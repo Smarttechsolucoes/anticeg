@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 import "./App.css";
+
+const supabase = createClient(
+  "https://ghjfsmwwcfpfvrouyrka.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
+);
 
 const STATUS_STEPS = [
   { id: "prevenda",  label: "Pré-venda",       icon: "🛒" },
@@ -10,64 +16,6 @@ const STATUS_STEPS = [
   { id: "nacional",  label: "Envio Liberado",   icon: "📬" },
   { id: "enviado",   label: "Enviado Nacional", icon: "🚚" },
 ];
-
-const DB = {
-  "ana@email.com": {
-    nome: "ANA",
-    itens: [
-      { id: 1, ceg: "#12", item: "SEVENTEEN — Spill The Feels", detalhe: "Weverse · PC aleatório",
-        item_val: 89, frete_inter: 22, taxa_rf: 0, nacional: 18, info: "Versão capa azul",
-        pag_item: "pago", pag_frete: "pago", pag_taxa: "—", pag_nacional: "pendente",
-        status: "caminho", statusDates: { prevenda: "01/02", warehouse: "14/02", caminho: "20/02" },
-        venc_item: "2026-03-07", venc_frete: "2026-03-12", venc_nacional: "2026-03-20", ceg_filter: "transito" },
-      { id: 2, ceg: "#12", item: "ILLIT — Super Real Me", detalhe: "Weverse Lim. · Sticker pack",
-        item_val: 112, frete_inter: 28, taxa_rf: 0, nacional: 20, info: "",
-        pag_item: "pendente", pag_frete: "pendente", pag_taxa: "—", pag_nacional: "—",
-        status: "prevenda", statusDates: { prevenda: "01/03" },
-        venc_item: "2026-03-14", venc_frete: "2026-03-18", ceg_filter: "transito" },
-      { id: 3, ceg: "#11", item: "AESPA — Armageddon", detalhe: "Hanteo · versão aleatória",
-        item_val: 67, frete_inter: 18, taxa_rf: 12, nacional: 16, info: "Já entregue",
-        pag_item: "pago", pag_frete: "pago", pag_taxa: "pago", pag_nacional: "pago",
-        status: "enviado", statusDates: { prevenda: "01/01", warehouse: "10/01", caminho: "15/01", taxa: "22/01", aqui: "28/01", nacional: "30/01", enviado: "01/02" },
-        venc_item: "2026-03-05", venc_frete: "2026-03-05", venc_taxa: "2026-03-10", venc_nacional: "2026-03-25", ceg_filter: "entregue" },
-      { id: 4, ceg: "#11", item: "LE SSERAFIM — EASY", detalhe: "Weverse · 2 versões",
-        item_val: 134, frete_inter: 32, taxa_rf: 18, nacional: 0, info: "Aguardando liberação taxa",
-        pag_item: "pago", pag_frete: "pago", pag_taxa: "pendente", pag_nacional: "—",
-        status: "taxa", statusDates: { prevenda: "01/01", warehouse: "10/01", caminho: "15/01", taxa: "22/01" },
-        venc_item: "2026-03-05", venc_frete: "2026-03-05", venc_taxa: "2026-03-22", ceg_filter: "transito" },
-    ],
-  },
-  "joao@email.com": {
-    nome: "JOÃO",
-    itens: [
-      { id: 5, ceg: "#12", item: "BTS — Map of the Soul", detalhe: "Weverse · PC exclusivo",
-        item_val: 95, frete_inter: 24, taxa_rf: 0, nacional: 18, info: "",
-        pag_item: "pago", pag_frete: "pendente", pag_taxa: "—", pag_nacional: "—",
-        status: "warehouse", statusDates: { prevenda: "05/02", warehouse: "18/02" },
-        venc_item: "2026-03-08", venc_frete: "2026-03-15", ceg_filter: "transito" },
-      { id: 6, ceg: "#12", item: "STRAY KIDS — ATE", detalhe: "Hanteo · versão aleatória",
-        item_val: 78, frete_inter: 20, taxa_rf: 0, nacional: 15, info: "",
-        pag_item: "pendente", pag_frete: "pendente", pag_taxa: "—", pag_nacional: "—",
-        status: "prevenda", statusDates: { prevenda: "05/02" },
-        venc_item: "2026-03-10", ceg_filter: "transito" },
-    ],
-  },
-  "maria@email.com": {
-    nome: "MARIA",
-    itens: [
-      { id: 7, ceg: "#12", item: "TWICE — WITH YOU-TH", detalhe: "Weverse · todas as versões",
-        item_val: 210, frete_inter: 48, taxa_rf: 0, nacional: 24, info: "4 versões",
-        pag_item: "pago", pag_frete: "pago", pag_taxa: "—", pag_nacional: "pendente",
-        status: "aqui", statusDates: { prevenda: "01/02", warehouse: "12/02", caminho: "18/02", taxa: "25/02", aqui: "01/03" },
-        venc_item: "2026-03-03", venc_frete: "2026-03-18", venc_nacional: "2026-03-28", ceg_filter: "transito" },
-      { id: 8, ceg: "#10", item: "NewJeans — How Sweet", detalhe: "Weverse · PC aleatório",
-        item_val: 55, frete_inter: 15, taxa_rf: 8, nacional: 14, info: "",
-        pag_item: "pago", pag_frete: "pago", pag_taxa: "pago", pag_nacional: "pago",
-        status: "enviado", statusDates: { prevenda: "10/12", warehouse: "20/12", caminho: "26/12", taxa: "05/01", aqui: "10/01", nacional: "12/01", enviado: "14/01" },
-        venc_item: "2026-03-01", venc_frete: "2026-03-01", venc_taxa: "2026-03-05", venc_nacional: "2026-03-12", ceg_filter: "entregue" },
-    ],
-  },
-};
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const chipMap = {
@@ -115,7 +63,6 @@ function Timeline({ item, activeIdx }) {
           <div key={step.id} className={`timeline-step ${cls}`}>
             <div className="tl-dot">{step.icon}</div>
             <div className="tl-name">{step.label}</div>
-            {item.statusDates?.[step.id] && <div className="tl-date">{item.statusDates[step.id]}</div>}
           </div>
         );
       })}
@@ -127,20 +74,120 @@ function ValCell({ val, status }) {
   const cls = status === "pago" ? "pago" : status === "pendente" ? "pend" : "zero";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <span className={`td-val ${cls}`}>R${val.toFixed(2).replace(".", ",")}</span>
+      <span className={`td-val ${cls}`}>R${Number(val).toFixed(2).replace(".", ",")}</span>
       <PayBadge status={status} />
     </div>
   );
 }
 
 function LoginScreen({ onLogin }) {
+  const [input, setInput] = useState("");
+  const [stage, setStage] = useState("login"); // login | cadastro_email
   const [email, setEmail] = useState("");
-  const [error, setError] = useState(false);
+  const [antijoiner, setAntijoiner] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin() {
-    const key = email.trim().toLowerCase();
-    if (DB[key]) { setError(false); onLogin(key, DB[key]); }
-    else { setError(true); }
+  async function handleLogin() {
+    setLoading(true);
+    setError("");
+    const val = input.trim().toLowerCase();
+
+    // Tenta por email
+    let { data, error: err } = await supabase
+      .from("antijoiners")
+      .select("*")
+      .eq("email", val)
+      .single();
+
+    // Tenta por COG
+    if (!data) {
+      const res = await supabase
+        .from("antijoiners")
+        .select("*")
+        .eq("cog", input.trim())
+        .single();
+      data = res.data;
+    }
+
+    setLoading(false);
+
+    if (!data) {
+      setError("COG ou e-mail não encontrado. Confirma com a antigom o seu COG.");
+      return;
+    }
+
+    if (!data.email) {
+      setAntijoiner(data);
+      setStage("cadastro_email");
+      return;
+    }
+
+    buscarItens(data);
+  }
+
+  async function handleCadastroEmail() {
+    setLoading(true);
+    setError("");
+    const emailLimpo = email.trim().toLowerCase();
+    if (!emailLimpo.includes("@")) {
+      setError("E-mail inválido.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: err } = await supabase
+      .from("antijoiners")
+      .update({ email: emailLimpo })
+      .eq("cog", antijoiner.cog);
+
+    if (err) {
+      setError("Esse e-mail já está em uso.");
+      setLoading(false);
+      return;
+    }
+
+    buscarItens({ ...antijoiner, email: emailLimpo });
+    setLoading(false);
+  }
+
+  async function buscarItens(aj) {
+    const { data: itens } = await supabase
+      .from("itens")
+      .select("*")
+      .eq("cog", aj.cog);
+    onLogin(aj, itens || []);
+  }
+
+  if (stage === "cadastro_email") {
+    return (
+      <div className="login-screen">
+        <div className="login-wrap">
+          <div className="login-eyebrow">masterlist · cadastro de e-mail</div>
+          <div className="login-title">
+            OI, <span className="lo">{antijoiner.nome || antijoiner.cog}</span>!
+          </div>
+          <div className="login-box">
+            <label className="login-label">Cadastra um e-mail pra acessar mais fácil depois</label>
+            <input
+              className="login-input"
+              type="email"
+              placeholder="seuemail@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCadastroEmail()}
+            />
+            <button className="login-btn" onClick={handleCadastroEmail} disabled={loading}>
+              {loading ? "SALVANDO..." : "SALVAR E ENTRAR →"}
+            </button>
+            <button className="login-skip" onClick={() => buscarItens(antijoiner)}>
+              Pular por agora
+            </button>
+            {error && <div className="login-error">{error}</div>}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -152,45 +199,46 @@ function LoginScreen({ onLogin }) {
           <span className="lg">MASTER</span><br />LIST
         </div>
         <div className="login-box">
-          <label className="login-label">Seu COG (e-mail cadastrado na anticeg)</label>
+          <label className="login-label">Seu COG ou e-mail cadastrado</label>
           <input
             className="login-input"
-            type="email"
-            placeholder="seucog@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="COG ou seuemail@email.com"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             style={{ borderColor: error ? "var(--laranja)" : "" }}
           />
-          <button className="login-btn" onClick={handleLogin}>ACESSAR →</button>
-          {error && <div className="login-error">COG não encontrado. Usa o mesmo e-mail da entrada na anticeg.</div>}
+          <button className="login-btn" onClick={handleLogin} disabled={loading}>
+            {loading ? "BUSCANDO..." : "ACESSAR →"}
+          </button>
+          {error && <div className="login-error">{error}</div>}
         </div>
       </div>
     </div>
   );
 }
 
-function MasterlistTab({ user }) {
+function MasterlistTab({ user, itens }) {
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
 
-  const itens = user.itens;
-  const totalV = itens.reduce((a, b) => a + b.item_val + b.frete_inter + (b.taxa_rf || 0) + (b.nacional || 0), 0);
-  const pagoV  = itens.filter(i => i.pag_item === "pago").reduce((a,b)=>a+b.item_val,0)
-               + itens.filter(i => i.pag_frete === "pago").reduce((a,b)=>a+b.frete_inter,0)
-               + itens.filter(i => i.pag_taxa === "pago").reduce((a,b)=>a+(b.taxa_rf||0),0)
-               + itens.filter(i => i.pag_nacional === "pago").reduce((a,b)=>a+(b.nacional||0),0);
+  const totalV = itens.reduce((a, b) => a + Number(b.item_val) + Number(b.frete_inter) + Number(b.taxa_rf || 0) + Number(b.nacional || 0), 0);
+  const pagoV  = itens.filter(i => i.pag_item === "pago").reduce((a,b)=>a+Number(b.item_val),0)
+               + itens.filter(i => i.pag_frete === "pago").reduce((a,b)=>a+Number(b.frete_inter),0)
+               + itens.filter(i => i.pag_taxa === "pago").reduce((a,b)=>a+Number(b.taxa_rf||0),0)
+               + itens.filter(i => i.pag_nacional === "pago").reduce((a,b)=>a+Number(b.nacional||0),0);
   const pendV  = totalV - pagoV;
   const cegs   = [...new Set(itens.map(i => i.ceg))].length;
 
   const today = new Date(); today.setHours(0,0,0,0);
   const vencDates = [];
   itens.forEach(i => {
-    if (i.venc_item && i.pag_item !== "pago") vencDates.push({ d: new Date(i.venc_item), label: "Item: " + i.item.split("—")[0].trim() });
-    if (i.venc_frete && i.pag_frete !== "pago") vencDates.push({ d: new Date(i.venc_frete), label: "Frete: " + i.item.split("—")[0].trim() });
-    if (i.venc_taxa && i.pag_taxa === "pendente") vencDates.push({ d: new Date(i.venc_taxa), label: "Taxa: " + i.item.split("—")[0].trim() });
-    if (i.venc_nacional && i.pag_nacional === "pendente") vencDates.push({ d: new Date(i.venc_nacional), label: "Nacional: " + i.item.split("—")[0].trim() });
+    if (i.venc_item && i.pag_item !== "pago") vencDates.push({ d: new Date(i.venc_item), label: "Item: " + i.nome_item.split(" ")[0] });
+    if (i.venc_frete && i.pag_frete !== "pago") vencDates.push({ d: new Date(i.venc_frete), label: "Frete: " + i.nome_item.split(" ")[0] });
+    if (i.venc_taxa && i.pag_taxa === "pendente") vencDates.push({ d: new Date(i.venc_taxa), label: "Taxa: " + i.nome_item.split(" ")[0] });
+    if (i.venc_nacional && i.pag_nacional === "pendente") vencDates.push({ d: new Date(i.venc_nacional), label: "Nacional: " + i.nome_item.split(" ")[0] });
   });
   const future = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d);
   const nextVenc = future[0];
@@ -200,13 +248,13 @@ function MasterlistTab({ user }) {
   else if (filter === "pago") filtered = filtered.filter(i => i.pag_item === "pago" && i.pag_frete === "pago");
   else if (filter === "transito") filtered = filtered.filter(i => i.ceg_filter === "transito");
   else if (filter === "entregue") filtered = filtered.filter(i => i.ceg_filter === "entregue");
-  if (search) filtered = filtered.filter(i => i.item.toLowerCase().includes(search) || i.detalhe.toLowerCase().includes(search));
+  if (search) filtered = filtered.filter(i => i.nome_item.toLowerCase().includes(search));
 
-  const tPend = filtered.filter(i=>i.pag_item==="pendente").reduce((a,b)=>a+b.item_val,0)
-              + filtered.filter(i=>i.pag_frete==="pendente").reduce((a,b)=>a+b.frete_inter,0)
-              + filtered.filter(i=>i.pag_taxa==="pendente").reduce((a,b)=>a+(b.taxa_rf||0),0)
-              + filtered.filter(i=>i.pag_nacional==="pendente").reduce((a,b)=>a+(b.nacional||0),0);
-  const tTotal = filtered.reduce((a,b)=>a+b.item_val+b.frete_inter+(b.taxa_rf||0)+(b.nacional||0),0);
+  const tPend = filtered.filter(i=>i.pag_item==="pendente").reduce((a,b)=>a+Number(b.item_val),0)
+              + filtered.filter(i=>i.pag_frete==="pendente").reduce((a,b)=>a+Number(b.frete_inter),0)
+              + filtered.filter(i=>i.pag_taxa==="pendente").reduce((a,b)=>a+Number(b.taxa_rf||0),0)
+              + filtered.filter(i=>i.pag_nacional==="pendente").reduce((a,b)=>a+Number(b.nacional||0),0);
+  const tTotal = filtered.reduce((a,b)=>a+Number(b.item_val)+Number(b.frete_inter)+Number(b.taxa_rf||0)+Number(b.nacional||0),0);
 
   const FILTERS = [
     { id: "todos", label: "Todos" },
@@ -224,7 +272,7 @@ function MasterlistTab({ user }) {
           <div className="page-title">MASTER<span>LIST</span></div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="greeting">{user.nome}</div>
+          <div className="greeting">{user.nome || user.cog}</div>
           <div className="greeting-sub">{itens.length} itens · {cegs} CEG{cegs > 1 ? "s" : ""}</div>
         </div>
       </div>
@@ -282,14 +330,13 @@ function MasterlistTab({ user }) {
                     <td><button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button></td>
                     <td className="td-ceg">{item.ceg}</td>
                     <td>
-                      <div className="item-title">{item.item}</div>
-                      <div className="item-detail">{item.detalhe}</div>
+                      <div className="item-title">{item.nome_item}</div>
                     </td>
-                    <td className="td-cog">{user.email}</td>
+                    <td className="td-cog">{user.cog}</td>
                     <td><ValCell val={item.item_val} status={item.pag_item} /></td>
                     <td><ValCell val={item.frete_inter} status={item.pag_frete} /></td>
-                    <td>{item.taxa_rf > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>}</td>
-                    <td>{item.nacional > 0 ? <ValCell val={item.nacional} status={item.pag_nacional} /> : <span className="zero-val">—</span>}</td>
+                    <td>{Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>}</td>
+                    <td>{Number(item.nacional) > 0 ? <ValCell val={item.nacional} status={item.pag_nacional} /> : <span className="zero-val">—</span>}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         <StatusChip status={item.status} />
@@ -321,7 +368,7 @@ function MasterlistTab({ user }) {
   );
 }
 
-function CalendarTab({ user }) {
+function CalendarTab({ user, itens }) {
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
   const [calMonth, setCalMonth] = useState(now.getMonth());
@@ -339,8 +386,8 @@ function CalendarTab({ user }) {
     if (!events[dateStr]) events[dateStr] = [];
     events[dateStr].push({ label, type });
   }
-  user.itens.forEach(item => {
-    const name = item.item.replace(/—.*/, "").trim();
+  itens.forEach(item => {
+    const name = item.nome_item.split(" ")[0];
     if (item.venc_item)     addEv(item.venc_item,     `${name} (${item.ceg}): Venc. Item`, "item");
     if (item.venc_frete)    addEv(item.venc_frete,    `${name}: Frete Inter`, "frete");
     if (item.venc_taxa)     addEv(item.venc_taxa,     `${name}: Taxa RF`, "taxa");
@@ -399,10 +446,19 @@ function CalendarTab({ user }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
 
-  function handleLogin(email, data) { setUser({ email, ...data }); }
-  function handleLogout() { setUser(null); setTab("masterlist"); }
+  function handleLogin(aj, itensData) {
+    setUser(aj);
+    setItens(itensData);
+  }
+
+  function handleLogout() {
+    setUser(null);
+    setItens([]);
+    setTab("masterlist");
+  }
 
   if (!user) return <LoginScreen onLogin={handleLogin} />;
 
@@ -413,7 +469,7 @@ export default function App() {
         <div className="topbar-right">
           <div className="topbar-user">
             <div className="user-dot" />
-            <span className="user-email">{user.email}</span>
+            <span className="user-email">{user.email || `COG ${user.cog}`}</span>
           </div>
           <button className="logout-btn" onClick={handleLogout}>Sair ↗</button>
         </div>
@@ -424,8 +480,8 @@ export default function App() {
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => setTab("calendario")}>◫ Calendário de Pagamentos</button>
       </div>
 
-      {tab === "masterlist" && <MasterlistTab user={user} />}
-      {tab === "calendario" && <CalendarTab user={user} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} />}
+      {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
     </div>
   );
 }
