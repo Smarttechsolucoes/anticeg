@@ -7,6 +7,10 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
 );
 
+function fmtBRL(val) {
+  return Number(val).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 const STATUS_STEPS = [
   { id: "prevenda",  label: "Pré-venda",       icon: "🛒" },
   { id: "warehouse", label: "Na Warehouse",     icon: "📦" },
@@ -74,7 +78,7 @@ function ValCell({ val, status }) {
   const cls = status === "pago" ? "pago" : status === "pendente" ? "pend" : "zero";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <span className={`td-val ${cls}`}>R${Number(val).toFixed(2).replace(".", ",")}</span>
+      <span className={`td-val ${cls}`}>R${fmtBRL(val)}</span>
       <PayBadge status={status} />
     </div>
   );
@@ -82,7 +86,7 @@ function ValCell({ val, status }) {
 
 function LoginScreen({ onLogin }) {
   const [input, setInput] = useState("");
-  const [stage, setStage] = useState("login"); // login | cadastro_email
+  const [stage, setStage] = useState("login");
   const [email, setEmail] = useState("");
   const [antijoiner, setAntijoiner] = useState(null);
   const [error, setError] = useState("");
@@ -93,14 +97,12 @@ function LoginScreen({ onLogin }) {
     setError("");
     const val = input.trim().toLowerCase();
 
-    // Tenta por email
-    let { data, error: err } = await supabase
+    let { data } = await supabase
       .from("antijoiners")
       .select("*")
       .eq("email", val)
       .single();
 
-    // Tenta por COG
     if (!data) {
       const res = await supabase
         .from("antijoiners")
@@ -279,9 +281,9 @@ function MasterlistTab({ user, itens }) {
 
       <div className="summary-row">
         <div className="sum-card"><div className="sum-label">Itens totais</div><div className="sum-value white">{itens.length}</div><div className="sum-sub">em todas as CEGs</div></div>
-        <div className="sum-card"><div className="sum-label">Valor total</div><div className="sum-value orange">R${totalV.toFixed(0)}</div><div className="sum-sub">item + frete + taxa</div></div>
-        <div className="sum-card"><div className="sum-label">Pago</div><div className="sum-value green">R${pagoV.toFixed(0)}</div><div className="sum-sub">confirmado</div></div>
-        <div className="sum-card"><div className="sum-label">Pendente</div><div className="sum-value lilas">R${Math.max(0,pendV).toFixed(0)}</div><div className="sum-sub">em aberto</div></div>
+        <div className="sum-card"><div className="sum-label">Valor total</div><div className="sum-value orange">R${fmtBRL(totalV)}</div><div className="sum-sub">item + frete + taxa</div></div>
+        <div className="sum-card"><div className="sum-label">Pago</div><div className="sum-value green">R${fmtBRL(pagoV)}</div><div className="sum-sub">confirmado</div></div>
+        <div className="sum-card"><div className="sum-label">Pendente</div><div className="sum-value lilas">R${fmtBRL(Math.max(0,pendV))}</div><div className="sum-sub">em aberto</div></div>
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
@@ -357,8 +359,8 @@ function MasterlistTab({ user, itens }) {
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
-                <td colSpan={4}><span className="total-val">R${tTotal.toFixed(0)}</span></td>
-                <td>{tPend > 0 && <span className="total-pend">↗ R${tPend.toFixed(0)} pendente</span>}</td>
+                <td colSpan={4}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
+                <td>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
               </tr>
             )}
           </tbody>
