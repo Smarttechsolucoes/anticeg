@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 
@@ -7,7 +7,8 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
 );
 
-function fmtBRL(val) {
+function fmtBRL(val, hidden) {
+  if (hidden) return "••••";
   return Number(val).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -84,6 +85,27 @@ function ValCell({ val, status }) {
   );
 }
 
+function SumCard({ label, value, valueCls, sub, showEye }) {
+  const [hidden, setHidden] = useState(false);
+  return (
+    <div className="sum-card">
+      <div className="sum-label">{label}</div>
+      <div className={`sum-value ${valueCls}`} style={{ display:"flex", alignItems:"center", gap:8 }}>
+        {showEye ? fmtBRL(value, hidden) : value}
+        {showEye && (
+          <button
+            onClick={() => setHidden(!hidden)}
+            style={{ background:"none", border:"none", cursor:"pointer", fontSize:13, opacity:0.4, padding:0, lineHeight:1 }}
+          >
+            {hidden ? "👁️" : "🙈"}
+          </button>
+        )}
+      </div>
+      <div className="sum-sub">{sub}</div>
+    </div>
+  );
+}
+
 function LoginScreen({ onLogin }) {
   const [input, setInput] = useState("");
   const [stage, setStage] = useState("login");
@@ -97,18 +119,10 @@ function LoginScreen({ onLogin }) {
     setError("");
     const val = input.trim().toLowerCase();
 
-    let { data } = await supabase
-      .from("antijoiners")
-      .select("*")
-      .eq("email", val)
-      .single();
+    let { data } = await supabase.from("antijoiners").select("*").eq("email", val).single();
 
     if (!data) {
-      const res = await supabase
-        .from("antijoiners")
-        .select("*")
-        .eq("cog", input.trim())
-        .single();
+      const res = await supabase.from("antijoiners").select("*").eq("cog", input.trim()).single();
       data = res.data;
     }
 
@@ -132,32 +146,17 @@ function LoginScreen({ onLogin }) {
     setLoading(true);
     setError("");
     const emailLimpo = email.trim().toLowerCase();
-    if (!emailLimpo.includes("@")) {
-      setError("E-mail inválido.");
-      setLoading(false);
-      return;
-    }
+    if (!emailLimpo.includes("@")) { setError("E-mail inválido."); setLoading(false); return; }
 
-    const { error: err } = await supabase
-      .from("antijoiners")
-      .update({ email: emailLimpo })
-      .eq("cog", antijoiner.cog);
-
-    if (err) {
-      setError("Esse e-mail já está em uso.");
-      setLoading(false);
-      return;
-    }
+    const { error: err } = await supabase.from("antijoiners").update({ email: emailLimpo }).eq("cog", antijoiner.cog);
+    if (err) { setError("Esse e-mail já está em uso."); setLoading(false); return; }
 
     buscarItens({ ...antijoiner, email: emailLimpo });
     setLoading(false);
   }
 
   async function buscarItens(aj) {
-    const { data: itens } = await supabase
-      .from("itens")
-      .select("*")
-      .eq("cog", aj.cog);
+    const { data: itens } = await supabase.from("itens").select("*").eq("cog", aj.cog);
     onLogin(aj, itens || []);
   }
 
@@ -166,25 +165,15 @@ function LoginScreen({ onLogin }) {
       <div className="login-screen">
         <div className="login-wrap">
           <div className="login-eyebrow">masterlist · cadastro de e-mail</div>
-          <div className="login-title">
-            OI, <span className="lo">{antijoiner.nome || antijoiner.cog}</span>!
-          </div>
+          <div className="login-title">OI, <span className="lo">{antijoiner.nome || antijoiner.cog}</span>!</div>
           <div className="login-box">
             <label className="login-label">Cadastra um e-mail pra acessar mais fácil depois</label>
-            <input
-              className="login-input"
-              type="email"
-              placeholder="seuemail@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCadastroEmail()}
-            />
+            <input className="login-input" type="email" placeholder="seuemail@email.com" value={email}
+              onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCadastroEmail()} />
             <button className="login-btn" onClick={handleCadastroEmail} disabled={loading}>
               {loading ? "SALVANDO..." : "SALVAR E ENTRAR →"}
             </button>
-            <button className="login-skip" onClick={() => buscarItens(antijoiner)}>
-              Pular por agora
-            </button>
+            <button className="login-skip" onClick={() => buscarItens(antijoiner)}>Pular por agora</button>
             {error && <div className="login-error">{error}</div>}
           </div>
         </div>
@@ -197,20 +186,13 @@ function LoginScreen({ onLogin }) {
       <div className="login-wrap">
         <div className="login-eyebrow">masterlist · acesso por COG</div>
         <div className="login-title">
-          ANTI<span className="lo">CEG</span><br />
-          <span className="lg">MASTER</span><br />LIST
+          ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST
         </div>
         <div className="login-box">
           <label className="login-label">Seu COG ou e-mail cadastrado</label>
-          <input
-            className="login-input"
-            type="text"
-            placeholder="COG ou seuemail@email.com"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            style={{ borderColor: error ? "var(--laranja)" : "" }}
-          />
+          <input className="login-input" type="text" placeholder="COG ou seuemail@email.com" value={input}
+            onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            style={{ borderColor: error ? "var(--laranja)" : "" }} />
           <button className="login-btn" onClick={handleLogin} disabled={loading}>
             {loading ? "BUSCANDO..." : "ACESSAR →"}
           </button>
@@ -248,7 +230,7 @@ function MasterlistTab({ user, itens }) {
   let filtered = [...itens];
   if (filter === "pendente") filtered = filtered.filter(i => i.pag_item === "pendente" || i.pag_frete === "pendente" || i.pag_taxa === "pendente" || i.pag_nacional === "pendente");
   else if (filter === "pago") filtered = filtered.filter(i => i.pag_item === "pago" && i.pag_frete === "pago");
-  else if (filter === "transito") filtered = filtered.filter(i => i.ceg_filter === "transito");
+  else if (filter === "transito") filtered = filtered.filter(i => ["warehouse","caminho","taxa","aqui","nacional"].includes(i.status));
   else if (filter === "entregue") filtered = filtered.filter(i => i.ceg_filter === "entregue");
   if (search) filtered = filtered.filter(i => i.nome_item.toLowerCase().includes(search));
 
@@ -280,10 +262,10 @@ function MasterlistTab({ user, itens }) {
       </div>
 
       <div className="summary-row">
-        <div className="sum-card"><div className="sum-label">Itens totais</div><div className="sum-value white">{itens.length}</div><div className="sum-sub">em todas as CEGs</div></div>
-        <div className="sum-card"><div className="sum-label">Valor total</div><div className="sum-value orange">R${fmtBRL(totalV)}</div><div className="sum-sub">item + frete + taxa</div></div>
-        <div className="sum-card"><div className="sum-label">Pago</div><div className="sum-value green">R${fmtBRL(pagoV)}</div><div className="sum-sub">confirmado</div></div>
-        <div className="sum-card"><div className="sum-label">Pendente</div><div className="sum-value lilas">R${fmtBRL(Math.max(0,pendV))}</div><div className="sum-sub">em aberto</div></div>
+        <SumCard label="Itens totais" value={itens.length} valueCls="white" sub="em todas as CEGs" showEye={false} />
+        <SumCard label="Valor total" value={totalV} valueCls="orange" sub="item + frete + taxa" showEye={true} />
+        <SumCard label="Pago" value={pagoV} valueCls="green" sub="confirmado" showEye={true} />
+        <SumCard label="Pendente" value={Math.max(0,pendV)} valueCls="lilas" sub="em aberto" showEye={true} />
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
@@ -331,9 +313,7 @@ function MasterlistTab({ user, itens }) {
                   <tr key={item.id}>
                     <td><button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button></td>
                     <td className="td-ceg">{item.ceg}</td>
-                    <td>
-                      <div className="item-title">{item.nome_item}</div>
-                    </td>
+                    <td><div className="item-title">{item.nome_item}</div></td>
                     <td className="td-cog">{user.cog}</td>
                     <td><ValCell val={item.item_val} status={item.pag_item} /></td>
                     <td><ValCell val={item.frete_inter} status={item.pag_frete} /></td>
@@ -451,16 +431,8 @@ export default function App() {
   const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
 
-  function handleLogin(aj, itensData) {
-    setUser(aj);
-    setItens(itensData);
-  }
-
-  function handleLogout() {
-    setUser(null);
-    setItens([]);
-    setTab("masterlist");
-  }
+  function handleLogin(aj, itensData) { setUser(aj); setItens(itensData); }
+  function handleLogout() { setUser(null); setItens([]); setTab("masterlist"); }
 
   if (!user) return <LoginScreen onLogin={handleLogin} />;
 
@@ -476,12 +448,10 @@ export default function App() {
           <button className="logout-btn" onClick={handleLogout}>Sair ↗</button>
         </div>
       </div>
-
       <div className="tabs-bar">
         <button className={`tab-btn ${tab === "masterlist" ? "active" : ""}`} onClick={() => setTab("masterlist")}>☰ Masterlist</button>
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => setTab("calendario")}>◫ Calendário de Pagamentos</button>
       </div>
-
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
     </div>
