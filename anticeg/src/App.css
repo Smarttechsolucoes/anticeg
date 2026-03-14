@@ -94,8 +94,7 @@ body {
   background: var(--preto);
   padding: 24px;
 }
-.login-wrap { width: 100%; max-width: 480px; }
-.login-eyebrow {
+.login-wrap { width: 100%; max-width: 480px; margin: 0 auto; }.login-eyebrow {
   font-size: var(--fs-xs);
   color: rgba(245,240,232,.4);
   letter-spacing: 2px;
