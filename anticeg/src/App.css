@@ -607,3 +607,6 @@ td {
 .pay-btn:hover { opacity: 0.8; }
 .pay-btn-pix  { background: var(--verde); color: #0D0D0D; }
 .pay-btn-card { background: var(--lilas); color: #0D0D0D; }
+#root {
+  height: 100vh;
+}
