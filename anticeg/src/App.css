@@ -87,14 +87,15 @@ body {
 
 /* ── LOGIN ── */
 .login-screen {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--preto);
   padding: 24px;
 }
-.login-wrap { width: 100%; max-width: 480px; margin: 0 auto; }.login-eyebrow {
+.login-wrap { width: 100%; max-width: 480px; margin: 0 auto; }
+.login-eyebrow {
   font-size: var(--fs-xs);
   color: rgba(245,240,232,.4);
   letter-spacing: 2px;
@@ -381,9 +382,9 @@ td {
   letter-spacing: .5px;
   font-weight: 600;
 }
-.pay-pago    { background: rgba(186,255,57,.12); color: var(--verde); }
+.pay-pago     { background: rgba(186,255,57,.12); color: var(--verde); }
 .pay-pendente { background: rgba(255,92,26,.12); color: var(--laranja); }
-.pay-parcial { background: rgba(201,168,240,.12); color: var(--lilas); }
+.pay-parcial  { background: rgba(201,168,240,.12); color: var(--lilas); }
 
 /* ── STATUS CHIPS ── */
 .status-chip {
@@ -583,9 +584,9 @@ td {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ev-item    { background: rgba(255,92,26,.15); color: var(--laranja); }
-.ev-frete   { background: rgba(201,168,240,.12); color: var(--lilas); }
-.ev-taxa    { background: rgba(186,255,57,.1); color: var(--verde); }
+.ev-item     { background: rgba(255,92,26,.15); color: var(--laranja); }
+.ev-frete    { background: rgba(201,168,240,.12); color: var(--lilas); }
+.ev-taxa     { background: rgba(186,255,57,.1); color: var(--verde); }
 .ev-nacional { background: rgba(255,209,70,.1); color: #FFD166; }
 
 /* ── PAY BUTTONS ── */
