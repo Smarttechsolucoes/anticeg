@@ -7,15 +7,24 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
 );
 
+const FORMS_URL = "https://forms.gle/vMyjCKG4Dj2yhryP7";
+const WHATSAPP_NUM = "5524992501917";
+
 function fmtBRL(val, hidden) {
   if (hidden) return "••••";
   return Number(val).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function whatsappMsg(item) {
+  const total = Number(item.item_val) + Number(item.frete_inter) + Number(item.taxa_rf || 0) + Number(item.nacional || 0);
+  const msg = `Olá! Quero pagar no cartão de crédito. Vou te mandar as informações:\nValor: R$ ${fmtBRL(total)}\nParcelas: até x12 com juros`;
+  return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
+}
+
 const STATUS_STEPS = [
   { id: "prevenda",  label: "Pré-venda",       icon: "🛒" },
   { id: "warehouse", label: "Na Warehouse",     icon: "📦" },
-  { id: "caminho",   label: "A Caminho",        icon: "✈️"  },
+  { id: "caminho",   label: "A Caminho",        icon: "✈️" },
   { id: "taxa",      label: "Taxa Liberada",    icon: "✅" },
   { id: "aqui",      label: "Chegou Aqui",      icon: "🏠" },
   { id: "nacional",  label: "Envio Liberado",   icon: "📬" },
@@ -23,6 +32,7 @@ const STATUS_STEPS = [
 ];
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
 const chipMap = {
   prevenda:  ["chip-prevenda",  "Pré-venda"],
   warehouse: ["chip-warehouse", "Na Warehouse"],
@@ -33,12 +43,11 @@ const chipMap = {
   enviado:   ["chip-enviado",   "Enviado Nacional"],
 };
 
-function getStepIdx(id) { return STATUS_STEPS.findIndex((s) => s.id === id); }
+function getStepIdx(id) { return STATUS_STEPS.findIndex(s => s.id === id); }
 
 function PayBadge({ status }) {
   if (status === "pago")     return <span className="pay-badge pay-pago">Pago</span>;
   if (status === "pendente") return <span className="pay-badge pay-pendente">Pend.</span>;
-  if (status === "parcial")  return <span className="pay-badge pay-parcial">Parcial</span>;
   return null;
 }
 
@@ -59,7 +68,7 @@ function ProgressMini({ activeIdx }) {
   );
 }
 
-function Timeline({ item, activeIdx }) {
+function Timeline({ activeIdx }) {
   return (
     <div className="drawer-inner">
       {STATUS_STEPS.map((step, i) => {
@@ -85,23 +94,31 @@ function ValCell({ val, status }) {
   );
 }
 
-function SumCard({ label, value, valueCls, sub, showEye }) {
+function SumCard({ label, value, valueCls, sub, isAmount }) {
   const [hidden, setHidden] = useState(false);
   return (
     <div className="sum-card">
       <div className="sum-label">{label}</div>
-      <div className={`sum-value ${valueCls}`} style={{ display:"flex", alignItems:"center", gap:8 }}>
-        {showEye ? fmtBRL(value, hidden) : value}
-        {showEye && (
-          <button
-            onClick={() => setHidden(!hidden)}
-            style={{ background:"none", border:"none", cursor:"pointer", fontSize:13, opacity:0.4, padding:0, lineHeight:1 }}
-          >
+      <div className={`sum-value ${valueCls}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {isAmount ? `R$${fmtBRL(value, hidden)}` : value}
+        {isAmount && (
+          <button onClick={() => setHidden(!hidden)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: 0.4, padding: 0, lineHeight: 1 }}>
             {hidden ? "👁️" : "🙈"}
           </button>
         )}
       </div>
       <div className="sum-sub">{sub}</div>
+    </div>
+  );
+}
+
+function PayButtons({ item }) {
+  const temPendente = item.pag_item === "pendente" || item.pag_frete === "pendente" || item.pag_taxa === "pendente" || item.pag_nacional === "pendente";
+  if (!temPendente) return null;
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <a href={FORMS_URL} target="_blank" rel="noopener noreferrer" className="pay-btn pay-btn-pix">💸 PIX</a>
+      <a href={whatsappMsg(item)} target="_blank" rel="noopener noreferrer" className="pay-btn pay-btn-card">💳 Cartão</a>
     </div>
   );
 }
@@ -115,42 +132,22 @@ function LoginScreen({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     const val = input.trim().toLowerCase();
-
     let { data } = await supabase.from("antijoiners").select("*").eq("email", val).single();
-
-    if (!data) {
-      const res = await supabase.from("antijoiners").select("*").eq("cog", input.trim()).single();
-      data = res.data;
-    }
-
+    if (!data) { const r = await supabase.from("antijoiners").select("*").eq("cog", input.trim()).single(); data = r.data; }
     setLoading(false);
-
-    if (!data) {
-      setError("COG ou e-mail não encontrado. Confirma com a antigom o seu COG.");
-      return;
-    }
-
-    if (!data.email) {
-      setAntijoiner(data);
-      setStage("cadastro_email");
-      return;
-    }
-
+    if (!data) { setError("COG ou e-mail não encontrado. Confirma com a antigom o seu COG."); return; }
+    if (!data.email) { setAntijoiner(data); setStage("cadastro_email"); return; }
     buscarItens(data);
   }
 
   async function handleCadastroEmail() {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     const emailLimpo = email.trim().toLowerCase();
     if (!emailLimpo.includes("@")) { setError("E-mail inválido."); setLoading(false); return; }
-
     const { error: err } = await supabase.from("antijoiners").update({ email: emailLimpo }).eq("cog", antijoiner.cog);
     if (err) { setError("Esse e-mail já está em uso."); setLoading(false); return; }
-
     buscarItens({ ...antijoiner, email: emailLimpo });
     setLoading(false);
   }
@@ -160,42 +157,34 @@ function LoginScreen({ onLogin }) {
     onLogin(aj, itens || []);
   }
 
-  if (stage === "cadastro_email") {
-    return (
-      <div className="login-screen">
-        <div className="login-wrap">
-          <div className="login-eyebrow">masterlist · cadastro de e-mail</div>
-          <div className="login-title">OI, <span className="lo">{antijoiner.nome || antijoiner.cog}</span>!</div>
-          <div className="login-box">
-            <label className="login-label">Cadastra um e-mail pra acessar mais fácil depois</label>
-            <input className="login-input" type="email" placeholder="seuemail@email.com" value={email}
-              onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCadastroEmail()} />
-            <button className="login-btn" onClick={handleCadastroEmail} disabled={loading}>
-              {loading ? "SALVANDO..." : "SALVAR E ENTRAR →"}
-            </button>
-            <button className="login-skip" onClick={() => buscarItens(antijoiner)}>Pular por agora</button>
-            {error && <div className="login-error">{error}</div>}
-          </div>
+  if (stage === "cadastro_email") return (
+    <div className="login-screen">
+      <div className="login-wrap">
+        <div className="login-eyebrow">masterlist · cadastro de e-mail</div>
+        <div className="login-title">OI, <span className="lo">{antijoiner.nome || antijoiner.cog}</span>!</div>
+        <div className="login-box">
+          <label className="login-label">Cadastra um e-mail pra acessar mais fácil depois</label>
+          <input className="login-input" type="email" placeholder="seuemail@email.com" value={email}
+            onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleCadastroEmail()} />
+          <button className="login-btn" onClick={handleCadastroEmail} disabled={loading}>{loading ? "SALVANDO..." : "SALVAR E ENTRAR →"}</button>
+          <button className="login-skip" onClick={() => buscarItens(antijoiner)}>Pular por agora</button>
+          {error && <div className="login-error">{error}</div>}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="login-screen">
       <div className="login-wrap">
         <div className="login-eyebrow">masterlist · acesso por COG</div>
-        <div className="login-title">
-          ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST
-        </div>
+        <div className="login-title">ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST</div>
         <div className="login-box">
           <label className="login-label">Seu COG ou e-mail cadastrado</label>
           <input className="login-input" type="text" placeholder="COG ou seuemail@email.com" value={input}
-            onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()}
             style={{ borderColor: error ? "var(--laranja)" : "" }} />
-          <button className="login-btn" onClick={handleLogin} disabled={loading}>
-            {loading ? "BUSCANDO..." : "ACESSAR →"}
-          </button>
+          <button className="login-btn" onClick={handleLogin} disabled={loading}>{loading ? "BUSCANDO..." : "ACESSAR →"}</button>
           {error && <div className="login-error">{error}</div>}
         </div>
       </div>
@@ -209,12 +198,12 @@ function MasterlistTab({ user, itens }) {
   const [openDrawer, setOpenDrawer] = useState(null);
 
   const totalV = itens.reduce((a, b) => a + Number(b.item_val) + Number(b.frete_inter) + Number(b.taxa_rf || 0) + Number(b.nacional || 0), 0);
-  const pagoV  = itens.filter(i => i.pag_item === "pago").reduce((a,b)=>a+Number(b.item_val),0)
-               + itens.filter(i => i.pag_frete === "pago").reduce((a,b)=>a+Number(b.frete_inter),0)
-               + itens.filter(i => i.pag_taxa === "pago").reduce((a,b)=>a+Number(b.taxa_rf||0),0)
-               + itens.filter(i => i.pag_nacional === "pago").reduce((a,b)=>a+Number(b.nacional||0),0);
-  const pendV  = totalV - pagoV;
-  const cegs   = [...new Set(itens.map(i => i.ceg))].length;
+  const pagoV  = itens.filter(i => i.pag_item === "pago").reduce((a,b) => a+Number(b.item_val), 0)
+               + itens.filter(i => i.pag_frete === "pago").reduce((a,b) => a+Number(b.frete_inter), 0)
+               + itens.filter(i => i.pag_taxa === "pago").reduce((a,b) => a+Number(b.taxa_rf||0), 0)
+               + itens.filter(i => i.pag_nacional === "pago").reduce((a,b) => a+Number(b.nacional||0), 0);
+  const pendV = totalV - pagoV;
+  const cegs  = [...new Set(itens.map(i => i.ceg))].length;
 
   const today = new Date(); today.setHours(0,0,0,0);
   const vencDates = [];
@@ -224,8 +213,7 @@ function MasterlistTab({ user, itens }) {
     if (i.venc_taxa && i.pag_taxa === "pendente") vencDates.push({ d: new Date(i.venc_taxa), label: "Taxa: " + i.nome_item.split(" ")[0] });
     if (i.venc_nacional && i.pag_nacional === "pendente") vencDates.push({ d: new Date(i.venc_nacional), label: "Nacional: " + i.nome_item.split(" ")[0] });
   });
-  const future = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d);
-  const nextVenc = future[0];
+  const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
 
   let filtered = [...itens];
   if (filter === "pendente") filtered = filtered.filter(i => i.pag_item === "pendente" || i.pag_frete === "pendente" || i.pag_taxa === "pendente" || i.pag_nacional === "pendente");
@@ -234,11 +222,11 @@ function MasterlistTab({ user, itens }) {
   else if (filter === "entregue") filtered = filtered.filter(i => i.ceg_filter === "entregue");
   if (search) filtered = filtered.filter(i => i.nome_item.toLowerCase().includes(search));
 
-  const tPend = filtered.filter(i=>i.pag_item==="pendente").reduce((a,b)=>a+Number(b.item_val),0)
-              + filtered.filter(i=>i.pag_frete==="pendente").reduce((a,b)=>a+Number(b.frete_inter),0)
-              + filtered.filter(i=>i.pag_taxa==="pendente").reduce((a,b)=>a+Number(b.taxa_rf||0),0)
-              + filtered.filter(i=>i.pag_nacional==="pendente").reduce((a,b)=>a+Number(b.nacional||0),0);
-  const tTotal = filtered.reduce((a,b)=>a+Number(b.item_val)+Number(b.frete_inter)+Number(b.taxa_rf||0)+Number(b.nacional||0),0);
+  const tTotal = filtered.reduce((a,b) => a+Number(b.item_val)+Number(b.frete_inter)+Number(b.taxa_rf||0)+Number(b.nacional||0), 0);
+  const tPend  = filtered.filter(i=>i.pag_item==="pendente").reduce((a,b)=>a+Number(b.item_val),0)
+               + filtered.filter(i=>i.pag_frete==="pendente").reduce((a,b)=>a+Number(b.frete_inter),0)
+               + filtered.filter(i=>i.pag_taxa==="pendente").reduce((a,b)=>a+Number(b.taxa_rf||0),0)
+               + filtered.filter(i=>i.pag_nacional==="pendente").reduce((a,b)=>a+Number(b.nacional||0),0);
 
   const FILTERS = [
     { id: "todos", label: "Todos" },
@@ -262,10 +250,10 @@ function MasterlistTab({ user, itens }) {
       </div>
 
       <div className="summary-row">
-        <SumCard label="Itens totais" value={itens.length} valueCls="white" sub="em todas as CEGs" showEye={false} />
-        <SumCard label="Valor total" value={totalV} valueCls="orange" sub="item + frete + taxa" showEye={true} />
-        <SumCard label="Pago" value={pagoV} valueCls="green" sub="confirmado" showEye={true} />
-        <SumCard label="Pendente" value={Math.max(0,pendV)} valueCls="lilas" sub="em aberto" showEye={true} />
+        <SumCard label="Itens totais" value={itens.length} valueCls="white" sub="em todas as CEGs" isAmount={false} />
+        <SumCard label="Valor total" value={totalV} valueCls="orange" sub="item + frete + taxa" isAmount={true} />
+        <SumCard label="Pago" value={pagoV} valueCls="green" sub="confirmado" isAmount={true} />
+        <SumCard label="Pendente" value={Math.max(0, pendV)} valueCls="lilas" sub="em aberto" isAmount={true} />
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
@@ -286,8 +274,9 @@ function MasterlistTab({ user, itens }) {
           <thead>
             <tr className="col-group-header">
               <th colSpan={4}></th>
-              <th colSpan={3}>VALORES A PAGAR</th>
-              <th colSpan={2} className="status-group">STATUS</th>
+              <th colSpan={4}>VALORES A PAGAR</th>
+              <th className="status-group">STATUS</th>
+              <th>PAGAR</th>
             </tr>
             <tr>
               <th style={{width:28}}></th>
@@ -298,12 +287,13 @@ function MasterlistTab({ user, itens }) {
               <th>FRETE INTER</th>
               <th>TAXA RF</th>
               <th>NACIONAL</th>
-              <th>INFORMAÇÕES ADICIONAIS</th>
+              <th>INFO / STATUS</th>
+              <th>PAGAR</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="empty-cell">nenhum item para esse filtro</td></tr>
+              <tr><td colSpan={10} className="empty-cell">nenhum item para esse filtro</td></tr>
             )}
             {filtered.map(item => {
               const ai = getStepIdx(item.status);
@@ -326,10 +316,11 @@ function MasterlistTab({ user, itens }) {
                       </div>
                       {item.info && <div className="item-detail" style={{marginTop:4}}>{item.info}</div>}
                     </td>
+                    <td><PayButtons item={item} /></td>
                   </tr>
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
-                      <td colSpan={9}><Timeline item={item} activeIdx={ai} /></td>
+                      <td colSpan={10}><Timeline activeIdx={ai} /></td>
                     </tr>
                   )}
                 </>
@@ -340,7 +331,7 @@ function MasterlistTab({ user, itens }) {
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
                 <td colSpan={4}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
-                <td>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
+                <td colSpan={2}>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
               </tr>
             )}
           </tbody>
@@ -370,9 +361,9 @@ function CalendarTab({ user, itens }) {
   }
   itens.forEach(item => {
     const name = item.nome_item.split(" ")[0];
-    if (item.venc_item)     addEv(item.venc_item,     `${name} (${item.ceg}): Venc. Item`, "item");
-    if (item.venc_frete)    addEv(item.venc_frete,    `${name}: Frete Inter`, "frete");
-    if (item.venc_taxa)     addEv(item.venc_taxa,     `${name}: Taxa RF`, "taxa");
+    if (item.venc_item)     addEv(item.venc_item,     `${name} (${item.ceg}): Item`, "item");
+    if (item.venc_frete)    addEv(item.venc_frete,    `${name}: Frete`, "frete");
+    if (item.venc_taxa)     addEv(item.venc_taxa,     `${name}: Taxa`, "taxa");
     if (item.venc_nacional) addEv(item.venc_nacional, `${name}: Nacional`, "nacional");
   });
 
@@ -403,20 +394,18 @@ function CalendarTab({ user, itens }) {
       <div className="cal-header">
         <div className="cal-nav">
           <button className="cal-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
-          <div className="cal-month-title">
-            <span>{MONTHS[calMonth]}</span> <span className="cal-year">{calYear}</span>
-          </div>
+          <div className="cal-month-title"><span>{MONTHS[calMonth]}</span> <span className="cal-year">{calYear}</span></div>
           <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
         </div>
         <div className="cal-legend">
-          {[["laranja","Venc. Item"],["lilas","Frete Inter"],["verde","Taxa RF"],["amarelo","Nacional"]].map(([c,l])=>(
+          {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"],["amarelo","Nacional"]].map(([c,l]) => (
             <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
           ))}
         </div>
       </div>
       <div className="cal-grid-wrap">
         <div className="cal-weekdays">
-          {["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"].map(d=>(
+          {["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"].map(d => (
             <div key={d} className="cal-weekday">{d}</div>
           ))}
         </div>
