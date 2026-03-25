@@ -283,7 +283,7 @@ function LoginScreen({ onLogin }) {
       {logoBlock("acesso por COG")}
       <div className="login-box">
         <label className="login-label">Seu COG ou e-mail</label>
-        <input className="login-input" type="text" placeholder="Ex: SEU CODIGO ou seuemail@email.com" value={input}
+        <input className="login-input" type="text" placeholder="Ex: Morri7 ou seuemail@email.com" value={input}
           onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLoginCOG()}
           style={{ borderColor: error ? "var(--laranja)" : "" }} />
         <button className="login-btn" onClick={handleLoginCOG} disabled={loading}>{loading ? "BUSCANDO..." : "CONTINUAR →"}</button>
@@ -608,7 +608,7 @@ function PerfilTab({ user, onUpdate }) {
         <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
         <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
         <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
-        {!user.cog && <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>}
+        <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
 
         {sectionTitle("⋆ Endereço")}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
