@@ -9,7 +9,6 @@ const supabase = createClient(
 
 const FORMS_URL = "https://forms.gle/vMyjCKG4Dj2yhryP7";
 const WHATSAPP_NUM = "5524992501917";
-
 const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 function fmtBRL(val, hidden) {
@@ -19,18 +18,18 @@ function fmtBRL(val, hidden) {
 
 function whatsappMsg(item) {
   const total = Number(item.valor_item) + Number(item.frete_inter) + Number(item.taxa_rf || 0) + Number(item.nacional || 0);
-  const msg = `Olá! Quero pagar no cartão de crédito. Vou te mandar as informações:\nValor: R$ ${fmtBRL(total)}\nParcelas: até x12 com juros`;
+  const msg = `Olá! Quero pagar no cartão de crédito.\nValor: R$ ${fmtBRL(total)}\nParcelas: até x12 com juros`;
   return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
 }
 
 const STATUS_STEPS = [
-  { id: "Pré-venda",       label: "Pré-venda",       icon: "🛒" },
-  { id: "Na Warehouse",    label: "Na Warehouse",     icon: "📦" },
-  { id: "A Caminho",       label: "A Caminho",        icon: "✈️" },
-  { id: "Taxa Liberada",   label: "Taxa Liberada",    icon: "✅" },
-  { id: "Chegou Aqui",     label: "Chegou Aqui",      icon: "🏠" },
-  { id: "Envio Liberado",  label: "Envio Liberado",   icon: "📬" },
-  { id: "Enviado Nacional",label: "Enviado Nacional", icon: "🚚" },
+  { id: "Pré-venda",        label: "Pré-venda",       icon: "🛒" },
+  { id: "Na Warehouse",     label: "Na Warehouse",     icon: "📦" },
+  { id: "A Caminho",        label: "A Caminho",        icon: "✈️" },
+  { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
+  { id: "Chegou Aqui",      label: "Chegou Aqui",      icon: "🏠" },
+  { id: "Envio Liberado",   label: "Envio Liberado",   icon: "📬" },
+  { id: "Enviado Nacional", label: "Enviado Nacional", icon: "🚚" },
 ];
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -46,14 +45,13 @@ const chipMap = {
 };
 
 function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status); }
+function isPendente(val) { return val && val !== "Pago"; }
 
 function PayBadge({ status }) {
   if (status === "Pago")      return <span className="pay-badge pay-pago">Pago</span>;
-  if (status === "Em aberto") return <span className="pay-badge pay-pendente">Pendente</span>;
+  if (isPendente(status))     return <span className="pay-badge pay-pendente">Pendente</span>;
   return null;
 }
-
-function isPendente(val) { return val && val !== "Pago"; }
 
 function StatusChip({ status }) {
   const [cls, label] = chipMap[status] || ["chip-prevenda", status || ""];
@@ -127,50 +125,116 @@ function PayButtons({ item }) {
   );
 }
 
+// ── Input helper ────────────────────────────────────────────
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="login-label" style={{ marginBottom: 6, display: "block" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("escolha");
   const [input, setInput] = useState("");
+  const [senha, setSenha] = useState("");
+  const [senhaConfirm, setSenhaConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // cadastro
   const [nome, setNome] = useState("");
   const [twitter, setTwitter] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [estado, setEstado] = useState("");
   const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
+
+  // dados temporários entre steps
+  const [cogTemp, setCogTemp] = useState("");
+  const [nomeTemp, setNomeTemp] = useState("");
+  const [itensTemp, setItensTemp] = useState([]);
+  const [joinerTemp, setJoinerTemp] = useState(null);
 
   async function handleLoginCOG() {
     setLoading(true); setError("");
     const val = input.trim();
+    const isEmail = val.includes("@");
 
-    // Busca por COG na masterlist
-    const { data: itens } = await supabase
-      .from("masterlist")
-      .select("*")
-      .eq("cog", val);
+    let cogReal = null;
+    let nomeReal = null;
+    let itensEncontrados = null;
 
-    if (itens && itens.length > 0) {
-      const user = { cog: val, nome: itens[0].nome || val };
-      onLogin(user, itens);
+    if (isEmail) {
+      // Busca joiner pelo e-mail cadastrado
+      const { data: joiner } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).single();
+      if (!joiner) { setError("E-mail não encontrado. Entre em contato com a Nanda para ter acesso."); setLoading(false); return; }
+      cogReal = joiner.cog;
+      nomeReal = joiner.nome || cogReal;
+      const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", cogReal);
+      itensEncontrados = itens || [];
+      setCogTemp(cogReal);
+      setNomeTemp(nomeReal);
+      setItensTemp(itensEncontrados);
+      setJoinerTemp(joiner);
+      setMode("senha");
       setLoading(false);
       return;
     }
 
-    // Busca por nome na masterlist
-    const { data: itensPorNome } = await supabase
-      .from("masterlist")
-      .select("*")
-      .ilike("nome", val);
+    // Busca por COG
+    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", val);
+    const { data: itensPorNome } = await supabase.from("masterlist").select("*").ilike("nome", val);
+    itensEncontrados = (itens && itens.length > 0) ? itens : (itensPorNome && itensPorNome.length > 0) ? itensPorNome : null;
 
-    if (itensPorNome && itensPorNome.length > 0) {
-      const user = { cog: itensPorNome[0].cog, nome: itensPorNome[0].nome || val };
-      onLogin(user, itensPorNome);
-      setLoading(false);
-      return;
+    if (!itensEncontrados) {
+      setError("COG não encontrado. Entre em contato com a Nanda para ter acesso.");
+      setLoading(false); return;
     }
 
-    setError("COG ou nome não encontrado.");
+    cogReal = itensEncontrados[0].cog;
+    nomeReal = itensEncontrados[0].nome || cogReal;
+
+    setCogTemp(cogReal);
+    setNomeTemp(nomeReal);
+    setItensTemp(itensEncontrados);
+
+    const { data: joiner } = await supabase.from("joiners").select("*").eq("cog", cogReal).single();
+
+    if (!joiner || !joiner.senha) {
+      setMode("criar-senha");
+    } else {
+      setJoinerTemp(joiner);
+      setMode("senha");
+    }
+    setLoading(false);
+  }
+
+  async function handleConfirmarSenha() {
+    setLoading(true); setError("");
+    if (senha !== joinerTemp.senha) { setError("Senha incorreta."); setLoading(false); return; }
+    const user = { ...joinerTemp, nome: nomeTemp };
+    localStorage.setItem("anticeg_user", JSON.stringify(user));
+    onLogin(user, itensTemp);
+    setLoading(false);
+  }
+
+  async function handleCriarSenha() {
+    setLoading(true); setError("");
+    if (senha.length < 6) { setError("Senha deve ter pelo menos 6 caracteres."); setLoading(false); return; }
+    if (senha !== senhaConfirm) { setError("As senhas não coincidem."); setLoading(false); return; }
+
+    const { data: existe } = await supabase.from("joiners").select("id").eq("cog", cogTemp).single();
+    if (existe) {
+      await supabase.from("joiners").update({ senha }).eq("cog", cogTemp);
+    } else {
+      await supabase.from("joiners").insert([{ cog: cogTemp, senha }]);
+    }
+
+    const { data: joiner } = await supabase.from("joiners").select("*").eq("cog", cogTemp).single();
+    const user = { ...joiner, nome: nomeTemp };
+    localStorage.setItem("anticeg_user", JSON.stringify(user));
+    onLogin(user, itensTemp);
     setLoading(false);
   }
 
@@ -179,76 +243,115 @@ function LoginScreen({ onLogin }) {
     if (!nome.trim()) { setError("Nome obrigatório."); setLoading(false); return; }
     if (!email.trim().includes("@")) { setError("E-mail inválido."); setLoading(false); return; }
     if (senha.length < 6) { setError("Senha deve ter pelo menos 6 caracteres."); setLoading(false); return; }
-
     const { data: existe } = await supabase.from("usuarios").select("id").eq("email", email.trim().toLowerCase()).single();
     if (existe) { setError("E-mail já cadastrado."); setLoading(false); return; }
-
     const novoUsuario = { nome: nome.trim(), twitter: twitter.trim(), whatsapp: whatsapp.trim(), estado, email: email.trim().toLowerCase(), senha };
     const { error: err } = await supabase.from("usuarios").insert([novoUsuario]);
-    if (err) { setError("Erro ao cadastrar. Tente novamente."); setLoading(false); return; }
-
+    if (err) { setError("Erro ao cadastrar."); setLoading(false); return; }
     onLogin(novoUsuario, []);
     setLoading(false);
   }
 
+  const logoBlock = (sub) => (
+    <>
+      <div className="login-eyebrow">masterlist · {sub}</div>
+      <div className="login-title">ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST</div>
+    </>
+  );
+
   if (mode === "escolha") return (
-    <div className="login-screen">
-      <div className="login-wrap">
-        <div className="login-eyebrow">masterlist · acesso</div>
-        <div className="login-title">ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST</div>
-        <div className="login-box">
-          <button className="login-btn" onClick={() => setMode("cog")}>TENHO COG →</button>
-          <button className="login-btn" style={{ background: "transparent", border: "1px solid var(--laranja)", color: "var(--laranja)" }} onClick={() => setMode("cadastro")}>QUERO ME CADASTRAR →</button>
+    <div className="login-screen"><div className="login-wrap">
+      {logoBlock("acesso")}
+      <div className="login-box">
+        <button className="login-btn" onClick={() => setMode("cog")}>ACESSAR COM COG OU E-MAIL →</button>
+        <div style={{ textAlign: "center", fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.35)", padding: "8px 0" }}>
+          Não tem acesso ainda?
         </div>
+        <a href={`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent("Olá! Quero solicitar acesso ao portal ANTICEG.")}`}
+          target="_blank" rel="noopener noreferrer"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "transparent", border: "1px solid rgba(245,240,232,.15)", color: "rgba(245,240,232,.5)", fontFamily: "'DM Mono', monospace", fontSize: "var(--fs-xs)", fontWeight: 600, padding: "14px", borderRadius: "6px", textDecoration: "none", letterSpacing: "1px", transition: "all .15s" }}
+          onMouseOver={e => { e.currentTarget.style.borderColor = "var(--verde)"; e.currentTarget.style.color = "var(--verde)"; }}
+          onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.15)"; e.currentTarget.style.color = "rgba(245,240,232,.5)"; }}>
+          💬 SOLICITAR ACESSO
+        </a>
       </div>
-    </div>
+    </div></div>
   );
 
   if (mode === "cog") return (
-    <div className="login-screen">
-      <div className="login-wrap">
-        <div className="login-eyebrow">masterlist · acesso por COG</div>
-        <div className="login-title">ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST</div>
-        <div className="login-box">
-          <label className="login-label">Seu COG ou nome</label>
-          <input className="login-input" type="text" placeholder="Seu código da masterlist ou e-mail" value={input}
-            onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLoginCOG()}
-            style={{ borderColor: error ? "var(--laranja)" : "" }} />
-          <button className="login-btn" onClick={handleLoginCOG} disabled={loading}>{loading ? "BUSCANDO..." : "ACESSAR →"}</button>
-          <button className="login-skip" onClick={() => { setMode("escolha"); setError(""); }}>← Voltar</button>
-          {error && <div className="login-error">{error}</div>}
-        </div>
+    <div className="login-screen"><div className="login-wrap">
+      {logoBlock("acesso por COG")}
+      <div className="login-box">
+        <label className="login-label">Seu COG ou e-mail</label>
+        <input className="login-input" type="text" placeholder="Ex: SEU CODIGO ou seuemail@email.com" value={input}
+          onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLoginCOG()}
+          style={{ borderColor: error ? "var(--laranja)" : "" }} />
+        <button className="login-btn" onClick={handleLoginCOG} disabled={loading}>{loading ? "BUSCANDO..." : "CONTINUAR →"}</button>
+        <button className="login-skip" onClick={() => { setMode("escolha"); setError(""); }}>← Voltar</button>
+        {error && <div className="login-error">{error}</div>}
       </div>
-    </div>
+    </div></div>
+  );
+
+  if (mode === "senha") return (
+    <div className="login-screen"><div className="login-wrap">
+      {logoBlock("acesso")}
+      <div className="login-box">
+        <div style={{ fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.4)", marginBottom: 4 }}>COG: <span style={{ color: "var(--lilas)" }}>{cogTemp}</span></div>
+        <label className="login-label">Sua senha</label>
+        <input className="login-input" type="password" placeholder="••••••" value={senha}
+          onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === "Enter" && handleConfirmarSenha()} />
+        <button className="login-btn" onClick={handleConfirmarSenha} disabled={loading}>{loading ? "VERIFICANDO..." : "ENTRAR →"}</button>
+        <button className="login-skip" onClick={() => { setMode("cog"); setError(""); setSenha(""); }}>← Voltar</button>
+        {error && <div className="login-error">{error}</div>}
+      </div>
+    </div></div>
+  );
+
+  if (mode === "criar-senha") return (
+    <div className="login-screen"><div className="login-wrap">
+      {logoBlock("primeiro acesso")}
+      <div className="login-box">
+        <div style={{ fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.4)", marginBottom: 4 }}>COG: <span style={{ color: "var(--lilas)" }}>{cogTemp}</span></div>
+        <div style={{ fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.5)", padding: "8px 12px", background: "rgba(201,168,240,.08)", border: "1px solid rgba(201,168,240,.15)", borderRadius: 4 }}>
+          Primeiro acesso! Crie uma senha para entrar nas próximas vezes.
+        </div>
+        <label className="login-label">Criar senha *</label>
+        <input className="login-input" type="password" placeholder="mínimo 6 caracteres" value={senha} onChange={e => setSenha(e.target.value)} />
+        <label className="login-label">Confirmar senha *</label>
+        <input className="login-input" type="password" placeholder="repita a senha" value={senhaConfirm}
+          onChange={e => setSenhaConfirm(e.target.value)} onKeyDown={e => e.key === "Enter" && handleCriarSenha()} />
+        <button className="login-btn" onClick={handleCriarSenha} disabled={loading}>{loading ? "SALVANDO..." : "CRIAR SENHA E ENTRAR →"}</button>
+        <button className="login-skip" onClick={() => { setMode("cog"); setError(""); setSenha(""); setSenhaConfirm(""); }}>← Voltar</button>
+        {error && <div className="login-error">{error}</div>}
+      </div>
+    </div></div>
   );
 
   if (mode === "cadastro") return (
-    <div className="login-screen">
-      <div className="login-wrap">
-        <div className="login-eyebrow">masterlist · cadastro</div>
-        <div className="login-title">ANTI<span className="lo">CEG</span><br /><span className="lg">CADASTRO</span></div>
-        <div className="login-box">
-          <label className="login-label">Nome completo *</label>
-          <input className="login-input" type="text" placeholder="Seu nome" value={nome} onChange={e => setNome(e.target.value)} />
-          <label className="login-label">@ no Twitter</label>
-          <input className="login-input" type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} />
-          <label className="login-label">WhatsApp</label>
-          <input className="login-input" type="text" placeholder="(11) 99999-9999" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
-          <label className="login-label">Estado (opcional)</label>
-          <select className="login-input" value={estado} onChange={e => setEstado(e.target.value)} style={{ cursor: "pointer" }}>
-            <option value="">Selecione...</option>
-            {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
-          <label className="login-label">E-mail *</label>
-          <input className="login-input" type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-          <label className="login-label">Senha * (mínimo 6 caracteres)</label>
-          <input className="login-input" type="password" placeholder="••••••" value={senha} onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === "Enter" && handleCadastro()} />
-          <button className="login-btn" onClick={handleCadastro} disabled={loading}>{loading ? "CADASTRANDO..." : "CADASTRAR →"}</button>
-          <button className="login-skip" onClick={() => { setMode("escolha"); setError(""); }}>← Voltar</button>
-          {error && <div className="login-error">{error}</div>}
-        </div>
+    <div className="login-screen"><div className="login-wrap">
+      {logoBlock("cadastro")}
+      <div className="login-box">
+        <label className="login-label">Nome completo *</label>
+        <input className="login-input" type="text" placeholder="Seu nome" value={nome} onChange={e => setNome(e.target.value)} />
+        <label className="login-label">@ no Twitter</label>
+        <input className="login-input" type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} />
+        <label className="login-label">WhatsApp</label>
+        <input className="login-input" type="text" placeholder="(11) 99999-9999" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
+        <label className="login-label">Estado (opcional)</label>
+        <select className="login-input" value={estado} onChange={e => setEstado(e.target.value)} style={{ cursor: "pointer" }}>
+          <option value="">Selecione...</option>
+          {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+        </select>
+        <label className="login-label">E-mail *</label>
+        <input className="login-input" type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+        <label className="login-label">Senha * (mínimo 6 caracteres)</label>
+        <input className="login-input" type="password" placeholder="••••••" value={senha} onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === "Enter" && handleCadastro()} />
+        <button className="login-btn" onClick={handleCadastro} disabled={loading}>{loading ? "CADASTRANDO..." : "CADASTRAR →"}</button>
+        <button className="login-skip" onClick={() => { setMode("escolha"); setError(""); }}>← Voltar</button>
+        {error && <div className="login-error">{error}</div>}
       </div>
-    </div>
+    </div></div>
   );
 }
 
@@ -341,14 +444,13 @@ function MasterlistTab({ user, itens }) {
       <div className="table-wrap">
         <table>
           <thead>
-        <tr className="col-group-header">
-  <th colSpan={4}></th>
-  <th colSpan={4}>VALORES A PAGAR</th>
-  <th className="status-group" colSpan={2}>STATUS</th>
-  <th>PAGAR</th>
-</tr>
+            <tr className="col-group-header">
+              <th colSpan={3}></th>
+              <th colSpan={4}>VALORES A PAGAR</th>
+              <th className="status-group" colSpan={2}>STATUS</th>
+              <th>PAGAR</th>
+            </tr>
             <tr className="thead-cols">
-              <th style={{width:20}}></th>
               <th>CEG</th>
               <th>NOME DO ITEM</th>
               <th>COG</th>
@@ -371,7 +473,6 @@ function MasterlistTab({ user, itens }) {
               return (
                 <>
                   <tr key={item.id}>
-                    <td><button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button></td>
                     <td className="td-ceg">{item.ceg}</td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
                     <td className="td-cog">{item.cog}</td>
@@ -385,12 +486,15 @@ function MasterlistTab({ user, itens }) {
                         <ProgressMini activeIdx={ai} />
                       </div>
                     </td>
-                    <td>{item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}</td>
+                    <td>
+                      {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
+                      <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)} style={{marginTop: item.info_adicionais ? 4 : 0}}>▾</button>
+                    </td>
                     <td><PayButtons item={item} /></td>
                   </tr>
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
-                      <td colSpan={11}><Timeline activeIdx={ai} /></td>
+                      <td colSpan={10}><Timeline activeIdx={ai} /></td>
                     </tr>
                   )}
                 </>
@@ -400,7 +504,7 @@ function MasterlistTab({ user, itens }) {
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
-                <td colSpan={5}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
+                <td colSpan={4}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
                 <td colSpan={2}>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
               </tr>
             )}
@@ -417,22 +521,57 @@ function PerfilTab({ user, onUpdate }) {
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
   const [estado, setEstado] = useState(user.estado || "");
   const [email, setEmail] = useState(user.email || "");
+  // endereço
+  const [cep, setCep] = useState(user.cep || "");
+  const [rua, setRua] = useState(user.rua || "");
+  const [numero, setNumero] = useState(user.numero || "");
+  const [complemento, setComplemento] = useState(user.complemento || "");
+  const [bairro, setBairro] = useState(user.bairro || "");
+  const [cidade, setCidade] = useState(user.cidade || "");
+  // senha
+  const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const temCOG = !!user.cog && !user.email;
+  async function buscarCep(v) {
+    const c = v.replace(/\D/g, "");
+    setCep(v);
+    if (c.length === 8) {
+      try {
+        const r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
+        const d = await r.json();
+        if (!d.erro) {
+          setRua(d.logradouro || "");
+          setBairro(d.bairro || "");
+          setCidade(d.localidade || "");
+          setEstado(d.uf || "");
+        }
+      } catch {}
+    }
+  }
 
   async function handleSalvar() {
     setLoading(true); setError(""); setSuccess("");
-    const updates = { nome, twitter, whatsapp, estado, email };
+
     if (novaSenha) {
       if (novaSenha.length < 6) { setError("Nova senha deve ter pelo menos 6 caracteres."); setLoading(false); return; }
-      updates.senha = novaSenha;
+      if (novaSenha !== confirmarSenha) { setError("As senhas não coincidem."); setLoading(false); return; }
+      if (user.cog && senhaAtual !== user.senha) { setError("Senha atual incorreta."); setLoading(false); return; }
     }
 
-    if (!temCOG) {
+    const updates = {
+      nome, twitter, whatsapp, estado, email,
+      cep, rua, numero, complemento, bairro, cidade,
+      ...(novaSenha ? { senha: novaSenha } : {})
+    };
+
+    if (user.cog) {
+      const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
+      if (err) { setError("Erro ao salvar."); setLoading(false); return; }
+    } else {
       const { error: err } = await supabase.from("usuarios").update(updates).eq("email", user.email);
       if (err) { setError("Erro ao salvar."); setLoading(false); return; }
     }
@@ -441,39 +580,79 @@ function PerfilTab({ user, onUpdate }) {
     localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
     onUpdate(updatedUser);
     setSuccess("Perfil atualizado com sucesso!");
+    setSenhaAtual(""); setNovaSenha(""); setConfirmarSenha("");
     setLoading(false);
   }
 
+  const inputStyle = { width: "100%", marginTop: 6 };
+  const sectionTitle = (t) => (
+    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", letterSpacing: 1, marginTop: 8, marginBottom: 4, paddingTop: 16, borderTop: "1px solid #1e1e1e" }}>{t}</div>
+  );
+
   return (
-<div className="main" style={{ maxWidth: 600, margin: '0 auto' }}>
-        <div className="page-header">
+    <div className="main" style={{ maxWidth: 600, margin: "0 auto" }}>
+      <div className="page-header">
         <div>
           <div className="page-eyebrow">anticeg · seu perfil</div>
           <div className="page-title">MEU<span> PERFIL</span></div>
         </div>
       </div>
-      <div className="login-box" style={{ gap: 16 }}>
+      <div className="login-box" style={{ gap: 14 }}>
         {user.cog && (
           <div>
             <div className="login-label" style={{ marginBottom: 6 }}>COG (fixo)</div>
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "12px 16px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono', monospace", fontSize: 13 }}>{user.cog}</div>
           </div>
         )}
-        <div><label className="login-label">Nome completo</label><input className="login-input" style={{ width: "100%", marginTop: 6 }} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
-        <div><label className="login-label">@ no Twitter</label><input className="login-input" style={{ width: "100%", marginTop: 6 }} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
-        <div><label className="login-label">WhatsApp</label><input className="login-input" style={{ width: "100%", marginTop: 6 }} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
-        <div>
-          <label className="login-label">Estado</label>
-          <select className="login-input" style={{ width: "100%", marginTop: 6, cursor: "pointer" }} value={estado} onChange={e => setEstado(e.target.value)}>
-            <option value="">Selecione...</option>
-            {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
+
+        <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
+        <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
+        <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
+        {!user.cog && <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>}
+
+        {sectionTitle("⋆ Endereço")}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="login-label">CEP</label>
+            <input className="login-input" style={inputStyle} type="text" placeholder="00000-000" value={cep} onChange={e => buscarCep(e.target.value)} maxLength={9} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="login-label">Rua</label>
+            <input className="login-input" style={inputStyle} type="text" value={rua} onChange={e => setRua(e.target.value)} />
+          </div>
+          <div>
+            <label className="login-label">Número</label>
+            <input className="login-input" style={inputStyle} type="text" value={numero} onChange={e => setNumero(e.target.value)} />
+          </div>
+          <div>
+            <label className="login-label">Complemento</label>
+            <input className="login-input" style={inputStyle} type="text" placeholder="Apto, bloco..." value={complemento} onChange={e => setComplemento(e.target.value)} />
+          </div>
+          <div>
+            <label className="login-label">Bairro</label>
+            <input className="login-input" style={inputStyle} type="text" value={bairro} onChange={e => setBairro(e.target.value)} />
+          </div>
+          <div>
+            <label className="login-label">Cidade</label>
+            <input className="login-input" style={inputStyle} type="text" value={cidade} onChange={e => setCidade(e.target.value)} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="login-label">Estado</label>
+            <select className="login-input" style={{ ...inputStyle, cursor: "pointer" }} value={estado} onChange={e => setEstado(e.target.value)}>
+              <option value="">Selecione...</option>
+              {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
         </div>
-        {!temCOG && <div><label className="login-label">E-mail</label><input className="login-input" style={{ width: "100%", marginTop: 6 }} type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>}
-        {!temCOG && <div><label className="login-label">Nova senha (deixe em branco para não alterar)</label><input className="login-input" style={{ width: "100%", marginTop: 6 }} type="password" placeholder="••••••" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} /></div>}
+
+        {sectionTitle("⋆ Senha")}
+        <div><label className="login-label">Senha atual</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} /></div>
+        <div><label className="login-label">Nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="mínimo 6 caracteres" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} /></div>
+        <div><label className="login-label">Confirmar nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} /></div>
+
         {error && <div className="login-error">{error}</div>}
         {success && <div style={{ fontSize: "var(--fs-xs)", color: "var(--verde)", padding: "8px 12px", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 4 }}>{success}</div>}
-        <button className="login-btn" onClick={handleSalvar} disabled={loading}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
+        <button className="login-btn" onClick={handleSalvar} disabled={loading} style={{ marginTop: 8 }}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
       </div>
     </div>
   );
@@ -578,8 +757,8 @@ function RegrasTab() {
     { p: "Posso retirar pessoalmente?", r: "Sim, se estivermos na mesma região." },
   ];
   return (
-<div className="main" style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div className="page-header"><div><div className="page-eyebrow">anticeg · comunidade</div><div className="page-title">REGRAS DA<span> COMU</span></div></div></div>
+    <div className="main" style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div className="page-header"><div><div className="page-eyebrow">anticeg · comunidade</div><div className="page-title">REGRAS DA<span> COMU</span></div></div></div>
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {secoes.map((s, i) => (
           <div key={i} style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: 24 }}>
@@ -607,7 +786,7 @@ function RegrasTab() {
         <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: 24 }}>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", marginBottom: 16, letterSpacing: 1 }}>⋆ Contato & Suporte</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10, fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.7)" }}><span style={{ color: "var(--verde)" }}>☆</span><span>Dúvidas? Chama a Nanda no WhatsApp — quase sempre disponível!</span></div>
+            <div style={{ display: "flex", gap: 10, fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.7)" }}><span style={{ color: "var(--verde)" }}>☆</span><span>Dúvidas? Chama a Nanda no WhatsApp!</span></div>
             <a href={`https://wa.me/${WHATSAPP_NUM}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "var(--verde)", color: "#0D0D0D", fontFamily: "'DM Mono', monospace", fontSize: "var(--fs-xs)", fontWeight: 600, padding: "10px 20px", borderRadius: 6, textDecoration: "none", width: "fit-content", marginTop: 8 }}>💬 Falar no WhatsApp</a>
           </div>
         </div>
@@ -636,7 +815,6 @@ export default function App() {
     setTab("masterlist");
   }
 
-  // Recarrega itens ao voltar com sessão salva
   useState(() => {
     if (user && user.cog) {
       supabase.from("masterlist").select("*").eq("cog", user.cog).then(({ data }) => {
