@@ -16,7 +16,11 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { height: 100%; }
+
+/* BUG 1 FIX: #root precisa de display:flex para o login-screen centralizar corretamente */
+html, body { height: 100%; }
+#root { min-height: 100%; display: flex; flex-direction: column; }
+
 body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono', monospace; }
 
 .topbar { display:flex; align-items:center; justify-content:space-between; padding:0 32px; height:52px; background:#080808; border-bottom:1px solid #1a1a1a; position:sticky; top:0; z-index:100; }
@@ -34,7 +38,7 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .tab-btn:hover { color:var(--offwhite); }
 .tab-btn.active { color:var(--laranja); border-bottom-color:var(--laranja); }
 
-.login-screen { height:100%; display:flex; align-items:center; justify-content:center; background:var(--preto); padding:24px; }
+.login-screen { flex:1; display:flex; align-items:center; justify-content:center; background:var(--preto); padding:24px; }
 .login-wrap { width:100%; max-width:480px; }
 .login-eyebrow { font-size:var(--fs-xs); color:rgba(245,240,232,.4); letter-spacing:2px; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
 .login-eyebrow::before { content:''; display:inline-block; width:24px; height:2px; background:var(--laranja); }
@@ -52,7 +56,7 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .login-skip:hover { color:var(--offwhite); }
 .login-error { font-size:var(--fs-xs); color:var(--laranja); padding:8px 12px; background:rgba(255,92,26,.08); border:1px solid rgba(255,92,26,.2); border-radius:4px; }
 
-.main { padding:32px; max-width:1600px; margin:0 auto; }
+.main { padding:32px; width:100%; }
 .page-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #1a1a1a; }
 .page-eyebrow { font-size:var(--fs-xs); color:rgba(245,240,232,.35); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
 .page-eyebrow::before { content:''; display:inline-block; width:18px; height:2px; background:var(--laranja); }
@@ -82,11 +86,14 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 
 .table-wrap { overflow-x:auto; border:1px solid #1e1e1e; border-radius:8px; }
 table { width:100%; border-collapse:collapse; font-size:var(--fs-xs); }
-thead { position:sticky; top:52px; z-index:10; }
+thead { position:sticky; top:0px; z-index:10; }
 .col-group-header th { background:#1a0f08; color:rgba(245,240,232,.3); font-size:9px; letter-spacing:2px; text-align:center; padding:6px 8px; border-bottom:1px solid #2a1a0f; }
 .col-group-header th:nth-child(2) { color:var(--laranja); border-left:1px solid #3a1a08; border-right:1px solid #3a1a08; }
 .status-group { color:var(--lilas) !important; }
-tr:nth-child(2) th { background:#141414; color:rgba(245,240,232,.4); font-size:9px; letter-spacing:1.5px; padding:8px 10px; text-align:left; border-bottom:1px solid #222; white-space:nowrap; }
+
+/* BUG 2 FIX: Substituído o seletor frágil tr:nth-child(2) por uma classe explícita .thead-cols */
+.thead-cols th { background:#141414; color:rgba(245,240,232,.4); font-size:9px; letter-spacing:1.5px; padding:8px 10px; text-align:left; border-bottom:1px solid #222; white-space:nowrap; }
+
 tbody tr { border-bottom:1px solid #181818; transition:background .1s; }
 tbody tr:hover { background:#141414; }
 tbody tr:last-child { border-bottom:none; }
