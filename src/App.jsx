@@ -211,7 +211,7 @@ function LoginScreen({ onLogin }) {
         <div className="login-title">ANTI<span className="lo">CEG</span><br /><span className="lg">MASTER</span><br />LIST</div>
         <div className="login-box">
           <label className="login-label">Seu COG ou nome</label>
-          <input className="login-input" type="text" placeholder="Ex: Morri7 ou Nanda" value={input}
+          <input className="login-input" type="text" placeholder="Seu código da masterlist ou e-mail" value={input}
             onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLoginCOG()}
             style={{ borderColor: error ? "var(--laranja)" : "" }} />
           <button className="login-btn" onClick={handleLoginCOG} disabled={loading}>{loading ? "BUSCANDO..." : "ACESSAR →"}</button>
