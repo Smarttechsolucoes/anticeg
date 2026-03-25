@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 
@@ -9,6 +9,7 @@ const supabase = createClient(
 
 const FORMS_URL = "https://forms.gle/vMyjCKG4Dj2yhryP7";
 const WHATSAPP_NUM = "5524992501917";
+const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
 const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 function fmtBRL(val, hidden) {
@@ -42,6 +43,8 @@ const chipMap = {
   "Chegou Aqui":     ["chip-aqui",      "Chegou Aqui"],
   "Envio Liberado":  ["chip-nacional",  "Envio Liberado"],
   "Enviado Nacional":["chip-enviado",   "Enviado Nacional"],
+  "Disponível":      ["chip-loja-disp", "Disponível"],
+  "Vendido":         ["chip-loja-vend", "Vendido"],
 };
 
 function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status); }
@@ -355,10 +358,72 @@ function LoginScreen({ onLogin }) {
   );
 }
 
+function CegModal({ ceg, onClose }) {
+  const [itens, setItens] = useState(null);
+
+  useEffect(() => {
+    supabase.from("masterlist").select("*").eq("ceg", ceg).then(({ data }) => {
+      setItens(data || []);
+    });
+  }, [ceg]);
+
+  const byJoiner = itens
+    ? itens.reduce((acc, item) => {
+        const key = item.nome || item.cog;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {})
+    : {};
+
+  return (
+    <div className="ceg-modal-overlay" onClick={onClose}>
+      <div className="ceg-modal" onClick={e => e.stopPropagation()}>
+        <div className="ceg-modal-header">
+          <div>
+            <div style={{ fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.4)", letterSpacing: 2, marginBottom: 4 }}>COMPRA EM GRUPO</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-2xl)", color: "var(--laranja)", lineHeight: 1 }}>CEG {ceg}</div>
+          </div>
+          <button className="ceg-modal-close" onClick={onClose}>✕</button>
+        </div>
+        {itens === null ? (
+          <div className="ceg-modal-loading">carregando...</div>
+        ) : (
+          <div className="ceg-modal-body">
+            {itens.length === 0 ? (
+              <div className="ceg-modal-loading">nenhum item encontrado</div>
+            ) : (
+              <>
+                <div className="ceg-modal-summary">
+                  <span>{itens.length} itens</span>
+                  <span>·</span>
+                  <span>{Object.keys(byJoiner).length} joiners</span>
+                </div>
+                {Object.entries(byJoiner).map(([joiner, items]) => (
+                  <div key={joiner} className="ceg-joiner-group">
+                    <div className="ceg-joiner-name">{joiner}</div>
+                    {items.map(item => (
+                      <div key={item.id} className="ceg-joiner-item">
+                        <span className="ceg-item-name">{item.nome_do_item}</span>
+                        <StatusChip status={item.status} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MasterlistTab({ user, itens }) {
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
+  const [cegModal, setCegModal] = useState(null);
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
@@ -473,7 +538,7 @@ function MasterlistTab({ user, itens }) {
               return (
                 <>
                   <tr key={item.id}>
-                    <td className="td-ceg">{item.ceg}</td>
+                    <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
                     <td className="td-cog">{item.cog}</td>
                     <td><ValCell val={item.valor_item} status={item.pag_item} /></td>
@@ -511,6 +576,7 @@ function MasterlistTab({ user, itens }) {
           </tbody>
         </table>
       </div>
+      {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
     </div>
   );
 }
@@ -795,6 +861,291 @@ function RegrasTab() {
   );
 }
 
+function AntiStoreTab({ user }) {
+  const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("masterlist").select("*").eq("nome", "Disponível").then(({ data }) => {
+      setItens(data || []);
+      setLoading(false);
+    });
+  }, []);
+
+  function claimMsg(item) {
+    const total = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0);
+    const msg = `Olá Nanda! Quero dar claim no item: *${item.nome_do_item}* — R$ ${fmtBRL(total)}\nMeu COG: ${user.cog || user.nome || user.email}`;
+    return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
+  }
+
+  return (
+    <div className="main">
+      <div className="page-header">
+        <div>
+          <div className="page-eyebrow">anticeg · repasses</div>
+          <div className="page-title">ANTI<span>STORE</span></div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div className="greeting-sub" style={{ marginTop: 8 }}>{itens.length} {itens.length === 1 ? "item disponível" : "itens disponíveis"}</div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>carregando...</div>
+      ) : itens.length === 0 ? (
+        <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>nenhum item disponível no momento</div>
+      ) : (
+        <div className="store-grid">
+          {itens.map(item => (
+            <div key={item.id} className="store-card">
+              <div className="store-card-img">
+                {item.cog
+                  ? <img src={item.cog} alt={item.nome_do_item} />
+                  : <div className="store-no-img">sem foto</div>
+                }
+              </div>
+              <div className="store-card-body">
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6 }}>
+                  <div className="store-card-name">{item.nome_do_item}</div>
+                  {item.status && <StatusChip status={item.status} />}
+                </div>
+                {item.info_adicionais && <div className="store-card-desc">{item.info_adicionais}</div>}
+                <div className="store-card-meta">
+                  <span className="store-card-cog">CEG {item.ceg || "—"}</span>
+                  <span className="store-card-valor">R$ {fmtBRL(Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0))}</span>
+                </div>
+                {item.status !== "Vendido" && (
+                  <a href={claimMsg(item)} target="_blank" rel="noopener noreferrer" className="store-claim-btn">
+                    ⚡ DAR CLAIM
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function usePhotoUpload() {
+  const [foto, setFoto] = useState(null);
+  const [preview, setPreview] = useState("");
+  function onFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFoto(file); setPreview(URL.createObjectURL(file));
+  }
+  async function upload() {
+    if (!foto) return null;
+    const ext = foto.name.split(".").pop();
+    const path = `itens/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("anti-store").upload(path, foto, { upsert: true });
+    if (error) throw new Error(error.message);
+    return supabase.storage.from("anti-store").getPublicUrl(path).data.publicUrl;
+  }
+  function reset() { setFoto(null); setPreview(""); }
+  return { foto, preview, onFile, upload, reset };
+}
+
+function AdminItemRow({ item, onRefresh }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    nome_do_item: item.nome_do_item || "",
+    ceg: item.ceg || "",
+    valor_item: item.valor_item || "",
+    frete_inter: item.frete_inter || "",
+    taxa_rf: item.taxa_rf || "",
+    nacional: item.nacional || "",
+    info_adicionais: item.info_adicionais || "",
+  });
+  const photo = usePhotoUpload();
+
+  async function handleSave() {
+    setSaving(true);
+    let fotoUrl = item.cog || "";
+    if (photo.foto) {
+      try { fotoUrl = await photo.upload(); } catch (e) { alert("Erro no upload: " + e.message); setSaving(false); return; }
+    }
+    await supabase.from("masterlist").update({
+      cog: fotoUrl,
+      nome_do_item: editForm.nome_do_item,
+      ceg: editForm.ceg,
+      valor_item: parseFloat(editForm.valor_item) || 0,
+      frete_inter: parseFloat(editForm.frete_inter) || 0,
+      taxa_rf: parseFloat(editForm.taxa_rf) || 0,
+      nacional: parseFloat(editForm.nacional) || 0,
+      info_adicionais: editForm.info_adicionais,
+    }).eq("id", item.id);
+    setSaving(false);
+    setOpen(false);
+    photo.reset();
+    onRefresh();
+  }
+
+  async function toggleStatus() {
+    const next = item.status === "Disponível" ? "Vendido" : "Disponível";
+    await supabase.from("masterlist").update({ status: next }).eq("id", item.id);
+    onRefresh();
+  }
+
+  async function handleDelete() {
+    if (!confirm("Remover este item da loja?")) return;
+    await supabase.from("masterlist").delete().eq("id", item.id);
+    onRefresh();
+  }
+
+  const inp = { className: "admin-input" };
+  const fotoAtual = photo.preview || item.cog;
+  const total = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0);
+
+  return (
+    <div className={`admin-item-wrap ${open ? "open" : ""}`}>
+      <div className="admin-item" onClick={() => setOpen(o => !o)} style={{ cursor:"pointer" }}>
+        {item.cog
+          ? <img src={item.cog} alt="" className="admin-item-img" />
+          : <div className="admin-item-img-empty">+foto</div>
+        }
+        <div className="admin-item-info">
+          <div className="admin-item-name">{item.nome_do_item}</div>
+          <div className="admin-item-ceg">{item.ceg || "—"} · R$ {fmtBRL(total)}</div>
+        </div>
+        <div className="admin-item-actions" onClick={e => e.stopPropagation()}>
+          <button className={`admin-toggle ${item.status === "Vendido" ? "vendido" : "disp"}`} onClick={toggleStatus}>
+            {item.status === "Vendido" ? "Vendido" : "Disponível"}
+          </button>
+          <button className="admin-del-btn" onClick={handleDelete}>✕</button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="admin-edit-form">
+          <div className="admin-foto-row">
+            <label className="admin-foto-label">
+              {fotoAtual
+                ? <img src={fotoAtual} alt="preview" className="admin-foto-preview" />
+                : <div className="admin-foto-placeholder">+ foto</div>
+              }
+              <input type="file" accept="image/*" style={{ display:"none" }} onChange={photo.onFile} />
+            </label>
+            <div className="admin-form-fields">
+              <input {...inp} placeholder="Nome do item *" value={editForm.nome_do_item} onChange={e => setEditForm(f => ({ ...f, nome_do_item: e.target.value }))} />
+              <input {...inp} placeholder="CEG (ex: DOME JP☆)" value={editForm.ceg} onChange={e => setEditForm(f => ({ ...f, ceg: e.target.value }))} />
+              <div className="admin-money-row">
+                <input {...inp} placeholder="Valor item" type="number" step="0.01" value={editForm.valor_item} onChange={e => setEditForm(f => ({ ...f, valor_item: e.target.value }))} />
+                <input {...inp} placeholder="Frete inter." type="number" step="0.01" value={editForm.frete_inter} onChange={e => setEditForm(f => ({ ...f, frete_inter: e.target.value }))} />
+                <input {...inp} placeholder="Taxa RF" type="number" step="0.01" value={editForm.taxa_rf} onChange={e => setEditForm(f => ({ ...f, taxa_rf: e.target.value }))} />
+                <input {...inp} placeholder="Nacional" type="number" step="0.01" value={editForm.nacional} onChange={e => setEditForm(f => ({ ...f, nacional: e.target.value }))} />
+              </div>
+              <input {...inp} placeholder="Descrição / info adicionais" value={editForm.info_adicionais} onChange={e => setEditForm(f => ({ ...f, info_adicionais: e.target.value }))} />
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:8, marginTop:4 }}>
+            <button className="admin-save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
+            <button className="admin-cancel-btn" onClick={() => { setOpen(false); photo.reset(); }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminTab() {
+  const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [form, setForm] = useState({
+    nome_do_item: "", ceg: "", valor_item: "", frete_inter: "",
+    taxa_rf: "", nacional: "", info_adicionais: "",
+  });
+  const photo = usePhotoUpload();
+
+  function fetchItens() {
+    supabase.from("masterlist").select("*").eq("nome", "Disponível")
+      .order("id", { ascending: false })
+      .then(({ data }) => { setItens(data || []); setLoading(false); });
+  }
+
+  useEffect(() => { fetchItens(); }, []);
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    if (!form.nome_do_item) { setMsg("Nome do item é obrigatório."); return; }
+    setSaving(true); setMsg("");
+    let fotoUrl = "";
+    if (photo.foto) {
+      try { fotoUrl = await photo.upload(); } catch (err) { setMsg("Erro no upload: " + err.message); setSaving(false); return; }
+    }
+    const { error } = await supabase.from("masterlist").insert({
+      nome: "Disponível", cog: fotoUrl,
+      nome_do_item: form.nome_do_item, ceg: form.ceg,
+      valor_item: parseFloat(form.valor_item) || 0,
+      frete_inter: parseFloat(form.frete_inter) || 0,
+      taxa_rf: parseFloat(form.taxa_rf) || 0,
+      nacional: parseFloat(form.nacional) || 0,
+      info_adicionais: form.info_adicionais,
+      status: "Disponível",
+    });
+    setSaving(false);
+    if (error) { setMsg("Erro: " + error.message); return; }
+    setMsg("✓ Item adicionado!");
+    setForm({ nome_do_item: "", ceg: "", valor_item: "", frete_inter: "", taxa_rf: "", nacional: "", info_adicionais: "" });
+    photo.reset();
+    fetchItens();
+  }
+
+  const inp = { className: "admin-input" };
+
+  return (
+    <div className="admin-wrap">
+      <h2 className="admin-title">⚙ Admin — Anti-Store</h2>
+
+      <form className="admin-form" onSubmit={handleAdd}>
+        <div className="admin-form-section-label">Novo item</div>
+        <div className="admin-foto-row">
+          <label className="admin-foto-label">
+            {photo.preview
+              ? <img src={photo.preview} alt="preview" className="admin-foto-preview" />
+              : <div className="admin-foto-placeholder">+ foto</div>
+            }
+            <input type="file" accept="image/*" style={{ display:"none" }} onChange={photo.onFile} />
+          </label>
+          <div className="admin-form-fields">
+            <input {...inp} placeholder="Nome do item *" value={form.nome_do_item} onChange={e => setForm(f => ({ ...f, nome_do_item: e.target.value }))} />
+            <input {...inp} placeholder="CEG (ex: DOME JP☆)" value={form.ceg} onChange={e => setForm(f => ({ ...f, ceg: e.target.value }))} />
+            <div className="admin-money-row">
+              <input {...inp} placeholder="Valor item" type="number" step="0.01" value={form.valor_item} onChange={e => setForm(f => ({ ...f, valor_item: e.target.value }))} />
+              <input {...inp} placeholder="Frete inter." type="number" step="0.01" value={form.frete_inter} onChange={e => setForm(f => ({ ...f, frete_inter: e.target.value }))} />
+              <input {...inp} placeholder="Taxa RF" type="number" step="0.01" value={form.taxa_rf} onChange={e => setForm(f => ({ ...f, taxa_rf: e.target.value }))} />
+              <input {...inp} placeholder="Nacional" type="number" step="0.01" value={form.nacional} onChange={e => setForm(f => ({ ...f, nacional: e.target.value }))} />
+            </div>
+            <input {...inp} placeholder="Descrição / info adicionais" value={form.info_adicionais} onChange={e => setForm(f => ({ ...f, info_adicionais: e.target.value }))} />
+          </div>
+        </div>
+        {msg && <div className="admin-msg">{msg}</div>}
+        <button type="submit" className="admin-save-btn" disabled={saving}>
+          {saving ? "Salvando..." : "+ Adicionar item"}
+        </button>
+      </form>
+
+      <div className="admin-list-title">Itens na loja ({itens.length}) — clique para editar</div>
+      {loading ? (
+        <div className="admin-loading">carregando...</div>
+      ) : itens.length === 0 ? (
+        <div className="admin-loading">nenhum item ainda</div>
+      ) : (
+        <div className="admin-list">
+          {itens.map(item => <AdminItemRow key={item.id} item={item} onRefresh={fetchItens} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; }
@@ -815,7 +1166,7 @@ export default function App() {
     setTab("masterlist");
   }
 
-  useState(() => {
+  useEffect(() => {
     if (user && user.cog) {
       supabase.from("masterlist").select("*").eq("cog", user.cog).then(({ data }) => {
         setItens(data || []);
@@ -842,11 +1193,17 @@ export default function App() {
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => setTab("calendario")}>◫ Calendário</button>
         <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Regras</button>
+        <button className={`tab-btn ${tab === "store" ? "active" : ""}`} onClick={() => setTab("store")}>🛍 Anti-Store</button>
+        {user.email === ADMIN_EMAIL && (
+          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
+        )}
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
+      {tab === "store" && <AntiStoreTab user={user} />}
+      {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
     </div>
   );
 }

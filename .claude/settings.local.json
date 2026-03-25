@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(ls c:UsersNandaanticeg*.csv)",
+      "Bash(node clean-csv.js \"/c/Users/Nanda/Downloads/anticeg_masterlist - MASTERLIST ☆.csv\")"
+    ]
+  }
+}
