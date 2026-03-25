@@ -866,7 +866,7 @@ function AntiStoreTab({ user }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("nome", "Disponível").then(({ data }) => {
+    supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
       setItens(data || []);
       setLoading(false);
     });
@@ -1065,7 +1065,7 @@ function AdminTab() {
   const photo = usePhotoUpload();
 
   function fetchItens() {
-    supabase.from("masterlist").select("*").eq("nome", "Disponível")
+    supabase.from("masterlist").select("*").eq("nome", "Disponivel")
       .order("id", { ascending: false })
       .then(({ data }) => { setItens(data || []); setLoading(false); });
   }
@@ -1078,10 +1078,10 @@ function AdminTab() {
     setSaving(true); setMsg("");
     let fotoUrl = "";
     if (photo.foto) {
-      try { fotoUrl = await photo.upload(); } catch (err) { setMsg("Erro no upload: " + err.message); setSaving(false); return; }
+      try { fotoUrl = await photo.upload(); } catch (err) { setMsg("⚠ Foto não enviada (verifique permissões do storage), salvando sem foto."); }
     }
     const { error } = await supabase.from("masterlist").insert({
-      nome: "Disponível", cog: fotoUrl,
+      nome: "Disponivel", cog: fotoUrl,
       nome_do_item: form.nome_do_item, ceg: form.ceg,
       valor_item: parseFloat(form.valor_item) || 0,
       frete_inter: parseFloat(form.frete_inter) || 0,
