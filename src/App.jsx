@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
+import LandingPage from "./LandingPage";
 
 const supabase = createClient(
   "https://ghjfsmwwcfpfvrouyrka.supabase.co",
@@ -1204,16 +1205,23 @@ function AdminTab() {
 }
 
 export default function App() {
+  const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; }
   });
   const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
 
+  // Se já tem sessão salva, vai direto pro portal
+  useEffect(() => {
+    if (user) setPage("portal");
+  }, []);
+
   async function handleLogin(u, itensData) {
     localStorage.setItem("anticeg_user", JSON.stringify(u));
     setUser(u);
     setItens(itensData);
+    setPage("portal");
   }
 
   function handleLogout() {
@@ -1221,6 +1229,7 @@ export default function App() {
     setUser(null);
     setItens([]);
     setTab("masterlist");
+    setPage("landing");
   }
 
   useEffect(() => {
@@ -1235,7 +1244,8 @@ export default function App() {
     }
   }, []);
 
-  if (!user) return <LoginScreen onLogin={handleLogin} />;
+  if (page === "landing") return <LandingPage onEntrar={() => setPage("login")} />;
+  if (page === "login" || !user) return <LoginScreen onLogin={handleLogin} />;
 
   return (
     <div>
