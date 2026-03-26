@@ -139,7 +139,7 @@ function Field({ label, children }) {
   );
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, onVoltar }) {
   const [mode, setMode] = useState("escolha");
   const [input, setInput] = useState("");
   const [senha, setSenha] = useState("");
@@ -267,6 +267,7 @@ function LoginScreen({ onLogin }) {
     <div className="login-screen"><div className="login-wrap">
       {logoBlock("acesso")}
       <div className="login-box">
+        {onVoltar && <button className="login-skip" style={{ marginBottom: 4 }} onClick={onVoltar}>← Voltar para a home</button>}
         <button className="login-btn" onClick={() => setMode("cog")}>ACESSAR COM COG OU E-MAIL →</button>
         <button className="login-btn" style={{ background: "transparent", border: "1px solid rgba(245,240,232,.2)", color: "rgba(245,240,232,.7)" }} onClick={() => onLogin({ guest: true }, [])}>ENTRAR COMO VISITANTE →</button>
         <div style={{ textAlign: "center", fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.35)", padding: "8px 0" }}>
@@ -1408,16 +1409,16 @@ export default function App() {
   if (page === "cegs-publico") return (
     <div>
       <div className="topbar">
-        <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
+        <a className="topbar-logo" href="#" onClick={e => { e.preventDefault(); setPage("landing"); }}>ANTI<span>CEG</span></a>
         <div className="topbar-right">
-          <button className="logout-btn" onClick={() => setPage("landing")}>← Voltar</button>
+          <button className="logout-btn" onClick={() => setPage("landing")}>← Home</button>
           <button className="login-btn" style={{ padding:"8px 18px", fontSize:"var(--fs-xs)" }} onClick={() => setPage("login")}>Entrar no portal →</button>
         </div>
       </div>
       <CegTab />
     </div>
   );
-  if (page === "login" || !user) return <LoginScreen onLogin={handleLogin} />;
+  if (page === "login" || !user) return <LoginScreen onLogin={handleLogin} onVoltar={() => setPage("landing")} />;
 
   return (
     <div>

@@ -91,7 +91,7 @@ export default function LandingPage({ onEntrar, onVerCegs }) {
 
       {/* NAV */}
       <nav className="lp-nav">
-        <a className="lp-nav-logo" href="#">ANTI<span>CEG</span></a>
+        <a className="lp-nav-logo" href="#" onClick={e => { e.preventDefault(); window.scrollTo(0,0); }}>ANTI<span>CEG</span></a>
         <ul className="lp-nav-links">
           <li><a href="#lp-regras">Regras</a></li>
           <li><a href="#lp-antimail">Antimail</a></li>
@@ -110,18 +110,14 @@ export default function LandingPage({ onEntrar, onVerCegs }) {
             <div className="lp-hero-tag">anticeg — compras em grupo · SKZ & mais</div>
             <h1 className="lp-h1"><span className="ao">ANTI</span><span className="ag">GOM</span></h1>
             <p className="lp-hero-sub">O lugar para você organizar seus trequinhos da anticomu. Consulte seus itens, acompanhe envios e gerencie pagamentos — e sim, você pode comprar na anti-store.</p>
-            <div className="lp-hero-actions">
-              <button className="lp-btn-primary" onClick={onEntrar}>Acessar o portal</button>
-              <a href="#lp-regras" className="lp-btn-outline">Ver as regras</a>
-            </div>
           </div>
           <div className="lp-hero-card">
             <div className="lp-card-label">// acesso rápido</div>
-            <input className="lp-card-input" type="text" placeholder="seu COG ou e-mail" />
+            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"rgba(245,240,232,.45)", lineHeight:1.7, margin:0 }}>
+              Entre com seu COG ou e-mail cadastrado na anticeg para ver seus itens e pagamentos.
+            </p>
             <button className="lp-card-btn" onClick={onEntrar}>ACESSAR PORTAL →</button>
-            <div style={{ marginTop:20, fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)", lineHeight:1.6 }}>
-              Use o mesmo COG ou e-mail cadastrado na anticeg.
-            </div>
+            <button className="lp-btn-outline" style={{ textAlign:"center", fontSize:11, padding:"10px 0" }} onClick={onVerCegs}>ver resumo das CEGs</button>
           </div>
         </div>
       </section>
