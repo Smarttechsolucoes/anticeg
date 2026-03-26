@@ -5,7 +5,7 @@ import bonequinha from "./assets/bonequinha.png";
 const WA = "5524992501917";
 const FORMS_URL = "https://forms.gle/vMyjCKG4Dj2yhryP7";
 
-export default function LandingPage({ onEntrar, onVerCegs }) {
+export default function LandingPage({ onEntrar, onVerCegs, onVerStore }) {
   const cursorRef = useRef(null);
   const ringRef = useRef(null);
   const [activeMenu, setActiveMenu] = useState("r1");
@@ -98,6 +98,7 @@ export default function LandingPage({ onEntrar, onVerCegs }) {
           <li><a href="#lp-pagamento">Pagar</a></li>
           <li><a href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer">Comunidade</a></li>
           <li><a href="#" onClick={e => { e.preventDefault(); onVerCegs(); }}>CEGs</a></li>
+          <li><a href="#" onClick={e => { e.preventDefault(); onVerStore(); }}>Anti-Store</a></li>
           <li><a href="#" className="lp-nav-cta" onClick={e => { e.preventDefault(); onEntrar(); }}>Portal →</a></li>
         </ul>
       </nav>
