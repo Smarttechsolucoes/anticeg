@@ -421,12 +421,79 @@ function CegModal({ ceg, onClose }) {
   );
 }
 
+function CegSummaryView({ onSaibaMais }) {
+  const [allItens, setAllItens] = useState(null);
+
+  useEffect(() => {
+    supabase.from("masterlist").select("ceg, cog, nome, status")
+      .neq("nome", "Disponivel")
+      .then(({ data }) => setAllItens(data || []));
+  }, []);
+
+  if (allItens === null) return (
+    <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>carregando CEGs...</div>
+  );
+
+  const cegMap = {};
+  allItens.forEach(item => {
+    const ceg = item.ceg || "—";
+    if (!cegMap[ceg]) cegMap[ceg] = { itens: 0, joiners: new Set(), statusCount: {} };
+    cegMap[ceg].itens++;
+    if (item.cog) cegMap[ceg].joiners.add(item.cog);
+    const s = item.status || "Pré-venda";
+    cegMap[ceg].statusCount[s] = (cegMap[ceg].statusCount[s] || 0) + 1;
+  });
+
+  const cegs = Object.entries(cegMap).sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (cegs.length === 0) return (
+    <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>nenhuma CEG encontrada</div>
+  );
+
+  return (
+    <div className="ceg-summary-grid">
+      {cegs.map(([ceg, data]) => {
+        const statuses = Object.entries(data.statusCount).sort((a, b) => b[1] - a[1]);
+        return (
+          <div key={ceg} className="ceg-summary-card">
+            <div className="ceg-summary-name">{ceg}</div>
+            <div className="ceg-summary-meta">
+              <span>{data.itens} {data.itens === 1 ? "item" : "itens"}</span>
+              <span>·</span>
+              <span>{data.joiners.size} {data.joiners.size === 1 ? "joiner" : "joiners"}</span>
+            </div>
+            <div className="ceg-summary-chips">
+              {statuses.map(([status, count]) => (
+                <span key={status} className={`status-chip ${(chipMap[status] || ["chip-prevenda"])[0]}`} style={{ fontSize: 10 }}>
+                  {status} <span style={{ opacity: 0.6, marginLeft: 2 }}>×{count}</span>
+                </span>
+              ))}
+            </div>
+            <button className="ceg-saiba-btn" onClick={() => onSaibaMais(ceg)}>
+              saiba mais →
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
+  const [view, setView] = useState("summary");
   const [filter, setFilter] = useState("todos");
+  const [cegFilter, setCegFilter] = useState(null);
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
+
+  function goToList(ceg) {
+    setCegFilter(ceg);
+    setView("list");
+    setFilter("todos");
+    setSearch("");
+  }
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
@@ -448,6 +515,7 @@ function MasterlistTab({ user, itens, onLogin }) {
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
 
   let filtered = [...itens];
+  if (cegFilter) filtered = filtered.filter(i => i.ceg === cegFilter);
   if (filter === "pendente") {
     filtered = filtered.filter(i => isPendente(i.pag_item) || isPendente(i.pag_frete) || isPendente(i.pag_taxa) || isPendente(i.pag_nacional));
   } else if (filter === "pago") {
@@ -500,13 +568,27 @@ function MasterlistTab({ user, itens, onLogin }) {
         </div>
       </div>
 
-      <div className="filters-bar">
-        <span className="filter-label">Ver:</span>
-        {FILTERS.map(f => (
-          <button key={f.id} className={`filter-pill ${filter === f.id ? "active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
-        ))}
-        <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
+      <div className="view-toggle-bar">
+        <button className={`view-toggle-btn ${view === "summary" ? "active" : ""}`} onClick={() => setView("summary")}>☰ Resumo por CEG</button>
+        <button className={`view-toggle-btn ${view === "list" ? "active" : ""}`} onClick={() => { setView("list"); setCegFilter(null); }}>≡ Lista completa</button>
       </div>
+
+      {view === "summary" && <CegSummaryView onSaibaMais={goToList} />}
+
+      {view === "list" && <>
+        {cegFilter && (
+          <div className="ceg-filter-active">
+            <span>CEG: <strong>{cegFilter}</strong></span>
+            <button onClick={() => setCegFilter(null)}>✕ limpar</button>
+          </div>
+        )}
+        <div className="filters-bar">
+          <span className="filter-label">Ver:</span>
+          {FILTERS.map(f => (
+            <button key={f.id} className={`filter-pill ${filter === f.id ? "active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
+          ))}
+          <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
+        </div>
 
       <div className="table-wrap">
         <table>
@@ -578,6 +660,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           </tbody>
         </table>
       </div>
+      </>}
       {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
     </div>
   );

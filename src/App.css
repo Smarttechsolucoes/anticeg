@@ -266,3 +266,23 @@ td { padding:10px; vertical-align:middle; }
 .admin-cancel-btn { background:transparent; border:1px solid #2a2a2a; color:rgba(245,240,232,.4); border-radius:6px; font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:10px 16px; cursor:pointer; transition:opacity .15s; }
 .admin-cancel-btn:hover { opacity:.7; }
 .admin-form-section-label { font-size:11px; color:rgba(245,240,232,.3); letter-spacing:1px; text-transform:uppercase; }
+/* ── View toggle ─────────────────────────────────────────── */
+.view-toggle-bar { display:flex; gap:8px; margin-bottom:20px; }
+.view-toggle-btn { background:transparent; border:1px solid #2a2a2a; color:rgba(245,240,232,.45); border-radius:6px; font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:8px 18px; cursor:pointer; transition:all .15s; letter-spacing:.5px; }
+.view-toggle-btn.active { background:var(--laranja); border-color:var(--laranja); color:#fff; }
+.view-toggle-btn:hover:not(.active) { border-color:#444; color:rgba(245,240,232,.7); }
+
+/* ── CEG filter active ───────────────────────────────────── */
+.ceg-filter-active { display:inline-flex; align-items:center; gap:10px; background:rgba(255,120,0,.08); border:1px solid rgba(255,120,0,.25); border-radius:6px; padding:8px 14px; font-size:var(--fs-xs); color:var(--laranja); margin-bottom:12px; }
+.ceg-filter-active button { background:none; border:none; color:rgba(245,240,232,.4); cursor:pointer; font-size:12px; padding:0; line-height:1; }
+.ceg-filter-active button:hover { color:var(--offwhite); }
+
+/* ── CEG Summary grid ────────────────────────────────────── */
+.ceg-summary-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
+.ceg-summary-card { background:#111; border:1px solid #1e1e1e; border-radius:10px; padding:18px 20px; display:flex; flex-direction:column; gap:10px; transition:border-color .2s; }
+.ceg-summary-card:hover { border-color:#333; }
+.ceg-summary-name { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-lg); color:var(--laranja); line-height:1.1; letter-spacing:.5px; }
+.ceg-summary-meta { font-family:'DM Mono',monospace; font-size:11px; color:rgba(245,240,232,.4); display:flex; gap:6px; }
+.ceg-summary-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.ceg-saiba-btn { align-self:flex-start; margin-top:4px; background:transparent; border:1px solid #2a2a2a; color:rgba(245,240,232,.5); border-radius:5px; font-family:'DM Mono',monospace; font-size:11px; padding:6px 12px; cursor:pointer; transition:all .15s; letter-spacing:.5px; }
+.ceg-saiba-btn:hover { border-color:var(--laranja); color:var(--laranja); }
