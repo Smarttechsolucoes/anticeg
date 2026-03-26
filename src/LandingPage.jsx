@@ -142,13 +142,7 @@ export default function LandingPage({ onEntrar, onVerCegs }) {
           </div>
           <p className="lp-section-desc">Status dos envios nacionais e rastreamento dos pacotes da anticomu.</p>
         </div>
-        <div className="lp-mail-grid">
-          <div className="lp-mail-card">
-            <div className="lp-m-label">Envios nacionais</div>
-            <div className="lp-m-title">NUVEMSHOP</div>
-            <div className="lp-m-info">Todos os envios nacionais são feitos pela plataforma Nuvemshop em até 7 dias úteis. Você recebe o código de rastreio no grupo e pelo portal.</div>
-            <div className="lp-m-track">↗ Rastreie pelo portal com seu COG</div>
-          </div>
+        <div className="lp-mail-grid lp-mail-grid-2">
           <div className="lp-mail-card">
             <div className="lp-m-label">Transportadoras</div>
             <div className="lp-m-title">OPÇÕES</div>
@@ -160,12 +154,6 @@ export default function LandingPage({ onEntrar, onVerCegs }) {
             <div className="lp-m-title">SEGURO INCLUSO</div>
             <div className="lp-m-info">O valor declarado sempre será o valor integral do produto para cobertura total do seguro do frete nacional.</div>
             <div className="lp-m-track" style={{ color:"#FF5C1A" }}>↗ Abra o pacote em vídeo sem cortes</div>
-          </div>
-          <div className="lp-mail-card" style={{ background:"rgba(186,255,57,.04)", border:"1px dashed rgba(186,255,57,.2)" }}>
-            <div className="lp-m-label">Dúvidas sobre envio?</div>
-            <div className="lp-m-title" style={{ color:"#BAFF39" }}>FALE COM A NANDA</div>
-            <div className="lp-m-info">Qualquer questão sobre frete, rastreio ou armazenamento — chama no WhatsApp da comunidade.</div>
-            <a href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer" className="lp-btn-primary" style={{ marginTop:8, fontSize:11, padding:"10px 20px" }}>💬 WhatsApp →</a>
           </div>
         </div>
       </section>
@@ -265,9 +253,13 @@ export default function LandingPage({ onEntrar, onVerCegs }) {
       {/* FOOTER */}
       <footer className="lp-footer">
         <div>
-          <div className="lp-footer-logo">ANTI<span>CEG</span></div>
-          <p className="lp-footer-desc">Compras em grupo de kpop organizadas pela Nanda para a anticomu. Com amor, organização e muito caos controlado.</p>
-          <img src={bonequinha} alt="antigom" className="lp-bonequinha-footer" />
+          <div style={{ display:"flex", alignItems:"flex-end", gap:16 }}>
+            <div>
+              <div className="lp-footer-logo">ANTI<span>CEG</span></div>
+              <p className="lp-footer-desc">Compras em grupo de kpop organizadas pela Nanda para a anticomu. Com amor, organização e muito caos controlado.</p>
+            </div>
+            <img src={bonequinha} alt="antigom" className="lp-bonequinha-footer" />
+          </div>
         </div>
         <div className="lp-footer-col">
           <h4>Navegação</h4>

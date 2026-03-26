@@ -81,6 +81,7 @@
 /* ANTIMAIL */
 .lp-antimail { background:#0A0A0A; }
 .lp-mail-grid { display:grid;grid-template-columns:1fr 1fr;gap:2px; }
+.lp-mail-grid-2 { max-width:860px; }
 .lp-mail-card { background:#161616;padding:32px;display:flex;flex-direction:column;gap:12px;border-bottom:2px solid transparent;transition:border-color .2s; }
 .lp-mail-card:hover { border-bottom-color:#BAFF39; }
 .lp-m-label { font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;color:rgba(245,240,232,.3);text-transform:uppercase; }
