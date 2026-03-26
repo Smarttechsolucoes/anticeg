@@ -222,6 +222,8 @@ td { padding:10px; vertical-align:middle; }
 .store-card-valor { font-size:var(--fs-sm); color:var(--verde); font-weight:600; }
 .store-claim-btn { display:flex; align-items:center; justify-content:center; gap:6px; background:var(--laranja); color:#fff; font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; padding:10px; border-radius:6px; text-decoration:none; letter-spacing:1px; transition:opacity .15s; margin-top:4px; }
 .store-claim-btn:hover { opacity:.85; }
+.store-filter-select { background:#1a1a1a; color:var(--offwhite); border:1px solid rgba(245,240,232,.15); border-radius:6px; padding:6px 10px; font-family:'DM Mono',monospace; font-size:var(--fs-xs); cursor:pointer; outline:none; letter-spacing:.5px; }
+.store-filter-select option { background:#2e2e2e; color:var(--offwhite); }
 
 /* Admin */
 .admin-wrap { max-width:780px; margin:0 auto; padding:32px 24px 60px; }

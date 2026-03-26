@@ -864,6 +864,8 @@ function RegrasTab() {
 function AntiStoreTab({ user }) {
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtroMembro, setFiltroMembro] = useState("todos");
+  const [ordenacao, setOrdenacao] = useState("padrao");
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
@@ -872,8 +874,50 @@ function AntiStoreTab({ user }) {
     });
   }, []);
 
+  const MEMBROS_MAP = [
+    { canonical: "Bang Chan",  keys: ["bangchan","bangcahn","bang chan","bang"] },
+    { canonical: "Changbin",   keys: ["changbin","chang bin","changbhin","changbim"] },
+    { canonical: "Hyunjin",    keys: ["hyunjin","hyun jin","hyunjim","hyunijn"] },
+    { canonical: "Han",        keys: ["han"] },
+    { canonical: "Felix",      keys: ["felix","félix","feliz","feliix"] },
+    { canonical: "Seungmin",   keys: ["seungmin","seung min","seungmim"] },
+    { canonical: "I.N.",       keys: ["i.n.","i.n","in","i n","jeongin"] },
+    { canonical: "Lee Know",   keys: ["leeknow","lee know","lee","minho"] },
+    { canonical: "RM",         keys: ["rm"] },
+    { canonical: "Jin",        keys: ["jin"] },
+    { canonical: "Suga",       keys: ["suga","yoongi"] },
+    { canonical: "J-Hope",     keys: ["jhope","j-hope","j hope","hoseok"] },
+    { canonical: "Jimin",      keys: ["jimin"] },
+    { canonical: "V",          keys: ["v","taehyung"] },
+    { canonical: "Jungkook",   keys: ["jungkook","jk"] },
+  ];
+
+  function normStr(s) {
+    return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s.]/g, "");
+  }
+
+  function getMembro(nome_do_item) {
+    if (!nome_do_item) return "outros";
+    const norm = normStr(nome_do_item);
+    for (const { canonical, keys } of MEMBROS_MAP) {
+      if (keys.some(k => norm.startsWith(normStr(k)))) return canonical;
+    }
+    // fallback: primeira palavra
+    return nome_do_item.trim().split(/\s+/)[0];
+  }
+
+  const membros = ["todos", ...Array.from(new Set(itens.map(i => getMembro(i.nome_do_item)))).sort()];
+
+  function getTotal(item) {
+    return Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0);
+  }
+
+  const itensFiltrados = itens
+    .filter(i => filtroMembro === "todos" || getMembro(i.nome_do_item) === filtroMembro)
+    .sort((a, b) => ordenacao === "preco" ? getTotal(a) - getTotal(b) : 0);
+
   function claimMsg(item) {
-    const total = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0);
+    const total = getTotal(item);
     const msg = `Olá Nanda! Quero dar claim no item: *${item.nome_do_item}* — R$ ${fmtBRL(total)}\nMeu COG: ${user.cog || user.nome || user.email}`;
     return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
   }
@@ -886,17 +930,27 @@ function AntiStoreTab({ user }) {
           <div className="page-title">ANTI<span>STORE</span></div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="greeting-sub" style={{ marginTop: 8 }}>{itens.length} {itens.length === 1 ? "item disponível" : "itens disponíveis"}</div>
+          <div className="greeting-sub" style={{ marginTop: 8 }}>{itensFiltrados.length} {itensFiltrados.length === 1 ? "item disponível" : "itens disponíveis"}</div>
         </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <select className="store-filter-select" value={filtroMembro} onChange={e => setFiltroMembro(e.target.value)}>
+          {membros.map(m => <option key={m} value={m}>{m === "todos" ? "todos os membros" : m}</option>)}
+        </select>
+        <select className="store-filter-select" value={ordenacao} onChange={e => setOrdenacao(e.target.value)}>
+          <option value="padrao">ordem padrão</option>
+          <option value="preco">mais barato primeiro</option>
+        </select>
       </div>
 
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>carregando...</div>
-      ) : itens.length === 0 ? (
+      ) : itensFiltrados.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>nenhum item disponível no momento</div>
       ) : (
         <div className="store-grid">
-          {itens.map(item => (
+          {itensFiltrados.map(item => (
             <div key={item.id} className="store-card">
               <div className="store-card-img">
                 {item.cog
