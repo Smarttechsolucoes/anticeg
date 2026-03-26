@@ -420,7 +420,8 @@ function CegModal({ ceg, onClose }) {
   );
 }
 
-function MasterlistTab({ user, itens }) {
+function MasterlistTab({ user, itens, onLogin }) {
+  const guest = user.guest;
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
@@ -482,20 +483,21 @@ function MasterlistTab({ user, itens }) {
           <div className="page-title">MASTER<span>LIST</span></div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="greeting">{user.nome || user.cog}</div>
-          <div className="greeting-sub">{itens.length} itens · {cegs} CEG{cegs > 1 ? "s" : ""}</div>
+          <div className="greeting">{guest ? "Visitante" : (user.nome || user.cog)}</div>
+          <div className="greeting-sub">{guest ? "visualização demo" : `${itens.length} itens · ${cegs} CEG${cegs > 1 ? "s" : ""}`}</div>
+          {guest && <button className="login-btn" style={{ marginTop: 8, padding: "8px 20px", fontSize: "var(--fs-xs)" }} onClick={onLogin}>FAZER LOGIN →</button>}
         </div>
       </div>
 
       <div className="summary-row">
-        <SumCard label="Itens totais" value={itens.length} valueCls="white" sub="em todas as CEGs" isAmount={false} />
-        <SumCard label="Valor total" value={totalV} valueCls="orange" sub="item + frete + taxa" isAmount={true} />
-        <SumCard label="Pago" value={pagoV} valueCls="green" sub="confirmado" isAmount={true} />
-        <SumCard label="Pendente" value={Math.max(0, pendV)} valueCls="lilas" sub="em aberto" isAmount={true} />
+        <SumCard label="Itens totais" value={guest ? 0 : itens.length} valueCls="white" sub="em todas as CEGs" isAmount={false} />
+        <SumCard label="Valor total" value={0} valueCls="orange" sub="item + frete + taxa" isAmount={true} />
+        <SumCard label="Pago" value={0} valueCls="green" sub="confirmado" isAmount={true} />
+        <SumCard label="Pendente" value={0} valueCls="lilas" sub="em aberto" isAmount={true} />
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
-          <div className="sum-value yellow">{nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
-          <div className="sum-sub">{nextVenc ? nextVenc.label : "nenhum pendente"}</div>
+          <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
+          <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : "nenhum pendente"}</div>
         </div>
       </div>
 
@@ -541,11 +543,11 @@ function MasterlistTab({ user, itens }) {
                   <tr key={item.id}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
-                    <td className="td-cog">{item.cog}</td>
-                    <td><ValCell val={item.valor_item} status={item.pag_item} /></td>
-                    <td><ValCell val={item.frete_inter} status={item.pag_frete} /></td>
-                    <td>{Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>}</td>
-                    <td>{Number(item.nacional) > 0 ? <ValCell val={item.nacional} status={item.pag_nacional} /> : <span className="zero-val">—</span>}</td>
+                    <td className="td-cog">{guest ? "—" : item.cog}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pag_item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pag_frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.nacional) > 0 ? <ValCell val={item.nacional} status={item.pag_nacional} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         <StatusChip status={item.status} />
@@ -556,7 +558,7 @@ function MasterlistTab({ user, itens }) {
                       {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
                       <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)} style={{marginTop: item.info_adicionais ? 4 : 0}}>▾</button>
                     </td>
-                    <td><PayButtons item={item} /></td>
+                    <td>{!guest && <PayButtons item={item} />}</td>
                   </tr>
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
@@ -566,7 +568,7 @@ function MasterlistTab({ user, itens }) {
                 </>
               );
             })}
-            {filtered.length > 0 && (
+            {filtered.length > 0 && !guest && (
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
@@ -1226,6 +1228,10 @@ export default function App() {
       supabase.from("masterlist").select("*").eq("cog", user.cog).then(({ data }) => {
         setItens(data || []);
       });
+    } else if (user && user.guest) {
+      supabase.from("masterlist").select("*").neq("nome", "Disponivel").limit(30).then(({ data }) => {
+        setItens(data || []);
+      });
     }
   }, []);
 
@@ -1253,15 +1259,7 @@ export default function App() {
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && (user.guest
-        ? <div className="main"><div style={{ padding: "60px 32px", textAlign: "center", color: "rgba(245,240,232,.4)", fontSize: "var(--fs-xs)", lineHeight: 2 }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-2xl)", color: "var(--offwhite)", marginBottom: 16 }}>MASTERLIST</div>
-            A masterlist é exclusiva para membros da comunidade.<br />
-            Faça login com seu COG para acessar seus itens e pagamentos.
-            <div style={{ marginTop: 24 }}><button className="login-btn" style={{ width: "auto", padding: "12px 32px" }} onClick={handleLogout}>FAZER LOGIN →</button></div>
-          </div></div>
-        : <MasterlistTab user={user} itens={itens} />
-      )}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={handleLogout} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
