@@ -40,7 +40,7 @@
 .lp-card-btn:hover { opacity:.85; }
 
 /* BONEQUINHA */
-.lp-bonequinha-hero { width:240px;position:absolute;bottom:0;right:80px;filter:invert(1);opacity:.55;pointer-events:none;z-index:1; }
+.lp-bonequinha-hero { width:260px;position:absolute;bottom:0;left:-40px;filter:grayscale(1) contrast(0.9);opacity:.85;pointer-events:none;z-index:1; }
 .lp-bonequinha-footer { width:90px;filter:invert(1);opacity:.45;margin-top:16px;display:block; }
 
 /* TICKER */
