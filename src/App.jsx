@@ -421,8 +421,9 @@ function CegModal({ ceg, onClose }) {
   );
 }
 
-function CegDetailModal({ ceg, onClose }) {
+function CegDetailView({ ceg, onVoltar }) {
   const [itens, setItens] = useState(null);
+  const [openDrawer, setOpenDrawer] = useState(null);
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
@@ -432,52 +433,82 @@ function CegDetailModal({ ceg, onClose }) {
   const joiners = itens ? [...new Set(itens.map(i => i.cog))].length : 0;
 
   return (
-    <div className="ceg-modal-overlay" onClick={onClose}>
-      <div className="ceg-modal" style={{ maxWidth: 760 }} onClick={e => e.stopPropagation()}>
-        <div className="ceg-modal-header">
-          <div>
-            <div style={{ fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.4)", letterSpacing: 2, marginBottom: 4 }}>COMPRA EM GRUPO</div>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-2xl)", color: "var(--laranja)", lineHeight: 1 }}>CEG {ceg}</div>
+    <div className="main">
+      <div className="page-header">
+        <div>
+          <div className="page-eyebrow">
+            <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", cursor:"pointer", padding:0, letterSpacing:1 }}>← voltar</button>
           </div>
-          <button className="ceg-modal-close" onClick={onClose}>✕</button>
+          <div className="page-title">{ceg}</div>
         </div>
-        {itens === null ? (
-          <div className="ceg-modal-loading">carregando...</div>
-        ) : (
-          <div className="ceg-modal-body">
-            <div className="ceg-modal-summary">
-              <span>{itens.length} {itens.length === 1 ? "item" : "itens"}</span>
-              <span>·</span>
-              <span>{joiners} {joiners === 1 ? "joiner" : "joiners"}</span>
-            </div>
-            <div className="ceg-detail-table-wrap">
-              <table className="ceg-detail-table">
-                <thead>
-                  <tr>
-                    <th>JOINER</th>
-                    <th>ITEM</th>
-                    <th>VALOR TOTAL</th>
-                    <th>STATUS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {itens.map(item => {
-                    const total = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0);
-                    return (
-                      <tr key={item.id}>
-                        <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
-                        <td className="ceg-detail-item">{item.nome_do_item}</td>
-                        <td className="ceg-detail-valor">R${fmtBRL(total)}</td>
-                        <td><StatusChip status={item.status} /></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+        {itens && (
+          <div style={{ textAlign:"right" }}>
+            <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
           </div>
         )}
       </div>
+
+      {itens === null ? (
+        <div style={{ padding:40, textAlign:"center", color:"rgba(245,240,232,.3)", fontSize:"var(--fs-xs)" }}>carregando...</div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr className="col-group-header">
+                <th colSpan={2}></th>
+                <th colSpan={4}>VALORES A PAGAR</th>
+                <th className="status-group" colSpan={2}>STATUS</th>
+              </tr>
+              <tr className="thead-cols">
+                <th>JOINER</th>
+                <th>NOME DO ITEM</th>
+                <th>ITEM</th>
+                <th>FRETE INTER</th>
+                <th>TAXA RF</th>
+                <th>NACIONAL</th>
+                <th>STATUS</th>
+                <th>INFO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itens.length === 0 && (
+                <tr><td colSpan={8} className="empty-cell">nenhum item</td></tr>
+              )}
+              {itens.map(item => {
+                const ai = getStepIdx(item.status);
+                const isOpen = openDrawer === item.id;
+                return (
+                  <>
+                    <tr key={item.id}>
+                      <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
+                      <td><div className="item-title">{item.nome_do_item}</div></td>
+                      <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
+                      <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
+                      <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
+                      <td>{Number(item.nacional) > 0 ? <span className="td-val">R${fmtBRL(item.nacional)}</span> : <span className="zero-val">—</span>}</td>
+                      <td>
+                        <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                          <StatusChip status={item.status} />
+                          <ProgressMini activeIdx={ai} />
+                        </div>
+                      </td>
+                      <td>
+                        {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
+                        <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)} style={{marginTop: item.info_adicionais ? 4 : 0}}>▾</button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr key={`drawer-${item.id}`} className="drawer-row">
+                        <td colSpan={8}><Timeline activeIdx={ai} /></td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -485,6 +516,8 @@ function CegDetailModal({ ceg, onClose }) {
 function CegTab() {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
+
+  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} />;
 
   useEffect(() => {
     supabase.from("masterlist").select("ceg, cog, status")
@@ -546,7 +579,6 @@ function CegTab() {
           })}
         </div>
       )}
-      {detalhe && <CegDetailModal ceg={detalhe} onClose={() => setDetalhe(null)} />}
     </div>
   );
 }
