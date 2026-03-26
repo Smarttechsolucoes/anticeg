@@ -49,7 +49,7 @@ const chipMap = {
 };
 
 function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status); }
-function isPendente(val) { return val && val !== "Pago"; }
+function isPendente(val) { return val && val !== "Pago" && val !== "N/A"; }
 
 function PayBadge({ status }) {
   if (status === "Pago")      return <span className="pay-badge pay-pago">Pago</span>;
