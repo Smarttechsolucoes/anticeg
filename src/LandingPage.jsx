@@ -118,7 +118,6 @@ export default function LandingPage({ onEntrar, onVerCegs, onVerStore }) {
               Entre com seu COG ou e-mail cadastrado na anticeg para ver seus itens e pagamentos.
             </p>
             <button className="lp-card-btn" onClick={onEntrar}>ACESSAR PORTAL →</button>
-            <button className="lp-btn-outline" style={{ textAlign:"center", fontSize:11, padding:"10px 0" }} onClick={onVerCegs}>ver resumo das CEGs</button>
           </div>
         </div>
       </section>
