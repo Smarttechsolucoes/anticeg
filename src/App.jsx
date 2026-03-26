@@ -510,6 +510,38 @@ function CegDetailView({ ceg, onVoltar }) {
           </table>
         </div>
       )}
+
+      {/* Mobile cards */}
+      {itens && itens.length > 0 && (
+        <div className="ml-cards">
+          {itens.map(item => {
+            const ai = getStepIdx(item.status);
+            const isOpen = openDrawer === item.id;
+            const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0)+Number(item.nacional||0);
+            return (
+              <div key={item.id} className="ml-card">
+                <div className="ml-card-top">
+                  <span className="ml-val-label" style={{ color:"rgba(245,240,232,.5)", fontSize:11 }}>{item.nome || item.cog || "—"}</span>
+                  <StatusChip status={item.status} />
+                </div>
+                <div className="ml-card-name">{item.nome_do_item}</div>
+                <div className="ml-card-vals">
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pag_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
+                  {Number(item.nacional) > 0 && <div className="ml-val-row"><span className="ml-val-label">nacional</span><ValCell val={item.nacional} status={item.pag_nacional} /></div>}
+                  {total > 0 && <div className="ml-val-total">total R${fmtBRL(total)}</div>}
+                </div>
+                {item.info_adicionais && <div className="item-detail" style={{ fontSize:11 }}>{item.info_adicionais}</div>}
+                <div className="ml-card-footer">
+                  <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                </div>
+                {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
