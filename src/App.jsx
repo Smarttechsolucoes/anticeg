@@ -517,13 +517,13 @@ function CegTab() {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
 
-  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} />;
-
   useEffect(() => {
     supabase.from("masterlist").select("ceg, cog, status")
       .neq("nome", "Disponivel")
       .then(({ data }) => setAllItens(data || []));
   }, []);
+
+  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} />;
 
   const cegMap = {};
   (allItens || []).forEach(item => {
