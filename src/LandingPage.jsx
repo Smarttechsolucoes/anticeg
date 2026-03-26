@@ -9,6 +9,7 @@ export default function LandingPage({ onEntrar, onVerCegs, onVerStore }) {
   const cursorRef = useRef(null);
   const ringRef = useRef(null);
   const [activeMenu, setActiveMenu] = useState("r1");
+  const [mobileNav, setMobileNav] = useState(false);
 
   useEffect(() => {
     const cursor = cursorRef.current;
@@ -101,7 +102,21 @@ export default function LandingPage({ onEntrar, onVerCegs, onVerStore }) {
           <li><a href="#" onClick={e => { e.preventDefault(); onVerStore(); }}>Anti-Store</a></li>
           <li><a href="#" className="lp-nav-cta" onClick={e => { e.preventDefault(); onEntrar(); }}>Portal →</a></li>
         </ul>
+        <button className="lp-hamburger" onClick={() => setMobileNav(v => !v)} aria-label="Menu">
+          <span /><span /><span />
+        </button>
       </nav>
+      {mobileNav && (
+        <div className="lp-mobile-nav" onClick={() => setMobileNav(false)}>
+          <a href="#lp-regras">Regras</a>
+          <a href="#lp-antimail">Antimail</a>
+          <a href="#lp-pagamento">Pagar</a>
+          <a href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer">Comunidade</a>
+          <a href="#" onClick={e => { e.preventDefault(); onVerCegs(); }}>CEGs</a>
+          <a href="#" onClick={e => { e.preventDefault(); onVerStore(); }}>Anti-Store</a>
+          <a href="#" className="lp-nav-cta" style={{ textAlign:"center" }} onClick={e => { e.preventDefault(); onEntrar(); }}>Portal →</a>
+        </div>
+      )}
 
       {/* HERO */}
       <section className="lp-hero">

@@ -13,6 +13,11 @@
 .lp-nav-links a { font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,232,.55);text-decoration:none;transition:color .2s;cursor:none; }
 .lp-nav-links a:hover { color:#BAFF39; }
 .lp-nav-cta { background:#FF5C1A;color:#0D0D0D !important;padding:8px 20px;font-weight:500 !important;cursor:none; }
+.lp-hamburger { display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px; }
+.lp-hamburger span { display:block;width:22px;height:2px;background:#F5F0E8;border-radius:2px;transition:opacity .2s; }
+.lp-mobile-nav { position:fixed;top:57px;left:0;right:0;z-index:99;background:#0D0D0D;border-bottom:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;padding:12px 20px 20px; }
+.lp-mobile-nav a { font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,240,232,.65);text-decoration:none;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05); }
+.lp-mobile-nav a:last-child { border-bottom:none;margin-top:8px;background:#FF5C1A;color:#0D0D0D;padding:14px 20px;border-radius:6px;font-weight:600; }
 .lp-nav-cta:hover { background:#BAFF39 !important;color:#0D0D0D !important; }
 
 /* HERO */
@@ -139,6 +144,7 @@
   /* Nav */
   .lp-nav { padding:14px 20px; }
   .lp-nav-links { display:none; }
+  .lp-hamburger { display:flex; }
 
   /* Hero */
   .lp-hero { padding-top:70px; }
