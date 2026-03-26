@@ -1372,7 +1372,19 @@ export default function App() {
     }
   }, []);
 
-  if (page === "landing") return <LandingPage onEntrar={() => setPage("login")} />;
+  if (page === "landing") return <LandingPage onEntrar={() => setPage("login")} onVerCegs={() => setPage("cegs-publico")} />;
+  if (page === "cegs-publico") return (
+    <div>
+      <div className="topbar">
+        <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
+        <div className="topbar-right">
+          <button className="logout-btn" onClick={() => setPage("landing")}>← Voltar</button>
+          <button className="login-btn" style={{ padding:"8px 18px", fontSize:"var(--fs-xs)" }} onClick={() => setPage("login")}>Entrar no portal →</button>
+        </div>
+      </div>
+      <CegTab />
+    </div>
+  );
   if (page === "login" || !user) return <LoginScreen onLogin={handleLogin} />;
 
   return (
