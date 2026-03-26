@@ -655,7 +655,7 @@ function MasterlistTab({ user, itens, onLogin }) {
 
       <div className="summary-row">
         <SumCard label="Itens totais" value={guest ? 0 : itens.length} valueCls="white" sub="em todas as CEGs" isAmount={false} />
-        <SumCard label="Pendente" value={0} valueCls="lilas" sub="em aberto" isAmount={true} />
+        <SumCard label="Pendente" value={guest ? 0 : tPend} valueCls="lilas" sub="em aberto" isAmount={true} />
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
