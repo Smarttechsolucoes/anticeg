@@ -103,8 +103,8 @@ export default function LandingPage({ onEntrar }) {
 
       {/* HERO */}
       <section className="lp-hero">
+        <img src={bonequinha} alt="antigom" className="lp-bonequinha-hero" />
         <div className="lp-hero-center">
-          <img src={bonequinha} alt="antigom" className="lp-bonequinha-hero" />
           <div className="lp-hero-left">
             <div className="lp-hero-tag">anticeg — compras em grupo · SKZ & mais</div>
             <h1 className="lp-h1"><span className="ao">ANTI</span><span className="ag">GOM</span></h1>

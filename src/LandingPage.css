@@ -40,8 +40,8 @@
 .lp-card-btn:hover { opacity:.85; }
 
 /* BONEQUINHA */
-.lp-bonequinha-hero { width:200px;flex-shrink:0;mix-blend-mode:multiply;opacity:.9;filter:contrast(1.05); }
-.lp-bonequinha-footer { width:100px;mix-blend-mode:multiply;opacity:.7;margin-top:16px;display:block; }
+.lp-bonequinha-hero { width:240px;position:absolute;bottom:0;right:80px;filter:invert(1);opacity:.55;pointer-events:none;z-index:1; }
+.lp-bonequinha-footer { width:90px;filter:invert(1);opacity:.45;margin-top:16px;display:block; }
 
 /* TICKER */
 .lp-ticker { background:#FF5C1A;overflow:hidden;white-space:nowrap;padding:10px 0; }
