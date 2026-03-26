@@ -267,6 +267,7 @@ function LoginScreen({ onLogin }) {
       {logoBlock("acesso")}
       <div className="login-box">
         <button className="login-btn" onClick={() => setMode("cog")}>ACESSAR COM COG OU E-MAIL →</button>
+        <button className="login-btn" style={{ background: "transparent", border: "1px solid rgba(245,240,232,.2)", color: "rgba(245,240,232,.7)" }} onClick={() => onLogin({ guest: true }, [])}>ENTRAR COMO VISITANTE →</button>
         <div style={{ textAlign: "center", fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.35)", padding: "8px 0" }}>
           Não tem acesso ainda?
         </div>
@@ -1245,16 +1246,24 @@ export default function App() {
       <div className="tabs-bar">
         <button className={`tab-btn ${tab === "masterlist" ? "active" : ""}`} onClick={() => setTab("masterlist")}>☰ Masterlist</button>
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => setTab("calendario")}>◫ Calendário</button>
-        <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>
+        {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Regras</button>
         <button className={`tab-btn ${tab === "store" ? "active" : ""}`} onClick={() => setTab("store")}>🛍 Anti-Store</button>
         {user.email === ADMIN_EMAIL && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} />}
+      {tab === "masterlist" && (user.guest
+        ? <div className="main"><div style={{ padding: "60px 32px", textAlign: "center", color: "rgba(245,240,232,.4)", fontSize: "var(--fs-xs)", lineHeight: 2 }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-2xl)", color: "var(--offwhite)", marginBottom: 16 }}>MASTERLIST</div>
+            A masterlist é exclusiva para membros da comunidade.<br />
+            Faça login com seu COG para acessar seus itens e pagamentos.
+            <div style={{ marginTop: 24 }}><button className="login-btn" style={{ width: "auto", padding: "12px 32px" }} onClick={handleLogout}>FAZER LOGIN →</button></div>
+          </div></div>
+        : <MasterlistTab user={user} itens={itens} />
+      )}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
-      {tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
+      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "store" && <AntiStoreTab user={user} />}
       {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
