@@ -286,3 +286,15 @@ td { padding:10px; vertical-align:middle; }
 .ceg-summary-chips { display:flex; flex-wrap:wrap; gap:5px; }
 .ceg-saiba-btn { align-self:flex-start; margin-top:4px; background:transparent; border:1px solid #2a2a2a; color:rgba(245,240,232,.5); border-radius:5px; font-family:'DM Mono',monospace; font-size:11px; padding:6px 12px; cursor:pointer; transition:all .15s; letter-spacing:.5px; }
 .ceg-saiba-btn:hover { border-color:var(--laranja); color:var(--laranja); }
+
+/* ── CEG Detail Table ────────────────────────────────────── */
+.ceg-detail-table-wrap { overflow-x:auto; margin-top:12px; }
+.ceg-detail-table { width:100%; border-collapse:collapse; font-family:'DM Mono',monospace; font-size:var(--fs-xs); }
+.ceg-detail-table thead tr { border-bottom:1px solid #2a2a2a; }
+.ceg-detail-table th { text-align:left; padding:8px 12px; color:rgba(245,240,232,.35); font-size:10px; letter-spacing:1.5px; font-weight:600; }
+.ceg-detail-table tbody tr { border-bottom:1px solid #1a1a1a; transition:background .1s; }
+.ceg-detail-table tbody tr:hover { background:rgba(255,255,255,.02); }
+.ceg-detail-table td { padding:10px 12px; color:rgba(245,240,232,.8); vertical-align:middle; }
+.ceg-detail-joiner { color:var(--lilas); font-weight:600; white-space:nowrap; }
+.ceg-detail-item { color:var(--offwhite); }
+.ceg-detail-valor { color:var(--laranja); white-space:nowrap; }
