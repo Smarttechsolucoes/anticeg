@@ -741,6 +741,41 @@ function MasterlistTab({ user, itens, onLogin }) {
           </tbody>
         </table>
       </div>
+      {/* Mobile cards — hidden on desktop via CSS */}
+      <div className="ml-cards">
+        {filtered.length === 0 && (
+          <div style={{ padding:"32px 0", textAlign:"center", color:"rgba(245,240,232,.3)", fontSize:"var(--fs-xs)" }}>nenhum item para esse filtro</div>
+        )}
+        {filtered.map(item => {
+          const ai = getStepIdx(item.status);
+          const isOpen = openDrawer === item.id;
+          const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0)+Number(item.nacional||0);
+          return (
+            <div key={item.id} className="ml-card">
+              <div className="ml-card-top">
+                <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
+                <StatusChip status={item.status} />
+              </div>
+              <div className="ml-card-name">{item.nome_do_item}</div>
+              {!guest && (
+                <div className="ml-card-vals">
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pag_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
+                  {Number(item.nacional) > 0 && <div className="ml-val-row"><span className="ml-val-label">nacional</span><ValCell val={item.nacional} status={item.pag_nacional} /></div>}
+                  {total > 0 && <div className="ml-val-total">total R${fmtBRL(total)}</div>}
+                </div>
+              )}
+              <div className="ml-card-footer">
+                {!guest && <PayButtons item={item} />}
+                <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+              </div>
+              {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
+            </div>
+          );
+        })}
+      </div>
+
       {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
     </div>
   );
