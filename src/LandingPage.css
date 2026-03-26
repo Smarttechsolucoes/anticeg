@@ -39,6 +39,10 @@
 .lp-card-btn { background:#BAFF39;color:#0D0D0D;border:none;padding:14px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.1em;cursor:none;transition:opacity .2s;width:100%;margin-top:8px; }
 .lp-card-btn:hover { opacity:.85; }
 
+/* BONEQUINHA */
+.lp-bonequinha-hero { width:200px;flex-shrink:0;mix-blend-mode:multiply;opacity:.9;filter:contrast(1.05); }
+.lp-bonequinha-footer { width:100px;mix-blend-mode:multiply;opacity:.7;margin-top:16px;display:block; }
+
 /* TICKER */
 .lp-ticker { background:#FF5C1A;overflow:hidden;white-space:nowrap;padding:10px 0; }
 .lp-ticker-inner { display:inline-block;animation:lpTicker 22s linear infinite; }

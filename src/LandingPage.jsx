@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
+import bonequinha from "./assets/bonequinha.png";
 
 const WA = "5524992501917";
 const FORMS_URL = "https://forms.gle/vMyjCKG4Dj2yhryP7";
@@ -103,6 +104,7 @@ export default function LandingPage({ onEntrar }) {
       {/* HERO */}
       <section className="lp-hero">
         <div className="lp-hero-center">
+          <img src={bonequinha} alt="antigom" className="lp-bonequinha-hero" />
           <div className="lp-hero-left">
             <div className="lp-hero-tag">anticeg — compras em grupo · SKZ & mais</div>
             <h1 className="lp-h1"><span className="ao">ANTI</span><span className="ag">GOM</span></h1>
@@ -264,6 +266,7 @@ export default function LandingPage({ onEntrar }) {
         <div>
           <div className="lp-footer-logo">ANTI<span>CEG</span></div>
           <p className="lp-footer-desc">Compras em grupo de kpop organizadas pela Nanda para a anticomu. Com amor, organização e muito caos controlado.</p>
+          <img src={bonequinha} alt="antigom" className="lp-bonequinha-footer" />
         </div>
         <div className="lp-footer-col">
           <h4>Navegação</h4>
