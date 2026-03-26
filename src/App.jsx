@@ -288,7 +288,7 @@ function LoginScreen({ onLogin }) {
       {logoBlock("acesso por COG")}
       <div className="login-box">
         <label className="login-label">Seu COG ou e-mail</label>
-        <input className="login-input" type="text" placeholder="Ex: Morri7 ou seuemail@email.com" value={input}
+        <input className="login-input" type="text" placeholder="Ex: COG ou seuemail@email.com" value={input}
           onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLoginCOG()}
           style={{ borderColor: error ? "var(--laranja)" : "" }} />
         <button className="login-btn" onClick={handleLoginCOG} disabled={loading}>{loading ? "BUSCANDO..." : "CONTINUAR →"}</button>
@@ -492,8 +492,6 @@ function MasterlistTab({ user, itens, onLogin }) {
 
       <div className="summary-row">
         <SumCard label="Itens totais" value={guest ? 0 : itens.length} valueCls="white" sub="em todas as CEGs" isAmount={false} />
-        <SumCard label="Valor total" value={0} valueCls="orange" sub="item + frete + taxa" isAmount={true} />
-        <SumCard label="Pago" value={0} valueCls="green" sub="confirmado" isAmount={true} />
         <SumCard label="Pendente" value={0} valueCls="lilas" sub="em aberto" isAmount={true} />
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
