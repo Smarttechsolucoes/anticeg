@@ -298,3 +298,98 @@ td { padding:10px; vertical-align:middle; }
 .ceg-detail-joiner { color:var(--lilas); font-weight:600; white-space:nowrap; }
 .ceg-detail-item { color:var(--offwhite); }
 .ceg-detail-valor { color:var(--laranja); white-space:nowrap; }
+
+/* ── MOBILE ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Topbar */
+  .topbar { padding:0 14px; height:52px; }
+  .topbar-logo { font-size:18px; }
+  .user-email { display:none; }
+  .user-dot { display:none; }
+
+  /* Tabs */
+  .tabs-bar { padding:8px 12px; gap:4px; overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .tabs-bar::-webkit-scrollbar { display:none; }
+  .tab-btn { white-space:nowrap; font-size:10px; padding:7px 12px; flex-shrink:0; }
+
+  /* Main */
+  .main { padding:20px 14px 48px; }
+
+  /* Page header */
+  .page-header { flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:20px; }
+  .page-title { font-size:clamp(34px,11vw,56px); }
+  .greeting { font-size:var(--fs-sm); }
+  .greeting-sub { font-size:11px; }
+
+  /* Summary cards */
+  .summary-row { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .sum-card { padding:14px 12px; }
+  .sum-value { font-size:var(--fs-md); }
+
+  /* Filters */
+  .filters-bar { gap:5px; flex-wrap:wrap; margin-bottom:12px; }
+  .filter-pill { font-size:10px; padding:5px 10px; }
+  .search-input { width:100%; margin-top:4px; box-sizing:border-box; }
+  .filter-label { width:100%; }
+
+  /* Table — horizontal scroll */
+  .table-wrap { border-radius:6px; }
+  .thead-cols th, .col-group-header th { font-size:8px; padding:6px 8px; }
+  tbody td { padding:10px 8px; font-size:11px; }
+  .td-cog { display:none; }
+  .item-title { font-size:12px; }
+  .td-ceg { max-width:80px; }
+  .td-ceg button { font-size:10px; }
+
+  /* View toggle */
+  .view-toggle-bar { gap:6px; flex-wrap:wrap; }
+  .view-toggle-btn { font-size:10px; padding:7px 14px; }
+
+  /* CEG summary grid */
+  .ceg-summary-grid { grid-template-columns:1fr; gap:10px; }
+  .ceg-filter-active { font-size:11px; }
+
+  /* CEG detail table */
+  .ceg-detail-joiner { font-size:11px; }
+  .ceg-detail-item { font-size:11px; }
+  .ceg-detail-valor { font-size:11px; }
+
+  /* Store */
+  .store-grid { grid-template-columns:1fr 1fr; padding:0 0 40px; gap:10px; }
+  .store-card-name { font-size:12px; }
+  .store-filter-select { font-size:11px; padding:7px 10px; }
+
+  /* Calendar */
+  .cal-main { padding:16px 12px; }
+  .cal-header { flex-direction:column; gap:12px; }
+  .cal-weekday { font-size:8px; padding:4px 0; }
+  .cal-day { min-height:48px; padding:4px; }
+  .cal-day-num { font-size:10px; }
+  .cal-event { font-size:8px; padding:1px 3px; }
+  .cal-legend { flex-wrap:wrap; gap:6px; }
+  .cal-month-title { font-size:18px; }
+
+  /* Login */
+  .login-screen { padding:16px; min-height:100dvh; }
+  .login-wrap { padding:0; gap:20px; }
+  .login-title { font-size:clamp(48px,15vw,72px); }
+
+  /* Admin */
+  .admin-wrap { padding:20px 14px 40px; }
+  .admin-money-row { grid-template-columns:1fr 1fr; }
+  .admin-foto-row { flex-direction:column; }
+  .admin-foto-preview,.admin-foto-placeholder { width:80px; height:80px; }
+
+  /* CEG modal */
+  .ceg-modal { margin:12px; width:calc(100% - 24px); max-height:88vh; }
+  .ceg-modal-header { padding:16px; }
+
+  /* Perfil */
+  .login-box { gap:12px; }
+}
+
+@media (max-width: 400px) {
+  .store-grid { grid-template-columns:1fr; }
+  .summary-row { grid-template-columns:1fr; }
+  .admin-money-row { grid-template-columns:1fr; }
+}

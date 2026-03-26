@@ -136,13 +136,43 @@
 
 /* MOBILE */
 @media (max-width: 768px) {
-  .lp-nav { padding:16px 20px; }
+  /* Nav */
+  .lp-nav { padding:14px 20px; }
   .lp-nav-links { display:none; }
-  .lp-hero { grid-template-columns:1fr;padding-top:70px; }
-  .lp-hero-right { display:none; }
-  .lp-hero-left { padding:40px 20px; }
-  .lp-section { padding:60px 20px; }
-  .lp-pag-grid,.lp-mail-grid,.lp-regras-wrap { grid-template-columns:1fr; }
-  .lp-footer { grid-template-columns:1fr;padding:40px 20px 20px; }
-  .lp-footer-bottom { padding:20px;flex-direction:column;gap:8px;text-align:center; }
+
+  /* Hero */
+  .lp-hero { padding-top:70px; }
+  .lp-hero-center { flex-direction:column; gap:32px; padding:32px 20px 48px; }
+  .lp-bonequinha-hero { display:none; }
+  .lp-hero-left { padding:0; }
+  .lp-h1 { font-size:clamp(52px,16vw,80px); }
+  .lp-hero-sub { font-size:13px; }
+  .lp-hero-card { width:100%; box-sizing:border-box; padding:24px 20px; }
+  .lp-hero-actions { flex-direction:column; gap:10px; }
+  .lp-btn-primary,.lp-btn-outline { width:100%; text-align:center; box-sizing:border-box; }
+
+  /* Sections */
+  .lp-section { padding:48px 20px; }
+  .lp-section-header { flex-direction:column; gap:12px; }
+  .lp-section-desc { max-width:100%; }
+  .lp-h2 { font-size:clamp(36px,12vw,60px); }
+
+  /* Antimail */
+  .lp-mail-grid,.lp-mail-grid-2 { grid-template-columns:1fr; }
+  .lp-m-title { font-size:22px; }
+
+  /* Regras */
+  .lp-regras-wrap { grid-template-columns:1fr; gap:24px; }
+  .lp-regras-menu { position:static; flex-direction:row; flex-wrap:wrap; gap:6px; padding:0; background:none; border:none; }
+  .lp-regras-menu a { padding:8px 14px; border:1px solid #2a2a2a; border-radius:20px; font-size:11px; }
+
+  /* Pagamento */
+  .lp-pag-grid { grid-template-columns:1fr; }
+  .lp-pix-key { font-size:13px !important; word-break:break-all; }
+
+  /* Footer */
+  .lp-footer { grid-template-columns:1fr; padding:40px 20px 20px; gap:32px; }
+  .lp-footer-bottom { padding:20px; flex-direction:column; gap:8px; text-align:center; }
+  .lp-footer-logo { font-size:28px; }
+  .lp-bonequinha-footer { width:60px; }
 }
