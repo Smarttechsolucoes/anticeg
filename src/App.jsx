@@ -641,6 +641,7 @@ function MasterlistTab({ user, itens, onLogin }) {
     if (i.venc_nacional && isPendente(i.pag_nacional)) vencDates.push({ d: new Date(i.venc_nacional), label: "Nacional: " + name });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
+  const qtdAtrasados = vencDates.filter(v => v.d < today).length;
 
   let filtered = [...itens];
   if (filter === "pendente") {
@@ -694,6 +695,16 @@ function MasterlistTab({ user, itens, onLogin }) {
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : "nenhum pendente"}</div>
         </div>
       </div>
+
+      {!guest && qtdAtrasados >= 3 && (
+        <div className="blocklist-banner">
+          <span className="blocklist-icon">⚠</span>
+          <div>
+            <div className="blocklist-title">pagamento atrasado</div>
+            <div className="blocklist-sub">você tem {qtdAtrasados} pagamento{qtdAtrasados > 1 ? "s" : ""} em atraso. regularize para continuar participando das CEGs.</div>
+          </div>
+        </div>
+      )}
 
       <div className="filters-bar">
           <span className="filter-label">Ver:</span>

@@ -76,6 +76,11 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .sum-value.yellow { color:#FFD166; }
 .sum-sub { font-size:var(--fs-xs); color:rgba(245,240,232,.3); }
 
+.blocklist-banner { display:flex; align-items:flex-start; gap:14px; background:#1a0a00; border:1px solid #c0392b; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
+.blocklist-icon { font-size:20px; color:#e74c3c; flex-shrink:0; margin-top:1px; }
+.blocklist-title { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-md); color:#e74c3c; letter-spacing:1px; }
+.blocklist-sub { font-family:'DM Mono',monospace; font-size:var(--fs-xs); color:rgba(245,240,232,.5); margin-top:3px; line-height:1.5; }
+
 .filters-bar { display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
 .filter-label { font-size:var(--fs-xs); color:rgba(245,240,232,.35); letter-spacing:1px; margin-right:4px; }
 .filter-pill { background:none; border:1px solid #2a2a2a; color:rgba(245,240,232,.45); font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:5px 14px; border-radius:20px; cursor:pointer; letter-spacing:.5px; transition:all .15s; }
