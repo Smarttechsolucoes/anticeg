@@ -1117,7 +1117,7 @@ function AntiStoreTab({ user }) {
   const isLogado = user && !user.guest && Object.keys(user).length > 0;
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
+    supabase.from("masterlist").select("*").not("foto_url", "is", null).neq("status", "Vendido").then(({ data }) => {
       setItens(data || []);
       setLoading(false);
     });
@@ -1233,8 +1233,8 @@ function AntiStoreTab({ user }) {
           {itensFiltrados.map(item => (
             <div key={item.id} className="store-card">
               <div className="store-card-img">
-                {item.cog
-                  ? <img src={item.cog} alt={item.nome_do_item} />
+                {item.foto_url
+                  ? <img src={item.foto_url} alt={item.nome_do_item} />
                   : <div className="store-no-img">sem foto</div>
                 }
               </div>
