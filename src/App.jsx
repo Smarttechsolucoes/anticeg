@@ -1744,6 +1744,124 @@ function AdminFeedbacks() {
   );
 }
 
+const TUTORIAL_STEPS = [
+  {
+    icon: "◈",
+    title: "Bem-vinda ao ANTICEG!",
+    text: "Aqui você acompanha todos os seus itens de compras em grupo (CEGs) em um só lugar — status, pagamentos e datas de vencimento."
+  },
+  {
+    icon: "☰",
+    title: "Sua Masterlist",
+    text: "Cada card é um item de uma CEG. Toque na seta ▾ no canto inferior direito do card para expandir e ver o timeline completo de onde seu item está na jornada."
+  },
+  {
+    icon: "◉",
+    title: "Status do item",
+    text: "Os chips coloridos mostram a etapa atual: Pré-venda → Na Warehouse → A Caminho → Enviado Nacional. Quanto mais à direita, mais perto de chegar!"
+  },
+  {
+    icon: "R$",
+    title: "Pagamentos",
+    text: "Cada item mostra os valores separados: item, frete, taxa RF e nacional. Verde = Pago, Laranja = Pendente. O total fica branco quando tudo está pago."
+  },
+  {
+    icon: "◈",
+    title: "Aba CEGs",
+    text: "Veja o resumo de todas as CEGs ativas. Use o filtro 'Minhas' para ver só aquelas em que você participa — seus cards ficam com borda roxa."
+  },
+  {
+    icon: "🛍",
+    title: "Anti-Store",
+    text: "Itens disponíveis para claim! Clique em 'Dar Claim' para reservar um item. Você tem 10 dias para pagar após o claim."
+  },
+];
+
+function TutorialModal({ onClose }) {
+  const [step, setStep] = useState(0);
+  const s = TUTORIAL_STEPS[step];
+  const isLast = step === TUTORIAL_STEPS.length - 1;
+
+  function fechar() {
+    localStorage.setItem("anticeg_tutorial_seen", "1");
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={fechar}>
+      <div className="modal-box tutorial-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, textAlign: "center" }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>{s.icon}</div>
+        <div className="modal-title" style={{ marginBottom: 10 }}>{s.title}</div>
+        <div style={{ fontSize: 13, color: "rgba(245,240,232,.7)", lineHeight: 1.6, marginBottom: 24 }}>{s.text}</div>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
+          {TUTORIAL_STEPS.map((_, i) => (
+            <div key={i} onClick={() => setStep(i)} style={{
+              width: i === step ? 20 : 6, height: 6, borderRadius: 3,
+              background: i === step ? "var(--laranja)" : "rgba(245,240,232,.2)",
+              cursor: "pointer", transition: "all .2s"
+            }} />
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          {step > 0 && (
+            <button className="modal-cancel-btn" style={{ flex: 1 }} onClick={() => setStep(s => s - 1)}>← Anterior</button>
+          )}
+          {!isLast ? (
+            <button className="modal-confirm-btn" style={{ flex: 2 }} onClick={() => setStep(s => s + 1)}>Próximo →</button>
+          ) : (
+            <button className="modal-confirm-btn" style={{ flex: 2 }} onClick={fechar}>Entendi! ✓</button>
+          )}
+        </div>
+        <button className="login-skip" style={{ marginTop: 12 }} onClick={fechar}>Pular tutorial</button>
+      </div>
+    </div>
+  );
+}
+
+function TutorialTab() {
+  return (
+    <div className="main">
+      <div className="page-header">
+        <div>
+          <div className="page-eyebrow">anticeg · guia de uso</div>
+          <div className="page-title">TUTO<span>RIAL</span></div>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {TUTORIAL_STEPS.map((s, i) => (
+          <div key={i} style={{
+            background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.08)",
+            borderRadius: 10, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start"
+          }}>
+            <div style={{
+              minWidth: 40, height: 40, borderRadius: 8, background: "rgba(255,90,31,.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 18, color: "var(--laranja)", fontFamily: "'DM Mono', monospace", fontWeight: 700
+            }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 4, letterSpacing: 0.3 }}>{s.title}</div>
+              <div style={{ fontSize: 12, color: "rgba(245,240,232,.6)", lineHeight: 1.7 }}>{s.text}</div>
+            </div>
+          </div>
+        ))}
+        <div style={{
+          background: "rgba(255,90,31,.07)", border: "1px solid rgba(255,90,31,.2)",
+          borderRadius: 10, padding: "18px 20px", textAlign: "center"
+        }}>
+          <div style={{ fontSize: 12, color: "rgba(245,240,232,.5)", marginBottom: 8 }}>Ficou com dúvidas?</div>
+          <a href={`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent("Oi Nanda! Tenho uma dúvida sobre o portal ANTICEG.")}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ color: "var(--verde)", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+            💬 Falar com a Nanda no WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
@@ -1751,6 +1869,7 @@ export default function App() {
   });
   const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Se já tem sessão salva, vai direto pro portal
   useEffect(() => {
@@ -1762,6 +1881,9 @@ export default function App() {
     setUser(u);
     setItens(itensData);
     setPage("portal");
+    if (!localStorage.getItem("anticeg_tutorial_seen") && !u.guest) {
+      setShowTutorial(true);
+    }
   }
 
   function handleLogout() {
@@ -1802,6 +1924,7 @@ export default function App() {
 
   return (
     <div>
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
       <div className="topbar">
         <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
         <div className="topbar-right">
@@ -1820,6 +1943,7 @@ export default function App() {
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Regras</button>
         <button className={`tab-btn ${tab === "store" ? "active" : ""}`} onClick={() => setTab("store")}>🛍 Anti-Store</button>
         {!user.guest && <button className={`tab-btn ${tab === "feedback" ? "active" : ""}`} onClick={() => setTab("feedback")}>✉ Feedback</button>}
+        <button className={`tab-btn ${tab === "tutorial" ? "active" : ""}`} onClick={() => setTab("tutorial")}>? Tutorial</button>
         {user.email === ADMIN_EMAIL && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
@@ -1831,6 +1955,7 @@ export default function App() {
       {tab === "regras" && <RegrasTab />}
       {tab === "store" && <AntiStoreTab user={user} />}
       {!user.guest && tab === "feedback" && <FeedbackTab user={user} />}
+      {tab === "tutorial" && <TutorialTab />}
       {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
     </div>
   );
