@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 import LandingPage from "./LandingPage";
+import bonequinha from "./assets/bonequinha.png";
 
 const supabase = createClient(
   "https://ghjfsmwwcfpfvrouyrka.supabase.co",
@@ -934,6 +935,41 @@ function PerfilTab({ user, onUpdate }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  // foto
+  const [fotoUrl, setFotoUrl] = useState(user.foto_perfil || "");
+  const [fotoLoading, setFotoLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  async function handleFotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFotoLoading(true);
+    // Redimensiona para 200x200 usando canvas
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 200; canvas.height = 200;
+      const ctx = canvas.getContext("2d");
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+      canvas.toBlob(async (blob) => {
+        const path = `${user.cog}/avatar.jpg`;
+        await supabase.storage.from("avatars").remove([path]);
+        const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: true });
+        if (upErr) { setError("Erro ao fazer upload."); setFotoLoading(false); return; }
+        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+        await supabase.from("joiners").update({ foto_perfil: publicUrl }).eq("cog", user.cog);
+        const updatedUser = { ...user, foto_perfil: publicUrl };
+        localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
+        onUpdate(updatedUser);
+        setFotoUrl(publicUrl);
+        setFotoLoading(false);
+      }, "image/jpeg", 0.9);
+    };
+  }
 
   async function buscarCep(v) {
     const c = v.replace(/\D/g, "");
@@ -997,6 +1033,14 @@ function PerfilTab({ user, onUpdate }) {
         </div>
       </div>
       <div className="login-box" style={{ gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingBottom: 16, borderBottom: "1px solid #1e1e1e" }}>
+          <div className="avatar-perfil" onClick={() => fileInputRef.current.click()} title="Clique para trocar a foto">
+            <img src={fotoUrl || bonequinha} alt="foto de perfil" />
+            <div className="avatar-perfil-overlay">{fotoLoading ? "..." : "trocar"}</div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFotoUpload} />
+          <div style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>clique na foto para alterar</div>
+        </div>
         {user.cog && (
           <div>
             <div className="login-label" style={{ marginBottom: 6 }}>COG (fixo)</div>
@@ -1870,6 +1914,27 @@ export default function App() {
   const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
   const [showTutorial, setShowTutorial] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+
+  async function updateLastSeen(u) {
+    if (!u || u.guest || !u.cog) return;
+    await supabase.from("joiners").update({ last_seen: new Date().toISOString() }).eq("cog", u.cog);
+  }
+
+  async function fetchOnlineUsers() {
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data } = await supabase.from("joiners").select("cog, nome, foto_perfil").gte("last_seen", since);
+    setOnlineUsers(data || []);
+  }
+
+  useEffect(() => {
+    if (user && !user.guest) {
+      updateLastSeen(user);
+      fetchOnlineUsers();
+      const iv = setInterval(() => { updateLastSeen(user); fetchOnlineUsers(); }, 5 * 60 * 1000);
+      return () => clearInterval(iv);
+    }
+  }, [user]);
 
   // Se já tem sessão salva, vai direto pro portal
   useEffect(() => {
@@ -1928,6 +1993,19 @@ export default function App() {
       <div className="topbar">
         <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
         <div className="topbar-right">
+          {onlineUsers.length > 0 && (
+            <div className="online-avatars">
+              {onlineUsers.slice(0, 6).map(u => (
+                <div key={u.cog} className="online-avatar" title={u.nome || u.cog}>
+                  <img src={u.foto_perfil || bonequinha} alt={u.cog} />
+                  <div className="online-dot" />
+                </div>
+              ))}
+              {onlineUsers.length > 6 && (
+                <div className="online-avatar-more">+{onlineUsers.length - 6}</div>
+              )}
+            </div>
+          )}
           <div className="topbar-user">
             <div className="user-dot" />
             <span className="user-email">{user.email || `COG ${user.cog}`}</span>

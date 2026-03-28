@@ -441,3 +441,17 @@ td { padding:10px; vertical-align:middle; }
   .table-wrap { display:none; }
   .ml-cards { display:flex; }
 }
+
+/* ── Online avatars ──────────────────────────────────────── */
+.online-avatars { display:flex; align-items:center; gap:-6px; margin-right:8px; }
+.online-avatar { position:relative; width:30px; height:30px; border-radius:50%; border:2px solid #111; overflow:visible; margin-left:-6px; cursor:default; }
+.online-avatar:first-child { margin-left:0; }
+.online-avatar img { width:30px; height:30px; border-radius:50%; object-fit:cover; display:block; }
+.online-dot { position:absolute; bottom:0; right:0; width:8px; height:8px; background:#4ade80; border-radius:50%; border:2px solid #111; }
+.online-avatar-more { background:#222; border:2px solid #333; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:10px; color:rgba(245,240,232,.5); font-family:'DM Mono',monospace; margin-left:-6px; }
+
+/* ── Avatar perfil ───────────────────────────────────────── */
+.avatar-perfil { position:relative; width:90px; height:90px; border-radius:50%; cursor:pointer; border:2px solid rgba(245,240,232,.1); overflow:hidden; }
+.avatar-perfil img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.avatar-perfil-overlay { position:absolute; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; font-size:11px; font-family:'DM Mono',monospace; color:var(--offwhite); opacity:0; transition:opacity .2s; border-radius:50%; }
+.avatar-perfil:hover .avatar-perfil-overlay { opacity:1; }
