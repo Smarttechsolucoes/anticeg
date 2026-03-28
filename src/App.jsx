@@ -1783,7 +1783,7 @@ function TutorialModal({ onClose }) {
   const isLast = step === TUTORIAL_STEPS.length - 1;
 
   function fechar() {
-    localStorage.setItem("anticeg_tutorial_seen", "1");
+    localStorage.setItem("anticeg_tutorial_v1", "1");
     onClose();
   }
 
@@ -1881,7 +1881,7 @@ export default function App() {
     setUser(u);
     setItens(itensData);
     setPage("portal");
-    if (!localStorage.getItem("anticeg_tutorial_seen") && !u.guest) {
+    if (!localStorage.getItem("anticeg_tutorial_v1") && !u.guest) {
       setShowTutorial(true);
     }
   }
