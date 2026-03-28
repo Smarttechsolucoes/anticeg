@@ -595,7 +595,7 @@ function CegTab({ user, itens }) {
 
   useEffect(() => {
     supabase.from("masterlist").select("ceg, cog, status")
-      .neq("nome", "Disponivel")
+      .or("nome.neq.Disponivel,nome.is.null")
       .then(({ data }) => setAllItens(data || []));
   }, []);
 
