@@ -530,7 +530,7 @@ function CegDetailView({ ceg, onVoltar }) {
                   {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
                   {Number(item.nacional) > 0 && <div className="ml-val-row"><span className="ml-val-label">nacional</span><ValCell val={item.nacional} status={item.pag_nacional} /></div>}
-                  {total > 0 && (isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional)) && <div className="ml-val-total">total R${fmtBRL(total)}</div>}
+                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="item-detail" style={{ fontSize:11 }}>{item.info_adicionais}</div>}
                 <div className="ml-card-footer">
@@ -806,7 +806,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                   {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
                   {Number(item.nacional) > 0 && <div className="ml-val-row"><span className="ml-val-label">nacional</span><ValCell val={item.nacional} status={item.pag_nacional} /></div>}
-                  {total > 0 && (isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional)) && <div className="ml-val-total">total R${fmtBRL(total)}</div>}
+                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
               )}
               <div className="ml-card-footer">

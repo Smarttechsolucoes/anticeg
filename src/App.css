@@ -425,6 +425,7 @@ td { padding:10px; vertical-align:middle; }
 .ml-val-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ml-val-label { font-family:'DM Mono',monospace; font-size:10px; color:rgba(245,240,232,.35); letter-spacing:.05em; text-transform:uppercase; }
 .ml-val-total { font-family:'DM Mono',monospace; font-size:12px; color:var(--laranja); font-weight:600; text-align:right; margin-top:4px; padding-top:8px; border-top:1px solid #1e1e1e; }
+.ml-val-total-pago { color:var(--offwhite); }
 .ml-card-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ml-card-timeline { border-top:1px solid #1e1e1e; padding-top:10px; }
 
