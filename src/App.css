@@ -225,8 +225,22 @@ td { padding:10px; vertical-align:middle; }
 .store-card-meta { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:8px; }
 .store-card-cog { font-size:var(--fs-xs); color:var(--lilas); letter-spacing:.5px; }
 .store-card-valor { font-size:var(--fs-sm); color:var(--verde); font-weight:600; }
-.store-claim-btn { display:flex; align-items:center; justify-content:center; gap:6px; background:var(--laranja); color:#fff; font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; padding:10px; border-radius:6px; text-decoration:none; letter-spacing:1px; transition:opacity .15s; margin-top:4px; }
+.store-claim-btn { display:flex; align-items:center; justify-content:center; gap:6px; background:var(--laranja); color:#fff; border:none; cursor:pointer; font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; padding:10px; border-radius:6px; text-decoration:none; letter-spacing:1px; transition:opacity .15s; margin-top:4px; width:100%; }
 .store-claim-btn:hover { opacity:.85; }
+.store-claim-wpp { background:#0d1f0d; border:1px solid #2a5a2a; color:#5cb85c; }
+
+.claim-prazo-box { background:#111; border:1px solid #2a2a2a; border-radius:8px; padding:14px 16px; display:flex; flex-direction:column; gap:4px; }
+.claim-prazo-label { font-family:'DM Mono',monospace; font-size:10px; color:rgba(245,240,232,.35); letter-spacing:1px; text-transform:uppercase; }
+.claim-prazo-date { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-xl); color:var(--laranja); letter-spacing:1px; }
+.claim-prazo-sub { font-family:'DM Mono',monospace; font-size:10px; color:rgba(245,240,232,.3); }
+
+.claim-success-banner { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#0a1a0a; border:1px solid #2a5a2a; border-radius:10px; padding:14px 20px; display:flex; align-items:center; gap:14px; color:#5cb85c; font-family:'DM Mono',monospace; font-size:12px; z-index:999; box-shadow:0 4px 24px rgba(0,0,0,.5); }
+
+.modal-cancel-btn { flex:1; background:none; border:1px solid #333; color:rgba(245,240,232,.4); font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:10px; border-radius:6px; cursor:pointer; }
+.modal-cancel-btn:hover { border-color:#555; color:rgba(245,240,232,.7); }
+.modal-confirm-btn { flex:2; background:var(--laranja); border:none; color:#fff; font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; padding:10px; border-radius:6px; cursor:pointer; letter-spacing:.5px; transition:opacity .15s; }
+.modal-confirm-btn:hover { opacity:.85; }
+.modal-confirm-btn:disabled { opacity:.5; cursor:not-allowed; }
 .store-filter-select { background:#1a1a1a; color:var(--offwhite); border:1px solid rgba(245,240,232,.15); border-radius:6px; padding:6px 10px; font-family:'DM Mono',monospace; font-size:var(--fs-xs); cursor:pointer; outline:none; letter-spacing:.5px; }
 .store-filter-select option { background:#2e2e2e; color:var(--offwhite); }
 

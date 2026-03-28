@@ -1109,6 +1109,11 @@ function AntiStoreTab({ user }) {
   const [loading, setLoading] = useState(true);
   const [filtroMembro, setFiltroMembro] = useState("todos");
   const [ordenacao, setOrdenacao] = useState("padrao");
+  const [claimModal, setClaimModal] = useState(null);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState(null);
+
+  const isLogado = user && user.cog && !user.guest;
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
@@ -1165,6 +1170,36 @@ function AntiStoreTab({ user }) {
     return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
   }
 
+  function getPrazo() {
+    const d = new Date();
+    d.setDate(d.getDate() + 10);
+    return d;
+  }
+
+  function fmtPrazo(d) {
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+  }
+
+  async function handleClaim() {
+    if (!claimModal) return;
+    setClaimLoading(true);
+    const prazo = getPrazo();
+    const venc = prazo.toISOString().split("T")[0];
+    const { error } = await supabase.from("masterlist").update({
+      nome: user.nome || user.cog,
+      cog: user.cog,
+      status: "Vendido",
+      pag_item: "Em aberto",
+      venc_item: venc,
+    }).eq("id", claimModal.id);
+    if (!error) {
+      setItens(prev => prev.filter(i => i.id !== claimModal.id));
+      setClaimSuccess(claimModal.nome_do_item);
+      setClaimModal(null);
+    }
+    setClaimLoading(false);
+  }
+
   return (
     <div className="main">
       <div className="page-header">
@@ -1212,13 +1247,42 @@ function AntiStoreTab({ user }) {
                   <span className="store-card-valor">R$ {fmtBRL(Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0) + Number(item.nacional||0))}</span>
                 </div>
                 {item.status !== "Vendido" && (
-                  <a href={claimMsg(item)} target="_blank" rel="noopener noreferrer" className="store-claim-btn">
-                    ⚡ DAR CLAIM
-                  </a>
+                  isLogado
+                    ? <button className="store-claim-btn" onClick={() => setClaimModal(item)}>⚡ DAR CLAIM</button>
+                    : <a href={claimMsg(item)} target="_blank" rel="noopener noreferrer" className="store-claim-btn store-claim-wpp">💬 CHAMAR NO WHATSAPP</a>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {claimSuccess && (
+        <div className="claim-success-banner">
+          <span>✓ claim confirmado!</span>
+          <span style={{ opacity:.6, fontSize:11 }}>{claimSuccess} aparece agora na sua masterlist.</span>
+          <button onClick={() => setClaimSuccess(null)} style={{ background:"none", border:"none", color:"inherit", cursor:"pointer", opacity:.5, fontSize:16, padding:0 }}>×</button>
+        </div>
+      )}
+
+      {claimModal && (
+        <div className="modal-overlay" onClick={() => !claimLoading && setClaimModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">confirmar claim</div>
+            <div style={{ fontSize:13, color:"rgba(245,240,232,.7)", margin:"12px 0 4px" }}>{claimModal.nome_do_item}</div>
+            <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", marginBottom:16 }}>CEG {claimModal.ceg} · R$ {fmtBRL(getTotal(claimModal))}</div>
+            <div className="claim-prazo-box">
+              <span className="claim-prazo-label">prazo de pagamento</span>
+              <span className="claim-prazo-date">{fmtPrazo(getPrazo())}</span>
+              <span className="claim-prazo-sub">10 dias a partir de hoje</span>
+            </div>
+            <div style={{ display:"flex", gap:10, marginTop:20 }}>
+              <button className="modal-cancel-btn" onClick={() => setClaimModal(null)} disabled={claimLoading}>cancelar</button>
+              <button className="modal-confirm-btn" onClick={handleClaim} disabled={claimLoading}>
+                {claimLoading ? "confirmando..." : "⚡ confirmar claim"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
