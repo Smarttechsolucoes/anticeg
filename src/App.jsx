@@ -594,10 +594,20 @@ function CegTab({ user, itens }) {
   const meuCog = user?.cog;
 
   useEffect(() => {
-    supabase.from("masterlist").select("ceg, cog, status")
-      .or("nome.neq.Disponivel,nome.is.null")
-      .limit(10000)
-      .then(({ data }) => setAllItens(data || []));
+    (async () => {
+      let all = [], from = 0;
+      while (true) {
+        const { data } = await supabase.from("masterlist")
+          .select("ceg, cog, status")
+          .or("nome.neq.Disponivel,nome.is.null")
+          .range(from, from + 999);
+        if (!data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setAllItens(all);
+    })();
   }, []);
 
   if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} />;
