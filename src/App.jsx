@@ -1114,7 +1114,7 @@ function AntiStoreTab({ user }) {
   const [claimSuccess, setClaimSuccess] = useState(null);
   const [claimCogInput, setClaimCogInput] = useState("");
 
-  const isLogado = user && (user.cog || user.email) && !user.guest;
+  const isLogado = user && !user.guest && Object.keys(user).length > 0;
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
@@ -1188,7 +1188,7 @@ function AntiStoreTab({ user }) {
     const venc = prazo.toISOString().split("T")[0];
     const { error } = await supabase.from("masterlist").update({
       nome: user.nome || user.cog || user.email,
-      cog: user.cog || user.email,
+      cog: user.cog || user.nome || user.email,
       status: "Vendido",
       pag_item: "Em aberto",
       venc_item: venc,
@@ -1283,12 +1283,12 @@ function AntiStoreTab({ user }) {
               <input
                 className="search-input"
                 style={{ width:"100%", boxSizing:"border-box" }}
-                placeholder={user.cog || user.email || "seu COG"}
+                placeholder={user.cog || user.nome || user.email || "seu COG"}
                 value={claimCogInput}
                 onChange={e => setClaimCogInput(e.target.value)}
                 disabled={claimLoading}
               />
-              {claimCogInput && claimCogInput.trim().toLowerCase() !== (user.cog || user.email || "").toLowerCase() && (
+              {claimCogInput && claimCogInput.trim().toLowerCase() !== (user.cog || user.nome || user.email || "").toLowerCase() && (
                 <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"#e74c3c", marginTop:5 }}>COG não confere</div>
               )}
             </div>
@@ -1297,7 +1297,7 @@ function AntiStoreTab({ user }) {
               <button
                 className="modal-confirm-btn"
                 onClick={handleClaim}
-                disabled={claimLoading || claimCogInput.trim().toLowerCase() !== (user.cog || user.email || "").toLowerCase()}
+                disabled={claimLoading || claimCogInput.trim().toLowerCase() !== (user.cog || user.nome || user.email || "").toLowerCase()}
               >
                 {claimLoading ? "confirmando..." : "⚡ confirmar claim"}
               </button>
