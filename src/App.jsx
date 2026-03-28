@@ -1117,7 +1117,7 @@ function AntiStoreTab({ user }) {
   const isLogado = user && !user.guest && Object.keys(user).length > 0;
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").not("foto_url", "is", null).neq("status", "Vendido").then(({ data }) => {
+    supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
       setItens(data || []);
       setLoading(false);
     });
