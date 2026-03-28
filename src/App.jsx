@@ -1113,7 +1113,7 @@ function AntiStoreTab({ user }) {
   const [claimLoading, setClaimLoading] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(null);
 
-  const isLogado = user && user.cog && !user.guest;
+  const isLogado = user && (user.cog || user.email) && !user.guest;
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
@@ -1186,8 +1186,8 @@ function AntiStoreTab({ user }) {
     const prazo = getPrazo();
     const venc = prazo.toISOString().split("T")[0];
     const { error } = await supabase.from("masterlist").update({
-      nome: user.nome || user.cog,
-      cog: user.cog,
+      nome: user.nome || user.cog || user.email,
+      cog: user.cog || user.email,
       status: "Vendido",
       pag_item: "Em aberto",
       venc_item: venc,
