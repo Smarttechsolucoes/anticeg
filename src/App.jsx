@@ -1112,6 +1112,7 @@ function AntiStoreTab({ user }) {
   const [claimModal, setClaimModal] = useState(null);
   const [claimLoading, setClaimLoading] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(null);
+  const [claimCogInput, setClaimCogInput] = useState("");
 
   const isLogado = user && (user.cog || user.email) && !user.guest;
 
@@ -1196,6 +1197,7 @@ function AntiStoreTab({ user }) {
       setItens(prev => prev.filter(i => i.id !== claimModal.id));
       setClaimSuccess(claimModal.nome_do_item);
       setClaimModal(null);
+      setClaimCogInput("");
     }
     setClaimLoading(false);
   }
@@ -1266,7 +1268,7 @@ function AntiStoreTab({ user }) {
       )}
 
       {claimModal && (
-        <div className="modal-overlay" onClick={() => !claimLoading && setClaimModal(null)}>
+        <div className="modal-overlay" onClick={() => !claimLoading && (setClaimModal(null), setClaimCogInput(""))}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-title">confirmar claim</div>
             <div style={{ fontSize:13, color:"rgba(245,240,232,.7)", margin:"12px 0 4px" }}>{claimModal.nome_do_item}</div>
@@ -1276,9 +1278,27 @@ function AntiStoreTab({ user }) {
               <span className="claim-prazo-date">{fmtPrazo(getPrazo())}</span>
               <span className="claim-prazo-sub">10 dias a partir de hoje</span>
             </div>
-            <div style={{ display:"flex", gap:10, marginTop:20 }}>
-              <button className="modal-cancel-btn" onClick={() => setClaimModal(null)} disabled={claimLoading}>cancelar</button>
-              <button className="modal-confirm-btn" onClick={handleClaim} disabled={claimLoading}>
+            <div style={{ marginTop:16 }}>
+              <label style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:1, textTransform:"uppercase", display:"block", marginBottom:6 }}>confirme seu COG</label>
+              <input
+                className="search-input"
+                style={{ width:"100%", boxSizing:"border-box" }}
+                placeholder={user.cog || user.email || "seu COG"}
+                value={claimCogInput}
+                onChange={e => setClaimCogInput(e.target.value)}
+                disabled={claimLoading}
+              />
+              {claimCogInput && claimCogInput.trim().toLowerCase() !== (user.cog || user.email || "").toLowerCase() && (
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"#e74c3c", marginTop:5 }}>COG não confere</div>
+              )}
+            </div>
+            <div style={{ display:"flex", gap:10, marginTop:16 }}>
+              <button className="modal-cancel-btn" onClick={() => { setClaimModal(null); setClaimCogInput(""); }} disabled={claimLoading}>cancelar</button>
+              <button
+                className="modal-confirm-btn"
+                onClick={handleClaim}
+                disabled={claimLoading || claimCogInput.trim().toLowerCase() !== (user.cog || user.email || "").toLowerCase()}
+              >
                 {claimLoading ? "confirmando..." : "⚡ confirmar claim"}
               </button>
             </div>
