@@ -76,6 +76,14 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .sum-value.yellow { color:#FFD166; }
 .sum-sub { font-size:var(--fs-xs); color:rgba(245,240,232,.3); }
 
+.feedback-textarea { width:100%; box-sizing:border-box; background:#111; border:1px solid #2a2a2a; border-radius:8px; color:var(--offwhite); font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:12px 14px; resize:vertical; outline:none; transition:border-color .15s; }
+.feedback-textarea:focus { border-color:var(--laranja); }
+.feedback-card { background:#111; border:1px solid #1e1e1e; border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; gap:8px; }
+.feedback-meta { font-family:'DM Mono',monospace; font-size:10px; color:rgba(245,240,232,.35); letter-spacing:.5px; }
+.feedback-msg { font-family:'DM Mono',monospace; font-size:var(--fs-xs); color:var(--offwhite); line-height:1.6; }
+.feedback-resposta { background:#0d1a0d; border:1px solid #1a3a1a; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; font-family:'DM Mono',monospace; font-size:var(--fs-xs); color:rgba(245,240,232,.7); line-height:1.5; }
+.feedback-resposta-label { font-size:9px; color:#5cb85c; text-transform:uppercase; letter-spacing:1px; }
+
 .blocklist-banner { display:flex; align-items:flex-start; gap:14px; background:#1a0a00; border:1px solid #c0392b; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
 .blocklist-icon { font-size:20px; color:#e74c3c; flex-shrink:0; margin-top:1px; }
 .blocklist-title { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-md); color:#e74c3c; letter-spacing:1px; }
