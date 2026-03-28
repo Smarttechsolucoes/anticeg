@@ -1279,7 +1279,8 @@ function AntiStoreTab({ user }) {
               <span className="claim-prazo-sub">10 dias a partir de hoje</span>
             </div>
             <div style={{ marginTop:16 }}>
-              <label style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:1, textTransform:"uppercase", display:"block", marginBottom:6 }}>confirme seu COG</label>
+              <label style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:1, textTransform:"uppercase", display:"block", marginBottom:6 }}>digite seu COG</label>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.35)", marginBottom:8 }}>{user.cog || user.nome || user.email || ""}</div>
               <input
                 className="search-input"
                 style={{ width:"100%", boxSizing:"border-box" }}
