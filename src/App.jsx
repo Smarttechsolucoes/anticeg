@@ -146,6 +146,7 @@ function LoginScreen({ onLogin, onVoltar }) {
   const [senhaConfirm, setSenhaConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [esquecInput, setEsquecInput] = useState("");
 
   // cadastro
   const [nome, setNome] = useState("");
@@ -220,6 +221,20 @@ function LoginScreen({ onLogin, onVoltar }) {
     const user = { ...joinerTemp, nome: nomeTemp };
     localStorage.setItem("anticeg_user", JSON.stringify(user));
     onLogin(user, itensTemp);
+    setLoading(false);
+  }
+
+  async function handleEsqueci() {
+    setLoading(true); setError("");
+    const val = esquecInput.trim().toLowerCase();
+    if (!val) { setError("Informe seu e-mail cadastrado."); setLoading(false); return; }
+    if (!joinerTemp || !joinerTemp.email) { setError("Não foi possível verificar. Entre em contato com a Nanda."); setLoading(false); return; }
+    if (joinerTemp.email.toLowerCase() !== val) { setError("E-mail não confere. Tente novamente ou fale com a Nanda."); setLoading(false); return; }
+    await supabase.from("joiners").update({ senha: null }).eq("cog", cogTemp);
+    setEsquecInput("");
+    setSenha("");
+    setSenhaConfirm("");
+    setMode("criar-senha");
     setLoading(false);
   }
 
@@ -308,7 +323,29 @@ function LoginScreen({ onLogin, onVoltar }) {
         <input className="login-input" type="password" placeholder="••••••" value={senha}
           onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === "Enter" && handleConfirmarSenha()} />
         <button className="login-btn" onClick={handleConfirmarSenha} disabled={loading}>{loading ? "VERIFICANDO..." : "ENTRAR →"}</button>
+        <button className="login-skip" onClick={() => { setMode("esqueci"); setError(""); setSenha(""); }}>Esqueci minha senha</button>
         <button className="login-skip" onClick={() => { setMode("cog"); setError(""); setSenha(""); }}>← Voltar</button>
+        {error && <div className="login-error">{error}</div>}
+      </div>
+    </div></div>
+  );
+
+  if (mode === "esqueci") return (
+    <div className="login-screen"><div className="login-wrap">
+      {logoBlock("redefinir senha")}
+      <div className="login-box">
+        <div style={{ fontSize: 12, color: "rgba(245,240,232,.5)", marginBottom: 12 }}>
+          COG: <span style={{ color: "var(--lilas)" }}>{cogTemp}</span>
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(245,240,232,.4)", marginBottom: 12 }}>
+          Confirme o e-mail cadastrado para redefinir sua senha.
+        </div>
+        <label className="login-label">Seu e-mail cadastrado</label>
+        <input className="login-input" type="email" placeholder="seuemail@email.com" value={esquecInput}
+          onChange={e => setEsquecInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleEsqueci()}
+          style={{ borderColor: error ? "var(--laranja)" : "" }} />
+        <button className="login-btn" onClick={handleEsqueci} disabled={loading}>{loading ? "VERIFICANDO..." : "REDEFINIR SENHA →"}</button>
+        <button className="login-skip" onClick={() => { setMode("senha"); setError(""); setEsquecInput(""); }}>← Voltar</button>
         {error && <div className="login-error">{error}</div>}
       </div>
     </div></div>
