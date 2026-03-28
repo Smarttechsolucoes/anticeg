@@ -583,9 +583,15 @@ function CegDetailView({ ceg, onVoltar }) {
   );
 }
 
-function CegTab() {
+const STATUS_FINAIS = ["Enviado Nacional", "Vendido"];
+
+function CegTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
+  const [filtro, setFiltro] = useState("todas");
+
+  const guest = !user || user.guest;
+  const meuCog = user?.cog;
 
   useEffect(() => {
     supabase.from("masterlist").select("ceg, cog, status")
@@ -604,7 +610,24 @@ function CegTab() {
     const s = item.status || "Pré-venda";
     cegMap[ceg].statusCount[s] = (cegMap[ceg].statusCount[s] || 0) + 1;
   });
-  const cegs = Object.entries(cegMap).sort((a, b) => a[0].localeCompare(b[0]));
+
+  const todasCegs = Object.entries(cegMap).sort((a, b) => a[0].localeCompare(b[0]));
+
+  const minhasCegs = meuCog ? todasCegs.filter(([, d]) => d.joiners.has(meuCog)) : [];
+
+  const finalizadas = todasCegs.filter(([, d]) => {
+    const statuses = Object.keys(d.statusCount);
+    return statuses.length > 0 && statuses.every(s => STATUS_FINAIS.includes(s));
+  });
+
+  const cegsMap = { todas: todasCegs, minhas: minhasCegs, finalizadas };
+  const cegs = cegsMap[filtro] || todasCegs;
+
+  const filtrosBtns = [
+    { id: "todas", label: `Todas (${todasCegs.length})` },
+    ...(!guest ? [{ id: "minhas", label: `Minhas (${minhasCegs.length})` }] : []),
+    { id: "finalizadas", label: `Finalizadas (${finalizadas.length})` },
+  ];
 
   return (
     <div className="main">
@@ -613,22 +636,41 @@ function CegTab() {
           <div className="page-eyebrow">anticeg · compras em grupo</div>
           <div className="page-title">RESU<span>MO CEGs</span></div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div className="greeting-sub" style={{ marginTop: 8 }}>{cegs.length} CEGs ativas</div>
-        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {filtrosBtns.map(f => (
+          <button key={f.id} onClick={() => setFiltro(f.id)}
+            style={{
+              background: filtro === f.id ? "var(--laranja)" : "transparent",
+              color: filtro === f.id ? "#111" : "rgba(245,240,232,.6)",
+              border: `1px solid ${filtro === f.id ? "var(--laranja)" : "rgba(245,240,232,.2)"}`,
+              borderRadius: 6, padding: "6px 14px", fontSize: 12,
+              fontFamily: "'DM Mono', monospace", fontWeight: 600,
+              cursor: "pointer", letterSpacing: "0.5px", transition: "all .15s"
+            }}>
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {allItens === null ? (
         <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>carregando...</div>
       ) : cegs.length === 0 ? (
-        <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>nenhuma CEG encontrada</div>
+        <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>
+          {filtro === "minhas" ? "você não está em nenhuma CEG ainda" : "nenhuma CEG encontrada"}
+        </div>
       ) : (
         <div className="ceg-summary-grid">
           {cegs.map(([ceg, data]) => {
             const statuses = Object.entries(data.statusCount).sort((a, b) => b[1] - a[1]);
+            const euEstou = meuCog && data.joiners.has(meuCog);
             return (
-              <div key={ceg} className="ceg-summary-card">
-                <div className="ceg-summary-name">{ceg}</div>
+              <div key={ceg} className="ceg-summary-card" style={{ borderColor: euEstou ? "rgba(183,156,255,.25)" : "" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="ceg-summary-name">{ceg}</div>
+                  {euEstou && <span style={{ fontSize: 9, background: "var(--lilas)", color: "#111", borderRadius: 4, padding: "1px 6px", fontWeight: 700, letterSpacing: 0.5 }}>EU</span>}
+                </div>
                 <div className="ceg-summary-meta">
                   <span>{data.itens} {data.itens === 1 ? "item" : "itens"}</span>
                   <span>·</span>
@@ -1772,7 +1814,7 @@ export default function App() {
         )}
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={handleLogout} />}
-      {tab === "cegs" && <CegTab />}
+      {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
