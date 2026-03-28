@@ -1262,7 +1262,7 @@ function AntiStoreTab({ user }) {
       {claimSuccess && (
         <div className="claim-success-banner">
           <span>✓ claim confirmado!</span>
-          <span style={{ opacity:.6, fontSize:11 }}>{claimSuccess} aparece agora na sua masterlist.</span>
+          <span style={{ opacity:.6, fontSize:11 }}>{claimSuccess} — atualize a página para aparecer na sua masterlist.</span>
           <button onClick={() => setClaimSuccess(null)} style={{ background:"none", border:"none", color:"inherit", cursor:"pointer", opacity:.5, fontSize:16, padding:0 }}>×</button>
         </div>
       )}
