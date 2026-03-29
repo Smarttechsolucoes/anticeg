@@ -1328,6 +1328,13 @@ function AntiStoreTab({ user }) {
       venc_item: venc,
     }).eq("id", claimModal.id);
     if (!error) {
+      await supabase.from("claims").insert([{
+        cog: user.cog || user.nome || user.email,
+        nome: user.nome || user.cog || user.email,
+        ceg: claimModal.ceg,
+        nome_do_item: claimModal.nome_do_item,
+        venc_item: venc,
+      }]);
       setItens(prev => prev.filter(i => i.id !== claimModal.id));
       setClaimSuccess(claimModal.nome_do_item);
       setClaimModal(null);
