@@ -1241,6 +1241,7 @@ function RegrasTab() {
 function AntiStoreTab({ user }) {
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [storeAtiva, setStoreAtiva] = useState(true);
   const [filtroMembro, setFiltroMembro] = useState("todos");
   const [ordenacao, setOrdenacao] = useState("padrao");
   const [claimModal, setClaimModal] = useState(null);
@@ -1251,6 +1252,8 @@ function AntiStoreTab({ user }) {
   const isLogado = user && !user.guest && Object.keys(user).length > 0;
 
   useEffect(() => {
+    supabase.from("config").select("value").eq("key", "store_ativa").single()
+      .then(({ data }) => { if (data) setStoreAtiva(data.value === "true"); });
     supabase.from("masterlist").select("*").eq("nome", "Disponivel").neq("status", "Vendido").then(({ data }) => {
       setItens(data || []);
       setLoading(false);
@@ -1342,6 +1345,15 @@ function AntiStoreTab({ user }) {
     }
     setClaimLoading(false);
   }
+
+  if (!loading && !storeAtiva) return (
+    <div className="main" style={{ textAlign:"center", paddingTop:60 }}>
+      <div style={{ fontSize:40, marginBottom:16 }}>🛍</div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1 }}>ANTI<span style={{ color:"var(--laranja)" }}>STORE</span></div>
+      <div style={{ fontSize:13, color:"rgba(245,240,232,.4)", marginTop:12 }}>A loja está fechada no momento.</div>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.25)", marginTop:6 }}>Novidades em breve!</div>
+    </div>
+  );
 
   return (
     <div className="main">
@@ -1581,6 +1593,7 @@ function AdminTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [storeAtiva, setStoreAtiva] = useState(true);
   const [form, setForm] = useState({
     nome_do_item: "", ceg: "", valor_item: "", frete_inter: "",
     taxa_rf: "", nacional: "", info_adicionais: "",
@@ -1593,7 +1606,17 @@ function AdminTab() {
       .then(({ data }) => { setItens(data || []); setLoading(false); });
   }
 
-  useEffect(() => { fetchItens(); }, []);
+  useEffect(() => {
+    fetchItens();
+    supabase.from("config").select("value").eq("key", "store_ativa").single()
+      .then(({ data }) => { if (data) setStoreAtiva(data.value === "true"); });
+  }, []);
+
+  async function toggleStore() {
+    const novo = !storeAtiva;
+    await supabase.from("config").update({ value: String(novo) }).eq("key", "store_ativa");
+    setStoreAtiva(novo);
+  }
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -1626,6 +1649,22 @@ function AdminTab() {
   return (
     <div className="admin-wrap">
       <h2 className="admin-title">⚙ Admin — Anti-Store</h2>
+
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Anti-Store</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>{storeAtiva ? "Visível para todos os joiners" : "Oculta — ninguém consegue ver"}</div>
+        </div>
+        <button onClick={toggleStore} style={{
+          background: storeAtiva ? "rgba(74,222,128,.15)" : "rgba(255,90,31,.15)",
+          border: `1px solid ${storeAtiva ? "rgba(74,222,128,.4)" : "rgba(255,90,31,.4)"}`,
+          color: storeAtiva ? "#4ade80" : "var(--laranja)",
+          borderRadius:8, padding:"8px 18px", fontSize:12,
+          fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
+        }}>
+          {storeAtiva ? "✓ ATIVA" : "✗ OCULTA"}
+        </button>
+      </div>
 
       <form className="admin-form" onSubmit={handleAdd}>
         <div className="admin-form-section-label">Novo item</div>
