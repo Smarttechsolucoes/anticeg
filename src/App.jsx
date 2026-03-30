@@ -1618,6 +1618,17 @@ function AdminTab() {
     setStoreAtiva(novo);
   }
 
+  const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key", "manutencao").single()
+      .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
+  }, []);
+  async function toggleManutencao() {
+    const novo = !manutencaoAdmin;
+    await supabase.from("config").update({ value: String(novo) }).eq("key", "manutencao");
+    setManutencaoAdmin(novo);
+  }
+
   async function handleAdd(e) {
     e.preventDefault();
     if (!form.nome_do_item) { setMsg("Nome do item é obrigatório."); return; }
@@ -1650,7 +1661,7 @@ function AdminTab() {
     <div className="admin-wrap">
       <h2 className="admin-title">⚙ Admin — Anti-Store</h2>
 
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Anti-Store</div>
           <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>{storeAtiva ? "Visível para todos os joiners" : "Oculta — ninguém consegue ver"}</div>
@@ -1663,6 +1674,22 @@ function AdminTab() {
           fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
         }}>
           {storeAtiva ? "✓ ATIVA" : "✗ OCULTA"}
+        </button>
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modo Manutenção</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>{manutencaoAdmin ? "⚠ Site bloqueado para todos (exceto admin)" : "Site normal — joiners têm acesso completo"}</div>
+        </div>
+        <button onClick={toggleManutencao} style={{
+          background: manutencaoAdmin ? "rgba(255,90,31,.15)" : "rgba(74,222,128,.15)",
+          border: `1px solid ${manutencaoAdmin ? "rgba(255,90,31,.4)" : "rgba(74,222,128,.4)"}`,
+          color: manutencaoAdmin ? "var(--laranja)" : "#4ade80",
+          borderRadius:8, padding:"8px 18px", fontSize:12,
+          fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
+        }}>
+          {manutencaoAdmin ? "✗ ATIVO" : "✓ DESLIGADO"}
         </button>
       </div>
 
@@ -1961,6 +1988,12 @@ export default function App() {
   const [tab, setTab] = useState("masterlist");
   const [showTutorial, setShowTutorial] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [manutencao, setManutencao] = useState(false);
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key", "manutencao").single()
+      .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
+  }, []);
 
   async function updateLastSeen(u) {
     if (!u || u.guest || !u.cog) return;
@@ -2033,8 +2066,37 @@ export default function App() {
   if (page === "store-publico") return <div>{publicTopbar}<AntiStoreTab user={{}} /></div>;
   if (page === "login" || !user) return <LoginScreen onLogin={handleLogin} onVoltar={() => setPage("landing")} />;
 
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
   return (
     <div>
+      {manutencao && !isAdmin && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "rgba(10,10,10,.97)",
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          padding: 32, textAlign: "center"
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔧</div>
+          <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 32, color: "var(--offwhite)", letterSpacing: 1, marginBottom: 8 }}>
+            SITE EM <span style={{ color: "var(--laranja)" }}>MANUTENÇÃO</span>
+          </div>
+          <div style={{ fontSize: 14, color: "rgba(245,240,232,.6)", lineHeight: 1.7, maxWidth: 420, marginBottom: 24 }}>
+            Em caso de dúvida sobre pagamentos, verifique a planilha no link abaixo:
+          </div>
+          <a href="https://docs.google.com/spreadsheets/d/1UDVBNTbZE04QnT8uOKFCmKY6ZcqT3p8XM_tJ_nzZwDc/edit?gid=2018344579#gid=2018344579"
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              background: "var(--laranja)", color: "#111",
+              fontFamily: "'DM Mono',monospace", fontWeight: 700,
+              fontSize: 13, padding: "12px 24px", borderRadius: 8,
+              textDecoration: "none", letterSpacing: 0.5
+            }}>
+            📊 ABRIR PLANILHA →
+          </a>
+        </div>
+      )}
       {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
       <div className="topbar">
         <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
