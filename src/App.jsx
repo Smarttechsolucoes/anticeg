@@ -1989,11 +1989,24 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [manutencao, setManutencao] = useState(false);
+  const [bypassManutencao, setBypassManutencao] = useState(
+    () => localStorage.getItem("anticeg_admin_bypass") === "1"
+  );
+  const [adminPortalInput, setAdminPortalInput] = useState("");
+  const [showAdminPortal, setShowAdminPortal] = useState(false);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
   }, []);
+
+  function handleAdminBypass() {
+    if (adminPortalInput === user?.senha || user?.email === ADMIN_EMAIL) {
+      localStorage.setItem("anticeg_admin_bypass", "1");
+      setBypassManutencao(true);
+      setShowAdminPortal(false);
+    }
+  }
 
   async function updateLastSeen(u) {
     if (!u || u.guest || !u.cog) return;
@@ -2070,31 +2083,50 @@ export default function App() {
 
   return (
     <div>
-      {manutencao && !isAdmin && (
+      {manutencao && !bypassManutencao && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 9999,
-          background: "rgba(10,10,10,.97)",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          padding: 32, textAlign: "center"
+          background: "#0D0D0D",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 24
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔧</div>
-          <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 32, color: "var(--offwhite)", letterSpacing: 1, marginBottom: 8 }}>
-            SITE EM <span style={{ color: "var(--laranja)" }}>MANUTENÇÃO</span>
+          <div style={{ textAlign: "center", maxWidth: 480, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+            <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, letterSpacing: 2 }}>
+              ANTI<span style={{ color: "var(--laranja)" }}>CEG</span>
+            </div>
+            <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "clamp(48px, 8vw, 80px)", lineHeight: 1 }}>
+              EM MANUTENÇÃO
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(245,240,232,.5)", lineHeight: 1.6 }}>
+              O site vai voltar em breve! Estamos atualizando os dados e corrigindo alguns bugs para melhorar sua experiência.
+            </div>
+            <a href="https://docs.google.com/spreadsheets/d/1iVi-DUq2glx5moyba5zuJktt45a9sYW5LoQXd4vkcHM"
+              target="_blank" rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "var(--laranja)", color: "#0D0D0D",
+                fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 600,
+                padding: "14px 28px", borderRadius: 6, textDecoration: "none", letterSpacing: 1
+              }}>
+              📊 Acessar Planilha
+            </a>
+            <div style={{ fontSize: 10, color: "rgba(245,240,232,.2)", letterSpacing: 2, textTransform: "uppercase" }}>
+              anticeg · masterlist
+            </div>
+            {isAdmin && (
+              <button onClick={() => { localStorage.setItem("anticeg_admin_bypass", "1"); setBypassManutencao(true); }}
+                style={{
+                  marginTop: 8, background: "transparent",
+                  border: "1px solid rgba(245,240,232,.15)",
+                  color: "rgba(245,240,232,.4)",
+                  fontFamily: "'DM Mono',monospace", fontSize: 11,
+                  padding: "10px 20px", borderRadius: 6, cursor: "pointer",
+                  letterSpacing: 1
+                }}>
+                ⚙ ENTRAR NOS BASTIDORES
+              </button>
+            )}
           </div>
-          <div style={{ fontSize: 14, color: "rgba(245,240,232,.6)", lineHeight: 1.7, maxWidth: 420, marginBottom: 24 }}>
-            Em caso de dúvida sobre pagamentos, verifique a planilha no link abaixo:
-          </div>
-          <a href="https://docs.google.com/spreadsheets/d/1UDVBNTbZE04QnT8uOKFCmKY6ZcqT3p8XM_tJ_nzZwDc/edit?gid=2018344579#gid=2018344579"
-            target="_blank" rel="noopener noreferrer"
-            style={{
-              background: "var(--laranja)", color: "#111",
-              fontFamily: "'DM Mono',monospace", fontWeight: 700,
-              fontSize: 13, padding: "12px 24px", borderRadius: 8,
-              textDecoration: "none", letterSpacing: 0.5
-            }}>
-            📊 ABRIR PLANILHA →
-          </a>
         </div>
       )}
       {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
