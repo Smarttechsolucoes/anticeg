@@ -21,7 +21,6 @@
       padding: 2rem 1.25rem 3rem;
     }
 
-    /* BACK BUTTON */
     .back-btn {
       display: inline-flex; align-items: center; gap: 8px;
       font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
@@ -29,41 +28,43 @@
       margin-bottom: 2rem; transition: color 0.15s;
     }
     .back-btn:hover { color: #ff5c00; }
-    .back-btn span { font-size: 16px; }
 
-    /* HEADER */
     .header { text-align: center; margin-bottom: 2.5rem; }
     .logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; color: #fff; margin-bottom: 4px; }
     .logo span { color: #ff5c00; }
     .tagline { font-size: 10px; font-weight: 300; letter-spacing: 0.22em; text-transform: uppercase; color: #444; margin-bottom: 10px; }
     .divider { width: 40px; height: 2px; background: #7a4fff; margin: 10px auto 0; }
 
-    /* SECTION */
-    .section {
-      margin-bottom: 1.5rem;
+    /* ACCORDION */
+    .acc {
       background: #161616;
       border: 1px solid #222;
-      border-top: 3px solid #7a4fff;
+      border-left: 3px solid #7a4fff;
       border-radius: 4px;
+      margin-bottom: 8px;
       overflow: hidden;
     }
-    .section.orange { border-top-color: #ff5c00; }
-    .section.green  { border-top-color: #c8f000; }
+    .acc.orange { border-left-color: #ff5c00; }
+    .acc.green  { border-left-color: #c8f000; }
 
-    .section-header {
-      padding: 14px 16px 12px;
-      border-bottom: 1px solid #1f1f1f;
-      display: flex; align-items: center; gap: 8px;
+    .acc-toggle {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; background: none; border: none;
+      cursor: pointer; font-family: 'Poppins', sans-serif; gap: 10px;
     }
-    .section-prefix { font-size: 10px; font-weight: 900; color: #ff5c00; }
-    .section-title {
-      font-size: 11px; font-weight: 700; color: #7a4fff;
-      text-transform: uppercase; letter-spacing: 0.14em;
+    .acc-toggle-left { display: flex; align-items: center; gap: 8px; }
+    .acc-prefix { font-size: 10px; font-weight: 900; color: #ff5c00; flex-shrink: 0; }
+    .acc-title {
+      font-size: 12px; font-weight: 700; color: #fff;
+      text-transform: uppercase; letter-spacing: 0.08em; text-align: left;
     }
-    .section.orange .section-title { color: #ff5c00; }
-    .section.green  .section-title { color: #c8f000; }
+    .acc-chevron { font-size: 13px; color: #333; transition: transform 0.2s; flex-shrink: 0; }
+    .acc-chevron.open { transform: rotate(180deg); }
 
-    .rules-list { list-style: none; padding: 12px 16px 16px; }
+    .acc-body { display: none; border-top: 1px solid #1f1f1f; padding: 12px 16px 16px; }
+    .acc-body.open { display: block; }
+
+    .rules-list { list-style: none; }
     .rules-list li {
       font-size: 12px; font-weight: 300; color: #999;
       padding: 5px 0 5px 16px; position: relative; line-height: 1.75;
@@ -74,24 +75,17 @@
       content: "☆"; position: absolute; left: 0;
       color: #7a4fff; font-size: 10px; top: 7px;
     }
-    .section.orange .rules-list li::before { color: #ff5c00; }
-    .section.green  .rules-list li::before { color: #c8f000; }
+    .acc.orange .rules-list li::before { color: #ff5c00; }
+    .acc.green  .rules-list li::before { color: #c8f000; }
     .rules-list li b { color: #fff; font-weight: 600; }
-    .rules-list li .tag {
-      display: inline-block; font-size: 9px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      background: #1e1e1e; border: 1px solid #2a2a2a;
-      color: #555; border-radius: 3px; padding: 1px 6px; margin-top: 3px;
-    }
 
-    /* sub-list for CEG types */
-    .sub-list { list-style: none; margin-top: 4px; padding-left: 0; }
+    .sub-list { list-style: none; margin-top: 4px; padding-left: 4px; }
     .sub-list li {
-      font-size: 11px; color: #666; padding: 2px 0 2px 12px; position: relative; border-bottom: none;
+      font-size: 11px; color: #666; padding: 2px 0 2px 12px;
+      position: relative; border-bottom: none;
     }
-    .sub-list li::before { content: "›"; color: #ff5c00; font-weight: 900; left: 0; top: 1px; }
+    .sub-list li::before { content: "›"; color: #ff5c00; font-weight: 900; position: absolute; left: 0; top: 1px; }
 
-    /* FOOTER */
     .footer { text-align: center; margin-top: 2rem; font-size: 10px; font-weight: 300; color: #2a2a2a; letter-spacing: 0.18em; text-transform: uppercase; }
     .footer span { color: #ff5c00; font-weight: 700; }
   </style>
@@ -99,9 +93,7 @@
 <body>
 <div class="page">
 
-  <a class="back-btn" href="/links.html">
-    <span>←</span> Voltar para links
-  </a>
+  <a class="back-btn" href="/links.html">← Voltar para links</a>
 
   <div class="header">
     <div class="logo">ANTI<span>CEG</span></div>
@@ -110,149 +102,221 @@
   </div>
 
   <!-- REGRA DE CLAIM -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Regra de Claim</span>
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Regra de Claim</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>É permitida apenas <b>UMA</b> pessoa te ajudando a dar claims nos itens.</li>
+        <li>No momento da claim, deve estar claramente sinalizado para quem é o photocard.</li>
+        <li>Caso não esteja claramente sinalizado no momento da claim, o item será automaticamente considerado seu, sem possibilidade de contestação posterior, inclusive em caso de erro de interpretação ou falta de identificação clara.</li>
+        <li>Itens considerados seus só poderão ser repassados mediante <b>pagamento integral</b>.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>É permitida apenas <b>UMA</b> pessoa te ajudando a dar claims nos itens.</li>
-      <li>No momento da claim, deve estar claramente sinalizado para quem é o photocard.</li>
-      <li>Caso não esteja claramente sinalizado no momento da claim, o item será automaticamente considerado seu, sem possibilidade de contestação posterior, inclusive em caso de erro de interpretação ou falta de identificação clara.</li>
-      <li>Itens considerados seus só poderão ser repassados mediante <b>pagamento integral</b>.</li>
-    </ul>
   </div>
 
   <!-- INFOS GERAIS -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Infos Gerais</span>
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Infos Gerais</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li><b>Menores de idade não são permitidos.</b></li>
+        <li>Você pode convidar amigxs confiáveis, mas evitem pessoas totalmente desconhecidas.</li>
+        <li>Ao participar da CEG, você declara estar ciente e de acordo com todas as regras.</li>
+        <li>O não cumprimento das regras pode resultar em <b>bloqueio na comunidade</b>.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li><b>Menores de idade não são permitidos.</b></li>
-      <li>Você pode convidar amigxs confiáveis, mas evitem pessoas totalmente desconhecidas.</li>
-      <li>Ao participar da CEG, você declara estar ciente e de acordo com todas as regras.</li>
-      <li>O não cumprimento das regras pode resultar em <b>bloqueio na comunidade</b>.</li>
-    </ul>
   </div>
 
   <!-- ATUALIZAÇÕES -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Atualizações</span>
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Atualizações</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>As atualizações e informações de CEG se encontram sempre nas <b>planilhas</b> e nos respectivos grupos.</li>
+        <li>Caso o participante não esteja nos grupos ou não acompanhe as atualizações, a GOM não se responsabiliza por perdas de prazo, multas ou falta de informação.</li>
+        <li>Se não tem atualização recente, é porque não houve novidade.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>As atualizações e informações de CEG se encontram sempre nas <b>planilhas</b> e nos respectivos grupos.</li>
-      <li>Caso o participante não esteja nos grupos ou não acompanhe as atualizações, a GOM não se responsabiliza por perdas de prazo, multas ou falta de informação.</li>
-      <li>Se não há atualização recente, é porque não houve novidade.</li>
-    </ul>
   </div>
 
   <!-- PAGAMENTOS & TAXAS -->
-  <div class="section green">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Pagamentos & Taxas</span>
+  <div class="acc green">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Pagamentos & Taxas</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>A taxa de <b>R$1 por dia por item</b> é aplicada automaticamente após o vencimento, sem necessidade de aviso.</li>
+        <li>Não é necessário comunicar atrasos individuais. Todas as situações seguem as mesmas regras.</li>
+        <li>Exceções por motivos pessoais não serão consideradas para prazos de pagamento — a multa continua sendo aplicada.</li>
+        <li>Pagamentos realizados após o prazo não garantem a manutenção do item, que pode já ter sido repassado.</li>
+        <li>Condições de abandono de item estão descritas na seção "Abandono de Item".</li>
+        <li>Taxa de embalagem de <b>R$2,50 por quilo</b> de envio.</li>
+        <li>Existem taxas da warehouse/proxy para envios internacional ou nacional.</li>
+        <li>O comprovante de pagamento deve ser enviado no <b>formulário de pagamento</b> — comprovantes enviados no privado não serão considerados.</li>
+        <li>Reembolso só ocorre em caso de <b>cancelamento da CEG inteira</b> — e integral.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>A taxa de <b>R$1 por dia por item</b> é aplicada automaticamente após o vencimento, sem necessidade de aviso.</li>
-      <li>Não é necessário comunicar atrasos individuais. Todas as situações seguem as mesmas regras.</li>
-      <li>Exceções por motivos pessoais não serão consideradas para prazos de pagamento — a multa continua sendo aplicada.</li>
-      <li>Pagamentos realizados após o prazo não garantem a manutenção do item, que pode já ter sido repassado.</li>
-      <li>Taxa de embalagem de <b>R$2,50 por quilo</b> de envio.</li>
-      <li>Existem taxas da warehouse/proxy para envios internacional ou nacional.</li>
-      <li>O comprovante deve ser enviado no <b>formulário de pagamento</b> — comprovantes enviados no privado não serão considerados.</li>
-      <li>Reembolso só ocorre em caso de <b>cancelamento da CEG inteira</b> — e integral.</li>
-    </ul>
   </div>
 
   <!-- REPASSE & ATRASO -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Repasse & Atraso</span>
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Repasse & Atraso</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>Repasses são permitidos dentro da comunidade <b>ANTIGOM</b>, inclusive no grupo V&T, desde que o item esteja totalmente pago à Nanda e com o formulário de pagamento devidamente preenchido.</li>
+        <li>Não é necessário solicitar autorização prévia para repasses realizados dentro da comunidade.</li>
+        <li>Repasses para pessoas <b>fora da comunidade</b> não são permitidos e serão cancelados.</li>
+        <li>
+          CEGs que <b>não permitem repasse:</b>
+          <ul class="sub-list">
+            <li>Itens fanmade</li>
+            <li>Revistas</li>
+            <li>Caixas Mercari</li>
+          </ul>
+        </li>
+        <li>O repasse de qualquer item só será realizado após <b>pagamento integral</b>.</li>
+        <li>O joiner original é totalmente responsável por repassar todas as informações e regras ao novo dono do item.</li>
+        <li>O joiner deve preencher o <b>formulário de repasse</b> após a finalização. Repasses não informados via formulário não serão considerados pela GOM.</li>
+        <li>A GOM não se responsabiliza por falhas de comunicação entre as partes.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>Repasses são permitidos dentro da comunidade <b>ANTIGOM</b>, inclusive no grupo V&T, desde que o item esteja totalmente pago e o formulário preenchido.</li>
-      <li>Não é necessário solicitar autorização prévia para repasses realizados dentro da comunidade.</li>
-      <li>Repasses para pessoas <b>fora da comunidade</b> não são permitidos e serão cancelados.</li>
-      <li>
-        CEGs que <b>não permitem repasse:</b>
-        <ul class="sub-list">
-          <li>Itens fanmade</li>
-          <li>Revistas</li>
-          <li>Caixas Mercari</li>
-        </ul>
-      </li>
-      <li>O repasse de qualquer item só será realizado após <b>pagamento integral</b>.</li>
-      <li>O joiner original é totalmente responsável por repassar todas as informações e regras ao novo dono.</li>
-      <li>O joiner deve preencher o <b>formulário de repasse</b> após a finalização. Repasses não informados via formulário não serão considerados.</li>
-      <li>A GOM não se responsabiliza por falhas de comunicação entre as partes.</li>
-    </ul>
   </div>
 
-  <!-- ENVIOS -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Envios Inter & Nacional</span>
+  <!-- ENVIO INTERNACIONAL -->
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Envio Internacional</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>Pagamentos de taxas da Receita Federal ou frete internacional serão comunicados no grupo da CEG com prazo de vencimento.</li>
+        <li>O valor da declaração será sempre o <b>valor integral do produto</b> para cobertura do seguro.</li>
+        <li>Condições de abandono relacionadas ao envio estão descritas na seção "Abandono de Item".</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>Pagamentos de taxas da Receita Federal ou frete internacional serão comunicados no grupo da CEG com prazo de vencimento.</li>
-      <li>Frete nacional: rounds de envio abertos mensalmente com avisos no grupo geral.</li>
-      <li>Armazenamento nacional <b>gratuito por até 1 mês</b>, caso haja outra CEG a caminho.</li>
-      <li>Se o armazenamento for extrapolado, o item poderá ser repassado sem reembolso e sem aviso individual.</li>
-      <li>Após o envio nacional, não nos responsabilizamos por atrasos ou falhas da transportadora — item danificado, perdido ou roubado.</li>
-      <li>A responsabilidade da GOM se encerra no momento da <b>postagem</b>.</li>
-      <li>O valor da declaração será sempre o valor integral do produto para cobertura do seguro.</li>
-    </ul>
+  </div>
+
+  <!-- ENVIO NACIONAL -->
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Envio Nacional</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>Os envios nacionais são realizados em <b>rounds mensais</b>, com avisos prévios no grupo geral.</li>
+        <li>O envio deve ser solicitado dentro do período informado. Solicitações fora do prazo poderão ser direcionadas para o próximo round.</li>
+        <li>Armazenamento nacional <b>gratuito por até 1 mês</b>, caso haja outra CEG a caminho.</li>
+        <li>Caso não haja previsão de novos itens, é responsabilidade do participante solicitar o envio dentro do prazo.</li>
+        <li>Se o armazenamento for extrapolado, o item poderá ser repassado sem reembolso e sem aviso individual.</li>
+        <li>Após o envio nacional, não nos responsabilizamos por atrasos ou falhas da transportadora — item danificado, perdido ou roubado.</li>
+        <li>A responsabilidade da GOM se encerra no momento da <b>postagem</b>.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ABANDONO -->
-  <div class="section orange">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Abandono de Item</span>
+  <div class="acc orange">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Abandono de Item</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>Itens com mais de <b>15 dias corridos</b> de atraso no pagamento serão considerados abandono e poderão ser repassados sem reembolso.</li>
+        <li>Itens sem solicitação de envio após <b>60 dias</b> do recebimento no Brasil serão considerados abandono e poderão ser repassados sem reembolso.</li>
+        <li>Pagamentos realizados após a caracterização de abandono não garantem a recuperação do item.</li>
+        <li>Não é necessário aviso individual para caracterização de abandono.</li>
+        <li>Ao participar da CEG, você declara estar ciente dos prazos e condições para evitar o abandono.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>Itens com mais de <b>15 dias corridos</b> de atraso no pagamento serão considerados abandono e poderão ser repassados sem reembolso.</li>
-      <li>Itens sem solicitação de envio após <b>60 dias</b> do recebimento no Brasil serão considerados abandono e poderão ser repassados sem reembolso.</li>
-      <li>Pagamentos realizados após a caracterização de abandono não garantem a recuperação do item.</li>
-      <li>Não é necessário aviso individual para caracterização de abandono.</li>
-      <li>Ao participar da CEG, você declara estar ciente dos prazos e condições para evitar o abandono.</li>
-    </ul>
   </div>
 
   <!-- REEMBOLSOS -->
-  <div class="section orange">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Reembolsos</span>
+  <div class="acc orange">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Reembolsos</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>Transações internacionais envolvem riscos. Ao participar, você declara estar ciente de que <b>não há reembolso</b> em casos de problemas com sellers, incluindo calotes.</li>
+        <li>Não há reembolso em caso de roubo ou perda do objeto, incluindo extravios por transportadoras ou serviços postais.</li>
+        <li>Reembolso pode ser realizado apenas em caso de má embalagem, comprovada por <b>vídeo de abertura sem cortes</b>.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>Transações internacionais envolvem riscos. Ao participar, você declara estar ciente de que <b>não há reembolso</b> em casos de problemas com sellers, incluindo calotes.</li>
-      <li>Não há reembolso em caso de roubo ou perda do objeto, incluindo extravios por transportadoras.</li>
-      <li>Reembolso pode ser realizado apenas em caso de má embalagem, comprovada por <b>vídeo de abertura sem cortes</b>.</li>
-    </ul>
   </div>
 
   <!-- COMPRADORES SENSÍVEIS -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-prefix">//</span>
-      <span class="section-title">Compradores Sensíveis</span>
+  <div class="acc">
+    <button class="acc-toggle" onclick="toggle(this)">
+      <div class="acc-toggle-left">
+        <span class="acc-prefix">//</span>
+        <span class="acc-title">Compradores Sensíveis</span>
+      </div>
+      <span class="acc-chevron">▾</span>
+    </button>
+    <div class="acc-body">
+      <ul class="rules-list">
+        <li>Compradores que se incomodam com pequenos defeitos estéticos (amassados leves, pressmarks, sinais de manuseio) <b>não devem participar</b> das CEGs.</li>
+        <li>Ao participar, você concorda em não solicitar trocas, cancelamentos ou reclamações por esse tipo de marca.</li>
+        <li>Reclamações desse tipo não serão consideradas.</li>
+      </ul>
     </div>
-    <ul class="rules-list">
-      <li>Compradores que se incomodam com pequenos defeitos estéticos (amassados leves, pressmarks, sinais de manuseio) <b>não devem participar</b> das CEGs.</li>
-      <li>Ao participar, você concorda em não solicitar trocas, cancelamentos ou reclamações por esse tipo de marca.</li>
-      <li>Reclamações desse tipo não serão consideradas.</li>
-    </ul>
   </div>
 
   <div class="footer"><span>★</span> ANTICEG · comunidade ANTIGOM <span>★</span></div>
 
 </div>
+<script>
+  function toggle(btn) {
+    var body = btn.nextElementSibling;
+    var chevron = btn.querySelector('.acc-chevron');
+    body.classList.toggle('open');
+    chevron.classList.toggle('open');
+  }
+</script>
 </body>
 </html>
