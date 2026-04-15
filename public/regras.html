@@ -86,6 +86,24 @@
     }
     .sub-list li::before { content: "›"; color: #ff5c00; font-weight: 900; position: absolute; left: 0; top: 1px; }
 
+    /* SEARCH */
+    .search-wrap { position: relative; margin-bottom: 1.5rem; }
+    .search-input {
+      width: 100%; padding: 11px 16px 11px 38px;
+      background: #161616; border: 1px solid #222; border-radius: 4px;
+      font-size: 13px; font-weight: 300; font-family: 'Poppins', sans-serif;
+      color: #fff; outline: none; transition: border-color 0.15s;
+    }
+    .search-input::placeholder { color: #333; }
+    .search-input:focus { border-color: #7a4fff; }
+    .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #333; pointer-events: none; }
+    .search-count { font-size: 10px; font-weight: 700; color: #444; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px; min-height: 14px; }
+    .search-count span { color: #7a4fff; }
+
+    mark { background: #7a4fff33; color: #fff; border-radius: 2px; padding: 0 2px; }
+    .acc.hidden { display: none; }
+    li.hidden { display: none; }
+
     .footer { text-align: center; margin-top: 2rem; font-size: 10px; font-weight: 300; color: #2a2a2a; letter-spacing: 0.18em; text-transform: uppercase; }
     .footer span { color: #ff5c00; font-weight: 700; }
   </style>
@@ -99,6 +117,12 @@
     <div class="logo">ANTI<span>CEG</span></div>
     <div class="tagline">regras da comunidade</div>
     <div class="divider"></div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" type="text" placeholder="Buscar por palavra-chave..." oninput="search(this.value)" autocomplete="off">
+    <div class="search-count" id="searchCount"></div>
   </div>
 
   <!-- INFOS GERAIS (fixo aberto) -->
@@ -294,6 +318,73 @@
     var chevron = btn.querySelector('.acc-chevron');
     body.classList.toggle('open');
     chevron.classList.toggle('open');
+  }
+
+  // salva o HTML original de cada li para restaurar depois
+  var originals = [];
+  document.querySelectorAll('.rules-list li').forEach(function(li, i) {
+    originals[i] = li.innerHTML;
+    li.dataset.idx = i;
+  });
+
+  function search(q) {
+    q = q.trim();
+    var count = 0;
+
+    document.querySelectorAll('.rules-list li').forEach(function(li) {
+      // restaura original
+      li.innerHTML = originals[li.dataset.idx];
+    });
+
+    if (!q) {
+      // reset: mostra tudo, fecha seções (exceto fixas)
+      document.querySelectorAll('.acc').forEach(function(acc) {
+        acc.classList.remove('hidden');
+      });
+      document.querySelectorAll('.rules-list li').forEach(function(li) {
+        li.classList.remove('hidden');
+      });
+      document.getElementById('searchCount').innerHTML = '';
+      return;
+    }
+
+    var re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+
+    document.querySelectorAll('.acc').forEach(function(acc) {
+      var items = acc.querySelectorAll('.rules-list li');
+      var accHasMatch = false;
+
+      items.forEach(function(li) {
+        var text = li.textContent;
+        if (re.test(text)) {
+          accHasMatch = true;
+          count++;
+          li.classList.remove('hidden');
+          li.innerHTML = li.innerHTML.replace(re, function(m) { return '<mark>' + m + '</mark>'; });
+          re.lastIndex = 0;
+        } else {
+          li.classList.add('hidden');
+          re.lastIndex = 0;
+        }
+      });
+
+      if (accHasMatch) {
+        acc.classList.remove('hidden');
+        var body = acc.querySelector('.acc-body');
+        if (body) body.classList.add('open');
+        var chevron = acc.querySelector('.acc-chevron');
+        if (chevron) chevron.classList.add('open');
+      } else {
+        acc.classList.add('hidden');
+      }
+    });
+
+    var el = document.getElementById('searchCount');
+    if (count === 0) {
+      el.innerHTML = 'nenhum resultado encontrado';
+    } else {
+      el.innerHTML = '<span>' + count + '</span> resultado' + (count > 1 ? 's' : '') + ' encontrado' + (count > 1 ? 's' : '');
+    }
   }
 </script>
 </body>
