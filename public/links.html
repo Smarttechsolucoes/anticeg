@@ -89,37 +89,6 @@
     .calc-note { font-size: 10px; font-weight: 300; color: #3a3a3a; margin-top: 12px; text-align: center; line-height: 1.7; letter-spacing: 0.03em; }
     .calc-note strong { color: #ff5c00; font-weight: 600; }
 
-    .rules-card { background: #161616; border: 1px solid #222; border-top: 3px solid #7a4fff; border-radius: 4px; overflow: hidden; }
-    .rules-toggle {
-      width: 100%; display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; background: none; border: none; cursor: pointer; font-family: 'Poppins', sans-serif;
-    }
-    .rules-toggle-left { display: flex; align-items: center; gap: 8px; }
-    .rules-prefix { font-size: 10px; font-weight: 700; color: #7a4fff; letter-spacing: 0.1em; }
-    .rules-toggle-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; }
-    .rules-chevron { font-size: 14px; color: #444; transition: transform 0.2s; }
-    .rules-chevron.open { transform: rotate(180deg); }
-
-    .rules-body { display: none; padding: 0 16px 16px; border-top: 1px solid #1f1f1f; }
-    .rules-body.open { display: block; }
-
-    .rules-section { margin-top: 16px; }
-    .rules-section h3 {
-      font-size: 10px; font-weight: 700; color: #7a4fff;
-      text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 8px;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .rules-section h3::before { content: "//"; color: #ff5c00; font-weight: 900; }
-    .rules-section ul { list-style: none; }
-    .rules-section ul li {
-      font-size: 12px; font-weight: 300; color: #999;
-      padding: 4px 0 4px 14px; position: relative; line-height: 1.7;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    .rules-section ul li:last-child { border-bottom: none; }
-    .rules-section ul li::before { content: "›"; position: absolute; left: 0; color: #ff5c00; font-weight: 900; font-size: 15px; top: 2px; }
-    .rules-section ul li b { color: #fff; font-weight: 600; }
-
     .ticker { margin-top: 2.5rem; overflow: hidden; white-space: nowrap; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; padding: 8px 0; }
     .ticker-inner { display: inline-block; animation: ticker 20s linear infinite; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #222; text-transform: uppercase; }
     @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -202,90 +171,6 @@
     <div class="calc-note"><strong>R$1 por dia por item</strong> · insira o valor do item para ver o total completo</div>
   </div>
 
-  <div class="section-label"><span>//</span> Regras da comunidade</div>
-
-  <div class="rules-card">
-    <button class="rules-toggle" onclick="toggleRules()">
-      <div class="rules-toggle-left">
-        <span class="rules-prefix">// 01</span>
-        <span class="rules-toggle-title">Ver todas as regras</span>
-      </div>
-      <span class="rules-chevron" id="chevron">▾</span>
-    </button>
-    <div class="rules-body" id="rulesBody">
-
-      <div class="rules-section">
-        <h3>Regra de Claim</h3>
-        <ul>
-          <li>Apenas <b>UMA</b> pessoa pode te ajudar a dar claims nos itens.</li>
-          <li>No momento da claim, deve estar claramente sinalizado para quem é o photocard. Caso não esteja, o item é considerado seu.</li>
-          <li>Itens considerados seus só podem ser repassados mediante <b>pagamento integral</b>.</li>
-        </ul>
-      </div>
-
-      <div class="rules-section">
-        <h3>Infos gerais</h3>
-        <ul>
-          <li>Sempre buscamos merchs, SKZOOs, itens de pop-up e photocards do SKZ com melhor preço e variedade.</li>
-          <li>Às vezes rolam caixinhas do Mercari, POCA, TaoBao e outros!</li>
-          <li>Assim que os itens chegam na warehouse/proxy, já solicitamos envio — não fazemos CEG longa.</li>
-          <li><b>Menores de idade não são permitidos.</b></li>
-          <li>Você pode convidar amigxs confiáveis, mas evite pessoas totalmente desconhecidas.</li>
-        </ul>
-      </div>
-
-      <div class="rules-section">
-        <h3>Pagamentos & Taxas</h3>
-        <ul>
-          <li>Taxa de <b>R$1 por dia por item</b> em caso de atraso.</li>
-          <li>Taxa de embalagem de <b>R$2,50</b> para até 6 photocards.</li>
-          <li>Comprovante deve ser enviado no formulário de pagamento.</li>
-          <li>Reembolso só em cancelamento da CEG inteira — imediato e integral.</li>
-          <li>3 atrasos em 30 dias = claims bloqueadas até regularizar.</li>
-        </ul>
-      </div>
-
-      <div class="rules-section">
-        <h3>Repasse & Atraso</h3>
-        <ul>
-          <li>Repasse permitido apenas para membros da comunidade <b>ANTIGOM</b>.</li>
-          <li>Mais de <b>15 dias de atraso</b> = abandono, item revendido. Sem reembolso.</li>
-          <li>Atrasos não comunicados ou +5 dias = lista de <b>NÃO PAGANTES</b>.</li>
-          <li>3 atrasos em 2 meses = claims bloqueadas.</li>
-          <li><b>20 dias corridos</b> sem justificativa = item repassado. Sem recompra.</li>
-        </ul>
-      </div>
-
-      <div class="rules-section">
-        <h3>Envios inter & nacional</h3>
-        <ul>
-          <li>Taxa inter: prazo de até <b>4 dias</b> para pagamento.</li>
-          <li>Taxa RF: prazo de <b>7 dias</b> para pagamento.</li>
-          <li>Armazenamento gratuito por até <b>1 mês</b> com outra CEG a caminho.</li>
-          <li>Após 30 dias: <b>R$30/mês</b> de armazenamento. 60 dias = ABANDONO.</li>
-          <li>Envios nacionais em <b>7 dias úteis</b> via NUVEMSHOP.</li>
-        </ul>
-      </div>
-
-      <div class="rules-section">
-        <h3>Reembolsos</h3>
-        <ul>
-          <li>Calote de seller não é reembolsado.</li>
-          <li>Sem reembolso por roubo ou perda.</li>
-          <li>Reembolso por má embalagem exige <b>vídeo de abertura sem cortes</b>.</li>
-        </ul>
-      </div>
-
-      <div class="rules-section">
-        <h3>Compradores sensíveis</h3>
-        <ul>
-          <li>Quem se incomoda com pequenos defeitos estéticos não deve participar de CEGs. Ao entrar, você declara estar ciente dessa possibilidade.</li>
-        </ul>
-      </div>
-
-    </div>
-  </div>
-
   <div class="ticker">
     <span class="ticker-inner">ANTIJOINERS · ANTICEG · ANTICOMU · ANTIMAIL · ANTIGOM · ANTI-STORE · ANTIJOINERS · ANTICEG · ANTICOMU · ANTIMAIL · ANTIGOM · ANTI-STORE · </span>
   </div>
@@ -310,10 +195,6 @@
     }
   }
 
-  function toggleRules() {
-    document.getElementById('rulesBody').classList.toggle('open');
-    document.getElementById('chevron').classList.toggle('open');
-  }
 </script>
 </body>
 </html>
