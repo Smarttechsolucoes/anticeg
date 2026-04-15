@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ANTICEG — Links</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+
+    body {
+      background: #0e0e0e;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 520px;
+      padding: 2rem 1.25rem 3rem;
+    }
+
+    .header { text-align: center; margin-bottom: 2.5rem; padding-top: 0.5rem; }
+    .logo { font-size: 30px; font-weight: 900; letter-spacing: -1px; color: #fff; margin-bottom: 4px; }
+    .logo span { color: #ff5c00; }
+    .tagline { font-size: 10px; font-weight: 300; letter-spacing: 0.22em; text-transform: uppercase; color: #444; margin-bottom: 10px; }
+    .divider { width: 40px; height: 2px; background: #ff5c00; margin: 10px auto 0; }
+
+    .section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #444; margin: 2rem 0 0.75rem;
+    }
+    .section-label span { color: #ff5c00; margin-right: 6px; }
+
+    .link-card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      background: #161616;
+      border: 1px solid #222;
+      border-left: 3px solid #ff5c00;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .link-card:hover { background: #1c1c1c; border-left-color: #c8f000; }
+    .link-card:hover .link-arrow { color: #c8f000; }
+
+    .link-icon {
+      width: 36px; height: 36px; border-radius: 4px;
+      background: #1e1e1e; border: 1px solid #2a2a2a;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 16px;
+    }
+    .link-info { flex: 1; }
+    .link-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.3; }
+    .link-sub { font-size: 11px; font-weight: 300; color: #555; margin-top: 2px; }
+    .link-arrow { font-size: 18px; color: #ff5c00; font-weight: 700; }
+
+    .calc-card {
+      background: #161616; border: 1px solid #222;
+      border-top: 3px solid #c8f000; border-radius: 4px; padding: 18px 16px;
+    }
+    .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .calc-field label {
+      display: block; font-size: 10px; font-weight: 700;
+      color: #444; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .calc-field input {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid #2a2a2a; border-radius: 3px;
+      font-size: 15px; font-weight: 600; font-family: 'Poppins', sans-serif;
+      color: #fff; background: #111; outline: none; transition: border-color 0.15s;
+    }
+    .calc-field input:focus { border-color: #c8f000; }
+    .calc-field input::placeholder { color: #333; font-weight: 300; }
+
+    .calc-result {
+      background: #111; border: 1px solid #2a2a2a;
+      border-left: 3px solid #c8f000; border-radius: 3px;
+      padding: 14px 16px; margin-top: 4px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .result-label { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.12em; }
+    .result-breakdown { font-size: 11px; font-weight: 300; color: #444; margin-top: 3px; }
+    .result-value { font-size: 26px; font-weight: 900; color: #c8f000; letter-spacing: -1px; }
+
+    .calc-note { font-size: 10px; font-weight: 300; color: #3a3a3a; margin-top: 12px; text-align: center; line-height: 1.7; letter-spacing: 0.03em; }
+    .calc-note strong { color: #ff5c00; font-weight: 600; }
+
+    .rules-card { background: #161616; border: 1px solid #222; border-top: 3px solid #7a4fff; border-radius: 4px; overflow: hidden; }
+    .rules-toggle {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; background: none; border: none; cursor: pointer; font-family: 'Poppins', sans-serif;
+    }
+    .rules-toggle-left { display: flex; align-items: center; gap: 8px; }
+    .rules-prefix { font-size: 10px; font-weight: 700; color: #7a4fff; letter-spacing: 0.1em; }
+    .rules-toggle-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; }
+    .rules-chevron { font-size: 14px; color: #444; transition: transform 0.2s; }
+    .rules-chevron.open { transform: rotate(180deg); }
+
+    .rules-body { display: none; padding: 0 16px 16px; border-top: 1px solid #1f1f1f; }
+    .rules-body.open { display: block; }
+
+    .rules-section { margin-top: 16px; }
+    .rules-section h3 {
+      font-size: 10px; font-weight: 700; color: #7a4fff;
+      text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .rules-section h3::before { content: "//"; color: #ff5c00; font-weight: 900; }
+    .rules-section ul { list-style: none; }
+    .rules-section ul li {
+      font-size: 12px; font-weight: 300; color: #999;
+      padding: 4px 0 4px 14px; position: relative; line-height: 1.7;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .rules-section ul li:last-child { border-bottom: none; }
+    .rules-section ul li::before { content: "›"; position: absolute; left: 0; color: #ff5c00; font-weight: 900; font-size: 15px; top: 2px; }
+    .rules-section ul li b { color: #fff; font-weight: 600; }
+
+    .ticker { margin-top: 2.5rem; overflow: hidden; white-space: nowrap; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; padding: 8px 0; }
+    .ticker-inner { display: inline-block; animation: ticker 20s linear infinite; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #222; text-transform: uppercase; }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    .footer { text-align: center; margin-top: 1.5rem; font-size: 10px; font-weight: 300; color: #2a2a2a; letter-spacing: 0.18em; text-transform: uppercase; }
+    .footer span { color: #ff5c00; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo">ANTI<span>CEG</span></div>
+    <div class="tagline">comunidade antigom · skz & mais</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section-label"><span>//</span> Links rápidos</div>
+
+  <a class="link-card" href="https://docs.google.com/spreadsheets/d/1UDVBNTbZE04QnT8uOKFCmKY6ZcqT3p8XM_tJ_nzZwDc/edit?usp=sharing" target="_blank">
+    <div class="link-icon">📊</div>
+    <div class="link-info">
+      <div class="link-title">Planilha CEGs</div>
+      <div class="link-sub">Acompanhe seus itens e status</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-card" href="https://forms.gle/SyG2Zz8Lovreq8kn9" target="_blank">
+    <div class="link-icon">💸</div>
+    <div class="link-info">
+      <div class="link-title">Forms de Pagamento</div>
+      <div class="link-sub">Envie seu comprovante aqui</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-card" href="https://forms.gle/LbXKqqiJHvVYrnSx6" target="_blank">
+    <div class="link-icon">🔄</div>
+    <div class="link-info">
+      <div class="link-title">Forms de Repasses</div>
+      <div class="link-sub">Solicite repasse de itens</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-card" href="https://api.whatsapp.com/send/?phone=5524992501917&text&type=phone_number&app_absent=0" target="_blank">
+    <div class="link-icon">💬</div>
+    <div class="link-info">
+      <div class="link-title">WhatsApp — Nanda</div>
+      <div class="link-sub">Dúvidas e contato direto</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <div class="section-label"><span>//</span> Calculadora de multa</div>
+
+  <div class="calc-card">
+    <div class="calc-row">
+      <div class="calc-field">
+        <label>Qtd. de itens</label>
+        <input type="number" id="qty" min="1" value="1" oninput="calcMulta()">
+      </div>
+      <div class="calc-field">
+        <label>Dias de atraso</label>
+        <input type="number" id="days" min="0" value="0" oninput="calcMulta()">
+      </div>
+    </div>
+    <div class="calc-field" style="margin-bottom:14px;">
+      <label>Valor do item (R$)</label>
+      <input type="number" id="price" min="0" step="0.01" placeholder="0,00" oninput="calcMulta()">
+    </div>
+    <div class="calc-result">
+      <div>
+        <div class="result-label">Total a pagar</div>
+        <div class="result-breakdown" id="breakdown">—</div>
+      </div>
+      <div class="result-value" id="total">R$ 0,00</div>
+    </div>
+    <div class="calc-note"><strong>R$1 por dia por item</strong> · insira o valor do item para ver o total completo</div>
+  </div>
+
+  <div class="section-label"><span>//</span> Regras da comunidade</div>
+
+  <div class="rules-card">
+    <button class="rules-toggle" onclick="toggleRules()">
+      <div class="rules-toggle-left">
+        <span class="rules-prefix">// 01</span>
+        <span class="rules-toggle-title">Ver todas as regras</span>
+      </div>
+      <span class="rules-chevron" id="chevron">▾</span>
+    </button>
+    <div class="rules-body" id="rulesBody">
+
+      <div class="rules-section">
+        <h3>Regra de Claim</h3>
+        <ul>
+          <li>Apenas <b>UMA</b> pessoa pode te ajudar a dar claims nos itens.</li>
+          <li>No momento da claim, deve estar claramente sinalizado para quem é o photocard. Caso não esteja, o item é considerado seu.</li>
+          <li>Itens considerados seus só podem ser repassados mediante <b>pagamento integral</b>.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Infos gerais</h3>
+        <ul>
+          <li>Sempre buscamos merchs, SKZOOs, itens de pop-up e photocards do SKZ com melhor preço e variedade.</li>
+          <li>Às vezes rolam caixinhas do Mercari, POCA, TaoBao e outros!</li>
+          <li>Assim que os itens chegam na warehouse/proxy, já solicitamos envio — não fazemos CEG longa.</li>
+          <li><b>Menores de idade não são permitidos.</b></li>
+          <li>Você pode convidar amigxs confiáveis, mas evite pessoas totalmente desconhecidas.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Pagamentos & Taxas</h3>
+        <ul>
+          <li>Taxa de <b>R$1 por dia por item</b> em caso de atraso.</li>
+          <li>Taxa de embalagem de <b>R$2,50</b> para até 6 photocards.</li>
+          <li>Comprovante deve ser enviado no formulário de pagamento.</li>
+          <li>Reembolso só em cancelamento da CEG inteira — imediato e integral.</li>
+          <li>3 atrasos em 30 dias = claims bloqueadas até regularizar.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Repasse & Atraso</h3>
+        <ul>
+          <li>Repasse permitido apenas para membros da comunidade <b>ANTIGOM</b>.</li>
+          <li>Mais de <b>15 dias de atraso</b> = abandono, item revendido. Sem reembolso.</li>
+          <li>Atrasos não comunicados ou +5 dias = lista de <b>NÃO PAGANTES</b>.</li>
+          <li>3 atrasos em 2 meses = claims bloqueadas.</li>
+          <li><b>20 dias corridos</b> sem justificativa = item repassado. Sem recompra.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Envios inter & nacional</h3>
+        <ul>
+          <li>Taxa inter: prazo de até <b>4 dias</b> para pagamento.</li>
+          <li>Taxa RF: prazo de <b>7 dias</b> para pagamento.</li>
+          <li>Armazenamento gratuito por até <b>1 mês</b> com outra CEG a caminho.</li>
+          <li>Após 30 dias: <b>R$30/mês</b> de armazenamento. 60 dias = ABANDONO.</li>
+          <li>Envios nacionais em <b>7 dias úteis</b> via NUVEMSHOP.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Reembolsos</h3>
+        <ul>
+          <li>Calote de seller não é reembolsado.</li>
+          <li>Sem reembolso por roubo ou perda.</li>
+          <li>Reembolso por má embalagem exige <b>vídeo de abertura sem cortes</b>.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Compradores sensíveis</h3>
+        <ul>
+          <li>Quem se incomoda com pequenos defeitos estéticos não deve participar de CEGs. Ao entrar, você declara estar ciente dessa possibilidade.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Perguntas frequentes</h3>
+        <ul>
+          <li><b>Quem organiza?</b> Nanda.</li>
+          <li><b>Posso chamar amigos?</b> Sim, desde que sejam confiáveis.</li>
+          <li><b>Menores podem participar?</b> Não.</li>
+          <li><b>Posso cancelar?</b> Após confirmação do item, não é possível.</li>
+          <li><b>Como funcionam os repasses?</b> Peça autorização à Nanda.</li>
+          <li><b>E se a CEG for cancelada?</b> Reembolso total.</li>
+          <li><b>Posso retirar pessoalmente?</b> Sim, se estivermos na mesma região.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="ticker">
+    <span class="ticker-inner">ANTIJOINERS · ANTICEG · ANTICOMU · ANTIMAIL · ANTIGOM · ANTI-STORE · ANTIJOINERS · ANTICEG · ANTICOMU · ANTIMAIL · ANTIGOM · ANTI-STORE · </span>
+  </div>
+
+  <div class="footer"><span>★</span> ANTICEG · comunidade ANTIGOM <span>★</span></div>
+
+</div>
+
+<script>
+  function calcMulta() {
+    var qty = parseFloat(document.getElementById('qty').value) || 0;
+    var days = parseFloat(document.getElementById('days').value) || 0;
+    var price = parseFloat(document.getElementById('price').value) || 0;
+    var multa = qty * days;
+    var total = (price * qty) + multa;
+    document.getElementById('total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+    var bd = document.getElementById('breakdown');
+    if (price > 0) {
+      bd.textContent = 'R$ ' + (price * qty).toFixed(2).replace('.', ',') + ' (itens) + R$ ' + multa.toFixed(2).replace('.', ',') + ' (multa)';
+    } else {
+      bd.textContent = multa > 0 ? 'multa: R$ ' + multa.toFixed(2).replace('.', ',') : '—';
+    }
+  }
+
+  function toggleRules() {
+    document.getElementById('rulesBody').classList.toggle('open');
+    document.getElementById('chevron').classList.toggle('open');
+  }
+</script>
+</body>
+</html>
