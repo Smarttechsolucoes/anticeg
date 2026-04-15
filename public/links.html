@@ -214,22 +214,26 @@
 <script>
   // Contador de online via Supabase Presence
   (function() {
-    var sb = supabase.createClient(
+    var { createClient } = window.supabase;
+    var sb = createClient(
       'https://ghjfsmwwcfpfvrouyrka.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM'
     );
     var uid = Math.random().toString(36).slice(2);
     var channel = sb.channel('links-online', { config: { presence: { key: uid } } });
 
+    function setCount() {
+      var n = Object.keys(channel.presenceState()).length;
+      document.getElementById('onlineCount').textContent = n;
+    }
+
     channel
-      .on('presence', { event: 'sync' }, function() {
-        var state = channel.presenceState();
-        var n = Object.keys(state).length;
-        document.getElementById('onlineCount').textContent = n;
-      })
+      .on('presence', { event: 'sync' }, setCount)
+      .on('presence', { event: 'join' }, setCount)
+      .on('presence', { event: 'leave' }, setCount)
       .subscribe(function(status) {
         if (status === 'SUBSCRIBED') {
-          channel.track({ uid: uid, t: Date.now() });
+          channel.track({ uid: uid, t: Date.now() }).then(setCount);
         }
       });
   })();
