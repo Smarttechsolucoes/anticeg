@@ -93,6 +93,23 @@
     .ticker-inner { display: inline-block; animation: ticker 20s linear infinite; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #222; text-transform: uppercase; }
     @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
+    .online-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #444; margin-top: 10px;
+    }
+    .online-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #c8f000;
+      box-shadow: 0 0 6px #c8f000;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .online-count { color: #c8f000; }
+
     .footer { text-align: center; margin-top: 1.5rem; font-size: 10px; font-weight: 300; color: #2a2a2a; letter-spacing: 0.18em; text-transform: uppercase; }
     .footer span { color: #ff5c00; font-weight: 700; }
   </style>
@@ -104,6 +121,11 @@
     <div class="logo">ANTI<span>CEG</span></div>
     <div class="tagline">comunidade antigom · skz & mais</div>
     <div class="divider"></div>
+    <div class="online-badge">
+      <span class="online-dot"></span>
+      <span class="online-count" id="onlineCount">—</span>
+      <span>online agora</span>
+    </div>
   </div>
 
   <div class="section-label"><span>//</span> Links rápidos</div>
@@ -188,7 +210,30 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+  // Contador de online via Supabase Presence
+  (function() {
+    var sb = supabase.createClient(
+      'https://ghjfsmwwcfpfvrouyrka.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM'
+    );
+    var uid = Math.random().toString(36).slice(2);
+    var channel = sb.channel('links-online', { config: { presence: { key: uid } } });
+
+    channel
+      .on('presence', { event: 'sync' }, function() {
+        var state = channel.presenceState();
+        var n = Object.keys(state).length;
+        document.getElementById('onlineCount').textContent = n;
+      })
+      .subscribe(function(status) {
+        if (status === 'SUBSCRIBED') {
+          channel.track({ uid: uid, t: Date.now() });
+        }
+      });
+  })();
+
   function calcMulta() {
     var qty = parseFloat(document.getElementById('qty').value) || 0;
     var days = parseFloat(document.getElementById('days').value) || 0;
