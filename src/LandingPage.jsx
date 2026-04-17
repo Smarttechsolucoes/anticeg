@@ -207,9 +207,8 @@ export default function LandingPage({ onLogin, onEntrar }) {
 
       {/* FOOTER */}
       <footer className="lp-footer">
-        <span className="lp-footer-logo">ANTI<span>CEG</span></span>
-        <span className="lp-footer-mid">Compras em grupo · Anticomu · Kpop</span>
-        <span className="lp-footer-copy">© 2025 anticeg — Nanda</span>
+        <span className="lp-footer-mid">OMG, YOU'RE SO ANTI</span>
+        <span className="lp-footer-copy">© 2025 design e programação por @nandaverseo_c</span>
       </footer>
     </div>
   );
