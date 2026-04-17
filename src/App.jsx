@@ -1619,14 +1619,22 @@ function AdminTab() {
   }
 
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
+  const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
+    supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
+      .then(({ data }) => { if (data) setPerfilPushAdmin(data.value !== "false"); });
   }, []);
   async function toggleManutencao() {
     const novo = !manutencaoAdmin;
     await supabase.from("config").update({ value: String(novo) }).eq("key", "manutencao");
     setManutencaoAdmin(novo);
+  }
+  async function togglePerfilPush() {
+    const novo = !perfilPushAdmin;
+    await supabase.from("config").upsert({ key: "perfil_push_ativo", value: String(novo) }, { onConflict: "key" });
+    setPerfilPushAdmin(novo);
   }
 
   async function handleAdd(e) {
@@ -1690,6 +1698,36 @@ function AdminTab() {
           fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
         }}>
           {manutencaoAdmin ? "✗ ATIVO" : "✓ DESLIGADO"}
+        </button>
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modal de perfil</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>{perfilPushAdmin ? "Ativo — aparece uma vez para cada joiner" : "Desligado — ninguém vê o modal"}</div>
+        </div>
+        <button onClick={togglePerfilPush} style={{
+          background: perfilPushAdmin ? "rgba(74,222,128,.15)" : "rgba(255,90,31,.15)",
+          border: `1px solid ${perfilPushAdmin ? "rgba(74,222,128,.4)" : "rgba(255,90,31,.4)"}`,
+          color: perfilPushAdmin ? "#4ade80" : "var(--laranja)",
+          borderRadius:8, padding:"8px 18px", fontSize:12,
+          fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
+        }}>
+          {perfilPushAdmin ? "✓ ATIVO" : "✗ DESLIGADO"}
+        </button>
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Testar modal de perfil</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>Reseta o flag — o modal vai aparecer no próximo acesso</div>
+        </div>
+        <button onClick={() => { localStorage.removeItem("anticeg_perfil_ok"); window.location.reload(); }} style={{
+          background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
+          color:"#C9A8F0", borderRadius:8, padding:"8px 18px", fontSize:12,
+          fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
+        }}>
+          TESTAR →
         </button>
       </div>
 
@@ -1894,6 +1932,68 @@ const TUTORIAL_STEPS = [
   },
 ];
 
+function ProfileConfirmModal({ user, onSave, onSkip }) {
+  const isNew = !user.nome || user.nome.trim() === "";
+  const [nome, setNome] = useState(user.nome || "");
+  const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
+  const [social, setSocial] = useState(user.twitter || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    if (!nome.trim()) { setError("Nome é obrigatório."); return; }
+    setSaving(true);
+    await supabase.from("joiners").update({ nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: social.trim() || null }).eq("id", user.id);
+    const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: social.trim() || null };
+    localStorage.setItem("anticeg_user", JSON.stringify(updated));
+    localStorage.setItem("anticeg_perfil_ok", String(user.id));
+    onSave(updated);
+    setSaving(false);
+  }
+
+  function handleSkip() {
+    localStorage.setItem("anticeg_perfil_ok", String(user.id));
+    onSkip();
+  }
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:800, background:"rgba(0,0,0,.82)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:12, width:"100%", maxWidth:420, padding:28, display:"flex", flexDirection:"column", gap:14 }}>
+        <div>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>
+            {isNew ? "bem-vindx" : "seus dados"}
+          </div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, lineHeight:1, color:"var(--offwhite)" }}>
+            {isNew ? <>COMPLETE SEU <span style={{ color:"var(--laranja)" }}>PERFIL</span></> : <>CONFIRME SUAS <span style={{ color:"var(--laranja)" }}>INFORMAÇÕES</span></>}
+          </div>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", marginTop:8, lineHeight:1.6 }}>
+            {isNew
+              ? "Preencha seus dados com as mesmas informações que você usa para dar claim no WhatsApp. Esses dados vinculam seus pedidos ao seu cadastro."
+              : "Confira e atualize seus dados. Essas informações são usadas para vincular seus pedidos ao seu cadastro."}
+          </div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Seu nome *</label>
+          <input className="login-input" type="text" placeholder="Como você aparece no grupo" value={nome} onChange={e => { setNome(e.target.value); setError(""); }} autoFocus />
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>WhatsApp</label>
+          <input className="login-input" type="tel" placeholder="(00) 00000-0000" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Seu @ <span style={{ opacity:.4, fontSize:9 }}>(twitter / x / threads / insta)</span></label>
+          <input className="login-input" type="text" placeholder="@seu_@" value={social} onChange={e => setSocial(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()} />
+        </div>
+        {error && <div className="login-error">{error}</div>}
+        <div style={{ display:"flex", gap:8, marginTop:4 }}>
+          <button className="modal-confirm-btn" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : isNew ? "SALVAR →" : "CONFIRMAR →"}</button>
+          <button className="modal-cancel-btn" onClick={handleSkip}>Depois</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TutorialModal({ onClose }) {
   const [step, setStep] = useState(0);
   const s = TUTORIAL_STEPS[step];
@@ -1994,10 +2094,14 @@ export default function App() {
   );
   const [adminPortalInput, setAdminPortalInput] = useState("");
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [showPerfilModal, setShowPerfilModal] = useState(false);
+  const [perfilPushAtivo, setPerfilPushAtivo] = useState(true);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
+    supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
+      .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
   }, []);
 
   function handleAdminBypass() {
@@ -2038,8 +2142,15 @@ export default function App() {
     setUser(u);
     setItens(itensData);
     setPage("portal");
-    if (!localStorage.getItem("anticeg_tutorial_v1") && !u.guest) {
-      setShowTutorial(true);
+    if (!u.guest) {
+      if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
+      const jaConfirmou = localStorage.getItem("anticeg_perfil_ok") === String(u.id);
+      if (!jaConfirmou) {
+        // lê push do config em tempo real para pegar o valor atualizado
+        const { data } = await supabase.from("config").select("value").eq("key", "perfil_push_ativo").single();
+        const pushOn = !data || data.value !== "false";
+        if (pushOn) setShowPerfilModal(true);
+      }
     }
   }
 
@@ -2117,6 +2228,13 @@ export default function App() {
         </div>
       )}
       {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+      {showPerfilModal && !user.guest && (
+        <ProfileConfirmModal
+          user={user}
+          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", String(updated.id)); localStorage.setItem("anticeg_user", JSON.stringify(updated)); }}
+          onSkip={() => { setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", String(user.id)); }}
+        />
+      )}
       <div className="topbar">
         <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
         <div className="topbar-right">
