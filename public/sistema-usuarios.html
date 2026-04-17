@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Usuários</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --laranja:#FF5C1A; --verde:#BAFF39; --lilas:#C9A8F0; --offwhite:#F5F0E8; --preto:#0D0D0D; }
+    body { background:var(--preto); color:var(--offwhite); font-family:'DM Mono',monospace; min-height:100vh; }
+
+    /* ─── LOGIN ─── */
+    #tela-login { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+    .login-wrap { width:100%; max-width:400px; }
+    .eyebrow { font-size:11px; color:rgba(245,240,232,.35); letter-spacing:2px; text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .eyebrow::before { content:''; display:inline-block; width:20px; height:2px; background:var(--laranja); }
+    .title { font-family:'Bebas Neue',sans-serif; font-size:clamp(40px,8vw,56px); line-height:.95; margin-bottom:32px; }
+    .title span { color:var(--laranja); }
+    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+    .label { font-size:10px; color:rgba(245,240,232,.4); letter-spacing:1.5px; text-transform:uppercase; }
+    .input { background:#111; border:1px solid #2a2a2a; color:var(--offwhite); font-family:'DM Mono',monospace; font-size:13px; padding:12px 14px; border-radius:6px; outline:none; transition:border-color .15s; width:100%; }
+    .input:focus { border-color:var(--laranja); }
+    .input::placeholder { color:rgba(245,240,232,.2); }
+    .btn-primary { width:100%; background:var(--laranja); border:none; color:var(--preto); font-family:'DM Mono',monospace; font-size:13px; font-weight:600; padding:14px; border-radius:6px; cursor:pointer; letter-spacing:1px; transition:opacity .15s; margin-top:4px; }
+    .btn-primary:hover { opacity:.85; }
+    .btn-outline { width:100%; background:transparent; border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.5); font-family:'DM Mono',monospace; font-size:12px; padding:12px; border-radius:6px; cursor:pointer; transition:all .15s; margin-top:8px; }
+    .btn-outline:hover { border-color:rgba(245,240,232,.35); color:var(--offwhite); }
+    .msg { font-size:11px; padding:8px 12px; border-radius:5px; margin-top:12px; display:none; }
+    .msg.erro    { background:rgba(255,92,26,.08); border:1px solid rgba(255,92,26,.2); color:var(--laranja); display:block; }
+    .msg.sucesso { background:rgba(186,255,57,.08); border:1px solid rgba(186,255,57,.2); color:var(--verde); display:block; }
+    .login-note { text-align:center; font-size:11px; color:rgba(245,240,232,.25); margin-top:16px; }
+
+    /* ─── MODAL PERFIL ─── */
+    #modal-perfil { display:none; position:fixed; inset:0; z-index:900; background:rgba(0,0,0,.8); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:24px; }
+    #modal-perfil.show { display:flex; }
+    .modal-box { background:#111; border:1px solid #2a2a2a; border-radius:12px; width:100%; max-width:420px; padding:28px; display:flex; flex-direction:column; gap:14px; }
+    .modal-eyebrow { font-size:10px; color:rgba(245,240,232,.35); letter-spacing:2px; text-transform:uppercase; }
+    .modal-title { font-family:'Bebas Neue',sans-serif; font-size:28px; line-height:1; }
+    .modal-title span { color:var(--laranja); }
+    .modal-desc { font-size:12px; color:rgba(245,240,232,.45); line-height:1.6; }
+    .modal-btns { display:flex; gap:8px; margin-top:4px; }
+    .btn-modal-confirm { flex:2; background:var(--laranja); border:none; color:var(--preto); font-family:'DM Mono',monospace; font-size:12px; font-weight:600; padding:12px; border-radius:6px; cursor:pointer; letter-spacing:1px; transition:opacity .15s; }
+    .btn-modal-confirm:hover { opacity:.85; }
+    .btn-modal-skip { flex:1; background:none; border:1px solid #2a2a2a; color:rgba(245,240,232,.4); font-family:'DM Mono',monospace; font-size:12px; padding:12px; border-radius:6px; cursor:pointer; transition:all .15s; }
+    .btn-modal-skip:hover { border-color:#444; color:rgba(245,240,232,.7); }
+
+    /* ─── BANNER ─── */
+    #banner-perfil { display:none; background:#1a0f00; border-bottom:1px solid rgba(255,92,26,.25); padding:12px 24px; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    #banner-perfil.show { display:flex; }
+    .banner-text { display:flex; align-items:center; gap:10px; }
+    .banner-btns { display:flex; gap:8px; flex-shrink:0; }
+    .btn-banner { background:var(--laranja); border:none; color:#fff; font-family:'DM Mono',monospace; font-size:11px; font-weight:600; padding:7px 14px; border-radius:5px; cursor:pointer; letter-spacing:1px; }
+    .btn-banner-close { background:none; border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.4); font-family:'DM Mono',monospace; font-size:11px; padding:7px 10px; border-radius:5px; cursor:pointer; }
+
+    /* ─── PORTAL ─── */
+    #tela-portal { display:none; flex-direction:column; min-height:100vh; }
+    #tela-portal.show { display:flex; }
+
+    .topbar { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:52px; background:#080808; border-bottom:1px solid #1a1a1a; position:sticky; top:0; z-index:100; }
+    .topbar-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--offwhite); letter-spacing:1px; }
+    .topbar-logo span { color:var(--laranja); }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+    .topbar-user { font-size:11px; color:rgba(245,240,232,.4); }
+    .btn-sair { background:none; border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.4); font-family:'DM Mono',monospace; font-size:11px; padding:5px 12px; border-radius:4px; cursor:pointer; transition:all .15s; }
+    .btn-sair:hover { border-color:var(--laranja); color:var(--laranja); }
+
+    .tabs { display:flex; padding:0 24px; background:#080808; border-bottom:1px solid #1a1a1a; overflow-x:auto; scrollbar-width:none; }
+    .tabs::-webkit-scrollbar { display:none; }
+    .tab-btn { background:none; border:none; border-bottom:2px solid transparent; color:rgba(245,240,232,.4); font-family:'DM Mono',monospace; font-size:11px; padding:12px 16px; cursor:pointer; transition:all .15s; letter-spacing:.5px; white-space:nowrap; }
+    .tab-btn.active { color:var(--laranja); border-bottom-color:var(--laranja); }
+    .tab-btn:hover { color:var(--offwhite); }
+
+    .content { padding:32px 24px; flex:1; }
+    .section { display:none; }
+    .section.active { display:block; }
+
+    /* ─── CARDS ─── */
+    .page-title { font-family:'Bebas Neue',sans-serif; font-size:clamp(28px,4vw,40px); margin-bottom:24px; }
+    .page-title span { color:var(--laranja); }
+    .card { background:#111; border:1px solid #1e1e1e; border-radius:10px; padding:20px; margin-bottom:12px; }
+    .card-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .card-label { font-size:10px; color:rgba(245,240,232,.35); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px; }
+    .card-value { font-size:13px; color:var(--offwhite); }
+    .card-value.laranja { color:var(--laranja); }
+    .card-value.lilas   { color:var(--lilas); }
+    .card-value.verde   { color:var(--verde); }
+    .tag-ativo { display:inline-flex; align-items:center; gap:5px; background:rgba(186,255,57,.08); border:1px solid rgba(186,255,57,.2); color:var(--verde); font-size:10px; padding:4px 10px; border-radius:20px; }
+    .tag-ativo::before { content:'●'; font-size:7px; }
+
+    /* Perfil form */
+    .perfil-form { max-width:480px; display:flex; flex-direction:column; gap:12px; }
+    .btn-save { background:var(--laranja); border:none; color:var(--preto); font-family:'DM Mono',monospace; font-size:12px; font-weight:600; padding:12px 24px; border-radius:6px; cursor:pointer; letter-spacing:1px; align-self:flex-start; transition:opacity .15s; }
+    .btn-save:hover { opacity:.85; }
+
+    /* Users table (admin) */
+    .users-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .users-table th { text-align:left; padding:8px 12px; color:rgba(245,240,232,.35); font-size:10px; letter-spacing:1.5px; border-bottom:1px solid #222; background:#111; }
+    .users-table td { padding:10px 12px; border-bottom:1px solid #181818; vertical-align:middle; }
+    .users-table tr:hover td { background:#141414; }
+    .status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; }
+    .completo { background:var(--verde); }
+    .incompleto { background:var(--laranja); }
+    .badge-id { font-size:10px; color:var(--lilas); background:rgba(201,168,240,.08); border:1px solid rgba(201,168,240,.15); border-radius:4px; padding:2px 6px; }
+
+    /* toggle switch */
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#111; border:1px solid #1e1e1e; border-radius:10px; margin-bottom:12px; }
+    .toggle-info h4 { font-size:13px; font-weight:700; margin-bottom:3px; }
+    .toggle-info p { font-size:11px; color:rgba(245,240,232,.4); }
+    .toggle-btn { border:none; border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; font-weight:700; padding:8px 18px; cursor:pointer; transition:all .15s; }
+    .toggle-on  { background:rgba(186,255,57,.15); border:1px solid rgba(186,255,57,.4); color:var(--verde); }
+    .toggle-off { background:rgba(255,90,31,.15); border:1px solid rgba(255,90,31,.4); color:var(--laranja); }
+
+    @media(max-width:600px) {
+      .content { padding:20px 14px; }
+      .users-table td:nth-child(4), .users-table th:nth-child(4) { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── TELA LOGIN ─── -->
+<div id="tela-login">
+  <div class="login-wrap">
+    <div class="eyebrow">sistema local · localStorage</div>
+    <h1 class="title">ENTRAR NO <span>PORTAL</span></h1>
+
+    <div class="field">
+      <label class="label">E-mail</label>
+      <input class="input" id="l-email" type="email" placeholder="email@exemplo.com" />
+    </div>
+    <div class="field">
+      <label class="label">Senha</label>
+      <input class="input" id="l-senha" type="password" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')entrar()" />
+    </div>
+    <button class="btn-primary" onclick="entrar()">ENTRAR →</button>
+    <div class="msg" id="msg-login"></div>
+    <p class="login-note">Novo por aqui? Digite seu e-mail e crie uma senha para se cadastrar.</p>
+  </div>
+</div>
+
+<!-- ─── MODAL COMPLETAR PERFIL ─── -->
+<div id="modal-perfil">
+  <div class="modal-box">
+    <div class="modal-eyebrow">bem-vindx</div>
+    <div class="modal-title">COMPLETE SEU <span>PERFIL</span></div>
+    <div class="modal-desc">Preencha seus dados com informações como dá claim no WhatsApp. Caso seja sua primeira vez, preencha como irá fazer quando se interessar — essas informações serão usadas para vincular seus pedidos ao seu cadastro.</div>
+    <div class="field" style="margin-bottom:0">
+      <label class="label">Nome *</label>
+      <input class="input" id="mp-nome" type="text" placeholder="Seu nome" />
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label class="label">WhatsApp</label>
+      <input class="input" id="mp-tel" type="tel" placeholder="(00) 00000-0000" oninput="mascaraTel(this)" />
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label class="label">Seu @ <span style="opacity:.5;font-size:9px">(twitter / x / threads / insta)</span></label>
+      <input class="input" id="mp-twitter" type="text" placeholder="@seu_@" />
+    </div>
+    <div class="msg" id="msg-modal"></div>
+    <div class="modal-btns">
+      <button class="btn-modal-confirm" onclick="salvarPerfil()">SALVAR →</button>
+      <button class="btn-modal-skip" onclick="pularPerfil()">Depois</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PORTAL ─── -->
+<div id="tela-portal">
+
+  <!-- Banner perfil incompleto -->
+  <div id="banner-perfil">
+    <div class="banner-text">
+      <span style="font-size:16px">📋</span>
+      <div>
+        <div style="font-size:12px;font-weight:600">Seu perfil está incompleto</div>
+        <div style="font-size:11px;color:rgba(245,240,232,.4);margin-top:2px">Adicione seu nome para a gente te reconhecer.</div>
+      </div>
+    </div>
+    <div class="banner-btns">
+      <button class="btn-banner" onclick="irPerfil()">COMPLETAR</button>
+      <button class="btn-banner-close" onclick="fecharBanner()">×</button>
+    </div>
+  </div>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">ANTI<span>CEG</span></div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="topbar-user">—</span>
+      <button class="btn-sair" onclick="sair()">Sair ↗</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="abrirTab('inicio')">◈ Início</button>
+    <button class="tab-btn" onclick="abrirTab('perfil')">⚙ Meu Perfil</button>
+    <button class="tab-btn" id="tab-admin-btn" style="display:none" onclick="abrirTab('admin')">🔒 Admin</button>
+  </div>
+
+  <div class="content">
+
+    <!-- INÍCIO -->
+    <div class="section active" id="sec-inicio">
+      <h2 class="page-title">OLÁ, <span id="dash-nome-title">—</span></h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card">
+          <div class="card-label">E-mail</div>
+          <div class="card-value laranja" id="dash-email">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Telefone</div>
+          <div class="card-value" id="dash-tel">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Twitter</div>
+          <div class="card-value lilas" id="dash-twitter">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Status</div>
+          <div id="dash-status"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label" style="margin-bottom:8px">User ID</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="font-size:12px;color:var(--lilas);word-break:break-all" id="dash-id">—</div>
+          <button onclick="copiarID()" style="background:none;border:1px solid #2a2a2a;color:rgba(245,240,232,.4);font-family:'DM Mono',monospace;font-size:10px;padding:5px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0">Copiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERFIL -->
+    <div class="section" id="sec-perfil">
+      <h2 class="page-title">MEU <span>PERFIL</span></h2>
+      <div class="perfil-form">
+        <div class="field">
+          <label class="label">Nome *</label>
+          <input class="input" id="pf-nome" type="text" placeholder="Seu nome" />
+        </div>
+        <div class="field">
+          <label class="label">WhatsApp</label>
+          <input class="input" id="pf-tel" type="tel" placeholder="(00) 00000-0000" oninput="mascaraTel(this)" />
+        </div>
+        <div class="field">
+          <label class="label">Seu @ <span style="opacity:.4;font-size:9px">(twitter / x / threads / insta)</span></label>
+          <input class="input" id="pf-twitter" type="text" placeholder="@seu_@" />
+        </div>
+        <div class="field">
+          <label class="label">Nova Senha <span style="opacity:.4;font-size:9px">(deixe em branco para manter)</span></label>
+          <input class="input" id="pf-senha" type="password" placeholder="Nova senha (mín. 6 caracteres)" />
+        </div>
+        <button class="btn-save" onclick="atualizarPerfil()">SALVAR ALTERAÇÕES →</button>
+        <div class="msg" id="msg-perfil"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="section" id="sec-admin">
+      <h2 class="page-title">PAINEL <span>ADMIN</span></h2>
+
+      <div class="toggle-row" id="toggle-push-row">
+        <div class="toggle-info">
+          <h4>Push de Perfil Incompleto</h4>
+          <p id="toggle-push-desc">Banner ativo — usuários sem nome são notificados</p>
+        </div>
+        <button class="toggle-btn toggle-on" id="toggle-push-btn" onclick="togglePush()">✓ ATIVO</button>
+      </div>
+
+      <h3 style="font-size:14px;color:rgba(245,240,232,.4);letter-spacing:1px;text-transform:uppercase;margin:24px 0 12px">Usuários cadastrados</h3>
+      <div style="overflow-x:auto;border:1px solid #1e1e1e;border-radius:8px">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Telefone</th>
+              <th>Twitter</th>
+              <th>Perfil</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const STORAGE   = "sus_usuarios";
+  const SESSION   = "sus_sessao";
+  const CONFIG    = "sus_config";
+  const ADMIN_EMAIL = "nandag_medeiros@hotmail.com"; // ← troque para seu e-mail admin
+
+  // ── helpers ────────────────────────────────────────────────
+  function uuid() {
+    return "usr_" + ([1e7]+-1e3+-4e3+-8e3+-1e11)
+      .replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16));
+  }
+  function getUsuarios()  { try { return JSON.parse(localStorage.getItem(STORAGE)) || []; } catch { return []; } }
+  function salvaUsuarios(l) { localStorage.setItem(STORAGE, JSON.stringify(l)); }
+  function getSessao()    { try { return JSON.parse(localStorage.getItem(SESSION)); } catch { return null; } }
+  function salvaSessao(u) { localStorage.setItem(SESSION, JSON.stringify(u)); }
+  function getConfig()    { try { return JSON.parse(localStorage.getItem(CONFIG)) || {}; } catch { return {}; } }
+  function salvaConfig(c) { localStorage.setItem(CONFIG, JSON.stringify(c)); }
+
+  function msgEl(id, txt, tipo) {
+    const el = document.getElementById(id);
+    el.textContent = txt; el.className = "msg " + tipo;
+    if (tipo === "sucesso") setTimeout(() => el.className = "msg", 3000);
+  }
+  function perfilCompleto(u) { return u.nome && u.nome.trim() !== ""; }
+  function mascaraTel(el) {
+    let v = el.value.replace(/\D/g,"").slice(0,11);
+    if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+    else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+    else if (v.length) v = `(${v}`;
+    el.value = v;
+  }
+
+  // ── login / cadastro ───────────────────────────────────────
+  function entrar() {
+    const email = document.getElementById("l-email").value.trim().toLowerCase();
+    const senha = document.getElementById("l-senha").value;
+    if (!email || !email.includes("@")) return msgEl("msg-login","E-mail inválido.","erro");
+    if (!senha) return msgEl("msg-login","Informe sua senha.","erro");
+
+    let usuarios = getUsuarios();
+    let user = usuarios.find(u => u.email === email);
+
+    if (user) {
+      if (user.senha !== senha) return msgEl("msg-login","Senha incorreta.","erro");
+    } else {
+      if (senha.length < 6) return msgEl("msg-login","Nova conta: senha deve ter no mínimo 6 caracteres.","erro");
+      user = { user_id: uuid(), email, senha, nome: "", telefone: "", twitter: "", criado_em: new Date().toISOString() };
+      usuarios.push(user);
+      salvaUsuarios(usuarios);
+    }
+
+    salvaSessao(user);
+    abrirPortal(user, !perfilCompleto(user));
+  }
+
+  // ── portal ─────────────────────────────────────────────────
+  function abrirPortal(user, primeiraVez) {
+    document.getElementById("tela-login").style.display = "none";
+    document.getElementById("tela-portal").classList.add("show");
+
+    document.getElementById("topbar-user").textContent = user.email;
+    document.getElementById("dash-nome-title").textContent = user.nome || user.email.split("@")[0];
+    document.getElementById("dash-email").textContent   = user.email;
+    document.getElementById("dash-tel").textContent     = user.telefone || "—";
+    document.getElementById("dash-twitter").textContent = user.twitter  || "—";
+    document.getElementById("dash-id").textContent      = user.user_id;
+    document.getElementById("dash-status").innerHTML = perfilCompleto(user)
+      ? '<span class="tag-ativo">Perfil completo</span>'
+      : '<span style="font-size:11px;color:var(--laranja)">⚠ Perfil incompleto</span>';
+
+    // Preenche form de perfil
+    document.getElementById("pf-nome").value    = user.nome    || "";
+    document.getElementById("pf-tel").value     = user.telefone|| "";
+    document.getElementById("pf-twitter").value = user.twitter || "";
+
+    // Admin tab
+    if (user.email === ADMIN_EMAIL) {
+      document.getElementById("tab-admin-btn").style.display = "block";
+      renderTogglePush();
+      renderUsersTable();
+    }
+
+    // Banner
+    const cfg = getConfig();
+    if (cfg.perfil_push_ativo !== false && !perfilCompleto(user)) {
+      document.getElementById("banner-perfil").classList.add("show");
+    }
+
+    // Modal de primeira vez
+    if (primeiraVez) {
+      document.getElementById("mp-nome").value    = user.nome || "";
+      document.getElementById("mp-tel").value     = user.telefone || "";
+      document.getElementById("mp-twitter").value = user.twitter || "";
+      document.getElementById("modal-perfil").classList.add("show");
+    }
+  }
+
+  // ── modal perfil ───────────────────────────────────────────
+  function salvarPerfil() {
+    const nome    = document.getElementById("mp-nome").value.trim();
+    const tel     = document.getElementById("mp-tel").value.trim();
+    const twitter = document.getElementById("mp-twitter").value.trim();
+    if (!nome) return msgEl("msg-modal","Nome é obrigatório.","erro");
+
+    let user = getSessao();
+    user = { ...user, nome, telefone: tel, twitter: twitter || "" };
+    atualizarUsuario(user);
+    document.getElementById("modal-perfil").classList.remove("show");
+    document.getElementById("banner-perfil").classList.remove("show");
+    refreshDash(user);
+  }
+  function pularPerfil() {
+    document.getElementById("modal-perfil").classList.remove("show");
+  }
+
+  // ── banner ─────────────────────────────────────────────────
+  function fecharBanner() { document.getElementById("banner-perfil").classList.remove("show"); }
+  function irPerfil() { fecharBanner(); abrirTab("perfil"); }
+
+  // ── atualizar perfil (tab) ─────────────────────────────────
+  function atualizarPerfil() {
+    const nome    = document.getElementById("pf-nome").value.trim();
+    const tel     = document.getElementById("pf-tel").value.trim();
+    const twitter = document.getElementById("pf-twitter").value.trim();
+    const novaSenha = document.getElementById("pf-senha").value;
+    if (!nome) return msgEl("msg-perfil","Nome é obrigatório.","erro");
+
+    let user = getSessao();
+    user = { ...user, nome, telefone: tel, twitter: twitter || "" };
+    if (novaSenha.length >= 6) user.senha = novaSenha;
+    else if (novaSenha && novaSenha.length < 6) return msgEl("msg-perfil","Senha deve ter no mínimo 6 caracteres.","erro");
+
+    atualizarUsuario(user);
+    fecharBanner();
+    refreshDash(user);
+    msgEl("msg-perfil","Perfil atualizado!","sucesso");
+    if (user.email === ADMIN_EMAIL) renderUsersTable();
+  }
+
+  function atualizarUsuario(user) {
+    salvaSessao(user);
+    let usuarios = getUsuarios();
+    usuarios = usuarios.map(u => u.user_id === user.user_id ? user : u);
+    salvaUsuarios(usuarios);
+  }
+
+  function refreshDash(user) {
+    document.getElementById("dash-nome-title").textContent = user.nome || user.email.split("@")[0];
+    document.getElementById("dash-email").textContent   = user.email;
+    document.getElementById("dash-tel").textContent     = user.telefone || "—";
+    document.getElementById("dash-twitter").textContent = user.twitter  || "—";
+    document.getElementById("topbar-user").textContent  = user.email;
+    document.getElementById("pf-nome").value    = user.nome    || "";
+    document.getElementById("pf-tel").value     = user.telefone|| "";
+    document.getElementById("pf-twitter").value = user.twitter || "";
+    document.getElementById("dash-status").innerHTML = perfilCompleto(user)
+      ? '<span class="tag-ativo">Perfil completo</span>'
+      : '<span style="font-size:11px;color:var(--laranja)">⚠ Perfil incompleto</span>';
+  }
+
+  // ── admin toggle ───────────────────────────────────────────
+  function renderTogglePush() {
+    const cfg = getConfig();
+    const ativo = cfg.perfil_push_ativo !== false;
+    const btn = document.getElementById("toggle-push-btn");
+    const desc = document.getElementById("toggle-push-desc");
+    btn.textContent = ativo ? "✓ ATIVO" : "✗ DESLIGADO";
+    btn.className   = "toggle-btn " + (ativo ? "toggle-on" : "toggle-off");
+    desc.textContent = ativo ? "Banner ativo — usuários sem nome são notificados" : "Desativado — ninguém recebe o aviso";
+  }
+  function togglePush() {
+    const cfg = getConfig();
+    cfg.perfil_push_ativo = cfg.perfil_push_ativo === false ? true : false;
+    salvaConfig(cfg);
+    renderTogglePush();
+  }
+
+  // ── tabela de usuários ─────────────────────────────────────
+  function renderUsersTable() {
+    const usuarios = getUsuarios();
+    const tbody = document.getElementById("users-tbody");
+    if (!usuarios.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:rgba(245,240,232,.2)">Nenhum usuário.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = [...usuarios].reverse().map(u => `
+      <tr>
+        <td><span class="badge-id">${u.user_id.slice(0,12)}…</span></td>
+        <td>${u.nome || '<span style="color:rgba(245,240,232,.25)">—</span>'}</td>
+        <td style="color:rgba(245,240,232,.6)">${u.email}</td>
+        <td style="color:rgba(245,240,232,.5)">${u.telefone || '—'}</td>
+        <td style="color:var(--lilas)">${u.twitter || '—'}</td>
+        <td><span class="status-dot ${perfilCompleto(u) ? 'completo' : 'incompleto'}"></span>${perfilCompleto(u) ? 'Completo' : 'Incompleto'}</td>
+      </tr>
+    `).join("");
+  }
+
+  // ── tabs ───────────────────────────────────────────────────
+  function abrirTab(id) {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("sec-" + id).classList.add("active");
+    event.currentTarget.classList.add("active");
+    if (id === "admin") renderUsersTable();
+  }
+
+  function copiarID() {
+    const id = document.getElementById("dash-id").textContent;
+    navigator.clipboard.writeText(id).then(() => {
+      const btn = event.currentTarget;
+      btn.textContent = "Copiado ✓"; btn.style.color = "var(--verde)";
+      setTimeout(() => { btn.textContent = "Copiar"; btn.style.color = ""; }, 2000);
+    });
+  }
+
+  function sair() {
+    localStorage.removeItem(SESSION);
+    document.getElementById("tela-portal").classList.remove("show");
+    document.getElementById("banner-perfil").classList.remove("show");
+    document.getElementById("modal-perfil").classList.remove("show");
+    document.getElementById("tela-login").style.display = "flex";
+    document.getElementById("l-email").value = "";
+    document.getElementById("l-senha").value = "";
+    document.getElementById("msg-login").className = "msg";
+    // reset tabs
+    document.querySelectorAll(".section").forEach((s,i) => s.classList.toggle("active", i===0));
+    document.querySelectorAll(".tab-btn").forEach((b,i) => b.classList.toggle("active", i===0));
+    document.getElementById("tab-admin-btn").style.display = "none";
+  }
+
+  // ── init ───────────────────────────────────────────────────
+  const sessao = getSessao();
+  if (sessao) {
+    document.getElementById("tela-login").style.display = "none";
+    abrirPortal(sessao, false);
+  }
+</script>
+</body>
+</html>
