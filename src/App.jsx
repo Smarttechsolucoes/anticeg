@@ -2063,20 +2063,7 @@ export default function App() {
     }
   }, []);
 
-  if (page === "landing") return <LandingPage onEntrar={() => setPage("login")} onVerCegs={() => setPage("cegs-publico")} onVerStore={() => setPage("store-publico")} />;
-
-  const publicTopbar = (
-    <div className="topbar">
-      <a className="topbar-logo" href="#" onClick={e => { e.preventDefault(); setPage("landing"); }}>ANTI<span>CEG</span></a>
-      <div className="topbar-right">
-        <button className="logout-btn" onClick={() => setPage("landing")}>← Home</button>
-        <button className="login-btn" style={{ padding:"8px 18px", fontSize:"var(--fs-xs)" }} onClick={() => setPage("login")}>Entrar no portal →</button>
-      </div>
-    </div>
-  );
-
-  if (page === "cegs-publico") return <div>{publicTopbar}<CegTab /></div>;
-  if (page === "store-publico") return <div>{publicTopbar}<AntiStoreTab user={{}} /></div>;
+  if (page === "landing") return <LandingPage onLogin={handleLogin} onEntrar={() => setPage("login")} />;
   if (page === "login" || !user) return <LoginScreen onLogin={handleLogin} onVoltar={() => setPage("landing")} />;
 
   const isAdmin = user?.email === ADMIN_EMAIL;
