@@ -437,6 +437,81 @@ td { padding:10px; vertical-align:middle; }
 .ml-card-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ml-card-timeline { border-top:1px solid #1e1e1e; padding-top:10px; }
 
+/* ── Galeria ──────────────────────────────────────────────── */
+.ml-gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; padding:4px 0 32px; }
+.ml-gallery-card { background:#111; border:1px solid #1e1e1e; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; transition:border-color .15s; }
+.ml-gallery-card:hover { border-color:#333; }
+.ml-gallery-img { position:relative; width:100%; aspect-ratio:3/4; background:#0d0d0d; overflow:hidden; }
+.ml-gallery-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.ml-gallery-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; color:rgba(245,240,232,.2); font-size:11px; cursor:pointer; transition:color .15s; }
+.ml-gallery-placeholder:hover { color:rgba(245,240,232,.5); }
+.ml-gallery-local-tag { position:absolute; top:6px; left:6px; background:rgba(186,255,57,.15); border:1px solid rgba(186,255,57,.3); color:#BAFF39; font-size:9px; letter-spacing:1px; padding:2px 6px; border-radius:4px; }
+.ml-gallery-swap { position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,.6); border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.6); font-size:13px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s; }
+.ml-gallery-swap:hover { background:rgba(0,0,0,.9); color:var(--offwhite); }
+.ml-gallery-info { padding:10px 10px 12px; display:flex; flex-direction:column; gap:5px; }
+.ml-gallery-name { font-size:12px; font-weight:600; color:var(--offwhite); line-height:1.35; }
+.ml-gallery-ceg { font-size:10px; color:rgba(245,240,232,.35); }
+.ml-gallery-val { font-size:11px; color:var(--lilas); margin-top:2px; }
+.ml-tipo-select { background:transparent; border:1px solid rgba(245,240,232,.15); border-radius:4px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; padding:2px 6px; cursor:pointer; outline:none; transition:border-color .15s; }
+.ml-tipo-select:hover { border-color:rgba(245,240,232,.3); }
+.ml-tipo-select option { background:#111; color:var(--offwhite); }
+
+/* ── Calculadora ──────────────────────────────────────────── */
+.calc-wrap { max-width:680px; margin:0 auto; padding-bottom:40px; }
+.calc-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:20px 0 14px; border-bottom:2px solid #c8381a; margin-bottom:0; }
+.calc-logo { font-family:'Bebas Neue',sans-serif; font-size:36px; line-height:.9; letter-spacing:2px; color:var(--offwhite); }
+.calc-logo-sub { font-size:9px; font-weight:700; letter-spacing:.2em; color:#6b6a64; text-transform:uppercase; margin-top:5px; }
+.calc-rates-btn { background:#2a2a24; border:1px solid #3a3a32; border-radius:20px; color:#f0c840; font-family:'DM Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.06em; padding:7px 16px; cursor:pointer; transition:border-color .15s; white-space:nowrap; }
+.calc-rates-btn:hover { border-color:#f0c840; }
+.calc-rates-panel { background:#1a1814; border:1px solid #3d3830; border-radius:10px; padding:14px 16px; margin:12px 0; display:flex; flex-wrap:wrap; gap:10px 16px; }
+.calc-rate-field { display:flex; flex-direction:column; gap:4px; }
+.calc-rate-field label { font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#6b6456; }
+.calc-rate-field input { background:#2a2722; border:1px solid #3d3830; border-radius:6px; color:#f0c840; font-family:'DM Mono',monospace; font-size:13px; padding:5px 8px; width:104px; text-align:right; outline:none; }
+.calc-rate-field input:focus { border-color:#f0c840; }
+.calc-rates-note { width:100%; font-size:10px; color:#6b6456; padding-top:8px; border-top:1px solid #2a2722; }
+.calc-main { padding-top:16px; }
+.calc-section-label { font-size:10px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:#6b6a64; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.calc-section-label::after { content:''; flex:1; height:1px; background:#2c2c28; }
+.calc-cur-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+.calc-cur-tab { background:#1c1c18; border:1.5px solid #2c2c28; border-radius:20px; color:#6b6a64; cursor:pointer; font-family:'DM Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.06em; padding:7px 14px; transition:all .15s; text-transform:uppercase; line-height:1; text-align:center; }
+.calc-cur-tab:hover { border-color:var(--offwhite); color:var(--offwhite); }
+.calc-cur-tab.active { background:#f0c840; border-color:#f0c840; color:#111; }
+.calc-cur-rate { display:block; font-family:'DM Mono',monospace; font-size:8px; font-weight:400; opacity:.45; margin-top:3px; }
+.calc-inputs-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+.calc-field { display:flex; flex-direction:column; gap:5px; }
+.calc-field label { font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#6b6a64; }
+.calc-big-input { background:#1c1c18; border:1.5px solid #2c2c28; border-radius:10px; color:var(--offwhite); font-family:'DM Mono',monospace; font-size:20px; padding:10px 14px; outline:none; transition:border-color .15s; width:100%; -moz-appearance:textfield; }
+.calc-big-input::-webkit-inner-spin-button { display:none; }
+.calc-big-input:focus { border-color:#f0c840; }
+.calc-hint { font-size:10px; color:#6b6a64; }
+.calc-margin-sym { font-family:'Bebas Neue',sans-serif; font-size:28px; color:#2e9e58; }
+.calc-cards-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.calc-card { border-radius:12px; overflow:hidden; position:relative; padding:14px 16px; display:flex; flex-direction:column; gap:0; }
+.calc-wise { background:#2a2a24; color:var(--offwhite); }
+.calc-cc   { background:#c8381a; color:#fff; }
+.calc-badge { position:absolute; top:10px; right:10px; background:#f0c840; color:#111; font-size:8px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; padding:3px 8px; border-radius:20px; }
+.calc-card-method { font-size:9px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; opacity:.45; margin-bottom:6px; }
+.calc-card-cost-lbl { font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; opacity:.5; margin-bottom:2px; }
+.calc-card-cost-val { font-family:'Bebas Neue',sans-serif; font-size:34px; line-height:1; letter-spacing:1px; margin-bottom:12px; }
+.calc-cur-sym { font-family:'DM Mono',monospace; font-size:11px; opacity:.35; margin-right:2px; }
+.calc-lines { display:flex; flex-direction:column; gap:0; }
+.calc-row { display:flex; justify-content:space-between; align-items:center; height:22px; font-size:10px; }
+.calc-row span:first-child { opacity:.55; }
+.calc-row span:last-child { font-family:'DM Mono',monospace; font-size:10px; font-weight:700; white-space:nowrap; padding-left:8px; }
+.calc-card-inner { background:rgba(0,0,0,.2); border-radius:8px; padding:10px 12px; margin-top:12px; }
+.calc-card-sale-val { font-family:'Bebas Neue',sans-serif; font-size:30px; line-height:1; margin-bottom:8px; }
+.calc-green { color:#6effa0; }
+.calc-cc .calc-green { color:#ffe08a; }
+.calc-red { color:#ff8a8a; }
+.calc-eco { background:#1c1c18; border:1.5px solid #2c2c28; border-radius:10px; padding:10px 16px; margin-bottom:24px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.calc-eco-lbl { font-size:10px; font-weight:700; color:#6b6a64; letter-spacing:.12em; text-transform:uppercase; }
+.calc-eco-val { font-family:'Bebas Neue',sans-serif; font-size:20px; color:#2e9e58; line-height:1; }
+.calc-eco-iof { font-family:'DM Mono',monospace; font-size:10px; color:#c8381a; margin-left:auto; }
+@media (max-width:480px) {
+  .calc-inputs-row { grid-template-columns:1fr; }
+  .calc-cards-row { grid-template-columns:1fr; }
+}
+
 @media (max-width: 768px) {
   .table-wrap { display:none; }
   .ml-cards { display:flex; }

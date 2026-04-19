@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora · ANTICEG</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #111210;
+  --ink: #e8e4dc;
+  --muted: #6b6a64;
+  --border: #2c2c28;
+  --surface: #1c1c18;
+  --cc: #c8381a;
+  --profit: #2e9e58;
+  --yellow: #f0c840;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.4;
+}
+
+header {
+  background: #1c1c18;
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 3px solid var(--cc);
+}
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 40px; line-height: 0.9; letter-spacing: 3px; }
+.logo em { color: var(--cc); font-style: normal; }
+.logo-sub { font-size: 9px; font-weight: 700; letter-spacing: 0.22em; color: #8a8478; text-transform: uppercase; margin-top: 6px; }
+.back-link { font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 700; color: #6b6a64; text-decoration: none; letter-spacing: 0.06em; border: 1px solid #3a3a32; border-radius: 20px; padding: 7px 14px; transition: color .15s, border-color .15s; }
+.back-link:hover { color: var(--ink); border-color: #6b6a64; }
+.rates-toggle-btn { background: #2a2a24; border: 1px solid #3a3a32; border-radius: 20px; color: var(--yellow); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.06em; padding: 7px 16px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.rates-toggle-btn:hover { border-color: var(--yellow); }
+
+.rates-panel { background: #1a1814; border-bottom: 2px solid #3d3830; padding: 14px 20px; display: none; flex-wrap: wrap; gap: 10px 16px; }
+.rates-panel.open { display: flex; }
+.rate-field { display: flex; flex-direction: column; gap: 4px; }
+.rate-field label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6456; }
+.rate-field input { background: #2a2722; border: 1px solid #3d3830; border-radius: 6px; color: var(--yellow); font-family: 'Space Mono', monospace; font-size: 13px; padding: 5px 8px; width: 104px; text-align: right; outline: none; -moz-appearance: textfield; }
+.rate-field input::-webkit-inner-spin-button { display: none; }
+.rate-field input:focus { border-color: var(--yellow); }
+.rates-note { width: 100%; font-size: 10px; color: #6b6456; padding-top: 8px; border-top: 1px solid #2a2722; }
+
+main { padding: 20px 16px 0; max-width: 680px; margin: 0 auto; }
+
+.section-label { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.currency-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+.cur-tab { background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; color: var(--muted); cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 0.06em; padding: 7px 14px; transition: all 0.15s; text-transform: uppercase; line-height: 1; text-align: center; }
+.cur-tab:hover { border-color: var(--ink); color: var(--ink); }
+.cur-tab.active { background: var(--yellow); border-color: var(--yellow); color: #111210; }
+.cur-tab .cur-rate { display: block; font-family: 'Space Mono', monospace; font-size: 8px; font-weight: 400; opacity: 0.45; margin-top: 3px; }
+
+.inputs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+@media (max-width: 460px) { .inputs-row { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.big-input { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; color: var(--ink); font-family: 'Space Mono', monospace; font-size: 20px; padding: 10px 14px; outline: none; transition: border-color 0.15s; -moz-appearance: textfield; width: 100%; }
+.big-input::-webkit-inner-spin-button { display: none; }
+.big-input:focus { border-color: var(--yellow); }
+.field-hint { font-family: 'Nunito', sans-serif; font-size: 10px; color: var(--muted); }
+.margin-wrap { display: flex; align-items: center; gap: 6px; }
+.margin-sym { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--profit); }
+
+.cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+@media (max-width: 460px) { .cards-row { grid-template-columns: 1fr; } }
+
+.main-card { border-radius: 12px; overflow: hidden; position: relative; }
+.card-top { padding: 14px 16px; }
+.main-card.wise-card .card-top { background: #2a2a24; color: var(--ink); }
+.main-card.cc-card   .card-top { background: var(--cc); color: #fff; }
+
+.card-method { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.45; margin-bottom: 6px; }
+.card-cost-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; margin-bottom: 2px; }
+.card-cost-val { font-family: 'Bebas Neue', sans-serif; font-size: 34px; line-height: 1; letter-spacing: 1px; margin-bottom: 12px; }
+.card-cur { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 400; opacity: 0.35; margin-right: 2px; }
+
+.card-lines { display: table; width: 100%; border-collapse: collapse; }
+.card-lines .row { display: table-row; height: 22px; }
+.card-lines .k, .card-lines .v { display: table-cell; vertical-align: middle; height: 22px; }
+.card-lines .k { font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 600; opacity: 0.55; white-space: nowrap; width: 99%; }
+.card-lines .v { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; text-align: right; white-space: nowrap; padding-left: 8px; width: 1%; }
+.card-divider { height: 1px; margin: 12px 0 10px; opacity: 0.15; background: currentColor; }
+.card-sale-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; margin-bottom: 2px; }
+.card-sale-val { font-family: 'Bebas Neue', sans-serif; font-size: 30px; line-height: 1; margin-bottom: 10px; }
+.card-sale-cur { font-family: 'Space Mono', monospace; font-size: 10px; opacity: 0.35; margin-right: 2px; }
+
+.card-bottom-inner { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
+.card-bottom-inner .card-sale-label { opacity: 0.6; }
+.card-bottom-inner .card-sale-val { margin-bottom: 8px; }
+
+.v-green { color: #6effa0; }
+.cc-card .v-green { color: #ffe08a; }
+.v-red { color: #ff8a8a; }
+
+.best-badge { position: absolute; top: 10px; right: 10px; background: var(--yellow); color: var(--ink); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; }
+
+.eco-strip { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.eco-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+.eco-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--profit); line-height: 1; }
+.eco-div { color: var(--border); }
+.eco-iof { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--cc); margin-left: auto; }
+
+footer { max-width: 680px; margin: 0 auto; padding: 14px 16px 32px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); }
+.footer-credit { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.footer-credit span { color: var(--yellow); font-weight: 800; }
+.footer-back { font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 700; color: var(--muted); text-decoration: none; letter-spacing: 0.06em; }
+.footer-back:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">ANTI<em>CEG</em></div>
+    <div class="logo-sub">calculadora de conversão</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a href="https://anticeg.vercel.app" class="back-link">← portal</a>
+    <button class="rates-toggle-btn" onclick="toggleRates()">✎ Editar Câmbio</button>
+  </div>
+</header>
+
+<div class="rates-panel" id="ratesPanel">
+  <div class="rate-field"><label>USD / BRL</label><input type="number" id="r_USD" value="5.3700" step="0.0001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>PHP / BRL</label><input type="number" id="r_PHP" value="0.0890" step="0.00001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>IDR / BRL</label><input type="number" id="r_IDR" value="0.000310" step="0.000001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>KRW / BRL</label><input type="number" id="r_KRW" value="0.004080" step="0.000001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>JPY / BRL</label><input type="number" id="r_JPY" value="0.034000" step="0.00001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>Wise (+%)</label><input type="number" id="r_WISE" value="6.5" step="0.1" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>Spread C.C. (%)</label><input type="number" id="r_SPREAD" value="4.0" step="0.1" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>IOF (%)</label><input type="number" id="r_IOF" value="3.5" step="0.1" oninput="onRateChange()"></div>
+  <div class="rates-note">💡 Altere quando a cotação mudar. Wise e Cartão calculam automaticamente.</div>
+</div>
+
+<main>
+  <div class="section-label">Moeda</div>
+  <div class="currency-tabs">
+    <button class="cur-tab active" data-cur="USD" onclick="selectCur(this)">USD $<span class="cur-rate" id="rt_USD">R$ 5,3700</span></button>
+    <button class="cur-tab" data-cur="PHP" onclick="selectCur(this)">PHP ₱<span class="cur-rate" id="rt_PHP">R$ 0,0890</span></button>
+    <button class="cur-tab" data-cur="IDR" onclick="selectCur(this)">IDR Rp<span class="cur-rate" id="rt_IDR">R$ 0,000310</span></button>
+    <button class="cur-tab" data-cur="KRW" onclick="selectCur(this)">KRW ₩<span class="cur-rate" id="rt_KRW">R$ 0,004080</span></button>
+    <button class="cur-tab" data-cur="JPY" onclick="selectCur(this)">JPY ¥<span class="cur-rate" id="rt_JPY">R$ 0,034000</span></button>
+  </div>
+
+  <div class="section-label">Entrada</div>
+  <div class="inputs-row">
+    <div class="field">
+      <label id="amountLabel">Valor em USD</label>
+      <input type="number" class="big-input" id="amount" value="100" min="0" step="0.01" oninput="calc()">
+      <span class="field-hint">quanto você paga na origem</span>
+    </div>
+    <div class="field">
+      <label>Margem de lucro</label>
+      <div class="margin-wrap">
+        <input type="number" class="big-input" id="marginInput" value="30" step="1" min="0" oninput="calc()">
+        <span class="margin-sym">%</span>
+      </div>
+      <span class="field-hint">preço de venda ao cliente</span>
+    </div>
+  </div>
+
+  <div class="section-label">Resultado</div>
+  <div class="cards-row">
+    <div class="main-card wise-card" id="wiseCard">
+      <div class="card-top">
+        <div class="card-method">Wise / Pix</div>
+        <div class="card-cost-label">Custo</div>
+        <div class="card-cost-val"><span class="card-cur">R$</span><span id="wiseTotal">—</span></div>
+        <div class="card-lines">
+          <div class="row"><span class="k">câmbio</span><span class="v" id="w_cambio">—</span></div>
+          <div class="row"><span class="k" id="w_taxa_lbl">taxa Wise</span><span class="v" id="w_taxa">—</span></div>
+          <div class="row"><span class="k">cotação efetiva</span><span class="v" id="w_cotacao">—</span></div>
+        </div>
+        <div class="card-bottom-inner">
+          <div class="card-sale-label">Preço de Venda</div>
+          <div class="card-sale-val"><span class="card-sale-cur">R$</span><span id="saleWise">—</span></div>
+          <div class="card-lines">
+            <div class="row"><span class="k" id="w_marg_lbl">margem</span><span class="v v-green" id="w_marg_val">—</span></div>
+            <div class="row"><span class="k">lucro</span><span class="v v-green" id="w_lucro">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-card cc-card" id="ccCard">
+      <div class="card-top">
+        <div class="card-method">Cartão de Crédito</div>
+        <div class="card-cost-label">Custo</div>
+        <div class="card-cost-val"><span class="card-cur">R$</span><span id="ccTotal">—</span></div>
+        <div class="card-lines">
+          <div class="row"><span class="k">câmbio</span><span class="v" id="c_cambio">—</span></div>
+          <div class="row"><span class="k" id="c_spread_lbl">spread</span><span class="v" id="c_spread">—</span></div>
+          <div class="row"><span class="k" id="c_iof_lbl">IOF</span><span class="v" id="c_iof">—</span></div>
+          <div class="row"><span class="k">taxa efetiva</span><span class="v" id="c_eff">—</span></div>
+        </div>
+        <div class="card-bottom-inner">
+          <div class="card-sale-label">Preço de Venda</div>
+          <div class="card-sale-val"><span class="card-sale-cur">R$</span><span id="saleCC">—</span></div>
+          <div class="card-lines">
+            <div class="row"><span class="k" id="c_marg_lbl">margem</span><span class="v v-green" id="c_marg_val">—</span></div>
+            <div class="row"><span class="k">lucro real</span><span class="v" id="c_lucro">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="eco-strip">
+    <span class="eco-label">economia Wise vs Cartão</span>
+    <span class="eco-val" id="ecoVal">—</span>
+    <span class="eco-div">|</span>
+    <span class="eco-iof" id="ecoIof"></span>
+  </div>
+</main>
+
+<footer>
+  <a href="https://anticeg.vercel.app" class="footer-back">← anticeg.vercel.app</a>
+  <div class="footer-credit">designed by <span>@nandaverseo_c</span></div>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let cur = 'USD';
+
+function getBase(c) { return parseFloat($('r_'+c).value) || 0; }
+function wisePct()  { return (parseFloat($('r_WISE').value)   || 0) / 100; }
+function spread()   { return (parseFloat($('r_SPREAD').value) || 0) / 100; }
+function iof()      { return (parseFloat($('r_IOF').value)    || 0) / 100; }
+function margin()   { return (parseFloat($('marginInput').value) || 0) / 100; }
+function amount()   { return parseFloat($('amount').value) || 0; }
+
+function wR(c) { return getBase(c) * (1 + wisePct()); }
+function cR(c) { return getBase(c) * (1 + spread()) * (1 + iof()); }
+
+function fmt(n, d=2) {
+  return n.toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
+}
+function fmtR(n) {
+  if (n < 0.001) return n.toFixed(6);
+  if (n < 0.01)  return n.toFixed(5);
+  if (n < 1)     return n.toFixed(4);
+  return n.toFixed(4);
+}
+
+function toggleRates() { $('ratesPanel').classList.toggle('open'); }
+
+function onRateChange() {
+  ['USD','PHP','IDR','KRW','JPY'].forEach(c => {
+    const el = $('rt_'+c);
+    if (el) el.textContent = 'R$ ' + fmtR(getBase(c));
+  });
+  $('w_taxa_lbl').textContent   = `taxa Wise +${$('r_WISE').value}%`;
+  $('c_spread_lbl').textContent = `spread ${$('r_SPREAD').value}%`;
+  $('c_iof_lbl').textContent    = `IOF ${$('r_IOF').value}%`;
+  calc();
+}
+
+function selectCur(el) {
+  document.querySelectorAll('.cur-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  cur = el.dataset.cur;
+  $('amountLabel').textContent = `Valor em ${cur}`;
+  calc();
+}
+
+function set(id, val) { $(id).textContent = val; }
+
+function calc() {
+  const a    = amount();
+  const base = getBase(cur);
+  const wr   = wR(cur);
+  const cr   = cR(cur);
+  const m    = margin();
+  const sp   = spread();
+  const io   = iof();
+  const wp   = wisePct();
+  const mPct = Math.round(m * 100);
+
+  $('w_marg_lbl').textContent = `margem ${mPct}%`;
+  $('c_marg_lbl').textContent = `margem ${mPct}%`;
+
+  set('w_cambio',  `R$ ${fmtR(base)}`);
+  set('c_cambio',  `R$ ${fmtR(base)}`);
+  set('w_cotacao', `R$ ${fmtR(wr)}`);
+  set('c_eff',     `+${fmt(((cr/base)-1)*100,2)}%`);
+
+  const dash = '—';
+
+  if (a <= 0) {
+    ['wiseTotal','ccTotal','saleWise','saleCC','w_taxa','c_spread','c_iof',
+     'w_marg_val','w_lucro','c_marg_val','c_lucro'].forEach(id => set(id, dash));
+    set('ecoVal', dash); set('ecoIof', '');
+    document.querySelectorAll('.best-badge').forEach(b => b.remove());
+    return;
+  }
+
+  const wTotal    = a * wr;
+  const cTotal    = a * cr;
+  const baseTotal = a * base;
+  const wiseAmt   = baseTotal * wp;
+  const spreadAmt = baseTotal * sp;
+  const iofAmt    = baseTotal * (1 + sp) * io;
+  const economia  = cTotal - wTotal;
+  const sW        = wTotal * (1 + m);
+  const lW        = sW - wTotal;
+  const sC        = sW;
+  const lC        = sC - cTotal;
+
+  set('wiseTotal', fmt(wTotal));
+  set('w_taxa',    `+R$ ${fmt(wiseAmt)}`);
+  set('ccTotal',   fmt(cTotal));
+  set('c_spread',  `+R$ ${fmt(spreadAmt)}`);
+  set('c_iof',     `+R$ ${fmt(iofAmt)}`);
+  set('saleWise',   fmt(sW));
+  set('w_marg_val', `+R$ ${fmt(lW)}`);
+  set('w_lucro',    `R$ ${fmt(lW)}`);
+  set('saleCC',     fmt(sC));
+  set('c_marg_val', `R$ ${fmt(sC)}`);
+  set('c_lucro',    `R$ ${fmt(lC)}`);
+
+  const cLucroEl = $('c_lucro');
+  cLucroEl.className = `v ${lC >= 0 ? 'v-green' : 'v-red'}`;
+
+  document.querySelectorAll('.best-badge').forEach(b => b.remove());
+  const badge = document.createElement('div');
+  badge.className = 'best-badge';
+  badge.textContent = '✓ mais barato';
+  (wTotal <= cTotal ? $('wiseCard') : $('ccCard')).appendChild(badge);
+
+  set('ecoVal', economia > 0 ? `R$ ${fmt(economia)} a menos` : 'cartão mais barato');
+  set('ecoIof', `IOF pago: R$ ${fmt(iofAmt)}`);
+}
+
+onRateChange();
+calc();
+</script>
+</body>
+</html>

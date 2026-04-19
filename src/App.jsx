@@ -580,6 +580,56 @@ function CegDetailView({ ceg, onVoltar }) {
           })}
         </div>
       )}
+
+      {/* GALERIA */}
+      {viewMode === "galeria" && (
+        <div className="ml-gallery">
+          {filtered.map(item => {
+            const foto = localPhotos[item.id] || item.foto_item;
+            const tipo = localTipos[item.id] || item.tipo || "outro";
+            const isLocal = !!localPhotos[item.id] && !item.foto_item;
+            return (
+              <div key={item.id} className="ml-gallery-card">
+                <div className="ml-gallery-img">
+                  {foto
+                    ? <>
+                        <img src={foto} alt={item.nome_do_item} />
+                        {isLocal && <span className="ml-gallery-local-tag">local</span>}
+                        <label className="ml-gallery-swap" title="Trocar foto">
+                          ↺
+                          <input type="file" accept="image/*" style={{ display:"none" }}
+                            onChange={e => assignPhoto(item.id, e.target.files[0])} />
+                        </label>
+                      </>
+                    : <label className="ml-gallery-placeholder">
+                        <span>+ foto</span>
+                        <input type="file" accept="image/*" style={{ display:"none" }}
+                          onChange={e => assignPhoto(item.id, e.target.files[0])} />
+                      </label>
+                  }
+                </div>
+                <div className="ml-gallery-info">
+                  <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                    <StatusChip status={item.status} />
+                    <select
+                      className="ml-tipo-select"
+                      value={tipo}
+                      onChange={e => setTipo(item.id, e.target.value)}
+                      style={{ color: tipoColor[tipo] }}
+                    >
+                      {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="ml-gallery-name">{item.nome_do_item}</div>
+                  <div className="ml-gallery-ceg">{item.ceg}</div>
+                  {!guest && <div className="ml-gallery-val">R${fmtBRL(Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0)+Number(item.nacional||0))}</div>}
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && <div style={{ color:"rgba(245,240,232,.3)", fontSize:13, padding:"32px 0" }}>Nenhum item encontrado.</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -707,12 +757,33 @@ function CegTab({ user, itens }) {
   );
 }
 
+const TIPOS = ["card", "merch", "set", "outro"];
+const tipoLabel = { card: "card", merch: "merch", set: "set", outro: "outro" };
+const tipoColor = { card: "#C9A8F0", merch: "#BAFF39", set: "#FF5C1A", outro: "rgba(245,240,232,.35)" };
+
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
+  const [viewMode, setViewMode] = useState("lista");
+  const [localPhotos, setLocalPhotos] = useState({});
+  const [localTipos, setLocalTipos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("anticeg_tipos_local") || "{}"); } catch { return {}; }
+  });
+  const [tipoFilter, setTipoFilter] = useState("todos");
+
+  function setTipo(id, tipo) {
+    const next = { ...localTipos, [id]: tipo };
+    setLocalTipos(next);
+    localStorage.setItem("anticeg_tipos_local", JSON.stringify(next));
+  }
+
+  function assignPhoto(id, file) {
+    if (!file) return;
+    setLocalPhotos(p => ({ ...p, [id]: URL.createObjectURL(file) }));
+  }
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
@@ -743,6 +814,7 @@ function MasterlistTab({ user, itens, onLogin }) {
     filtered = filtered.filter(i => i.status === filter);
   }
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
+  if (tipoFilter !== "todos") filtered = filtered.filter(i => (localTipos[i.id] || i.tipo || "outro") === tipoFilter);
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0)+Number(b.nacional||0), 0);
   const tPend  = filtered.filter(i=>isPendente(i.pag_item)).reduce((a,b)=>a+Number(b.valor_item||0),0)
@@ -798,14 +870,27 @@ function MasterlistTab({ user, itens, onLogin }) {
       )}
 
       <div className="filters-bar">
-          <span className="filter-label">Ver:</span>
-          {FILTERS.map(f => (
-            <button key={f.id} className={`filter-pill ${filter === f.id ? "active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
-          ))}
-          <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
+        <span className="filter-label">Ver:</span>
+        {FILTERS.map(f => (
+          <button key={f.id} className={`filter-pill ${filter === f.id ? "active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
+        ))}
+        <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
+        <div style={{ display:"flex", gap:4, marginLeft:"auto" }}>
+          <button className={`filter-pill ${viewMode === "lista" ? "active" : ""}`} onClick={() => setViewMode("lista")}>☰ lista</button>
+          <button className={`filter-pill ${viewMode === "galeria" ? "active" : ""}`} onClick={() => setViewMode("galeria")}>⊞ galeria</button>
         </div>
+      </div>
+      <div className="filters-bar" style={{ marginTop:4 }}>
+        <span className="filter-label">Tipo:</span>
+        <button className={`filter-pill ${tipoFilter === "todos" ? "active" : ""}`} onClick={() => setTipoFilter("todos")}>Todos</button>
+        {TIPOS.map(t => (
+          <button key={t} className={`filter-pill ${tipoFilter === t ? "active" : ""}`}
+            style={tipoFilter === t ? { borderColor: tipoColor[t], color: tipoColor[t] } : {}}
+            onClick={() => setTipoFilter(t)}>{t}</button>
+        ))}
+      </div>
 
-      <div className="table-wrap">
+      {viewMode === "lista" && <div className="table-wrap">
         <table>
           <thead>
             <tr className="col-group-header">
@@ -874,9 +959,9 @@ function MasterlistTab({ user, itens, onLogin }) {
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
       {/* Mobile cards — hidden on desktop via CSS */}
-      <div className="ml-cards">
+      {viewMode === "lista" && <div className="ml-cards">
         {filtered.length === 0 && (
           <div style={{ padding:"32px 0", textAlign:"center", color:"rgba(245,240,232,.3)", fontSize:"var(--fs-xs)" }}>nenhum item para esse filtro</div>
         )}
@@ -908,7 +993,7 @@ function MasterlistTab({ user, itens, onLogin }) {
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
     </div>
@@ -1994,6 +2079,172 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
+function CalculadoraTab() {
+  const CURRENCIES = [
+    { id:"USD", sym:"$" }, { id:"PHP", sym:"₱" }, { id:"IDR", sym:"Rp" },
+    { id:"KRW", sym:"₩" }, { id:"JPY", sym:"¥" },
+  ];
+  const [cur, setCur] = useState("USD");
+  const [showRates, setShowRates] = useState(false);
+  const [amount, setAmount] = useState("100");
+  const [marginPct, setMarginPct] = useState("30");
+  const [rates, setRates] = useState({
+    USD:5.3700, PHP:0.0890, IDR:0.000310, KRW:0.004080, JPY:0.034000,
+    WISE:6.5, SPREAD:4.0, IOF:3.5,
+  });
+
+  function setRate(k, v) { setRates(r => ({ ...r, [k]: parseFloat(v) || 0 })); }
+
+  function fmtR(n) {
+    if (n < 0.001) return n.toFixed(6);
+    if (n < 0.01)  return n.toFixed(5);
+    if (n < 1)     return n.toFixed(4);
+    return n.toFixed(4);
+  }
+  function fmt(n, d=2) { return n.toLocaleString("pt-BR", { minimumFractionDigits:d, maximumFractionDigits:d }); }
+
+  const a    = parseFloat(amount) || 0;
+  const m    = (parseFloat(marginPct) || 0) / 100;
+  const base = rates[cur] || 0;
+  const wp   = rates.WISE   / 100;
+  const sp   = rates.SPREAD / 100;
+  const io   = rates.IOF    / 100;
+  const wr   = base * (1 + wp);
+  const cr   = base * (1 + sp) * (1 + io);
+
+  let R = null;
+  if (a > 0) {
+    const wTotal   = a * wr;
+    const cTotal   = a * cr;
+    const baseT    = a * base;
+    const wiseAmt  = baseT * wp;
+    const spreadAmt= baseT * sp;
+    const iofAmt   = baseT * (1 + sp) * io;
+    const sW = wTotal * (1 + m);
+    const lW = sW - wTotal;
+    const sC = sW;
+    const lC = sC - cTotal;
+    R = { wTotal, cTotal, wiseAmt, spreadAmt, iofAmt, economia: cTotal - wTotal, sW, lW, sC, lC };
+  }
+
+  const INP = { className:"calc-big-input", type:"number" };
+
+  return (
+    <div className="calc-wrap">
+      {/* HEADER */}
+      <div className="calc-header">
+        <div>
+          <div className="calc-logo">Calculadora</div>
+          <div className="calc-logo-sub">conversão de moeda · CEG</div>
+        </div>
+        <button className="calc-rates-btn" onClick={() => setShowRates(v => !v)}>✎ Editar Câmbio</button>
+      </div>
+
+      {/* RATES PANEL */}
+      {showRates && (
+        <div className="calc-rates-panel">
+          {[["USD","USD / BRL"],["PHP","PHP / BRL"],["IDR","IDR / BRL"],["KRW","KRW / BRL"],["JPY","JPY / BRL"],
+            ["WISE","Wise (+%)"],["SPREAD","Spread C.C. (%)"],["IOF","IOF (%)"]].map(([k, lbl]) => (
+            <div key={k} className="calc-rate-field">
+              <label>{lbl}</label>
+              <input type="number" value={rates[k]} step={k==="USD"?"0.0001":k==="WISE"||k==="SPREAD"||k==="IOF"?"0.1":"0.000001"}
+                onChange={e => setRate(k, e.target.value)} />
+            </div>
+          ))}
+          <div className="calc-rates-note">💡 Altere quando a cotação mudar. Os campos abaixo atualizam automaticamente.</div>
+        </div>
+      )}
+
+      <div className="calc-main">
+        {/* CURRENCY TABS */}
+        <div className="calc-section-label">Moeda</div>
+        <div className="calc-cur-tabs">
+          {CURRENCIES.map(c => (
+            <button key={c.id} className={`calc-cur-tab ${cur === c.id ? "active" : ""}`} onClick={() => setCur(c.id)}>
+              {c.id} {c.sym}
+              <span className="calc-cur-rate">R$ {fmtR(rates[c.id] || 0)}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* INPUTS */}
+        <div className="calc-section-label">Entrada</div>
+        <div className="calc-inputs-row">
+          <div className="calc-field">
+            <label>Valor em {cur}</label>
+            <input {...INP} value={amount} onChange={e => setAmount(e.target.value)} />
+            <span className="calc-hint">quanto você paga na origem</span>
+          </div>
+          <div className="calc-field">
+            <label>Margem de lucro</label>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <input {...INP} value={marginPct} onChange={e => setMarginPct(e.target.value)} />
+              <span className="calc-margin-sym">%</span>
+            </div>
+            <span className="calc-hint">preço de venda ao cliente</span>
+          </div>
+        </div>
+
+        {/* RESULT CARDS */}
+        <div className="calc-section-label">Resultado</div>
+        <div className="calc-cards-row">
+          {/* WISE */}
+          <div className={`calc-card calc-wise ${R && R.wTotal <= R.cTotal ? "calc-best" : ""}`}>
+            {R && R.wTotal <= R.cTotal && <div className="calc-badge">✓ mais barato</div>}
+            <div className="calc-card-method">Wise / Pix</div>
+            <div className="calc-card-cost-lbl">Custo</div>
+            <div className="calc-card-cost-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.wTotal) : "—"}</div>
+            <div className="calc-lines">
+              <div className="calc-row"><span>câmbio</span><span>R$ {fmtR(base)}</span></div>
+              <div className="calc-row"><span>taxa Wise +{rates.WISE}%</span><span>{R ? `+R$ ${fmt(R.wiseAmt)}` : "—"}</span></div>
+              <div className="calc-row"><span>cotação efetiva</span><span>R$ {fmtR(wr)}</span></div>
+            </div>
+            <div className="calc-card-inner">
+              <div className="calc-card-cost-lbl">Preço de Venda</div>
+              <div className="calc-card-sale-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.sW) : "—"}</div>
+              <div className="calc-lines">
+                <div className="calc-row"><span>margem {Math.round(m*100)}%</span><span className="calc-green">{R ? `+R$ ${fmt(R.lW)}` : "—"}</span></div>
+                <div className="calc-row"><span>lucro</span><span className="calc-green">{R ? `R$ ${fmt(R.lW)}` : "—"}</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* CARTÃO */}
+          <div className={`calc-card calc-cc ${R && R.cTotal < R.wTotal ? "calc-best" : ""}`}>
+            {R && R.cTotal < R.wTotal && <div className="calc-badge">✓ mais barato</div>}
+            <div className="calc-card-method">Cartão de Crédito</div>
+            <div className="calc-card-cost-lbl">Custo</div>
+            <div className="calc-card-cost-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.cTotal) : "—"}</div>
+            <div className="calc-lines">
+              <div className="calc-row"><span>câmbio</span><span>R$ {fmtR(base)}</span></div>
+              <div className="calc-row"><span>spread {rates.SPREAD}%</span><span>{R ? `+R$ ${fmt(R.spreadAmt)}` : "—"}</span></div>
+              <div className="calc-row"><span>IOF {rates.IOF}%</span><span>{R ? `+R$ ${fmt(R.iofAmt)}` : "—"}</span></div>
+              <div className="calc-row"><span>taxa efetiva</span><span>{R ? `+${fmt(((cr/base)-1)*100,2)}%` : "—"}</span></div>
+            </div>
+            <div className="calc-card-inner">
+              <div className="calc-card-cost-lbl">Preço de Venda</div>
+              <div className="calc-card-sale-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.sC) : "—"}</div>
+              <div className="calc-lines">
+                <div className="calc-row"><span>margem {Math.round(m*100)}%</span><span className="calc-green">{R ? `+R$ ${fmt(R.lW)}` : "—"}</span></div>
+                <div className="calc-row"><span>lucro real</span>
+                  <span className={R ? (R.lC >= 0 ? "calc-green" : "calc-red") : ""}>{R ? `R$ ${fmt(R.lC)}` : "—"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ECO STRIP */}
+        <div className="calc-eco">
+          <span className="calc-eco-lbl">economia Wise vs Cartão</span>
+          <span className="calc-eco-val">{R ? (R.economia > 0 ? `R$ ${fmt(R.economia)} a menos` : "cartão mais barato") : "—"}</span>
+          {R && <span className="calc-eco-iof">IOF pago: R$ {fmt(R.iofAmt)}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TutorialModal({ onClose }) {
   const [step, setStep] = useState(0);
   const s = TUTORIAL_STEPS[step];
@@ -2267,6 +2518,7 @@ export default function App() {
         <button className={`tab-btn ${tab === "store" ? "active" : ""}`} onClick={() => setTab("store")}>🛍 Anti-Store</button>
         {!user.guest && <button className={`tab-btn ${tab === "feedback" ? "active" : ""}`} onClick={() => setTab("feedback")}>✉ Feedback</button>}
         <button className={`tab-btn ${tab === "tutorial" ? "active" : ""}`} onClick={() => setTab("tutorial")}>? Tutorial</button>
+        <button className={`tab-btn ${tab === "calculadora" ? "active" : ""}`} onClick={() => setTab("calculadora")}>$ Calc</button>
         {user.email === ADMIN_EMAIL && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
@@ -2279,6 +2531,7 @@ export default function App() {
       {tab === "store" && <AntiStoreTab user={user} />}
       {!user.guest && tab === "feedback" && <FeedbackTab user={user} />}
       {tab === "tutorial" && <TutorialTab />}
+      {tab === "calculadora" && <CalculadoraTab />}
       {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
     </div>
   );
