@@ -437,25 +437,6 @@ td { padding:10px; vertical-align:middle; }
 .ml-card-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ml-card-timeline { border-top:1px solid #1e1e1e; padding-top:10px; }
 
-/* ── Galeria ──────────────────────────────────────────────── */
-.ml-gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; padding:4px 0 32px; }
-.ml-gallery-card { background:#111; border:1px solid #1e1e1e; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; transition:border-color .15s; }
-.ml-gallery-card:hover { border-color:#333; }
-.ml-gallery-img { position:relative; width:100%; aspect-ratio:3/4; background:#0d0d0d; overflow:hidden; }
-.ml-gallery-img img { width:100%; height:100%; object-fit:cover; display:block; }
-.ml-gallery-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; color:rgba(245,240,232,.2); font-size:11px; cursor:pointer; transition:color .15s; }
-.ml-gallery-placeholder:hover { color:rgba(245,240,232,.5); }
-.ml-gallery-local-tag { position:absolute; top:6px; left:6px; background:rgba(186,255,57,.15); border:1px solid rgba(186,255,57,.3); color:#BAFF39; font-size:9px; letter-spacing:1px; padding:2px 6px; border-radius:4px; }
-.ml-gallery-swap { position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,.6); border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.6); font-size:13px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s; }
-.ml-gallery-swap:hover { background:rgba(0,0,0,.9); color:var(--offwhite); }
-.ml-gallery-info { padding:10px 10px 12px; display:flex; flex-direction:column; gap:5px; }
-.ml-gallery-name { font-size:12px; font-weight:600; color:var(--offwhite); line-height:1.35; }
-.ml-gallery-ceg { font-size:10px; color:rgba(245,240,232,.35); }
-.ml-gallery-val { font-size:11px; color:var(--lilas); margin-top:2px; }
-.ml-tipo-select { background:transparent; border:1px solid rgba(245,240,232,.15); border-radius:4px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; padding:2px 6px; cursor:pointer; outline:none; transition:border-color .15s; }
-.ml-tipo-select:hover { border-color:rgba(245,240,232,.3); }
-.ml-tipo-select option { background:#111; color:var(--offwhite); }
-
 /* ── Calculadora ──────────────────────────────────────────── */
 .calc-wrap { max-width:680px; margin:0 auto; padding-bottom:40px; }
 .calc-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:20px 0 14px; border-bottom:2px solid #c8381a; margin-bottom:0; }

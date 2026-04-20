@@ -759,33 +759,12 @@ function CegTab({ user, itens }) {
   );
 }
 
-const TIPOS = ["card", "merch", "set", "outro"];
-const tipoLabel = { card: "card", merch: "merch", set: "set", outro: "outro" };
-const tipoColor = { card: "#C9A8F0", merch: "#BAFF39", set: "#FF5C1A", outro: "rgba(245,240,232,.35)" };
-
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
-  const [viewMode, setViewMode] = useState("lista");
-  const [localPhotos, setLocalPhotos] = useState({});
-  const [localTipos, setLocalTipos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("anticeg_tipos_local") || "{}"); } catch { return {}; }
-  });
-  const [tipoFilter, setTipoFilter] = useState("todos");
-
-  function setTipo(id, tipo) {
-    const next = { ...localTipos, [id]: tipo };
-    setLocalTipos(next);
-    localStorage.setItem("anticeg_tipos_local", JSON.stringify(next));
-  }
-
-  function assignPhoto(id, file) {
-    if (!file) return;
-    setLocalPhotos(p => ({ ...p, [id]: URL.createObjectURL(file) }));
-  }
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
@@ -816,7 +795,6 @@ function MasterlistTab({ user, itens, onLogin }) {
     filtered = filtered.filter(i => i.status === filter);
   }
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
-  if (tipoFilter !== "todos") filtered = filtered.filter(i => (localTipos[i.id] || i.tipo || "outro") === tipoFilter);
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0)+Number(b.nacional||0), 0);
   const tPend  = filtered.filter(i=>isPendente(i.pag_item)).reduce((a,b)=>a+Number(b.valor_item||0),0)
@@ -877,22 +855,9 @@ function MasterlistTab({ user, itens, onLogin }) {
           <button key={f.id} className={`filter-pill ${filter === f.id ? "active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
         ))}
         <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
-        <div style={{ display:"flex", gap:4, marginLeft:"auto" }}>
-          <button className={`filter-pill ${viewMode === "lista" ? "active" : ""}`} onClick={() => setViewMode("lista")}>☰ lista</button>
-          <button className={`filter-pill ${viewMode === "galeria" ? "active" : ""}`} onClick={() => setViewMode("galeria")}>⊞ galeria</button>
-        </div>
-      </div>
-      <div className="filters-bar" style={{ marginTop:4 }}>
-        <span className="filter-label">Tipo:</span>
-        <button className={`filter-pill ${tipoFilter === "todos" ? "active" : ""}`} onClick={() => setTipoFilter("todos")}>Todos</button>
-        {TIPOS.map(t => (
-          <button key={t} className={`filter-pill ${tipoFilter === t ? "active" : ""}`}
-            style={tipoFilter === t ? { borderColor: tipoColor[t], color: tipoColor[t] } : {}}
-            onClick={() => setTipoFilter(t)}>{t}</button>
-        ))}
       </div>
 
-      {viewMode === "lista" && <div className="table-wrap">
+      <div className="table-wrap">
         <table>
           <thead>
             <tr className="col-group-header">
@@ -961,9 +926,9 @@ function MasterlistTab({ user, itens, onLogin }) {
             )}
           </tbody>
         </table>
-      </div>}
+      </div>
       {/* Mobile cards — hidden on desktop via CSS */}
-      {viewMode === "lista" && <div className="ml-cards">
+      <div className="ml-cards">
         {filtered.length === 0 && (
           <div style={{ padding:"32px 0", textAlign:"center", color:"rgba(245,240,232,.3)", fontSize:"var(--fs-xs)" }}>nenhum item para esse filtro</div>
         )}
@@ -995,7 +960,7 @@ function MasterlistTab({ user, itens, onLogin }) {
             </div>
           );
         })}
-      </div>}
+      </div>
 
       {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
     </div>
