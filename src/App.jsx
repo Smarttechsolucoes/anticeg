@@ -861,12 +861,13 @@ function MasterlistTab({ user, itens, onLogin }) {
         <table>
           <thead>
             <tr className="col-group-header">
-              <th colSpan={3}></th>
+              <th colSpan={4}></th>
               <th colSpan={4}>VALORES A PAGAR</th>
               <th className="status-group" colSpan={2}>STATUS</th>
               <th>PAGAR</th>
             </tr>
             <tr className="thead-cols">
+              <th>FOTO</th>
               <th>CEG</th>
               <th>NOME DO ITEM</th>
               <th>COG</th>
@@ -889,6 +890,11 @@ function MasterlistTab({ user, itens, onLogin }) {
               return (
                 <>
                   <tr key={item.id}>
+                    <td className="td-foto">
+                      {item.foto_url
+                        ? <img src={item.foto_url} alt="" className="ml-foto-thumb" />
+                        : <div className="ml-foto-empty">sem foto</div>}
+                    </td>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
                     <td className="td-cog">{guest ? "—" : item.cog}</td>
@@ -939,7 +945,12 @@ function MasterlistTab({ user, itens, onLogin }) {
           return (
             <div key={item.id} className="ml-card">
               <div className="ml-card-top">
-                <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  {item.foto_url
+                    ? <img src={item.foto_url} alt="" className="ml-foto-thumb" />
+                    : <div className="ml-foto-empty">sem foto</div>}
+                  <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
+                </div>
                 <StatusChip status={item.status} />
               </div>
               <div className="ml-card-name">{item.nome_do_item}</div>
