@@ -263,12 +263,14 @@ function LoginScreen({ onLogin, onVoltar }) {
     if (!nome.trim()) { setError("Nome obrigatório."); setLoading(false); return; }
     if (!email.trim().includes("@")) { setError("E-mail inválido."); setLoading(false); return; }
     if (senha.length < 6) { setError("Senha deve ter pelo menos 6 caracteres."); setLoading(false); return; }
-    const { data: existe } = await supabase.from("usuarios").select("id").eq("email", email.trim().toLowerCase()).single();
+    const em = email.trim().toLowerCase();
+    const { data: existe } = await supabase.from("joiners").select("id").eq("email", em).single();
     if (existe) { setError("E-mail já cadastrado."); setLoading(false); return; }
-    const novoUsuario = { nome: nome.trim(), twitter: twitter.trim(), whatsapp: whatsapp.trim(), estado, email: email.trim().toLowerCase(), senha };
-    const { error: err } = await supabase.from("usuarios").insert([novoUsuario]);
+    const cog = em.split("@")[0];
+    const novoUsuario = { cog, nome: nome.trim(), twitter: twitter.trim(), whatsapp: whatsapp.trim(), estado, email: em, senha };
+    const { data: novo, error: err } = await supabase.from("joiners").insert([novoUsuario]).select().single();
     if (err) { setError("Erro ao cadastrar."); setLoading(false); return; }
-    onLogin(novoUsuario, []);
+    onLogin(novo, []);
     setLoading(false);
   }
 
@@ -1088,13 +1090,8 @@ function PerfilTab({ user, onUpdate }) {
       ...(novaSenha ? { senha: novaSenha } : {})
     };
 
-    if (user.cog) {
-      const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
-      if (err) { setError("Erro ao salvar."); setLoading(false); return; }
-    } else {
-      const { error: err } = await supabase.from("usuarios").update(updates).eq("email", user.email);
-      if (err) { setError("Erro ao salvar."); setLoading(false); return; }
-    }
+    const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
+    if (err) { setError("Erro ao salvar."); setLoading(false); return; }
 
     const updatedUser = { ...user, ...updates };
     localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
