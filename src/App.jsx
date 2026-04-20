@@ -765,6 +765,7 @@ function MasterlistTab({ user, itens, onLogin }) {
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
+  const [fotoZoom, setFotoZoom] = useState(null);
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
@@ -892,7 +893,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                   <tr key={item.id}>
                     <td className="td-foto">
                       {item.foto_url
-                        ? <img src={item.foto_url} alt="" className="ml-foto-thumb" />
+                        ? <img src={item.foto_url} alt="" className="ml-foto-thumb ml-foto-clicavel" onClick={() => setFotoZoom(item.foto_url)} />
                         : <div className="ml-foto-empty">sem foto</div>}
                     </td>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
@@ -947,7 +948,7 @@ function MasterlistTab({ user, itens, onLogin }) {
               <div className="ml-card-top">
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   {item.foto_url
-                    ? <img src={item.foto_url} alt="" className="ml-foto-thumb" />
+                    ? <img src={item.foto_url} alt="" className="ml-foto-thumb ml-foto-clicavel" onClick={() => setFotoZoom(item.foto_url)} />
                     : <div className="ml-foto-empty">sem foto</div>}
                   <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
                 </div>
@@ -974,6 +975,13 @@ function MasterlistTab({ user, itens, onLogin }) {
       </div>
 
       {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
+
+      {fotoZoom && (
+        <div className="foto-zoom-overlay" onClick={() => setFotoZoom(null)}>
+          <img src={fotoZoom} alt="" className="foto-zoom-img" onClick={e => e.stopPropagation()} />
+          <button className="foto-zoom-close" onClick={() => setFotoZoom(null)}>✕</button>
+        </div>
+      )}
     </div>
   );
 }
