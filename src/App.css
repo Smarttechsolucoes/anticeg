@@ -447,6 +447,23 @@ td { padding:10px; vertical-align:middle; }
 .foto-zoom-close { position:fixed; top:20px; right:24px; background:rgba(245,240,232,.1); border:1px solid rgba(245,240,232,.2); color:var(--offwhite); font-size:18px; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
 .foto-zoom-close:hover { background:rgba(245,240,232,.2); }
 
+/* ── Fotos Tab ───────────────────────────────────────────── */
+.fotos-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
+.fotos-card { background:#111; border:1px solid #1e1e1e; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+.fotos-img { position:relative; width:100%; aspect-ratio:1; background:#0d0d0d; overflow:hidden; cursor:pointer; }
+.fotos-img img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .15s; }
+.fotos-img:hover img { opacity:.85; }
+.fotos-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; color:rgba(245,240,232,.2); letter-spacing:1px; cursor:default; }
+.fotos-uploading { position:absolute; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--offwhite); animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.fotos-info { padding:8px 10px 10px; display:flex; flex-direction:column; gap:4px; }
+.fotos-nome { font-size:10px; font-weight:600; color:var(--offwhite); line-height:1.3; }
+.fotos-cog { font-size:9px; color:rgba(245,240,232,.3); }
+.fotos-actions { display:flex; gap:4px; margin-top:4px; }
+.fotos-btn-upload { background:var(--laranja); color:var(--preto); font-family:'DM Mono',monospace; font-size:9px; font-weight:700; padding:4px 8px; border-radius:4px; cursor:pointer; letter-spacing:.5px; flex:1; text-align:center; }
+.fotos-btn-remove { background:transparent; border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.4); font-size:10px; padding:4px 7px; border-radius:4px; cursor:pointer; }
+.fotos-btn-remove:hover { border-color:var(--laranja); color:var(--laranja); }
+
 /* ── Calculadora ──────────────────────────────────────────── */
 .calc-wrap { max-width:680px; margin:0 auto; padding-bottom:40px; }
 .calc-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:20px 0 14px; border-bottom:2px solid #c8381a; margin-bottom:0; }

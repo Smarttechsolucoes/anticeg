@@ -1305,6 +1305,145 @@ function RegrasTab() {
 }
 
 
+function FotosTab() {
+  const [itens, setItens] = useState(null);
+  const [busca, setBusca] = useState("");
+  const [cegFiltro, setCegFiltro] = useState("todas");
+  const [uploading, setUploading] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [fotoZoom, setFotoZoom] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      let all = [], from = 0;
+      while (true) {
+        const { data } = await supabase.from("masterlist")
+          .select("id, nome_do_item, ceg, cog, foto_url, status")
+          .neq("nome", "Disponivel")
+          .order("ceg", { ascending: true })
+          .range(from, from + 999);
+        if (!data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setItens(all);
+    })();
+  }, []);
+
+  async function uploadFoto(item, file) {
+    if (!file) return;
+    setUploading(item.id); setMsg("");
+    const ext = file.name.split(".").pop();
+    const path = `${item.id}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("masterlist-fotos").upload(path, file, { upsert: true });
+    if (upErr) { setMsg("Erro: " + upErr.message); setUploading(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from("masterlist-fotos").getPublicUrl(path);
+    await supabase.from("masterlist").update({ foto_url: publicUrl }).eq("id", item.id);
+    setItens(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: publicUrl } : i));
+    setMsg("✓ Foto salva!");
+    setTimeout(() => setMsg(""), 2000);
+    setUploading(null);
+  }
+
+  async function removerFoto(item) {
+    await supabase.from("masterlist").update({ foto_url: null }).eq("id", item.id);
+    setItens(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: null } : i));
+  }
+
+  if (!itens) return <div className="main" style={{ color:"rgba(245,240,232,.3)", fontSize:13 }}>carregando...</div>;
+
+  const cegs = [...new Set(itens.map(i => i.ceg))].sort();
+  const semFoto = itens.filter(i => !i.foto_url).length;
+  const comFoto = itens.filter(i => i.foto_url).length;
+
+  let filtrados = itens;
+  if (cegFiltro !== "todas") filtrados = filtrados.filter(i => i.ceg === cegFiltro);
+  if (busca.trim()) filtrados = filtrados.filter(i => (i.nome_do_item || "").toLowerCase().includes(busca.toLowerCase()));
+
+  const porCeg = filtrados.reduce((acc, item) => {
+    if (!acc[item.ceg]) acc[item.ceg] = [];
+    acc[item.ceg].push(item);
+    return acc;
+  }, {});
+
+  return (
+    <div className="main">
+      <div className="page-header">
+        <div>
+          <div className="page-eyebrow">admin · masterlist</div>
+          <div className="page-title">FO<span>TOS</span></div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"var(--fs-xl)", color:"#4ade80" }}>{comFoto}</div>
+          <div style={{ fontSize:"var(--fs-xs)", color:"rgba(245,240,232,.35)" }}>com foto · {semFoto} sem foto</div>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="filters-bar" style={{ marginBottom:16 }}>
+        <input className="search-input" type="text" placeholder="Buscar item..." value={busca} onChange={e => setBusca(e.target.value)} />
+        <select value={cegFiltro} onChange={e => setCegFiltro(e.target.value)}
+          style={{ background:"#111", border:"1px solid #2a2a2a", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", padding:"5px 12px", borderRadius:20, cursor:"pointer", outline:"none" }}>
+          <option value="todas">Todas as CEGs</option>
+          {cegs.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <button className={`filter-pill ${cegFiltro === "todas" && !busca ? "active" : ""}`}
+          onClick={() => { setCegFiltro("todas"); setBusca(""); }}>Limpar</button>
+      </div>
+
+      {msg && <div style={{ fontSize:11, color:"#4ade80", marginBottom:12, padding:"8px 12px", background:"rgba(74,222,128,.08)", border:"1px solid rgba(74,222,128,.2)", borderRadius:6 }}>{msg}</div>}
+
+      {/* Lista por CEG */}
+      {Object.entries(porCeg).map(([ceg, items]) => (
+        <div key={ceg} style={{ marginBottom:28 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"var(--fs-lg)", color:"var(--laranja)" }}>{ceg}</span>
+            <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{items.filter(i=>i.foto_url).length}/{items.length} com foto</span>
+          </div>
+          <div className="fotos-grid">
+            {items.map(item => (
+              <div key={item.id} className="fotos-card">
+                {/* Imagem */}
+                <div className="fotos-img" onClick={() => item.foto_url && setFotoZoom(item.foto_url)}>
+                  {item.foto_url
+                    ? <img src={item.foto_url} alt="" />
+                    : <div className="fotos-empty">sem foto</div>}
+                  {uploading === item.id && <div className="fotos-uploading">↑</div>}
+                </div>
+                {/* Info */}
+                <div className="fotos-info">
+                  <div className="fotos-nome">{item.nome_do_item}</div>
+                  <div className="fotos-cog">{item.cog}</div>
+                  <div className="fotos-actions">
+                    <label className="fotos-btn-upload">
+                      {item.foto_url ? "trocar" : "+ foto"}
+                      <input type="file" accept="image/*" style={{ display:"none" }}
+                        onChange={e => uploadFoto(item, e.target.files[0])}
+                        disabled={uploading === item.id} />
+                    </label>
+                    {item.foto_url && (
+                      <button className="fotos-btn-remove" onClick={() => removerFoto(item)}>✕</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Zoom */}
+      {fotoZoom && (
+        <div className="foto-zoom-overlay" onClick={() => setFotoZoom(null)}>
+          <img src={fotoZoom} alt="" className="foto-zoom-img" onClick={e => e.stopPropagation()} />
+          <button className="foto-zoom-close" onClick={() => setFotoZoom(null)}>✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
@@ -2128,6 +2267,9 @@ export default function App() {
         <button className={`tab-btn ${tab === "tutorial" ? "active" : ""}`} onClick={() => setTab("tutorial")}>? Tutorial</button>
         <button className={`tab-btn ${tab === "calculadora" ? "active" : ""}`} onClick={() => setTab("calculadora")}>$ Calc</button>
         {user.email === ADMIN_EMAIL && (
+          <button className={`tab-btn ${tab === "fotos" ? "active" : ""}`} onClick={() => setTab("fotos")}>◻ Fotos</button>
+        )}
+        {user.email === ADMIN_EMAIL && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
       </div>
@@ -2138,6 +2280,7 @@ export default function App() {
       {tab === "regras" && <RegrasTab />}
       {tab === "tutorial" && <TutorialTab />}
       {tab === "calculadora" && <CalculadoraTab />}
+      {tab === "fotos" && user.email === ADMIN_EMAIL && <FotosTab />}
       {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
     </div>
   );
