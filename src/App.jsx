@@ -1376,7 +1376,101 @@ function AdminTab() {
       </div>
 
 
+      <AdminFotoUploader />
       <AdminFeedbacks />
+    </div>
+  );
+}
+
+function AdminFotoUploader() {
+  const [busca, setBusca] = useState("");
+  const [resultados, setResultados] = useState(null);
+  const [buscando, setBuscando] = useState(false);
+  const [uploading, setUploading] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  async function buscarItens() {
+    if (!busca.trim()) return;
+    setBuscando(true); setResultados(null); setMsg("");
+    const { data } = await supabase.from("masterlist")
+      .select("id, nome_do_item, ceg, cog, foto_url")
+      .ilike("nome_do_item", `%${busca.trim()}%`)
+      .neq("nome", "Disponivel")
+      .limit(20);
+    setResultados(data || []);
+    setBuscando(false);
+  }
+
+  async function uploadFoto(item, file) {
+    if (!file) return;
+    setUploading(item.id); setMsg("");
+    const ext = file.name.split(".").pop();
+    const path = `${item.id}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("masterlist-fotos").upload(path, file, { upsert: true });
+    if (upErr) { setMsg("Erro no upload: " + upErr.message); setUploading(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from("masterlist-fotos").getPublicUrl(path);
+    await supabase.from("masterlist").update({ foto_url: publicUrl }).eq("id", item.id);
+    setResultados(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: publicUrl } : i));
+    setMsg("✓ Foto salva para: " + item.nome_do_item);
+    setUploading(null);
+  }
+
+  async function removerFoto(item) {
+    await supabase.from("masterlist").update({ foto_url: null }).eq("id", item.id);
+    setResultados(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: null } : i));
+    setMsg("Foto removida.");
+  }
+
+  return (
+    <div style={{ marginBottom:24 }}>
+      <div style={{ fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"rgba(245,240,232,.35)", marginBottom:12 }}>Fotos dos itens</div>
+
+      <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+        <input
+          className="admin-input" style={{ flex:1 }}
+          placeholder="Buscar item pelo nome..."
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && buscarItens()}
+        />
+        <button className="admin-save-btn" style={{ padding:"0 20px", margin:0 }} onClick={buscarItens} disabled={buscando}>
+          {buscando ? "..." : "BUSCAR"}
+        </button>
+      </div>
+
+      {msg && <div className="admin-msg" style={{ marginBottom:10 }}>{msg}</div>}
+
+      {resultados && resultados.length === 0 && (
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", padding:"12px 0" }}>Nenhum item encontrado.</div>
+      )}
+
+      {resultados && resultados.length > 0 && (
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {resultados.map(item => (
+            <div key={item.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"#111", border:"1px solid #1e1e1e", borderRadius:8 }}>
+              <div style={{ width:48, height:48, borderRadius:6, overflow:"hidden", flexShrink:0, background:"#0d0d0d", border:"1px solid #2a2a2a" }}>
+                {item.foto_url
+                  ? <img src={item.foto_url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"rgba(245,240,232,.2)" }}>sem foto</div>
+                }
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"var(--offwhite)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.nome_do_item}</div>
+                <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.ceg} · {item.cog}</div>
+              </div>
+              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                <label style={{ background:"var(--laranja)", color:"var(--preto)", fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, padding:"6px 12px", borderRadius:5, cursor:"pointer", letterSpacing:1 }}>
+                  {uploading === item.id ? "..." : item.foto_url ? "TROCAR" : "+ FOTO"}
+                  <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => uploadFoto(item, e.target.files[0])} disabled={uploading === item.id} />
+                </label>
+                {item.foto_url && (
+                  <button onClick={() => removerFoto(item)} style={{ background:"transparent", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:10, padding:"6px 10px", borderRadius:5, cursor:"pointer" }}>✕</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
