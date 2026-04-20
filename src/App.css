@@ -13,6 +13,7 @@
   --fs-xl: clamp(20px, 1.8vw, 28px);
   --fs-2xl: clamp(28px, 2.5vw, 40px);
   --fs-3xl: clamp(36px, 3.5vw, 56px);
+  --card-bg: #111;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
