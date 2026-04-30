@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculadora · ANTICEG</title>
+<title>Calculadora de Conversão</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,6 +14,7 @@
   --muted: #6b6a64;
   --border: #2c2c28;
   --surface: #1c1c18;
+  --surface2: #242420;
   --cc: #c8381a;
   --profit: #2e9e58;
   --yellow: #f0c840;
@@ -36,8 +37,10 @@ body::after {
   opacity: 0.4;
 }
 
+/* ── HEADER ── */
 header {
   background: #1c1c18;
+  color: var(--ink);
   padding: 16px 20px 12px;
   display: flex;
   align-items: flex-end;
@@ -48,102 +51,396 @@ header {
   z-index: 50;
   border-bottom: 3px solid var(--cc);
 }
-.logo { font-family: 'Bebas Neue', sans-serif; font-size: 40px; line-height: 0.9; letter-spacing: 3px; }
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 40px;
+  line-height: 0.9;
+  letter-spacing: 3px;
+}
 .logo em { color: var(--cc); font-style: normal; }
-.logo-sub { font-size: 9px; font-weight: 700; letter-spacing: 0.22em; color: #8a8478; text-transform: uppercase; margin-top: 6px; }
-.back-link { font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 700; color: #6b6a64; text-decoration: none; letter-spacing: 0.06em; border: 1px solid #3a3a32; border-radius: 20px; padding: 7px 14px; transition: color .15s, border-color .15s; }
-.back-link:hover { color: var(--ink); border-color: #6b6a64; }
-.rates-toggle-btn { background: #2a2a24; border: 1px solid #3a3a32; border-radius: 20px; color: var(--yellow); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.06em; padding: 7px 16px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.logo-sub {
+  font-family: 'Nunito', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #8a8478;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+.rates-toggle-btn {
+  background: #2a2a24;
+  border: 1px solid #3a3a32;
+  border-radius: 20px;
+  color: var(--yellow);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
 .rates-toggle-btn:hover { border-color: var(--yellow); }
 
-.rates-panel { background: #1a1814; border-bottom: 2px solid #3d3830; padding: 14px 20px; display: none; flex-wrap: wrap; gap: 10px 16px; }
+/* ── RATES PANEL ── */
+.rates-panel {
+  background: #1a1814;
+  border-bottom: 2px solid #3d3830;
+  padding: 14px 20px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
 .rates-panel.open { display: flex; }
 .rate-field { display: flex; flex-direction: column; gap: 4px; }
-.rate-field label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6456; }
-.rate-field input { background: #2a2722; border: 1px solid #3d3830; border-radius: 6px; color: var(--yellow); font-family: 'Space Mono', monospace; font-size: 13px; padding: 5px 8px; width: 104px; text-align: right; outline: none; -moz-appearance: textfield; }
+.rate-field label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b6456;
+}
+.rate-field input {
+  background: #2a2722;
+  border: 1px solid #3d3830;
+  border-radius: 6px;
+  color: var(--yellow);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  padding: 5px 8px;
+  width: 104px;
+  text-align: right;
+  outline: none;
+  -moz-appearance: textfield;
+}
 .rate-field input::-webkit-inner-spin-button { display: none; }
 .rate-field input:focus { border-color: var(--yellow); }
-.rates-note { width: 100%; font-size: 10px; color: #6b6456; padding-top: 8px; border-top: 1px solid #2a2722; }
+.rates-note {
+  width: 100%;
+  font-family: 'Nunito', sans-serif;
+  font-size: 10px;
+  color: #6b6456;
+  padding-top: 8px;
+  border-top: 1px solid #2a2722;
+}
 
-main { padding: 20px 16px 0; max-width: 680px; margin: 0 auto; }
+/* ── MAIN ── */
+main {
+  padding: 20px 16px 0;
+  max-width: 680px;
+  margin: 0 auto;
+}
 
-.section-label { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::after {
+  content: ''; flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
-.currency-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
-.cur-tab { background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; color: var(--muted); cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 0.06em; padding: 7px 14px; transition: all 0.15s; text-transform: uppercase; line-height: 1; text-align: center; }
+/* ── CURRENCY TABS ── */
+.currency-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.cur-tab {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 7px 14px;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  line-height: 1;
+  text-align: center;
+}
 .cur-tab:hover { border-color: var(--ink); color: var(--ink); }
 .cur-tab.active { background: var(--yellow); border-color: var(--yellow); color: #111210; }
-.cur-tab .cur-rate { display: block; font-family: 'Space Mono', monospace; font-size: 8px; font-weight: 400; opacity: 0.45; margin-top: 3px; }
+.cur-tab .cur-rate {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  font-weight: 400;
+  opacity: 0.45;
+  margin-top: 3px;
+}
 
-.inputs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+/* ── INPUTS ── */
+.inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
 @media (max-width: 460px) { .inputs-row { grid-template-columns: 1fr; } }
+
 .field { display: flex; flex-direction: column; gap: 5px; }
-.field label { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-.big-input { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; color: var(--ink); font-family: 'Space Mono', monospace; font-size: 20px; padding: 10px 14px; outline: none; transition: border-color 0.15s; -moz-appearance: textfield; width: 100%; }
+.field label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.big-input {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: 'Space Mono', monospace;
+  font-size: 20px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+  width: 100%;
+}
 .big-input::-webkit-inner-spin-button { display: none; }
 .big-input:focus { border-color: var(--yellow); }
-.field-hint { font-family: 'Nunito', sans-serif; font-size: 10px; color: var(--muted); }
+.field-hint {
+  font-family: 'Nunito', sans-serif;
+  font-size: 10px;
+  color: var(--muted);
+}
 .margin-wrap { display: flex; align-items: center; gap: 6px; }
-.margin-sym { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--profit); }
+.margin-sym {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  color: var(--profit);
+}
 
-.cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+/* ── CARDS ── */
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
 @media (max-width: 460px) { .cards-row { grid-template-columns: 1fr; } }
 
-.main-card { border-radius: 12px; overflow: hidden; position: relative; }
-.card-top { padding: 14px 16px; }
+.main-card {
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* TOP */
+.card-top { padding: 14px 16px 14px; }
 .main-card.wise-card .card-top { background: #2a2a24; color: var(--ink); }
-.main-card.cc-card   .card-top { background: var(--cc); color: #fff; }
+.main-card.cc-card   .card-top { background: var(--cc);  color: #fff; }
 
-.card-method { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.45; margin-bottom: 6px; }
-.card-cost-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; margin-bottom: 2px; }
-.card-cost-val { font-family: 'Bebas Neue', sans-serif; font-size: 34px; line-height: 1; letter-spacing: 1px; margin-bottom: 12px; }
-.card-cur { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 400; opacity: 0.35; margin-right: 2px; }
+.card-method {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  margin-bottom: 6px;
+}
+.card-cost-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 2px;
+}
+.card-cost-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.card-cur {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.35;
+  margin-right: 2px;
+}
 
-.card-lines { display: table; width: 100%; border-collapse: collapse; }
-.card-lines .row { display: table-row; height: 22px; }
-.card-lines .k, .card-lines .v { display: table-cell; vertical-align: middle; height: 22px; }
-.card-lines .k { font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 600; opacity: 0.55; white-space: nowrap; width: 99%; }
-.card-lines .v { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; text-align: right; white-space: nowrap; padding-left: 8px; width: 1%; }
-.card-divider { height: 1px; margin: 12px 0 10px; opacity: 0.15; background: currentColor; }
-.card-sale-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; margin-bottom: 2px; }
-.card-sale-val { font-family: 'Bebas Neue', sans-serif; font-size: 30px; line-height: 1; margin-bottom: 10px; }
-.card-sale-cur { font-family: 'Space Mono', monospace; font-size: 10px; opacity: 0.35; margin-right: 2px; }
+.card-lines {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+.card-lines .row {
+  display: table-row;
+  height: 22px;
+}
+.card-lines .k,
+.card-lines .v {
+  display: table-cell;
+  vertical-align: middle;
+  height: 22px;
+}
+.card-lines .k {
+  font-family: 'Nunito', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.55;
+  white-space: nowrap;
+  width: 99%;
+}
+.card-lines .v {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 8px;
+  width: 1%;
+}
 
-.card-bottom-inner { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
+.card-divider {
+  height: 1px;
+  margin: 12px 0 10px;
+  opacity: 0.15;
+  background: currentColor;
+}
+
+.card-sale-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 2px;
+}
+.card-sale-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.card-sale-cur {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  opacity: 0.35;
+  margin-right: 2px;
+}
+
+.card-bottom-inner {
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 12px;
+}
+.main-card.wise-card .card-bottom-inner { background: rgba(0,0,0,0.2); }
+.main-card.cc-card   .card-bottom-inner { background: rgba(0,0,0,0.2); }
+
 .card-bottom-inner .card-sale-label { opacity: 0.6; }
-.card-bottom-inner .card-sale-val { margin-bottom: 8px; }
+.card-bottom-inner .card-sale-val   { margin-bottom: 8px; }
 
 .v-green { color: #6effa0; }
 .cc-card .v-green { color: #ffe08a; }
-.v-red { color: #ff8a8a; }
+.v-red   { color: #ff8a8a; }
 
-.best-badge { position: absolute; top: 10px; right: 10px; background: var(--yellow); color: var(--ink); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; }
+.best-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
 
-.eco-strip { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.eco-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
-.eco-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--profit); line-height: 1; }
+/* ── ECO STRIP ── */
+.eco-strip {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.eco-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.eco-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  color: var(--profit);
+  line-height: 1;
+}
 .eco-div { color: var(--border); }
-.eco-iof { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--cc); margin-left: auto; }
+.eco-iof {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--cc);
+  margin-left: auto;
+}
 
-footer { max-width: 680px; margin: 0 auto; padding: 14px 16px 32px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); }
-.footer-credit { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.footer-credit span { color: var(--yellow); font-weight: 800; }
-.footer-back { font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 700; color: var(--muted); text-decoration: none; letter-spacing: 0.06em; }
-.footer-back:hover { color: var(--ink); }
+/* ── FOOTER ── */
+footer {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 14px 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+.footer-credit {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.footer-credit span {
+  color: var(--yellow);
+  font-weight: 800;
+}
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <div class="logo">ANTI<em>CEG</em></div>
+    <div class="logo">Calculadora</div>
     <div class="logo-sub">calculadora de conversão</div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <a href="https://anticeg.vercel.app" class="back-link">← portal</a>
-    <button class="rates-toggle-btn" onclick="toggleRates()">✎ Editar Câmbio</button>
-  </div>
+  <button class="rates-toggle-btn" onclick="toggleRates()">✎ Editar Câmbio</button>
 </header>
 
 <div class="rates-panel" id="ratesPanel">
@@ -159,6 +456,7 @@ footer { max-width: 680px; margin: 0 auto; padding: 14px 16px 32px; display: fle
 </div>
 
 <main>
+
   <div class="section-label">Moeda</div>
   <div class="currency-tabs">
     <button class="cur-tab active" data-cur="USD" onclick="selectCur(this)">USD $<span class="cur-rate" id="rt_USD">R$ 5,3700</span></button>
@@ -187,48 +485,62 @@ footer { max-width: 680px; margin: 0 auto; padding: 14px 16px 32px; display: fle
 
   <div class="section-label">Resultado</div>
   <div class="cards-row">
+
+    <!-- WISE -->
     <div class="main-card wise-card" id="wiseCard">
       <div class="card-top">
         <div class="card-method">Wise / Pix</div>
+
         <div class="card-cost-label">Custo</div>
         <div class="card-cost-val"><span class="card-cur">R$</span><span id="wiseTotal">—</span></div>
+
         <div class="card-lines">
           <div class="row"><span class="k">câmbio</span><span class="v" id="w_cambio">—</span></div>
           <div class="row"><span class="k" id="w_taxa_lbl">taxa Wise</span><span class="v" id="w_taxa">—</span></div>
           <div class="row"><span class="k">cotação efetiva</span><span class="v" id="w_cotacao">—</span></div>
         </div>
+
         <div class="card-bottom-inner">
           <div class="card-sale-label">Preço de Venda</div>
           <div class="card-sale-val"><span class="card-sale-cur">R$</span><span id="saleWise">—</span></div>
           <div class="card-lines">
             <div class="row"><span class="k" id="w_marg_lbl">margem</span><span class="v v-green" id="w_marg_val">—</span></div>
-            <div class="row"><span class="k">lucro</span><span class="v v-green" id="w_lucro">—</span></div>
+            <div class="row"><span class="k">lucro bruto</span><span class="v v-green" id="w_lucro">—</span></div>
+            <div class="row"><span class="k">DAS 4%</span><span class="v v-red" id="w_das">—</span></div>
+            <div class="row"><span class="k">lucro líquido</span><span class="v v-green" id="w_lucro_liq">—</span></div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- CARTÃO -->
     <div class="main-card cc-card" id="ccCard">
       <div class="card-top">
         <div class="card-method">Cartão de Crédito</div>
+
         <div class="card-cost-label">Custo</div>
         <div class="card-cost-val"><span class="card-cur">R$</span><span id="ccTotal">—</span></div>
+
         <div class="card-lines">
           <div class="row"><span class="k">câmbio</span><span class="v" id="c_cambio">—</span></div>
           <div class="row"><span class="k" id="c_spread_lbl">spread</span><span class="v" id="c_spread">—</span></div>
           <div class="row"><span class="k" id="c_iof_lbl">IOF</span><span class="v" id="c_iof">—</span></div>
           <div class="row"><span class="k">taxa efetiva</span><span class="v" id="c_eff">—</span></div>
         </div>
+
         <div class="card-bottom-inner">
           <div class="card-sale-label">Preço de Venda</div>
           <div class="card-sale-val"><span class="card-sale-cur">R$</span><span id="saleCC">—</span></div>
           <div class="card-lines">
             <div class="row"><span class="k" id="c_marg_lbl">margem</span><span class="v v-green" id="c_marg_val">—</span></div>
-            <div class="row"><span class="k">lucro real</span><span class="v" id="c_lucro">—</span></div>
+            <div class="row"><span class="k">lucro bruto</span><span class="v" id="c_lucro">—</span></div>
+            <div class="row"><span class="k">DAS 4%</span><span class="v v-red" id="c_das">—</span></div>
+            <div class="row"><span class="k">lucro líquido</span><span class="v" id="c_lucro_liq">—</span></div>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 
   <div class="eco-strip">
@@ -237,10 +549,10 @@ footer { max-width: 680px; margin: 0 auto; padding: 14px 16px 32px; display: fle
     <span class="eco-div">|</span>
     <span class="eco-iof" id="ecoIof"></span>
   </div>
+
 </main>
 
 <footer>
-  <a href="https://anticeg.vercel.app" class="footer-back">← anticeg.vercel.app</a>
   <div class="footer-credit">designed by <span>@nandaverseo_c</span></div>
 </footer>
 
@@ -275,9 +587,9 @@ function onRateChange() {
     const el = $('rt_'+c);
     if (el) el.textContent = 'R$ ' + fmtR(getBase(c));
   });
-  $('w_taxa_lbl').textContent   = `taxa Wise +${$('r_WISE').value}%`;
-  $('c_spread_lbl').textContent = `spread ${$('r_SPREAD').value}%`;
-  $('c_iof_lbl').textContent    = `IOF ${$('r_IOF').value}%`;
+  $('w_taxa_lbl').textContent    = `taxa Wise +${$('r_WISE').value}%`;
+  $('c_spread_lbl').textContent  = `spread ${$('r_SPREAD').value}%`;
+  $('c_iof_lbl').textContent     = `IOF ${$('r_IOF').value}%`;
   calc();
 }
 
@@ -313,9 +625,13 @@ function calc() {
   const dash = '—';
 
   if (a <= 0) {
-    ['wiseTotal','ccTotal','saleWise','saleCC','w_taxa','c_spread','c_iof',
-     'w_marg_val','w_lucro','c_marg_val','c_lucro'].forEach(id => set(id, dash));
-    set('ecoVal', dash); set('ecoIof', '');
+    ['wiseTotal','ccTotal','saleWise','saleCC',
+     'w_taxa','c_spread','c_iof',
+     'w_marg_val','w_lucro','w_das','w_lucro_liq',
+     'c_marg_val','c_lucro','c_das','c_lucro_liq']
+      .forEach(id => set(id, dash));
+    set('ecoVal', dash);
+    set('ecoIof', '');
     document.querySelectorAll('.best-badge').forEach(b => b.remove());
     return;
   }
@@ -334,18 +650,32 @@ function calc() {
 
   set('wiseTotal', fmt(wTotal));
   set('w_taxa',    `+R$ ${fmt(wiseAmt)}`);
+
   set('ccTotal',   fmt(cTotal));
   set('c_spread',  `+R$ ${fmt(spreadAmt)}`);
   set('c_iof',     `+R$ ${fmt(iofAmt)}`);
+
+  const dasW  = sW * 0.04;
+  const liqW  = lW - dasW;
   set('saleWise',   fmt(sW));
   set('w_marg_val', `+R$ ${fmt(lW)}`);
   set('w_lucro',    `R$ ${fmt(lW)}`);
+  set('w_das',      `-R$ ${fmt(dasW)}`);
+  const wLiqEl = $('w_lucro_liq');
+  wLiqEl.textContent = `R$ ${fmt(liqW)}`;
+  wLiqEl.className = `v ${liqW >= 0 ? 'v-green' : 'v-red'}`;
+
+  const dasC  = sC * 0.04;
+  const liqC  = lC - dasC;
   set('saleCC',     fmt(sC));
   set('c_marg_val', `R$ ${fmt(sC)}`);
-  set('c_lucro',    `R$ ${fmt(lC)}`);
-
   const cLucroEl = $('c_lucro');
+  cLucroEl.textContent = `R$ ${fmt(lC)}`;
   cLucroEl.className = `v ${lC >= 0 ? 'v-green' : 'v-red'}`;
+  set('c_das',      `-R$ ${fmt(dasC)}`);
+  const cLiqEl = $('c_lucro_liq');
+  cLiqEl.textContent = `R$ ${fmt(liqC)}`;
+  cLiqEl.className = `v ${liqC >= 0 ? 'v-green' : 'v-red'}`;
 
   document.querySelectorAll('.best-badge').forEach(b => b.remove());
   const badge = document.createElement('div');
