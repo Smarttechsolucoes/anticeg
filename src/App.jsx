@@ -583,55 +583,6 @@ function CegDetailView({ ceg, onVoltar }) {
         </div>
       )}
 
-      {/* GALERIA */}
-      {viewMode === "galeria" && (
-        <div className="ml-gallery">
-          {filtered.map(item => {
-            const foto = localPhotos[item.id] || item.foto_item;
-            const tipo = localTipos[item.id] || item.tipo || "outro";
-            const isLocal = !!localPhotos[item.id] && !item.foto_item;
-            return (
-              <div key={item.id} className="ml-gallery-card">
-                <div className="ml-gallery-img">
-                  {foto
-                    ? <>
-                        <img src={foto} alt={item.nome_do_item} />
-                        {isLocal && <span className="ml-gallery-local-tag">local</span>}
-                        <label className="ml-gallery-swap" title="Trocar foto">
-                          ↺
-                          <input type="file" accept="image/*" style={{ display:"none" }}
-                            onChange={e => assignPhoto(item.id, e.target.files[0])} />
-                        </label>
-                      </>
-                    : <label className="ml-gallery-placeholder">
-                        <span>+ foto</span>
-                        <input type="file" accept="image/*" style={{ display:"none" }}
-                          onChange={e => assignPhoto(item.id, e.target.files[0])} />
-                      </label>
-                  }
-                </div>
-                <div className="ml-gallery-info">
-                  <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                    <StatusChip status={item.status} />
-                    <select
-                      className="ml-tipo-select"
-                      value={tipo}
-                      onChange={e => setTipo(item.id, e.target.value)}
-                      style={{ color: tipoColor[tipo] }}
-                    >
-                      {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="ml-gallery-name">{item.nome_do_item}</div>
-                  <div className="ml-gallery-ceg">{item.ceg}</div>
-                  {!guest && <div className="ml-gallery-val">R${fmtBRL(Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0)+Number(item.nacional||0))}</div>}
-                </div>
-              </div>
-            );
-          })}
-          {filtered.length === 0 && <div style={{ color:"rgba(245,240,232,.3)", fontSize:13, padding:"32px 0" }}>Nenhum item encontrado.</div>}
-        </div>
-      )}
     </div>
   );
 }
@@ -1516,7 +1467,6 @@ function AdminTab() {
 
 
       <AdminFotoUploader />
-      <AdminFeedbacks />
     </div>
   );
 }
@@ -1614,129 +1564,6 @@ function AdminFotoUploader() {
   );
 }
 
-function FeedbackTab({ user }) {
-  const [mensagem, setMensagem] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [feedbacks, setFeedbacks] = useState([]);
-  const cog = user.cog || user.nome || user.email || "";
-
-  useEffect(() => {
-    supabase.from("feedbacks").select("*").eq("cog", cog).order("created_at", { ascending: false })
-      .then(({ data }) => setFeedbacks(data || []));
-  }, [cog]);
-
-  async function handleEnviar(e) {
-    e.preventDefault();
-    if (!mensagem.trim()) return;
-    setEnviando(true);
-    const { data } = await supabase.from("feedbacks").insert([{ cog, mensagem: mensagem.trim() }]).select().single();
-    if (data) setFeedbacks(prev => [data, ...prev]);
-    setMensagem("");
-    setEnviando(false);
-  }
-
-  return (
-    <div className="main">
-      <div className="page-header">
-        <div>
-          <div className="page-eyebrow">anticeg · suporte</div>
-          <div className="page-title">FEED<span>BACK</span></div>
-        </div>
-      </div>
-
-      <form onSubmit={handleEnviar} style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:32 }}>
-        <div className="feedback-card" style={{ flexDirection:"row", alignItems:"center", gap:10 }}>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:1, textTransform:"uppercase" }}>enviando como</span>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--laranja)", fontWeight:600 }}>{cog}</span>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.25)" }}>— não anônimo</span>
-        </div>
-        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:1, textTransform:"uppercase" }}>sua mensagem</div>
-        <textarea
-          className="feedback-textarea"
-          placeholder="Descreva sua sugestão, melhoria ou bug encontrado..."
-          value={mensagem}
-          onChange={e => setMensagem(e.target.value)}
-          required
-          rows={4}
-        />
-        <button type="submit" className="modal-confirm-btn" disabled={enviando || !mensagem.trim()}>
-          {enviando ? "enviando..." : "✉ enviar feedback"}
-        </button>
-      </form>
-
-      {feedbacks.length > 0 && (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}>seus feedbacks anteriores</div>
-          {feedbacks.map(fb => (
-            <div key={fb.id} className="feedback-card">
-              <div className="feedback-meta">{new Date(fb.created_at).toLocaleDateString("pt-BR")} · {fb.cog}</div>
-              <div className="feedback-msg">{fb.mensagem}</div>
-              {fb.resposta && (
-                <div className="feedback-resposta">
-                  <span className="feedback-resposta-label">resposta da nanda</span>
-                  <div>{fb.resposta}</div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AdminFeedbacks() {
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [respostas, setRespostas] = useState({});
-  const [enviando, setEnviando] = useState(null);
-
-  useEffect(() => {
-    supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => setFeedbacks(data || []));
-  }, []);
-
-  async function handleResponder(id) {
-    const resposta = respostas[id];
-    if (!resposta?.trim()) return;
-    setEnviando(id);
-    await supabase.from("feedbacks").update({ resposta: resposta.trim() }).eq("id", id);
-    setFeedbacks(prev => prev.map(fb => fb.id === id ? { ...fb, resposta: resposta.trim() } : fb));
-    setRespostas(prev => ({ ...prev, [id]: "" }));
-    setEnviando(null);
-  }
-
-  return (
-    <div style={{ marginTop: 40 }}>
-      <div className="admin-list-title">Feedbacks ({feedbacks.length})</div>
-      {feedbacks.length === 0
-        ? <div className="admin-loading">nenhum feedback ainda</div>
-        : feedbacks.map(fb => (
-          <div key={fb.id} className="feedback-card" style={{ marginBottom: 12 }}>
-            <div className="feedback-meta">{new Date(fb.created_at).toLocaleDateString("pt-BR")} · <strong>{fb.cog}</strong></div>
-            <div className="feedback-msg">{fb.mensagem}</div>
-            {fb.resposta
-              ? <div className="feedback-resposta"><span className="feedback-resposta-label">sua resposta</span><div>{fb.resposta}</div></div>
-              : (
-                <div style={{ display:"flex", gap:8, marginTop:10 }}>
-                  <input
-                    className="admin-input"
-                    style={{ flex:1 }}
-                    placeholder="Digite sua resposta..."
-                    value={respostas[fb.id] || ""}
-                    onChange={e => setRespostas(prev => ({ ...prev, [fb.id]: e.target.value }))}
-                  />
-                  <button className="admin-save-btn" onClick={() => handleResponder(fb.id)} disabled={enviando === fb.id}>
-                    {enviando === fb.id ? "..." : "responder"}
-                  </button>
-                </div>
-              )
-            }
-          </div>
-        ))
-      }
-    </div>
-  );
-}
 
 const TUTORIAL_STEPS = [
   {
@@ -2145,12 +1972,7 @@ export default function App() {
     if (!u.guest) {
       if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
       const jaConfirmou = localStorage.getItem("anticeg_perfil_ok") === String(u.id);
-      if (!jaConfirmou) {
-        // lê push do config em tempo real para pegar o valor atualizado
-        const { data } = await supabase.from("config").select("value").eq("key", "perfil_push_ativo").single();
-        const pushOn = !data || data.value !== "false";
-        if (pushOn) setShowPerfilModal(true);
-      }
+      if (!jaConfirmou && perfilPushAtivo) setShowPerfilModal(true);
     }
   }
 
