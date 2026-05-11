@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mercari — Calculadora</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a16;
+    --bg2: #222220;
+    --bg3: #2a2a26;
+    --card-dark: #242420;
+    --orange: #e85c1a;
+    --orange-light: #f07040;
+    --yellow: #f0c040;
+    --green: #4ecb71;
+    --red-neg: #e85050;
+    --text: #f5f0e8;
+    --muted: #9a9888;
+    --border: #3a3a34;
+    --accent-line: #e85c1a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--bg);
+    border-bottom: 2px solid var(--accent-line);
+    padding: 18px 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .header-title h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 42px;
+    letter-spacing: .02em;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .header-title p {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: .18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .btn-edit {
+    background: transparent;
+    border: 1.5px solid var(--text);
+    border-radius: 999px;
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    padding: 8px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .15s, color .15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-edit:hover { background: var(--text); color: var(--bg); }
+
+  /* MODAL */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 320px;
+  }
+  .modal h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    color: var(--yellow);
+  }
+  .modal label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    margin-top: 14px;
+  }
+  .modal input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    padding: 8px 12px;
+  }
+  .modal input:focus { outline: none; border-color: var(--orange); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-save {
+    flex: 1; background: var(--orange); border: none; border-radius: 6px;
+    color: #fff; font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: .06em;
+    padding: 10px; cursor: pointer; text-transform: uppercase;
+    transition: background .15s;
+  }
+  .btn-save:hover { background: var(--orange-light); }
+  .btn-cancel {
+    flex: 1; background: transparent; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--muted); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 600; letter-spacing: .06em;
+    padding: 10px; cursor: pointer; text-transform: uppercase;
+    transition: border-color .15s;
+  }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+  /* MAIN */
+  main { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* INPUTS */
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .input-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .input-wrapper {
+    position: relative;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    transition: border-color .15s;
+  }
+  .input-wrapper:focus-within { border-color: var(--orange); }
+
+  .input-wrapper input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    padding: 14px 16px;
+    width: 100%;
+    outline: none;
+  }
+  .input-wrapper .unit {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--orange);
+    padding-right: 16px;
+  }
+  .input-hint {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* RESULT CARD */
+  .result-card {
+    background: var(--orange);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+
+  .card-tag {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.7);
+    margin-bottom: 6px;
+  }
+
+  .cost-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.7);
+    margin-bottom: 2px;
+  }
+
+  .big-price {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .big-price .currency { font-size: 18px; opacity: .8; }
+  .big-price .amount { font-size: 56px; }
+
+  .detail-rows { margin-bottom: 20px; }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    font-size: 14px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row .dl { color: rgba(255,255,255,.75); }
+  .detail-row .dv { font-weight: 600; color: #fff; }
+  .detail-row .dv.pos { color: #fff; }
+
+  .sell-block {
+    background: rgba(0,0,0,.25);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 4px;
+  }
+
+  .sell-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.6);
+    margin-bottom: 2px;
+  }
+
+  .sell-price {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .sell-price .currency { font-size: 14px; opacity: .7; }
+  .sell-price .amount { font-size: 40px; }
+
+  .sell-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+    font-size: 13px;
+  }
+  .sell-row:last-child { border-bottom: none; }
+  .sell-row .sl { color: rgba(255,255,255,.65); }
+  .sell-row .sv { font-weight: 600; }
+  .sell-row .sv.green { color: #a8ffbe; }
+  .sell-row .sv.white { color: #fff; }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: .12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 20px; }
+    .header-title h1 { font-size: 30px; }
+    main { padding: 24px 16px 48px; }
+    .input-grid { grid-template-columns: 1fr; }
+    .big-price .amount { font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <h1>Mercari</h1>
+    <p>Calculadora de compra</p>
+  </div>
+  <button class="btn-edit" onclick="document.getElementById('modal').classList.add('open')">
+    ✎ Editar Câmbio
+  </button>
+</header>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3>Editar Câmbio</h3>
+    <label>JPY / BRL</label>
+    <input type="number" id="modal-fx" step="0.00001" placeholder="0.03141">
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveFx()">Salvar</button>
+      <button class="btn-cancel" onclick="document.getElementById('modal').classList.remove('open')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="section-label">Entrada</div>
+
+  <input type="hidden" id="fxInput" value="0.03141">
+  <div class="input-grid" style="grid-template-columns:1fr">
+    <div class="input-group">
+      <span class="input-label">Valor do item — JPY ¥</span>
+      <div class="input-wrapper">
+        <input type="number" id="itemPrice" value="5000" min="0" step="1" oninput="calc()">
+        <span class="unit">¥</span>
+      </div>
+      <span class="input-hint" id="fx-hint">¥ 1 = R$ 0,03141</span>
+    </div>
+  </div>
+
+  <div class="section-label">Resultado</div>
+
+  <div class="result-card">
+    <div class="card-tag">Mercari JP</div>
+
+    <div class="detail-rows">
+      <div class="detail-row">
+        <span class="dl">valor do item (¥)</span>
+        <span class="dv" id="r-item-jpy">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="dl">taxa de serviço (¥)</span>
+        <span class="dv" id="r-fee-jpy">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="dl">total em iene</span>
+        <span class="dv" id="r-total-jpy">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="dl">câmbio aplicado</span>
+        <span class="dv" id="r-fx">—</span>
+      </div>
+    </div>
+
+    <div class="sell-block">
+      <div class="sell-label">Preço ao joiner</div>
+      <div class="sell-price">
+        <span class="currency">R$</span>
+        <span class="amount" id="r-sell-brl">—</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    A calculadora é uma projeção de pagamento e pode não refletir no valor final a ser pago.
+  </p>
+
+</main>
+
+<footer>Calculadora Mercari</footer>
+
+<script>
+  function jpy(v) {
+    return '¥ ' + Math.round(v).toLocaleString('pt-BR');
+  }
+  function brl(v) {
+    return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function calc() {
+    const item = parseFloat(document.getElementById('itemPrice').value) || 0;
+    const fx   = parseFloat(document.getElementById('fxInput').value)   || 0;
+
+    const subWithBuy = item + 100;
+    const payFee     = Math.round(subWithBuy * 0.08);
+    const cost       = subWithBuy + payFee;
+    const profit     = Math.round(cost * 0.08);
+    const total      = cost + profit;
+    const fee        = total - item;
+    const totalBRL   = total * fx;
+
+    document.getElementById('r-item-jpy').textContent  = jpy(item);
+    document.getElementById('r-fee-jpy').textContent   = jpy(fee);
+    document.getElementById('r-total-jpy').textContent = jpy(total);
+    document.getElementById('r-fx').textContent        = 'R$ ' + fx.toFixed(5);
+    document.getElementById('r-sell-brl').textContent  = brl(totalBRL);
+    document.getElementById('fx-hint').textContent     = '¥ 1 = R$ ' + fx.toFixed(5);
+  }
+
+  function saveFx() {
+    const v = parseFloat(document.getElementById('modal-fx').value);
+    if (v > 0) {
+      document.getElementById('fxInput').value = v;
+      calc();
+    }
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  calc();
+</script>
+
+</body>
+</html>
