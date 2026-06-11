@@ -456,7 +456,6 @@ function MasterlistTab({ user, itens, onLogin }) {
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
-  const [fotoZoom, setFotoZoom] = useState(null);
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
@@ -553,13 +552,12 @@ function MasterlistTab({ user, itens, onLogin }) {
         <table>
           <thead>
             <tr className="col-group-header">
-              <th colSpan={4}></th>
+              <th colSpan={3}></th>
               <th colSpan={4}>VALORES A PAGAR</th>
               <th className="status-group" colSpan={2}>STATUS</th>
               <th>PAGAR</th>
             </tr>
             <tr className="thead-cols">
-              <th>FOTO</th>
               <th>CEG</th>
               <th>NOME DO ITEM</th>
               <th>COG</th>
@@ -582,11 +580,6 @@ function MasterlistTab({ user, itens, onLogin }) {
               return (
                 <>
                   <tr key={item.id}>
-                    <td className="td-foto">
-                      {item.foto_url
-                        ? <img src={item.foto_url} alt="" className="ml-foto-thumb ml-foto-clicavel" onClick={() => setFotoZoom(item.foto_url)} />
-                        : <div className="ml-foto-empty">sem foto</div>}
-                    </td>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
                     <td className="td-cog">{guest ? "—" : item.cog}</td>
@@ -637,12 +630,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           return (
             <div key={item.id} className="ml-card">
               <div className="ml-card-top">
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  {item.foto_url
-                    ? <img src={item.foto_url} alt="" className="ml-foto-thumb ml-foto-clicavel" onClick={() => setFotoZoom(item.foto_url)} />
-                    : <div className="ml-foto-empty">sem foto</div>}
-                  <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
-                </div>
+                <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
                 <StatusChip status={item.status} />
               </div>
               <div className="ml-card-name">{item.nome_do_item}</div>
@@ -666,13 +654,6 @@ function MasterlistTab({ user, itens, onLogin }) {
       </div>
 
       {cegModal && <CegModal ceg={cegModal} onClose={() => setCegModal(null)} />}
-
-      {fotoZoom && (
-        <div className="foto-zoom-overlay" onClick={() => setFotoZoom(null)}>
-          <img src={fotoZoom} alt="" className="foto-zoom-img" onClick={e => e.stopPropagation()} />
-          <button className="foto-zoom-close" onClick={() => setFotoZoom(null)}>✕</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -995,146 +976,6 @@ function RegrasTab() {
   );
 }
 
-
-function FotosTab() {
-  const [itens, setItens] = useState(null);
-  const [busca, setBusca] = useState("");
-  const [cegFiltro, setCegFiltro] = useState("todas");
-  const [uploading, setUploading] = useState(null);
-  const [msg, setMsg] = useState("");
-  const [fotoZoom, setFotoZoom] = useState(null);
-
-  useEffect(() => {
-    (async () => {
-      let all = [], from = 0;
-      while (true) {
-        const { data } = await supabase.from("masterlist")
-          .select("id, nome_do_item, ceg, cog, foto_url, status")
-          .neq("nome", "Disponivel")
-          .order("ceg", { ascending: true })
-          .range(from, from + 999);
-        if (!data || data.length === 0) break;
-        all = [...all, ...data];
-        if (data.length < 1000) break;
-        from += 1000;
-      }
-      setItens(all);
-    })();
-  }, []);
-
-  async function uploadFoto(item, file) {
-    if (!file) return;
-    setUploading(item.id); setMsg("");
-    const ext = file.name.split(".").pop();
-    const path = `${item.id}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("masterlist-fotos").upload(path, file, { upsert: true });
-    if (upErr) { setMsg("Erro: " + upErr.message); setUploading(null); return; }
-    const { data: { publicUrl } } = supabase.storage.from("masterlist-fotos").getPublicUrl(path);
-    await supabase.from("masterlist").update({ foto_url: publicUrl }).eq("id", item.id);
-    setItens(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: publicUrl } : i));
-    setMsg("✓ Foto salva!");
-    setTimeout(() => setMsg(""), 2000);
-    setUploading(null);
-  }
-
-  async function removerFoto(item) {
-    await supabase.from("masterlist").update({ foto_url: null }).eq("id", item.id);
-    setItens(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: null } : i));
-  }
-
-  if (!itens) return <div className="main" style={{ color:"rgba(245,240,232,.3)", fontSize:13 }}>carregando...</div>;
-
-  const cegs = [...new Set(itens.map(i => i.ceg))].sort();
-  const semFoto = itens.filter(i => !i.foto_url).length;
-  const comFoto = itens.filter(i => i.foto_url).length;
-
-  let filtrados = itens;
-  if (cegFiltro !== "todas") filtrados = filtrados.filter(i => i.ceg === cegFiltro);
-  if (busca.trim()) filtrados = filtrados.filter(i => (i.nome_do_item || "").toLowerCase().includes(busca.toLowerCase()));
-
-  const porCeg = filtrados.reduce((acc, item) => {
-    if (!acc[item.ceg]) acc[item.ceg] = [];
-    acc[item.ceg].push(item);
-    return acc;
-  }, {});
-
-  return (
-    <div className="main">
-      <div className="page-header">
-        <div>
-          <div className="page-eyebrow">admin · masterlist</div>
-          <div className="page-title">FO<span>TOS</span></div>
-        </div>
-        <div style={{ textAlign:"right" }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"var(--fs-xl)", color:"#4ade80" }}>{comFoto}</div>
-          <div style={{ fontSize:"var(--fs-xs)", color:"rgba(245,240,232,.35)" }}>com foto · {semFoto} sem foto</div>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="filters-bar" style={{ marginBottom:16 }}>
-        <input className="search-input" type="text" placeholder="Buscar item..." value={busca} onChange={e => setBusca(e.target.value)} />
-        <select value={cegFiltro} onChange={e => setCegFiltro(e.target.value)}
-          style={{ background:"#111", border:"1px solid #2a2a2a", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", padding:"5px 12px", borderRadius:20, cursor:"pointer", outline:"none" }}>
-          <option value="todas">Todas as CEGs</option>
-          {cegs.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <button className={`filter-pill ${cegFiltro === "todas" && !busca ? "active" : ""}`}
-          onClick={() => { setCegFiltro("todas"); setBusca(""); }}>Limpar</button>
-      </div>
-
-      {msg && <div style={{ fontSize:11, color:"#4ade80", marginBottom:12, padding:"8px 12px", background:"rgba(74,222,128,.08)", border:"1px solid rgba(74,222,128,.2)", borderRadius:6 }}>{msg}</div>}
-
-      {/* Lista por CEG */}
-      {Object.entries(porCeg).map(([ceg, items]) => (
-        <div key={ceg} style={{ marginBottom:28 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"var(--fs-lg)", color:"var(--laranja)" }}>{ceg}</span>
-            <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{items.filter(i=>i.foto_url).length}/{items.length} com foto</span>
-          </div>
-          <div className="fotos-grid">
-            {items.map(item => (
-              <div key={item.id} className="fotos-card">
-                {/* Imagem */}
-                <div className="fotos-img" onClick={() => item.foto_url && setFotoZoom(item.foto_url)}>
-                  {item.foto_url
-                    ? <img src={item.foto_url} alt="" />
-                    : <div className="fotos-empty">sem foto</div>}
-                  {uploading === item.id && <div className="fotos-uploading">↑</div>}
-                </div>
-                {/* Info */}
-                <div className="fotos-info">
-                  <div className="fotos-nome">{item.nome_do_item}</div>
-                  <div className="fotos-cog">{item.cog}</div>
-                  <div className="fotos-actions">
-                    <label className="fotos-btn-upload">
-                      {item.foto_url ? "trocar" : "+ foto"}
-                      <input type="file" accept="image/*" style={{ display:"none" }}
-                        onChange={e => uploadFoto(item, e.target.files[0])}
-                        disabled={uploading === item.id} />
-                    </label>
-                    {item.foto_url && (
-                      <button className="fotos-btn-remove" onClick={() => removerFoto(item)}>✕</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {/* Zoom */}
-      {fotoZoom && (
-        <div className="foto-zoom-overlay" onClick={() => setFotoZoom(null)}>
-          <img src={fotoZoom} alt="" className="foto-zoom-img" onClick={e => e.stopPropagation()} />
-          <button className="foto-zoom-close" onClick={() => setFotoZoom(null)}>✕</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
@@ -1204,102 +1045,6 @@ function AdminTab() {
           TESTAR →
         </button>
       </div>
-
-
-      <AdminFotoUploader />
-    </div>
-  );
-}
-
-function AdminFotoUploader() {
-  const [busca, setBusca] = useState("");
-  const [resultados, setResultados] = useState(null);
-  const [buscando, setBuscando] = useState(false);
-  const [uploading, setUploading] = useState(null);
-  const [msg, setMsg] = useState("");
-
-  async function buscarItens() {
-    if (!busca.trim()) return;
-    setBuscando(true); setResultados(null); setMsg("");
-    const { data } = await supabase.from("masterlist")
-      .select("id, nome_do_item, ceg, cog, foto_url")
-      .ilike("nome_do_item", `%${busca.trim()}%`)
-      .neq("nome", "Disponivel")
-      .limit(20);
-    setResultados(data || []);
-    setBuscando(false);
-  }
-
-  async function uploadFoto(item, file) {
-    if (!file) return;
-    setUploading(item.id); setMsg("");
-    const ext = file.name.split(".").pop();
-    const path = `${item.id}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("masterlist-fotos").upload(path, file, { upsert: true });
-    if (upErr) { setMsg("Erro no upload: " + upErr.message); setUploading(null); return; }
-    const { data: { publicUrl } } = supabase.storage.from("masterlist-fotos").getPublicUrl(path);
-    await supabase.from("masterlist").update({ foto_url: publicUrl }).eq("id", item.id);
-    setResultados(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: publicUrl } : i));
-    setMsg("✓ Foto salva para: " + item.nome_do_item);
-    setUploading(null);
-  }
-
-  async function removerFoto(item) {
-    await supabase.from("masterlist").update({ foto_url: null }).eq("id", item.id);
-    setResultados(prev => prev.map(i => i.id === item.id ? { ...i, foto_url: null } : i));
-    setMsg("Foto removida.");
-  }
-
-  return (
-    <div style={{ marginBottom:24 }}>
-      <div style={{ fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"rgba(245,240,232,.35)", marginBottom:12 }}>Fotos dos itens</div>
-
-      <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-        <input
-          className="admin-input" style={{ flex:1 }}
-          placeholder="Buscar item pelo nome..."
-          value={busca}
-          onChange={e => setBusca(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && buscarItens()}
-        />
-        <button className="admin-save-btn" style={{ padding:"0 20px", margin:0 }} onClick={buscarItens} disabled={buscando}>
-          {buscando ? "..." : "BUSCAR"}
-        </button>
-      </div>
-
-      {msg && <div className="admin-msg" style={{ marginBottom:10 }}>{msg}</div>}
-
-      {resultados && resultados.length === 0 && (
-        <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", padding:"12px 0" }}>Nenhum item encontrado.</div>
-      )}
-
-      {resultados && resultados.length > 0 && (
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {resultados.map(item => (
-            <div key={item.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"#111", border:"1px solid #1e1e1e", borderRadius:8 }}>
-              <div style={{ width:48, height:48, borderRadius:6, overflow:"hidden", flexShrink:0, background:"#0d0d0d", border:"1px solid #2a2a2a" }}>
-                {item.foto_url
-                  ? <img src={item.foto_url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"rgba(245,240,232,.2)" }}>sem foto</div>
-                }
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:"var(--offwhite)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.nome_do_item}</div>
-                <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.ceg} · {item.cog}</div>
-              </div>
-              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                <label style={{ background:"var(--laranja)", color:"var(--preto)", fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, padding:"6px 12px", borderRadius:5, cursor:"pointer", letterSpacing:1 }}>
-                  {uploading === item.id ? "..." : item.foto_url ? "TROCAR" : "+ FOTO"}
-                  <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => uploadFoto(item, e.target.files[0])} disabled={uploading === item.id} />
-                </label>
-                {item.foto_url && (
-                  <button onClick={() => removerFoto(item)} style={{ background:"transparent", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:10, padding:"6px 10px", borderRadius:5, cursor:"pointer" }}>✕</button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -1389,172 +1134,6 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
           <button className="modal-confirm-btn" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : isNew ? "SALVAR →" : "CONFIRMAR →"}</button>
           <button className="modal-cancel-btn" onClick={handleSkip}>Depois</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CalculadoraTab() {
-  const CURRENCIES = [
-    { id:"USD", sym:"$" }, { id:"PHP", sym:"₱" }, { id:"IDR", sym:"Rp" },
-    { id:"KRW", sym:"₩" }, { id:"JPY", sym:"¥" },
-  ];
-  const [cur, setCur] = useState("USD");
-  const [showRates, setShowRates] = useState(false);
-  const [amount, setAmount] = useState("100");
-  const [marginPct, setMarginPct] = useState("30");
-  const [rates, setRates] = useState({
-    USD:5.3700, PHP:0.0890, IDR:0.000310, KRW:0.004080, JPY:0.034000,
-    WISE:6.5, SPREAD:4.0, IOF:3.5,
-  });
-
-  function setRate(k, v) { setRates(r => ({ ...r, [k]: parseFloat(v) || 0 })); }
-
-  function fmtR(n) {
-    if (n < 0.001) return n.toFixed(6);
-    if (n < 0.01)  return n.toFixed(5);
-    if (n < 1)     return n.toFixed(4);
-    return n.toFixed(4);
-  }
-  function fmt(n, d=2) { return n.toLocaleString("pt-BR", { minimumFractionDigits:d, maximumFractionDigits:d }); }
-
-  const a    = parseFloat(amount) || 0;
-  const m    = (parseFloat(marginPct) || 0) / 100;
-  const base = rates[cur] || 0;
-  const wp   = rates.WISE   / 100;
-  const sp   = rates.SPREAD / 100;
-  const io   = rates.IOF    / 100;
-  const wr   = base * (1 + wp);
-  const cr   = base * (1 + sp) * (1 + io);
-
-  let R = null;
-  if (a > 0) {
-    const wTotal   = a * wr;
-    const cTotal   = a * cr;
-    const baseT    = a * base;
-    const wiseAmt  = baseT * wp;
-    const spreadAmt= baseT * sp;
-    const iofAmt   = baseT * (1 + sp) * io;
-    const sW = wTotal * (1 + m);
-    const lW = sW - wTotal;
-    const sC = sW;
-    const lC = sC - cTotal;
-    R = { wTotal, cTotal, wiseAmt, spreadAmt, iofAmt, economia: cTotal - wTotal, sW, lW, sC, lC };
-  }
-
-  const INP = { className:"calc-big-input", type:"number" };
-
-  return (
-    <div className="calc-wrap">
-      {/* HEADER */}
-      <div className="calc-header">
-        <div>
-          <div className="calc-logo">Calculadora</div>
-          <div className="calc-logo-sub">conversão de moeda · CEG</div>
-        </div>
-        <button className="calc-rates-btn" onClick={() => setShowRates(v => !v)}>✎ Editar Câmbio</button>
-      </div>
-
-      {/* RATES PANEL */}
-      {showRates && (
-        <div className="calc-rates-panel">
-          {[["USD","USD / BRL"],["PHP","PHP / BRL"],["IDR","IDR / BRL"],["KRW","KRW / BRL"],["JPY","JPY / BRL"],
-            ["WISE","Wise (+%)"],["SPREAD","Spread C.C. (%)"],["IOF","IOF (%)"]].map(([k, lbl]) => (
-            <div key={k} className="calc-rate-field">
-              <label>{lbl}</label>
-              <input type="number" value={rates[k]} step={k==="USD"?"0.0001":k==="WISE"||k==="SPREAD"||k==="IOF"?"0.1":"0.000001"}
-                onChange={e => setRate(k, e.target.value)} />
-            </div>
-          ))}
-          <div className="calc-rates-note">💡 Altere quando a cotação mudar. Os campos abaixo atualizam automaticamente.</div>
-        </div>
-      )}
-
-      <div className="calc-main">
-        {/* CURRENCY TABS */}
-        <div className="calc-section-label">Moeda</div>
-        <div className="calc-cur-tabs">
-          {CURRENCIES.map(c => (
-            <button key={c.id} className={`calc-cur-tab ${cur === c.id ? "active" : ""}`} onClick={() => setCur(c.id)}>
-              {c.id} {c.sym}
-              <span className="calc-cur-rate">R$ {fmtR(rates[c.id] || 0)}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* INPUTS */}
-        <div className="calc-section-label">Entrada</div>
-        <div className="calc-inputs-row">
-          <div className="calc-field">
-            <label>Valor em {cur}</label>
-            <input {...INP} value={amount} onChange={e => setAmount(e.target.value)} />
-            <span className="calc-hint">quanto você paga na origem</span>
-          </div>
-          <div className="calc-field">
-            <label>Margem de lucro</label>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <input {...INP} value={marginPct} onChange={e => setMarginPct(e.target.value)} />
-              <span className="calc-margin-sym">%</span>
-            </div>
-            <span className="calc-hint">preço de venda ao cliente</span>
-          </div>
-        </div>
-
-        {/* RESULT CARDS */}
-        <div className="calc-section-label">Resultado</div>
-        <div className="calc-cards-row">
-          {/* WISE */}
-          <div className={`calc-card calc-wise ${R && R.wTotal <= R.cTotal ? "calc-best" : ""}`}>
-            {R && R.wTotal <= R.cTotal && <div className="calc-badge">✓ mais barato</div>}
-            <div className="calc-card-method">Wise / Pix</div>
-            <div className="calc-card-cost-lbl">Custo</div>
-            <div className="calc-card-cost-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.wTotal) : "—"}</div>
-            <div className="calc-lines">
-              <div className="calc-row"><span>câmbio</span><span>R$ {fmtR(base)}</span></div>
-              <div className="calc-row"><span>taxa Wise +{rates.WISE}%</span><span>{R ? `+R$ ${fmt(R.wiseAmt)}` : "—"}</span></div>
-              <div className="calc-row"><span>cotação efetiva</span><span>R$ {fmtR(wr)}</span></div>
-            </div>
-            <div className="calc-card-inner">
-              <div className="calc-card-cost-lbl">Preço de Venda</div>
-              <div className="calc-card-sale-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.sW) : "—"}</div>
-              <div className="calc-lines">
-                <div className="calc-row"><span>margem {Math.round(m*100)}%</span><span className="calc-green">{R ? `+R$ ${fmt(R.lW)}` : "—"}</span></div>
-                <div className="calc-row"><span>lucro</span><span className="calc-green">{R ? `R$ ${fmt(R.lW)}` : "—"}</span></div>
-              </div>
-            </div>
-          </div>
-
-          {/* CARTÃO */}
-          <div className={`calc-card calc-cc ${R && R.cTotal < R.wTotal ? "calc-best" : ""}`}>
-            {R && R.cTotal < R.wTotal && <div className="calc-badge">✓ mais barato</div>}
-            <div className="calc-card-method">Cartão de Crédito</div>
-            <div className="calc-card-cost-lbl">Custo</div>
-            <div className="calc-card-cost-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.cTotal) : "—"}</div>
-            <div className="calc-lines">
-              <div className="calc-row"><span>câmbio</span><span>R$ {fmtR(base)}</span></div>
-              <div className="calc-row"><span>spread {rates.SPREAD}%</span><span>{R ? `+R$ ${fmt(R.spreadAmt)}` : "—"}</span></div>
-              <div className="calc-row"><span>IOF {rates.IOF}%</span><span>{R ? `+R$ ${fmt(R.iofAmt)}` : "—"}</span></div>
-              <div className="calc-row"><span>taxa efetiva</span><span>{R ? `+${fmt(((cr/base)-1)*100,2)}%` : "—"}</span></div>
-            </div>
-            <div className="calc-card-inner">
-              <div className="calc-card-cost-lbl">Preço de Venda</div>
-              <div className="calc-card-sale-val"><span className="calc-cur-sym">R$</span>{R ? fmt(R.sC) : "—"}</div>
-              <div className="calc-lines">
-                <div className="calc-row"><span>margem {Math.round(m*100)}%</span><span className="calc-green">{R ? `+R$ ${fmt(R.lW)}` : "—"}</span></div>
-                <div className="calc-row"><span>lucro real</span>
-                  <span className={R ? (R.lC >= 0 ? "calc-green" : "calc-red") : ""}>{R ? `R$ ${fmt(R.lC)}` : "—"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ECO STRIP */}
-        <div className="calc-eco">
-          <span className="calc-eco-lbl">economia Wise vs Cartão</span>
-          <span className="calc-eco-val">{R ? (R.economia > 0 ? `R$ ${fmt(R.economia)} a menos` : "cartão mais barato") : "—"}</span>
-          {R && <span className="calc-eco-iof">IOF pago: R$ {fmt(R.iofAmt)}</span>}
         </div>
       </div>
     </div>
@@ -1826,10 +1405,6 @@ export default function App() {
         {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Regras</button>
         <button className={`tab-btn ${tab === "tutorial" ? "active" : ""}`} onClick={() => setTab("tutorial")}>? Tutorial</button>
-        <button className={`tab-btn ${tab === "calculadora" ? "active" : ""}`} onClick={() => setTab("calculadora")}>$ Calc</button>
-        {user.email === ADMIN_EMAIL && (
-          <button className={`tab-btn ${tab === "fotos" ? "active" : ""}`} onClick={() => setTab("fotos")}>◻ Fotos</button>
-        )}
         {user.email === ADMIN_EMAIL && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
@@ -1840,8 +1415,6 @@ export default function App() {
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "tutorial" && <TutorialTab />}
-      {tab === "calculadora" && <CalculadoraTab />}
-      {tab === "fotos" && user.email === ADMIN_EMAIL && <FotosTab />}
       {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
     </div>
   );
