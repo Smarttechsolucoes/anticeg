@@ -11,7 +11,6 @@ const supabase = createClient(
 
 const WHATSAPP_NUM = "5524992501917";
 const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
-const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 function fmtBRL(val, hidden) {
   if (hidden) return "••••";
@@ -611,15 +610,7 @@ function PerfilTab({ user, onUpdate }) {
   const [nome, setNome] = useState(user.nome || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
-  const [estado, setEstado] = useState(user.estado || "");
   const [email, setEmail] = useState(user.email || "");
-  // endereço
-  const [cep, setCep] = useState(user.cep || "");
-  const [rua, setRua] = useState(user.rua || "");
-  const [numero, setNumero] = useState(user.numero || "");
-  const [complemento, setComplemento] = useState(user.complemento || "");
-  const [bairro, setBairro] = useState(user.bairro || "");
-  const [cidade, setCidade] = useState(user.cidade || "");
   // senha
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
@@ -663,23 +654,6 @@ function PerfilTab({ user, onUpdate }) {
     };
   }
 
-  async function buscarCep(v) {
-    const c = v.replace(/\D/g, "");
-    setCep(v);
-    if (c.length === 8) {
-      try {
-        const r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
-        const d = await r.json();
-        if (!d.erro) {
-          setRua(d.logradouro || "");
-          setBairro(d.bairro || "");
-          setCidade(d.localidade || "");
-          setEstado(d.uf || "");
-        }
-      } catch {}
-    }
-  }
-
   async function handleSalvar() {
     setLoading(true); setError(""); setSuccess("");
 
@@ -690,8 +664,7 @@ function PerfilTab({ user, onUpdate }) {
     }
 
     const updates = {
-      nome, twitter, whatsapp, estado, email,
-      cep, rua, numero, complemento, bairro, cidade,
+      nome, twitter, whatsapp, email,
       ...(novaSenha ? { senha: novaSenha } : {})
     };
 
@@ -739,41 +712,6 @@ function PerfilTab({ user, onUpdate }) {
         <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
         <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
         <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-
-        {sectionTitle("⋆ Endereço")}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label className="login-label">CEP</label>
-            <input className="login-input" style={inputStyle} type="text" placeholder="00000-000" value={cep} onChange={e => buscarCep(e.target.value)} maxLength={9} />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label className="login-label">Rua</label>
-            <input className="login-input" style={inputStyle} type="text" value={rua} onChange={e => setRua(e.target.value)} />
-          </div>
-          <div>
-            <label className="login-label">Número</label>
-            <input className="login-input" style={inputStyle} type="text" value={numero} onChange={e => setNumero(e.target.value)} />
-          </div>
-          <div>
-            <label className="login-label">Complemento</label>
-            <input className="login-input" style={inputStyle} type="text" placeholder="Apto, bloco..." value={complemento} onChange={e => setComplemento(e.target.value)} />
-          </div>
-          <div>
-            <label className="login-label">Bairro</label>
-            <input className="login-input" style={inputStyle} type="text" value={bairro} onChange={e => setBairro(e.target.value)} />
-          </div>
-          <div>
-            <label className="login-label">Cidade</label>
-            <input className="login-input" style={inputStyle} type="text" value={cidade} onChange={e => setCidade(e.target.value)} />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label className="login-label">Estado</label>
-            <select className="login-input" style={{ ...inputStyle, cursor: "pointer" }} value={estado} onChange={e => setEstado(e.target.value)}>
-              <option value="">Selecione...</option>
-              {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-          </div>
-        </div>
 
         {sectionTitle("⋆ Senha")}
         <div><label className="login-label">Senha atual</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} /></div>
