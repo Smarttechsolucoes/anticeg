@@ -219,7 +219,7 @@ function CegDetailView({ ceg, onVoltar }) {
             <thead>
               <tr className="col-group-header">
                 <th colSpan={2}></th>
-                <th colSpan={4}>VALORES A PAGAR</th>
+                <th colSpan={3}>VALORES A PAGAR</th>
                 <th className="status-group" colSpan={2}>STATUS</th>
               </tr>
               <tr className="thead-cols">
@@ -228,14 +228,13 @@ function CegDetailView({ ceg, onVoltar }) {
                 <th>ITEM</th>
                 <th>FRETE INTER</th>
                 <th>TAXA RF</th>
-                <th>NACIONAL</th>
                 <th>STATUS</th>
                 <th>INFO</th>
               </tr>
             </thead>
             <tbody>
               {itens.length === 0 && (
-                <tr><td colSpan={8} className="empty-cell">nenhum item</td></tr>
+                <tr><td colSpan={7} className="empty-cell">nenhum item</td></tr>
               )}
               {itens.map(item => {
                 const ai = getStepIdx(item.status);
@@ -248,7 +247,6 @@ function CegDetailView({ ceg, onVoltar }) {
                       <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
                       <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
                       <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
-                      <td>{Number(item.nacional) > 0 ? <span className="td-val">R${fmtBRL(item.nacional)}</span> : <span className="zero-val">—</span>}</td>
                       <td>
                         <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                           <StatusChip status={item.status} />
@@ -262,7 +260,7 @@ function CegDetailView({ ceg, onVoltar }) {
                     </tr>
                     {isOpen && (
                       <tr key={`drawer-${item.id}`} className="drawer-row">
-                        <td colSpan={8}><Timeline activeIdx={ai} /></td>
+                        <td colSpan={7}><Timeline activeIdx={ai} /></td>
                       </tr>
                     )}
                   </>
@@ -279,7 +277,7 @@ function CegDetailView({ ceg, onVoltar }) {
           {itens.map(item => {
             const ai = getStepIdx(item.status);
             const isOpen = openDrawer === item.id;
-            const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0)+Number(item.nacional||0);
+            const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
             return (
               <div key={item.id} className="ml-card">
                 <div className="ml-card-top">
@@ -291,8 +289,7 @@ function CegDetailView({ ceg, onVoltar }) {
                   {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pag_item} /></div>}
                   {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
-                  {Number(item.nacional) > 0 && <div className="ml-val-row"><span className="ml-val-label">nacional</span><ValCell val={item.nacional} status={item.pag_nacional} /></div>}
-                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="item-detail" style={{ fontSize:11 }}>{item.info_adicionais}</div>}
                 <div className="ml-card-footer">
@@ -439,11 +436,10 @@ function MasterlistTab({ user, itens, onLogin }) {
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
 
-  const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0) + Number(b.nacional||0), 0);
+  const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0), 0);
   const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
                + itens.filter(i => i.pag_frete === "Pago").reduce((a,b) => a+Number(b.frete_inter||0), 0)
-               + itens.filter(i => i.pag_taxa === "Pago").reduce((a,b) => a+Number(b.taxa_rf||0), 0)
-               + itens.filter(i => i.pag_nacional === "Pago").reduce((a,b) => a+Number(b.nacional||0), 0);
+               + itens.filter(i => i.pag_taxa === "Pago").reduce((a,b) => a+Number(b.taxa_rf||0), 0);
   const pendV = totalV - pagoV;
   const cegs  = [...new Set(itens.map(i => i.ceg))].length;
 
@@ -454,26 +450,24 @@ function MasterlistTab({ user, itens, onLogin }) {
     if (i.venc_item     && isPendente(i.pag_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + name });
     if (i.venc_frete    && isPendente(i.pag_frete))    vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + name });
     if (i.venc_taxa     && isPendente(i.pag_taxa))     vencDates.push({ d: new Date(i.venc_taxa),     label: "Taxa: " + name });
-    if (i.venc_nacional && isPendente(i.pag_nacional)) vencDates.push({ d: new Date(i.venc_nacional), label: "Nacional: " + name });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
 
   let filtered = [...itens];
   if (filter === "pendente") {
-    filtered = filtered.filter(i => isPendente(i.pag_item) || isPendente(i.pag_frete) || isPendente(i.pag_taxa) || isPendente(i.pag_nacional));
+    filtered = filtered.filter(i => isPendente(i.pag_item) || isPendente(i.pag_frete) || isPendente(i.pag_taxa));
   } else if (filter === "pago") {
-    filtered = filtered.filter(i => !isPendente(i.pag_item) && !isPendente(i.pag_frete) && !isPendente(i.pag_taxa) && !isPendente(i.pag_nacional));
+    filtered = filtered.filter(i => !isPendente(i.pag_item) && !isPendente(i.pag_frete) && !isPendente(i.pag_taxa));
   } else if (filter !== "todos") {
     filtered = filtered.filter(i => i.status === filter);
   }
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
 
-  const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0)+Number(b.nacional||0), 0);
+  const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
   const tPend  = filtered.filter(i=>isPendente(i.pag_item)).reduce((a,b)=>a+Number(b.valor_item||0),0)
                + filtered.filter(i=>isPendente(i.pag_frete)).reduce((a,b)=>a+Number(b.frete_inter||0),0)
-               + filtered.filter(i=>isPendente(i.pag_taxa)).reduce((a,b)=>a+Number(b.taxa_rf||0),0)
-               + filtered.filter(i=>isPendente(i.pag_nacional)).reduce((a,b)=>a+Number(b.nacional||0),0);
+               + filtered.filter(i=>isPendente(i.pag_taxa)).reduce((a,b)=>a+Number(b.taxa_rf||0),0);
 
   const FILTERS = [
     { id: "todos",            label: "Todos" },
@@ -535,7 +529,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           <thead>
             <tr className="col-group-header">
               <th colSpan={3}></th>
-              <th colSpan={4}>VALORES A PAGAR</th>
+              <th colSpan={3}>VALORES A PAGAR</th>
               <th className="status-group" colSpan={2}>STATUS</th>
             </tr>
             <tr className="thead-cols">
@@ -545,14 +539,13 @@ function MasterlistTab({ user, itens, onLogin }) {
               <th>ITEM</th>
               <th>FRETE INTER</th>
               <th>TAXA RF</th>
-              <th>NACIONAL</th>
               <th>STATUS</th>
               <th>INFO</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="empty-cell">nenhum item para esse filtro</td></tr>
+              <tr><td colSpan={8} className="empty-cell">nenhum item para esse filtro</td></tr>
             )}
             {filtered.map(item => {
               const ai = getStepIdx(item.status);
@@ -566,7 +559,6 @@ function MasterlistTab({ user, itens, onLogin }) {
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pag_item} />}</td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pag_frete} />}</td>
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>)}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.nacional) > 0 ? <ValCell val={item.nacional} status={item.pag_nacional} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         <StatusChip status={item.status} />
@@ -580,7 +572,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                   </tr>
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
-                      <td colSpan={9}><Timeline activeIdx={ai} /></td>
+                      <td colSpan={8}><Timeline activeIdx={ai} /></td>
                     </tr>
                   )}
                 </>
@@ -590,7 +582,7 @@ function MasterlistTab({ user, itens, onLogin }) {
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
-                <td colSpan={4}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
+                <td colSpan={3}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
                 <td>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
               </tr>
             )}
@@ -605,7 +597,7 @@ function MasterlistTab({ user, itens, onLogin }) {
         {filtered.map(item => {
           const ai = getStepIdx(item.status);
           const isOpen = openDrawer === item.id;
-          const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0)+Number(item.nacional||0);
+          const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
           return (
             <div key={item.id} className="ml-card">
               <div className="ml-card-top">
@@ -618,8 +610,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                   {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pag_item} /></div>}
                   {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
-                  {Number(item.nacional) > 0 && <div className="ml-val-row"><span className="ml-val-label">nacional</span><ValCell val={item.nacional} status={item.pag_nacional} /></div>}
-                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
               )}
               <div className="ml-card-footer">
@@ -840,7 +831,6 @@ function CalendarTab({ user, itens }) {
     if (item.venc_item)     addEv(item.venc_item,     `${name} (${item.ceg}): Item`, "item");
     if (item.venc_frete)    addEv(item.venc_frete,    `${name}: Frete`, "frete");
     if (item.venc_taxa)     addEv(item.venc_taxa,     `${name}: Taxa`, "taxa");
-    if (item.venc_nacional) addEv(item.venc_nacional, `${name}: Nacional`, "nacional");
   });
 
   const firstDay = new Date(calYear, calMonth, 1);
@@ -874,7 +864,7 @@ function CalendarTab({ user, itens }) {
           <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
         </div>
         <div className="cal-legend">
-          {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"],["amarelo","Nacional"]].map(([c,l]) => (
+          {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"]].map(([c,l]) => (
             <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
           ))}
         </div>
@@ -1047,7 +1037,7 @@ const TUTORIAL_STEPS = [
   {
     icon: "R$",
     title: "Pagamentos",
-    text: "Cada item mostra os valores separados: item, frete, taxa RF e nacional. Verde = Pago, Laranja = Pendente. O total fica branco quando tudo está pago."
+    text: "Cada item mostra os valores separados: item, frete e taxa RF. Verde = Pago, Laranja = Pendente. O total fica branco quando tudo está pago."
   },
   {
     icon: "◈",
