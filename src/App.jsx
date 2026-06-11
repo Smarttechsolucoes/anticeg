@@ -809,19 +809,6 @@ function RegrasTab() {
     { titulo: "⋆ Reembolsos", itens: ["Transações internacionais envolvem riscos. Ao participar, você declara estar ciente de que não há reembolso em casos de problemas com sellers, incluindo calotes.","Não há reembolso em caso de roubo ou perda do objeto, incluindo extravios por transportadoras ou serviços postais.","Reembolso pode ser realizado apenas em caso de má embalagem, comprovada por vídeo de abertura sem cortes."] },
     { titulo: "⋆ Compradores Sensíveis", itens: ["Compradores que se incomodam com pequenos defeitos estéticos (amassados leves, pressmarks, sinais de manuseio) não devem participar das CEGs.","Ao participar, você concorda em não solicitar trocas, cancelamentos ou reclamações por esse tipo de marca.","Reclamações desse tipo não serão consideradas."] },
   ];
-  const faq = [
-    { p: "Quem organiza?", r: "Nanda (eu mesma)." },
-    { p: "Posso chamar amigos?", r: "Sim, desde que sejam confiáveis." },
-    { p: "Menores podem participar?", r: "Não." },
-    { p: "Preciso pagar à vista?", r: "Você pode pagar no PIX ou cartão de crédito." },
-    { p: "Posso cancelar meu pedido?", r: "A partir do momento em que o seu item está confirmado, não é possível cancelar." },
-    { p: "Como funcionam os repasses?", r: "Me mande mensagem pedindo autorização. Não aceito pessoas desconhecidas dentro da comunidade." },
-    { p: "E se a CEG for cancelada?", r: "Reembolso total." },
-    { p: "Como vou saber das atualizações?", r: "Sempre aviso no grupo. Qualquer dúvida pode me chamar no privado." },
-    { p: "Quando os itens são enviados pro BR?", r: "Assim que chegam na warehouse/proxy, já fecho a caixa." },
-    { p: "Quais formas de envio pro Brasil?", r: "Correios, Mini Envio, Superfrete ou Jadlog." },
-    { p: "Posso retirar pessoalmente?", r: "Sim, se estivermos na mesma região." },
-  ];
   return (
     <div className="main" style={{ maxWidth: 800, margin: "0 auto" }}>
       <div className="page-header"><div><div className="page-eyebrow">anticeg · comunidade</div><div className="page-title">REGRAS DA<span> COMU</span></div></div></div>
@@ -838,17 +825,6 @@ function RegrasTab() {
             </ul>
           </div>
         ))}
-        <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: 24 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", marginBottom: 16, letterSpacing: 1 }}>⋆ Perguntas Frequentes</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {faq.map((f, i) => (
-              <div key={i}>
-                <div style={{ fontSize: "var(--fs-xs)", color: "var(--offwhite)", fontWeight: 600, marginBottom: 4 }}>→ {f.p}</div>
-                <div style={{ fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.6)", lineHeight: 1.6, paddingLeft: 12 }}>{f.r}</div>
-              </div>
-            ))}
-          </div>
-        </div>
         <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: 24 }}>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", marginBottom: 16, letterSpacing: 1 }}>⋆ Contato & Suporte</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
