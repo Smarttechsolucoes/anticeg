@@ -99,7 +99,6 @@ tbody tr:last-child { border-bottom:none; }
 td { padding:10px; vertical-align:middle; }
 
 .td-ceg { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-md); color:var(--lilas); white-space:nowrap; }
-.td-cog { color:rgba(245,240,232,.4); font-size:var(--fs-xs); }
 .item-title { font-size:var(--fs-xs); color:var(--offwhite); max-width:320px; }
 .item-detail { font-size:10px; color:rgba(245,240,232,.3); margin-top:3px; }
 .td-val { font-size:var(--fs-xs); font-family:'DM Mono',monospace; }
@@ -343,7 +342,6 @@ td { padding:10px; vertical-align:middle; }
   .table-wrap { border-radius:6px; }
   .thead-cols th, .col-group-header th { font-size:8px; padding:6px 8px; }
   tbody td { padding:10px 8px; font-size:11px; }
-  .td-cog { display:none; }
   .item-title { font-size:12px; }
   .td-ceg { max-width:80px; }
   .td-ceg button { font-size:10px; }

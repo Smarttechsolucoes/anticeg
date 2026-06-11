@@ -507,14 +507,13 @@ function MasterlistTab({ user, itens, onLogin }) {
         <table>
           <thead>
             <tr className="col-group-header">
-              <th colSpan={3}></th>
+              <th colSpan={2}></th>
               <th colSpan={3}>VALORES A PAGAR</th>
               <th className="status-group" colSpan={2}>STATUS</th>
             </tr>
             <tr className="thead-cols">
               <th>CEG</th>
               <th>NOME DO ITEM</th>
-              <th>COG</th>
               <th>ITEM</th>
               <th>FRETE INTER</th>
               <th>TAXA RF</th>
@@ -524,7 +523,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="empty-cell">nenhum item para esse filtro</td></tr>
+              <tr><td colSpan={7} className="empty-cell">nenhum item para esse filtro</td></tr>
             )}
             {filtered.map(item => {
               const ai = getStepIdx(item.status);
@@ -534,7 +533,6 @@ function MasterlistTab({ user, itens, onLogin }) {
                   <tr key={item.id}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
-                    <td className="td-cog">{guest ? "—" : item.cog}</td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pag_item} />}</td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pag_frete} />}</td>
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>)}</td>
@@ -551,7 +549,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                   </tr>
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
-                      <td colSpan={8}><Timeline activeIdx={ai} /></td>
+                      <td colSpan={7}><Timeline activeIdx={ai} /></td>
                     </tr>
                   )}
                 </>
@@ -560,7 +558,7 @@ function MasterlistTab({ user, itens, onLogin }) {
             {filtered.length > 0 && !guest && (
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
-                <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
+                <td><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
                 <td colSpan={3}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
                 <td>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
               </tr>
