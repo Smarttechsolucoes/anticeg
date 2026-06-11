@@ -77,10 +77,6 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .blocklist-sub { font-family:'DM Mono',monospace; font-size:var(--fs-xs); color:rgba(245,240,232,.5); margin-top:3px; line-height:1.5; }
 
 .filters-bar { display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-.filter-label { font-size:var(--fs-xs); color:rgba(245,240,232,.35); letter-spacing:1px; margin-right:4px; }
-.filter-pill { background:none; border:1px solid #2a2a2a; color:rgba(245,240,232,.45); font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:5px 14px; border-radius:20px; cursor:pointer; letter-spacing:.5px; transition:all .15s; }
-.filter-pill:hover { border-color:#444; color:var(--offwhite); }
-.filter-pill.active { background:var(--laranja); border-color:var(--laranja); color:var(--preto); font-weight:600; }
 .search-input { margin-left:auto; background:#111; border:1px solid #2a2a2a; color:var(--offwhite); font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:6px 12px; border-radius:20px; outline:none; width:200px; transition:border-color .15s; }
 .search-input:focus { border-color:var(--laranja); }
 
@@ -338,9 +334,7 @@ td { padding:10px; vertical-align:middle; }
 
   /* Filters */
   .filters-bar { gap:5px; flex-wrap:wrap; margin-bottom:12px; }
-  .filter-pill { font-size:10px; padding:5px 10px; }
   .search-input { width:100%; margin-top:4px; box-sizing:border-box; }
-  .filter-label { width:100%; }
 
   /* Table — horizontal scroll */
   .table-wrap { border-radius:6px; }

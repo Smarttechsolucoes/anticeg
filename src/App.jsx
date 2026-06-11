@@ -431,7 +431,6 @@ function CegTab({ user, itens }) {
 
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
-  const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
@@ -455,13 +454,6 @@ function MasterlistTab({ user, itens, onLogin }) {
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
 
   let filtered = [...itens];
-  if (filter === "pendente") {
-    filtered = filtered.filter(i => isPendente(i.pag_item) || isPendente(i.pag_frete) || isPendente(i.pag_taxa));
-  } else if (filter === "pago") {
-    filtered = filtered.filter(i => !isPendente(i.pag_item) && !isPendente(i.pag_frete) && !isPendente(i.pag_taxa));
-  } else if (filter !== "todos") {
-    filtered = filtered.filter(i => i.status === filter);
-  }
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
@@ -469,18 +461,6 @@ function MasterlistTab({ user, itens, onLogin }) {
                + filtered.filter(i=>isPendente(i.pag_frete)).reduce((a,b)=>a+Number(b.frete_inter||0),0)
                + filtered.filter(i=>isPendente(i.pag_taxa)).reduce((a,b)=>a+Number(b.taxa_rf||0),0);
 
-  const FILTERS = [
-    { id: "todos",            label: "Todos" },
-    { id: "pendente",         label: "Pendentes" },
-    { id: "pago",             label: "Pagos" },
-    { id: "Pré-venda",        label: "Pré-venda" },
-    { id: "Na Warehouse",     label: "Na Warehouse" },
-    { id: "A Caminho",        label: "A Caminho" },
-    { id: "Taxa Liberada",    label: "Taxa Liberada" },
-    { id: "Chegou Aqui",      label: "Chegou Aqui" },
-    { id: "Envio Liberado",   label: "Envio Liberado" },
-    { id: "Enviado Nacional", label: "Entregues" },
-  ];
 
   return (
     <div className="main">
@@ -517,10 +497,6 @@ function MasterlistTab({ user, itens, onLogin }) {
       )}
 
       <div className="filters-bar">
-        <span className="filter-label">Ver:</span>
-        {FILTERS.map(f => (
-          <button key={f.id} className={`filter-pill ${filter === f.id ? "active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
-        ))}
         <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
       </div>
 
