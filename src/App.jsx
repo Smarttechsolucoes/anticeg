@@ -9,7 +9,6 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
 );
 
-const FORMS_URL = "https://forms.gle/vMyjCKG4Dj2yhryP7";
 const WHATSAPP_NUM = "5524992501917";
 const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
 const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -17,12 +16,6 @@ const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG
 function fmtBRL(val, hidden) {
   if (hidden) return "••••";
   return Number(val).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function whatsappMsg(item) {
-  const total = Number(item.valor_item) + Number(item.frete_inter) + Number(item.taxa_rf || 0) + Number(item.nacional || 0);
-  const msg = `Olá! Quero pagar no cartão de crédito.\nValor: R$ ${fmtBRL(total)}\nParcelas: até x12 com juros`;
-  return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
 }
 
 const STATUS_STEPS = [
@@ -115,17 +108,6 @@ function SumCard({ label, value, valueCls, sub, isAmount }) {
         )}
       </div>
       <div className="sum-sub">{sub}</div>
-    </div>
-  );
-}
-
-function PayButtons({ item }) {
-  const temPendente = isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) || isPendente(item.pag_nacional);
-  if (!temPendente) return null;
-  return (
-    <div style={{ display: "flex", gap: 6 }}>
-      <a href={FORMS_URL} target="_blank" rel="noopener noreferrer" className="pay-btn pay-btn-pix">💸 PIX</a>
-      <a href={whatsappMsg(item)} target="_blank" rel="noopener noreferrer" className="pay-btn pay-btn-card">💳 Cartão</a>
     </div>
   );
 }
@@ -555,7 +537,6 @@ function MasterlistTab({ user, itens, onLogin }) {
               <th colSpan={3}></th>
               <th colSpan={4}>VALORES A PAGAR</th>
               <th className="status-group" colSpan={2}>STATUS</th>
-              <th>PAGAR</th>
             </tr>
             <tr className="thead-cols">
               <th>CEG</th>
@@ -567,12 +548,11 @@ function MasterlistTab({ user, itens, onLogin }) {
               <th>NACIONAL</th>
               <th>STATUS</th>
               <th>INFO</th>
-              <th>PAGAR</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={10} className="empty-cell">nenhum item para esse filtro</td></tr>
+              <tr><td colSpan={9} className="empty-cell">nenhum item para esse filtro</td></tr>
             )}
             {filtered.map(item => {
               const ai = getStepIdx(item.status);
@@ -597,11 +577,10 @@ function MasterlistTab({ user, itens, onLogin }) {
                       {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
                       <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)} style={{marginTop: item.info_adicionais ? 4 : 0}}>▾</button>
                     </td>
-                    <td>{!guest && <PayButtons item={item} />}</td>
                   </tr>
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
-                      <td colSpan={10}><Timeline activeIdx={ai} /></td>
+                      <td colSpan={9}><Timeline activeIdx={ai} /></td>
                     </tr>
                   )}
                 </>
@@ -612,7 +591,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td colSpan={2}><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
                 <td colSpan={4}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
-                <td colSpan={2}>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
+                <td>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
               </tr>
             )}
           </tbody>
@@ -644,7 +623,6 @@ function MasterlistTab({ user, itens, onLogin }) {
                 </div>
               )}
               <div className="ml-card-footer">
-                {!guest && <PayButtons item={item} />}
                 <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
               </div>
               {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}

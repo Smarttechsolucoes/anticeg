@@ -183,11 +183,6 @@ td { padding:10px; vertical-align:middle; }
 .ev-taxa     { background:rgba(186,255,57,.1); color:var(--verde); }
 .ev-nacional { background:rgba(255,209,70,.1); color:#FFD166; }
 
-.pay-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; font-weight:600; text-decoration:none; cursor:pointer; transition:opacity 0.15s; white-space:nowrap; }
-.pay-btn:hover { opacity:0.8; }
-.pay-btn-pix  { background:var(--verde); color:#0D0D0D; }
-.pay-btn-card { background:var(--lilas); color:#0D0D0D; }
-
 /* CEG button */
 .ceg-btn { background:none; border:none; color:var(--laranja); font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid rgba(255,92,26,.25); transition:all .15s; letter-spacing:.5px; }
 .ceg-btn:hover { background:rgba(255,92,26,.12); border-color:var(--laranja); }
@@ -416,7 +411,7 @@ td { padding:10px; vertical-align:middle; }
 .ml-val-label { font-family:'DM Mono',monospace; font-size:10px; color:rgba(245,240,232,.35); letter-spacing:.05em; text-transform:uppercase; }
 .ml-val-total { font-family:'DM Mono',monospace; font-size:12px; color:var(--laranja); font-weight:600; text-align:right; margin-top:4px; padding-top:8px; border-top:1px solid #1e1e1e; }
 .ml-val-total-pago { color:var(--offwhite); }
-.ml-card-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ml-card-footer { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
 .ml-card-timeline { border-top:1px solid #1e1e1e; padding-top:10px; }
 
 @media (max-width: 768px) {
