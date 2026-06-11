@@ -964,6 +964,11 @@ const TUTORIAL_STEPS = [
     text: "Cada card é um item de uma CEG. Toque na seta ▾ no canto inferior direito do card para expandir e ver o timeline completo de onde seu item está na jornada."
   },
   {
+    icon: "💳",
+    title: "Forms de Pagamento",
+    text: "No topo da Masterlist, toque no card 'Forms de Pagamento' (CLIQUE AQUI) para abrir o formulário e enviar o comprovante dos itens em aberto."
+  },
+  {
     icon: "◉",
     title: "Status do item",
     text: "Os chips coloridos mostram a etapa atual: Pré-venda → Na Warehouse → A Caminho → Enviado Nacional. Quanto mais à direita, mais perto de chegar!"
