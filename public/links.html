@@ -46,6 +46,11 @@
     }
     .link-card:hover { background: #1c1c1c; border-left-color: #c8f000; }
     .link-card:hover .link-arrow { color: #c8f000; }
+    .link-card.destaque { background: #ff5c00; border-left-color: #ff5c00; border-color: #ff5c00; }
+    .link-card.destaque .link-title { color: #fff; }
+    .link-card.destaque .link-sub { color: rgba(255,255,255,.75); }
+    .link-card.destaque .link-arrow { color: #fff; }
+    .link-card.destaque:hover { background: #e84e00; border-color: #e84e00; border-left-color: #e84e00; }
 
     .link-icon {
       width: 36px; height: 36px; border-radius: 4px;
@@ -130,7 +135,7 @@
 
   <div class="section-label"><span>//</span> Links rápidos</div>
 
-  <a class="link-card" href="/regras.html">
+  <a class="link-card destaque" href="/regras.html">
     <div class="link-icon">📋</div>
     <div class="link-info">
       <div class="link-title">Regras da Comunidade</div>
