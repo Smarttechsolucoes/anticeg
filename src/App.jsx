@@ -479,7 +479,7 @@ function MasterlistTab({ user, itens, onLogin }) {
       <div className="summary-row">
         <a className="sum-card sum-card-link" href="https://forms.gle/SyG2Zz8Lovreq8kn9" target="_blank" rel="noopener noreferrer">
           <div className="sum-label">Forms de Pagamento</div>
-          <div className="sum-value orange">→</div>
+          <div className="sum-value orange">CLIQUE AQUI</div>
           <div className="sum-sub">pague o que está em aberto</div>
         </a>
         <SumCard label="Pendente" value={guest ? 0 : tPend} valueCls="lilas" sub="em aberto" isAmount={true} />

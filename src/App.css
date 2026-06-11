@@ -63,6 +63,7 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .sum-card { background:#111; border:1px solid #1e1e1e; border-radius:8px; padding:20px; display:flex; flex-direction:column; gap:6px; }
 .sum-card-link { text-decoration:none; transition:border-color .15s, background .15s; }
 .sum-card-link:hover { border-color:var(--laranja); background:#161616; }
+.sum-card-link .sum-value { font-size:var(--fs-xl); letter-spacing:1px; }
 .sum-label { font-size:var(--fs-xs); color:rgba(245,240,232,.4); letter-spacing:1px; text-transform:uppercase; }
 .sum-value { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-2xl); line-height:1; }
 .sum-value.white  { color:var(--offwhite); }
