@@ -504,7 +504,10 @@ function ReportModal({ user, item, onClose }) {
             <div style={{ fontSize: 12, color: "rgba(245,240,232,.35)", marginBottom: 2, letterSpacing: 1 }}>{item.ceg}</div>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>{item.nome_do_item}</div>
 
-            <div style={labelStyle}>O que está errado?</div>
+            <div style={{ ...labelStyle, display: "flex", justifyContent: "space-between" }}>
+              <span>O que está errado? <span style={{ color: "var(--laranja)" }}>*</span></span>
+              {!Object.values(erros).some(Boolean) && <span style={{ color: "rgba(245,240,232,.25)", fontSize: 10 }}>selecione ao menos uma opção</span>}
+            </div>
             <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
               <CheckRow k="item" label="Item incorreto" />
               {erros.item && (
@@ -579,24 +582,6 @@ function ReportModal({ user, item, onClose }) {
               <CheckRow k="outro" label="Outro problema" />
             </div>
 
-            <div style={labelStyle}>Preencheu o forms de pagamento?</div>
-            <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-              {["sim", "nao"].map(v => (
-                <button key={v} onClick={() => setPreencheuForms(v)}
-                  style={{ flex: 1, padding: "8px", borderRadius: 6, fontSize: 12, fontFamily: "'DM Mono',monospace", cursor: "pointer", border: `1px solid ${preencheuForms === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: preencheuForms === v ? "rgba(255,92,26,.12)" : "transparent", color: preencheuForms === v ? "var(--laranja)" : "rgba(245,240,232,.5)" }}>
-                  {v === "sim" ? "Sim" : "Não"}
-                </button>
-              ))}
-            </div>
-
-            {preencheuForms === "sim" && (
-              <>
-                <label style={labelStyle}>Data e horário do preenchimento</label>
-                <input type="datetime-local" value={dataHora} onChange={e => setDataHora(e.target.value)}
-                  style={{ ...inputStyle, marginBottom: 16 }} />
-              </>
-            )}
-
             <label style={labelStyle}>Obs (opcional)</label>
             <textarea value={obs} onChange={e => setObs(e.target.value)}
               placeholder="Adicione informações adicionais caso necessário"
@@ -604,7 +589,7 @@ function ReportModal({ user, item, onClose }) {
 
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, background: "none", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "10px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 12, cursor: "pointer" }}>Cancelar</button>
-              <button onClick={handleEnviar} disabled={loading} className="lp-card-btn" style={{ flex: 2, margin: 0 }}>
+              <button onClick={handleEnviar} disabled={loading || !Object.values(erros).some(Boolean)} className="lp-card-btn" style={{ flex: 2, margin: 0 }}>
                 {loading ? "..." : "Enviar report →"}
               </button>
             </div>
