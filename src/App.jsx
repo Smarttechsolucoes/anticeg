@@ -1562,7 +1562,7 @@ export default function App() {
         {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Regras</button>
         <button className={`tab-btn ${tab === "tutorial" ? "active" : ""}`} onClick={() => setTab("tutorial")}>? Tutorial</button>
-        {user.email === ADMIN_EMAIL && (
+        {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
       </div>
@@ -1572,7 +1572,7 @@ export default function App() {
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "tutorial" && <TutorialTab />}
-      {tab === "admin" && user.email === ADMIN_EMAIL && <AdminTab />}
+      {tab === "admin" && isAdminUser(user) && <AdminTab />}
     </div>
   );
 }
