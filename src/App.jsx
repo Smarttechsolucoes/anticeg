@@ -444,6 +444,7 @@ function ReportModal({ user, item, onClose }) {
   const [motivoItem, setMotivoItem] = useState(null);
   const [preencheuForms, setPreencheuForms] = useState(null);
   const [dataHora, setDataHora] = useState("");
+  const [pagInfo, setPagInfo] = useState({ dataPag: "", dataForms: "", valorPago: "", metodo: null });
   const [obs, setObs] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -470,6 +471,10 @@ function ReportModal({ user, item, onClose }) {
       correcao_taxa:   erros.taxa   ? correcoes.taxa   : null,
       preencheu_forms: preencheuForms,
       data_forms:      dataHora || null,
+      pag_data:        erros.pagamento ? pagInfo.dataPag   : null,
+      pag_data_forms:  erros.pagamento ? pagInfo.dataForms : null,
+      pag_valor:       erros.pagamento ? pagInfo.valorPago : null,
+      pag_metodo:      erros.pagamento ? pagInfo.metodo    : null,
       observacao:      obs.trim() || null,
     }]);
     setLoading(false);
@@ -541,6 +546,36 @@ function ReportModal({ user, item, onClose }) {
                 </div>
               )}
               <CheckRow k="pagamento" label="Já paguei e continua pendente" />
+              {erros.pagamento && (
+                <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", flexDirection: "column", gap: 10, padding: "8px 0" }}>
+                  <div>
+                    <div style={labelStyle}>Data do pagamento</div>
+                    <input type="date" value={pagInfo.dataPag} onChange={e => setPagInfo(p => ({ ...p, dataPag: e.target.value }))}
+                      style={{ ...inputStyle, width: "100%" }} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Data e horário do preenchimento do forms</div>
+                    <input type="datetime-local" value={pagInfo.dataForms} onChange={e => setPagInfo(p => ({ ...p, dataForms: e.target.value }))}
+                      style={{ ...inputStyle, width: "100%" }} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Valor pago</div>
+                    <input type="text" placeholder="Ex: 96,00" value={pagInfo.valorPago} onChange={e => setPagInfo(p => ({ ...p, valorPago: e.target.value }))}
+                      style={{ ...inputStyle, width: "100%" }} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Método de pagamento</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {["PIX", "Transferência", "Outro"].map(m => (
+                        <button key={m} onClick={() => setPagInfo(p => ({ ...p, metodo: m }))}
+                          style={{ flex: 1, padding: "6px", borderRadius: 6, fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer", border: `1px solid ${pagInfo.metodo === m ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagInfo.metodo === m ? "rgba(255,92,26,.12)" : "transparent", color: pagInfo.metodo === m ? "var(--laranja)" : "rgba(245,240,232,.5)" }}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               <CheckRow k="outro" label="Outro problema" />
             </div>
 
