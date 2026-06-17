@@ -1072,6 +1072,45 @@ function RegrasTab() {
   );
 }
 
+function NotifResolvido({ notif, user, onDismiss }) {
+  const [reenviar, setReenviar] = useState(false);
+  const [reportItem, setReportItem] = useState(null);
+
+  useEffect(() => {
+    if (reenviar && notif.report_id) {
+      supabase.from("reports").select("*").eq("id", notif.report_id).single()
+        .then(({ data }) => { if (data) setReportItem({ id: data.item_id, nome_do_item: data.item_nome, ceg: data.ceg }); });
+    }
+  }, [reenviar]);
+
+  return (
+    <>
+      <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 900, width: "calc(100% - 48px)", maxWidth: 520, background: "#1a1a1a", border: "1px solid rgba(74,222,128,.3)", borderRadius: 12, padding: "16px 20px", boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <span style={{ fontSize: 20 }}>✓</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#4ade80", marginBottom: 4 }}>Problema resolvido!</div>
+            <div style={{ fontSize: 12, color: "rgba(245,240,232,.6)", lineHeight: 1.5 }}>
+              {notif.message} Se o problema persistir, reenvie a solicitação.
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={() => setReenviar(true)} style={{ background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.3)", color: "#4ade80", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
+                Reenviar solicitação →
+              </button>
+              <button onClick={onDismiss} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.35)", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
+                OK, entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {reportItem && (
+        <ReportModal user={user} item={reportItem} onClose={() => { setReportItem(null); setReenviar(false); onDismiss(); }} />
+      )}
+    </>
+  );
+}
+
 function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
@@ -1086,9 +1125,19 @@ function AdminTab() {
       .then(({ data }) => { if (data) setReports(data); });
   }, []);
 
-  async function marcarResolvido(id) {
-    await supabase.from("reports").update({ status: "resolvido" }).eq("id", id);
-    setReports(r => r.map(x => x.id === id ? { ...x, status: "resolvido" } : x));
+  async function marcarResolvido(rep) {
+    await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
+    await supabase.from("notifications").insert([{
+      joiner_cog: rep.joiner_cog,
+      message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
+      type: "report_resolved",
+      report_id: rep.id,
+    }]);
+    setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido" } : x));
+  }
+  async function desfazerResolvido(id) {
+    await supabase.from("reports").update({ status: "pendente" }).eq("id", id);
+    setReports(r => r.map(x => x.id === id ? { ...x, status: "pendente" } : x));
   }
   async function toggleManutencao() {
     const novo = !manutencaoAdmin;
@@ -1162,27 +1211,73 @@ function AdminTab() {
         {reports.length === 0 && (
           <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report ainda.</div>
         )}
-        {reports.map(r => (
-          <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--card-bg)", border: `1px solid ${r.status === "resolvido" ? "rgba(74,222,128,.15)" : "rgba(255,92,26,.25)"}`, borderRadius: 10, marginBottom: 8 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--offwhite)" }}>{r.joiner_nome}</div>
-              <div style={{ fontSize: 11, color: "rgba(245,240,232,.4)", marginTop: 2 }}>
-                Forms preenchido em: <strong style={{ color: "var(--offwhite)" }}>{new Date(r.data_forms + "T12:00:00").toLocaleDateString("pt-BR")}</strong>
-                {r.observacao && <> · {r.observacao}</>}
+        {reports.map(r => {
+          const erroLabels = [
+            r.erro_item      && "Item incorreto",
+            r.erro_valor     && "Valor incorreto",
+            r.erro_frete     && "Frete incorreto",
+            r.erro_taxa      && "Taxa RF incorreta",
+            r.erro_pagamento && "Já paguei (pendente)",
+            r.erro_outro     && "Outro problema",
+          ].filter(Boolean);
+          return (
+          <div key={r.id} style={{ padding: "14px 16px", background: "var(--card-bg)", border: `1px solid ${r.status === "resolvido" ? "rgba(74,222,128,.15)" : "rgba(255,92,26,.25)"}`, borderRadius: 10, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--offwhite)" }}>
+                  {r.joiner_nome} <span style={{ fontSize: 10, color: "rgba(245,240,232,.3)", fontWeight: 400 }}>@{r.joiner_cog}</span>
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 3 }}>
+                  {r.item_nome} <span style={{ color: "rgba(245,240,232,.25)" }}>· {r.ceg}</span>
+                </div>
+                {erroLabels.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                    {erroLabels.map(l => (
+                      <span key={l} style={{ fontSize: 10, background: "rgba(255,92,26,.12)", border: "1px solid rgba(255,92,26,.25)", borderRadius: 4, padding: "2px 7px", color: "var(--laranja)" }}>{l}</span>
+                    ))}
+                  </div>
+                )}
+                {(r.motivo_item || r.correcao_valor || r.correcao_frete || r.correcao_taxa) && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.4)", display: "flex", flexDirection: "column", gap: 2 }}>
+                    {r.motivo_item     && <span>↳ Item: {r.motivo_item}</span>}
+                    {r.correcao_valor  && <span>↳ Valor correto: {r.correcao_valor}</span>}
+                    {r.correcao_frete  && <span>↳ Frete correto: {r.correcao_frete}</span>}
+                    {r.correcao_taxa   && <span>↳ Taxa correta: {r.correcao_taxa}</span>}
+                  </div>
+                )}
+                {r.erro_pagamento && (r.pag_data || r.pag_valor || r.pag_metodo) && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.4)", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {r.pag_data   && <span>Data pag: <strong style={{ color: "var(--offwhite)" }}>{new Date(r.pag_data + "T12:00:00").toLocaleDateString("pt-BR")}</strong></span>}
+                    {r.pag_valor  && <span>Valor: <strong style={{ color: "var(--offwhite)" }}>{r.pag_valor}</strong></span>}
+                    {r.pag_metodo && <span>Método: <strong style={{ color: "var(--offwhite)" }}>{r.pag_metodo}</strong></span>}
+                    {r.pag_data_forms && <span>Forms em: <strong style={{ color: "var(--offwhite)" }}>{new Date(r.pag_data_forms).toLocaleString("pt-BR")}</strong></span>}
+                  </div>
+                )}
+                {r.observacao && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.5)", fontStyle: "italic" }}>"{r.observacao}"</div>
+                )}
+                <div style={{ fontSize: 10, color: "rgba(245,240,232,.2)", marginTop: 6 }}>
+                  Reportado em {new Date(r.created_at).toLocaleString("pt-BR")}
+                </div>
               </div>
-              <div style={{ fontSize: 10, color: "rgba(245,240,232,.25)", marginTop: 2 }}>
-                Reportado em {new Date(r.created_at).toLocaleString("pt-BR")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+                {r.status === "pendente" ? (
+                  <button onClick={() => marcarResolvido(r)} style={{ background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.3)", color: "#4ade80", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
+                    Resolver ✓
+                  </button>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 11, color: "#4ade80" }}>✓ resolvido</span>
+                    <button onClick={() => desfazerResolvido(r.id)} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.3)", borderRadius: 6, padding: "4px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
+                      desfazer
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-            {r.status === "pendente" ? (
-              <button onClick={() => marcarResolvido(r.id)} style={{ background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.3)", color: "#4ade80", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
-                Resolver ✓
-              </button>
-            ) : (
-              <span style={{ fontSize: 11, color: "#4ade80" }}>✓ resolvido</span>
-            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1377,6 +1472,7 @@ export default function App() {
   const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
   const [showTutorial, setShowTutorial] = useState(false);
+  const [notificacoes, setNotificacoes] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [manutencao, setManutencao] = useState(false);
   const [bypassManutencao, setBypassManutencao] = useState(
@@ -1436,6 +1532,9 @@ export default function App() {
       if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
       const jaConfirmou = localStorage.getItem("anticeg_perfil_ok") === u.cog;
       if (!jaConfirmou && perfilPushAtivo) setShowPerfilModal(true);
+      const { data: notifs } = await supabase.from("notifications")
+        .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
+      if (notifs?.length > 0) setNotificacoes(notifs);
     }
   }
 
@@ -1518,6 +1617,17 @@ export default function App() {
           </div>
         </div>
       )}
+      {notificacoes.map(n => (
+        <NotifResolvido
+          key={n.id}
+          notif={n}
+          user={user}
+          onDismiss={async () => {
+            await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", n.id);
+            setNotificacoes(prev => prev.filter(x => x.id !== n.id));
+          }}
+        />
+      ))}
       {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
       {showPerfilModal && !user.guest && (
         <ProfileConfirmModal
