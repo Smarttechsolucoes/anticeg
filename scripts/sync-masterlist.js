@@ -40,7 +40,18 @@ async function main() {
   if (!res.ok) throw new Error(`Falha ao buscar CSV: ${res.status}`);
   const text = await res.text();
 
-  const records = parse(text, { columns: true, skip_empty_lines: true, bom: true, from_line: 2 });
+  // Detecta qual linha tem o cabeçalho real (procura por "ABA" ou "NOME DO ITEM")
+  const lines = text.split('\n');
+  let headerLine = 1;
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    if (lines[i].includes('ABA') || lines[i].includes('NOME DO ITEM') || lines[i].includes('NOME')) {
+      headerLine = i + 1;
+      break;
+    }
+  }
+  console.log(`Cabeçalho detectado na linha ${headerLine}`);
+
+  const records = parse(text, { columns: true, skip_empty_lines: true, bom: true, from_line: headerLine });
   console.log(`${records.length} linhas encontradas na planilha`);
 
   if (records.length === 0) { console.log('Planilha vazia.'); return; }
