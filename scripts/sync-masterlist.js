@@ -40,7 +40,7 @@ async function main() {
   if (!res.ok) throw new Error(`Falha ao buscar CSV: ${res.status}`);
   const text = await res.text();
 
-  const records = parse(text, { columns: true, skip_empty_lines: true, bom: true });
+  const records = parse(text, { columns: true, skip_empty_lines: true, bom: true, from_line: 2 });
   console.log(`${records.length} linhas encontradas na planilha`);
 
   if (records.length === 0) { console.log('Planilha vazia.'); return; }
