@@ -29,6 +29,10 @@ async function main() {
 
   const records = parse(text, { columns: true, skip_empty_lines: true });
   console.log(`${records.length} linhas encontradas na planilha`);
+  if (records.length > 0) {
+    console.log('Colunas encontradas:', Object.keys(records[0]));
+    console.log('Primeira linha:', JSON.stringify(records[0]));
+  }
 
   // Carregar todos os joiners para lookup por @ e e-mail
   const { data: joiners } = await supabase.from('joiners').select('cog, email, twitter');
