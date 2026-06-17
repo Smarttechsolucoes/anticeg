@@ -64,16 +64,23 @@ async function main() {
     if (j.email)   byEmail[j.email.toLowerCase()] = j.cog;
   });
 
-  // Carregar masterlist existente para preservar campos de pagamento
-  const { data: existing } = await supabase
-    .from('masterlist')
-    .select('id, ceg, nome_do_item, nome, status');
-
+  // Carregar masterlist existente paginada (Supabase limita 1000 por query)
   const existingMap = {};
-  (existing || []).forEach(item => {
-    const key = `${item.ceg}|${item.nome_do_item}|${item.nome}`.toLowerCase();
-    existingMap[key] = item;
-  });
+  let from = 0;
+  while (true) {
+    const { data: page } = await supabase
+      .from('masterlist')
+      .select('id, ceg, nome_do_item, nome, status')
+      .range(from, from + 999);
+    if (!page || page.length === 0) break;
+    page.forEach(item => {
+      const key = `${item.ceg}|${item.nome_do_item}|${item.nome}`.toLowerCase();
+      existingMap[key] = item;
+    });
+    if (page.length < 1000) break;
+    from += 1000;
+  }
+  console.log(`${Object.keys(existingMap).length} itens existentes no banco`);
 
   const rows = records.filter(r =>
     col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim() &&
