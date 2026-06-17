@@ -440,6 +440,7 @@ const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "blo
 
 function ReportModal({ user, item, onClose }) {
   const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, outro: false });
+  const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
   const [preencheuForms, setPreencheuForms] = useState(null);
   const [dataHora, setDataHora] = useState("");
   const [obs, setObs] = useState("");
@@ -451,20 +452,23 @@ function ReportModal({ user, item, onClose }) {
   async function handleEnviar() {
     setLoading(true);
     const { error } = await supabase.from("reports").insert([{
-      joiner_cog:    user.cog,
-      joiner_nome:   user.nome || user.cog,
-      item_id:       item.id,
-      item_nome:     item.nome_do_item,
-      ceg:           item.ceg,
-      erro_item:     erros.item,
-      erro_valor:    erros.valor,
-      erro_frete:    erros.frete,
-      erro_taxa:     erros.taxa,
-      erro_pagamento:erros.pagamento,
-      erro_outro:    erros.outro,
+      joiner_cog:      user.cog,
+      joiner_nome:     user.nome || user.cog,
+      item_id:         item.id,
+      item_nome:       item.nome_do_item,
+      ceg:             item.ceg,
+      erro_item:       erros.item,
+      erro_valor:      erros.valor,
+      erro_frete:      erros.frete,
+      erro_taxa:       erros.taxa,
+      erro_pagamento:  erros.pagamento,
+      erro_outro:      erros.outro,
+      correcao_valor:  erros.valor  ? correcoes.valor  : null,
+      correcao_frete:  erros.frete  ? correcoes.frete  : null,
+      correcao_taxa:   erros.taxa   ? correcoes.taxa   : null,
       preencheu_forms: preencheuForms,
-      data_forms:    dataHora || null,
-      observacao:    obs.trim() || null,
+      data_forms:      dataHora || null,
+      observacao:      obs.trim() || null,
     }]);
     setLoading(false);
     if (!error) setSent(true);
@@ -497,8 +501,29 @@ function ReportModal({ user, item, onClose }) {
             <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
               <CheckRow k="item" label="Item incorreto" />
               <CheckRow k="valor" label="Valor do item incorreto" />
+              {erros.valor && (
+                <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>Registrado: R${fmtBRL(item.valor_item)}</span>
+                  <input placeholder="Valor correto (R$)" value={correcoes.valor} onChange={e => setCorrecoes(c => ({ ...c, valor: e.target.value }))}
+                    style={{ ...inputStyle, width: 140, padding: "5px 10px" }} />
+                </div>
+              )}
               <CheckRow k="frete" label="Frete incorreto" />
+              {erros.frete && (
+                <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>Registrado: R${fmtBRL(item.frete_inter)}</span>
+                  <input placeholder="Valor correto (R$)" value={correcoes.frete} onChange={e => setCorrecoes(c => ({ ...c, frete: e.target.value }))}
+                    style={{ ...inputStyle, width: 140, padding: "5px 10px" }} />
+                </div>
+              )}
               <CheckRow k="taxa" label="Taxa RF incorreta" />
+              {erros.taxa && (
+                <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>Registrado: R${fmtBRL(item.taxa_rf)}</span>
+                  <input placeholder="Valor correto (R$)" value={correcoes.taxa} onChange={e => setCorrecoes(c => ({ ...c, taxa: e.target.value }))}
+                    style={{ ...inputStyle, width: 140, padding: "5px 10px" }} />
+                </div>
+              )}
               <CheckRow k="pagamento" label="Já paguei e continua pendente" />
               <CheckRow k="outro" label="Outro problema" />
             </div>
