@@ -87,7 +87,8 @@ function Timeline({ activeIdx }) {
 }
 
 function ValCell({ val, status }) {
-  const cls = status === "Pago" ? "pago" : isPendente(status) ? "pend" : "zero";
+  if (!Number(val)) return <span className="zero-val">—</span>;
+  const cls = isPendente(status) ? "pend" : "pago";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span className={`td-val ${cls}`}>R${fmtBRL(val)}</span>
