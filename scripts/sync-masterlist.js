@@ -117,18 +117,22 @@ async function main() {
         pago_rf:    pagoRf,
       };
 
+      const freteVal = parseBRL(col(r, colMap, 'PREÇO FRETE', 'FRETE INTER', 'PRECO FRETE'));
+      const rfVal    = parseBRL(col(r, colMap, 'PREÇO RF', 'PRECO RF'));
+      const status = chegou ? 'Envio Liberado'
+                   : rfVal > 0    ? 'ANTIGOM'
+                   : freteVal > 0 ? 'A Caminho'
+                   : 'Comprado';
+
       const key = `${ceg}|${nomeItem}|${nome}`.toLowerCase();
       const existingItem = existingMap[key];
 
       if (existingItem) {
-        const updateFields = { ...baseFields };
-        if (chegou) updateFields.status = 'Envio Liberado';
-        const { error } = await supabase.from('masterlist').update(updateFields).eq('id', existingItem.id);
+        const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
         if (error) throw error;
         updated++;
       } else {
-        const { error } = await supabase.from('masterlist')
-          .insert([{ ...baseFields, status: chegou ? 'Envio Liberado' : 'Pré-venda' }]);
+        const { error } = await supabase.from('masterlist').insert([{ ...baseFields, status }]);
         if (error) throw error;
         inserted++;
       }

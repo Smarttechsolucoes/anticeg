@@ -18,11 +18,11 @@ function fmtBRL(val, hidden) {
 }
 
 const STATUS_STEPS = [
-  { id: "Pré-venda",        label: "Pré-venda",       icon: "🛒" },
+  { id: "Comprado",         label: "Comprado",         icon: "🛒" },
   { id: "Na Warehouse",     label: "Na Warehouse",     icon: "📦" },
   { id: "A Caminho",        label: "A Caminho",        icon: "✈️" },
   { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
-  { id: "Chegou Aqui",      label: "Chegou Aqui",      icon: "🏠" },
+  { id: "ANTIGOM",          label: "ANTIGOM",          icon: "🏠" },
   { id: "Envio Liberado",   label: "Envio Liberado",   icon: "📬" },
   { id: "Enviado Nacional", label: "Enviado Nacional", icon: "🚚" },
 ];
@@ -30,11 +30,13 @@ const STATUS_STEPS = [
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 const chipMap = {
-  "Pré-venda":       ["chip-prevenda",  "Pré-venda"],
+  "Comprado":        ["chip-prevenda",  "Comprado"],
+  "Pré-venda":       ["chip-prevenda",  "Comprado"],
   "Na Warehouse":    ["chip-warehouse", "Na Warehouse"],
   "A Caminho":       ["chip-caminho",   "A Caminho"],
   "Taxa Liberada":   ["chip-taxa",      "Taxa Liberada"],
-  "Chegou Aqui":     ["chip-aqui",      "Chegou Aqui"],
+  "ANTIGOM":         ["chip-aqui",      "ANTIGOM"],
+  "Chegou Aqui":     ["chip-aqui",      "ANTIGOM"],
   "Envio Liberado":  ["chip-nacional",  "Envio Liberado"],
   "Enviado Nacional":["chip-enviado",   "Enviado Nacional"],
   "Disponível":      ["chip-loja-disp", "Disponível"],
