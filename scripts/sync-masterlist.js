@@ -40,8 +40,13 @@ async function main() {
   if (!res.ok) throw new Error(`Falha ao buscar CSV: ${res.status}`);
   const text = await res.text();
 
-  // Linha 1-2 são título, linha 3 é o cabeçalho real
-  const records = parse(text, { columns: true, skip_empty_lines: true, bom: true, from_line: 3 });
+  // Encontra a linha do cabeçalho real procurando por "ABA"
+  const allLines = text.replace(/^﻿/, '').split('\n');
+  const headerIdx = allLines.findIndex(l => l.includes('ABA'));
+  if (headerIdx === -1) throw new Error('Cabeçalho não encontrado no CSV');
+  console.log(`Cabeçalho na linha ${headerIdx + 1}: ${allLines[headerIdx].slice(0, 80)}`);
+  const csvFromHeader = allLines.slice(headerIdx).join('\n');
+  const records = parse(csvFromHeader, { columns: true, skip_empty_lines: true });
   console.log(`${records.length} linhas encontradas na planilha`);
 
   if (records.length === 0) { console.log('Planilha vazia.'); return; }
