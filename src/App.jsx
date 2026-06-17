@@ -441,6 +441,7 @@ const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "blo
 function ReportModal({ user, item, onClose }) {
   const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
+  const [motivoItem, setMotivoItem] = useState(null);
   const [preencheuForms, setPreencheuForms] = useState(null);
   const [dataHora, setDataHora] = useState("");
   const [obs, setObs] = useState("");
@@ -463,6 +464,7 @@ function ReportModal({ user, item, onClose }) {
       erro_taxa:       erros.taxa,
       erro_pagamento:  erros.pagamento,
       erro_outro:      erros.outro,
+      motivo_item:     erros.item   ? motivoItem        : null,
       correcao_valor:  erros.valor  ? correcoes.valor  : null,
       correcao_frete:  erros.frete  ? correcoes.frete  : null,
       correcao_taxa:   erros.taxa   ? correcoes.taxa   : null,
@@ -500,6 +502,20 @@ function ReportModal({ user, item, onClose }) {
             <div style={labelStyle}>O que está errado?</div>
             <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
               <CheckRow k="item" label="Item incorreto" />
+              {erros.item && (
+                <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4 }}>
+                  {[
+                    { v: "repassei", label: "Repassei o item e já preenchi o forms" },
+                    { v: "membro_errado", label: "Esse é o item mas o membro/skzoo está errado" },
+                  ].map(({ v, label }) => (
+                    <label key={v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 0" }}>
+                      <input type="radio" name="motivo_item" checked={motivoItem === v} onChange={() => setMotivoItem(v)}
+                        style={{ accentColor: "var(--laranja)", width: 13, height: 13 }} />
+                      <span style={{ fontSize: 11, color: "rgba(245,240,232,.65)" }}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
               <CheckRow k="valor" label="Valor do item incorreto" />
               {erros.valor && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
