@@ -468,8 +468,16 @@ function MasterlistTab({ user, itens, onLogin }) {
       + (isPendente(b.pago_rf)    ? Number(b.taxa_rf||0)     : 0), 0);
 
 
+  const temEnvioLiberado = !guest && itens.some(i => i.status === "Envio Liberado");
+  const temPendente = !guest && pendV > 0;
+
   return (
     <div className="main">
+      {temEnvioLiberado && temPendente && (
+        <div className="notif-pagamento">
+          ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
+        </div>
+      )}
       <div className="page-header">
         <div>
           <div className="page-eyebrow">anticeg · visão completa</div>

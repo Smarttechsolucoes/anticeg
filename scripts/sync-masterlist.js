@@ -99,6 +99,7 @@ async function main() {
       const twitter  = col(r, colMap, '@').trim().replace(/^@/, '').toLowerCase();
       const email    = col(r, colMap, 'EMAIL').trim().toLowerCase();
       const chegou    = col(r, colMap, 'Chegou?', 'CHEGOU?').trim().toUpperCase() === 'TRUE';
+      const nacional  = col(r, colMap, 'NACIONAL').trim().toUpperCase() === 'TRUE';
       const pagoItem  = col(r, colMap, 'ITEM').trim().toUpperCase() === 'TRUE';
       const pagoFrete = col(r, colMap, 'FRETE').trim().toUpperCase() === 'TRUE';
       const pagoRf    = col(r, colMap, 'RF').trim().toUpperCase() === 'TRUE';
@@ -119,9 +120,10 @@ async function main() {
 
       const freteVal = parseBRL(col(r, colMap, 'PREÇO FRETE', 'FRETE INTER', 'PRECO FRETE'));
       const rfVal    = parseBRL(col(r, colMap, 'PREÇO RF', 'PRECO RF'));
-      const status = chegou ? 'Envio Liberado'
-                   : rfVal > 0    ? 'ANTIGOM'
-                   : freteVal > 0 ? 'A Caminho'
+      const status = nacional       ? 'Enviado Nacional'
+                   : chegou         ? 'Envio Liberado'
+                   : rfVal > 0      ? 'ANTIGOM'
+                   : freteVal > 0   ? 'A Caminho'
                    : 'Comprado';
 
       const key = `${ceg}|${nomeItem}|${nome}`.toLowerCase();
