@@ -42,7 +42,10 @@ const chipMap = {
 };
 
 function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status); }
-function isPendente(val) { return val && val !== "Pago" && val !== "N/A"; }
+function isPendente(val) {
+  if (typeof val === "boolean") return !val; // true=pago, false=pendente
+  return val && val !== "Pago" && val !== "N/A";
+}
 
 function PayBadge({ status }) {
   if (status === "Pago")      return <span className="pay-badge pay-pago">Pago</span>;
@@ -285,10 +288,10 @@ function CegDetailView({ ceg, onVoltar, guest }) {
                 </div>
                 <div className="ml-card-name">{item.nome_do_item}</div>
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pag_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
-                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} /></div>}
+                  {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="item-detail" style={{ fontSize:11 }}>{item.info_adicionais}</div>}
                 <div className="ml-card-footer">
@@ -435,9 +438,10 @@ function MasterlistTab({ user, itens, onLogin }) {
   const [cegModal, setCegModal] = useState(null);
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0), 0);
-  const pagoV  = itens.filter(i => i.pag_item === "Pago").reduce((a,b) => a+Number(b.valor_item||0), 0)
-               + itens.filter(i => i.pag_frete === "Pago").reduce((a,b) => a+Number(b.frete_inter||0), 0)
-               + itens.filter(i => i.pag_taxa === "Pago").reduce((a,b) => a+Number(b.taxa_rf||0), 0);
+  const pagoV  = itens.reduce((a,b) =>
+    a + (b.pago_item  ? Number(b.valor_item||0)  : 0)
+      + (b.pago_frete ? Number(b.frete_inter||0) : 0)
+      + (b.pago_rf    ? Number(b.taxa_rf||0)     : 0), 0);
   const pendV = totalV - pagoV;
   const cegs  = [...new Set(itens.map(i => i.ceg))].length;
 
@@ -445,9 +449,9 @@ function MasterlistTab({ user, itens, onLogin }) {
   const vencDates = [];
   itens.forEach(i => {
     const name = (i.nome_do_item || "").split(" ")[0];
-    if (i.venc_item     && isPendente(i.pag_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + name });
-    if (i.venc_frete    && isPendente(i.pag_frete))    vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + name });
-    if (i.venc_taxa     && isPendente(i.pag_taxa))     vencDates.push({ d: new Date(i.venc_taxa),     label: "Taxa: " + name });
+    if (i.venc_item     && isPendente(i.pago_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + name });
+    if (i.venc_frete    && isPendente(i.pago_frete))   vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + name });
+    if (i.venc_taxa     && isPendente(i.pago_rf))      vencDates.push({ d: new Date(i.venc_taxa),     label: "Taxa: " + name });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
@@ -456,9 +460,10 @@ function MasterlistTab({ user, itens, onLogin }) {
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
-  const tPend  = filtered.filter(i=>isPendente(i.pag_item)).reduce((a,b)=>a+Number(b.valor_item||0),0)
-               + filtered.filter(i=>isPendente(i.pag_frete)).reduce((a,b)=>a+Number(b.frete_inter||0),0)
-               + filtered.filter(i=>isPendente(i.pag_taxa)).reduce((a,b)=>a+Number(b.taxa_rf||0),0);
+  const tPend  = filtered.reduce((a,b) =>
+    a + (isPendente(b.pago_item)  ? Number(b.valor_item||0)  : 0)
+      + (isPendente(b.pago_frete) ? Number(b.frete_inter||0) : 0)
+      + (isPendente(b.pago_rf)    ? Number(b.taxa_rf||0)     : 0), 0);
 
 
   return (
@@ -533,9 +538,9 @@ function MasterlistTab({ user, itens, onLogin }) {
                   <tr key={item.id}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pag_item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pag_frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pag_taxa} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         <StatusChip status={item.status} />
@@ -584,10 +589,10 @@ function MasterlistTab({ user, itens, onLogin }) {
               <div className="ml-card-name">{item.nome_do_item}</div>
               {!guest && (
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pag_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pag_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pag_taxa} /></div>}
-                  {total > 0 && <div className={`ml-val-total${isPendente(item.pag_item) || isPendente(item.pag_frete) || isPendente(item.pag_taxa) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} /></div>}
+                  {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
               )}
               <div className="ml-card-footer">

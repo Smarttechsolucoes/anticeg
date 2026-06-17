@@ -98,7 +98,10 @@ async function main() {
       const nomeItem = col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM').trim();
       const twitter  = col(r, colMap, '@').trim().replace(/^@/, '').toLowerCase();
       const email    = col(r, colMap, 'EMAIL').trim().toLowerCase();
-      const chegou   = col(r, colMap, 'Chegou?', 'CHEGOU?').trim().toUpperCase() === 'TRUE';
+      const chegou    = col(r, colMap, 'Chegou?', 'CHEGOU?').trim().toUpperCase() === 'TRUE';
+      const pagoItem  = col(r, colMap, 'ITEM').trim().toUpperCase() === 'TRUE';
+      const pagoFrete = col(r, colMap, 'FRETE').trim().toUpperCase() === 'TRUE';
+      const pagoRf    = col(r, colMap, 'RF').trim().toUpperCase() === 'TRUE';
 
       const cog = byTwitter[twitter] || byEmail[email] || twitter || email.split('@')[0] || null;
 
@@ -106,9 +109,12 @@ async function main() {
         ceg, cog, nome,
         nome_do_item:    nomeItem,
         valor_item:      parseBRL(col(r, colMap, 'PREÇO ITEM', 'PRECO ITEM')),
-        frete_inter:     parseBRL(col(r, colMap, 'FRETE INTER')),
+        frete_inter:     parseBRL(col(r, colMap, 'PREÇO FRETE', 'FRETE INTER', 'PRECO FRETE')),
         taxa_rf:         parseBRL(col(r, colMap, 'PREÇO RF', 'PRECO RF')),
         info_adicionais: col(r, colMap, 'INFORMAÇÕES', 'INFORMACOES').trim() || null,
+        pago_item:  pagoItem,
+        pago_frete: pagoFrete,
+        pago_rf:    pagoRf,
       };
 
       const key = `${ceg}|${nomeItem}|${nome}`.toLowerCase();
