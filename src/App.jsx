@@ -469,8 +469,6 @@ function ReportModal({ user, item, onClose }) {
       correcao_valor:  erros.valor  ? correcoes.valor  : null,
       correcao_frete:  erros.frete  ? correcoes.frete  : null,
       correcao_taxa:   erros.taxa   ? correcoes.taxa   : null,
-      preencheu_forms: preencheuForms,
-      data_forms:      dataHora || null,
       pag_data:        erros.pagamento ? pagInfo.dataPag   : null,
       pag_data_forms:  erros.pagamento ? pagInfo.dataForms : null,
       pag_valor:       erros.pagamento ? pagInfo.valorPago : null,
@@ -478,7 +476,8 @@ function ReportModal({ user, item, onClose }) {
       observacao:      obs.trim() || null,
     }]);
     setLoading(false);
-    if (!error) setSent(true);
+    if (error) { alert("Erro ao enviar: " + error.message); return; }
+    setSent(true);
   }
 
   const CheckRow = ({ k, label }) => (
