@@ -183,7 +183,7 @@ function CegModal({ ceg, onClose }) {
   );
 }
 
-function CegDetailView({ ceg, onVoltar }) {
+function CegDetailView({ ceg, onVoltar, guest }) {
   const [itens, setItens] = useState(null);
   const [openDrawer, setOpenDrawer] = useState(null);
 
@@ -218,15 +218,13 @@ function CegDetailView({ ceg, onVoltar }) {
             <thead>
               <tr className="col-group-header">
                 <th colSpan={2}></th>
-                <th colSpan={3}>VALORES A PAGAR</th>
+                {!guest && <th colSpan={3}>VALORES A PAGAR</th>}
                 <th className="status-group" colSpan={2}>STATUS</th>
               </tr>
               <tr className="thead-cols">
                 <th>JOINER</th>
                 <th>NOME DO ITEM</th>
-                <th>ITEM</th>
-                <th>FRETE INTER</th>
-                <th>TAXA RF</th>
+                {!guest && <><th>ITEM</th><th>FRETE INTER</th><th>TAXA RF</th></>}
                 <th>STATUS</th>
                 <th>INFO</th>
               </tr>
@@ -243,9 +241,11 @@ function CegDetailView({ ceg, onVoltar }) {
                     <tr key={item.id}>
                       <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
                       <td><div className="item-title">{item.nome_do_item}</div></td>
-                      <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
-                      <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
-                      <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
+                      {!guest && <>
+                        <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
+                        <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
+                        <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
+                      </>}
                       <td>
                         <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                           <StatusChip status={item.status} />
@@ -332,7 +332,7 @@ function CegTab({ user, itens }) {
     })();
   }, []);
 
-  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} />;
+  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} guest={guest} />;
 
   const cegMap = {};
   (allItens || []).forEach(item => {
@@ -1222,7 +1222,14 @@ export default function App() {
     }
   }, []);
 
-  if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} />;
+  function handleVerCegs() {
+    setUser({ guest: true });
+    setItens([]);
+    setTab("cegs");
+    setPage("portal");
+  }
+
+  if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -1298,11 +1305,17 @@ export default function App() {
               )}
             </div>
           )}
-          <div className="topbar-user">
-            <div className="user-dot" />
-            <span className="user-email">{user.email || `COG ${user.cog}`}</span>
-          </div>
-          <button className="logout-btn" onClick={handleLogout}>Sair ↗</button>
+          {user.guest ? (
+            <button className="logout-btn" onClick={handleLogout}>ENTRAR →</button>
+          ) : (
+            <>
+              <div className="topbar-user">
+                <div className="user-dot" />
+                <span className="user-email">{user.email || `COG ${user.cog}`}</span>
+              </div>
+              <button className="logout-btn" onClick={handleLogout}>Sair ↗</button>
+            </>
+          )}
         </div>
       </div>
       <div className="tabs-bar">

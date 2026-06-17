@@ -11,7 +11,7 @@ const supabase = createClient(
 const WA = "5524992501917";
 const WA_ACESSO = `https://wa.me/${WA}?text=${encodeURIComponent("Olá! Quero solicitar acesso ao portal ANTICEG.")}`;
 
-export default function LandingPage({ onLogin, onEntrar }) {
+export default function LandingPage({ onLogin, onVerCegs }) {
   const cursorRef = useRef(null);
   const ringRef = useRef(null);
   const [mobileNav, setMobileNav] = useState(false);
@@ -101,6 +101,7 @@ export default function LandingPage({ onLogin, onEntrar }) {
         <a className="lp-nav-logo" href="#" onClick={e => e.preventDefault()}>ANTI<span>CEG</span></a>
         <ul className="lp-nav-links">
           <li><a href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer">Comunidade</a></li>
+          <li><button onClick={onVerCegs} className="lp-nav-link-btn">CEGs</button></li>
           <li><a href="https://anticeg.vercel.app/regras.html" target="_blank" rel="noopener noreferrer" className="lp-nav-cta">REGRAS →</a></li>
         </ul>
         <button className="lp-hamburger" onClick={() => setMobileNav(v => !v)} aria-label="Menu">
@@ -110,6 +111,7 @@ export default function LandingPage({ onLogin, onEntrar }) {
       {mobileNav && (
         <div className="lp-mobile-nav" onClick={() => setMobileNav(false)}>
           <a href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer">Comunidade</a>
+          <button onClick={onVerCegs} className="lp-nav-link-btn" style={{ textAlign:"center" }}>CEGs</button>
           <a href="https://anticeg.vercel.app/regras.html" target="_blank" rel="noopener noreferrer" className="lp-nav-cta" style={{ textAlign:"center" }}>REGRAS →</a>
         </div>
       )}

@@ -13,6 +13,8 @@
 .lp-nav-links { display:flex; gap:28px; list-style:none; align-items:center; }
 .lp-nav-links a { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:rgba(245,240,232,.55); text-decoration:none; transition:color .2s; cursor:none; }
 .lp-nav-links a:hover { color:#BAFF39; }
+.lp-nav-link-btn { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:rgba(245,240,232,.55); background:none; border:none; padding:0; cursor:pointer; transition:color .2s; }
+.lp-nav-link-btn:hover { color:#BAFF39; }
 .lp-nav-cta { background:#FF5C1A !important; color:#0D0D0D !important; padding:8px 20px; font-weight:500 !important; }
 .lp-nav-cta:hover { background:#BAFF39 !important; }
 .lp-hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:4px; }
