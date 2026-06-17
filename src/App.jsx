@@ -260,7 +260,7 @@ function CegDetailView({ ceg, onVoltar, guest }) {
                         {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
                         <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
                           <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                          {!guest && <button onClick={() => setReportItem(item)} className="report-row-btn">⚑</button>}
+                          <button onClick={() => setReportItem(item)} className="report-row-btn">⚑</button>
                         </div>
                       </td>
                     </tr>
