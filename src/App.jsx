@@ -439,7 +439,7 @@ const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border:
 const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "block", marginBottom: 5 };
 
 function ReportModal({ user, item, onClose }) {
-  const [erros, setErros] = useState({ item: false, valor: false, pagamento: false });
+  const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, outro: false });
   const [preencheuForms, setPreencheuForms] = useState(null);
   const [dataHora, setDataHora] = useState("");
   const [obs, setObs] = useState("");
@@ -458,7 +458,10 @@ function ReportModal({ user, item, onClose }) {
       ceg:           item.ceg,
       erro_item:     erros.item,
       erro_valor:    erros.valor,
+      erro_frete:    erros.frete,
+      erro_taxa:     erros.taxa,
       erro_pagamento:erros.pagamento,
+      erro_outro:    erros.outro,
       preencheu_forms: preencheuForms,
       data_forms:    dataHora || null,
       observacao:    obs.trim() || null,
@@ -492,9 +495,12 @@ function ReportModal({ user, item, onClose }) {
 
             <div style={labelStyle}>O que está errado?</div>
             <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
-              <CheckRow k="item" label="Item errado" />
-              <CheckRow k="valor" label="Valor errado" />
-              <CheckRow k="pagamento" label="Status de pagamento errado" />
+              <CheckRow k="item" label="Item incorreto" />
+              <CheckRow k="valor" label="Valor do item incorreto" />
+              <CheckRow k="frete" label="Frete incorreto" />
+              <CheckRow k="taxa" label="Taxa RF incorreta" />
+              <CheckRow k="pagamento" label="Já paguei e continua pendente" />
+              <CheckRow k="outro" label="Outro problema" />
             </div>
 
             <div style={labelStyle}>Preencheu o forms de pagamento?</div>
