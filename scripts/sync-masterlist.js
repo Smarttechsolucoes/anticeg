@@ -27,10 +27,12 @@ async function main() {
   if (!res.ok) throw new Error(`Falha ao buscar CSV: ${res.status}`);
   const text = await res.text();
 
-  const records = parse(text, { columns: true, skip_empty_lines: true });
+  console.log('Primeiros 300 chars do CSV:', text.slice(0, 300));
+
+  const records = parse(text, { columns: true, skip_empty_lines: true, bom: true });
   console.log(`${records.length} linhas encontradas na planilha`);
   if (records.length > 0) {
-    console.log('Colunas encontradas:', Object.keys(records[0]));
+    console.log('Colunas encontradas:', JSON.stringify(Object.keys(records[0])));
     console.log('Primeira linha:', JSON.stringify(records[0]));
   }
 
