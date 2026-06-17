@@ -125,7 +125,38 @@ async function main() {
     }
   }
 
-  console.log(`\n✓ Sync concluído: ${updated} atualizados · ${inserted} inseridos · ${erros} erros`);
+  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros`);
+
+  // Sincronizar joiners únicos da planilha
+  const joinersMap = {};
+  for (const r of rows) {
+    const twitter = col(r, colMap, '@').trim();
+    const email   = col(r, colMap, 'EMAIL').trim().toLowerCase();
+    const nome    = col(r, colMap, 'NOME').trim();
+    const handle  = twitter.replace(/^@/, '').toLowerCase();
+    const key     = handle || email;
+    if (key && !joinersMap[key]) {
+      joinersMap[key] = {
+        cog:     handle || email.split('@')[0],
+        nome,
+        email:   email || null,
+        twitter: twitter || null,
+      };
+    }
+  }
+
+  const joinersList = Object.values(joinersMap);
+  console.log(`\nSincronizando ${joinersList.length} joiners únicos...`);
+  let jUpserted = 0, jErros = 0;
+
+  for (const j of joinersList) {
+    const { error } = await supabase.from('joiners')
+      .upsert(j, { onConflict: 'cog', ignoreDuplicates: false });
+    if (error) { console.error('Erro joiner:', error.message); jErros++; }
+    else jUpserted++;
+  }
+
+  console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
