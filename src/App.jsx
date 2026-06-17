@@ -666,7 +666,10 @@ function MasterlistTab({ user, itens, onLogin }) {
                     </td>
                     <td>
                       {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
-                      <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)} style={{marginTop: item.info_adicionais ? 4 : 0}}>▾</button>
+                      <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
+                        <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                        <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
+                      </div>
                     </td>
                   </tr>
                   {isOpen && (
