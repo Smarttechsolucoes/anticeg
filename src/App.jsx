@@ -471,6 +471,11 @@ function MasterlistTab({ user, itens, onLogin }) {
 
   return (
     <div className="main">
+      {!guest && (
+        <div className="notif-info">
+          ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 11/06/2026 às 13:02. Caso tenha realizado após esse horário, ainda será atualizado.
+        </div>
+      )}
       {temEnvioLiberado && temPendente && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
