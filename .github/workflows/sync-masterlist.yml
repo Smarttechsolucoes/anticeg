@@ -1,0 +1,27 @@
+name: Sync Masterlist
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # todo dia ao meio-dia UTC (9h BRT)
+  workflow_dispatch:        # permite rodar manualmente também
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependências
+        run: npm install
+        working-directory: scripts
+
+      - name: Rodar sync
+        run: node sync-masterlist.js
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
