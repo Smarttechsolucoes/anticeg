@@ -12,7 +12,7 @@ const supabase = createClient(
 const WHATSAPP_NUM = "5524992501917";
 const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
 function isAdminUser(user) {
-  return isAdminUser(user) || user?.twitter === "@nandaverseo_c" || user?.cog === "nandaverseo_c";
+  return user?.email === ADMIN_EMAIL || user?.twitter === "@nandaverseo_c" || user?.cog === "nandaverseo_c";
 }
 
 function fmtBRL(val, hidden) {
