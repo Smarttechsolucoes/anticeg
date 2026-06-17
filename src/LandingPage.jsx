@@ -16,18 +16,9 @@ export default function LandingPage({ onLogin, onEntrar }) {
   const ringRef = useRef(null);
   const [mobileNav, setMobileNav] = useState(false);
 
-  // mini-login states
-  const [mode, setMode] = useState("cog"); // cog | senha | criar-senha | esqueci
-  const [input, setInput] = useState("");
-  const [senha, setSenha] = useState("");
-  const [senhaConfirm, setSenhaConfirm] = useState("");
-  const [esquecInput, setEsquecInput] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [cogTemp, setCogTemp] = useState("");
-  const [nomeTemp, setNomeTemp] = useState("");
-  const [itensTemp, setItensTemp] = useState([]);
-  const [joinerTemp, setJoinerTemp] = useState(null);
 
   useEffect(() => {
     const cursor = cursorRef.current;
@@ -47,121 +38,54 @@ export default function LandingPage({ onLogin, onEntrar }) {
     return () => document.removeEventListener("mousemove", move);
   }, []);
 
-  async function handleBuscarCOG() {
-    setLoading(true); setError("");
-    const val = input.trim();
-    if (!val) { setError("Informe seu COG ou e-mail."); setLoading(false); return; }
-    const isEmail = val.includes("@");
+  function isEmail(str) {
+    const idx = str.indexOf("@");
+    return idx > 0; // @ existe e não é o primeiro caractere
+  }
 
-    if (isEmail) {
-      const { data: joiner } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).single();
-      if (!joiner) { setError("E-mail não encontrado. Fale com a Nanda."); setLoading(false); return; }
-      const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
-      setCogTemp(joiner.cog); setNomeTemp(joiner.nome || joiner.cog);
-      setItensTemp(itens || []); setJoinerTemp(joiner);
-      setMode("senha"); setLoading(false); return;
+  async function buscarJoiner(input) {
+    if (isEmail(input)) {
+      const { data } = await supabase.from("joiners").select("*").eq("email", input.toLowerCase()).single();
+      return data;
     }
-
-    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", val);
-    const { data: itensPorNome } = await supabase.from("masterlist").select("*").ilike("nome", val);
-    const itensEncontrados = (itens && itens.length > 0) ? itens : (itensPorNome && itensPorNome.length > 0) ? itensPorNome : null;
-
-    if (!itensEncontrados) { setError("COG não encontrado. Fale com a Nanda."); setLoading(false); return; }
-
-    const cogReal = itensEncontrados[0].cog;
-    const nomeReal = itensEncontrados[0].nome || cogReal;
-    setCogTemp(cogReal); setNomeTemp(nomeReal); setItensTemp(itensEncontrados);
-    const { data: joiner } = await supabase.from("joiners").select("*").eq("cog", cogReal).single();
-    setJoinerTemp(joiner);
-    setMode(!joiner || !joiner.senha ? "criar-senha" : "senha");
-    setLoading(false);
+    const handle = input.startsWith("@") ? input.slice(1) : input;
+    const { data } = await supabase.from("joiners").select("*")
+      .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`)
+      .single();
+    return data;
   }
 
-  async function handleConfirmarSenha() {
+  async function handleEntrar() {
     setLoading(true); setError("");
-    if (senha !== joinerTemp.senha) { setError("Senha incorreta."); setLoading(false); return; }
-    const user = { ...joinerTemp, nome: nomeTemp };
-    localStorage.setItem("anticeg_user", JSON.stringify(user));
-    onLogin(user, itensTemp);
-    setLoading(false);
-  }
+    const input = email.trim();
+    if (!input) { setError("Informe seu @ ou e-mail."); setLoading(false); return; }
 
-  async function handleEsqueci() {
-    setLoading(true); setError("");
-    if (!joinerTemp?.email) { setError("Conta sem e-mail. Fale com a Nanda."); setLoading(false); return; }
-    if (joinerTemp.email.toLowerCase() !== esquecInput.trim().toLowerCase()) { setError("E-mail não confere."); setLoading(false); return; }
-    await supabase.from("joiners").update({ senha: null }).eq("cog", cogTemp);
-    setSenha(""); setSenhaConfirm(""); setEsquecInput(""); setMode("criar-senha");
-    setLoading(false);
-  }
+    const joiner = await buscarJoiner(input);
 
-  async function handleCriarSenha() {
-    setLoading(true); setError("");
-    if (senha.length < 6) { setError("Mínimo 6 caracteres."); setLoading(false); return; }
-    if (senha !== senhaConfirm) { setError("As senhas não coincidem."); setLoading(false); return; }
-    const { data: existe } = await supabase.from("joiners").select("id").eq("cog", cogTemp).single();
-    if (existe) { await supabase.from("joiners").update({ senha }).eq("cog", cogTemp); }
-    else { await supabase.from("joiners").insert([{ cog: cogTemp, senha }]); }
-    const { data: joiner } = await supabase.from("joiners").select("*").eq("cog", cogTemp).single();
-    const user = { ...joiner, nome: nomeTemp };
-    localStorage.setItem("anticeg_user", JSON.stringify(user));
-    onLogin(user, itensTemp);
+    if (!joiner) { setError("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
+
+    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
+    localStorage.setItem("anticeg_user", JSON.stringify(joiner));
+    onLogin(joiner, itens || []);
     setLoading(false);
   }
 
   function renderCard() {
-    if (mode === "senha") return (
-      <>
-        <div className="lp-card-label">// bem-vinda, {nomeTemp}</div>
-        <input className="lp-card-input" type="password" placeholder="Sua senha" value={senha} onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === "Enter" && handleConfirmarSenha()} autoFocus />
-        {error && <div className="lp-card-error">{error}</div>}
-        <button className="lp-card-btn" onClick={handleConfirmarSenha} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
-        <div className="lp-card-links">
-          <button className="lp-card-link" onClick={() => { setMode("esqueci"); setError(""); }}>Esqueci minha senha</button>
-          <button className="lp-card-link" onClick={() => { setMode("cog"); setInput(""); setError(""); }}>← Voltar</button>
-        </div>
-      </>
-    );
-
-    if (mode === "esqueci") return (
-      <>
-        <div className="lp-card-label">// redefinir senha</div>
-        <p className="lp-card-desc">Confirme o e-mail cadastrado para redefinir.</p>
-        <input className="lp-card-input" type="email" placeholder="Seu e-mail" value={esquecInput} onChange={e => setEsquecInput(e.target.value)} />
-        {error && <div className="lp-card-error">{error}</div>}
-        <button className="lp-card-btn" onClick={handleEsqueci} disabled={loading}>{loading ? "..." : "CONFIRMAR →"}</button>
-        <button className="lp-card-link" style={{ marginTop: 8 }} onClick={() => { setMode("senha"); setError(""); }}>← Voltar</button>
-      </>
-    );
-
-    if (mode === "criar-senha") return (
-      <>
-        <div className="lp-card-label">// criar senha — {nomeTemp}</div>
-        <input className="lp-card-input" type="password" placeholder="Nova senha (mín. 6 caracteres)" value={senha} onChange={e => setSenha(e.target.value)} autoFocus />
-        <input className="lp-card-input" type="password" placeholder="Confirmar senha" value={senhaConfirm} onChange={e => setSenhaConfirm(e.target.value)} onKeyDown={e => e.key === "Enter" && handleCriarSenha()} />
-        {error && <div className="lp-card-error">{error}</div>}
-        <button className="lp-card-btn" onClick={handleCriarSenha} disabled={loading}>{loading ? "..." : "CRIAR SENHA E ENTRAR →"}</button>
-        <button className="lp-card-link" style={{ marginTop: 8 }} onClick={() => { setMode("cog"); setInput(""); setError(""); }}>← Voltar</button>
-      </>
-    );
-
-    // mode === "cog"
     return (
       <>
         <div className="lp-card-label">// acesso rápido</div>
         <input
           className="lp-card-input"
           type="text"
-          placeholder="Seu COG ou e-mail"
-          value={input}
-          onChange={e => { setInput(e.target.value); setError(""); }}
-          onKeyDown={e => e.key === "Enter" && handleBuscarCOG()}
+          placeholder="@ da rede social ou e-mail"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setError(""); }}
+          onKeyDown={e => e.key === "Enter" && handleEntrar()}
           autoFocus
         />
         {error && <div className="lp-card-error">{error}</div>}
-        <button className="lp-card-btn" onClick={handleBuscarCOG} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
+        <button className="lp-card-btn" onClick={handleEntrar} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
         <div className="lp-card-divider" />
-        <button className="lp-card-secondary" onClick={() => onLogin({ guest: true }, [])}>Entrar como visitante</button>
         <a href={WA_ACESSO} target="_blank" rel="noopener noreferrer" className="lp-card-secondary lp-card-secondary-link">Solicitar acesso</a>
       </>
     );
