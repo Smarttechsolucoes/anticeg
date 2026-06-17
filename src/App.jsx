@@ -11,6 +11,9 @@ const supabase = createClient(
 
 const WHATSAPP_NUM = "5524992501917";
 const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
+function isAdminUser(user) {
+  return isAdminUser(user) || user?.twitter === "@nandaverseo_c" || user?.cog === "nandaverseo_c";
+}
 
 function fmtBRL(val, hidden) {
   if (hidden) return "••••";
@@ -1392,7 +1395,7 @@ export default function App() {
   }, []);
 
   function handleAdminBypass() {
-    if (adminPortalInput === user?.senha || user?.email === ADMIN_EMAIL) {
+    if (adminPortalInput === user?.senha || isAdminUser(user)) {
       localStorage.setItem("anticeg_admin_bypass", "1");
       setBypassManutencao(true);
       setShowAdminPortal(false);
@@ -1465,7 +1468,7 @@ export default function App() {
 
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = isAdminUser(user);
 
   return (
     <div>
