@@ -19,7 +19,6 @@ function fmtBRL(val, hidden) {
 
 const STATUS_STEPS = [
   { id: "Comprado",         label: "Comprado",         icon: "🛒" },
-  { id: "Na Warehouse",     label: "Na Warehouse",     icon: "📦" },
   { id: "A Caminho",        label: "A Caminho",        icon: "✈️" },
   { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
   { id: "ANTIGOM",          label: "ANTIGOM",          icon: "🏠" },
@@ -32,7 +31,6 @@ const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","A
 const chipMap = {
   "Comprado":        ["chip-prevenda",  "Comprado"],
   "Pré-venda":       ["chip-prevenda",  "Comprado"],
-  "Na Warehouse":    ["chip-warehouse", "Na Warehouse"],
   "A Caminho":       ["chip-caminho",   "A Caminho"],
   "Taxa Liberada":   ["chip-taxa",      "Taxa Liberada"],
   "ANTIGOM":         ["chip-aqui",      "ANTIGOM"],
