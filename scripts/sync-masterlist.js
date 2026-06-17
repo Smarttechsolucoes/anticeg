@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
+import ws from 'ws';
 
 const SHEET_ID = '1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_SERVICE_KEY,
+  { realtime: { transport: ws } }
 );
 
 function parseBRL(str) {
