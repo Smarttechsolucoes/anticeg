@@ -258,7 +258,10 @@ function CegDetailView({ ceg, onVoltar, guest }) {
                       </td>
                       <td>
                         {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
-                        <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)} style={{marginTop: item.info_adicionais ? 4 : 0}}>▾</button>
+                        <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
+                          <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                          {!guest && <button onClick={() => setReportItem(item)} className="report-row-btn">⚑</button>}
+                        </div>
                       </td>
                     </tr>
                     {isOpen && (
@@ -432,11 +435,110 @@ function CegTab({ user, itens }) {
   );
 }
 
+const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.12)", borderRadius: 6, padding: "10px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12 };
+const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "block", marginBottom: 5 };
+
+function ReportModal({ user, item, onClose }) {
+  const [erros, setErros] = useState({ item: false, valor: false, pagamento: false });
+  const [preencheuForms, setPreencheuForms] = useState(null);
+  const [dataHora, setDataHora] = useState("");
+  const [obs, setObs] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  function toggleErro(k) { setErros(e => ({ ...e, [k]: !e[k] })); }
+
+  async function handleEnviar() {
+    setLoading(true);
+    const { error } = await supabase.from("reports").insert([{
+      joiner_cog:    user.cog,
+      joiner_nome:   user.nome || user.cog,
+      item_id:       item.id,
+      item_nome:     item.nome_do_item,
+      ceg:           item.ceg,
+      erro_item:     erros.item,
+      erro_valor:    erros.valor,
+      erro_pagamento:erros.pagamento,
+      preencheu_forms: preencheuForms,
+      data_forms:    dataHora || null,
+      observacao:    obs.trim() || null,
+    }]);
+    setLoading(false);
+    if (!error) setSent(true);
+  }
+
+  const CheckRow = ({ k, label }) => (
+    <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", cursor: "pointer" }}>
+      <input type="checkbox" checked={erros[k]} onChange={() => toggleErro(k)}
+        style={{ accentColor: "var(--laranja)", width: 14, height: 14 }} />
+      <span style={{ fontSize: 12, color: "rgba(245,240,232,.75)" }}>{label}</span>
+    </label>
+  );
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        {sent ? (
+          <>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>✓</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Report enviado!</div>
+            <div style={{ fontSize: 12, color: "rgba(245,240,232,.45)", marginBottom: 20 }}>A admin vai revisar e atualizar em breve.</div>
+            <button className="lp-card-btn" onClick={onClose}>Fechar</button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 12, color: "rgba(245,240,232,.35)", marginBottom: 2, letterSpacing: 1 }}>{item.ceg}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>{item.nome_do_item}</div>
+
+            <div style={labelStyle}>O que está errado?</div>
+            <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
+              <CheckRow k="item" label="Item errado" />
+              <CheckRow k="valor" label="Valor errado" />
+              <CheckRow k="pagamento" label="Status de pagamento errado" />
+            </div>
+
+            <div style={labelStyle}>Preencheu o forms de pagamento?</div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+              {["sim", "nao"].map(v => (
+                <button key={v} onClick={() => setPreencheuForms(v)}
+                  style={{ flex: 1, padding: "8px", borderRadius: 6, fontSize: 12, fontFamily: "'DM Mono',monospace", cursor: "pointer", border: `1px solid ${preencheuForms === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: preencheuForms === v ? "rgba(255,92,26,.12)" : "transparent", color: preencheuForms === v ? "var(--laranja)" : "rgba(245,240,232,.5)" }}>
+                  {v === "sim" ? "Sim" : "Não"}
+                </button>
+              ))}
+            </div>
+
+            {preencheuForms === "sim" && (
+              <>
+                <label style={labelStyle}>Data e horário do preenchimento</label>
+                <input type="datetime-local" value={dataHora} onChange={e => setDataHora(e.target.value)}
+                  style={{ ...inputStyle, marginBottom: 16 }} />
+              </>
+            )}
+
+            <label style={labelStyle}>Obs (opcional)</label>
+            <textarea value={obs} onChange={e => setObs(e.target.value)}
+              placeholder="Adicione informações adicionais caso necessário"
+              rows={3} style={{ ...inputStyle, marginBottom: 20, resize: "none" }} />
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={onClose} style={{ flex: 1, background: "none", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "10px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 12, cursor: "pointer" }}>Cancelar</button>
+              <button onClick={handleEnviar} disabled={loading} className="lp-card-btn" style={{ flex: 2, margin: 0 }}>
+                {loading ? "..." : "Enviar report →"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
+  const [reportItem, setReportItem] = useState(null);
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0), 0);
   const pagoV  = itens.reduce((a,b) =>
@@ -472,6 +574,7 @@ function MasterlistTab({ user, itens, onLogin }) {
 
   return (
     <div className="main">
+      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
       {!guest && (
         <div className="notif-info">
           ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 11/06/2026 às 13:02. Caso tenha realizado após esse horário, ainda será atualizado.
@@ -900,12 +1003,21 @@ function RegrasTab() {
 function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
+  const [reports, setReports] = useState([]);
+
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
       .then(({ data }) => { if (data) setPerfilPushAdmin(data.value !== "false"); });
+    supabase.from("reports").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setReports(data); });
   }, []);
+
+  async function marcarResolvido(id) {
+    await supabase.from("reports").update({ status: "resolvido" }).eq("id", id);
+    setReports(r => r.map(x => x.id === id ? { ...x, status: "resolvido" } : x));
+  }
   async function toggleManutencao() {
     const novo = !manutencaoAdmin;
     await supabase.from("config").update({ value: String(novo) }).eq("key", "manutencao");
@@ -965,6 +1077,40 @@ function AdminTab() {
         }}>
           TESTAR →
         </button>
+      </div>
+
+      <div style={{ marginTop: 28 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
+          Reports de pagamento {reports.filter(r => r.status === "pendente").length > 0 && (
+            <span style={{ background: "var(--laranja)", color: "#000", borderRadius: 99, padding: "2px 8px", fontSize: 10, marginLeft: 8 }}>
+              {reports.filter(r => r.status === "pendente").length} novo{reports.filter(r => r.status === "pendente").length > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        {reports.length === 0 && (
+          <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report ainda.</div>
+        )}
+        {reports.map(r => (
+          <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--card-bg)", border: `1px solid ${r.status === "resolvido" ? "rgba(74,222,128,.15)" : "rgba(255,92,26,.25)"}`, borderRadius: 10, marginBottom: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--offwhite)" }}>{r.joiner_nome}</div>
+              <div style={{ fontSize: 11, color: "rgba(245,240,232,.4)", marginTop: 2 }}>
+                Forms preenchido em: <strong style={{ color: "var(--offwhite)" }}>{new Date(r.data_forms + "T12:00:00").toLocaleDateString("pt-BR")}</strong>
+                {r.observacao && <> · {r.observacao}</>}
+              </div>
+              <div style={{ fontSize: 10, color: "rgba(245,240,232,.25)", marginTop: 2 }}>
+                Reportado em {new Date(r.created_at).toLocaleString("pt-BR")}
+              </div>
+            </div>
+            {r.status === "pendente" ? (
+              <button onClick={() => marcarResolvido(r.id)} style={{ background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.3)", color: "#4ade80", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
+                Resolver ✓
+              </button>
+            ) : (
+              <span style={{ fontSize: 11, color: "#4ade80" }}>✓ resolvido</span>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -52,6 +52,8 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 
 .main { padding:32px; width:100%; }
 .notif-info { background:rgba(186,255,57,.07); border:1px solid rgba(186,255,57,.2); border-radius:8px; padding:12px 20px; margin-bottom:12px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.03em; color:rgba(186,255,57,.7); line-height:1.5; }
+.report-row-btn { background:rgba(245,240,232,.06); border:1px solid rgba(245,240,232,.12); border-radius:4px; padding:2px 7px; color:rgba(245,240,232,.4); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.05em; cursor:pointer; text-align:left; transition:all .15s; }
+.report-row-btn:hover { color:rgba(245,240,232,.7); background:rgba(245,240,232,.1); }
 .notif-pagamento { background:rgba(255,92,26,.12); border:1px solid rgba(255,92,26,.35); border-radius:8px; padding:14px 20px; margin-bottom:24px; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:.04em; color:#FF5C1A; }
 .page-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #1a1a1a; }
 .page-eyebrow { font-size:var(--fs-xs); color:rgba(245,240,232,.35); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
