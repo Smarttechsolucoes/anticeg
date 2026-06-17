@@ -1236,13 +1236,13 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
     await supabase.from("joiners").update({ nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: social.trim() || null }).eq("id", user.id);
     const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: social.trim() || null };
     localStorage.setItem("anticeg_user", JSON.stringify(updated));
-    localStorage.setItem("anticeg_perfil_ok", String(user.id));
+    localStorage.setItem("anticeg_perfil_ok", user.cog);
     onSave(updated);
     setSaving(false);
   }
 
   function handleSkip() {
-    localStorage.setItem("anticeg_perfil_ok", String(user.id));
+    localStorage.setItem("anticeg_perfil_ok", user.cog);
     onSkip();
   }
 
@@ -1277,7 +1277,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         {error && <div className="login-error">{error}</div>}
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
           <button className="modal-confirm-btn" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : isNew ? "SALVAR →" : "CONFIRMAR →"}</button>
-          <button className="modal-cancel-btn" onClick={handleSkip}>Depois</button>
+          <button className="modal-cancel-btn" onClick={handleSkip}>Não mostrar novamente</button>
         </div>
       </div>
     </div>
@@ -1321,7 +1321,7 @@ function TutorialModal({ onClose }) {
             <button className="modal-confirm-btn" style={{ flex: 2 }} onClick={fechar}>Entendi! ✓</button>
           )}
         </div>
-        <button className="login-skip" style={{ marginTop: 12 }} onClick={fechar}>Pular tutorial</button>
+        <button className="login-skip" style={{ marginTop: 12 }} onClick={fechar}>Não mostrar novamente</button>
       </div>
     </div>
   );
@@ -1434,7 +1434,7 @@ export default function App() {
     setPage("portal");
     if (!u.guest) {
       if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
-      const jaConfirmou = localStorage.getItem("anticeg_perfil_ok") === String(u.id);
+      const jaConfirmou = localStorage.getItem("anticeg_perfil_ok") === u.cog;
       if (!jaConfirmou && perfilPushAtivo) setShowPerfilModal(true);
     }
   }
@@ -1522,8 +1522,8 @@ export default function App() {
       {showPerfilModal && !user.guest && (
         <ProfileConfirmModal
           user={user}
-          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", String(updated.id)); localStorage.setItem("anticeg_user", JSON.stringify(updated)); }}
-          onSkip={() => { setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", String(user.id)); }}
+          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", updated.cog); localStorage.setItem("anticeg_user", JSON.stringify(updated)); }}
+          onSkip={() => { setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", user.cog); }}
         />
       )}
       <div className="topbar">
