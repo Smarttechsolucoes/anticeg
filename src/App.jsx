@@ -1205,6 +1205,13 @@ function PushAdminCard({ p, onDesativar }) {
   async function verLeituras() {
     if (leituras) { setAberto(a => !a); return; }
     const { data } = await supabase.from("push_reads").select("joiner_cog, created_at").eq("push_id", p.id).order("created_at", { ascending: false });
+    if (data?.length > 0) {
+      const cogs = data.map(d => d.joiner_cog);
+      const { data: jData } = await supabase.from("joiners").select("cog, nome").in("cog", cogs);
+      const nomeMap = Object.fromEntries((jData || []).map(j => [j.cog, j.nome]));
+      setLeituras(data.map(d => ({ ...d, nome: nomeMap[d.joiner_cog] || d.joiner_cog })));
+      setAberto(true); return;
+    }
     setLeituras(data || []);
     setAberto(true);
   }
@@ -1230,7 +1237,7 @@ function PushAdminCard({ p, onDesativar }) {
                 <div style={{ fontSize: 10, color: "rgba(245,240,232,.3)", marginBottom: 8, letterSpacing: ".08em", textTransform: "uppercase" }}>{leituras?.length} joiner{leituras?.length > 1 ? "s" : ""} viram</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {leituras?.map(l => (
-                    <span key={l.joiner_cog} style={{ fontSize: 10, background: "rgba(201,168,240,.08)", border: "1px solid rgba(201,168,240,.15)", borderRadius: 4, padding: "2px 8px", color: "rgba(245,240,232,.5)" }}>
+                    <span key={l.joiner_cog} className="cog-tip" data-nome={l.nome || l.joiner_cog} style={{ fontSize: 10, background: "rgba(201,168,240,.08)", border: "1px solid rgba(201,168,240,.15)", borderRadius: 4, padding: "2px 8px", color: "rgba(245,240,232,.5)" }}>
                       @{l.joiner_cog}
                     </span>
                   ))}
@@ -1377,7 +1384,7 @@ function AdminTab() {
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--offwhite)" }}>
-                  {r.joiner_nome} <span style={{ fontSize: 10, color: "rgba(245,240,232,.3)", fontWeight: 400 }}>@{r.joiner_cog}</span>
+                  {r.joiner_nome} <span className="cog-tip" data-nome={r.joiner_nome} style={{ fontSize: 10, color: "rgba(245,240,232,.3)", fontWeight: 400 }}>@{r.joiner_cog}</span>
                 </div>
                 <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 3 }}>
                   {r.item_nome} <span style={{ color: "rgba(245,240,232,.25)" }}>· {r.ceg}</span>

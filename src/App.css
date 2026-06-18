@@ -54,6 +54,9 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .notif-info { background:rgba(186,255,57,.07); border:1px solid rgba(186,255,57,.2); border-radius:8px; padding:12px 20px; margin-bottom:12px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.03em; color:rgba(186,255,57,.7); line-height:1.5; }
 .report-row-btn { background:rgba(245,240,232,.08); border:1px solid rgba(245,240,232,.18); border-radius:4px; padding:3px 8px; color:rgba(245,240,232,.55); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.05em; cursor:pointer; transition:all .15s; }
 .report-row-btn:hover { color:#FF5C1A; border-color:rgba(255,92,26,.4); background:rgba(255,92,26,.08); }
+.cog-tip { position:relative; cursor:default; }
+.cog-tip::after { content:attr(data-nome); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1a1a1a; border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.8); font-size:11px; font-family:'DM Mono',monospace; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; z-index:99; }
+.cog-tip:hover::after { opacity:1; }
 .notif-pagamento { background:rgba(255,92,26,.12); border:1px solid rgba(255,92,26,.35); border-radius:8px; padding:14px 20px; margin-bottom:24px; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:.04em; color:#FF5C1A; }
 .page-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #1a1a1a; }
 .page-eyebrow { font-size:var(--fs-xs); color:rgba(245,240,232,.35); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
