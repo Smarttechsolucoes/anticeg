@@ -1312,37 +1312,7 @@ function AdminTab() {
           borderRadius:8, padding:"8px 18px", fontSize:12,
           fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
         }}>
-          {manutencaoAdmin ? "✗ ATIVO" : "✓ DESLIGADO"}
-        </button>
-      </div>
-
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modal de perfil</div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>{perfilPushAdmin ? "Ativo — aparece uma vez para cada joiner" : "Desligado — ninguém vê o modal"}</div>
-        </div>
-        <button onClick={togglePerfilPush} style={{
-          background: perfilPushAdmin ? "rgba(74,222,128,.15)" : "rgba(255,90,31,.15)",
-          border: `1px solid ${perfilPushAdmin ? "rgba(74,222,128,.4)" : "rgba(255,90,31,.4)"}`,
-          color: perfilPushAdmin ? "#4ade80" : "var(--laranja)",
-          borderRadius:8, padding:"8px 18px", fontSize:12,
-          fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
-        }}>
-          {perfilPushAdmin ? "✓ ATIVO" : "✗ DESLIGADO"}
-        </button>
-      </div>
-
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Testar modal de perfil</div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>Reseta o flag — o modal vai aparecer no próximo acesso</div>
-        </div>
-        <button onClick={() => { localStorage.removeItem("anticeg_perfil_ok"); window.location.reload(); }} style={{
-          background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
-          color:"#C9A8F0", borderRadius:8, padding:"8px 18px", fontSize:12,
-          fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
-        }}>
-          TESTAR →
+          {manutencaoAdmin ? "OFF" : "ON"}
         </button>
       </div>
 
