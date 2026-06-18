@@ -65,22 +65,25 @@ async function main() {
   });
 
   // Carregar masterlist existente paginada (Supabase limita 1000 por query)
+  // existingMap: chave → array de itens (suporta duplicatas)
   const existingMap = {};
   let from = 0;
   while (true) {
     const { data: page } = await supabase
       .from('masterlist')
       .select('id, ceg, nome_do_item, nome, status')
+      .order('id', { ascending: true })
       .range(from, from + 999);
     if (!page || page.length === 0) break;
     page.forEach(item => {
       const key = `${item.ceg}|${item.nome_do_item}|${item.nome}`.toLowerCase();
-      existingMap[key] = item;
+      if (!existingMap[key]) existingMap[key] = [];
+      existingMap[key].push(item);
     });
     if (page.length < 1000) break;
     from += 1000;
   }
-  console.log(`${Object.keys(existingMap).length} itens existentes no banco`);
+  console.log(`${Object.values(existingMap).reduce((a, v) => a + v.length, 0)} itens existentes no banco`);
 
   const rows = records.filter(r =>
     col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim() &&
@@ -90,6 +93,8 @@ async function main() {
   console.log(`${rows.length} linhas válidas após filtro`);
 
   let updated = 0, inserted = 0, erros = 0;
+  // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
+  const sheetKeyCount = {};
 
   for (const r of rows) {
     try {
@@ -127,7 +132,11 @@ async function main() {
                    : 'Comprado';
 
       const key = `${ceg}|${nomeItem}|${nome}`.toLowerCase();
-      const existingItem = existingMap[key];
+      sheetKeyCount[key] = (sheetKeyCount[key] || 0) + 1;
+      const occIdx = sheetKeyCount[key] - 1; // 0 = primeira ocorrência
+
+      const existingArr = existingMap[key] || [];
+      const existingItem = existingArr[occIdx]; // pega o item correspondente por ordem
 
       if (existingItem) {
         const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
