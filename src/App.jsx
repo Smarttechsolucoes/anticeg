@@ -205,9 +205,10 @@ function CegModal({ ceg, onClose }) {
   );
 }
 
-function CegDetailView({ ceg, onVoltar, guest }) {
+function CegDetailView({ ceg, onVoltar, guest, user }) {
   const [itens, setItens] = useState(null);
   const [openDrawer, setOpenDrawer] = useState(null);
+  const [reportItem, setReportItem] = useState(null);
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
@@ -326,6 +327,7 @@ function CegDetailView({ ceg, onVoltar, guest }) {
         </div>
       )}
 
+      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
     </div>
   );
 }
@@ -357,7 +359,7 @@ function CegTab({ user, itens }) {
     })();
   }, []);
 
-  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} guest={guest} />;
+  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} guest={guest} user={user} />;
 
   const cegMap = {};
   (allItens || []).forEach(item => {
@@ -1345,7 +1347,6 @@ function PushAdminCard({ p, onDesativar }) {
 
 function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
-  const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [adminMainTab, setAdminMainTab] = useState("geral");
@@ -1359,8 +1360,6 @@ function AdminTab() {
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
-    supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
-      .then(({ data }) => { if (data) setPerfilPushAdmin(data.value !== "false"); });
     supabase.from("reports").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setReports(data); });
     supabase.from("pushes").select("*").order("created_at", { ascending: false })
@@ -1416,11 +1415,6 @@ function AdminTab() {
     const novo = !manutencaoAdmin;
     await supabase.from("config").update({ value: String(novo) }).eq("key", "manutencao");
     setManutencaoAdmin(novo);
-  }
-  async function togglePerfilPush() {
-    const novo = !perfilPushAdmin;
-    await supabase.from("config").upsert({ key: "perfil_push_ativo", value: String(novo) }, { onConflict: "key" });
-    setPerfilPushAdmin(novo);
   }
 
   return (
@@ -1839,48 +1833,6 @@ function TutorialModal({ onClose }) {
           )}
         </div>
         <button className="login-skip" style={{ marginTop: 12 }} onClick={fechar}>Não mostrar novamente</button>
-      </div>
-    </div>
-  );
-}
-
-function TutorialTab() {
-  return (
-    <div className="main">
-      <div className="page-header">
-        <div>
-          <div className="page-eyebrow">anticeg · guia de uso</div>
-          <div className="page-title">TUTO<span>RIAL</span></div>
-        </div>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {TUTORIAL_STEPS.map((s, i) => (
-          <div key={i} style={{
-            background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.08)",
-            borderRadius: 10, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start"
-          }}>
-            <div style={{
-              minWidth: 40, height: 40, borderRadius: 8, background: "rgba(255,90,31,.12)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, color: "var(--laranja)", fontFamily: "'DM Mono', monospace", fontWeight: 700
-            }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 4, letterSpacing: 0.3 }}>{s.title}</div>
-              <div style={{ fontSize: 12, color: "rgba(245,240,232,.6)", lineHeight: 1.7 }}>{s.text}</div>
-            </div>
-          </div>
-        ))}
-        <div style={{
-          background: "rgba(255,90,31,.07)", border: "1px solid rgba(255,90,31,.2)",
-          borderRadius: 10, padding: "18px 20px", textAlign: "center"
-        }}>
-          <div style={{ fontSize: 12, color: "rgba(245,240,232,.5)", marginBottom: 8 }}>Ficou com dúvidas?</div>
-          <a href={`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent("Oi Nanda! Tenho uma dúvida sobre o portal ANTICEG.")}`}
-            target="_blank" rel="noopener noreferrer"
-            style={{ color: "var(--verde)", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-            💬 Falar com a Nanda no WhatsApp
-          </a>
-        </div>
       </div>
     </div>
   );
