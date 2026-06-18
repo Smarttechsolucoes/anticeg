@@ -1348,10 +1348,13 @@ function AdminTab() {
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
+  const [adminMainTab, setAdminMainTab] = useState("geral");
   const [pushes, setPushes] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [novoPush, setNovoPush] = useState("");
   const [sendingPush, setSendingPush] = useState(false);
+  const [pendentesData, setPendentesData] = useState([]);
+  const [joinersData, setJoinersData] = useState([]);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -1364,6 +1367,22 @@ function AdminTab() {
       .then(({ data }) => { if (data) setPushes(data); });
     supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setFeedbacks(data); });
+    // Pagamentos pendentes
+    (async () => {
+      let all = [], from = 0;
+      while (true) {
+        const { data } = await supabase.from("masterlist")
+          .select("cog, nome, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf")
+          .range(from, from + 999);
+        if (!data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setPendentesData(all);
+      const { data: jData } = await supabase.from("joiners").select("cog, nome, bloqueado").order("nome");
+      setJoinersData(jData || []);
+    })();
   }, []);
 
   async function enviarPush() {
@@ -1408,6 +1427,24 @@ function AdminTab() {
     <div className="admin-wrap">
       <h2 className="admin-title">⚙ Admin</h2>
 
+      <div style={{ display:"flex", gap:8, marginBottom:24 }}>
+        {[
+          { id:"geral",      label:"Geral" },
+          { id:"pagamentos", label:"Pagamentos" },
+          { id:"blocklist",  label:"Blocklist" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
+            background: adminMainTab === t.id ? "var(--laranja)" : "transparent",
+            color:      adminMainTab === t.id ? "#111" : "rgba(245,240,232,.5)",
+            border:    `1px solid ${adminMainTab === t.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
+            borderRadius:6, padding:"6px 16px", fontSize:11,
+            fontFamily:"'DM Mono',monospace", fontWeight: adminMainTab === t.id ? 700 : 400,
+            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase"
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {adminMainTab === "geral" && <>
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modo Manutenção</div>
@@ -1568,10 +1605,106 @@ function AdminTab() {
           </div>
         ))}
       </div>
+      </>}
+
+      {adminMainTab === "pagamentos" && <AdminPagamentos data={pendentesData} />}
+      {adminMainTab === "blocklist"  && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
     </div>
   );
 }
 
+function AdminPagamentos({ data }) {
+  const byJoiner = {};
+  data.forEach(item => {
+    const cog = item.cog || "—";
+    if (!byJoiner[cog]) byJoiner[cog] = { nome: item.nome || cog, cog, itens: [] };
+    const pend = (item.pago_item === false ? Number(item.valor_item||0) : 0)
+               + (item.pago_frete === false ? Number(item.frete_inter||0) : 0)
+               + (item.pago_rf === false ? Number(item.taxa_rf||0) : 0);
+    if (pend > 0) byJoiner[cog].itens.push({ ...item, pend });
+  });
+  const lista = Object.values(byJoiner).filter(j => j.itens.length > 0)
+    .sort((a, b) => b.itens.reduce((s,i)=>s+i.pend,0) - a.itens.reduce((s,i)=>s+i.pend,0));
+
+  if (lista.length === 0) return <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum pagamento pendente.</div>;
+
+  return (
+    <div>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", marginBottom:16 }}>{lista.length} joiners com pagamentos em aberto</div>
+      {lista.map(j => {
+        const total = j.itens.reduce((s,i) => s+i.pend, 0);
+        return (
+          <div key={j.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, marginBottom:8, overflow:"hidden" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px" }}>
+              <div style={{ flex:1 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{j.nome}</span>
+                <span className="cog-tip" data-nome={j.nome} style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>@{j.cog}</span>
+              </div>
+              <span style={{ fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(total)}</span>
+              <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{j.itens.length} item{j.itens.length>1?"s":""}</span>
+            </div>
+            <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
+              {j.itens.map((item, idx) => (
+                <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"3px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
+                  <span style={{ flex:1 }}>{item.nome_do_item}</span>
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{item.ceg}</span>
+                  <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AdminBlocklist({ data, joiners, onUpdate }) {
+  const pendByJoiner = {};
+  data.forEach(item => {
+    const cog = item.cog || "—";
+    if (!pendByJoiner[cog]) pendByJoiner[cog] = 0;
+    if (item.pago_item === false) pendByJoiner[cog]++;
+    if (item.pago_frete === false) pendByJoiner[cog]++;
+    if (item.pago_rf === false) pendByJoiner[cog]++;
+  });
+
+  async function toggleBloqueado(cog, atual) {
+    await supabase.from("joiners").update({ bloqueado: !atual }).eq("cog", cog);
+    onUpdate(prev => prev.map(j => j.cog === cog ? { ...j, bloqueado: !atual } : j));
+  }
+
+  const lista = joiners.map(j => ({ ...j, pendentes: pendByJoiner[j.cog] || 0 }))
+    .filter(j => j.bloqueado || j.pendentes >= 3)
+    .sort((a, b) => (b.bloqueado ? 1 : 0) - (a.bloqueado ? 1 : 0) || b.pendentes - a.pendentes);
+
+  return (
+    <div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16, lineHeight:1.6 }}>
+        Joiners bloqueados ou com 3+ pagamentos pendentes aparecem aqui automaticamente.
+      </div>
+      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum joiner na blocklist.</div>}
+      {lista.map(j => (
+        <div key={j.cog} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"var(--card-bg)", border:`1px solid ${j.bloqueado ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10, marginBottom:8 }}>
+          <div style={{ flex:1 }}>
+            <span style={{ fontSize:13, fontWeight:600, color: j.bloqueado ? "var(--laranja)" : "var(--offwhite)" }}>{j.nome || j.cog}</span>
+            <span className="cog-tip" data-nome={j.nome||j.cog} style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>@{j.cog}</span>
+            {j.pendentes > 0 && <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>{j.pendentes} pgto{j.pendentes>1?"s":""} pendente{j.pendentes>1?"s":""}</span>}
+          </div>
+          <button onClick={() => toggleBloqueado(j.cog, j.bloqueado)} style={{
+            background: j.bloqueado ? "rgba(255,90,31,.12)" : "rgba(245,240,232,.05)",
+            border: `1px solid ${j.bloqueado ? "rgba(255,90,31,.35)" : "rgba(245,240,232,.12)"}`,
+            color: j.bloqueado ? "var(--laranja)" : "rgba(245,240,232,.35)",
+            borderRadius:6, padding:"5px 14px", fontSize:11,
+            fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer"
+          }}>
+            {j.bloqueado ? "BLOQUEADO" : "BLOQUEAR"}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const TUTORIAL_STEPS = [
   {
