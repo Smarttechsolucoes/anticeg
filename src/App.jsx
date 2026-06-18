@@ -1105,6 +1105,30 @@ function RegrasTab() {
   );
 }
 
+function PushBanner({ push, offset, onOk, onX }) {
+  return (
+    <div style={{
+      position: "fixed", bottom: 24 + offset * 88, left: "50%", transform: "translateX(-50%)",
+      zIndex: 901, width: "calc(100% - 48px)", maxWidth: 520,
+      background: "#1a1a1a", border: "1px solid rgba(201,168,240,.3)", borderRadius: 12,
+      padding: "16px 20px", boxShadow: "0 8px 32px rgba(0,0,0,.6)"
+    }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <span style={{ fontSize: 18 }}>📢</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 12, color: "rgba(245,240,232,.75)", lineHeight: 1.6 }}>{push.message}</div>
+          <div style={{ marginTop: 10 }}>
+            <button onClick={onOk} style={{ background: "rgba(201,168,240,.15)", border: "1px solid rgba(201,168,240,.3)", color: "#C9A8F0", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
+              OK, entendi ✓
+            </button>
+          </div>
+        </div>
+        <button onClick={onX} style={{ background: "none", border: "none", color: "rgba(245,240,232,.25)", fontSize: 16, cursor: "pointer", padding: 0, lineHeight: 1 }}>✕</button>
+      </div>
+    </div>
+  );
+}
+
 function NotifResolvido({ notif, user, onDismiss }) {
   const [reenviar, setReenviar] = useState(false);
   const [reportItem, setReportItem] = useState(null);
@@ -1149,6 +1173,9 @@ function AdminTab() {
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
+  const [pushes, setPushes] = useState([]);
+  const [novoPush, setNovoPush] = useState("");
+  const [sendingPush, setSendingPush] = useState(false);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -1157,7 +1184,22 @@ function AdminTab() {
       .then(({ data }) => { if (data) setPerfilPushAdmin(data.value !== "false"); });
     supabase.from("reports").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setReports(data); });
+    supabase.from("pushes").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setPushes(data); });
   }, []);
+
+  async function enviarPush() {
+    if (!novoPush.trim()) return;
+    setSendingPush(true);
+    const { data } = await supabase.from("pushes").insert([{ message: novoPush.trim() }]).select().single();
+    if (data) setPushes(p => [data, ...p]);
+    setNovoPush("");
+    setSendingPush(false);
+  }
+  async function desativarPush(id) {
+    await supabase.from("pushes").update({ active: false }).eq("id", id);
+    setPushes(p => p.map(x => x.id === id ? { ...x, active: false } : x));
+  }
 
   async function marcarResolvido(rep) {
     await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
@@ -1232,6 +1274,34 @@ function AdminTab() {
         }}>
           TESTAR →
         </button>
+      </div>
+
+      <div style={{ marginTop: 28, marginBottom: 28 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 12 }}>Avisos / Push para joiners</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <input
+            value={novoPush} onChange={e => setNovoPush(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && enviarPush()}
+            placeholder="Ex: Atenção! Prazo de pagamento amanhã..."
+            style={{ flex: 1, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "10px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }}
+          />
+          <button onClick={enviarPush} disabled={sendingPush || !novoPush.trim()} style={{ background: "var(--laranja)", color: "#000", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 12, fontFamily: "'DM Mono',monospace", fontWeight: 700, cursor: "pointer", opacity: novoPush.trim() ? 1 : 0.4 }}>
+            {sendingPush ? "..." : "Enviar →"}
+          </button>
+        </div>
+        {pushes.length === 0 && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)" }}>Nenhum aviso enviado ainda.</div>}
+        {pushes.map(p => (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--card-bg)", border: `1px solid ${p.active ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius: 8, marginBottom: 6, opacity: p.active ? 1 : 0.45 }}>
+            <div style={{ flex: 1, fontSize: 12, color: p.active ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>{p.message}</div>
+            <div style={{ fontSize: 10, color: "rgba(245,240,232,.25)", whiteSpace: "nowrap" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</div>
+            {p.active && (
+              <button onClick={() => desativarPush(p.id)} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.35)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
+                desativar
+              </button>
+            )}
+            {!p.active && <span style={{ fontSize: 10, color: "rgba(245,240,232,.25)" }}>desativado</span>}
+          </div>
+        ))}
       </div>
 
       <div style={{ marginTop: 28 }}>
@@ -1521,6 +1591,7 @@ export default function App() {
   const [tab, setTab] = useState("masterlist");
   const [showTutorial, setShowTutorial] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
+  const [pushAtivos, setPushAtivos] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [manutencao, setManutencao] = useState(false);
   const [bypassManutencao, setBypassManutencao] = useState(
@@ -1583,6 +1654,13 @@ export default function App() {
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
       if (notifs?.length > 0) setNotificacoes(notifs);
+
+      const { data: allPushes } = await supabase.from("pushes").select("*").eq("active", true).order("created_at", { ascending: false });
+      if (allPushes?.length > 0) {
+        const { data: lidos } = await supabase.from("push_reads").select("push_id").eq("joiner_cog", u.cog);
+        const lidosIds = new Set((lidos || []).map(r => r.push_id));
+        setPushAtivos(allPushes.filter(p => !lidosIds.has(p.id)));
+      }
     }
   }
 
@@ -1665,6 +1743,19 @@ export default function App() {
           </div>
         </div>
       )}
+      {pushAtivos.map((p, i) => (
+        <PushBanner
+          key={p.id}
+          push={p}
+          offset={i}
+          user={user}
+          onOk={async () => {
+            await supabase.from("push_reads").insert([{ push_id: p.id, joiner_cog: user.cog }]);
+            setPushAtivos(prev => prev.filter(x => x.id !== p.id));
+          }}
+          onX={() => setPushAtivos(prev => prev.filter(x => x.id !== p.id))}
+        />
+      ))}
       {notificacoes.map(n => (
         <NotifResolvido
           key={n.id}
