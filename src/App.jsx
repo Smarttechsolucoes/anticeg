@@ -766,11 +766,13 @@ function MasterlistTab({ user, itens, onLogin }) {
                         <ProgressMini activeIdx={ai} />
                       </div>
                     </td>
-                    <td>
-                      {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
-                      <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
-                        <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                        <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
+                    <td style={{ maxWidth: 220 }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {item.info_adicionais && <div className="item-detail" style={{ whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.5 }}>{item.info_adicionais}</div>}
+                        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                          <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                          <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
+                        </div>
                       </div>
                     </td>
                   </tr>
