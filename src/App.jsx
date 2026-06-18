@@ -620,6 +620,7 @@ function ReportModal({ user, item, onClose }) {
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
+  const [statusFiltro, setStatusFiltro] = useState("tudo");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
@@ -645,6 +646,8 @@ function MasterlistTab({ user, itens, onLogin }) {
 
   let filtered = [...itens];
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
+  if (statusFiltro === "finalizados") filtered = filtered.filter(i => i.status === "Enviado Nacional");
+  if (statusFiltro === "andamento")   filtered = filtered.filter(i => i.status !== "Enviado Nacional");
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
   const tPend  = filtered.reduce((a,b) =>
@@ -707,6 +710,21 @@ function MasterlistTab({ user, itens, onLogin }) {
 
       <div className="filters-bar">
         <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
+        <div style={{ display: "flex", gap: 6 }}>
+          {[
+            { id: "tudo",        label: "Tudo" },
+            { id: "andamento",   label: "Em andamento" },
+            { id: "finalizados", label: "Finalizados" },
+          ].map(f => (
+            <button key={f.id} onClick={() => setStatusFiltro(f.id)} style={{
+              background: statusFiltro === f.id ? "var(--laranja)" : "transparent",
+              color:      statusFiltro === f.id ? "#111" : "rgba(245,240,232,.6)",
+              border:    `1px solid ${statusFiltro === f.id ? "var(--laranja)" : "rgba(245,240,232,.2)"}`,
+              borderRadius: 6, padding: "5px 12px", fontSize: 11,
+              fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap"
+            }}>{f.label}</button>
+          ))}
+        </div>
       </div>
 
       <div className="table-wrap">
