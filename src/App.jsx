@@ -1193,6 +1193,51 @@ function NotifResolvido({ notif, user, onDismiss }) {
   );
 }
 
+function PushAdminCard({ p, onDesativar }) {
+  const [aberto, setAberto] = useState(false);
+  const [leituras, setLeituras] = useState(null);
+
+  async function verLeituras() {
+    if (leituras) { setAberto(a => !a); return; }
+    const { data } = await supabase.from("push_reads").select("joiner_cog, created_at").eq("push_id", p.id).order("created_at", { ascending: false });
+    setLeituras(data || []);
+    setAberto(true);
+  }
+
+  return (
+    <div style={{ background: "var(--card-bg)", border: `1px solid ${p.active ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius: 8, marginBottom: 6, opacity: p.active ? 1 : 0.5 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+        <div style={{ flex: 1, fontSize: 12, color: p.active ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>{p.message}</div>
+        <div style={{ fontSize: 10, color: "rgba(245,240,232,.25)", whiteSpace: "nowrap" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</div>
+        <button onClick={verLeituras} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.35)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
+          {aberto ? "▴ ocultar" : "▾ quem viu"}
+        </button>
+        {p.active
+          ? <button onClick={onDesativar} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.3)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>desativar</button>
+          : <span style={{ fontSize: 10, color: "rgba(245,240,232,.2)" }}>desativado</span>
+        }
+      </div>
+      {aberto && (
+        <div style={{ borderTop: "1px solid rgba(245,240,232,.06)", padding: "10px 14px" }}>
+          {leituras?.length === 0
+            ? <div style={{ fontSize: 11, color: "rgba(245,240,232,.3)" }}>Nenhum joiner confirmou leitura ainda.</div>
+            : <>
+                <div style={{ fontSize: 10, color: "rgba(245,240,232,.3)", marginBottom: 8, letterSpacing: ".08em", textTransform: "uppercase" }}>{leituras?.length} joiner{leituras?.length > 1 ? "s" : ""} viram</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {leituras?.map(l => (
+                    <span key={l.joiner_cog} style={{ fontSize: 10, background: "rgba(201,168,240,.08)", border: "1px solid rgba(201,168,240,.15)", borderRadius: 4, padding: "2px 8px", color: "rgba(245,240,232,.5)" }}>
+                      @{l.joiner_cog}
+                    </span>
+                  ))}
+                </div>
+              </>
+          }
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
@@ -1315,18 +1360,7 @@ function AdminTab() {
           </button>
         </div>
         {pushes.length === 0 && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)" }}>Nenhum aviso enviado ainda.</div>}
-        {pushes.map(p => (
-          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--card-bg)", border: `1px solid ${p.active ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius: 8, marginBottom: 6, opacity: p.active ? 1 : 0.45 }}>
-            <div style={{ flex: 1, fontSize: 12, color: p.active ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>{p.message}</div>
-            <div style={{ fontSize: 10, color: "rgba(245,240,232,.25)", whiteSpace: "nowrap" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</div>
-            {p.active && (
-              <button onClick={() => desativarPush(p.id)} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.35)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
-                desativar
-              </button>
-            )}
-            {!p.active && <span style={{ fontSize: 10, color: "rgba(245,240,232,.25)" }}>desativado</span>}
-          </div>
-        ))}
+        {pushes.map(p => <PushAdminCard key={p.id} p={p} onDesativar={() => desativarPush(p.id)} />)}
       </div>
 
       <div style={{ marginTop: 28 }}>
