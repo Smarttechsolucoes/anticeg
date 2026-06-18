@@ -1130,25 +1130,30 @@ function RegrasTab() {
   );
 }
 
-function PushBanner({ push, offset, onOk, onX }) {
+function PushBanner({ push, onOk, onX }) {
   return (
     <div style={{
-      position: "fixed", bottom: 24 + offset * 88, left: "50%", transform: "translateX(-50%)",
-      zIndex: 901, width: "calc(100% - 48px)", maxWidth: 520,
-      background: "#1a1a1a", border: "1px solid rgba(201,168,240,.3)", borderRadius: 12,
-      padding: "16px 20px", boxShadow: "0 8px 32px rgba(0,0,0,.6)"
+      position: "fixed", inset: 0, zIndex: 950,
+      background: "rgba(0,0,0,.88)", backdropFilter: "blur(6px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 24
     }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-        <span style={{ fontSize: 18 }}>📢</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, color: "rgba(245,240,232,.75)", lineHeight: 1.6 }}>{push.message}</div>
-          <div style={{ marginTop: 10 }}>
-            <button onClick={onOk} style={{ background: "rgba(201,168,240,.15)", border: "1px solid rgba(201,168,240,.3)", color: "#C9A8F0", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>
-              OK, entendi ✓
-            </button>
-          </div>
+      <div style={{
+        background: "#111", border: "1px solid rgba(201,168,240,.25)", borderRadius: 16,
+        width: "100%", maxWidth: 460, padding: 32, boxShadow: "0 24px 64px rgba(0,0,0,.8)",
+        display: "flex", flexDirection: "column", gap: 20
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <span style={{ fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: "#C9A8F0", fontFamily: "'DM Mono',monospace" }}>📢 aviso</span>
+          <button onClick={onX} style={{ background: "none", border: "none", color: "rgba(245,240,232,.25)", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>✕</button>
         </div>
-        <button onClick={onX} style={{ background: "none", border: "none", color: "rgba(245,240,232,.25)", fontSize: 16, cursor: "pointer", padding: 0, lineHeight: 1 }}>✕</button>
+        <div style={{ fontSize: 14, color: "var(--offwhite)", lineHeight: 1.7 }}>{push.message}</div>
+        <button onClick={onOk} style={{
+          background: "#C9A8F0", color: "#111", border: "none", borderRadius: 8,
+          padding: "12px", fontSize: 13, fontFamily: "'DM Mono',monospace",
+          fontWeight: 700, cursor: "pointer", letterSpacing: ".05em"
+        }}>
+          OK, ENTENDI ✓
+        </button>
       </div>
     </div>
   );
