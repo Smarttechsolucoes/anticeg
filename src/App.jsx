@@ -921,10 +921,6 @@ function PerfilTab({ user, onUpdate }) {
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
   const [email, setEmail] = useState(user.email || "");
-  // senha
-  const [senhaAtual, setSenhaAtual] = useState("");
-  const [novaSenha, setNovaSenha] = useState("");
-  const [confirmarSenha, setConfirmarSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -967,16 +963,7 @@ function PerfilTab({ user, onUpdate }) {
   async function handleSalvar() {
     setLoading(true); setError(""); setSuccess("");
 
-    if (novaSenha) {
-      if (novaSenha.length < 6) { setError("Nova senha deve ter pelo menos 6 caracteres."); setLoading(false); return; }
-      if (novaSenha !== confirmarSenha) { setError("As senhas não coincidem."); setLoading(false); return; }
-      if (user.cog && senhaAtual !== user.senha) { setError("Senha atual incorreta."); setLoading(false); return; }
-    }
-
-    const updates = {
-      nome, twitter, whatsapp, email,
-      ...(novaSenha ? { senha: novaSenha } : {})
-    };
+    const updates = { nome, twitter, whatsapp, email };
 
     const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
     if (err) { setError("Erro ao salvar."); setLoading(false); return; }
@@ -985,7 +972,6 @@ function PerfilTab({ user, onUpdate }) {
     localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
     onUpdate(updatedUser);
     setSuccess("Perfil atualizado com sucesso!");
-    setSenhaAtual(""); setNovaSenha(""); setConfirmarSenha("");
     setLoading(false);
   }
 
@@ -1034,10 +1020,6 @@ function PerfilTab({ user, onUpdate }) {
           <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
           <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
           <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-          {sectionTitle("⋆ Senha")}
-          <div><label className="login-label">Senha atual</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} /></div>
-          <div><label className="login-label">Nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="mínimo 6 caracteres" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} /></div>
-          <div><label className="login-label">Confirmar nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} /></div>
           {error && <div className="login-error">{error}</div>}
           {success && <div style={{ fontSize: "var(--fs-xs)", color: "var(--verde)", padding: "8px 12px", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 4 }}>{success}</div>}
           <button className="login-btn" onClick={handleSalvar} disabled={loading} style={{ marginTop: 8 }}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
