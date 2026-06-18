@@ -187,8 +187,8 @@ td { padding:10px; vertical-align:middle; }
 .ev-taxa     { background:rgba(186,255,57,.1); color:var(--verde); }
 
 /* CEG button */
-.ceg-btn { background:none; border:none; color:var(--laranja); font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid rgba(255,92,26,.25); transition:all .15s; letter-spacing:.5px; }
-.ceg-btn:hover { background:rgba(255,92,26,.12); border-color:var(--laranja); }
+.ceg-btn { background:none; color:rgba(245,240,232,.45); font-family:'DM Mono',monospace; font-size:var(--fs-xs); font-weight:600; cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid rgba(245,240,232,.12); transition:all .15s; letter-spacing:.5px; }
+.ceg-btn:hover { background:rgba(245,240,232,.06); border-color:rgba(245,240,232,.25); color:rgba(245,240,232,.75); }
 
 /* CEG Modal */
 .ceg-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:500; display:flex; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(4px); }
