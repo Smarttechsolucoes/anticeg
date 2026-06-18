@@ -1641,6 +1641,17 @@ export default function App() {
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
+    // Atualiza dados do joiner em cache (foto, nome, etc.)
+    const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; } })();
+    if (cached?.cog && !cached?.guest) {
+      supabase.from("joiners").select("*").eq("cog", cached.cog).single()
+        .then(({ data }) => {
+          if (data) {
+            localStorage.setItem("anticeg_user", JSON.stringify(data));
+            setUser(data);
+          }
+        });
+    }
   }, []);
 
   function handleAdminBypass() {
