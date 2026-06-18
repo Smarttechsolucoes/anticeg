@@ -1130,6 +1130,7 @@ function AdminTab() {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [perfilPushAdmin, setPerfilPushAdmin] = useState(true);
   const [reports, setReports] = useState([]);
+  const [adminTab, setAdminTab] = useState("pendentes");
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -1216,17 +1217,31 @@ function AdminTab() {
       </div>
 
       <div style={{ marginTop: 28 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
-          Reports de pagamento {reports.filter(r => r.status === "pendente").length > 0 && (
-            <span style={{ background: "var(--laranja)", color: "#000", borderRadius: 99, padding: "2px 8px", fontSize: 10, marginLeft: 8 }}>
-              {reports.filter(r => r.status === "pendente").length} novo{reports.filter(r => r.status === "pendente").length > 1 ? "s" : ""}
-            </span>
-          )}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          {["pendentes", "finalizados"].map(t => {
+            const count = t === "pendentes" ? reports.filter(r => r.status === "pendente").length : reports.filter(r => r.status === "resolvido").length;
+            const active = adminTab === t;
+            return (
+              <button key={t} onClick={() => setAdminTab(t)} style={{
+                background: active ? "rgba(245,240,232,.08)" : "none",
+                border: `1px solid ${active ? "rgba(245,240,232,.2)" : "rgba(245,240,232,.07)"}`,
+                color: active ? "var(--offwhite)" : "rgba(245,240,232,.35)",
+                borderRadius: 8, padding: "6px 16px", fontSize: 12,
+                fontFamily: "'DM Mono',monospace", fontWeight: active ? 700 : 400, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 7, textTransform: "uppercase", letterSpacing: ".08em"
+              }}>
+                {t}
+                {count > 0 && (
+                  <span style={{ background: t === "pendentes" ? "var(--laranja)" : "rgba(74,222,128,.2)", color: t === "pendentes" ? "#000" : "#4ade80", borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{count}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
-        {reports.length === 0 && (
-          <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report ainda.</div>
+        {reports.filter(r => adminTab === "pendentes" ? r.status === "pendente" : r.status === "resolvido").length === 0 && (
+          <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report {adminTab === "pendentes" ? "pendente" : "finalizado"} ainda.</div>
         )}
-        {reports.map(r => {
+        {reports.filter(r => adminTab === "pendentes" ? r.status === "pendente" : r.status === "resolvido").map(r => {
           const erroLabels = [
             r.erro_item      && "Item incorreto",
             r.erro_valor     && "Valor incorreto",
