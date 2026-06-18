@@ -1992,7 +1992,6 @@ export default function App() {
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => setTab("calendario")}>◫ Calendário</button>
         {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Regras</button>
-        <button className={`tab-btn ${tab === "tutorial" ? "active" : ""}`} onClick={() => setTab("tutorial")}>? Tutorial</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
@@ -2002,7 +2001,6 @@ export default function App() {
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "tutorial" && <TutorialTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab />}
     </div>
   );
