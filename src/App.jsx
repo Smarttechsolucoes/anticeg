@@ -1664,9 +1664,9 @@ function AdminBlocklist({ data, joiners, onUpdate }) {
   data.forEach(item => {
     const cog = item.cog || "—";
     if (!pendByJoiner[cog]) pendByJoiner[cog] = 0;
-    if (item.pago_item === false) pendByJoiner[cog]++;
-    if (item.pago_frete === false) pendByJoiner[cog]++;
-    if (item.pago_rf === false) pendByJoiner[cog]++;
+    if (item.pago_item === false && Number(item.valor_item||0) > 0) pendByJoiner[cog]++;
+    if (item.pago_frete === false && Number(item.frete_inter||0) > 0) pendByJoiner[cog]++;
+    if (item.pago_rf === false && Number(item.taxa_rf||0) > 0) pendByJoiner[cog]++;
   });
 
   async function toggleBloqueado(cog, atual) {
