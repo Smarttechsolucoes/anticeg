@@ -856,7 +856,65 @@ function MasterlistTab({ user, itens, onLogin }) {
   );
 }
 
+function FeedbackForm({ user }) {
+  const [tipo, setTipo] = useState("sugestão");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function handleEnviar() {
+    if (!message.trim()) return;
+    setLoading(true);
+    await supabase.from("feedbacks").insert([{
+      joiner_cog:  user.cog,
+      joiner_nome: user.nome || user.cog,
+      tipo,
+      message: message.trim(),
+    }]);
+    setLoading(false);
+    setSent(true);
+  }
+
+  if (sent) return (
+    <div style={{ textAlign:"center", padding:"40px 0" }}>
+      <div style={{ fontSize:32, marginBottom:12 }}>✓</div>
+      <div style={{ fontSize:14, color:"var(--offwhite)", marginBottom:8 }}>Enviado!</div>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", marginBottom:20 }}>Obrigada pelo feedback. Vou dar uma olhada.</div>
+      <button onClick={() => { setSent(false); setMessage(""); }} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Enviar outro</button>
+    </div>
+  );
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", lineHeight:1.7 }}>
+        Tem alguma sugestão de melhoria, encontrou um bug ou quer dar um feedback? Manda aqui!
+      </div>
+      <div style={{ display:"flex", gap:8 }}>
+        {["bug", "sugestão", "elogio"].map(t => (
+          <button key={t} onClick={() => setTipo(t)} style={{
+            background: tipo === t ? "rgba(201,168,240,.15)" : "transparent",
+            border: `1px solid ${tipo === t ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.15)"}`,
+            color: tipo === t ? "#C9A8F0" : "rgba(245,240,232,.4)",
+            borderRadius:6, padding:"5px 14px", fontSize:11,
+            fontFamily:"'DM Mono',monospace", cursor:"pointer", textTransform:"capitalize"
+          }}>{t}</button>
+        ))}
+      </div>
+      <textarea
+        value={message} onChange={e => setMessage(e.target.value)}
+        placeholder={tipo === "bug" ? "Descreva o que aconteceu..." : tipo === "elogio" ? "Conta o que você curtiu..." : "Qual melhoria você sugere?"}
+        rows={5}
+        style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"12px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, resize:"vertical", outline:"none", lineHeight:1.6 }}
+      />
+      <button onClick={handleEnviar} disabled={loading || !message.trim()} className="login-btn" style={{ opacity: message.trim() ? 1 : 0.4 }}>
+        {loading ? "ENVIANDO..." : "ENVIAR →"}
+      </button>
+    </div>
+  );
+}
+
 function PerfilTab({ user, onUpdate }) {
+  const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [nome, setNome] = useState(user.nome || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
@@ -942,36 +1000,71 @@ function PerfilTab({ user, onUpdate }) {
           <div className="page-title">MEU<span> PERFIL</span></div>
         </div>
       </div>
-      <div className="login-box" style={{ gap: 14 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingBottom: 16, borderBottom: "1px solid #1e1e1e" }}>
-          <div className="avatar-perfil" onClick={() => fileInputRef.current.click()} title="Clique para trocar a foto">
-            <img src={fotoUrl || bonequinha} alt="foto de perfil" />
-            <div className="avatar-perfil-overlay">{fotoLoading ? "..." : "trocar"}</div>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFotoUpload} />
-          <div style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>clique na foto para alterar</div>
-        </div>
-        {user.cog && (
-          <div>
-            <div className="login-label" style={{ marginBottom: 6 }}>COG (fixo)</div>
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "12px 16px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono', monospace", fontSize: 13 }}>{user.cog}</div>
-          </div>
-        )}
 
-        <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
-        <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
-        <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
-        <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-
-        {sectionTitle("⋆ Senha")}
-        <div><label className="login-label">Senha atual</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} /></div>
-        <div><label className="login-label">Nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="mínimo 6 caracteres" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} /></div>
-        <div><label className="login-label">Confirmar nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} /></div>
-
-        {error && <div className="login-error">{error}</div>}
-        {success && <div style={{ fontSize: "var(--fs-xs)", color: "var(--verde)", padding: "8px 12px", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 4 }}>{success}</div>}
-        <button className="login-btn" onClick={handleSalvar} disabled={loading} style={{ marginTop: 8 }}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
+      <div style={{ display:"flex", gap:6, marginBottom:24 }}>
+        {[
+          { id:"dados",     label:"Dados" },
+          { id:"tutorial",  label:"Tutorial" },
+          { id:"feedback",  label:"Feedbacks" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setPerfilSubTab(t.id)} style={{
+            background: perfilSubTab === t.id ? "var(--laranja)" : "transparent",
+            color:      perfilSubTab === t.id ? "#111" : "rgba(245,240,232,.5)",
+            border:    `1px solid ${perfilSubTab === t.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
+            borderRadius:6, padding:"6px 16px", fontSize:11,
+            fontFamily:"'DM Mono',monospace", fontWeight: perfilSubTab === t.id ? 700 : 400,
+            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase"
+          }}>{t.label}</button>
+        ))}
       </div>
+
+      {perfilSubTab === "dados" && (
+        <div className="login-box" style={{ gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingBottom: 16, borderBottom: "1px solid #1e1e1e" }}>
+            <div className="avatar-perfil" onClick={() => fileInputRef.current.click()} title="Clique para trocar a foto">
+              <img src={fotoUrl || bonequinha} alt="foto de perfil" />
+              <div className="avatar-perfil-overlay">{fotoLoading ? "..." : "trocar"}</div>
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFotoUpload} />
+            <div style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>clique na foto para alterar</div>
+          </div>
+          {user.cog && (
+            <div>
+              <div className="login-label" style={{ marginBottom: 6 }}>COG (fixo)</div>
+              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "12px 16px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono', monospace", fontSize: 13 }}>{user.cog}</div>
+            </div>
+          )}
+          <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
+          <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
+          <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
+          <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+          {sectionTitle("⋆ Senha")}
+          <div><label className="login-label">Senha atual</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} /></div>
+          <div><label className="login-label">Nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="mínimo 6 caracteres" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} /></div>
+          <div><label className="login-label">Confirmar nova senha</label><input className="login-input" style={inputStyle} type="password" placeholder="••••••" value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} /></div>
+          {error && <div className="login-error">{error}</div>}
+          {success && <div style={{ fontSize: "var(--fs-xs)", color: "var(--verde)", padding: "8px 12px", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 4 }}>{success}</div>}
+          <button className="login-btn" onClick={handleSalvar} disabled={loading} style={{ marginTop: 8 }}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
+        </div>
+      )}
+
+      {perfilSubTab === "tutorial" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          {TUTORIAL_STEPS.map((s, i) => (
+            <div key={i} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"18px 20px", display:"flex", gap:16, alignItems:"flex-start" }}>
+              <span style={{ fontSize:28, flexShrink:0 }}>{s.icon}</span>
+              <div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--offwhite)", letterSpacing:.5, marginBottom:6 }}>{s.title}</div>
+                <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", lineHeight:1.7 }}>{s.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {perfilSubTab === "feedback" && (
+        <FeedbackForm user={user} />
+      )}
     </div>
   );
 }
@@ -1256,6 +1349,7 @@ function AdminTab() {
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [pushes, setPushes] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [novoPush, setNovoPush] = useState("");
   const [sendingPush, setSendingPush] = useState(false);
 
@@ -1268,6 +1362,8 @@ function AdminTab() {
       .then(({ data }) => { if (data) setReports(data); });
     supabase.from("pushes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setPushes(data); });
+    supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setFeedbacks(data); });
   }, []);
 
   async function enviarPush() {
@@ -1437,6 +1533,40 @@ function AdminTab() {
           </div>
           );
         })}
+      </div>
+
+      <div style={{ marginTop: 36 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
+          Feedbacks & Sugestões
+          {feedbacks.filter(f => f.status === "novo").length > 0 && (
+            <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, padding:"2px 8px", fontSize:10, marginLeft:8, fontWeight:700 }}>
+              {feedbacks.filter(f => f.status === "novo").length} novo{feedbacks.filter(f => f.status === "novo").length > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        {feedbacks.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum feedback ainda.</div>}
+        {feedbacks.map(f => (
+          <div key={f.id} style={{ padding:"12px 16px", background:"var(--card-bg)", border:`1px solid ${f.status === "novo" ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, marginBottom:8, opacity: f.status === "visto" ? 0.55 : 1 }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:4, padding:"1px 7px" }}>{f.tipo}</span>
+                  <span className="cog-tip" data-nome={f.joiner_nome} style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>@{f.joiner_cog}</span>
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.2)" }}>{new Date(f.created_at).toLocaleDateString("pt-BR")}</span>
+                </div>
+                <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", lineHeight:1.6 }}>{f.message}</div>
+              </div>
+              {f.status === "novo" && (
+                <button onClick={async () => {
+                  await supabase.from("feedbacks").update({ status:"visto" }).eq("id", f.id);
+                  setFeedbacks(prev => prev.map(x => x.id === f.id ? {...x, status:"visto"} : x));
+                }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:6, padding:"4px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                  marcar visto
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
