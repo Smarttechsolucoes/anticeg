@@ -89,13 +89,28 @@ function Timeline({ activeIdx }) {
   );
 }
 
-function ValCell({ val, status }) {
+function diasAtraso(vencimento) {
+  if (!vencimento) return 0;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const venc = new Date(vencimento + "T12:00:00");
+  const diff = Math.floor((hoje - venc) / 86400000);
+  return diff > 0 ? diff : 0;
+}
+
+function ValCell({ val, status, vencimento, adminPreview }) {
   if (!Number(val)) return <span className="zero-val">—</span>;
-  const cls = isPendente(status) ? "pend" : "pago";
+  const pendente = isPendente(status);
+  const cls = pendente ? "pend" : "pago";
+  const atraso = (adminPreview && pendente) ? diasAtraso(vencimento) : 0;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span className={`td-val ${cls}`}>R${fmtBRL(val)}</span>
       <PayBadge status={status} />
+      {atraso > 0 && (
+        <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
+          ⚠ {atraso}d em atraso
+        </span>
+      )}
     </div>
   );
 }
@@ -724,9 +739,9 @@ function MasterlistTab({ user, itens, onLogin }) {
                   <tr key={item.id}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         <StatusChip status={item.status} />
