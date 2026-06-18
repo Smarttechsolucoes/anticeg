@@ -617,6 +617,29 @@ function ReportModal({ user, item, onClose }) {
   );
 }
 
+const INFO_LIMIT = 72;
+function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
+  const [expandido, setExpandido] = useState(false);
+  const longo = info && info.length > INFO_LIMIT;
+  const texto = info ? (longo && !expandido ? info.slice(0, INFO_LIMIT) + "…" : info) : null;
+  return (
+    <div style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
+      <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={onToggleDrawer} style={{ flexShrink:0, marginTop:1 }}>▾</button>
+      <button onClick={onReport} className="report-row-btn" style={{ flexShrink:0, marginTop:1 }}>⚑ Reportar erro</button>
+      {texto && (
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", lineHeight:1.5, wordBreak:"break-word" }}>
+          {texto}
+          {longo && (
+            <button onClick={() => setExpandido(e => !e)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:10, cursor:"pointer", padding:"0 0 0 4px", fontFamily:"'DM Mono',monospace" }}>
+              {expandido ? "menos" : "ler mais"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MasterlistTab({ user, itens, onLogin }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
@@ -766,14 +789,14 @@ function MasterlistTab({ user, itens, onLogin }) {
                         <ProgressMini activeIdx={ai} />
                       </div>
                     </td>
-                    <td style={{ maxWidth: 220 }}>
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {item.info_adicionais && <div className="item-detail" style={{ whiteSpace:"normal", wordBreak:"break-word", lineHeight:1.5 }}>{item.info_adicionais}</div>}
-                        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                          <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                          <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
-                        </div>
-                      </div>
+                    <td style={{ maxWidth: 260 }}>
+                      <InfoCell
+                        info={item.info_adicionais}
+                        isOpen={isOpen}
+                        itemId={item.id}
+                        onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)}
+                        onReport={() => setReportItem(item)}
+                      />
                     </td>
                   </tr>
                   {isOpen && (
