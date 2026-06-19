@@ -98,18 +98,19 @@ function diasAtraso(vencimento) {
   return diff > 0 ? diff : 0;
 }
 
-function ValCell({ val, status, vencimento, adminPreview }) {
+function ValCell({ val, status, vencimento }) {
   if (!Number(val)) return <span className="zero-val">—</span>;
   const pendente = isPendente(status);
   const cls = pendente ? "pend" : "pago";
-  const atraso = (adminPreview && pendente) ? diasAtraso(vencimento) : 0;
+  const dias = pendente ? diasAtraso(vencimento) : 0;
+  const multa = dias * 1;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span className={`td-val ${cls}`}>R${fmtBRL(val)}</span>
       <PayBadge status={status} />
-      {atraso > 0 && (
+      {dias > 0 && (
         <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
-          ⚠ {atraso}d em atraso
+          ⚠ multa R${fmtBRL(multa)} ({dias}d)
         </span>
       )}
     </div>
@@ -312,9 +313,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 </div>
                 <div className="ml-card-name">{item.nome_do_item}</div>
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
                   {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="item-detail" style={{ fontSize:11 }}>{item.info_adicionais}</div>}
@@ -680,6 +681,10 @@ function MasterlistTab({ user, itens, onLogin }) {
     a + (isPendente(b.pago_item)  ? Number(b.valor_item||0)  : 0)
       + (isPendente(b.pago_frete) ? Number(b.frete_inter||0) : 0)
       + (isPendente(b.pago_rf)    ? Number(b.taxa_rf||0)     : 0), 0);
+  const tMulta = itens.reduce((a,b) =>
+    a + (isPendente(b.pago_item)  ? diasAtraso(b.venc_item)  : 0)
+      + (isPendente(b.pago_frete) ? diasAtraso(b.venc_frete) : 0)
+      + (isPendente(b.pago_rf)    ? diasAtraso(b.venc_rf)    : 0), 0);
 
 
   const temPendente = !guest && pendV > 0;
@@ -723,6 +728,13 @@ function MasterlistTab({ user, itens, onLogin }) {
           <div className="sum-sub">pague o que está em aberto</div>
         </a>
         <SumCard label="Pendente" value={guest ? 0 : tPend} valueCls="lilas" sub="em aberto" isAmount={true} />
+        {!guest && tMulta > 0 && (
+          <div className="sum-card">
+            <div className="sum-label">Multa acumulada</div>
+            <div className="sum-value" style={{ color:"#ff6b6b" }}>R${fmtBRL(tMulta)}</div>
+            <div className="sum-sub">R$1/dia por atraso</div>
+          </div>
+        )}
         <div className="sum-card">
           <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
