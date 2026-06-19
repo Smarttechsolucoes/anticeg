@@ -1769,6 +1769,8 @@ function AdminCadastros({ confirmacoes, onUpdate }) {
 }
 
 function AdminPagamentos({ data }) {
+  const [open, setOpen] = useState(null);
+
   const byJoiner = {};
   data.forEach(item => {
     const cog = item.cog || "—";
@@ -1792,9 +1794,10 @@ function AdminPagamentos({ data }) {
       {lista.map(j => {
         const total = j.itens.reduce((s,i) => s+i.pend, 0);
         const totalMulta = j.itens.reduce((s,i) => s+i.multa, 0);
+        const isOpen = open === j.cog;
         return (
-          <div key={j.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, marginBottom:8, overflow:"hidden" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px" }}>
+          <div key={j.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, marginBottom:6, overflow:"hidden" }}>
+            <div onClick={() => setOpen(isOpen ? null : j.cog)} style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", cursor:"pointer" }}>
               <div style={{ flex:1 }}>
                 <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{j.nome}</span>
                 <span className="cog-tip" data-nome={j.nome} style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>@{j.cog}</span>
@@ -1803,18 +1806,21 @@ function AdminPagamentos({ data }) {
                 <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(total)}</div>
                 {totalMulta > 0 && <div style={{ fontSize:10, color:"#ff6b6b", fontWeight:600 }}>+R${fmtBRL(totalMulta)} multa</div>}
               </div>
-              <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{j.itens.length} item{j.itens.length>1?"s":""}</span>
+              <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:4 }}>{j.itens.length}i</span>
+              <span style={{ fontSize:12, color:"rgba(245,240,232,.3)", transition:"transform .2s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
             </div>
-            <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
-              {j.itens.map((item, idx) => (
-                <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"4px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
-                  <span style={{ flex:1 }}>{item.nome_do_item}</span>
-                  <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{item.ceg}</span>
-                  <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
-                  {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
-                </div>
-              ))}
-            </div>
+            {isOpen && (
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
+                {j.itens.map((item, idx) => (
+                  <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"4px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
+                    <span style={{ flex:1 }}>{item.nome_do_item}</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{item.ceg}</span>
+                    <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
+                    {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
