@@ -682,7 +682,7 @@ function MasterlistTab({ user, itens, onLogin }) {
       + (isPendente(b.pago_rf)    ? Number(b.taxa_rf||0)     : 0), 0);
 
 
-  const temEnvioLiberado = !guest && itens.some(i => i.status === "Envio Liberado");
+  const temEnvioLiberado = !guest && itens.some(i => i.status === "ANTIGOM");
   const temPendente = !guest && pendV > 0;
 
   return (
