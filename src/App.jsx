@@ -660,11 +660,12 @@ function MasterlistTab({ user, itens, onLogin }) {
   const cegs  = [...new Set(itens.map(i => i.ceg))].length;
 
   const today = new Date(); today.setHours(0,0,0,0);
+  const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
   const vencDates = [];
   itens.forEach(i => {
-    if (i.venc_item     && isPendente(i.pago_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + i.ceg });
-    if (i.venc_frete    && isPendente(i.pago_frete))   vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + i.ceg });
-    if (i.venc_rf       && isPendente(i.pago_rf))      vencDates.push({ d: new Date(i.venc_rf),       label: "Taxa: " + i.ceg });
+    if (i.venc_item     && isPendente(i.pago_item))     vencDates.push({ d: parseLocalDate(i.venc_item),     label: "Item: " + i.ceg });
+    if (i.venc_frete    && isPendente(i.pago_frete))   vencDates.push({ d: parseLocalDate(i.venc_frete),    label: "Frete: " + i.ceg });
+    if (i.venc_rf       && isPendente(i.pago_rf))      vencDates.push({ d: parseLocalDate(i.venc_rf),       label: "Taxa: " + i.ceg });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
