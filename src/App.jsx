@@ -848,6 +848,13 @@ function MasterlistTab({ user, itens, onLogin }) {
           const ai = getStepIdx(item.status);
           const isOpen = openDrawer === item.id;
           const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
+          const pendItem  = !guest && isPendente(item.pago_item)  && Number(item.valor_item) > 0;
+          const pendFrete = !guest && isPendente(item.pago_frete) && Number(item.frete_inter) > 0;
+          const pendRf    = !guest && isPendente(item.pago_rf)    && Number(item.taxa_rf) > 0;
+          const temPendente = pendItem || pendFrete || pendRf;
+          const totalPend = (pendItem  ? Number(item.valor_item||0)  : 0)
+                          + (pendFrete ? Number(item.frete_inter||0) : 0)
+                          + (pendRf    ? Number(item.taxa_rf||0)     : 0);
           return (
             <div key={item.id} className="ml-card" style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { border:"1.5px solid rgba(220,50,50,.55)" } : {}}>
               <div className="ml-card-top">
@@ -855,16 +862,26 @@ function MasterlistTab({ user, itens, onLogin }) {
                 <StatusChip status={item.status} />
               </div>
               <div className="ml-card-name">{item.nome_do_item}</div>
+              {temPendente && (
+                <div className="ml-card-pend-banner">
+                  <span className="ml-pend-dot" />
+                  R${fmtBRL(totalPend)} pendente
+                  <span className="ml-pend-tags">
+                    {[pendItem && "item", pendFrete && "frete", pendRf && "taxa RF"].filter(Boolean).join(" · ")}
+                  </span>
+                </div>
+              )}
               {!guest && (
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} /></div>}
-                  {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
+                  {total > 0 && <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
               )}
               <div className="ml-card-footer">
                 <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar erro</button>}
               </div>
               {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
             </div>
