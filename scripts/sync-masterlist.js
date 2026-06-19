@@ -98,7 +98,7 @@ async function main() {
 
   console.log(`${rows.length} linhas válidas após filtro`);
 
-  let updated = 0, inserted = 0, erros = 0;
+  let updated = 0, inserted = 0, erros = 0, comData = 0;
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
 
@@ -159,6 +159,7 @@ async function main() {
       const existingArr = existingMap[key] || [];
       const existingItem = existingArr[occIdx]; // pega o item correspondente por ordem
 
+      if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
         const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
         if (error) throw error;
@@ -174,7 +175,7 @@ async function main() {
     }
   }
 
-  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros`);
+  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data`);
 
   // Sincronizar joiners únicos da planilha
   const joinersMap = {};
