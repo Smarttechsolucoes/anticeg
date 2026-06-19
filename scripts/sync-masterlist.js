@@ -55,12 +55,6 @@ async function main() {
   const colMap = {};
   Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
   console.log('Colunas:', Object.keys(colMap).join(' | '));
-  // Debug: dump raw keys que contenham "item", "frete", "rf", "data"
-  const rawKeys = Object.keys(records[0]);
-  console.log('RAW keys com "data":', rawKeys.filter(k => k.toLowerCase().includes('data')).map(k => JSON.stringify(k)).join(' | '));
-  console.log('Coluna ITEM DATA:', colMap['item data'] ?? '❌ NÃO ENCONTRADA');
-  console.log('Coluna FRETE DATA:', colMap['frete data'] ?? '❌ NÃO ENCONTRADA');
-  console.log('Coluna RF DATA:', colMap['rf data'] ?? '❌ NÃO ENCONTRADA');
 
   // Carregar joiners para lookup
   const { data: joiners } = await supabase.from('joiners').select('cog, email, twitter');
@@ -98,7 +92,7 @@ async function main() {
 
   console.log(`${rows.length} linhas válidas após filtro`);
 
-  let updated = 0, inserted = 0, erros = 0, comData = 0, dataSamples = 0;
+  let updated = 0, inserted = 0, erros = 0, comData = 0;
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
 
@@ -159,16 +153,7 @@ async function main() {
       const existingArr = existingMap[key] || [];
       const existingItem = existingArr[occIdx]; // pega o item correspondente por ordem
 
-      if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) {
-        comData++;
-        if (dataSamples < 5) {
-          const rawItem  = col(r, colMap, 'ITEM DATA');
-          const rawFrete = col(r, colMap, 'FRETE DATA');
-          const rawRf    = col(r, colMap, 'RF DATA');
-          console.log(`DATA SAMPLE [${comData}]: item="${rawItem}"→"${baseFields.venc_item}" frete="${rawFrete}"→"${baseFields.venc_frete}" rf="${rawRf}"→"${baseFields.venc_rf}"`);
-          dataSamples++;
-        }
-      }
+      if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
         const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
         if (error) throw error;
