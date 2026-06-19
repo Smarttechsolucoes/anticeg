@@ -55,6 +55,9 @@ async function main() {
   const colMap = {};
   Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
   console.log('Colunas:', Object.keys(colMap).join(' | '));
+  // Debug: dump raw keys que contenham "item", "frete", "rf", "data"
+  const rawKeys = Object.keys(records[0]);
+  console.log('RAW keys com "data":', rawKeys.filter(k => k.toLowerCase().includes('data')).map(k => JSON.stringify(k)).join(' | '));
   console.log('Coluna ITEM DATA:', colMap['item data'] ?? '❌ NÃO ENCONTRADA');
   console.log('Coluna FRETE DATA:', colMap['frete data'] ?? '❌ NÃO ENCONTRADA');
   console.log('Coluna RF DATA:', colMap['rf data'] ?? '❌ NÃO ENCONTRADA');
