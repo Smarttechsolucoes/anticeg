@@ -59,6 +59,7 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .cog-tip:hover::after { opacity:1; }
 .notif-pagamento { background:rgba(255,92,26,.12); border:1px solid rgba(255,92,26,.35); border-radius:8px; padding:14px 20px; margin-bottom:24px; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:.04em; color:#FF5C1A; }
 .page-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #1a1a1a; }
+.page-header-right { text-align:right; }
 .page-eyebrow { font-size:var(--fs-xs); color:rgba(245,240,232,.35); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
 .page-eyebrow::before { content:''; display:inline-block; width:18px; height:2px; background:var(--laranja); }
 .page-title { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-3xl); line-height:1; color:var(--offwhite); }
@@ -332,6 +333,7 @@ td { padding:10px; vertical-align:middle; }
 
   /* Page header */
   .page-header { flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:20px; }
+  .page-header-right { text-align:left; width:100%; }
   .page-title { font-size:clamp(34px,11vw,56px); }
   .greeting { font-size:var(--fs-sm); }
   .greeting-sub { font-size:11px; }

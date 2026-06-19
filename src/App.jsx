@@ -709,7 +709,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           <div className="page-eyebrow">anticeg · visão completa</div>
           <div className="page-title">MASTER<span>LIST</span></div>
         </div>
-        <div style={{ textAlign: "right" }}>
+        <div className="page-header-right">
           <div className="greeting">{guest ? "Visitante" : (user.nome || user.cog)}</div>
           <div className="greeting-sub">{guest ? "visualização demo" : `${itens.length} itens · ${cegs} CEG${cegs > 1 ? "s" : ""}`}</div>
           {guest && <button className="login-btn" style={{ marginTop: 8, padding: "8px 20px", fontSize: "var(--fs-xs)" }} onClick={onLogin}>FAZER LOGIN →</button>}
