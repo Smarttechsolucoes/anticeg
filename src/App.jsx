@@ -1777,12 +1777,12 @@ function AdminPagamentos({ data, joiners }) {
   data.filter(item => cogValidos.has(item.cog)).forEach(item => {
     const cog = item.cog || "—";
     if (!byJoiner[cog]) byJoiner[cog] = { nome: item.nome || cog, cog, itens: [] };
-    const pend = (item.pago_item === false ? Number(item.valor_item||0) : 0)
-               + (item.pago_frete === false ? Number(item.frete_inter||0) : 0)
-               + (item.pago_rf === false ? Number(item.taxa_rf||0) : 0);
-    const multa = (item.pago_item === false ? diasAtraso(item.venc_item) : 0)
-                + (item.pago_frete === false ? diasAtraso(item.venc_frete) : 0)
-                + (item.pago_rf === false ? diasAtraso(item.venc_rf) : 0);
+    const pend = (isPendente(item.pago_item)  ? Number(item.valor_item||0)  : 0)
+               + (isPendente(item.pago_frete) ? Number(item.frete_inter||0) : 0)
+               + (isPendente(item.pago_rf)    ? Number(item.taxa_rf||0)     : 0);
+    const multa = (isPendente(item.pago_item)  ? diasAtraso(item.venc_item)  : 0)
+                + (isPendente(item.pago_frete) ? diasAtraso(item.venc_frete) : 0)
+                + (isPendente(item.pago_rf)    ? diasAtraso(item.venc_rf)    : 0);
     if (pend > 0) byJoiner[cog].itens.push({ ...item, pend, multa });
   });
   const lista = Object.values(byJoiner).filter(j => j.itens.length > 0)
