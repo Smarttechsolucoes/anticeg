@@ -690,7 +690,7 @@ function MasterlistTab({ user, itens, onLogin }) {
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
       {!guest && (
         <div className="notif-info">
-          ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 11/06/2026 às 13:02. Caso tenha realizado após esse horário, ainda será atualizado.
+          ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 18/06/2026 às 19:53. Caso tenha realizado após esse horário, ainda será atualizado.
         </div>
       )}
       {temEnvioLiberado && temPendente && (
