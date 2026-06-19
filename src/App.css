@@ -19,8 +19,8 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* BUG 1 FIX: #root precisa de display:flex para o login-screen centralizar corretamente */
-html, body { height: 100%; }
-#root { min-height: 100%; display: flex; flex-direction: column; }
+html, body { height: 100%; overflow-x: hidden; }
+#root { min-height: 100%; display: flex; flex-direction: column; overflow-x: hidden; }
 
 body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono', monospace; }
 
@@ -434,6 +434,65 @@ td { padding:10px; vertical-align:middle; }
 
   /* Blocklist banner */
   .blocklist-banner { padding:12px 14px; gap:10px; }
+
+  /* Esconde top tabs — substituídos pela bottom nav */
+  .tabs-bar { display:none !important; }
+
+  /* Espaço no final do conteúdo para a bottom nav */
+  .main { padding-bottom: 88px !important; }
+  .cal-main { padding-bottom: 88px; }
+  .admin-wrap { padding-bottom: 88px !important; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    background: #0d0d0d;
+    border-top: 1px solid #1e1e1e;
+    padding: 8px 4px env(safe-area-inset-bottom, 8px);
+    gap: 0;
+  }
+  .bottom-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    color: rgba(245,240,232,.35);
+    cursor: pointer;
+    padding: 6px 2px;
+    transition: color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav-btn.active { color: var(--laranja); }
+  .bottom-nav-icon { font-size: 18px; line-height: 1; }
+  .bottom-nav-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+
+  /* ── FAB pagamento ── */
+  .fab-pag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 76px;
+    right: 16px;
+    z-index: 190;
+    background: var(--laranja);
+    color: #111;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 999px;
+    box-shadow: 0 4px 20px rgba(255,92,26,.4);
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 400px) {
@@ -454,11 +513,30 @@ td { padding:10px; vertical-align:middle; }
 .ml-val-total-pago { color:var(--offwhite); }
 .ml-card-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ml-card-timeline { border-top:1px solid #1e1e1e; padding-top:10px; }
+.ml-card-info { font-size:10px; color:rgba(245,240,232,.45); line-height:1.5; background:rgba(245,240,232,.03); border-radius:4px; padding:6px 8px; border-left:2px solid rgba(245,240,232,.12); }
 
 /* Mobile pending banner */
 .ml-card-pend-banner { display:flex; align-items:center; gap:6px; background:rgba(255,92,26,.08); border:1px solid rgba(255,92,26,.2); border-radius:6px; padding:7px 10px; font-size:11px; font-weight:700; color:var(--laranja); letter-spacing:.03em; }
 .ml-pend-dot { width:6px; height:6px; border-radius:50%; background:var(--laranja); flex-shrink:0; }
 .ml-pend-tags { font-size:9px; font-weight:400; color:rgba(255,92,26,.6); letter-spacing:.05em; text-transform:uppercase; margin-left:auto; }
+
+/* ── BOTTOM NAV (mobile only) ──────────────────────────────── */
+.bottom-nav { display:none; }
+
+/* ── FAB pagamento (mobile only) ──────────────────────────── */
+.fab-pag { display:none; }
+
+/* ── CALENDAR DAY POPUP ────────────────────────────────────── */
+.cal-day-popup-overlay { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.7); display:flex; align-items:flex-end; backdrop-filter:blur(4px); }
+.cal-day-popup { background:#1a1a1a; border:1px solid rgba(245,240,232,.1); border-radius:16px 16px 0 0; width:100%; padding:20px 20px 32px; display:flex; flex-direction:column; gap:10px; max-height:70vh; overflow-y:auto; }
+.cal-day-popup-title { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--laranja); letter-spacing:1px; margin-bottom:4px; }
+.cal-day-popup-close { background:none; border:1px solid rgba(245,240,232,.15); color:rgba(245,240,232,.4); width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; align-self:flex-end; margin-top:-8px; }
+.cal-day-popup-ev { font-size:12px; padding:8px 12px; border-radius:6px; font-family:'DM Mono',monospace; }
+.cal-day-popup-ev.ev-item  { background:rgba(255,92,26,.12);  color:var(--laranja); }
+.cal-day-popup-ev.ev-frete { background:rgba(201,168,240,.12); color:var(--lilas); }
+.cal-day-popup-ev.ev-taxa  { background:rgba(186,255,57,.1);   color:var(--verde); }
+.cal-day-has-ev { cursor:pointer; }
+.cal-day-has-ev:hover { background:rgba(255,255,255,.04); }
 
 @media (max-width: 768px) {
   .table-wrap { display:none; }

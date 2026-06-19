@@ -318,9 +318,10 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
                   {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
-                {item.info_adicionais && <div className="item-detail" style={{ fontSize:11 }}>{item.info_adicionais}</div>}
+                {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
                 <div className="ml-card-footer">
                   <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                  {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>}
                 </div>
                 {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
               </div>
@@ -871,6 +872,7 @@ function MasterlistTab({ user, itens, onLogin }) {
                   </span>
                 </div>
               )}
+              {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
               {!guest && (
                 <div className="ml-card-vals">
                   {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
@@ -1098,6 +1100,7 @@ function CalendarTab({ user, itens }) {
   const [calMonth, setCalMonth] = useState(now.getMonth());
   const [calView, setCalView]   = useState("geral");
   const [allItens, setAllItens] = useState(null);
+  const [dayDetail, setDayDetail] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -1153,7 +1156,8 @@ function CalendarTab({ user, itens }) {
     const isToday = new Date(calYear, calMonth, d).getTime() === today.getTime();
     const dayEvs = events[dateStr] || [];
     cells.push(
-      <div key={d} className={`cal-day${isToday ? " today" : ""}`}>
+      <div key={d} className={`cal-day${isToday ? " today" : ""}${dayEvs.length > 0 ? " cal-day-has-ev" : ""}`}
+        onClick={() => dayEvs.length > 0 && setDayDetail({ d, month: calMonth+1, year: calYear, evs: dayEvs })}>
         <div className="cal-day-num">{d}</div>
         <div className="cal-events">
           {dayEvs.map((e, i) => <div key={i} className={`cal-event ev-${e.type}`}>{e.label}</div>)}
@@ -1185,12 +1189,28 @@ function CalendarTab({ user, itens }) {
       </div>
       <div className="cal-grid-wrap">
         <div className="cal-weekdays">
-          {["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"].map(d => (
+          {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map(d => (
             <div key={d} className="cal-weekday">{d}</div>
           ))}
         </div>
         <div className="cal-days">{cells}</div>
       </div>
+
+      {dayDetail && (
+        <div className="cal-day-popup-overlay" onClick={() => setDayDetail(null)}>
+          <div className="cal-day-popup" onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div className="cal-day-popup-title">
+                {String(dayDetail.d).padStart(2,"0")}/{String(dayDetail.month).padStart(2,"0")}/{dayDetail.year}
+              </div>
+              <button className="cal-day-popup-close" onClick={() => setDayDetail(null)}>✕</button>
+            </div>
+            {dayDetail.evs.map((e, i) => (
+              <div key={i} className={`cal-day-popup-ev ev-${e.type}`}>{e.label}</div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2000,6 +2020,27 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
+function BottomNav({ tab, setTab, isGuest, isAdmin }) {
+  const items = [
+    { id:"masterlist", icon:"☰", label:"Lista" },
+    { id:"cegs",       icon:"◈", label:"CEGs" },
+    { id:"calendario", icon:"◫", label:"Datas" },
+    ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
+    { id:"regras",     icon:"☆", label:"Links" },
+    ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
+  ];
+  return (
+    <nav className="bottom-nav">
+      {items.map(item => (
+        <button key={item.id} className={`bottom-nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>
+          <span className="bottom-nav-icon">{item.icon}</span>
+          <span className="bottom-nav-label">{item.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 function TutorialModal({ onClose }) {
   const [step, setStep] = useState(0);
   const s = TUTORIAL_STEPS[step];
@@ -2298,6 +2339,18 @@ export default function App() {
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab />}
+
+      <BottomNav tab={tab} setTab={setTab} isGuest={user.guest} isAdmin={isAdmin} />
+
+      {!user.guest && itens.some(i =>
+        (isPendente(i.pago_item) && Number(i.valor_item) > 0) ||
+        (isPendente(i.pago_frete) && Number(i.frete_inter) > 0) ||
+        (isPendente(i.pago_rf) && Number(i.taxa_rf) > 0)
+      ) && (
+        <a href="https://forms.gle/SyG2Zz8Lovreq8kn9" target="_blank" rel="noopener noreferrer" className="fab-pag">
+          💳 Pagar agora
+        </a>
+      )}
     </div>
   );
 }
