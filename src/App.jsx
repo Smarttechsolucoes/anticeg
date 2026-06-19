@@ -865,8 +865,8 @@ function MasterlistTab({ user, itens, onLogin }) {
   );
 }
 
-function FeedbackForm({ user }) {
-  const [tipo, setTipo] = useState("sugestão");
+function FeedbackForm({ user, defaultTipo }) {
+  const [tipo, setTipo] = useState(defaultTipo || "sugestão");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -924,6 +924,12 @@ function FeedbackForm({ user }) {
 
 function PerfilTab({ user, onUpdate }) {
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
+  const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
+
+  function reportarProblema() {
+    setFeedbackTipo("bug");
+    setPerfilSubTab("feedback");
+  }
   const [nome, setNome] = useState(user.nome || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
@@ -1030,6 +1036,9 @@ function PerfilTab({ user, onUpdate }) {
           {error && <div className="login-error">{error}</div>}
           {success && <div style={{ fontSize: "var(--fs-xs)", color: "var(--verde)", padding: "8px 12px", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 4 }}>{success}</div>}
           <button className="login-btn" onClick={handleSalvar} disabled={loading} style={{ marginTop: 8 }}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
+          <button onClick={reportarProblema} style={{ background:"none", border:"1px solid rgba(255,90,31,.25)", color:"rgba(255,90,31,.6)", borderRadius:6, padding:"10px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", marginTop:4, letterSpacing:".05em" }}>
+            ⚑ Reportar problema (item faltando ou erro grave)
+          </button>
         </div>
       )}
 
@@ -1048,7 +1057,7 @@ function PerfilTab({ user, onUpdate }) {
       )}
 
       {perfilSubTab === "feedback" && (
-        <FeedbackForm user={user} />
+        <FeedbackForm user={user} defaultTipo={feedbackTipo} />
       )}
     </div>
   );
