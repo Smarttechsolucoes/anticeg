@@ -1075,8 +1075,12 @@ function CalendarTab({ user, itens }) {
   }
 
   const events = {};
+  const evSeen = {};
   function addEv(dateStr, label, type) {
     if (!dateStr) return;
+    const dedupeKey = `${dateStr}|${label}`;
+    if (evSeen[dedupeKey]) return;
+    evSeen[dedupeKey] = true;
     if (!events[dateStr]) events[dateStr] = [];
     events[dateStr].push({ label, type });
   }
