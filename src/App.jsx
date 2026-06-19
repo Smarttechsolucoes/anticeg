@@ -1131,6 +1131,11 @@ function highlightMatch(text, q) {
 function RegrasTab() {
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState({});
+  const [links, setLinks] = useState([]);
+
+  useEffect(() => {
+    supabase.from("links_uteis").select("*").eq("ativo", true).order("ordem").then(({ data }) => setLinks(data || []));
+  }, []);
 
   const secoes = [
     { titulo: "⋆ Infos Gerais", color: "lilas", fixed: true, itens: ["Menores de idade não são permitidos.","Você pode convidar amigxs confiáveis, mas evitem pessoas totalmente desconhecidas.","Ao participar da CEG, você declara estar ciente e de acordo com todas as regras.","O não cumprimento das regras pode resultar em bloqueio na comunidade.","Compradores que se incomodam com pequenos defeitos estéticos (amassados leves, pressmarks, sinais de manuseio) não devem participar das CEGs."] },
@@ -1158,6 +1163,26 @@ function RegrasTab() {
   return (
     <div className="main" style={{ maxWidth: 800, margin: "0 auto" }}>
       <div className="page-header"><div><div className="page-eyebrow">anticeg · comunidade</div><div className="page-title">REGRAS DA<span> COMU</span></div></div></div>
+
+      {links.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, color: "rgba(245,240,232,.3)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>Links úteis</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {links.map(l => (
+              <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, textDecoration: "none", transition: "border-color .15s", cursor: "pointer" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(245,240,232,.2)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(245,240,232,.08)"}>
+                <span style={{ fontSize: 22, minWidth: 32, textAlign: "center" }}>{l.emoji || "🔗"}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--offwhite)" }}>{l.titulo}</div>
+                  {l.descricao && <div style={{ fontSize: 11, color: "rgba(245,240,232,.4)", marginTop: 2 }}>{l.descricao}</div>}
+                </div>
+                <span style={{ fontSize: 11, color: "rgba(245,240,232,.25)" }}>↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="regras-search-wrap">
         <span className="regras-search-icon">🔍</span>
@@ -1550,6 +1575,8 @@ function AdminTab() {
         })}
       </div>
 
+      <AdminLinks />
+
       <div style={{ marginTop: 36 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
           Feedbacks & Sugestões
@@ -1588,6 +1615,66 @@ function AdminTab() {
       {adminMainTab === "cadastros"  && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
       {adminMainTab === "pagamentos" && <AdminPagamentos data={pendentesData} />}
       {adminMainTab === "blocklist"  && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
+    </div>
+  );
+}
+
+function AdminLinks() {
+  const [links, setLinks] = useState([]);
+  const [emoji, setEmoji] = useState("🔗");
+  const [titulo, setTitulo] = useState("");
+  const [url, setUrl] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("links_uteis").select("*").order("ordem").then(({ data }) => setLinks(data || []));
+  }, []);
+
+  async function handleAdd() {
+    if (!titulo.trim() || !url.trim()) return;
+    setSaving(true);
+    const ordem = links.length;
+    const { data } = await supabase.from("links_uteis").insert([{ emoji: emoji.trim() || "🔗", titulo: titulo.trim(), url: url.trim(), descricao: descricao.trim() || null, ordem, ativo: true }]).select().single();
+    if (data) setLinks(prev => [...prev, data]);
+    setEmoji("🔗"); setTitulo(""); setUrl(""); setDescricao("");
+    setSaving(false);
+  }
+
+  async function handleDelete(id) {
+    await supabase.from("links_uteis").delete().eq("id", id);
+    setLinks(prev => prev.filter(l => l.id !== id));
+  }
+
+  async function toggleAtivo(l) {
+    await supabase.from("links_uteis").update({ ativo: !l.ativo }).eq("id", l.id);
+    setLinks(prev => prev.map(x => x.id === l.id ? { ...x, ativo: !l.ativo } : x));
+  }
+
+  return (
+    <div style={{ marginTop: 36 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>Links da Comunidade</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <input value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="🔗" style={{ width: 48, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 10px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 16, textAlign: "center", outline: "none" }} />
+        <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título do link" style={{ flex: 2, minWidth: 120, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
+        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." style={{ flex: 3, minWidth: 140, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Descrição (opcional)" style={{ flex: 1, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
+        <button onClick={handleAdd} disabled={saving || !titulo.trim() || !url.trim()} style={{ background: "var(--laranja)", color: "#000", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 12, fontFamily: "'DM Mono',monospace", fontWeight: 700, cursor: "pointer", opacity: titulo.trim() && url.trim() ? 1 : 0.4 }}>+ Adicionar</button>
+      </div>
+      {links.length === 0 && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)" }}>Nenhum link cadastrado ainda.</div>}
+      {links.map(l => (
+        <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.07)", borderRadius: 10, marginBottom: 6, opacity: l.ativo ? 1 : 0.45 }}>
+          <span style={{ fontSize: 18 }}>{l.emoji}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--offwhite)" }}>{l.titulo}</div>
+            <div style={{ fontSize: 10, color: "rgba(245,240,232,.3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.url}</div>
+          </div>
+          <button onClick={() => toggleAtivo(l)} style={{ background: "none", border: `1px solid ${l.ativo ? "rgba(74,222,128,.3)" : "rgba(245,240,232,.12)"}`, color: l.ativo ? "#4ade80" : "rgba(245,240,232,.3)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>{l.ativo ? "ON" : "OFF"}</button>
+          <button onClick={() => handleDelete(l.id)} style={{ background: "none", border: "1px solid rgba(255,90,31,.2)", color: "rgba(255,90,31,.6)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>✕</button>
+        </div>
+      ))}
     </div>
   );
 }
