@@ -786,7 +786,7 @@ function MasterlistTab({ user, itens, onLogin }) {
               const isOpen = openDrawer === item.id;
               return (
                 <>
-                  <tr key={item.id}>
+                  <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title">{item.nome_do_item}</div></td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
@@ -837,7 +837,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           const isOpen = openDrawer === item.id;
           const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
           return (
-            <div key={item.id} className="ml-card">
+            <div key={item.id} className="ml-card" style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { border:"1.5px solid rgba(220,50,50,.55)" } : {}}>
               <div className="ml-card-top">
                 <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
                 <StatusChip status={item.status} />
