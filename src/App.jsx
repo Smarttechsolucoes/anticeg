@@ -1433,7 +1433,7 @@ function AdminTab() {
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
-          .select("cog, nome, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf")
+          .select("cog, nome, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
           .range(from, from + 999);
         if (!data || data.length === 0) break;
         all = [...all, ...data];
@@ -1776,7 +1776,10 @@ function AdminPagamentos({ data }) {
     const pend = (item.pago_item === false ? Number(item.valor_item||0) : 0)
                + (item.pago_frete === false ? Number(item.frete_inter||0) : 0)
                + (item.pago_rf === false ? Number(item.taxa_rf||0) : 0);
-    if (pend > 0) byJoiner[cog].itens.push({ ...item, pend });
+    const multa = (item.pago_item === false ? diasAtraso(item.venc_item) : 0)
+                + (item.pago_frete === false ? diasAtraso(item.venc_frete) : 0)
+                + (item.pago_rf === false ? diasAtraso(item.venc_rf) : 0);
+    if (pend > 0) byJoiner[cog].itens.push({ ...item, pend, multa });
   });
   const lista = Object.values(byJoiner).filter(j => j.itens.length > 0)
     .sort((a, b) => b.itens.reduce((s,i)=>s+i.pend,0) - a.itens.reduce((s,i)=>s+i.pend,0));
@@ -1788,6 +1791,7 @@ function AdminPagamentos({ data }) {
       <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", marginBottom:16 }}>{lista.length} joiners com pagamentos em aberto</div>
       {lista.map(j => {
         const total = j.itens.reduce((s,i) => s+i.pend, 0);
+        const totalMulta = j.itens.reduce((s,i) => s+i.multa, 0);
         return (
           <div key={j.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, marginBottom:8, overflow:"hidden" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px" }}>
@@ -1795,15 +1799,19 @@ function AdminPagamentos({ data }) {
                 <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{j.nome}</span>
                 <span className="cog-tip" data-nome={j.nome} style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>@{j.cog}</span>
               </div>
-              <span style={{ fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(total)}</span>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(total)}</div>
+                {totalMulta > 0 && <div style={{ fontSize:10, color:"#ff6b6b", fontWeight:600 }}>+R${fmtBRL(totalMulta)} multa</div>}
+              </div>
               <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{j.itens.length} item{j.itens.length>1?"s":""}</span>
             </div>
             <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
               {j.itens.map((item, idx) => (
-                <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"3px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
+                <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"4px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
                   <span style={{ flex:1 }}>{item.nome_do_item}</span>
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{item.ceg}</span>
                   <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
+                  {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
                 </div>
               ))}
             </div>
