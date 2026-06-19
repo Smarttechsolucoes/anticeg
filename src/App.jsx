@@ -1065,8 +1065,26 @@ function PerfilTab({ user, onUpdate }) {
 
 function CalendarTab({ user, itens }) {
   const now = new Date();
-  const [calYear, setCalYear] = useState(now.getFullYear());
+  const [calYear, setCalYear]   = useState(now.getFullYear());
   const [calMonth, setCalMonth] = useState(now.getMonth());
+  const [calView, setCalView]   = useState("geral");
+  const [allItens, setAllItens] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      let all = [], from = 0;
+      while (true) {
+        const { data } = await supabase.from("masterlist")
+          .select("ceg, venc_item, venc_frete, venc_rf, pago_item, pago_frete, pago_rf")
+          .or("venc_item.not.is.null,venc_frete.not.is.null,venc_rf.not.is.null");
+        if (!data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setAllItens(all);
+    })();
+  }, []);
 
   function changeMonth(d) {
     let m = calMonth + d, y = calYear;
@@ -1074,6 +1092,8 @@ function CalendarTab({ user, itens }) {
     if (m < 0)  { m = 11; y--; }
     setCalMonth(m); setCalYear(y);
   }
+
+  const activeItens = calView === "meu" ? itens : (allItens || []);
 
   const events = {};
   const evSeen = {};
@@ -1085,7 +1105,7 @@ function CalendarTab({ user, itens }) {
     if (!events[dateStr]) events[dateStr] = [];
     events[dateStr].push({ label, type });
   }
-  itens.forEach(item => {
+  activeItens.forEach(item => {
     if (item.venc_item)     addEv(item.venc_item,     `${item.ceg}: Item`, "item");
     if (item.venc_frete)    addEv(item.venc_frete,    `${item.ceg}: Frete`, "frete");
     if (item.venc_rf)       addEv(item.venc_rf,       `${item.ceg}: Taxa RF`, "taxa");
@@ -1121,11 +1141,18 @@ function CalendarTab({ user, itens }) {
           <div className="cal-month-title"><span>{MONTHS[calMonth]}</span> <span className="cal-year">{calYear}</span></div>
           <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
         </div>
-        <div className="cal-legend">
-          {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"]].map(([c,l]) => (
-            <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
+        <div style={{ display:"flex", gap:6 }}>
+          {["geral","meu"].map(v => (
+            <button key={v} onClick={() => setCalView(v)} style={{ background: calView === v ? "var(--laranja)" : "transparent", color: calView === v ? "#000" : "rgba(245,240,232,.45)", border: `1px solid ${calView === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, borderRadius:6, padding:"5px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", textTransform:"uppercase" }}>
+              {v === "geral" ? "Geral" : "Meu Calendário"}
+            </button>
           ))}
         </div>
+      </div>
+      <div className="cal-legend" style={{ marginBottom:12 }}>
+        {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"]].map(([c,l]) => (
+          <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
+        ))}
       </div>
       <div className="cal-grid-wrap">
         <div className="cal-weekdays">
