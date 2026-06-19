@@ -1448,6 +1448,7 @@ function AdminTab() {
       </div>
 
       {adminMainTab === "geral" && <>
+      <AdminLinks />
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modo Manutenção</div>
@@ -1574,8 +1575,6 @@ function AdminTab() {
           );
         })}
       </div>
-
-      <AdminLinks />
 
       <div style={{ marginTop: 36 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
