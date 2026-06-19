@@ -662,10 +662,9 @@ function MasterlistTab({ user, itens, onLogin }) {
   const today = new Date(); today.setHours(0,0,0,0);
   const vencDates = [];
   itens.forEach(i => {
-    const name = (i.nome_do_item || "").split(" ")[0];
-    if (i.venc_item     && isPendente(i.pago_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + name });
-    if (i.venc_frete    && isPendente(i.pago_frete))   vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + name });
-    if (i.venc_rf       && isPendente(i.pago_rf))      vencDates.push({ d: new Date(i.venc_rf),       label: "Taxa: " + name });
+    if (i.venc_item     && isPendente(i.pago_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + i.ceg });
+    if (i.venc_frete    && isPendente(i.pago_frete))   vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + i.ceg });
+    if (i.venc_rf       && isPendente(i.pago_rf))      vencDates.push({ d: new Date(i.venc_rf),       label: "Taxa: " + i.ceg });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
@@ -1082,10 +1081,9 @@ function CalendarTab({ user, itens }) {
     events[dateStr].push({ label, type });
   }
   itens.forEach(item => {
-    const name = (item.nome_do_item || "").split(" ")[0];
-    if (item.venc_item)     addEv(item.venc_item,     `${name} (${item.ceg}): Item`, "item");
-    if (item.venc_frete)    addEv(item.venc_frete,    `${name}: Frete`, "frete");
-    if (item.venc_rf)       addEv(item.venc_rf,       `${name}: Taxa RF`, "taxa");
+    if (item.venc_item)     addEv(item.venc_item,     `${item.ceg}: Item`, "item");
+    if (item.venc_frete)    addEv(item.venc_frete,    `${item.ceg}: Frete`, "frete");
+    if (item.venc_rf)       addEv(item.venc_rf,       `${item.ceg}: Taxa RF`, "taxa");
   });
 
   const firstDay = new Date(calYear, calMonth, 1);
