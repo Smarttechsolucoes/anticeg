@@ -375,13 +375,16 @@ td { padding:10px; vertical-align:middle; }
 
   /* Calendar */
   .cal-main { padding:16px 12px; }
-  .cal-header { flex-direction:column; gap:12px; }
+  .cal-header { flex-direction:row; flex-wrap:wrap; gap:8px; align-items:center; }
+  .cal-nav { order:0; flex:1; }
+  .cal-header > div:last-child { order:1; gap:4px; }
+  .cal-header > div:last-child button { font-size:9px; padding:4px 8px; }
   .cal-weekday { font-size:8px; padding:4px 0; }
-  .cal-day { min-height:48px; padding:4px; }
-  .cal-day-num { font-size:10px; }
-  .cal-event { font-size:8px; padding:1px 3px; }
+  .cal-day { min-height:44px; padding:3px; }
+  .cal-day-num { font-size:9px; }
+  .cal-event { font-size:7px; padding:1px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cal-legend { flex-wrap:wrap; gap:6px; }
-  .cal-month-title { font-size:18px; }
+  .cal-month-title { font-size:16px; }
 
   /* Admin */
   .admin-wrap { padding:20px 14px 40px; }
@@ -407,11 +410,30 @@ td { padding:10px; vertical-align:middle; }
   .filters-bar > div::-webkit-scrollbar { display:none; }
 
   /* CEG modal */
-  .ceg-modal { margin:12px; width:calc(100% - 24px); max-height:88vh; }
-  .ceg-modal-header { padding:16px; }
+  .ceg-modal { margin:8px; width:calc(100% - 16px); max-height:92vh; }
+  .ceg-modal-header { padding:14px; }
+
+  /* Perfil sub-tabs — scroll horizontal */
+  .perfil-subtabs { overflow-x:auto; flex-wrap:nowrap !important; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .perfil-subtabs::-webkit-scrollbar { display:none; }
+  .perfil-subtabs button { flex-shrink:0; white-space:nowrap; }
+
+  /* Modais genéricos — menos padding em mobile */
+  .modal-overlay, .ceg-modal-overlay { padding:12px; }
+  .modal-box { padding:20px !important; width:100% !important; max-width:100% !important; }
 
   /* Perfil */
   .login-box { gap:12px; }
+
+  /* Summary row — até 4 cards: scroll horizontal em telas muito pequenas */
+  .summary-row { grid-template-columns:1fr 1fr; }
+
+  /* Banner notif */
+  .notif-info { font-size:10px; padding:10px 14px; }
+  .notif-pagamento { font-size:11px; padding:10px 14px; }
+
+  /* Blocklist banner */
+  .blocklist-banner { padding:12px 14px; gap:10px; }
 }
 
 @media (max-width: 400px) {

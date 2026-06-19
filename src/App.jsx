@@ -1014,7 +1014,7 @@ function PerfilTab({ user, onUpdate }) {
         </div>
       </div>
 
-      <div style={{ display:"flex", gap:6, marginBottom:24 }}>
+      <div className="perfil-subtabs" style={{ display:"flex", gap:6, marginBottom:24 }}>
         {[
           { id:"dados",     label:"Dados" },
           { id:"tutorial",  label:"Tutorial" },

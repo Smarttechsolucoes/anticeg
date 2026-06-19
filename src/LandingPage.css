@@ -64,6 +64,11 @@
 
 /* ── MOBILE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Restaura cursor normal em touch */
+  .lp { cursor:auto; }
+  .lp-cursor, .lp-cursor-ring { display:none; }
+  .lp-card-btn, .lp-card-secondary, .lp-card-link, .lp-nav-links a, .lp-nav-link-btn { cursor:pointer; }
+
   .lp-nav { padding:14px 20px; }
   .lp-nav-links { display:none; }
   .lp-hamburger { display:flex; }
@@ -73,7 +78,7 @@
   .lp-hero-content { flex-direction:column; gap:32px; padding:40px 20px 48px; align-items:flex-start; }
   .lp-h1 { font-size:clamp(60px,18vw,90px); }
   .lp-hero-sub { font-size:13px; }
-  .lp-hero-card { width:100%; box-sizing:border-box; }
+  .lp-hero-card { width:100%; box-sizing:border-box; padding:24px 20px; }
 
   .lp-footer { padding:20px; flex-direction:column; align-items:flex-start; gap:6px; }
 }
