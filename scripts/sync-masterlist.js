@@ -55,6 +55,9 @@ async function main() {
   const colMap = {};
   Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
   console.log('Colunas:', Object.keys(colMap).join(' | '));
+  console.log('Coluna ITEM DATA:', colMap['item data'] ?? '❌ NÃO ENCONTRADA');
+  console.log('Coluna FRETE DATA:', colMap['frete data'] ?? '❌ NÃO ENCONTRADA');
+  console.log('Coluna RF DATA:', colMap['rf data'] ?? '❌ NÃO ENCONTRADA');
 
   // Carregar joiners para lookup
   const { data: joiners } = await supabase.from('joiners').select('cog, email, twitter');

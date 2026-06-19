@@ -665,7 +665,7 @@ function MasterlistTab({ user, itens, onLogin }) {
     const name = (i.nome_do_item || "").split(" ")[0];
     if (i.venc_item     && isPendente(i.pago_item))     vencDates.push({ d: new Date(i.venc_item),     label: "Item: " + name });
     if (i.venc_frete    && isPendente(i.pago_frete))   vencDates.push({ d: new Date(i.venc_frete),    label: "Frete: " + name });
-    if (i.venc_taxa     && isPendente(i.pago_rf))      vencDates.push({ d: new Date(i.venc_taxa),     label: "Taxa: " + name });
+    if (i.venc_rf       && isPendente(i.pago_rf))      vencDates.push({ d: new Date(i.venc_rf),       label: "Taxa: " + name });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
@@ -1085,7 +1085,7 @@ function CalendarTab({ user, itens }) {
     const name = (item.nome_do_item || "").split(" ")[0];
     if (item.venc_item)     addEv(item.venc_item,     `${name} (${item.ceg}): Item`, "item");
     if (item.venc_frete)    addEv(item.venc_frete,    `${name}: Frete`, "frete");
-    if (item.venc_taxa)     addEv(item.venc_taxa,     `${name}: Taxa`, "taxa");
+    if (item.venc_rf)       addEv(item.venc_rf,       `${name}: Taxa RF`, "taxa");
   });
 
   const firstDay = new Date(calYear, calMonth, 1);
