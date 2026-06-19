@@ -11,6 +11,7 @@ const supabase = createClient(
 
 const WHATSAPP_NUM = "5524992501917";
 const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
+const SESSION_VERSION = "2";
 function isAdminUser(user) {
   return user?.email === ADMIN_EMAIL || user?.twitter === "@nandaverseo_c" || user?.cog === "nandaverseo_c";
 }
@@ -1403,6 +1404,7 @@ function AdminTab() {
       <div style={{ display:"flex", gap:8, marginBottom:24 }}>
         {[
           { id:"geral",      label:"Geral" },
+          { id:"cadastros",  label:"Cadastros", badge: confirmacoes.length || null },
           { id:"pagamentos", label:"Pagamentos" },
           { id:"blocklist",  label:"Blocklist" },
         ].map(t => (
@@ -1412,8 +1414,11 @@ function AdminTab() {
             border:    `1px solid ${adminMainTab === t.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
             borderRadius:6, padding:"6px 16px", fontSize:11,
             fontFamily:"'DM Mono',monospace", fontWeight: adminMainTab === t.id ? 700 : 400,
-            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase"
-          }}>{t.label}</button>
+            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase", position:"relative"
+          }}>
+            {t.label}
+            {t.badge > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"var(--laranja)", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 5px", lineHeight:1.4 }}>{t.badge}</span>}
+          </button>
         ))}
       </div>
 
@@ -1545,38 +1550,6 @@ function AdminTab() {
         })}
       </div>
 
-      {confirmacoes.length > 0 && (
-        <div style={{ marginTop: 36 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
-            Confirmações de dados
-            <span style={{ background:"var(--laranja)", color:"#111", borderRadius:99, padding:"2px 8px", fontSize:10, marginLeft:8, fontWeight:700 }}>
-              {confirmacoes.length}
-            </span>
-          </div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:12 }}>Joiner alterou @ ou e-mail — atualize na planilha.</div>
-          {confirmacoes.map(c => (
-            <div key={c.id} style={{ padding:"12px 16px", background:"var(--card-bg)", border:"1px solid rgba(255,90,31,.2)", borderRadius:10, marginBottom:8 }}>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, fontWeight:600, color:"var(--offwhite)", marginBottom:6 }}>
-                    {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontWeight:400 }}>@{c.joiner_cog}</span>
-                  </div>
-                  {c.twitter_novo && <div style={{ fontSize:11, color:"rgba(245,240,232,.6)" }}>@ novo: <span style={{ color:"var(--laranja)" }}>{c.twitter_novo}</span></div>}
-                  {c.email_novo   && <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", marginTop:2 }}>e-mail: <span style={{ color:"var(--laranja)" }}>{c.email_novo}</span></div>}
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", marginTop:4 }}>{new Date(c.created_at).toLocaleDateString("pt-BR")}</div>
-                </div>
-                <button onClick={async () => {
-                  await supabase.from("confirmacoes").update({ visto: true }).eq("id", c.id);
-                  setConfirmacoes(prev => prev.filter(x => x.id !== c.id));
-                }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"4px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
-                  marcar visto
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div style={{ marginTop: 36 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
           Feedbacks & Sugestões
@@ -1612,8 +1585,42 @@ function AdminTab() {
       </div>
       </>}
 
+      {adminMainTab === "cadastros"  && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
       {adminMainTab === "pagamentos" && <AdminPagamentos data={pendentesData} />}
       {adminMainTab === "blocklist"  && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
+    </div>
+  );
+}
+
+function AdminCadastros({ confirmacoes, onUpdate }) {
+  if (confirmacoes.length === 0) return (
+    <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhuma atualização de cadastro pendente.</div>
+  );
+  return (
+    <div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16, lineHeight:1.6 }}>
+        Joiners que alteraram @ ou e-mail. Atualize na planilha e marque como visto.
+      </div>
+      {confirmacoes.map(c => (
+        <div key={c.id} style={{ padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(255,90,31,.2)", borderRadius:10, marginBottom:8 }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginBottom:6 }}>
+                {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontWeight:400 }}>@{c.joiner_cog}</span>
+              </div>
+              {c.twitter_novo && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)" }}>@ novo: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.twitter_novo}</span></div>}
+              {c.email_novo   && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)", marginTop:3 }}>e-mail: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.email_novo}</span></div>}
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", marginTop:6 }}>{new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
+            </div>
+            <button onClick={async () => {
+              await supabase.from("confirmacoes").update({ visto: true }).eq("id", c.id);
+              onUpdate(prev => prev.filter(x => x.id !== c.id));
+            }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+              marcar visto
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1781,32 +1788,27 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   function handleSkip() { onSkip(); }
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:800, background:"rgba(0,0,0,.82)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:12, width:"100%", maxWidth:420, padding:28, display:"flex", flexDirection:"column", gap:14 }}>
+    <div style={{ position:"fixed", inset:0, zIndex:800, background:"rgba(0,0,0,.88)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.1)", borderRadius:14, width:"100%", maxWidth:440, padding:30, display:"flex", flexDirection:"column", gap:14 }}>
         <div>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>
-            {isNew ? "bem-vindx" : "seus dados"}
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, lineHeight:1.1, color:"var(--offwhite)", marginBottom:8 }}>
+            CONFIRME SEUS DADOS E EVITE ERROS<br/><span style={{ color:"var(--laranja)" }}>NA SUA MASTERLIST</span>
           </div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, lineHeight:1, color:"var(--offwhite)" }}>
-            {isNew ? <>COMPLETE SEU <span style={{ color:"var(--laranja)" }}>PERFIL</span></> : <>CONFIRME SUAS <span style={{ color:"var(--laranja)" }}>INFORMAÇÕES</span></>}
-          </div>
-          <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", marginTop:8, lineHeight:1.6 }}>
-            {isNew
-              ? "Preencha seus dados com as mesmas informações que você usa para dar claim no WhatsApp. Esses dados vinculam seus pedidos ao seu cadastro."
-              : "Confira e atualize seus dados. Essas informações são usadas para vincular seus pedidos ao seu cadastro."}
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>
+            Caso algo esteja errado, corrija abaixo. Clique em <strong style={{ color:"rgba(245,240,232,.7)" }}>Tudo certo</strong> para não receber essa mensagem novamente.
           </div>
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Seu nome *</label>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Nome</label>
           <input className="login-input" type="text" placeholder="Como você aparece no grupo" value={nome} onChange={e => { setNome(e.target.value); setError(""); }} autoFocus />
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>@ para acesso <span style={{ opacity:.5, fontSize:9 }}>(twitter / x / threads / insta)</span></label>
+          <input className="login-input" type="text" placeholder="@seu_@" value={social} onChange={e => setSocial(e.target.value)} />
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>WhatsApp</label>
           <input className="login-input" type="tel" placeholder="(00) 00000-0000" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Seu @ <span style={{ opacity:.4, fontSize:9 }}>(twitter / x / threads / insta)</span></label>
-          <input className="login-input" type="text" placeholder="@seu_@" value={social} onChange={e => setSocial(e.target.value)} />
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>E-mail</label>
@@ -1814,7 +1816,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         </div>
         {error && <div className="login-error">{error}</div>}
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
-          <button className="modal-confirm-btn" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : isNew ? "SALVAR →" : "CONFIRMAR →"}</button>
+          <button className="modal-confirm-btn" onClick={handleSave} disabled={saving} style={{ flex:1 }}>{saving ? "Salvando..." : "TUDO CERTO ✓"}</button>
           <button className="modal-cancel-btn" onClick={handleSkip}>Agora não</button>
         </div>
       </div>
@@ -1868,7 +1870,14 @@ function TutorialModal({ onClose }) {
 export default function App() {
   const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; }
+    try {
+      if (localStorage.getItem("anticeg_session_v") !== SESSION_VERSION) {
+        localStorage.removeItem("anticeg_user");
+        localStorage.setItem("anticeg_session_v", SESSION_VERSION);
+        return null;
+      }
+      return JSON.parse(localStorage.getItem("anticeg_user"));
+    } catch { return null; }
   });
   const [itens, setItens] = useState([]);
   const [tab, setTab] = useState("masterlist");
