@@ -682,8 +682,14 @@ function MasterlistTab({ user, itens, onLogin }) {
       + (isPendente(b.pago_rf)    ? Number(b.taxa_rf||0)     : 0), 0);
 
 
-  const temEnvioLiberado = !guest && itens.some(i => i.status === "ANTIGOM");
   const temPendente = !guest && pendV > 0;
+  const temAntigomEmAberto = !guest && itens.some(i =>
+    i.status === "ANTIGOM" && (
+      (i.pago_item  === false && Number(i.valor_item  || 0) > 0) ||
+      (i.pago_frete === false && Number(i.frete_inter || 0) > 0) ||
+      (i.pago_rf    === false && Number(i.taxa_rf     || 0) > 0)
+    )
+  );
 
   return (
     <div className="main">
@@ -693,7 +699,7 @@ function MasterlistTab({ user, itens, onLogin }) {
           ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 18/06/2026 às 19:53. Caso tenha realizado após esse horário, ainda será atualizado.
         </div>
       )}
-      {temEnvioLiberado && temPendente && (
+      {temAntigomEmAberto && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
         </div>
