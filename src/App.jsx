@@ -1669,7 +1669,7 @@ function AdminTab() {
       </>}
 
       {adminMainTab === "cadastros"  && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
-      {adminMainTab === "pagamentos" && <AdminPagamentos data={pendentesData} />}
+      {adminMainTab === "pagamentos" && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
       {adminMainTab === "blocklist"  && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
     </div>
   );
@@ -1768,11 +1768,13 @@ function AdminCadastros({ confirmacoes, onUpdate }) {
   );
 }
 
-function AdminPagamentos({ data }) {
+function AdminPagamentos({ data, joiners }) {
   const [open, setOpen] = useState(null);
 
+  const cogValidos = new Set((joiners || []).map(j => j.cog));
+
   const byJoiner = {};
-  data.forEach(item => {
+  data.filter(item => cogValidos.has(item.cog)).forEach(item => {
     const cog = item.cog || "—";
     if (!byJoiner[cog]) byJoiner[cog] = { nome: item.nome || cog, cog, itens: [] };
     const pend = (item.pago_item === false ? Number(item.valor_item||0) : 0)
