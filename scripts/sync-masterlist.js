@@ -111,6 +111,16 @@ async function main() {
 
       const cog = byTwitter[twitter] || byEmail[email] || twitter || email.split('@')[0] || null;
 
+      const parseDate = str => {
+        if (!str || !str.trim()) return null;
+        const s = str.trim();
+        const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (brMatch) return `${brMatch[3]}-${brMatch[2].padStart(2,'0')}-${brMatch[1].padStart(2,'0')}`;
+        const isoMatch = s.match(/^\d{4}-\d{2}-\d{2}$/);
+        if (isoMatch) return s;
+        return null;
+      };
+
       const baseFields = {
         ceg, cog, nome,
         nome_do_item:    nomeItem,
@@ -121,6 +131,9 @@ async function main() {
         pago_item:  pagoItem,
         pago_frete: pagoFrete,
         pago_rf:    pagoRf,
+        venc_item:  parseDate(col(r, colMap, 'ITEM DATA')),
+        venc_frete: parseDate(col(r, colMap, 'FRETE DATA')),
+        venc_rf:    parseDate(col(r, colMap, 'RF DATA')),
       };
 
       const freteVal = parseBRL(col(r, colMap, 'PREÇO FRETE', 'FRETE INTER', 'PRECO FRETE'));
