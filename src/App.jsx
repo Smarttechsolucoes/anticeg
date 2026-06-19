@@ -1441,7 +1441,7 @@ function AdminTab() {
     <div className="admin-wrap">
       <h2 className="admin-title">⚙ Admin</h2>
 
-      <div style={{ display:"flex", gap:8, marginBottom:24 }}>
+      <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24 }}>
         {[
           { id:"geral",      label:"Geral" },
           { id:"cadastros",  label:"Cadastros", badge: confirmacoes.length || null },
@@ -1668,13 +1668,13 @@ function AdminLinks() {
   return (
     <div style={{ marginTop: 36 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>Links da Comunidade</div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <input value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="🔗" style={{ width: 48, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 10px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 16, textAlign: "center", outline: "none" }} />
+      <div className="admin-links-row1" style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <input value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="🔗" style={{ width: 48, flexShrink: 0, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 10px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 16, textAlign: "center", outline: "none" }} />
         <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título do link" style={{ flex: 2, minWidth: 120, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
         <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." style={{ flex: 3, minWidth: 140, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Descrição (opcional)" style={{ flex: 1, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
+      <div className="admin-links-row2" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Descrição (opcional)" style={{ flex: 1, minWidth: 120, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "9px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }} />
         <button onClick={handleAdd} disabled={saving || !titulo.trim() || !url.trim()} style={{ background: "var(--laranja)", color: "#000", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 12, fontFamily: "'DM Mono',monospace", fontWeight: 700, cursor: "pointer", opacity: titulo.trim() && url.trim() ? 1 : 0.4 }}>+ Adicionar</button>
       </div>
       {links.length === 0 && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)" }}>Nenhum link cadastrado ainda.</div>}

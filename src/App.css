@@ -387,6 +387,23 @@ td { padding:10px; vertical-align:middle; }
   .admin-foto-row { flex-direction:column; }
   .admin-foto-preview,.admin-foto-placeholder { width:80px; height:80px; }
 
+  /* Admin main tabs — scroll horizontal em vez de quebrar */
+  .admin-main-tabs { overflow-x:auto; flex-wrap:nowrap !important; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:4px; }
+  .admin-main-tabs::-webkit-scrollbar { display:none; }
+  .admin-main-tabs button { flex-shrink:0; }
+
+  /* AdminLinks form — empilha em mobile */
+  .admin-links-row1, .admin-links-row2 { flex-wrap:wrap; }
+  .admin-links-row1 input, .admin-links-row2 input { min-width:0; flex:1 1 100%; }
+
+  /* Topbar — esconde avatars online em telas pequenas */
+  .online-avatars { display:none; }
+
+  /* Filtros masterlist — busca ocupa linha inteira, botões quebram */
+  .filters-bar { flex-direction:column; align-items:stretch; }
+  .filters-bar > div { overflow-x:auto; display:flex; flex-wrap:nowrap; gap:5px; padding-bottom:2px; scrollbar-width:none; }
+  .filters-bar > div::-webkit-scrollbar { display:none; }
+
   /* CEG modal */
   .ceg-modal { margin:12px; width:calc(100% - 24px); max-height:88vh; }
   .ceg-modal-header { padding:16px; }
