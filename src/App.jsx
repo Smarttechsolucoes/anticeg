@@ -1332,6 +1332,7 @@ function AdminTab() {
   const [sendingPush, setSendingPush] = useState(false);
   const [pendentesData, setPendentesData] = useState([]);
   const [joinersData, setJoinersData] = useState([]);
+  const [confirmacoes, setConfirmacoes] = useState([]);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -1342,6 +1343,8 @@ function AdminTab() {
       .then(({ data }) => { if (data) setPushes(data); });
     supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setFeedbacks(data); });
+    supabase.from("confirmacoes").select("*").eq("visto", false).order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setConfirmacoes(data); });
     // Pagamentos pendentes
     (async () => {
       let all = [], from = 0;
@@ -1542,6 +1545,38 @@ function AdminTab() {
         })}
       </div>
 
+      {confirmacoes.length > 0 && (
+        <div style={{ marginTop: 36 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
+            Confirmações de dados
+            <span style={{ background:"var(--laranja)", color:"#111", borderRadius:99, padding:"2px 8px", fontSize:10, marginLeft:8, fontWeight:700 }}>
+              {confirmacoes.length}
+            </span>
+          </div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:12 }}>Joiner alterou @ ou e-mail — atualize na planilha.</div>
+          {confirmacoes.map(c => (
+            <div key={c.id} style={{ padding:"12px 16px", background:"var(--card-bg)", border:"1px solid rgba(255,90,31,.2)", borderRadius:10, marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:"var(--offwhite)", marginBottom:6 }}>
+                    {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontWeight:400 }}>@{c.joiner_cog}</span>
+                  </div>
+                  {c.twitter_novo && <div style={{ fontSize:11, color:"rgba(245,240,232,.6)" }}>@ novo: <span style={{ color:"var(--laranja)" }}>{c.twitter_novo}</span></div>}
+                  {c.email_novo   && <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", marginTop:2 }}>e-mail: <span style={{ color:"var(--laranja)" }}>{c.email_novo}</span></div>}
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", marginTop:4 }}>{new Date(c.created_at).toLocaleDateString("pt-BR")}</div>
+                </div>
+                <button onClick={async () => {
+                  await supabase.from("confirmacoes").update({ visto: true }).eq("id", c.id);
+                  setConfirmacoes(prev => prev.filter(x => x.id !== c.id));
+                }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"4px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                  marcar visto
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ marginTop: 36 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
           Feedbacks & Sugestões
@@ -1714,24 +1749,36 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   const [nome, setNome] = useState(user.nome || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
   const [social, setSocial] = useState(user.twitter || "");
+  const [email, setEmail] = useState(user.email || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSave() {
     if (!nome.trim()) { setError("Nome é obrigatório."); return; }
     setSaving(true);
-    await supabase.from("joiners").update({ nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: social.trim() || null }).eq("id", user.id);
-    const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: social.trim() || null };
+    const twitterNovo = social.trim() || null;
+    const emailNovo   = email.trim().toLowerCase() || null;
+    const twitterMudou = twitterNovo !== (user.twitter || null);
+    const emailMudou   = emailNovo   !== (user.email || null);
+    await supabase.from("joiners").update({
+      nome: nome.trim(), whatsapp: whatsapp.trim() || null,
+      twitter: twitterNovo, email: emailNovo, confirmado: true,
+    }).eq("cog", user.cog);
+    if (twitterMudou || emailMudou) {
+      await supabase.from("confirmacoes").insert([{
+        joiner_cog:   user.cog,
+        joiner_nome:  nome.trim() || user.cog,
+        twitter_novo: twitterNovo,
+        email_novo:   emailNovo,
+      }]);
+    }
+    const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: twitterNovo, email: emailNovo, confirmado: true };
     localStorage.setItem("anticeg_user", JSON.stringify(updated));
-    localStorage.setItem("anticeg_perfil_ok", user.cog);
     onSave(updated);
     setSaving(false);
   }
 
-  function handleSkip() {
-    localStorage.setItem("anticeg_perfil_ok", user.cog);
-    onSkip();
-  }
+  function handleSkip() { onSkip(); }
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex:800, background:"rgba(0,0,0,.82)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
@@ -1759,12 +1806,16 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Seu @ <span style={{ opacity:.4, fontSize:9 }}>(twitter / x / threads / insta)</span></label>
-          <input className="login-input" type="text" placeholder="@seu_@" value={social} onChange={e => setSocial(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()} />
+          <input className="login-input" type="text" placeholder="@seu_@" value={social} onChange={e => setSocial(e.target.value)} />
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>E-mail</label>
+          <input className="login-input" type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()} />
         </div>
         {error && <div className="login-error">{error}</div>}
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
           <button className="modal-confirm-btn" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : isNew ? "SALVAR →" : "CONFIRMAR →"}</button>
-          <button className="modal-cancel-btn" onClick={handleSkip}>Não mostrar novamente</button>
+          <button className="modal-cancel-btn" onClick={handleSkip}>Agora não</button>
         </div>
       </div>
     </div>
@@ -1892,8 +1943,7 @@ export default function App() {
     setPage("portal");
     if (!u.guest) {
       if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
-      const jaConfirmou = localStorage.getItem("anticeg_perfil_ok") === u.cog;
-      if (!jaConfirmou && perfilPushAtivo) setShowPerfilModal(true);
+      if (!u.confirmado) setShowPerfilModal(true);
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
       if (notifs?.length > 0) setNotificacoes(notifs);
@@ -2014,8 +2064,8 @@ export default function App() {
       {showPerfilModal && !user.guest && (
         <ProfileConfirmModal
           user={user}
-          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", updated.cog); localStorage.setItem("anticeg_user", JSON.stringify(updated)); }}
-          onSkip={() => { setShowPerfilModal(false); localStorage.setItem("anticeg_perfil_ok", user.cog); }}
+          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_user", JSON.stringify(updated)); }}
+          onSkip={() => setShowPerfilModal(false)}
         />
       )}
       <div className="topbar">
