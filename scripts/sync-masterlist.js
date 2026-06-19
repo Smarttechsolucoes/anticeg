@@ -114,8 +114,10 @@ async function main() {
       const parseDate = str => {
         if (!str || !str.trim()) return null;
         const s = str.trim();
-        const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-        if (brMatch) return `${brMatch[3]}-${brMatch[2].padStart(2,'0')}-${brMatch[1].padStart(2,'0')}`;
+        const brFull = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (brFull) return `${brFull[3]}-${brFull[2].padStart(2,'0')}-${brFull[1].padStart(2,'0')}`;
+        const brShort = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+        if (brShort) return `${new Date().getFullYear()}-${brShort[2].padStart(2,'0')}-${brShort[1].padStart(2,'0')}`;
         const isoMatch = s.match(/^\d{4}-\d{2}-\d{2}$/);
         if (isoMatch) return s;
         return null;
