@@ -10,10 +10,11 @@ const supabase = createClient(
 );
 
 const WHATSAPP_NUM = "5524992501917";
-const ADMIN_EMAIL = "nandag_medeiros@hotmail.com";
+const ADMIN_EMAILS = ["nandag_medeiros@hotmail.com", "nathallynayane1234@gmail.com"];
+const ADMIN_COGS   = ["nandaverseo_c", "nathy_mrnd"];
 const SESSION_VERSION = "2";
 function isAdminUser(user) {
-  return user?.email === ADMIN_EMAIL || user?.twitter === "@nandaverseo_c" || user?.cog === "nandaverseo_c";
+  return ADMIN_EMAILS.includes(user?.email) || ADMIN_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c";
 }
 
 function fmtBRL(val, hidden) {
