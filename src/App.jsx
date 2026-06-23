@@ -1661,6 +1661,54 @@ function PushAdminCard({ p, onDesativar }) {
   );
 }
 
+function EmailJSTestBlock() {
+  const [testEmail, setTestEmail] = useState("");
+  const [status, setStatus] = useState(null); // null | "sending" | "ok" | "error" | "notcfg"
+
+  const configured = !EJS_SERVICE.startsWith("YOUR");
+
+  async function testar() {
+    if (!testEmail.trim()) return;
+    if (!configured) { setStatus("notcfg"); return; }
+    setStatus("sending");
+    try {
+      await sendEmailJoiner(testEmail.trim(), "você", "Teste de e-mail ANTICEG ✓", "Se você recebeu este e-mail, a configuração do EmailJS está funcionando corretamente!");
+      setStatus("ok");
+    } catch { setStatus("error"); }
+  }
+
+  const statusMsg = {
+    notcfg: { text: "Preencha EJS_SERVICE, EJS_TEMPLATE e EJS_KEY em App.jsx primeiro.", color: "#ff6b6b" },
+    sending: { text: "Enviando...", color: "rgba(245,240,232,.4)" },
+    ok:      { text: "✓ E-mail enviado! Verifique a caixa de entrada.", color: "#4ade80" },
+    error:   { text: "✗ Erro ao enviar. Verifique as credenciais no EmailJS.", color: "#ff6b6b" },
+  };
+
+  return (
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${configured ? "rgba(245,240,232,.08)" : "rgba(255,107,107,.2)"}`, borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>
+        E-mail de notificação
+        <span style={{ marginLeft:8, fontSize:10, fontFamily:"'DM Mono',monospace", color: configured ? "#4ade80" : "#ff6b6b", fontWeight:400 }}>
+          {configured ? "● configurado" : "● não configurado"}
+        </span>
+      </div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", marginBottom:12 }}>Envie um e-mail de teste para confirmar que a integração está funcionando.</div>
+      <div style={{ display:"flex", gap:8 }}>
+        <input
+          value={testEmail} onChange={e => { setTestEmail(e.target.value); setStatus(null); }}
+          placeholder="seu@email.com"
+          style={{ flex:1, background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"8px 12px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
+        />
+        <button onClick={testar} disabled={status === "sending"} style={{
+          background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.15)", color:"var(--offwhite)",
+          borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer"
+        }}>Testar →</button>
+      </div>
+      {status && <div style={{ fontSize:11, color:statusMsg[status].color, marginTop:8, fontFamily:"'DM Mono',monospace" }}>{statusMsg[status].text}</div>}
+    </div>
+  );
+}
+
 function AdminTab({ owner = false, userCog = "" }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
@@ -1830,6 +1878,8 @@ function AdminTab({ owner = false, userCog = "" }) {
           {manutencaoAdmin ? "OFF" : "ON"}
         </button>
       </div>
+
+      <EmailJSTestBlock />
 
       <div style={{ marginTop: 28, marginBottom: 28 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 12 }}>Avisos / Push para joiners</div>
