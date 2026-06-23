@@ -1814,7 +1814,7 @@ function AdminPagamentos({ data, joiners }) {
   const cogValidos = new Set((joiners || []).map(j => j.cog));
 
   const byJoiner = {};
-  data.filter(item => cogValidos.has(item.cog) && item.nome !== "Disponivel").forEach(item => {
+  data.filter(item => cogValidos.has(item.cog) && (item.nome || "").toLowerCase() !== "disponivel" && item.cog !== "disponivel").forEach(item => {
     const cog = item.cog || "—";
     if (!byJoiner[cog]) byJoiner[cog] = { nome: item.nome || cog, cog, itens: [] };
     const pend = (isPendente(item.pago_item)  ? Number(item.valor_item||0)  : 0)
@@ -1872,7 +1872,7 @@ function AdminPagamentos({ data, joiners }) {
 
 function AdminDisponivel({ data }) {
   const [filtro, setFiltro] = useState("disponiveis");
-  const itens = data.filter(i => i.nome === "Disponivel");
+  const itens = data.filter(i => (i.nome || "").toLowerCase() === "disponivel" || i.cog === "disponivel");
   const disponiveis = itens.filter(i => i.status === "Disponível");
   const vendidos    = itens.filter(i => i.status === "Vendido");
   const lista = filtro === "disponiveis" ? disponiveis : filtro === "vendidos" ? vendidos : itens;
@@ -1949,7 +1949,7 @@ function AdminDisponivel({ data }) {
 
 function AdminBlocklist({ data, joiners, onUpdate }) {
   const pendByJoiner = {};
-  data.forEach(item => {
+  data.filter(item => (item.nome || "").toLowerCase() !== "disponivel" && item.cog !== "disponivel").forEach(item => {
     const cog = item.cog || "—";
     if (!pendByJoiner[cog]) pendByJoiner[cog] = 0;
     if (item.pago_item === false && Number(item.valor_item||0) > 0) pendByJoiner[cog]++;
