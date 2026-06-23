@@ -659,6 +659,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
+  const [avisos, setAvisos] = useState([]);
+
+  useEffect(() => {
+    supabase.from("pushes").select("*").eq("active", true).order("created_at", { ascending: false })
+      .then(({ data }) => setAvisos(data || []));
+  }, []);
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0), 0);
   const pagoV  = itens.reduce((a,b) =>
@@ -752,16 +758,16 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
         </div>
-        {pushAtivos.length > 0 && (
+        {avisos.length > 0 && (
           <div className="sum-card" style={{ borderColor:"rgba(201,168,240,.3)", position:"relative", minWidth:180 }}>
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               <div className="sum-label">Mural de avisos</div>
-              <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{pushAtivos.length}</span>
+              <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>
             </div>
             <div style={{ fontSize:12, color:"var(--offwhite)", marginTop:6, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
-              {pushAtivos[0].message}
+              {avisos[0].message}
             </div>
-            <div className="sum-sub" style={{ marginTop:4 }}>{pushAtivos.length > 1 ? `+${pushAtivos.length - 1} aviso${pushAtivos.length > 2 ? "s" : ""}` : "toque para ver"}</div>
+            <div className="sum-sub" style={{ marginTop:4 }}>{avisos.length > 1 ? `+${avisos.length - 1} aviso${avisos.length > 2 ? "s" : ""}` : "📢 aviso ativo"}</div>
           </div>
         )}
       </div>
