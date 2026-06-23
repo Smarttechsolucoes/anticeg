@@ -509,6 +509,7 @@ function ReportModal({ user, item, onClose }) {
       item_id:         item.id,
       item_nome:       item.nome_do_item,
       ceg:             item.ceg,
+      status:          "pendente",
       erro_item:       erros.item,
       erro_valor:      erros.valor,
       erro_frete:      erros.frete,
@@ -747,7 +748,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
       {!guest && (
         <div className="notif-info">
-          ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 18/06/2026 às 19:53. Caso tenha realizado após esse horário, ainda será atualizado.
+          ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 23/06/2026 às 15:49. Caso tenha realizado após esse horário, ainda será atualizado.
         </div>
       )}
       {temAntigomEmAberto && (
@@ -1321,6 +1322,13 @@ function CalendarTab({ user, itens }) {
   const [calView, setCalView]   = useState("geral");
   const [allItens, setAllItens] = useState(null);
   const [dayDetail, setDayDetail] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 640);
+
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -1369,6 +1377,7 @@ function CalendarTab({ user, itens }) {
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const today = new Date(); today.setHours(0,0,0,0);
 
+  // Desktop cells (full labels)
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push(<div key={`e${i}`} className="cal-day empty" />);
   for (let d = 1; d <= daysInMonth; d++) {
@@ -1386,6 +1395,120 @@ function CalendarTab({ user, itens }) {
     );
   }
 
+  // Mobile cells (compact — dots only)
+  const mobileCells = [];
+  for (let i = 0; i < startDow; i++) mobileCells.push(<div key={`e${i}`} className="cal-day cal-day-mini empty" />);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const isToday = new Date(calYear, calMonth, d).getTime() === today.getTime();
+    const dayEvs = events[dateStr] || [];
+    mobileCells.push(
+      <div key={d} className={`cal-day cal-day-mini${isToday ? " today" : ""}${dayEvs.length > 0 ? " cal-day-has-ev" : ""}`}
+        onClick={() => dayEvs.length > 0 && setDayDetail({ d, month: calMonth+1, year: calYear, evs: dayEvs })}>
+        <div className="cal-day-num">{d}</div>
+        {dayEvs.length > 0 && (
+          <div className="cal-mini-dots">
+            {dayEvs.slice(0, 3).map((e, i) => <div key={i} className={`cal-mini-dot dot-${e.type}`} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Agenda entries for mobile (sorted events this month)
+  const agendaEntries = Object.entries(events)
+    .filter(([dateStr]) => {
+      const [y, m] = dateStr.split("-").map(Number);
+      return y === calYear && m === calMonth + 1;
+    })
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const viewBtns = (
+    <div style={{ display:"flex", gap:4 }}>
+      {["geral","meu"].map(v => (
+        <button key={v} onClick={() => setCalView(v)} style={{ background: calView === v ? "var(--laranja)" : "transparent", color: calView === v ? "#000" : "rgba(245,240,232,.45)", border: `1px solid ${calView === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, borderRadius:6, padding:"5px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", textTransform:"uppercase" }}>
+          {v === "geral" ? "Geral" : "Meu Calendário"}
+        </button>
+      ))}
+    </div>
+  );
+
+  const legend = (
+    <div className="cal-legend" style={{ marginBottom:12 }}>
+      {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"]].map(([c,l]) => (
+        <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
+      ))}
+    </div>
+  );
+
+  const popup = dayDetail && (
+    <div className="cal-day-popup-overlay" onClick={() => setDayDetail(null)}>
+      <div className="cal-day-popup" onClick={e => e.stopPropagation()}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div className="cal-day-popup-title">
+            {String(dayDetail.d).padStart(2,"0")}/{String(dayDetail.month).padStart(2,"0")}/{dayDetail.year}
+          </div>
+          <button className="cal-day-popup-close" onClick={() => setDayDetail(null)}>✕</button>
+        </div>
+        {dayDetail.evs.map((e, i) => (
+          <div key={i} className={`cal-day-popup-ev ev-${e.type}`}>{e.label}</div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="cal-main">
+        <div className="cal-header">
+          <div className="cal-nav">
+            <button className="cal-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
+            <div className="cal-month-title"><span>{MONTHS[calMonth]}</span> <span className="cal-year">{calYear}</span></div>
+            <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
+          </div>
+          {viewBtns}
+        </div>
+        {legend}
+
+        <div className="cal-grid-wrap">
+          <div className="cal-weekdays">
+            {["S","T","Q","Q","S","S","D"].map((d, i) => (
+              <div key={i} className="cal-weekday">{d}</div>
+            ))}
+          </div>
+          <div className="cal-days">{mobileCells}</div>
+        </div>
+
+        <div className="cal-agenda">
+          <div className="cal-agenda-title">// eventos de {MONTHS[calMonth]}</div>
+          {agendaEntries.length === 0 ? (
+            <div className="cal-agenda-empty">Nenhuma data registrada este mês</div>
+          ) : agendaEntries.map(([dateStr, evs]) => {
+            const [y, m, d] = dateStr.split("-").map(Number);
+            const date = new Date(y, m - 1, d);
+            const isAgendaToday = date.getTime() === today.getTime();
+            const isPast = date < today;
+            return (
+              <div key={dateStr} className={`cal-agenda-day${isAgendaToday ? " cal-agenda-today" : ""}${isPast && !isAgendaToday ? " cal-agenda-past" : ""}`}>
+                <div className="cal-agenda-date">
+                  <span className="cal-agenda-daynum">{String(d).padStart(2,"0")}</span>
+                  <span className="cal-agenda-weekday">{["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][date.getDay()]}</span>
+                </div>
+                <div className="cal-agenda-evs">
+                  {evs.map((e, i2) => (
+                    <div key={i2} className={`cal-day-popup-ev ev-${e.type}`}>{e.label}</div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {popup}
+      </div>
+    );
+  }
+
   return (
     <div className="cal-main">
       <div className="cal-header">
@@ -1394,19 +1517,9 @@ function CalendarTab({ user, itens }) {
           <div className="cal-month-title"><span>{MONTHS[calMonth]}</span> <span className="cal-year">{calYear}</span></div>
           <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
         </div>
-        <div style={{ display:"flex", gap:6 }}>
-          {["geral","meu"].map(v => (
-            <button key={v} onClick={() => setCalView(v)} style={{ background: calView === v ? "var(--laranja)" : "transparent", color: calView === v ? "#000" : "rgba(245,240,232,.45)", border: `1px solid ${calView === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, borderRadius:6, padding:"5px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", textTransform:"uppercase" }}>
-              {v === "geral" ? "Geral" : "Meu Calendário"}
-            </button>
-          ))}
-        </div>
+        {viewBtns}
       </div>
-      <div className="cal-legend" style={{ marginBottom:12 }}>
-        {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"]].map(([c,l]) => (
-          <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
-        ))}
-      </div>
+      {legend}
       <div className="cal-grid-wrap">
         <div className="cal-weekdays">
           {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map(d => (
@@ -1415,22 +1528,7 @@ function CalendarTab({ user, itens }) {
         </div>
         <div className="cal-days">{cells}</div>
       </div>
-
-      {dayDetail && (
-        <div className="cal-day-popup-overlay" onClick={() => setDayDetail(null)}>
-          <div className="cal-day-popup" onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div className="cal-day-popup-title">
-                {String(dayDetail.d).padStart(2,"0")}/{String(dayDetail.month).padStart(2,"0")}/{dayDetail.year}
-              </div>
-              <button className="cal-day-popup-close" onClick={() => setDayDetail(null)}>✕</button>
-            </div>
-            {dayDetail.evs.map((e, i) => (
-              <div key={i} className={`cal-day-popup-ev ev-${e.type}`}>{e.label}</div>
-            ))}
-          </div>
-        </div>
-      )}
+      {popup}
     </div>
   );
 }
@@ -1868,7 +1966,8 @@ function AdminTab({ owner = false, userCog = "" }) {
   }
 
   async function marcarResolvido(rep) {
-    await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
+    const { error } = await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
+    if (error) { alert("Erro ao resolver report: " + error.message); return; }
     await supabase.from("notifications").insert([{
       joiner_cog: rep.joiner_cog,
       message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
@@ -1887,7 +1986,8 @@ function AdminTab({ owner = false, userCog = "" }) {
     setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido" } : x));
   }
   async function desfazerResolvido(id) {
-    await supabase.from("reports").update({ status: "pendente" }).eq("id", id);
+    const { error } = await supabase.from("reports").update({ status: "pendente" }).eq("id", id);
+    if (error) { alert("Erro ao desfazer: " + error.message); return; }
     setReports(r => r.map(x => x.id === id ? { ...x, status: "pendente" } : x));
   }
   async function toggleManutencao() {
@@ -1921,7 +2021,7 @@ function AdminTab({ owner = false, userCog = "" }) {
             temAcesso("pagamentos")  && { id:"pagamentos",  label:"Pagamentos" },
             temAcesso("disponiveis") && { id:"disponiveis", label:"Disponíveis" },
             temAcesso("blocklist")   && { id:"blocklist",   label:"Blocklist" },
-            temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status === "pendente").length || null },
+            temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status !== "resolvido").length || null },
           ].filter(Boolean);
         })().map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
@@ -1981,7 +2081,7 @@ function AdminTab({ owner = false, userCog = "" }) {
       {adminMainTab === "reports" && <div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           {["pendentes", "finalizados"].map(t => {
-            const count = t === "pendentes" ? reports.filter(r => r.status === "pendente").length : reports.filter(r => r.status === "resolvido").length;
+            const count = t === "pendentes" ? reports.filter(r => r.status !== "resolvido").length : reports.filter(r => r.status === "resolvido").length;
             const active = adminTab === t;
             return (
               <button key={t} onClick={() => setAdminTab(t)} style={{
@@ -2000,10 +2100,10 @@ function AdminTab({ owner = false, userCog = "" }) {
             );
           })}
         </div>
-        {reports.filter(r => adminTab === "pendentes" ? r.status === "pendente" : r.status === "resolvido").length === 0 && (
+        {reports.filter(r => adminTab === "pendentes" ? r.status !== "resolvido" : r.status === "resolvido").length === 0 && (
           <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report {adminTab === "pendentes" ? "pendente" : "finalizado"} ainda.</div>
         )}
-        {reports.filter(r => adminTab === "pendentes" ? r.status === "pendente" : r.status === "resolvido").map(r => {
+        {reports.filter(r => adminTab === "pendentes" ? r.status !== "resolvido" : r.status === "resolvido").map(r => {
           const erroLabels = [
             r.erro_item      && "Item incorreto",
             r.erro_valor     && "Valor incorreto",
@@ -2788,7 +2888,7 @@ export default function App() {
           onX={() => setPushAtivos(prev => prev.filter(x => x.id !== p.id))}
         />
       ))}
-      {notificacoes.map(n => (
+      {notificacoes.filter(n => n.type === "report_resolved").slice(0, 1).map(n => (
         <NotifResolvido
           key={n.id}
           notif={n}
