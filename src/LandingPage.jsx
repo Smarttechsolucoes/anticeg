@@ -19,6 +19,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [pendingJoiner, setPendingJoiner] = useState(null);
+  const [senha, setSenha] = useState("");
 
   useEffect(() => {
     const cursor = cursorRef.current;
@@ -61,16 +63,57 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     if (!input) { setError("Informe seu @ ou e-mail."); setLoading(false); return; }
 
     const joiner = await buscarJoiner(input);
-
     if (!joiner) { setError("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
 
-    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
-    localStorage.setItem("anticeg_user", JSON.stringify(joiner));
-    onLogin(joiner, itens || []);
+    if (joiner.senha) {
+      setPendingJoiner(joiner);
+      setLoading(false);
+      return;
+    }
+
+    await entrarCom(joiner);
     setLoading(false);
   }
 
+  async function handleSenha() {
+    setLoading(true); setError("");
+    if (senha.trim() !== pendingJoiner.senha) {
+      setError("Senha incorreta."); setLoading(false); return;
+    }
+    await entrarCom(pendingJoiner);
+    setLoading(false);
+  }
+
+  async function entrarCom(joiner) {
+    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
+    onLogin(joiner, itens || []);
+  }
+
   function renderCard() {
+    if (pendingJoiner) return (
+      <>
+        <div className="lp-card-label">// senha de acesso</div>
+        <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>
+          Olá, {pendingJoiner.nome || pendingJoiner.cog}. Digite sua senha para continuar.
+        </div>
+        <input
+          className="lp-card-input"
+          type="password"
+          placeholder="senha"
+          value={senha}
+          onChange={e => { setSenha(e.target.value); setError(""); }}
+          onKeyDown={e => e.key === "Enter" && handleSenha()}
+          autoFocus
+        />
+        {error && <div className="lp-card-error">{error}</div>}
+        <button className="lp-card-btn" onClick={handleSenha} disabled={loading}>{loading ? "..." : "CONFIRMAR →"}</button>
+        <button onClick={() => { setPendingJoiner(null); setSenha(""); setError(""); }} style={{
+          background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace",
+          fontSize:11, cursor:"pointer", marginTop:4, textAlign:"center", width:"100%"
+        }}>← voltar</button>
+      </>
+    );
+
     return (
       <>
         <div className="lp-card-label">// acesso rápido</div>
