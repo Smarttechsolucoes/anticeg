@@ -2708,7 +2708,11 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const [tab, setTab] = useState("masterlist");
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","admin"];
+  const [tab, setTab] = useState(() => {
+    const slug = window.location.pathname.replace(/^\//, "").split(/[?#]/)[0];
+    return TAB_SLUGS.includes(slug) ? slug : "masterlist";
+  });
   const [showTutorial, setShowTutorial] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
@@ -2738,6 +2742,20 @@ export default function App() {
           }
         });
     }
+  }, []);
+
+  function changeTab(newTab) {
+    setTab(newTab);
+    history.pushState(null, "", "/" + newTab);
+  }
+
+  useEffect(() => {
+    const handler = () => {
+      const slug = window.location.pathname.replace(/^\//, "").split(/[?#]/)[0];
+      if (TAB_SLUGS.includes(slug)) setTab(slug);
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
   }, []);
 
   function handleAdminBypass() {
@@ -2800,6 +2818,7 @@ export default function App() {
     setUser(null);
     setItens([]);
     setTab("masterlist");
+    history.replaceState(null, "", "/");
     setPage("landing");
   }
 
@@ -2819,6 +2838,7 @@ export default function App() {
     setUser({ guest: true });
     setItens([]);
     setTab("cegs");
+    history.replaceState(null, "", "/cegs");
     setPage("portal");
   }
 
@@ -2931,7 +2951,7 @@ export default function App() {
                 ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
               ].map(item => (
                 <button key={item.id} className={`side-nav-item ${tab === item.id ? "active" : ""}`}
-                  onClick={() => { setTab(item.id); setSideOpen(false); }}>
+                  onClick={() => { changeTab(item.id); setSideOpen(false); }}>
                   <span className="side-nav-icon">{item.icon}</span>
                   {item.label}
                 </button>
@@ -2983,13 +3003,13 @@ export default function App() {
         </div>
       </div>
       <div className="tabs-bar">
-        <button className={`tab-btn ${tab === "masterlist" ? "active" : ""}`} onClick={() => setTab("masterlist")}>☰ Masterlist</button>
-        <button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => setTab("cegs")}>◈ CEGs</button>
-        <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => setTab("calendario")}>◫ Calendário</button>
-        {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => setTab("perfil")}>⚙ Meu Perfil</button>}
-        <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => setTab("regras")}>☆ Links</button>
+        <button className={`tab-btn ${tab === "masterlist" ? "active" : ""}`} onClick={() => changeTab("masterlist")}>☰ Masterlist</button>
+        <button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => changeTab("cegs")}>◈ CEGs</button>
+        <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => changeTab("calendario")}>◫ Calendário</button>
+        {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
+        <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
         {isAdminUser(user) && (
-          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
+          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => changeTab("admin")}>⚙ Admin</button>
         )}
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} />}
@@ -2999,7 +3019,7 @@ export default function App() {
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} />}
 
-      <BottomNav tab={tab} setTab={setTab} isGuest={user.guest} isAdmin={isAdmin} />
+      <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
 
       {!user.guest && itens.some(i =>
         (isPendente(i.pago_item) && Number(i.valor_item) > 0) ||
