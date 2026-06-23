@@ -1822,6 +1822,7 @@ function AdminCadastros({ confirmacoes, onUpdate }) {
 
 function AdminPagamentos({ data, joiners }) {
   const [open, setOpen] = useState(null);
+  const [subtab, setSubtab] = useState("atrasados");
 
   const cogValidos = new Set((joiners || []).map(j => j.cog));
 
@@ -1837,14 +1838,29 @@ function AdminPagamentos({ data, joiners }) {
                 + (isPendente(item.pago_rf)    ? diasAtraso(item.venc_rf)    : 0);
     if (pend > 0) byJoiner[cog].itens.push({ ...item, pend, multa });
   });
-  const lista = Object.values(byJoiner).filter(j => j.itens.length > 0)
+  const todos = Object.values(byJoiner).filter(j => j.itens.length > 0)
     .sort((a, b) => b.itens.reduce((s,i)=>s+i.pend,0) - a.itens.reduce((s,i)=>s+i.pend,0));
 
-  if (lista.length === 0) return <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum pagamento pendente.</div>;
+  const atrasados  = todos.filter(j => j.itens.some(i => i.multa > 0));
+  const emAberto   = todos.filter(j => j.itens.every(i => i.multa === 0));
+  const lista = subtab === "atrasados" ? atrasados : emAberto;
+
+  const btnStyle = active => ({
+    background: active ? "var(--laranja)" : "transparent",
+    color: active ? "#111" : "rgba(245,240,232,.45)",
+    border: `1px solid ${active ? "var(--laranja)" : "rgba(245,240,232,.15)"}`,
+    borderRadius: 6, padding: "5px 14px", fontSize: 11,
+    fontFamily: "'DM Mono',monospace", fontWeight: active ? 700 : 400,
+    cursor: "pointer", letterSpacing: ".05em"
+  });
 
   return (
     <div>
-      <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", marginBottom:16 }}>{lista.length} joiners com pagamentos em aberto</div>
+      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+        <button style={btnStyle(subtab === "atrasados")} onClick={() => setSubtab("atrasados")}>Atrasados ({atrasados.length})</button>
+        <button style={btnStyle(subtab === "emaberto")}  onClick={() => setSubtab("emaberto")}>Em aberto ({emAberto.length})</button>
+      </div>
+      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum aqui.</div>}
       {lista.map(j => {
         const total = j.itens.reduce((s,i) => s+i.pend, 0);
         const totalMulta = j.itens.reduce((s,i) => s+i.multa, 0);
