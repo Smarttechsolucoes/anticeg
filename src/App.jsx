@@ -960,7 +960,64 @@ function FeedbackForm({ user, defaultTipo }) {
   );
 }
 
-function PerfilTab({ user, onUpdate }) {
+const STAFF_CONFIG = [
+  { cog: "nathy_mrnd", email: "nathallynayane1234@gmail.com", nome: "Nathally", acessos: ["cadastros","pagamentos","disponiveis","blocklist","reports"] },
+];
+
+const ALL_ACESSOS = [
+  { id:"cadastros",   label:"Cadastros" },
+  { id:"pagamentos",  label:"Pagamentos" },
+  { id:"disponiveis", label:"Disponíveis" },
+  { id:"blocklist",   label:"Blocklist" },
+  { id:"reports",     label:"Reports" },
+  { id:"geral",       label:"Config / Geral" },
+];
+
+function StaffPanel() {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", letterSpacing:".08em", textTransform:"uppercase" }}>
+        Acesso atual da equipe
+      </div>
+      {STAFF_CONFIG.map(s => (
+        <div key={s.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"18px 20px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+            <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(201,168,240,.15)", border:"1px solid rgba(201,168,240,.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, color:"#C9A8F0", fontFamily:"'Bebas Neue',sans-serif" }}>
+              {s.nome[0]}
+            </div>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{s.nome}</div>
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.35)" }}>@{s.cog} · {s.email}</div>
+            </div>
+            <span style={{ marginLeft:"auto", fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:99, padding:"2px 10px" }}>staff</span>
+          </div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:8, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {ALL_ACESSOS.map(a => {
+              const tem = s.acessos.includes(a.id);
+              return (
+                <span key={a.id} style={{
+                  fontSize:10, padding:"3px 10px", borderRadius:99,
+                  background: tem ? "rgba(186,255,57,.1)" : "rgba(245,240,232,.04)",
+                  border: `1px solid ${tem ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.1)"}`,
+                  color: tem ? "var(--verde)" : "rgba(245,240,232,.25)",
+                  fontFamily:"'DM Mono',monospace"
+                }}>
+                  {tem ? "✓ " : "✗ "}{a.label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", marginTop:4 }}>
+        Para alterar acessos, edite STAFF_COGS / STAFF_EMAILS no código.
+      </div>
+    </div>
+  );
+}
+
+function PerfilTab({ user, onUpdate, owner = false }) {
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
 
@@ -1045,6 +1102,7 @@ function PerfilTab({ user, onUpdate }) {
           { id:"dados",     label:"Dados" },
           { id:"tutorial",  label:"Tutorial" },
           { id:"feedback",  label:"Feedbacks" },
+          ...(owner ? [{ id:"staff", label:"Staff" }] : []),
         ].map(t => (
           <button key={t.id} onClick={() => setPerfilSubTab(t.id)} style={{
             background: perfilSubTab === t.id ? "var(--laranja)" : "transparent",
@@ -1097,6 +1155,8 @@ function PerfilTab({ user, onUpdate }) {
       {perfilSubTab === "feedback" && (
         <FeedbackForm user={user} defaultTipo={feedbackTipo} />
       )}
+
+      {perfilSubTab === "staff" && owner && <StaffPanel />}
     </div>
   );
 }
@@ -2447,7 +2507,7 @@ export default function App() {
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
-      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
+      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} />}
 
