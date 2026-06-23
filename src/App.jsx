@@ -660,6 +660,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
   const [avisos, setAvisos] = useState([]);
+  const [avisosAberto, setAvisosAberto] = useState(false);
 
   useEffect(() => {
     supabase.from("pushes").select("*").eq("active", true).order("created_at", { ascending: false })
@@ -759,18 +760,43 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
         </div>
         {avisos.length > 0 && (
-          <div className="sum-card" style={{ borderColor:"rgba(201,168,240,.3)", position:"relative", minWidth:180 }}>
+          <button onClick={() => setAvisosAberto(v => !v)} style={{
+            background: avisosAberto ? "rgba(201,168,240,.12)" : "var(--card-bg)",
+            border:`1px solid ${avisosAberto ? "rgba(201,168,240,.5)" : "rgba(201,168,240,.3)"}`,
+            borderRadius:"var(--radius)", padding:"var(--sum-pad)",
+            textAlign:"left", cursor:"pointer", minWidth:180, flex:1
+          }}>
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               <div className="sum-label">Mural de avisos</div>
               <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>
+              <span style={{ marginLeft:"auto", fontSize:10, color:"rgba(201,168,240,.6)" }}>{avisosAberto ? "▴" : "▾"}</span>
             </div>
             <div style={{ fontSize:12, color:"var(--offwhite)", marginTop:6, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
               {avisos[0].message}
             </div>
-            <div className="sum-sub" style={{ marginTop:4 }}>{avisos.length > 1 ? `+${avisos.length - 1} aviso${avisos.length > 2 ? "s" : ""}` : "📢 aviso ativo"}</div>
-          </div>
+            <div className="sum-sub" style={{ marginTop:4 }}>
+              {avisos.length > 1 ? `${avisos.length} avisos · clique para ver todos` : "📢 clique para ver"}
+            </div>
+          </button>
         )}
       </div>
+
+      {avisosAberto && avisos.length > 0 && (
+        <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+          {avisos.map((a, i) => (
+            <div key={a.id} style={{
+              background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)",
+              borderRadius:10, padding:"14px 18px", display:"flex", gap:12, alignItems:"flex-start"
+            }}>
+              <span style={{ fontSize:16, flexShrink:0, marginTop:1 }}>📢</span>
+              <div style={{ flex:1 }}>
+                {avisos.length > 1 && <div style={{ fontSize:9, color:"rgba(201,168,240,.5)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:4 }}>Aviso {i + 1}</div>}
+                <div style={{ fontSize:13, color:"var(--offwhite)", lineHeight:1.7 }}>{a.message}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!guest && qtdAtrasados >= 3 && (
         <div className="blocklist-banner">
