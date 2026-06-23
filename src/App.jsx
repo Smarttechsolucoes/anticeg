@@ -251,7 +251,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       <div className="page-header">
         <div>
           <div className="page-eyebrow">
-            <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", cursor:"pointer", padding:0, letterSpacing:1 }}>← voltar</button>
+            <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.62)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", cursor:"pointer", padding:0, letterSpacing:1 }}>← voltar</button>
           </div>
           <div className="page-title">{ceg}</div>
         </div>
@@ -263,7 +263,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       </div>
 
       {itens === null ? (
-        <div style={{ padding:40, textAlign:"center", color:"rgba(245,240,232,.3)", fontSize:"var(--fs-xs)" }}>carregando...</div>
+        <div style={{ padding:40, textAlign:"center", color:"rgba(245,240,232,.52)", fontSize:"var(--fs-xs)" }}>carregando...</div>
       ) : (
         <div className="table-wrap">
           <table>
@@ -662,7 +662,7 @@ function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
         <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", lineHeight:1.5, wordBreak:"break-word" }}>
           {texto}
           {longo && (
-            <button onClick={() => setExpandido(e => !e)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:10, cursor:"pointer", padding:"0 0 0 4px", fontFamily:"'DM Mono',monospace" }}>
+            <button onClick={() => setExpandido(e => !e)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:10, cursor:"pointer", padding:"0 0 0 4px", fontFamily:"'DM Mono',monospace" }}>
               {expandido ? "menos" : "ler mais"}
             </button>
           )}
@@ -816,9 +816,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
                   MURAL DE <span style={{ color:"#C9A8F0" }}>AVISOS</span>
                 </div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", marginTop:2 }}>{avisos.length} aviso{avisos.length !== 1 ? "s" : ""} não lido{avisos.length !== 1 ? "s" : ""}</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginTop:2 }}>{avisos.length} aviso{avisos.length !== 1 ? "s" : ""} não lido{avisos.length !== 1 ? "s" : ""}</div>
               </div>
-              <button onClick={() => setAvisosModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:20, cursor:"pointer" }}>✕</button>
+              <button onClick={() => setAvisosModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               {avisos.map((a, i) => (
@@ -936,7 +936,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
             {filtered.length > 0 && !guest && (
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
-                <td><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
+                <td><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.52)"}}>{filtered.length} itens</span></td>
                 <td colSpan={3}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
                 <td>
                   {tPend > 0 && (
@@ -954,7 +954,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
       {/* Mobile cards — hidden on desktop via CSS */}
       <div className="ml-cards">
         {filtered.length === 0 && (
-          <div style={{ padding:"32px 0", textAlign:"center", color:"rgba(245,240,232,.3)", fontSize:"var(--fs-xs)" }}>nenhum item para esse filtro</div>
+          <div style={{ padding:"32px 0", textAlign:"center", color:"rgba(245,240,232,.52)", fontSize:"var(--fs-xs)" }}>nenhum item para esse filtro</div>
         )}
         {filtered.map(item => {
           const ai = getStepIdx(item.status);
@@ -1041,8 +1041,8 @@ function FeedbackForm({ user, defaultTipo }) {
     <div style={{ textAlign:"center", padding:"40px 0" }}>
       <div style={{ fontSize:32, marginBottom:12 }}>✓</div>
       <div style={{ fontSize:14, color:"var(--offwhite)", marginBottom:8 }}>Enviado!</div>
-      <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", marginBottom:20 }}>Obrigada pelo feedback. Vou dar uma olhada.</div>
-      <button onClick={() => { setSent(false); setMessage(""); }} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Enviar outro</button>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.62)", marginBottom:20 }}>Obrigada pelo feedback. Vou dar uma olhada.</div>
+      <button onClick={() => { setSent(false); setMessage(""); }} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.62)", borderRadius:6, padding:"6px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Enviar outro</button>
     </div>
   );
 
@@ -1118,13 +1118,13 @@ function StaffPanel() {
     setSaving(false);
   }
 
-  if (!acessos) return <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Carregando...</div>;
+  if (!acessos) return <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Carregando...</div>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", letterSpacing:".08em", textTransform:"uppercase" }}>Acesso da equipe</div>
-        {saving && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>salvando...</div>}
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", letterSpacing:".08em", textTransform:"uppercase" }}>Acesso da equipe</div>
+        {saving && <div style={{ fontSize:10, color:"rgba(245,240,232,.52)" }}>salvando...</div>}
       </div>
       {STAFF_MEMBERS.map(s => {
         const staffAcessos = acessos[s.cog] || DEFAULT_STAFF_ACESSOS;
@@ -1136,11 +1136,11 @@ function StaffPanel() {
               </div>
               <div>
                 <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{s.nome}</div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.35)" }}>@{s.cog} · {s.email}</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.58)" }}>@{s.cog} · {s.email}</div>
               </div>
               <span style={{ marginLeft:"auto", fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:99, padding:"2px 10px" }}>staff</span>
             </div>
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:10, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginBottom:10, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {ALL_ACESSOS.map(a => {
                 const ativo = staffAcessos.includes(a.id);
@@ -1692,7 +1692,7 @@ function EmailJSTestBlock() {
           {configured ? "● configurado" : "● não configurado"}
         </span>
       </div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", marginBottom:12 }}>Envie um e-mail de teste para confirmar que a integração está funcionando.</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>Envie um e-mail de teste para confirmar que a integração está funcionando.</div>
       <div style={{ display:"flex", gap:8 }}>
         <input
           value={testEmail} onChange={e => { setTestEmail(e.target.value); setStatus(null); }}
@@ -1764,7 +1764,7 @@ function NotificarTodosBlock() {
   return (
     <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10 }}>
       <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Notificar todos os joiners</div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", marginBottom:12 }}>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>
         Envia um e-mail para cada joiner com pagamentos em aberto. Use após atualizar a planilha.
       </div>
       <button onClick={notificarTodos} disabled={!!status && status !== "done" && status !== "error" && status !== "notcfg"} style={{
@@ -1779,7 +1779,7 @@ function NotificarTodosBlock() {
       {status === "done" && resultado && (
         <div style={{ fontSize:11, color:"#4ade80", marginTop:8, fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
           ✓ {resultado.enviados} e-mail(s) enviado(s)
-          {resultado.semPendencia > 0 && <span style={{ color:"rgba(245,240,232,.3)" }}> · {resultado.semPendencia} sem pendências (não notificados)</span>}
+          {resultado.semPendencia > 0 && <span style={{ color:"rgba(245,240,232,.52)" }}> · {resultado.semPendencia} sem pendências (não notificados)</span>}
         </div>
       )}
     </div>
@@ -1943,7 +1943,7 @@ function AdminTab({ owner = false, userCog = "" }) {
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modo Manutenção</div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:2 }}>{manutencaoAdmin ? "⚠ Site bloqueado para todos (exceto admin)" : "Site normal — joiners têm acesso completo"}</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginTop:2 }}>{manutencaoAdmin ? "⚠ Site bloqueado para todos (exceto admin)" : "Site normal — joiners têm acesso completo"}</div>
         </div>
         <button onClick={toggleManutencao} style={{
           background: manutencaoAdmin ? "rgba(255,90,31,.15)" : "rgba(74,222,128,.15)",
@@ -2142,11 +2142,11 @@ function AdminLinks() {
 
 function AdminCadastros({ confirmacoes, onUpdate }) {
   if (confirmacoes.length === 0) return (
-    <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhuma atualização de cadastro pendente.</div>
+    <div style={{ fontSize:12, color:"rgba(245,240,232,.52)", padding:"20px 0" }}>Nenhuma atualização de cadastro pendente.</div>
   );
   return (
     <div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16, lineHeight:1.6 }}>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.52)", marginBottom:16, lineHeight:1.6 }}>
         Joiners que alteraram @ ou e-mail. Atualize na planilha e marque como visto.
       </div>
       {confirmacoes.map(c => (
@@ -2154,16 +2154,16 @@ function AdminCadastros({ confirmacoes, onUpdate }) {
           <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginBottom:6 }}>
-                {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontWeight:400 }}>@{c.joiner_cog}</span>
+                {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.52)", fontWeight:400 }}>@{c.joiner_cog}</span>
               </div>
               {c.twitter_novo && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)" }}>@ novo: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.twitter_novo}</span></div>}
               {c.email_novo   && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)", marginTop:3 }}>e-mail: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.email_novo}</span></div>}
-              <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", marginTop:6 }}>{new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.42)", marginTop:6 }}>{new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
             </div>
             <button onClick={async () => {
               await supabase.from("confirmacoes").update({ visto: true }).eq("id", c.id);
               onUpdate(prev => prev.filter(x => x.id !== c.id));
-            }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+            }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.58)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
               marcar visto
             </button>
           </div>
@@ -2213,7 +2213,7 @@ function AdminPagamentos({ data, joiners }) {
         <button style={btnStyle(subtab === "atrasados")} onClick={() => setSubtab("atrasados")}>Atrasados ({atrasados.length})</button>
         <button style={btnStyle(subtab === "emaberto")}  onClick={() => setSubtab("emaberto")}>Em aberto ({emAberto.length})</button>
       </div>
-      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum aqui.</div>}
+      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum aqui.</div>}
       {lista.map(j => {
         const total = j.itens.reduce((s,i) => s+i.pend, 0);
         const totalMulta = j.itens.reduce((s,i) => s+i.multa, 0);
@@ -2223,21 +2223,21 @@ function AdminPagamentos({ data, joiners }) {
             <div onClick={() => setOpen(isOpen ? null : j.cog)} style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", cursor:"pointer" }}>
               <div style={{ flex:1 }}>
                 <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{j.nome}</span>
-                <span className="cog-tip" data-nome={j.nome} style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>@{j.cog}</span>
+                <span className="cog-tip" data-nome={j.nome} style={{ fontSize:10, color:"rgba(245,240,232,.52)", marginLeft:8 }}>@{j.cog}</span>
               </div>
               <div style={{ textAlign:"right" }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(total)}</div>
                 {totalMulta > 0 && <div style={{ fontSize:10, color:"#ff6b6b", fontWeight:600 }}>+R${fmtBRL(totalMulta)} multa</div>}
               </div>
-              <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:4 }}>{j.itens.length}i</span>
-              <span style={{ fontSize:12, color:"rgba(245,240,232,.3)", transition:"transform .2s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+              <span style={{ fontSize:10, color:"rgba(245,240,232,.52)", marginLeft:4 }}>{j.itens.length}i</span>
+              <span style={{ fontSize:12, color:"rgba(245,240,232,.52)", transition:"transform .2s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
             </div>
             {isOpen && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
                 {j.itens.map((item, idx) => (
                   <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"4px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
                     <span style={{ flex:1 }}>{item.nome_do_item}</span>
-                    <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{item.ceg}</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.48)" }}>{item.ceg}</span>
                     <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
                     {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
                   </div>
@@ -2249,7 +2249,7 @@ function AdminPagamentos({ data, joiners }) {
                   return (
                     <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
                       marginTop:8, background:"none", border:"1px solid rgba(245,240,232,.12)",
-                      color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px",
+                      color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
                       fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
                     }}>✉ Notificar por e-mail</button>
                   );
@@ -2277,10 +2277,10 @@ function AdminDisponivel({ data }) {
 
   return (
     <div>
-      <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", marginBottom:16 }}>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.58)", marginBottom:16 }}>
         {itens.length} item{itens.length !== 1 ? "s" : ""} disponível{itens.length !== 1 ? "is" : ""} para venda
       </div>
-      {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum item disponível.</div>}
+      {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item disponível.</div>}
       {itens.map(item => (
         <div key={item.id} style={{
           background:"var(--card-bg)",
@@ -2298,7 +2298,7 @@ function AdminDisponivel({ data }) {
               <div style={{ fontSize:12, color:"var(--laranja)", marginTop:3, fontWeight:600 }}>R${fmtBRL(item.valor_item)}</div>
             )}
             {item.info_adicionais && (
-              <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>{item.info_adicionais}</div>
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginTop:4 }}>{item.info_adicionais}</div>
             )}
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:6, flexShrink:0 }}>
@@ -2343,16 +2343,16 @@ function AdminBlocklist({ data, joiners, onUpdate }) {
 
   return (
     <div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16, lineHeight:1.6 }}>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.52)", marginBottom:16, lineHeight:1.6 }}>
         Joiners bloqueados ou com 3+ pagamentos pendentes aparecem aqui automaticamente.
       </div>
-      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum joiner na blocklist.</div>}
+      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum joiner na blocklist.</div>}
       {lista.map(j => (
         <div key={j.cog} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"var(--card-bg)", border:`1px solid ${j.bloqueado ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10, marginBottom:8 }}>
           <div style={{ flex:1 }}>
             <span style={{ fontSize:13, fontWeight:600, color: j.bloqueado ? "var(--laranja)" : "var(--offwhite)" }}>{j.nome || j.cog}</span>
-            <span className="cog-tip" data-nome={j.nome||j.cog} style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>@{j.cog}</span>
-            {j.pendentes > 0 && <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginLeft:8 }}>{j.pendentes} pgto{j.pendentes>1?"s":""} pendente{j.pendentes>1?"s":""}</span>}
+            <span className="cog-tip" data-nome={j.nome||j.cog} style={{ fontSize:10, color:"rgba(245,240,232,.52)", marginLeft:8 }}>@{j.cog}</span>
+            {j.pendentes > 0 && <span style={{ fontSize:10, color:"rgba(245,240,232,.52)", marginLeft:8 }}>{j.pendentes} pgto{j.pendentes>1?"s":""} pendente{j.pendentes>1?"s":""}</span>}
           </div>
           <button onClick={() => toggleBloqueado(j.cog, j.bloqueado)} style={{
             background: j.bloqueado ? "rgba(255,90,31,.12)" : "rgba(245,240,232,.05)",
@@ -2445,24 +2445,24 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, lineHeight:1.1, color:"var(--offwhite)", marginBottom:8 }}>
             CONFIRME SEUS DADOS E EVITE ERROS<br/><span style={{ color:"var(--laranja)" }}>NA SUA MASTERLIST</span>
           </div>
-          <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.62)", lineHeight:1.6 }}>
             Caso algo esteja errado, corrija abaixo. Clique em <strong style={{ color:"rgba(245,240,232,.7)" }}>Tudo certo</strong> para não receber essa mensagem novamente.
           </div>
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>Nome</label>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.62)", letterSpacing:1.5, textTransform:"uppercase" }}>Nome</label>
           <input className="login-input" type="text" placeholder="Como você aparece no grupo" value={nome} onChange={e => { setNome(e.target.value); setError(""); }} autoFocus />
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>@ para acesso <span style={{ opacity:.5, fontSize:9 }}>(twitter / x / threads / insta)</span></label>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.62)", letterSpacing:1.5, textTransform:"uppercase" }}>@ para acesso <span style={{ opacity:.5, fontSize:9 }}>(twitter / x / threads / insta)</span></label>
           <input className="login-input" type="text" placeholder="@seu_@" value={social} onChange={e => setSocial(e.target.value)} />
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>WhatsApp</label>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.62)", letterSpacing:1.5, textTransform:"uppercase" }}>WhatsApp</label>
           <input className="login-input" type="tel" placeholder="(00) 00000-0000" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <label style={{ fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:1.5, textTransform:"uppercase" }}>E-mail</label>
+          <label style={{ fontSize:10, color:"rgba(245,240,232,.62)", letterSpacing:1.5, textTransform:"uppercase" }}>E-mail</label>
           <input className="login-input" type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()} />
         </div>
         {error && <div className="login-error">{error}</div>}
