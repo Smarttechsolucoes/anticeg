@@ -117,6 +117,66 @@
 
     .footer { text-align: center; margin-top: 1.5rem; font-size: 10px; font-weight: 300; color: #2a2a2a; letter-spacing: 0.18em; text-transform: uppercase; }
     .footer span { color: #ff5c00; font-weight: 700; }
+
+    /* ── PORTAL CARD ── */
+    .portal-card {
+      position: relative; overflow: hidden;
+      background: #0e0e0e;
+      border: 1px solid rgba(200,240,0,.35);
+      border-radius: 6px;
+      padding: 24px 20px 20px;
+      margin-bottom: 2rem;
+    }
+    .portal-card::before {
+      content: '';
+      position: absolute; top: -60px; right: -60px;
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, rgba(200,240,0,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .portal-card::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #ff5c00, #c8f000);
+    }
+    .portal-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #c8f000; color: #0e0e0e;
+      font-size: 8px; font-weight: 900; letter-spacing: .22em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 2px; margin-bottom: 14px;
+    }
+    .portal-badge::before { content: '★'; font-size: 9px; }
+    .portal-title {
+      font-size: 28px; font-weight: 900; letter-spacing: -1px; color: #fff;
+      line-height: 1; margin-bottom: 6px;
+    }
+    .portal-title span { color: #c8f000; }
+    .portal-eyebrow {
+      font-size: 9px; font-weight: 700; letter-spacing: .18em;
+      text-transform: uppercase; color: #444; margin-bottom: 10px;
+    }
+    .portal-desc {
+      font-size: 12px; font-weight: 300; color: #666;
+      line-height: 1.75; margin-bottom: 18px;
+    }
+    .portal-chips {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px;
+    }
+    .portal-chip {
+      font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(200,240,0,.65); background: rgba(200,240,0,.07);
+      border: 1px solid rgba(200,240,0,.2);
+      padding: 4px 10px; border-radius: 2px;
+    }
+    .portal-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: #ff5c00; color: #fff; text-decoration: none;
+      font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      padding: 13px; border-radius: 4px;
+      transition: background .15s, transform .1s;
+    }
+    .portal-btn:hover { background: #e84e00; transform: translateY(-1px); }
+    .portal-btn-arrow { font-size: 16px; }
   </style>
 </head>
 <body>
@@ -131,6 +191,23 @@
       <span class="online-count" id="onlineCount">—</span>
       <span>online agora</span>
     </div>
+  </div>
+
+  <div class="portal-card">
+    <div class="portal-badge">novo</div>
+    <div class="portal-eyebrow">anticeg · portal exclusivo</div>
+    <div class="portal-title">MASTER<span>LIST</span></div>
+    <div class="portal-desc">Acompanhe seus itens, pagamentos e CEGs em tempo real. Seu histórico completo numa só tela — sem precisar abrir planilha.</div>
+    <div class="portal-chips">
+      <span class="portal-chip">☰ Masterlist</span>
+      <span class="portal-chip">◈ CEGs</span>
+      <span class="portal-chip">◫ Calendário</span>
+      <span class="portal-chip">○ Perfil</span>
+      <span class="portal-chip">✉ Notificações</span>
+    </div>
+    <a class="portal-btn" href="https://anticeg.vercel.app/masterlist">
+      Acessar o portal <span class="portal-btn-arrow">→</span>
+    </a>
   </div>
 
   <div class="section-label"><span>//</span> Links rápidos</div>
