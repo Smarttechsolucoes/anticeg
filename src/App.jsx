@@ -1709,6 +1709,83 @@ function EmailJSTestBlock() {
   );
 }
 
+function NotificarTodosBlock() {
+  const [status, setStatus]   = useState(null); // null | "loading" | "sending" | "done" | "error" | "notcfg"
+  const [resultado, setResultado] = useState(null); // { enviados, semEmail, semPendencia }
+
+  const configured = !EJS_SERVICE.startsWith("YOUR");
+
+  async function notificarTodos() {
+    if (!configured) { setStatus("notcfg"); return; }
+    setStatus("loading");
+    try {
+      // Busca todos os joiners com email
+      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email").not("email", "is", null).neq("email", "");
+      if (!joiners?.length) { setStatus("done"); setResultado({ enviados:0, semEmail:0, semPendencia:0 }); return; }
+
+      // Busca todos os itens pendentes
+      const { data: itens } = await supabase.from("masterlist").select("cog, nome_do_item, ceg, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf, venc_item, venc_frete, venc_rf").neq("cog","disponivel");
+
+      setStatus("sending");
+      let enviados = 0, semPendencia = 0;
+
+      for (const j of joiners) {
+        const meus = (itens || []).filter(i => i.cog === j.cog);
+        const pendentes = meus.filter(i =>
+          (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
+          (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
+          (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
+        );
+
+        if (pendentes.length === 0) { semPendencia++; continue; }
+
+        const totalPend = pendentes.reduce((s,i) =>
+          s + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
+            + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
+            + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0), 0);
+        const totalMulta = pendentes.reduce((s,i) =>
+          s + diasAtraso(i.venc_item) + diasAtraso(i.venc_frete) + diasAtraso(i.venc_rf), 0);
+
+        const linhas = pendentes.map(i => `• ${i.nome_do_item}${i.ceg ? ` (${i.ceg})` : ""}`).join("\n");
+        const corpo = `Você tem ${pendentes.length} item(ns) com pagamento em aberto:\n\n${linhas}\n\nTotal: R$${fmtBRL(totalPend)}${totalMulta > 0 ? ` + R$${fmtBRL(totalMulta)} de multa por atraso` : ""}.\n\nAcesse o portal para efetuar o pagamento ou fale pelo WhatsApp.`;
+
+        await sendEmailJoiner(j.email, j.nome, "📋 Resumo de pagamentos em aberto — ANTICEG", corpo);
+        enviados++;
+      }
+
+      setResultado({ enviados, semEmail: 0, semPendencia });
+      setStatus("done");
+    } catch (e) {
+      console.error(e);
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Notificar todos os joiners</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", marginBottom:12 }}>
+        Envia um e-mail para cada joiner com pagamentos em aberto. Use após atualizar a planilha.
+      </div>
+      <button onClick={notificarTodos} disabled={!!status && status !== "done" && status !== "error" && status !== "notcfg"} style={{
+        background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
+        color:"#C9A8F0", borderRadius:8, padding:"9px 18px",
+        fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".05em"
+      }}>
+        {status === "loading" ? "Carregando dados..." : status === "sending" ? "Enviando e-mails..." : "✉ Notificar todos →"}
+      </button>
+      {status === "notcfg" && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Configure o EmailJS primeiro.</div>}
+      {status === "error"   && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Erro ao enviar. Tente novamente.</div>}
+      {status === "done" && resultado && (
+        <div style={{ fontSize:11, color:"#4ade80", marginTop:8, fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
+          ✓ {resultado.enviados} e-mail(s) enviado(s)
+          {resultado.semPendencia > 0 && <span style={{ color:"rgba(245,240,232,.3)" }}> · {resultado.semPendencia} sem pendências (não notificados)</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminTab({ owner = false, userCog = "" }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
@@ -1880,6 +1957,7 @@ function AdminTab({ owner = false, userCog = "" }) {
       </div>
 
       <EmailJSTestBlock />
+      <NotificarTodosBlock />
 
       <div style={{ marginTop: 28, marginBottom: 28 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 12 }}>Avisos / Push para joiners</div>
