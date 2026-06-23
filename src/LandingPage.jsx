@@ -222,11 +222,6 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         <button className="lp-card-btn" onClick={handleEntrar} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
         <div className="lp-card-divider" />
         <button className="lp-card-secondary" onClick={() => setPrimeiroAcesso(true)}>Primeiro acesso →</button>
-        <a href={WA_ACESSO} target="_blank" rel="noopener noreferrer" style={{
-          display:"block", textAlign:"center", marginTop:8,
-          fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace",
-          textDecoration:"none", letterSpacing:".06em"
-        }}>Solicitar acesso via WhatsApp</a>
       </>
     );
   }
