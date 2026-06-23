@@ -1003,13 +1003,14 @@ function StaffPanel() {
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key","staff_acessos").single()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (data?.value) {
           try { setAcessos(JSON.parse(data.value)); } catch { setAcessos({}); }
         } else {
           const defaults = {};
           STAFF_MEMBERS.forEach(s => { defaults[s.cog] = [...DEFAULT_STAFF_ACESSOS]; });
           setAcessos(defaults);
+          await supabase.from("config").insert({ key:"staff_acessos", value: JSON.stringify(defaults) });
         }
       });
   }, []);
@@ -1020,7 +1021,7 @@ function StaffPanel() {
     const novo  = atual.includes(acessoId) ? atual.filter(a => a !== acessoId) : [...atual, acessoId];
     const novoAcessos = { ...acessos, [cog]: novo };
     setAcessos(novoAcessos);
-    await supabase.from("config").upsert({ key:"staff_acessos", value: JSON.stringify(novoAcessos) }, { onConflict:"key" });
+    await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key","staff_acessos");
     setSaving(false);
   }
 
@@ -1586,9 +1587,17 @@ function AdminTab({ owner = false, userCog = "" }) {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "staff_acessos").single()
-      .then(({ data }) => {
-        if (data?.value) { try { setStaffAcessos(JSON.parse(data.value)); } catch {} }
-        else setStaffAcessos({});
+      .then(async ({ data }) => {
+        if (data?.value) {
+          try { setStaffAcessos(JSON.parse(data.value)); } catch { setStaffAcessos({}); }
+        } else {
+          const defaults = {};
+          STAFF_MEMBERS.forEach(s => { defaults[s.cog] = [...DEFAULT_STAFF_ACESSOS]; });
+          setStaffAcessos(defaults);
+          if (owner) {
+            await supabase.from("config").insert({ key:"staff_acessos", value: JSON.stringify(defaults) });
+          }
+        }
       });
     supabase.from("reports").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setReports(data); });
