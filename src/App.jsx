@@ -1546,6 +1546,7 @@ function AdminTab({ owner = false }) {
           { id:"pagamentos",   label:"Pagamentos" },
           { id:"disponiveis",  label:"Disponíveis" },
           { id:"blocklist",    label:"Blocklist" },
+          { id:"reports",      label:"Reports", badge: reports.filter(r => r.status === "pendente").length || null },
         ].map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
             background: adminMainTab === t.id ? "var(--laranja)" : "transparent",
@@ -1596,7 +1597,9 @@ function AdminTab({ owner = false }) {
         {pushes.map(p => <PushAdminCard key={p.id} p={p} onDesativar={() => desativarPush(p.id)} />)}
       </div>
 
-      <div style={{ marginTop: 28 }}>
+      </>}
+
+      {adminMainTab === "reports" && <div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           {["pendentes", "finalizados"].map(t => {
             const count = t === "pendentes" ? reports.filter(r => r.status === "pendente").length : reports.filter(r => r.status === "resolvido").length;
@@ -1688,9 +1691,7 @@ function AdminTab({ owner = false }) {
           </div>
           );
         })}
-      </div>
-
-      </>}
+      </div>}
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
       {adminMainTab === "pagamentos"  && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
