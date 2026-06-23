@@ -65,7 +65,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const joiner = await buscarJoiner(input);
     if (!joiner) { setError("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
 
-    if (joiner.senha) {
+    const isOwner = joiner.cog === "nandaverseo_c" || joiner.email === "nandag_medeiros@hotmail.com";
+    if (isOwner && joiner.senha) {
       setPendingJoiner(joiner);
       setLoading(false);
       return;
