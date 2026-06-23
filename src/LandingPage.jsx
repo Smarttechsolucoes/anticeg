@@ -22,6 +22,13 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [pendingJoiner, setPendingJoiner] = useState(null);
   const [senha, setSenha] = useState("");
 
+  const [primeiroAcesso, setPrimeiroAcesso] = useState(false);
+  const [paEmail, setPaEmail]   = useState("");
+  const [paHandle, setPaHandle] = useState("");
+  const [paClaim, setPaClaim]   = useState("");
+  const [paError, setPaError]   = useState("");
+  const [paLoading, setPaLoading] = useState(false);
+
   useEffect(() => {
     const cursor = cursorRef.current;
     const ring = ringRef.current;
@@ -90,6 +97,54 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     onLogin(joiner, itens || []);
   }
 
+  async function handlePrimeiroAcesso() {
+    setPaLoading(true); setPaError("");
+    const emailVal  = paEmail.trim().toLowerCase();
+    const handleVal = paHandle.trim().replace(/^@/, "");
+    const claimVal  = paClaim.trim();
+
+    if (!emailVal && !handleVal) {
+      setPaError("Preencha pelo menos o e-mail ou o @."); setPaLoading(false); return;
+    }
+
+    let joiner = null;
+
+    if (emailVal) {
+      const { data } = await supabase.from("joiners").select("*").eq("email", emailVal).maybeSingle();
+      if (data) joiner = data;
+    }
+    if (!joiner && handleVal) {
+      const { data } = await supabase.from("joiners").select("*")
+        .or(`twitter.ilike.@${handleVal},twitter.ilike.${handleVal}`)
+        .maybeSingle();
+      if (data) joiner = data;
+    }
+
+    if (!joiner) {
+      setPaError("Cadastro não encontrado. Confira os dados ou fale no WhatsApp."); setPaLoading(false); return;
+    }
+
+    if (claimVal) {
+      const { data: claimData } = await supabase.from("masterlist")
+        .select("id").eq("cog", joiner.cog).ilike("nome_do_item", `%${claimVal}%`).limit(1);
+      if (!claimData || claimData.length === 0) {
+        setPaError("Item não encontrado para este cadastro. Verifique o nome da claim."); setPaLoading(false); return;
+      }
+    }
+
+    await entrarCom(joiner);
+    setPaLoading(false);
+  }
+
+  function resetPrimeiroAcesso() {
+    setPrimeiroAcesso(false); setPaEmail(""); setPaHandle(""); setPaClaim(""); setPaError("");
+  }
+
+  const voltarStyle = {
+    background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace",
+    fontSize:11, cursor:"pointer", marginTop:4, textAlign:"center", width:"100%"
+  };
+
   function renderCard() {
     if (pendingJoiner) return (
       <>
@@ -108,10 +163,46 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         />
         {error && <div className="lp-card-error">{error}</div>}
         <button className="lp-card-btn" onClick={handleSenha} disabled={loading}>{loading ? "..." : "CONFIRMAR →"}</button>
-        <button onClick={() => { setPendingJoiner(null); setSenha(""); setError(""); }} style={{
-          background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace",
-          fontSize:11, cursor:"pointer", marginTop:4, textAlign:"center", width:"100%"
-        }}>← voltar</button>
+        <button onClick={() => { setPendingJoiner(null); setSenha(""); setError(""); }} style={voltarStyle}>← voltar</button>
+      </>
+    );
+
+    if (primeiroAcesso) return (
+      <>
+        <div className="lp-card-label">// primeiro acesso</div>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:14, lineHeight:1.6 }}>
+          Preencha com os dados usados na CEG. Ao menos e-mail <em>ou</em> @ é obrigatório.
+        </div>
+        <input
+          className="lp-card-input"
+          type="email"
+          placeholder="e-mail do forms de pagamento"
+          value={paEmail}
+          onChange={e => { setPaEmail(e.target.value); setPaError(""); }}
+          onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()}
+          autoFocus
+        />
+        <input
+          className="lp-card-input"
+          type="text"
+          placeholder="@ da rede social"
+          value={paHandle}
+          onChange={e => { setPaHandle(e.target.value); setPaError(""); }}
+          onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()}
+        />
+        <input
+          className="lp-card-input"
+          type="text"
+          placeholder="nome da claim (opcional, para verificação)"
+          value={paClaim}
+          onChange={e => { setPaClaim(e.target.value); setPaError(""); }}
+          onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()}
+        />
+        {paError && <div className="lp-card-error">{paError}</div>}
+        <button className="lp-card-btn" onClick={handlePrimeiroAcesso} disabled={paLoading}>
+          {paLoading ? "..." : "VERIFICAR →"}
+        </button>
+        <button onClick={resetPrimeiroAcesso} style={voltarStyle}>← voltar</button>
       </>
     );
 
@@ -130,7 +221,12 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         {error && <div className="lp-card-error">{error}</div>}
         <button className="lp-card-btn" onClick={handleEntrar} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
         <div className="lp-card-divider" />
-        <a href={WA_ACESSO} target="_blank" rel="noopener noreferrer" className="lp-card-secondary lp-card-secondary-link">Solicitar acesso</a>
+        <button className="lp-card-secondary" onClick={() => setPrimeiroAcesso(true)}>Primeiro acesso →</button>
+        <a href={WA_ACESSO} target="_blank" rel="noopener noreferrer" style={{
+          display:"block", textAlign:"center", marginTop:8,
+          fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace",
+          textDecoration:"none", letterSpacing:".06em"
+        }}>Solicitar acesso via WhatsApp</a>
       </>
     );
   }
