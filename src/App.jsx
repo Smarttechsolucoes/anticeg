@@ -10,11 +10,17 @@ const supabase = createClient(
 );
 
 const WHATSAPP_NUM = "5524992501917";
-const ADMIN_EMAILS = ["nandag_medeiros@hotmail.com", "nathallynayane1234@gmail.com"];
-const ADMIN_COGS   = ["nandaverseo_c", "nathy_mrnd"];
+const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
+const OWNER_COGS   = ["nandaverseo_c"];
+const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
+const STAFF_COGS   = ["nathy_mrnd"];
 const SESSION_VERSION = "2";
 function isAdminUser(user) {
-  return ADMIN_EMAILS.includes(user?.email) || ADMIN_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c";
+  return OWNER_EMAILS.includes(user?.email) || OWNER_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c"
+      || STAFF_EMAILS.includes(user?.email) || STAFF_COGS.includes(user?.cog);
+}
+function isOwner(user) {
+  return OWNER_EMAILS.includes(user?.email) || OWNER_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c";
 }
 
 function fmtBRL(val, hidden) {
@@ -1442,7 +1448,7 @@ function PushAdminCard({ p, onDesativar }) {
   );
 }
 
-function AdminTab() {
+function AdminTab({ owner = false }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
@@ -1535,7 +1541,7 @@ function AdminTab() {
 
       <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24 }}>
         {[
-          { id:"geral",        label:"Geral" },
+          ...(owner ? [{ id:"geral", label:"Geral" }] : []),
           { id:"cadastros",    label:"Cadastros", badge: confirmacoes.length || null },
           { id:"pagamentos",   label:"Pagamentos" },
           { id:"disponiveis",  label:"Disponíveis" },
@@ -1555,7 +1561,7 @@ function AdminTab() {
         ))}
       </div>
 
-      {adminMainTab === "geral" && <>
+      {adminMainTab === "geral" && owner && <>
       <AdminLinks />
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
         <div style={{ flex:1 }}>
@@ -2475,7 +2481,7 @@ export default function App() {
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "admin" && isAdminUser(user) && <AdminTab />}
+      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} />}
 
       <BottomNav tab={tab} setTab={setTab} isGuest={user.guest} isAdmin={isAdmin} />
 
