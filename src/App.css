@@ -14,7 +14,88 @@
   --fs-2xl: clamp(28px, 2.5vw, 40px);
   --fs-3xl: clamp(36px, 3.5vw, 56px);
   --card-bg: #111;
+  --a11y-scale: 1;
 }
+
+/* ── Alto contraste ──────────────────────────────────────── */
+body.high-contrast {
+  background: #fff !important;
+  color: #000 !important;
+}
+body.high-contrast .topbar,
+body.high-contrast .tabs-bar,
+body.high-contrast .side-nav,
+body.high-contrast .bottom-nav { background:#fff !important; border-color:#000 !important; }
+body.high-contrast .main,
+body.high-contrast .admin-wrap,
+body.high-contrast .cal-main { background:#fff !important; }
+body.high-contrast .sum-card,
+body.high-contrast .ml-card,
+body.high-contrast .modal-box { background:#f4f4f4 !important; border-color:#000 !important; color:#000 !important; }
+body.high-contrast * { color:#000 !important; }
+body.high-contrast .tab-btn.active,
+body.high-contrast .side-nav-item.active { color:#c00 !important; border-color:#c00 !important; }
+body.high-contrast .page-title,
+body.high-contrast .page-title span { color:#000 !important; }
+body.high-contrast input,
+body.high-contrast textarea { background:#fff !important; color:#000 !important; border-color:#000 !important; }
+
+/* ── Escala de fonte ─────────────────────────────────────── */
+body.font-lg  { font-size: calc(16px * var(--a11y-scale, 1.2)) !important; }
+body.font-lg  .sum-value { font-size: 22px !important; }
+body.font-lg  .page-title { font-size: clamp(38px, 11vw, 60px) !important; }
+body.font-xl  { font-size: calc(16px * 1.4) !important; }
+body.font-xl  .sum-value { font-size: 26px !important; }
+body.font-xl  .page-title { font-size: clamp(42px, 12vw, 68px) !important; }
+
+/* ── Widget acessibilidade ───────────────────────────────── */
+.a11y-btn {
+  position: fixed; bottom: 80px; left: 16px; z-index: 999;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #1a1a1a; border: 1.5px solid rgba(245,240,232,.2);
+  color: rgba(245,240,232,.7); font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .2s; box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  -webkit-tap-highlight-color: transparent;
+}
+.a11y-btn:hover { border-color: var(--lilas); color: var(--lilas); }
+.a11y-panel {
+  position: fixed; bottom: 134px; left: 16px; z-index: 999;
+  background: #1a1a1a; border: 1px solid rgba(245,240,232,.15);
+  border-radius: 12px; padding: 14px; width: 200px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.a11y-panel-title { font-size: 10px; color: rgba(245,240,232,.45); letter-spacing: .1em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+.a11y-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.a11y-label { font-size: 12px; color: rgba(245,240,232,.7); font-family: 'DM Mono', monospace; }
+.a11y-controls { display: flex; gap: 4px; }
+.a11y-ctrl-btn {
+  background: rgba(245,240,232,.06); border: 1px solid rgba(245,240,232,.12);
+  color: rgba(245,240,232,.8); border-radius: 6px; width: 30px; height: 30px;
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.a11y-ctrl-btn:hover { background: rgba(201,168,240,.15); border-color: var(--lilas); color: var(--lilas); }
+.a11y-ctrl-btn.active { background: rgba(201,168,240,.2); border-color: var(--lilas); color: var(--lilas); }
+.a11y-toggle {
+  width: 36px; height: 20px; border-radius: 99px; border: none; cursor: pointer;
+  background: rgba(245,240,232,.12); position: relative; transition: background .2s; flex-shrink: 0;
+}
+.a11y-toggle.on { background: var(--lilas); }
+.a11y-toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%; background: #fff;
+  transition: left .2s;
+}
+.a11y-toggle.on::after { left: 19px; }
+
+body.high-contrast .a11y-btn { background:#fff; border-color:#000; color:#000; }
+body.high-contrast .a11y-panel { background:#fff; border-color:#000; }
+body.high-contrast .a11y-ctrl-btn { background:#eee; border-color:#000; color:#000; }
+body.high-contrast .a11y-label,
+body.high-contrast .a11y-panel-title { color:#000 !important; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

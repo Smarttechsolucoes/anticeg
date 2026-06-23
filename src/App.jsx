@@ -2539,6 +2539,53 @@ function TutorialModal({ onClose }) {
   );
 }
 
+function AccessibilityWidget() {
+  const [open, setOpen] = useState(false);
+  const [contraste, setContraste] = useState(() => localStorage.getItem("a11y_contraste") === "1");
+  const [fonte, setFonte] = useState(() => localStorage.getItem("a11y_fonte") || "normal");
+
+  useEffect(() => {
+    document.body.classList.toggle("high-contrast", contraste);
+    localStorage.setItem("a11y_contraste", contraste ? "1" : "0");
+  }, [contraste]);
+
+  useEffect(() => {
+    document.body.classList.remove("font-lg", "font-xl");
+    if (fonte !== "normal") document.body.classList.add(fonte);
+    localStorage.setItem("a11y_fonte", fonte);
+  }, [fonte]);
+
+  const fontes = ["normal", "font-lg", "font-xl"];
+  const fonteLabels = { normal: "Normal", "font-lg": "Grande", "font-xl": "Maior" };
+
+  return (
+    <>
+      {open && (
+        <div className="a11y-panel">
+          <div className="a11y-panel-title">Acessibilidade</div>
+          <div className="a11y-row">
+            <span className="a11y-label">Fonte</span>
+            <div className="a11y-controls">
+              {fontes.map(f => (
+                <button key={f} className={`a11y-ctrl-btn${fonte === f ? " active" : ""}`} onClick={() => setFonte(f)} title={fonteLabels[f]}>
+                  {f === "normal" ? "A" : f === "font-lg" ? "A+" : "A++"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="a11y-row">
+            <span className="a11y-label">Alto contraste</span>
+            <button className={`a11y-toggle${contraste ? " on" : ""}`} onClick={() => setContraste(c => !c)} aria-label="Alternar alto contraste" />
+          </div>
+        </div>
+      )}
+      <button className="a11y-btn" onClick={() => setOpen(o => !o)} aria-label="Opções de acessibilidade" title="Acessibilidade">
+        ♿
+      </button>
+    </>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState("landing");
   const [sideOpen, setSideOpen] = useState(false);
@@ -2681,6 +2728,7 @@ export default function App() {
 
   return (
     <div>
+      <AccessibilityWidget />
       {manutencao && !bypassManutencao && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 9999,
