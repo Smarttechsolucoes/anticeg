@@ -2580,7 +2580,7 @@ function AccessibilityWidget() {
         </div>
       )}
       <button className="a11y-btn" onClick={() => setOpen(o => !o)} aria-label="Opções de acessibilidade" title="Acessibilidade">
-        ♿
+        Aa
       </button>
     </>
   );
