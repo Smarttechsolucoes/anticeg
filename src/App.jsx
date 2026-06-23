@@ -982,8 +982,8 @@ function FeedbackForm({ user, defaultTipo }) {
   );
 }
 
-const STAFF_CONFIG = [
-  { cog: "nathy_mrnd", email: "nathallynayane1234@gmail.com", nome: "Nathally", acessos: ["cadastros","pagamentos","disponiveis","blocklist","reports"] },
+const STAFF_MEMBERS = [
+  { cog: "nathy_mrnd", email: "nathallynayane1234@gmail.com", nome: "Nathally" },
 ];
 
 const ALL_ACESSOS = [
@@ -995,46 +995,83 @@ const ALL_ACESSOS = [
   { id:"geral",       label:"Config / Geral" },
 ];
 
+const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports"];
+
 function StaffPanel() {
+  const [acessos, setAcessos] = useState(null); // { nathy_mrnd: [...] }
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key","staff_acessos").single()
+      .then(({ data }) => {
+        if (data?.value) {
+          try { setAcessos(JSON.parse(data.value)); } catch { setAcessos({}); }
+        } else {
+          const defaults = {};
+          STAFF_MEMBERS.forEach(s => { defaults[s.cog] = [...DEFAULT_STAFF_ACESSOS]; });
+          setAcessos(defaults);
+        }
+      });
+  }, []);
+
+  async function toggle(cog, acessoId) {
+    setSaving(true);
+    const atual = acessos[cog] || [...DEFAULT_STAFF_ACESSOS];
+    const novo  = atual.includes(acessoId) ? atual.filter(a => a !== acessoId) : [...atual, acessoId];
+    const novoAcessos = { ...acessos, [cog]: novo };
+    setAcessos(novoAcessos);
+    await supabase.from("config").upsert({ key:"staff_acessos", value: JSON.stringify(novoAcessos) }, { onConflict:"key" });
+    setSaving(false);
+  }
+
+  if (!acessos) return <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Carregando...</div>;
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", letterSpacing:".08em", textTransform:"uppercase" }}>
-        Acesso atual da equipe
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", letterSpacing:".08em", textTransform:"uppercase" }}>Acesso da equipe</div>
+        {saving && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>salvando...</div>}
       </div>
-      {STAFF_CONFIG.map(s => (
-        <div key={s.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"18px 20px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-            <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(201,168,240,.15)", border:"1px solid rgba(201,168,240,.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, color:"#C9A8F0", fontFamily:"'Bebas Neue',sans-serif" }}>
-              {s.nome[0]}
+      {STAFF_MEMBERS.map(s => {
+        const staffAcessos = acessos[s.cog] || DEFAULT_STAFF_ACESSOS;
+        return (
+          <div key={s.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"18px 20px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+              <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(201,168,240,.15)", border:"1px solid rgba(201,168,240,.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, color:"#C9A8F0", fontFamily:"'Bebas Neue',sans-serif" }}>
+                {s.nome[0]}
+              </div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{s.nome}</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.35)" }}>@{s.cog} · {s.email}</div>
+              </div>
+              <span style={{ marginLeft:"auto", fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:99, padding:"2px 10px" }}>staff</span>
             </div>
-            <div>
-              <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{s.nome}</div>
-              <div style={{ fontSize:11, color:"rgba(245,240,232,.35)" }}>@{s.cog} · {s.email}</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:10, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {ALL_ACESSOS.map(a => {
+                const ativo = staffAcessos.includes(a.id);
+                return (
+                  <div key={a.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.06)" }}>
+                    <span style={{ fontSize:12, color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{a.label}</span>
+                    <button onClick={() => toggle(s.cog, a.id)} style={{
+                      width:42, height:24, borderRadius:99, border:"none", cursor:"pointer",
+                      background: ativo ? "var(--verde)" : "rgba(245,240,232,.12)",
+                      position:"relative", transition:"background .2s", flexShrink:0
+                    }}>
+                      <span style={{
+                        position:"absolute", top:3, left: ativo ? 21 : 3,
+                        width:18, height:18, borderRadius:"50%",
+                        background: ativo ? "#111" : "rgba(245,240,232,.4)",
+                        transition:"left .2s"
+                      }} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-            <span style={{ marginLeft:"auto", fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:99, padding:"2px 10px" }}>staff</span>
           </div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:8, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-            {ALL_ACESSOS.map(a => {
-              const tem = s.acessos.includes(a.id);
-              return (
-                <span key={a.id} style={{
-                  fontSize:10, padding:"3px 10px", borderRadius:99,
-                  background: tem ? "rgba(186,255,57,.1)" : "rgba(245,240,232,.04)",
-                  border: `1px solid ${tem ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.1)"}`,
-                  color: tem ? "var(--verde)" : "rgba(245,240,232,.25)",
-                  fontFamily:"'DM Mono',monospace"
-                }}>
-                  {tem ? "✓ " : "✗ "}{a.label}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", marginTop:4 }}>
-        Para alterar acessos, edite STAFF_COGS / STAFF_EMAILS no código.
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -1530,11 +1567,11 @@ function PushAdminCard({ p, onDesativar }) {
   );
 }
 
-function AdminTab({ owner = false }) {
+function AdminTab({ owner = false, userCog = "" }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
-  const [adminMainTab, setAdminMainTab] = useState("geral");
+  const [adminMainTab, setAdminMainTab] = useState(owner ? "geral" : "cadastros");
   const [pushes, setPushes] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [novoPush, setNovoPush] = useState("");
@@ -1543,10 +1580,16 @@ function AdminTab({ owner = false }) {
   const [disponiveisData, setDisponiveisData] = useState([]);
   const [joinersData, setJoinersData] = useState([]);
   const [confirmacoes, setConfirmacoes] = useState([]);
+  const [staffAcessos, setStaffAcessos] = useState(null);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
+    supabase.from("config").select("value").eq("key", "staff_acessos").single()
+      .then(({ data }) => {
+        if (data?.value) { try { setStaffAcessos(JSON.parse(data.value)); } catch {} }
+        else setStaffAcessos({});
+      });
     supabase.from("reports").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setReports(data); });
     supabase.from("pushes").select("*").order("created_at", { ascending: false })
@@ -1622,14 +1665,18 @@ function AdminTab({ owner = false }) {
       <h2 className="admin-title">⚙ Admin</h2>
 
       <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24 }}>
-        {[
-          ...(owner ? [{ id:"geral", label:"Geral" }] : []),
-          { id:"cadastros",    label:"Cadastros", badge: confirmacoes.length || null },
-          { id:"pagamentos",   label:"Pagamentos" },
-          { id:"disponiveis",  label:"Disponíveis" },
-          { id:"blocklist",    label:"Blocklist" },
-          { id:"reports",      label:"Reports", badge: reports.filter(r => r.status === "pendente").length || null },
-        ].map(t => (
+        {(() => {
+          const meuAcesso = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
+          const temAcesso = (id) => owner || !meuAcesso || meuAcesso.includes(id);
+          return [
+            ...(owner ? [{ id:"geral", label:"Geral" }] : []),
+            temAcesso("cadastros")   && { id:"cadastros",   label:"Cadastros",   badge: confirmacoes.length || null },
+            temAcesso("pagamentos")  && { id:"pagamentos",  label:"Pagamentos" },
+            temAcesso("disponiveis") && { id:"disponiveis", label:"Disponíveis" },
+            temAcesso("blocklist")   && { id:"blocklist",   label:"Blocklist" },
+            temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status === "pendente").length || null },
+          ].filter(Boolean);
+        })().map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
             background: adminMainTab === t.id ? "var(--laranja)" : "transparent",
             color:      adminMainTab === t.id ? "#111" : "rgba(245,240,232,.5)",
@@ -2531,7 +2578,7 @@ export default function App() {
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} />}
+      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} />}
 
       <BottomNav tab={tab} setTab={setTab} isGuest={user.guest} isAdmin={isAdmin} />
 
