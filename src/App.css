@@ -153,12 +153,18 @@ body.high-contrast .a11y-toggle.on { background:#5500bb !important; }
 body.high-contrast .a11y-toggle::after { background:#fff !important; }
 
 /* ── Escala de fonte ─────────────────────────────────────── */
-body.font-lg  { font-size: calc(16px * var(--a11y-scale, 1.2)) !important; }
-body.font-lg  .sum-value { font-size: 22px !important; }
-body.font-lg  .page-title { font-size: clamp(38px, 11vw, 60px) !important; }
-body.font-xl  { font-size: calc(16px * 1.4) !important; }
-body.font-xl  .sum-value { font-size: 26px !important; }
-body.font-xl  .page-title { font-size: clamp(42px, 12vw, 68px) !important; }
+body.font-lg  { font-size: 18px !important; line-height: 1.6 !important; }
+body.font-lg  .sum-value { font-size: 24px !important; }
+body.font-lg  .sum-label, body.font-lg  .sum-sub { font-size: 12px !important; }
+body.font-lg  .page-title { font-size: clamp(42px, 11vw, 64px) !important; }
+
+body.font-xl  { font-size: 22px !important; line-height: 1.7 !important; }
+body.font-xl  .sum-value { font-size: 30px !important; }
+body.font-xl  .sum-label, body.font-xl  .sum-sub { font-size: 14px !important; }
+body.font-xl  .page-title { font-size: clamp(48px, 13vw, 72px) !important; }
+body.font-xl  .tab-btn { font-size: 13px !important; padding: 10px 18px !important; }
+body.font-xl  .side-nav-item { font-size: 16px !important; }
+body.font-xl  .bottom-nav-label { font-size: 11px !important; }
 
 /* ── Widget acessibilidade ───────────────────────────────── */
 .a11y-btn {
