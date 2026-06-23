@@ -1471,7 +1471,7 @@ function AdminTab() {
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
-          .select("cog, nome, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
+          .select("id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais")
           .range(from, from + 999);
         if (!data || data.length === 0) break;
         all = [...all, ...data];
@@ -1523,10 +1523,11 @@ function AdminTab() {
 
       <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24 }}>
         {[
-          { id:"geral",      label:"Geral" },
-          { id:"cadastros",  label:"Cadastros", badge: confirmacoes.length || null },
-          { id:"pagamentos", label:"Pagamentos" },
-          { id:"blocklist",  label:"Blocklist" },
+          { id:"geral",        label:"Geral" },
+          { id:"cadastros",    label:"Cadastros", badge: confirmacoes.length || null },
+          { id:"pagamentos",   label:"Pagamentos" },
+          { id:"disponiveis",  label:"Disponíveis" },
+          { id:"blocklist",    label:"Blocklist" },
         ].map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
             background: adminMainTab === t.id ? "var(--laranja)" : "transparent",
@@ -1706,9 +1707,10 @@ function AdminTab() {
       </div>
       </>}
 
-      {adminMainTab === "cadastros"  && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
-      {adminMainTab === "pagamentos" && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
-      {adminMainTab === "blocklist"  && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
+      {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
+      {adminMainTab === "pagamentos"  && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
+      {adminMainTab === "disponiveis" && <AdminDisponivel data={pendentesData} />}
+      {adminMainTab === "blocklist"   && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
     </div>
   );
 }
@@ -1812,7 +1814,7 @@ function AdminPagamentos({ data, joiners }) {
   const cogValidos = new Set((joiners || []).map(j => j.cog));
 
   const byJoiner = {};
-  data.filter(item => cogValidos.has(item.cog)).forEach(item => {
+  data.filter(item => cogValidos.has(item.cog) && item.nome !== "Disponivel").forEach(item => {
     const cog = item.cog || "—";
     if (!byJoiner[cog]) byJoiner[cog] = { nome: item.nome || cog, cog, itens: [] };
     const pend = (isPendente(item.pago_item)  ? Number(item.valor_item||0)  : 0)
@@ -1864,6 +1866,83 @@ function AdminPagamentos({ data, joiners }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function AdminDisponivel({ data }) {
+  const [filtro, setFiltro] = useState("disponiveis");
+  const itens = data.filter(i => i.nome === "Disponivel");
+  const disponiveis = itens.filter(i => i.status === "Disponível");
+  const vendidos    = itens.filter(i => i.status === "Vendido");
+  const lista = filtro === "disponiveis" ? disponiveis : filtro === "vendidos" ? vendidos : itens;
+
+  async function marcarVendido(id) {
+    await supabase.from("masterlist").update({ status: "Vendido" }).eq("id", id);
+  }
+  async function marcarDisponivel(id) {
+    await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", id);
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", marginBottom:16 }}>
+        {disponiveis.length} disponível{disponiveis.length !== 1 ? "is" : ""} · {vendidos.length} vendido{vendidos.length !== 1 ? "s" : ""}
+      </div>
+      <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+        {[
+          { id:"disponiveis", label:`Disponíveis (${disponiveis.length})` },
+          { id:"vendidos",    label:`Vendidos (${vendidos.length})` },
+          { id:"todos",       label:`Todos (${itens.length})` },
+        ].map(f => (
+          <button key={f.id} onClick={() => setFiltro(f.id)} style={{
+            background: filtro === f.id ? "var(--laranja)" : "transparent",
+            color:      filtro === f.id ? "#111" : "rgba(245,240,232,.5)",
+            border:    `1px solid ${filtro === f.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
+            borderRadius:6, padding:"5px 12px", fontSize:11,
+            fontFamily:"'DM Mono',monospace", fontWeight: filtro === f.id ? 700 : 400,
+            cursor:"pointer", letterSpacing:".05em"
+          }}>{f.label}</button>
+        ))}
+      </div>
+      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum item aqui.</div>}
+      {lista.map(item => (
+        <div key={item.id} style={{
+          background:"var(--card-bg)",
+          border:`1px solid ${item.status === "Disponível" ? "rgba(255,180,0,.2)" : "rgba(245,240,232,.07)"}`,
+          borderRadius:10, padding:"14px 16px", marginBottom:8,
+          display:"flex", alignItems:"center", gap:12
+        }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
+              <StatusChip status={item.status} />
+            </div>
+            <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginTop:4 }}>{item.nome_do_item}</div>
+            {Number(item.valor_item) > 0 && (
+              <div style={{ fontSize:12, color:"var(--laranja)", marginTop:3, fontWeight:600 }}>R${fmtBRL(item.valor_item)}</div>
+            )}
+            {item.info_adicionais && (
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>{item.info_adicionais}</div>
+            )}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6, flexShrink:0 }}>
+            {item.status === "Disponível" ? (
+              <button onClick={() => marcarVendido(item.id)} style={{
+                background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)",
+                color:"var(--verde)", borderRadius:6, padding:"5px 12px",
+                fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
+              }}>Marcar vendido ✓</button>
+            ) : (
+              <button onClick={() => marcarDisponivel(item.id)} style={{
+                background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.25)",
+                color:"#ffb400", borderRadius:6, padding:"5px 12px",
+                fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
+              }}>Reabrir →</button>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
