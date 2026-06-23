@@ -652,7 +652,7 @@ function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -752,6 +752,18 @@ function MasterlistTab({ user, itens, onLogin }) {
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
         </div>
+        {pushAtivos.length > 0 && (
+          <div className="sum-card" style={{ borderColor:"rgba(201,168,240,.3)", position:"relative", minWidth:180 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div className="sum-label">Mural de avisos</div>
+              <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{pushAtivos.length}</span>
+            </div>
+            <div style={{ fontSize:12, color:"var(--offwhite)", marginTop:6, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+              {pushAtivos[0].message}
+            </div>
+            <div className="sum-sub" style={{ marginTop:4 }}>{pushAtivos.length > 1 ? `+${pushAtivos.length - 1} aviso${pushAtivos.length > 2 ? "s" : ""}` : "toque para ver"}</div>
+          </div>
+        )}
       </div>
 
       {!guest && qtdAtrasados >= 3 && (
@@ -2593,7 +2605,7 @@ export default function App() {
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => setTab("admin")}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
