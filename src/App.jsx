@@ -660,12 +660,23 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
   const [avisos, setAvisos] = useState([]);
-  const [avisosAberto, setAvisosAberto] = useState(false);
+  const [avisosModal, setAvisosModal] = useState(false);
 
   useEffect(() => {
     supabase.from("pushes").select("*").eq("active", true).order("created_at", { ascending: false })
-      .then(({ data }) => setAvisos(data || []));
+      .then(async ({ data }) => {
+        if (!data?.length) { setAvisos([]); return; }
+        if (user.guest) { setAvisos(data); return; }
+        const { data: lidos } = await supabase.from("push_reads").select("push_id").eq("joiner_cog", user.cog);
+        const lidosIds = new Set((lidos || []).map(r => r.push_id));
+        setAvisos(data.filter(p => !lidosIds.has(p.id)));
+      });
   }, []);
+
+  async function marcarLido(pushId) {
+    if (!user.guest) await supabase.from("push_reads").insert([{ push_id: pushId, joiner_cog: user.cog }]);
+    setAvisos(prev => prev.filter(a => a.id !== pushId));
+  }
 
   const totalV = itens.reduce((a, b) => a + Number(b.valor_item||0) + Number(b.frete_inter||0) + Number(b.taxa_rf||0), 0);
   const pagoV  = itens.reduce((a,b) =>
@@ -760,41 +771,58 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
         </div>
         {avisos.length > 0 && (
-          <button onClick={() => setAvisosAberto(v => !v)} style={{
-            background: avisosAberto ? "rgba(201,168,240,.12)" : "var(--card-bg)",
-            border:`1px solid ${avisosAberto ? "rgba(201,168,240,.5)" : "rgba(201,168,240,.3)"}`,
+          <button onClick={() => setAvisosModal(true)} style={{
+            background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.3)",
             borderRadius:"var(--radius)", padding:"var(--sum-pad)",
             textAlign:"left", cursor:"pointer", minWidth:180, flex:1
           }}>
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               <div className="sum-label">Mural de avisos</div>
               <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>
-              <span style={{ marginLeft:"auto", fontSize:10, color:"rgba(201,168,240,.6)" }}>{avisosAberto ? "▴" : "▾"}</span>
             </div>
-            <div style={{ fontSize:12, color:"var(--offwhite)", marginTop:6, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+            <div style={{ fontSize:12, color:"#C9A8F0", marginTop:6, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
               {avisos[0].message}
             </div>
             <div className="sum-sub" style={{ marginTop:4 }}>
-              {avisos.length > 1 ? `${avisos.length} avisos · clique para ver todos` : "📢 clique para ver"}
+              {avisos.length > 1 ? `${avisos.length} avisos não lidos` : "1 aviso não lido"}
             </div>
           </button>
         )}
       </div>
 
-      {avisosAberto && avisos.length > 0 && (
-        <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
-          {avisos.map((a, i) => (
-            <div key={a.id} style={{
-              background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)",
-              borderRadius:10, padding:"14px 18px", display:"flex", gap:12, alignItems:"flex-start"
-            }}>
-              <span style={{ fontSize:16, flexShrink:0, marginTop:1 }}>📢</span>
-              <div style={{ flex:1 }}>
-                {avisos.length > 1 && <div style={{ fontSize:9, color:"rgba(201,168,240,.5)", letterSpacing:".1em", textTransform:"uppercase", marginBottom:4 }}>Aviso {i + 1}</div>}
-                <div style={{ fontSize:13, color:"var(--offwhite)", lineHeight:1.7 }}>{a.message}</div>
+      {avisosModal && (
+        <div className="modal-overlay" onClick={() => setAvisosModal(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:480 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+              <div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
+                  MURAL DE <span style={{ color:"#C9A8F0" }}>AVISOS</span>
+                </div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", marginTop:2 }}>{avisos.length} aviso{avisos.length !== 1 ? "s" : ""} não lido{avisos.length !== 1 ? "s" : ""}</div>
               </div>
+              <button onClick={() => setAvisosModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
-          ))}
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {avisos.map((a, i) => (
+                <div key={a.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"16px 18px" }}>
+                  {avisos.length > 1 && <div style={{ fontSize:9, color:"rgba(201,168,240,.45)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:6 }}>Aviso {i + 1}</div>}
+                  <div style={{ fontSize:13, color:"var(--offwhite)", lineHeight:1.75, marginBottom:14 }}>{a.message}</div>
+                  <button onClick={() => marcarLido(a.id)} style={{
+                    background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)",
+                    color:"#C9A8F0", borderRadius:6, padding:"6px 14px",
+                    fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+                  }}>✓ Marcar como lido</button>
+                </div>
+              ))}
+              {avisos.length > 1 && (
+                <button onClick={() => { avisos.forEach(a => marcarLido(a.id)); setAvisosModal(false); }} style={{
+                  background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)",
+                  color:"rgba(201,168,240,.6)", borderRadius:8, padding:"10px",
+                  fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer"
+                }}>✓ Marcar todos como lido</button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
