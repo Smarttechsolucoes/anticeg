@@ -1452,6 +1452,7 @@ function AdminTab() {
   const [novoPush, setNovoPush] = useState("");
   const [sendingPush, setSendingPush] = useState(false);
   const [pendentesData, setPendentesData] = useState([]);
+  const [disponiveisData, setDisponiveisData] = useState([]);
   const [joinersData, setJoinersData] = useState([]);
   const [confirmacoes, setConfirmacoes] = useState([]);
 
@@ -1466,19 +1467,30 @@ function AdminTab() {
       .then(({ data }) => { if (data) setFeedbacks(data); });
     supabase.from("confirmacoes").select("*").eq("visto", false).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setConfirmacoes(data); });
-    // Pagamentos pendentes
+    // Masterlist separada: joiners reais (sem disponivel) e disponíveis
     (async () => {
-      let all = [], from = 0;
+      const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+
+      // Itens de joiners reais — exclui cog "disponivel" na query
+      let joiners_all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
-          .select("id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais")
+          .select(sel)
+          .neq("cog", "disponivel")
           .range(from, from + 999);
         if (!data || data.length === 0) break;
-        all = [...all, ...data];
+        joiners_all = [...joiners_all, ...data];
         if (data.length < 1000) break;
         from += 1000;
       }
-      setPendentesData(all);
+      setPendentesData(joiners_all);
+
+      // Itens disponíveis para venda
+      const { data: dispData } = await supabase.from("masterlist")
+        .select(sel)
+        .eq("cog", "disponivel");
+      setDisponiveisData(dispData || []);
+
       const { data: jData } = await supabase.from("joiners").select("cog, nome, bloqueado").order("nome");
       setJoinersData(jData || []);
     })();
@@ -1709,7 +1721,7 @@ function AdminTab() {
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
       {adminMainTab === "pagamentos"  && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
-      {adminMainTab === "disponiveis" && <AdminDisponivel data={pendentesData} />}
+      {adminMainTab === "disponiveis" && <AdminDisponivel data={disponiveisData} />}
       {adminMainTab === "blocklist"   && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
     </div>
   );
@@ -1814,7 +1826,7 @@ function AdminPagamentos({ data, joiners }) {
   const cogValidos = new Set((joiners || []).map(j => j.cog));
 
   const byJoiner = {};
-  data.filter(item => cogValidos.has(item.cog) && (item.nome || "").toLowerCase() !== "disponivel" && item.cog !== "disponivel").forEach(item => {
+  data.filter(item => cogValidos.has(item.cog)).forEach(item => {
     const cog = item.cog || "—";
     if (!byJoiner[cog]) byJoiner[cog] = { nome: item.nome || cog, cog, itens: [] };
     const pend = (isPendente(item.pago_item)  ? Number(item.valor_item||0)  : 0)
@@ -1872,7 +1884,7 @@ function AdminPagamentos({ data, joiners }) {
 
 function AdminDisponivel({ data }) {
   const [filtro, setFiltro] = useState("disponiveis");
-  const itens = data.filter(i => (i.nome || "").toLowerCase() === "disponivel" || i.cog === "disponivel");
+  const itens = data;
   const disponiveis = itens.filter(i => i.status === "Disponível");
   const vendidos    = itens.filter(i => i.status === "Vendido");
   const lista = filtro === "disponiveis" ? disponiveis : filtro === "vendidos" ? vendidos : itens;
