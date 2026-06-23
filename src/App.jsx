@@ -805,8 +805,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               {avisos.map((a, i) => (
                 <div key={a.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"16px 18px" }}>
-                  {avisos.length > 1 && <div style={{ fontSize:9, color:"rgba(201,168,240,.45)", letterSpacing:".12em", textTransform:"uppercase", marginBottom:6 }}>Aviso {i + 1}</div>}
-                  <div style={{ fontSize:13, color:"var(--offwhite)", lineHeight:1.75, marginBottom:14 }}>{a.message}</div>
+                  <div style={{ fontSize:10, color:"rgba(201,168,240,.45)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>
+                    {avisos.length > 1 && <span style={{ letterSpacing:".1em", textTransform:"uppercase", marginRight:8 }}>Aviso {i + 1} ·</span>}
+                    {new Date(a.created_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
+                  </div>
+                  <div style={{ fontSize:13, color:"var(--offwhite)", lineHeight:1.75, fontFamily:"'DM Mono',monospace", marginBottom:14 }}>{a.message}</div>
                   <button onClick={() => marcarLido(a.id)} style={{
                     background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)",
                     color:"#C9A8F0", borderRadius:6, padding:"6px 14px",
@@ -818,7 +821,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 <button onClick={() => { avisos.forEach(a => marcarLido(a.id)); setAvisosModal(false); }} style={{
                   background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)",
                   color:"rgba(201,168,240,.6)", borderRadius:8, padding:"10px",
-                  fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer"
+                  fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
                 }}>✓ Marcar todos como lido</button>
               )}
             </div>
