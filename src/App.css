@@ -19,26 +19,92 @@
 
 /* ── Alto contraste ──────────────────────────────────────── */
 body.high-contrast {
+  /* Sobrescreve variáveis CSS — afeta todos os var(--x) no CSS e inline styles */
+  --card-bg:  #f0f0f0;
+  --preto:    #ffffff;
+  --offwhite: #111111;
+  --laranja:  #c0390b;
+  --lilas:    #5500bb;
+  --verde:    #1a6b00;
   background: #fff !important;
   color: #000 !important;
 }
-body.high-contrast .topbar,
-body.high-contrast .tabs-bar,
-body.high-contrast .side-nav,
-body.high-contrast .bottom-nav { background:#fff !important; border-color:#000 !important; }
+
+/* Texto: tudo preto (regra geral, sobrescrita pelas específicas abaixo) */
+body.high-contrast,
+body.high-contrast * { color: #000 !important; }
+
+/* Estrutura */
+body.high-contrast .topbar  { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .tabs-bar { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .side-nav { background:#f5f5f5 !important; border-color:#ccc !important; }
+body.high-contrast .side-nav-overlay { background:rgba(0,0,0,.4) !important; }
+body.high-contrast .bottom-nav { background:#fff !important; border-color:#ccc !important; }
 body.high-contrast .main,
 body.high-contrast .admin-wrap,
 body.high-contrast .cal-main { background:#fff !important; }
+
+/* Cards e modais */
 body.high-contrast .sum-card,
-body.high-contrast .ml-card,
-body.high-contrast .modal-box { background:#f4f4f4 !important; border-color:#000 !important; color:#000 !important; }
-body.high-contrast * { color:#000 !important; }
-body.high-contrast .tab-btn.active,
-body.high-contrast .side-nav-item.active { color:#c00 !important; border-color:#c00 !important; }
-body.high-contrast .page-title,
-body.high-contrast .page-title span { color:#000 !important; }
+body.high-contrast .ml-card { background:#f0f0f0 !important; border-color:#999 !important; }
+body.high-contrast .ml-card-vals { background:#e2e2e2 !important; }
+body.high-contrast .modal-box,
+body.high-contrast .ceg-modal { background:#fff !important; border-color:#555 !important; }
+
+/* Tabela */
+body.high-contrast .table-wrap { border-color:#555 !important; }
+body.high-contrast .col-group-header th,
+body.high-contrast .thead-cols th { background:#e8e8e8 !important; border-color:#aaa !important; }
+body.high-contrast tbody tr { background:#fff !important; border-color:#ddd !important; }
+body.high-contrast tbody tr:hover { background:#f0f0f0 !important; }
+body.high-contrast .drawer-inner { background:#f9f9f9 !important; border-color:#ccc !important; }
+body.high-contrast .total-row td { background:#ececec !important; }
+
+/* Chips e badges */
+body.high-contrast .status-chip,
+body.high-contrast .pay-badge,
+body.high-contrast .pay-pago,
+body.high-contrast .pay-pendente { background:#ddd !important; border:1px solid #777 !important; }
+
+/* Inputs e selects */
 body.high-contrast input,
-body.high-contrast textarea { background:#fff !important; color:#000 !important; border-color:#000 !important; }
+body.high-contrast textarea,
+body.high-contrast select { background:#fff !important; border-color:#555 !important; }
+
+/* Botões de estado ativo */
+body.high-contrast .tab-btn.active { color:var(--laranja) !important; border-color:var(--laranja) !important; }
+body.high-contrast .bottom-nav-btn.active { color:var(--laranja) !important; }
+body.high-contrast .side-nav-item.active { background:rgba(192,57,11,.08) !important; border-color:var(--laranja) !important; }
+
+/* Timeline */
+body.high-contrast .tl-dot { background:#e8e8e8 !important; border-color:#888 !important; }
+body.high-contrast .tl-done .tl-dot { border-color:var(--verde) !important; background:rgba(26,107,0,.08) !important; }
+body.high-contrast .tl-active .tl-dot { border-color:var(--laranja) !important; background:rgba(192,57,11,.08) !important; }
+body.high-contrast .timeline-step::after { background:#ccc !important; }
+body.high-contrast .tl-done::after { background:var(--verde) !important; }
+body.high-contrast .prog-seg { background:#ccc !important; }
+body.high-contrast .done-seg .prog-seg-fill { background:var(--verde) !important; }
+body.high-contrast .active-seg .prog-seg-fill { background:var(--laranja) !important; }
+
+/* Banners */
+body.high-contrast .notif-info { background:rgba(26,107,0,.08) !important; border-color:var(--verde) !important; }
+body.high-contrast .notif-pagamento,
+body.high-contrast .ml-card-pend-banner { background:rgba(192,57,11,.08) !important; border-color:var(--laranja) !important; }
+body.high-contrast .blocklist-banner { background:#fff0f0 !important; border-color:#c00 !important; }
+
+/* Calendário */
+body.high-contrast .cal-day { background:#fff !important; border-color:#ddd !important; }
+body.high-contrast .cal-day.today { background:#f0f0ff !important; }
+body.high-contrast .cal-event { opacity:1 !important; }
+
+/* Widget de acessibilidade — mantém estilo próprio */
+body.high-contrast .a11y-btn { background:#fff !important; border-color:#333 !important; }
+body.high-contrast .a11y-panel { background:#fff !important; border-color:#333 !important; }
+body.high-contrast .a11y-ctrl-btn { background:#eee !important; border-color:#555 !important; }
+body.high-contrast .a11y-ctrl-btn.active { background:#ddd !important; border-color:#333 !important; }
+body.high-contrast .a11y-toggle { background:#bbb !important; }
+body.high-contrast .a11y-toggle.on { background:#5500bb !important; }
+body.high-contrast .a11y-toggle::after { background:#fff !important; }
 
 /* ── Escala de fonte ─────────────────────────────────────── */
 body.font-lg  { font-size: calc(16px * var(--a11y-scale, 1.2)) !important; }
@@ -91,11 +157,6 @@ body.font-xl  .page-title { font-size: clamp(42px, 12vw, 68px) !important; }
 }
 .a11y-toggle.on::after { left: 19px; }
 
-body.high-contrast .a11y-btn { background:#fff; border-color:#000; color:#000; }
-body.high-contrast .a11y-panel { background:#fff; border-color:#000; }
-body.high-contrast .a11y-ctrl-btn { background:#eee; border-color:#000; color:#000; }
-body.high-contrast .a11y-label,
-body.high-contrast .a11y-panel-title { color:#000 !important; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
