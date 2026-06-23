@@ -134,6 +134,15 @@ body.high-contrast .cog-tip::after { background:#fff !important; border-color:#5
 /* Chip escuro */
 body.high-contrast .chip-prevenda { background:#ddd !important; border:1px solid #888 !important; }
 
+/* Regras da comunidade */
+body.high-contrast .regras-search-input { background:#fff !important; border-color:#aaa !important; }
+body.high-contrast .regras-acc { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .regras-acc-toggle { background:transparent !important; }
+body.high-contrast .regras-acc-title { color:var(--laranja) !important; }
+body.high-contrast .regras-acc-chevron { color:#555 !important; }
+body.high-contrast .regras-list li { color:#111 !important; }
+body.high-contrast .regras-list mark { background:rgba(85,0,187,.15) !important; color:#000 !important; }
+
 /* Widget de acessibilidade — mantém estilo próprio */
 body.high-contrast .a11y-btn { background:#fff !important; border-color:#333 !important; }
 body.high-contrast .a11y-panel { background:#fff !important; border-color:#333 !important; }
