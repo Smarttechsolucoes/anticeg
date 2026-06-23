@@ -1671,9 +1671,20 @@ function AdminTab({ owner = false, userCog = "" }) {
 
   return (
     <div className="admin-wrap">
-      <h2 className="admin-title">⚙ Admin</h2>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+        <h2 className="admin-title" style={{ margin:0 }}>⚙ Admin</h2>
+        <a href="https://docs.google.com/spreadsheets/d/1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
+          display:"flex", alignItems:"center", gap:6,
+          background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)",
+          color:"var(--verde)", borderRadius:8, padding:"7px 14px",
+          fontSize:11, fontFamily:"'DM Mono',monospace", textDecoration:"none",
+          letterSpacing:".05em", whiteSpace:"nowrap"
+        }}>
+          ↗ Planilha
+        </a>
+      </div>
 
-      <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24 }}>
+      <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24, marginTop:16 }}>
         {(() => {
           const meuAcesso = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
           const temAcesso = (id) => owner || !meuAcesso || meuAcesso.includes(id);
