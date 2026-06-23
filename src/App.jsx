@@ -2377,7 +2377,15 @@ export default function App() {
     try {
       if (localStorage.getItem("anticeg_session_v") !== SESSION_VERSION) {
         localStorage.removeItem("anticeg_user");
+        localStorage.removeItem("anticeg_session_at");
         localStorage.setItem("anticeg_session_v", SESSION_VERSION);
+        return null;
+      }
+      const sessionAt = Number(localStorage.getItem("anticeg_session_at") || 0);
+      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+      if (sessionAt && Date.now() - sessionAt > SEVEN_DAYS) {
+        localStorage.removeItem("anticeg_user");
+        localStorage.removeItem("anticeg_session_at");
         return null;
       }
       return JSON.parse(localStorage.getItem("anticeg_user"));
@@ -2451,6 +2459,7 @@ export default function App() {
 
   async function handleLogin(u, itensData) {
     localStorage.setItem("anticeg_user", JSON.stringify(u));
+    localStorage.setItem("anticeg_session_at", String(Date.now()));
     setUser(u);
     setItens(itensData);
     setPage("portal");
