@@ -1883,42 +1883,24 @@ function AdminPagamentos({ data, joiners }) {
 }
 
 function AdminDisponivel({ data }) {
-  const [filtro, setFiltro] = useState("disponiveis");
-  const itens = data;
-  const disponiveis = itens.filter(i => i.status === "Disponível");
-  const vendidos    = itens.filter(i => i.status === "Vendido");
-  const lista = filtro === "disponiveis" ? disponiveis : filtro === "vendidos" ? vendidos : itens;
+  const [itens, setItens] = useState(data);
 
   async function marcarVendido(id) {
     await supabase.from("masterlist").update({ status: "Vendido" }).eq("id", id);
+    setItens(prev => prev.map(i => i.id === id ? { ...i, status: "Vendido" } : i));
   }
   async function marcarDisponivel(id) {
     await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", id);
+    setItens(prev => prev.map(i => i.id === id ? { ...i, status: "Disponível" } : i));
   }
 
   return (
     <div>
       <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", marginBottom:16 }}>
-        {disponiveis.length} disponível{disponiveis.length !== 1 ? "is" : ""} · {vendidos.length} vendido{vendidos.length !== 1 ? "s" : ""}
+        {itens.length} item{itens.length !== 1 ? "s" : ""} disponível{itens.length !== 1 ? "is" : ""} para venda
       </div>
-      <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
-        {[
-          { id:"disponiveis", label:`Disponíveis (${disponiveis.length})` },
-          { id:"vendidos",    label:`Vendidos (${vendidos.length})` },
-          { id:"todos",       label:`Todos (${itens.length})` },
-        ].map(f => (
-          <button key={f.id} onClick={() => setFiltro(f.id)} style={{
-            background: filtro === f.id ? "var(--laranja)" : "transparent",
-            color:      filtro === f.id ? "#111" : "rgba(245,240,232,.5)",
-            border:    `1px solid ${filtro === f.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
-            borderRadius:6, padding:"5px 12px", fontSize:11,
-            fontFamily:"'DM Mono',monospace", fontWeight: filtro === f.id ? 700 : 400,
-            cursor:"pointer", letterSpacing:".05em"
-          }}>{f.label}</button>
-        ))}
-      </div>
-      {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum item aqui.</div>}
-      {lista.map(item => (
+      {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum item disponível.</div>}
+      {itens.map(item => (
         <div key={item.id} style={{
           background:"var(--card-bg)",
           border:`1px solid ${item.status === "Disponível" ? "rgba(255,180,0,.2)" : "rgba(245,240,232,.07)"}`,
