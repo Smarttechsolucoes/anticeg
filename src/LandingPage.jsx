@@ -190,14 +190,6 @@ export default function LandingPage({ onLogin, onVerCegs }) {
           onChange={e => { setPaHandle(e.target.value); setPaError(""); }}
           onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()}
         />
-        <input
-          className="lp-card-input"
-          type="text"
-          placeholder="nome da claim (opcional, para verificação)"
-          value={paClaim}
-          onChange={e => { setPaClaim(e.target.value); setPaError(""); }}
-          onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()}
-        />
         {paError && <div className="lp-card-error">{paError}</div>}
         <button className="lp-card-btn" onClick={handlePrimeiroAcesso} disabled={paLoading}>
           {paLoading ? "..." : "VERIFICAR →"}
