@@ -771,10 +771,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
         </div>
         {avisos.length > 0 && (
-          <button onClick={() => setAvisosModal(true)} style={{
-            background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.3)",
-            borderRadius:"var(--radius)", padding:"var(--sum-pad)",
-            textAlign:"left", cursor:"pointer", minWidth:180, flex:1
+          <button onClick={() => setAvisosModal(true)} className="sum-card" style={{
+            border:"1px solid rgba(201,168,240,.3)", textAlign:"left", cursor:"pointer"
           }}>
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               <div className="sum-label">Mural de avisos</div>
