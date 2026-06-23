@@ -6,9 +6,9 @@ import LandingPage from "./LandingPage";
 import bonequinha from "./assets/bonequinha.png";
 
 // ── EmailJS config ── preencha após criar conta em emailjs.com
-const EJS_SERVICE  = "YOUR_SERVICE_ID";   // ex: "service_abc123"
-const EJS_TEMPLATE = "YOUR_TEMPLATE_ID";  // ex: "template_xyz789"
-const EJS_KEY      = "YOUR_PUBLIC_KEY";   // ex: "abcDEFghiJKL"
+const EJS_SERVICE  = "service_wguc7si";
+const EJS_TEMPLATE = "template_3x4zqua";
+const EJS_KEY      = "FoEjO0bZC4mn9ebeN";
 
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
   if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return;
