@@ -735,12 +735,16 @@ function MasterlistTab({ user, itens, onLogin }) {
           <div className="sum-value orange">CLIQUE AQUI</div>
           <div className="sum-sub">pague o que está em aberto</div>
         </a>
-        <SumCard label="Pendente" value={guest ? 0 : tPend} valueCls="lilas" sub="em aberto" isAmount={true} />
-        {!guest && tMulta > 0 && (
-          <div className="sum-card">
-            <div className="sum-label">Multa acumulada</div>
-            <div className="sum-value" style={{ color:"#ff6b6b" }}>R${fmtBRL(tMulta)}</div>
-            <div className="sum-sub">R$1/dia por atraso</div>
+        {!guest && (
+          <div className="sum-card" style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : undefined }}>
+            <div className="sum-label">Total a pagar</div>
+            <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>
+              R${fmtBRL(tPend + tMulta)}
+            </div>
+            {tMulta > 0
+              ? <div className="sum-sub" style={{ color:"rgba(255,107,107,.7)" }}>R${fmtBRL(tPend)} + R${fmtBRL(tMulta)} multa</div>
+              : <div className="sum-sub">sem atraso</div>
+            }
           </div>
         )}
         <div className="sum-card">
@@ -841,7 +845,14 @@ function MasterlistTab({ user, itens, onLogin }) {
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
                 <td><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.3)"}}>{filtered.length} itens</span></td>
                 <td colSpan={3}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
-                <td>{tPend > 0 && <span className="total-pend">↗ R${fmtBRL(tPend)} pendente</span>}</td>
+                <td>
+                  {tPend > 0 && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                      <span className="total-pend">↗ R${fmtBRL(tPend + tMulta)} a pagar</span>
+                      {tMulta > 0 && <span style={{ fontSize:10, color:"rgba(255,107,107,.6)", fontFamily:"'DM Mono',monospace" }}>+R${fmtBRL(tMulta)} multa</span>}
+                    </div>
+                  )}
+                </td>
               </tr>
             )}
           </tbody>
@@ -863,6 +874,9 @@ function MasterlistTab({ user, itens, onLogin }) {
           const totalPend = (pendItem  ? Number(item.valor_item||0)  : 0)
                           + (pendFrete ? Number(item.frete_inter||0) : 0)
                           + (pendRf    ? Number(item.taxa_rf||0)     : 0);
+          const multaItem = (pendItem  ? diasAtraso(item.venc_item)  : 0)
+                          + (pendFrete ? diasAtraso(item.venc_frete) : 0)
+                          + (pendRf    ? diasAtraso(item.venc_rf)    : 0);
           return (
             <div key={item.id} className="ml-card" style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { border:"1.5px solid rgba(220,50,50,.55)" } : {}}>
               <div className="ml-card-top">
@@ -873,7 +887,10 @@ function MasterlistTab({ user, itens, onLogin }) {
               {temPendente && (
                 <div className="ml-card-pend-banner">
                   <span className="ml-pend-dot" />
-                  R${fmtBRL(totalPend)} pendente
+                  <span>
+                    R${fmtBRL(totalPend + multaItem)} a pagar
+                    {multaItem > 0 && <span style={{ fontSize:10, opacity:.7 }}> (R${fmtBRL(totalPend)} + R${fmtBRL(multaItem)} multa)</span>}
+                  </span>
                   <span className="ml-pend-tags">
                     {[pendItem && "item", pendFrete && "frete", pendRf && "taxa RF"].filter(Boolean).join(" · ")}
                   </span>
@@ -885,7 +902,12 @@ function MasterlistTab({ user, itens, onLogin }) {
                   {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
                   {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
-                  {total > 0 && <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                  {total > 0 && (
+                    <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>
+                      total R${fmtBRL(total)}
+                      {temPendente && multaItem > 0 && <span style={{ color:"rgba(255,107,107,.7)", marginLeft:6, fontSize:10 }}>+R${fmtBRL(multaItem)} multa</span>}
+                    </div>
+                  )}
                 </div>
               )}
               <div className="ml-card-footer">
