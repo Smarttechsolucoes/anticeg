@@ -780,7 +780,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               <div className="sum-label">Mural de avisos</div>
               <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>
             </div>
-            <div style={{ fontSize:12, color:"#C9A8F0", marginTop:6, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+            <div style={{ fontSize:12, color:"#C9A8F0", marginTop:6, lineHeight:1.5, fontFamily:"'DM Mono',monospace", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
               {avisos[0].message}
             </div>
             <div className="sum-sub" style={{ marginTop:4 }}>
