@@ -62,6 +62,40 @@
 .lp-footer-mid { font-size:10px; color:rgba(245,240,232,.2); letter-spacing:.12em; text-transform:uppercase; }
 .lp-footer-copy { font-size:10px; color:rgba(245,240,232,.18); letter-spacing:.08em; }
 
+/* ── ALTO CONTRASTE ──────────────────────────────────────── */
+body.high-contrast .lp { background:#fff !important; cursor:auto; }
+body.high-contrast .lp-cursor,
+body.high-contrast .lp-cursor-ring { display:none !important; }
+body.high-contrast .lp-nav { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .lp-nav-logo,
+body.high-contrast .lp-nav-logo span { color:#000 !important; }
+body.high-contrast .lp-nav-links a,
+body.high-contrast .lp-nav-link-btn { color:#333 !important; }
+body.high-contrast .lp-nav-cta { background:#c0390b !important; color:#fff !important; }
+body.high-contrast .lp-mobile-nav { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .lp-mobile-nav a { color:#333 !important; border-color:#eee !important; }
+body.high-contrast .lp-h1 { color:#000 !important; }
+body.high-contrast .lp-h1 .ao { color:#c0390b !important; }
+body.high-contrast .lp-h1 .ag { color:#1a6b00 !important; }
+body.high-contrast .lp-hero-sub { color:#333 !important; }
+body.high-contrast .lp-hero-tag { color:#5500bb !important; }
+body.high-contrast .lp-hero-tag::before { background:#5500bb !important; }
+body.high-contrast .lp-hero-card { background:#f0f0f0 !important; border-color:#bbb !important; }
+body.high-contrast .lp-hero-card::before { background:#c0390b !important; }
+body.high-contrast .lp-card-label { color:#5500bb !important; }
+body.high-contrast .lp-card-input { background:#fff !important; border-color:#555 !important; color:#000 !important; }
+body.high-contrast .lp-card-input::placeholder { color:#888 !important; }
+body.high-contrast .lp-card-btn { background:#c0390b !important; color:#fff !important; cursor:pointer !important; }
+body.high-contrast .lp-card-secondary { background:#f0f0f0 !important; border-color:#888 !important; color:#333 !important; }
+body.high-contrast .lp-card-error { color:#c0390b !important; background:rgba(192,57,11,.08) !important; border-color:#c0390b !important; }
+body.high-contrast .lp-card-divider { background:#ccc !important; }
+body.high-contrast .lp-card-link { color:#555 !important; }
+body.high-contrast .lp-footer { border-color:#ccc !important; }
+body.high-contrast .lp-footer-logo,
+body.high-contrast .lp-footer-mid,
+body.high-contrast .lp-footer-copy { color:#555 !important; }
+body.high-contrast .lp-hamburger span { background:#000 !important; }
+
 /* ── MOBILE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   /* Restaura cursor normal em touch */

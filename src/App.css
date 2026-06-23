@@ -97,6 +97,43 @@ body.high-contrast .cal-day { background:#fff !important; border-color:#ddd !imp
 body.high-contrast .cal-day.today { background:#f0f0ff !important; }
 body.high-contrast .cal-event { opacity:1 !important; }
 
+/* Inputs e campos de busca */
+body.high-contrast .search-input,
+body.high-contrast .login-input,
+body.high-contrast .admin-input,
+body.high-contrast .store-filter-select { background:#fff !important; border-color:#555 !important; }
+
+/* Calendário — backgrounds adicionais */
+body.high-contrast .cal-grid-wrap { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .cal-weekdays { background:#e8e8e8 !important; border-color:#ccc !important; }
+body.high-contrast .cal-day.empty { background:#f5f5f5 !important; }
+body.high-contrast .cal-nav-btn { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .cal-day-popup { background:#fff !important; border-color:#ccc !important; }
+
+/* Store */
+body.high-contrast .store-card { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .store-card-img { background:#e0e0e0 !important; }
+body.high-contrast .store-claim-wpp { background:#e8ffe8 !important; border-color:#1a6b00 !important; }
+body.high-contrast .claim-prazo-box { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .claim-success-banner { background:#e8ffe8 !important; border-color:#1a6b00 !important; }
+
+/* Admin */
+body.high-contrast .admin-form { background:#f5f5f5 !important; border-color:#ccc !important; }
+body.high-contrast .admin-item,
+body.high-contrast .admin-item-wrap { background:#f0f0f0 !important; border-color:#bbb !important; }
+body.high-contrast .admin-edit-form { background:#e8e8e8 !important; border-color:#ccc !important; }
+
+/* CEG cards */
+body.high-contrast .ceg-summary-card { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .ceg-modal-overlay,
+body.high-contrast .modal-overlay { background:rgba(0,0,0,.5) !important; }
+
+/* Tooltip cog */
+body.high-contrast .cog-tip::after { background:#fff !important; border-color:#555 !important; }
+
+/* Chip escuro */
+body.high-contrast .chip-prevenda { background:#ddd !important; border:1px solid #888 !important; }
+
 /* Widget de acessibilidade — mantém estilo próprio */
 body.high-contrast .a11y-btn { background:#fff !important; border-color:#333 !important; }
 body.high-contrast .a11y-panel { background:#fff !important; border-color:#333 !important; }
