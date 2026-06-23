@@ -1690,39 +1690,6 @@ function AdminTab({ owner = false }) {
         })}
       </div>
 
-      <div style={{ marginTop: 36 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 14 }}>
-          Feedbacks & Sugestões
-          {feedbacks.filter(f => f.status === "novo").length > 0 && (
-            <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, padding:"2px 8px", fontSize:10, marginLeft:8, fontWeight:700 }}>
-              {feedbacks.filter(f => f.status === "novo").length} novo{feedbacks.filter(f => f.status === "novo").length > 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
-        {feedbacks.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Nenhum feedback ainda.</div>}
-        {feedbacks.map(f => (
-          <div key={f.id} style={{ padding:"12px 16px", background:"var(--card-bg)", border:`1px solid ${f.status === "novo" ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, marginBottom:8, opacity: f.status === "visto" ? 0.55 : 1 }}>
-            <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-              <div style={{ flex:1 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-                  <span style={{ fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:4, padding:"1px 7px" }}>{f.tipo}</span>
-                  <span className="cog-tip" data-nome={f.joiner_nome} style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>@{f.joiner_cog}</span>
-                  <span style={{ fontSize:10, color:"rgba(245,240,232,.2)" }}>{new Date(f.created_at).toLocaleDateString("pt-BR")}</span>
-                </div>
-                <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", lineHeight:1.6 }}>{f.message}</div>
-              </div>
-              {f.status === "novo" && (
-                <button onClick={async () => {
-                  await supabase.from("feedbacks").update({ status:"visto" }).eq("id", f.id);
-                  setFeedbacks(prev => prev.map(x => x.id === f.id ? {...x, status:"visto"} : x));
-                }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:6, padding:"4px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
-                  marcar visto
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
       </>}
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
