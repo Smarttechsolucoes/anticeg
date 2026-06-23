@@ -1,8 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import emailjs from "@emailjs/browser";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import bonequinha from "./assets/bonequinha.png";
+
+// ── EmailJS config ── preencha após criar conta em emailjs.com
+const EJS_SERVICE  = "YOUR_SERVICE_ID";   // ex: "service_abc123"
+const EJS_TEMPLATE = "YOUR_TEMPLATE_ID";  // ex: "template_xyz789"
+const EJS_KEY      = "YOUR_PUBLIC_KEY";   // ex: "abcDEFghiJKL"
+
+async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
+  if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return;
+  try {
+    await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
+      to_email: toEmail,
+      to_name:  toNome  || "joiner",
+      assunto,
+      corpo,
+    }, EJS_KEY);
+  } catch (e) {
+    console.error("[EmailJS]", e);
+  }
+}
 
 const supabase = createClient(
   "https://ghjfsmwwcfpfvrouyrka.supabase.co",
@@ -1730,6 +1750,15 @@ function AdminTab({ owner = false, userCog = "" }) {
       type: "report_resolved",
       report_id: rep.id,
     }]);
+    const joinerInfo = joinersData.find(j => j.cog === rep.joiner_cog);
+    if (joinerInfo?.email) {
+      sendEmailJoiner(
+        joinerInfo.email,
+        joinerInfo.nome || rep.joiner_cog,
+        "Seu report foi resolvido ✓",
+        `Olá! Seu report sobre o item "${rep.item_nome}" foi marcado como resolvido. Qualquer dúvida, fale com a gente pelo WhatsApp.`
+      );
+    }
     setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido" } : x));
   }
   async function desfazerResolvido(id) {
@@ -2085,6 +2114,18 @@ function AdminPagamentos({ data, joiners }) {
                     {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
                   </div>
                 ))}
+                {(() => {
+                  const joinerInfo = (joiners || []).find(jn => jn.cog === j.cog);
+                  if (!joinerInfo?.email) return null;
+                  const corpo = `Olá, ${j.nome}! Você tem ${j.itens.length} item(ns) com pagamento em aberto no total de R$${fmtBRL(total + totalMulta)}${totalMulta > 0 ? ` (inclui R$${fmtBRL(totalMulta)} de multa por atraso)` : ""}. Efetue o pagamento pelo link no portal. Qualquer dúvida, fale pelo WhatsApp.`;
+                  return (
+                    <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
+                      marginTop:8, background:"none", border:"1px solid rgba(245,240,232,.12)",
+                      color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px",
+                      fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+                    }}>✉ Notificar por e-mail</button>
+                  );
+                })()}
               </div>
             )}
           </div>
