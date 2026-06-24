@@ -44,7 +44,12 @@ function buildEmailHTML(_toNome, contentRows) {
     </td>
   </tr>
   ${contentRows}
-  <tr><td style="background:#111111;padding:8px 40px 28px"><div style="height:1px;background:rgba(255,92,26,0.2)"></div></td></tr>
+  <tr>
+    <td style="background:#111111;padding:8px 40px 24px">
+      <div style="height:1px;background:rgba(255,92,26,0.2);margin-bottom:24px"></div>
+      <p style="margin:0;font-size:12px;color:#F5F0E8;line-height:1.75">Caso o pagamento j&aacute; tenha sido realizado, abra um chamado pelo bot&atilde;o <strong>&ldquo;Reportar Erro&rdquo;</strong> dentro do portal para que possamos verificar.</p>
+    </td>
+  </tr>
   <tr>
     <td align="center" style="background:#111111;padding:0 40px 28px">
       <a href="https://anticeg.vercel.app/masterlist" style="display:inline-block;background:#FF5C1A;color:#ffffff;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 36px;border-radius:4px">ACESSAR O PORTAL &rarr;</a>
@@ -52,7 +57,6 @@ function buildEmailHTML(_toNome, contentRows) {
   </tr>
   <tr>
     <td style="background:#111111;padding:0 40px 36px">
-      <p style="margin:0 0 12px;font-size:11px;color:rgba(245,240,232,0.38);line-height:1.75">Caso o pagamento j&aacute; tenha sido realizado, abra um chamado pelo bot&atilde;o <span style="color:rgba(245,240,232,0.55)">&ldquo;Reportar Erro&rdquo;</span> dentro do portal para que possamos verificar.</p>
       <p style="margin:0 0 20px;font-size:11px;color:rgba(245,240,232,0.38);line-height:1.75">Para acessar sua conta, basta informar o e-mail utilizado nos pagamentos da comunidade ou o @ utilizado para realizar claims.</p>
       <p style="margin:0;font-size:10px;color:rgba(245,240,232,0.18);line-height:1.6">Esta &eacute; uma mensagem autom&aacute;tica enviada pelo sistema.</p>
     </td>
