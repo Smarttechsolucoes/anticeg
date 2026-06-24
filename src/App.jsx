@@ -1437,6 +1437,15 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                               <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
                               <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
                             </div>
+                            {s.status === "aguardando pagamento" && (() => {
+                              const totalPago = (pf(s.modalidade_escolhida.valor) + emb).toFixed(2).replace(".",",");
+                              const waMsg = encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPago}`);
+                              return (
+                                <a href={`https://wa.me/5524992501917?text=${waMsg}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", textDecoration:"none", marginTop:8 }}>
+                                  📎 Enviar comprovante no WhatsApp →
+                                </a>
+                              );
+                            })()}
                           ) : (
                             <>
                               {["enviado","cancelado"].includes(s.status) ? null : <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Toque para selecionar a modalidade</div>}
