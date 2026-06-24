@@ -2876,12 +2876,286 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
+function EnvioTab({ user, itens }) {
+  const WA_GOM = "5524992501917";
+  const antigomItens = itens.filter(i => i.status === "ANTIGOM");
+
+  const [nome,        setNome]        = useState(user.nome    || "");
+  const [handle,      setHandle]      = useState(user.twitter || "");
+  const [whatsapp,    setWhatsapp]    = useState(user.whatsapp || "");
+  const [destinatario,setDestinatario]= useState("");
+  const [cpf,         setCpf]         = useState("");
+  const [cep,         setCep]         = useState("");
+  const [endereco,    setEndereco]    = useState("");
+  const [numero,      setNumero]      = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [bairro,      setBairro]      = useState("");
+  const [cidade,      setCidade]      = useState("");
+  const [estado,      setEstado]      = useState("");
+  const [cepLoading,  setCepLoading]  = useState(false);
+  const [selecionados,setSelecionados]= useState(() => antigomItens.map(i => i.id));
+  const [metodo,      setMetodo]      = useState("");
+  const [seguro,      setSeguro]      = useState("");
+  const [valorSeguro, setValorSeguro] = useState("");
+  const [confirmou,   setConfirmou]   = useState(false);
+  const [ciente1,     setCiente1]     = useState(false);
+  const [ciente2,     setCiente2]     = useState(false);
+  const [erro,        setErro]        = useState("");
+
+  async function buscarCep(val) {
+    const clean = val.replace(/\D/g, "");
+    if (clean.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res  = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setEndereco(data.logradouro || "");
+        setBairro(data.bairro      || "");
+        setCidade(data.localidade  || "");
+        setEstado(data.uf          || "");
+      }
+    } catch {}
+    setCepLoading(false);
+  }
+
+  function toggleItem(id) {
+    setSelecionados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function handleSubmit() {
+    setErro("");
+    const missing = [];
+    if (!nome)         missing.push("nome");
+    if (!handle)       missing.push("@");
+    if (!whatsapp)     missing.push("WhatsApp");
+    if (!destinatario) missing.push("nome do destinatário");
+    if (!cpf)          missing.push("CPF");
+    if (!cep)          missing.push("CEP");
+    if (!endereco)     missing.push("endereço");
+    if (!numero)       missing.push("número");
+    if (!bairro)       missing.push("bairro");
+    if (!cidade)       missing.push("cidade");
+    if (!estado)       missing.push("estado");
+    if (selecionados.length === 0) missing.push("itens selecionados");
+    if (!metodo)       missing.push("método de envio");
+    if (!seguro)       missing.push("seguro");
+    if (!confirmou || !ciente1 || !ciente2) missing.push("todas as confirmações");
+    if (missing.length > 0) { setErro(`Preencha: ${missing.join(", ")}.`); return; }
+
+    const itensSel   = antigomItens.filter(i => selecionados.includes(i.id));
+    const itensTexto = itensSel.map(i => `• ${i.nome_do_item} (${i.ceg})`).join("\n");
+
+    const msg = [
+      `*SOLICITAÇÃO DE ENVIO NACIONAL*`,
+      ``,
+      `*Nome:* ${nome}`,
+      `*@:* ${handle}`,
+      `*WhatsApp:* ${whatsapp}`,
+      ``,
+      `*Destinatário:* ${destinatario}`,
+      `*CPF:* ${cpf}`,
+      `*CEP:* ${cep}`,
+      `*Endereço:* ${endereco}, ${numero}${complemento ? ` — ${complemento}` : ""}`,
+      `*Bairro:* ${bairro}`,
+      `*Cidade:* ${cidade} — ${estado}`,
+      ``,
+      `*Itens solicitados:*`,
+      itensTexto,
+      ``,
+      `*Método de envio:* ${metodo}`,
+      `*Seguro:* ${seguro === "sim" ? `Sim — R$ ${valorSeguro}` : "Não"}`,
+      ``,
+      `✅ Revisou todas as informações`,
+      `✅ Ciente que a GOM não se responsabiliza por dados incorretos`,
+      `✅ Ciente que todos os itens listados e/ou disponíveis serão enviados`,
+    ].join("\n");
+
+    window.open(`https://wa.me/${WA_GOM}?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  const inp = {
+    width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)",
+    borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:12,
+    fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box",
+  };
+  const lbl = {
+    display:"block", fontSize:10, letterSpacing:"0.8px", color:"rgba(245,240,232,.38)",
+    textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:5,
+  };
+  const sec = {
+    background:"#111", border:"1px solid rgba(245,240,232,.07)",
+    borderRadius:10, padding:"20px 20px 16px", marginBottom:12,
+  };
+  const row2 = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 };
+  const fld  = { marginBottom:12 };
+
+  return (
+    <div style={{ maxWidth:560, margin:"0 auto", padding:"24px 16px 100px" }}>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:11, letterSpacing:"2px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>// solicitação</div>
+        <div style={{ fontSize:20, fontWeight:700, color:"#F5F0E8" }}>Envio Nacional</div>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>Preencha os dados abaixo para solicitar o envio dos seus itens.</div>
+      </div>
+
+      {/* SEUS DADOS */}
+      <div style={sec}>
+        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Seus dados</div>
+        <div style={fld}><label style={lbl}>Seu nome (igual à planilha)</label><input style={inp} value={nome} onChange={e => setNome(e.target.value)} /></div>
+        <div style={row2}>
+          <div style={fld}><label style={lbl}>@ (Twitter/X/Threads/Insta)</label><input style={inp} value={handle} onChange={e => setHandle(e.target.value)} placeholder="@" /></div>
+          <div style={fld}><label style={lbl}>WhatsApp da comunidade</label><input style={inp} value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="(XX) XXXXX-XXXX" /></div>
+        </div>
+      </div>
+
+      {/* DESTINATÁRIO */}
+      <div style={sec}>
+        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Destinatário</div>
+        <div style={fld}><label style={lbl}>Nome completo do destinatário</label><input style={inp} value={destinatario} onChange={e => setDestinatario(e.target.value)} /></div>
+        <div style={fld}><label style={lbl}>CPF do destinatário</label><input style={inp} value={cpf} onChange={e => setCpf(e.target.value)} placeholder="000.000.000-00" /></div>
+      </div>
+
+      {/* ENDEREÇO */}
+      <div style={sec}>
+        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Endereço</div>
+        <div style={fld}>
+          <label style={lbl}>CEP {cepLoading && <span style={{ color:"rgba(245,240,232,.3)" }}>buscando...</span>}</label>
+          <input style={inp} value={cep} onChange={e => { setCep(e.target.value); buscarCep(e.target.value); }} placeholder="00000-000" />
+        </div>
+        <div style={fld}><label style={lbl}>Endereço</label><input style={inp} value={endereco} onChange={e => setEndereco(e.target.value)} /></div>
+        <div style={row2}>
+          <div style={fld}><label style={lbl}>Número</label><input style={inp} value={numero} onChange={e => setNumero(e.target.value)} /></div>
+          <div style={fld}><label style={lbl}>Complemento (se houver)</label><input style={inp} value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Apto, bloco..." /></div>
+        </div>
+        <div style={row2}>
+          <div style={fld}><label style={lbl}>Bairro</label><input style={inp} value={bairro} onChange={e => setBairro(e.target.value)} /></div>
+          <div style={fld}><label style={lbl}>Cidade</label><input style={inp} value={cidade} onChange={e => setCidade(e.target.value)} /></div>
+        </div>
+        <div style={{ ...fld, maxWidth:140 }}><label style={lbl}>Estado</label>
+          <select style={{ ...inp, cursor:"pointer" }} value={estado} onChange={e => setEstado(e.target.value)}>
+            <option value="">—</option>
+            {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => <option key={uf} value={uf}>{uf}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* ITENS */}
+      <div style={sec}>
+        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Itens disponíveis para envio</div>
+        {antigomItens.length === 0 ? (
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textAlign:"center", padding:"20px 0" }}>
+            Nenhum item com status ANTIGOM no momento.
+          </div>
+        ) : (
+          antigomItens.map(item => {
+            const sel = selecionados.includes(item.id);
+            return (
+              <div key={item.id} onClick={() => toggleItem(item.id)} style={{
+                display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
+                background: sel ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.02)",
+                border: `1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`,
+                borderRadius:7, marginBottom:6, cursor:"pointer",
+              }}>
+                <div style={{
+                  width:18, height:18, borderRadius:4, flexShrink:0,
+                  background: sel ? "#BAFF39" : "transparent",
+                  border: `2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}>
+                  {sel && <span style={{ fontSize:11, color:"#111", fontWeight:900 }}>✓</span>}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                    {item.nome_do_item || "—"}
+                  </div>
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.ceg}</div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ENVIO */}
+      <div style={sec}>
+        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Método de envio</div>
+        <div style={fld}>
+          <label style={lbl}>Método de envio</label>
+          <select style={{ ...inp, cursor:"pointer" }} value={metodo} onChange={e => setMetodo(e.target.value)}>
+            <option value="">Selecione...</option>
+            <option value="PAC">PAC</option>
+            <option value="SEDEX">SEDEX</option>
+            <option value="SEDEX 10">SEDEX 10</option>
+            <option value="SEDEX 12">SEDEX 12</option>
+            <option value="Jadlog">Jadlog</option>
+            <option value="Total Express">Total Express</option>
+          </select>
+        </div>
+        <div style={fld}>
+          <label style={lbl}>Deseja adicionar seguro?</label>
+          <div style={{ display:"flex", gap:8 }}>
+            {["sim","nao"].map(v => (
+              <button key={v} onClick={() => setSeguro(v)} style={{
+                flex:1, padding:"8px 0", borderRadius:6, fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer",
+                background: seguro === v ? "var(--laranja)" : "transparent",
+                color:      seguro === v ? "#111" : "rgba(245,240,232,.6)",
+                border:    `1px solid ${seguro === v ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
+              }}>{v === "sim" ? "Sim" : "Não"}</button>
+            ))}
+          </div>
+        </div>
+        {seguro === "sim" && (
+          <div style={fld}><label style={lbl}>Valor do seguro da caixa (R$)</label><input style={inp} type="number" value={valorSeguro} onChange={e => setValorSeguro(e.target.value)} placeholder="0,00" /></div>
+        )}
+      </div>
+
+      {/* CONFIRMAÇÕES */}
+      <div style={sec}>
+        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Confirmações</div>
+        {[
+          { val:confirmou, set:setConfirmou, text:"Confirmo que revisei todas as informações acima." },
+          { val:ciente1,   set:setCiente1,   text:"Estou ciente de que a GOM não se responsabiliza por dados incorretos informados neste formulário." },
+          { val:ciente2,   set:setCiente2,   text:"Estou ciente que serão enviados todos os itens listados e/ou disponíveis na casa da GOM." },
+        ].map(({ val, set, text }, idx) => (
+          <div key={idx} onClick={() => set(v => !v)} style={{
+            display:"flex", alignItems:"flex-start", gap:10, marginBottom:12, cursor:"pointer",
+          }}>
+            <div style={{
+              width:18, height:18, borderRadius:4, flexShrink:0, marginTop:1,
+              background: val ? "var(--laranja)" : "transparent",
+              border: `2px solid ${val ? "var(--laranja)" : "rgba(245,240,232,.2)"}`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+            }}>
+              {val && <span style={{ fontSize:11, color:"#111", fontWeight:900 }}>✓</span>}
+            </div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{text}</div>
+          </div>
+        ))}
+      </div>
+
+      {erro && <div style={{ fontSize:11, color:"#FF5C1A", fontFamily:"'DM Mono',monospace", marginBottom:12, lineHeight:1.5 }}>{erro}</div>}
+
+      <button onClick={handleSubmit} style={{
+        width:"100%", padding:"14px 0", background:"var(--laranja)", color:"#111",
+        border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace",
+        cursor:"pointer", letterSpacing:"1px",
+      }}>
+        SOLICITAR ENVIO VIA WHATSAPP →
+      </button>
+      <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", textAlign:"center", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
+        Abrirá o WhatsApp com a mensagem preenchida para enviar à GOM.
+      </div>
+    </div>
+  );
+}
+
 function BottomNav({ tab, setTab, isGuest, isAdmin }) {
   const items = [
     { id:"masterlist", icon:"☰", label:"Lista" },
     { id:"cegs",       icon:"◈", label:"CEGs" },
     { id:"calendario", icon:"◫", label:"Datas" },
     ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
+    ...(!isGuest ? [{ id:"envio",  icon:"📦", label:"Envio" }] : []),
     { id:"regras",     icon:"☆", label:"Links" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
@@ -3009,7 +3283,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","admin"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin"];
   const [tab, setTab] = useState(() => {
     const slug = window.location.pathname.replace(/^\//, "").split(/[?#]/)[0];
     return TAB_SLUGS.includes(slug) ? slug : "masterlist";
@@ -3248,6 +3522,7 @@ export default function App() {
                 { id:"cegs",       icon:"◈", label:"CEGs" },
                 { id:"calendario", icon:"◫", label:"Calendário" },
                 ...(!user.guest ? [{ id:"perfil", icon:"○", label:"Meu Perfil" }] : []),
+                ...(!user.guest ? [{ id:"envio",  icon:"📦", label:"Envio Nacional" }] : []),
                 { id:"regras",     icon:"☆", label:"Links & Regras" },
                 ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
               ].map(item => (
@@ -3308,6 +3583,7 @@ export default function App() {
         <button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => changeTab("cegs")}>◈ CEGs</button>
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => changeTab("calendario")}>◫ Calendário</button>
         {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
+        {!user.guest && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>📦 Envio</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => changeTab("admin")}>⚙ Admin</button>
@@ -3317,6 +3593,7 @@ export default function App() {
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
+      {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} />}
 
