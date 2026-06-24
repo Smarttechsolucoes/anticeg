@@ -355,7 +355,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                         </div>
                       </td>
                       <td>
-                        {item.info_adicionais && <div className="item-detail">{item.info_adicionais}</div>}
+                        {item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}
                         <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
                           <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
                           <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
@@ -395,7 +395,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                   {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
                   {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
-                {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
+                {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
                 <div className="ml-card-footer">
                   <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
                   {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>}
@@ -701,24 +701,47 @@ function ReportModal({ user, item, onClose }) {
 }
 
 const INFO_LIMIT = 72;
-function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
+
+function cleanUrl(raw) {
+  try { return new URL(raw).origin + new URL(raw).pathname; } catch { return raw; }
+}
+
+function InfoContent({ info }) {
   const [expandido, setExpandido] = useState(false);
-  const longo = info && info.length > INFO_LIMIT;
-  const texto = info ? (longo && !expandido ? info.slice(0, INFO_LIMIT) + "…" : info) : null;
+  if (!info) return null;
+  const isUrl = /^https?:\/\//i.test(info.trim());
+  if (isUrl) {
+    const href = info.trim();
+    const label = cleanUrl(href).replace(/^https?:\/\//, "");
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer"
+        style={{ fontSize:11, color:"rgba(201,168,240,.7)", textDecoration:"none", wordBreak:"break-all", lineHeight:1.5 }}
+        onMouseEnter={e => e.currentTarget.style.textDecoration="underline"}
+        onMouseLeave={e => e.currentTarget.style.textDecoration="none"}>
+        {label} ↗
+      </a>
+    );
+  }
+  const longo = info.length > INFO_LIMIT;
+  const texto = longo && !expandido ? info.slice(0, INFO_LIMIT) + "…" : info;
+  return (
+    <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", lineHeight:1.5, wordBreak:"break-word" }}>
+      {texto}
+      {longo && (
+        <button onClick={() => setExpandido(e => !e)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:10, cursor:"pointer", padding:"0 0 0 4px", fontFamily:"'DM Mono',monospace" }}>
+          {expandido ? "menos" : "ler mais"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
   return (
     <div style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
       <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={onToggleDrawer} style={{ flexShrink:0, marginTop:1 }}>▾</button>
       <button onClick={onReport} className="report-row-btn" style={{ flexShrink:0, marginTop:1 }}>⚑ Reportar erro</button>
-      {texto && (
-        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", lineHeight:1.5, wordBreak:"break-word" }}>
-          {texto}
-          {longo && (
-            <button onClick={() => setExpandido(e => !e)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:10, cursor:"pointer", padding:"0 0 0 4px", fontFamily:"'DM Mono',monospace" }}>
-              {expandido ? "menos" : "ler mais"}
-            </button>
-          )}
-        </div>
-      )}
+      <InfoContent info={info} />
     </div>
   );
 }
