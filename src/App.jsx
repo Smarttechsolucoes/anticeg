@@ -957,9 +957,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           borderRadius:6, padding:"5px 10px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", outline:"none"
         }}>
           <option value="tudo">Tudo</option>
-          <option value="pendente">⚠ Pendente</option>
+          <option value="pendente">Pendente</option>
           {STATUS_STEPS.map(s => (
-            <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
+            <option key={s.id} value={s.id}>{s.label}</option>
           ))}
         </select>
         <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} style={{
