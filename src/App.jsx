@@ -1432,20 +1432,18 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                       {opcoes.length > 0 ? (
                         <>
                           {["aguardando pagamento","pagamento confirmado","enviado"].includes(s.status) && s.modalidade_escolhida ? (
-                            <div style={{ background: s.status === "aguardando pagamento" ? "rgba(255,209,102,.06)" : "rgba(186,255,57,.06)", border:`1px solid ${s.status === "aguardando pagamento" ? "rgba(255,209,102,.22)" : "rgba(186,255,57,.22)"}`, borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
-                              <div style={{ fontSize:10, color: s.status === "aguardando pagamento" ? "#FFD166" : "#BAFF39", letterSpacing:"1px", marginBottom:4 }}>{s.status === "aguardando pagamento" ? "AGUARDANDO PAGAMENTO" : "MODALIDADE CONFIRMADA"}</div>
-                              <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
-                              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
-                            </div>
-                            {s.status === "aguardando pagamento" && (() => {
-                              const totalPago = (pf(s.modalidade_escolhida.valor) + emb).toFixed(2).replace(".",",");
-                              const waMsg = encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPago}`);
-                              return (
-                                <a href={`https://wa.me/5524992501917?text=${waMsg}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", textDecoration:"none", marginTop:8 }}>
+                            <>
+                              <div style={{ background: s.status === "aguardando pagamento" ? "rgba(255,209,102,.06)" : "rgba(186,255,57,.06)", border:`1px solid ${s.status === "aguardando pagamento" ? "rgba(255,209,102,.22)" : "rgba(186,255,57,.22)"}`, borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
+                                <div style={{ fontSize:10, color: s.status === "aguardando pagamento" ? "#FFD166" : "#BAFF39", letterSpacing:"1px", marginBottom:4 }}>{s.status === "aguardando pagamento" ? "AGUARDANDO PAGAMENTO" : "MODALIDADE CONFIRMADA"}</div>
+                                <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
+                                <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
+                              </div>
+                              {s.status === "aguardando pagamento" && (
+                                <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:2 }}>
                                   📎 Enviar comprovante no WhatsApp →
                                 </a>
-                              );
-                            })()}
+                              )}
+                            </>
                           ) : (
                             <>
                               {["enviado","cancelado"].includes(s.status) ? null : <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Toque para selecionar a modalidade</div>}
