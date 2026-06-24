@@ -602,7 +602,7 @@ function ReportModal({ user, item, onClose }) {
         ) : (
           <>
             <div style={{ fontSize: 12, color: "rgba(245,240,232,.35)", marginBottom: 2, letterSpacing: 1 }}>{item.ceg}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>{item.nome_do_item}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}><InfoContent info={item.nome_do_item} /></div>
 
             <div style={{ ...labelStyle, display: "flex", justifyContent: "space-between" }}>
               <span>O que está errado? <span style={{ color: "var(--laranja)" }}>*</span></span>
@@ -2615,7 +2615,7 @@ function AdminPagamentos({ data, joiners }) {
               <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
                 {j.itens.map((item, idx) => (
                   <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"4px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
-                    <span style={{ flex:1 }}>{item.nome_do_item}</span>
+                    <span style={{ flex:1 }}><InfoContent info={item.nome_do_item} /></span>
                     <span style={{ fontSize:10, color:"rgba(245,240,232,.48)" }}>{item.ceg}</span>
                     <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
                     {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
@@ -2676,7 +2676,7 @@ function AdminDisponivel({ data }) {
               <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
               <StatusChip status={item.status} />
             </div>
-            <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginTop:4 }}>{item.nome_do_item}</div>
+            <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginTop:4 }}><InfoContent info={item.nome_do_item} /></div>
             {Number(item.valor_item) > 0 && (
               <div style={{ fontSize:12, color:"var(--laranja)", marginTop:3, fontWeight:600 }}>R${fmtBRL(item.valor_item)}</div>
             )}
