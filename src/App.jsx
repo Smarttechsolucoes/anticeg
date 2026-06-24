@@ -1398,16 +1398,22 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                 </div>
 
                 {/* Itens */}
-                {s.itens?.length > 0 && (
-                  <div style={{ marginBottom:10 }}>
-                    <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:5 }}>Itens solicitados</div>
-                    {s.itens.map((it, idx) => (
-                      <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
-                        {it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span>
+                {s.itens?.length > 0 && (() => {
+                  const totalCaixa = s.itens.reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
+                  return (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:5 }}>
+                        <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase" }}>Itens solicitados</div>
+                        {totalCaixa > 0 && <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>Total da caixa: <strong style={{ color:"#F5F0E8" }}>R$ {totalCaixa.toFixed(2).replace(".",",")}</strong></div>}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {s.itens.map((it, idx) => (
+                        <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                          {it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 {/* Método */}
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom: s.cotacao_valor ? 10 : 0 }}>
@@ -2733,9 +2739,14 @@ function AdminTab({ owner = false, userCog = "" }) {
                 </div>
 
                 {/* Itens */}
-                {s.itens?.length > 0 && (
+                {s.itens?.length > 0 && (() => {
+                  const totalCaixa = s.itens.reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
+                  return (
                   <div style={{ marginBottom:12 }}>
-                    <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Itens solicitados</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+                      <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>Itens solicitados</div>
+                      {totalCaixa > 0 && <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>Total da caixa: <strong style={{ color:"#F5F0E8" }}>R$ {totalCaixa.toFixed(2).replace(".",",")}</strong></div>}
+                    </div>
                     {s.itens.map((it, idx) => (
                       <div key={idx} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"5px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
                         <span>{it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span></span>
@@ -2747,7 +2758,8 @@ function AdminTab({ owner = false, userCog = "" }) {
                       </div>
                     ))}
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* Cotação recebida */}
                 {s.cotacao_valor && (
@@ -2761,7 +2773,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                 {/* Form cotação */}
                 {s.status === "em cotação" && cotacaoAberta === s.id && (() => {
                   const valorDecl  = s.seguro === "sim" ? s.valor_seguro : null;
-                  const totalItens = (s.itens||[]).reduce((a, it) => a + Number(it.valor||0), 0);
+                  const totalItens = (s.itens||[]).reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
                   const emb        = pf(cotacaoEmbalagem);
                   const precos     = cotacaoOpcoes.map(o => pf(o.valor)).filter(v => v > 0);
                   const minPreco   = precos.length > 0 ? Math.min(...precos) : 0;
@@ -2797,7 +2809,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                           <label style={lbl2}>VALOR DECLARADO</label>
                           <div style={{ ...inp2, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.04)", lineHeight:1.5 }}>
                             {valorDecl ? `R$ ${valorDecl}` : "—"}
-                            {totalItens > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>val. itens: R$ {totalItens.toFixed(2).replace(".",",")}</div>}
+                            {totalItens > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>total caixa: R$ {totalItens.toFixed(2).replace(".",",")} (item+taxa+frete)</div>}
                           </div>
                         </div>
                       </div>
@@ -3351,7 +3363,7 @@ function EnvioTab({ user, itens }) {
 
     setLoading(true);
     const itensSel = antigomItens.filter(i => selecionados.includes(i.id))
-      .map(i => ({ id: i.id, ceg: i.ceg, nome: i.nome_do_item, valor: Number(i.valor_item||0) }));
+      .map(i => ({ id: i.id, ceg: i.ceg, nome: i.nome_do_item, valor: Number(i.valor_item||0), taxa: Number(i.taxa_rf||0), frete: Number(i.frete_inter||0) }));
 
     const { error } = await supabase.from("envio_solicitacoes").insert([{
       joiner_cog:      user.cog,
