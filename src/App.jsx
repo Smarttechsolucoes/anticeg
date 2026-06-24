@@ -2541,11 +2541,14 @@ function AdminPagamentos({ data, joiners }) {
                   const itemRowsInd = j.itens.map(it => `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`).join("");
                   const corpo = buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">+ R$&nbsp;${fmtBRL(totalMulta)} de multa por atraso</div>` : ""}</td></tr></table></td></tr>`);
                   return (
-                    <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
-                      marginTop:8, background:"none", border:"1px solid rgba(245,240,232,.12)",
-                      color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
-                      fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
-                    }}>✉ Notificar por e-mail</button> <EmailTypeBadge type="pagamento" />
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8 }}>
+                      <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
+                        background:"none", border:"1px solid rgba(245,240,232,.12)",
+                        color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
+                        fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+                      }}>✉ Notificar por e-mail</button>
+                      <EmailTypeBadge type="pagamento" />
+                    </div>
                   );
                 })()}
               </div>
