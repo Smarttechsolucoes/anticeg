@@ -750,6 +750,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
+  const [ordenacao, setOrdenacao] = useState("padrao");
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
@@ -799,6 +800,20 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
     (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
     (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
     (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
+  );
+  if (ordenacao === "ceg")      filtered.sort((a,b) => (a.ceg||"").localeCompare(b.ceg||""));
+  if (ordenacao === "venc")     filtered.sort((a,b) => {
+    const va = [a.venc_item, a.venc_frete, a.venc_rf].filter(Boolean).sort()[0] || "9999";
+    const vb = [b.venc_item, b.venc_frete, b.venc_rf].filter(Boolean).sort()[0] || "9999";
+    return va.localeCompare(vb);
+  });
+  if (ordenacao === "valor-desc") filtered.sort((a,b) =>
+    (Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0)) -
+    (Number(a.valor_item||0)+Number(a.frete_inter||0)+Number(a.taxa_rf||0))
+  );
+  if (ordenacao === "valor-asc")  filtered.sort((a,b) =>
+    (Number(a.valor_item||0)+Number(a.frete_inter||0)+Number(a.taxa_rf||0)) -
+    (Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0))
   );
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
@@ -938,22 +953,25 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
 
       <div className="filters-bar">
         <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
-        <div style={{ display: "flex", gap: 6 }}>
-          {[
-            { id: "tudo",        label: "Tudo" },
-            { id: "andamento",   label: "Em andamento" },
-            { id: "pendente",    label: "Pendente" },
-            { id: "finalizados", label: "Finalizados" },
-          ].map(f => (
-            <button key={f.id} onClick={() => setStatusFiltro(f.id)} style={{
-              background: statusFiltro === f.id ? "var(--laranja)" : "transparent",
-              color:      statusFiltro === f.id ? "#111" : "rgba(245,240,232,.6)",
-              border:    `1px solid ${statusFiltro === f.id ? "var(--laranja)" : "rgba(245,240,232,.2)"}`,
-              borderRadius: 6, padding: "5px 12px", fontSize: 11,
-              fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap"
-            }}>{f.label}</button>
-          ))}
-        </div>
+        <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)} style={{
+          background:"#0d0d0d", border:"1px solid rgba(245,240,232,.18)", color:"rgba(245,240,232,.8)",
+          borderRadius:6, padding:"5px 10px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", outline:"none"
+        }}>
+          <option value="tudo">Tudo</option>
+          <option value="andamento">Em andamento</option>
+          <option value="pendente">Pendente</option>
+          <option value="finalizados">Finalizados</option>
+        </select>
+        <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} style={{
+          background:"#0d0d0d", border:"1px solid rgba(245,240,232,.18)", color:"rgba(245,240,232,.8)",
+          borderRadius:6, padding:"5px 10px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", outline:"none"
+        }}>
+          <option value="padrao">Ordenar: padrão</option>
+          <option value="ceg">CEG A → Z</option>
+          <option value="venc">Vencimento mais próximo</option>
+          <option value="valor-desc">Valor ↓</option>
+          <option value="valor-asc">Valor ↑</option>
+        </select>
       </div>
 
       <div className="table-wrap">
