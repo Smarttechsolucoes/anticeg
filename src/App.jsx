@@ -2671,7 +2671,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                         <label style={lbl2}>FORMA DE ENVIO *</label>
                         <select value={cotacaoForma} onChange={e => setCotacaoForma(e.target.value)} style={{ ...inp2, cursor:"pointer" }}>
                           <option value="">Selecione...</option>
-                          {["Correios","Jadlog","Mini Envios","Pack","SEDEX"].map(f => <option key={f} value={f}>{f}</option>)}
+                          {["Correios","Jadlog","Mini Envios","PAC","SEDEX"].map(f => <option key={f} value={f}>{f}</option>)}
                         </select>
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
