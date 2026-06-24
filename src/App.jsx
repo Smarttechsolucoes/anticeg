@@ -104,7 +104,7 @@ const STATUS_STEPS = [
   { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
   { id: "ANTIGOM",          label: "ANTIGOM",          icon: "🏠" },
   { id: "Envio Liberado",   label: "Envio Liberado",   icon: "📬" },
-  { id: "Enviado Nacional", label: "Enviado Nacional", icon: "🚚" },
+  { id: "Enviado Nacional", label: "Finalizado",       icon: "🚚" },
 ];
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -117,7 +117,7 @@ const chipMap = {
   "ANTIGOM":         ["chip-aqui",      "ANTIGOM"],
   "Chegou Aqui":     ["chip-aqui",      "ANTIGOM"],
   "Envio Liberado":  ["chip-nacional",  "Envio Liberado"],
-  "Enviado Nacional":["chip-enviado",   "Enviado Nacional"],
+  "Enviado Nacional":["chip-enviado",   "Finalizado"],
   "Disponível":      ["chip-loja-disp", "Disponível"],
   "Vendido":         ["chip-loja-vend", "Vendido"],
 };
