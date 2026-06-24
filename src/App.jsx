@@ -1388,8 +1388,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           {meuEnvios.length === 0 ? (
             <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma solicitação de envio ainda.</div>
           ) : meuEnvios.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
-            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", "aguardando pagamento":"rgba(255,209,102,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", "pagamento confirmado":"#BAFF39", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", "aguardando pagamento":"rgba(255,209,102,.25)", "pagamento confirmado":"rgba(186,255,57,.2)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
@@ -2715,8 +2715,8 @@ function AdminTab({ owner = false, userCog = "" }) {
           {envioSolic.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
           ) : envioSolic.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
-            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", "aguardando pagamento":"rgba(255,209,102,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", "pagamento confirmado":"#BAFF39", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", "aguardando pagamento":"rgba(255,209,102,.3)", "pagamento confirmado":"rgba(186,255,57,.25)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
                 {/* Cabeçalho */}
@@ -2845,9 +2845,18 @@ function AdminTab({ owner = false, userCog = "" }) {
                       Enviar cotação
                     </button>
                   )}
-                  {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada" || s.status === "aguardando pagamento") && (
+                  {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada" || s.status === "aguardando pagamento" || s.status === "pagamento confirmado") && (
                     <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
                       {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
+                    </button>
+                  )}
+                  {s.status === "aguardando pagamento" && (
+                    <button onClick={async () => {
+                      await supabase.from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
+                      await supabase.from("pushes").insert([{ message:"Seu pagamento foi confirmado! Em breve seu pedido será enviado.", active:true, joiner_cog:s.joiner_cog }]);
+                      setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"pagamento confirmado" } : x));
+                    }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
+                      ✓ Pagamento confirmado
                     </button>
                   )}
                   {s.status === "cotação enviada" && (
