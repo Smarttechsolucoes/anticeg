@@ -1443,7 +1443,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                               {opcoes.map((op, idx) => {
                                 const isBest     = pf(op.valor) === minVal;
                                 const isSelected = opcaoEscolhida[s.id] === idx;
-                                const canSelect  = !["enviado","cancelado","aguardando pagamento"].includes(s.status);
+                                const canSelect  = !["enviado","cancelado","aguardando pagamento","pagamento confirmado"].includes(s.status);
                                 const total      = (pf(op.valor) + emb).toFixed(2).replace(".",",");
                                 return (
                                   <div key={idx} onClick={() => canSelect && setOpcaoEscolhida(prev => ({ ...prev, [s.id]: isSelected ? undefined : idx }))} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:6, borderRadius:8, cursor: canSelect ? "pointer" : "default", transition:"all .15s", background: isSelected ? "rgba(201,168,240,.1)" : isBest ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px solid ${isSelected ? "rgba(201,168,240,.5)" : isBest ? "rgba(186,255,57,.22)" : "rgba(245,240,232,.08)"}` }}>
@@ -1463,7 +1463,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                                   </div>
                                 );
                               })}
-                              {opcaoEscolhida[s.id] !== undefined && (() => {
+                              {opcaoEscolhida[s.id] !== undefined && !["aguardando pagamento","pagamento confirmado","enviado","cancelado"].includes(s.status) && (() => {
                                 const chosen = opcoes[opcaoEscolhida[s.id]];
                                 if (!chosen) return null;
                                 const totalChosen = (pf(chosen.valor) + emb).toFixed(2).replace(".",",");
