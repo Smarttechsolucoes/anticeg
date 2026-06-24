@@ -1408,7 +1408,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
 
                 {/* Método */}
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom: s.cotacao_valor ? 10 : 0 }}>
-                  Método: {s.metodo} · Seguro: {s.seguro === "sim" ? `Sim — R$ ${s.valor_seguro}` : "Não"}
+                  Método: {s.metodo} · Val. declarado: {s.seguro === "sim" ? `R$ ${s.valor_seguro}` : "—"}
                 </div>
 
                 {/* Cotação */}
@@ -1419,8 +1419,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                     {(s.cotacao_frete || s.cotacao_seguro || s.cotacao_embalagem) && (
                       <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginBottom:8, display:"flex", flexDirection:"column", gap:2 }}>
                         {s.cotacao_frete     && <span>Frete ({s.cotacao_forma}): <strong style={{ color:"rgba(245,240,232,.7)" }}>R$ {s.cotacao_frete}</strong></span>}
-                        {s.cotacao_seguro    && <span>Seguro: <strong style={{ color:"rgba(245,240,232,.7)" }}>R$ {s.cotacao_seguro}</strong></span>}
                         {s.cotacao_embalagem && <span>Embalagem: <strong style={{ color:"rgba(245,240,232,.7)" }}>R$ {s.cotacao_embalagem}</strong></span>}
+                        {s.cotacao_seguro    && <span style={{ color:"rgba(245,240,232,.3)" }}>Val. declarado (info): R$ {s.cotacao_seguro}</span>}
                       </div>
                     )}
                     <div style={{ fontSize:11, color:"rgba(245,240,232,.55)" }}>Prazo estimado: <strong style={{ color:"#F5F0E8" }}>{s.cotacao_prazo}</strong></div>
@@ -2280,13 +2280,13 @@ function AdminTab({ owner = false, userCog = "" }) {
 
   async function enviarCotacao(s) {
     if (!cotacaoFrete || !cotacaoForma || !cotacaoPrazo) { alert("Preencha forma de envio, frete e prazo."); return; }
-    const seguroVal   = s.seguro === "sim" ? parseFloat(s.valor_seguro || 0) : 0;
-    const totalVal    = (parseFloat(cotacaoFrete||0) + seguroVal + parseFloat(cotacaoEmbalagem||0)).toFixed(2);
+    const valorDeclarado = s.seguro === "sim" ? s.valor_seguro : null;
+    const totalVal    = (parseFloat(cotacaoFrete||0) + parseFloat(cotacaoEmbalagem||0)).toFixed(2);
     const totalFmt    = totalVal.replace(".", ",");
     await supabase.from("envio_solicitacoes").update({
       cotacao_frete:     cotacaoFrete,
       cotacao_forma:     cotacaoForma,
-      cotacao_seguro:    seguroVal > 0 ? String(seguroVal.toFixed(2)) : null,
+      cotacao_seguro:    valorDeclarado || null,
       cotacao_embalagem: cotacaoEmbalagem || null,
       cotacao_valor:     totalFmt,
       cotacao_prazo:     cotacaoPrazo,
@@ -2299,7 +2299,7 @@ function AdminTab({ owner = false, userCog = "" }) {
       active: true,
       joiner_cog: s.joiner_cog,
     }]);
-    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação enviada", cotacao_frete:cotacaoFrete, cotacao_forma:cotacaoForma, cotacao_seguro:seguroVal>0?String(seguroVal):null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:cotacaoPrazo, cotacao_obs:cotacaoObs } : x));
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação enviada", cotacao_frete:cotacaoFrete, cotacao_forma:cotacaoForma, cotacao_seguro:valorDeclarado||null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:cotacaoPrazo, cotacao_obs:cotacaoObs } : x));
     setCotacaoAberta(null); setCotacaoFrete(""); setCotacaoForma(""); setCotacaoEmbalagem(""); setCotacaoPrazo(""); setCotacaoObs("");
   }
 
@@ -2629,7 +2629,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:10, lineHeight:1.8, background:"rgba(245,240,232,.03)", borderRadius:6, padding:"10px 12px" }}>
                   <strong style={{ color:"rgba(245,240,232,.7)" }}>Dest.:</strong> {s.destinatario} · CPF: {s.cpf}<br />
                   {s.endereco}, {s.numero}{s.complemento ? ` (${s.complemento})` : ""} — {s.bairro}, {s.cidade}/{s.estado} · CEP {s.cep}<br />
-                  <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Seguro:</strong> {s.seguro === "sim" ? `Sim — R$ ${s.valor_seguro}` : "Não"}
+                  <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Val. declarado:</strong> {s.seguro === "sim" ? `R$ ${s.valor_seguro}` : "—"}
                 </div>
 
                 {/* Itens */}
@@ -2660,9 +2660,9 @@ function AdminTab({ owner = false, userCog = "" }) {
 
                 {/* Form cotação */}
                 {s.status === "em cotação" && cotacaoAberta === s.id && (() => {
-                  const seguroJoiner  = s.seguro === "sim" ? parseFloat(s.valor_seguro||0) : 0;
-                  const totalItens    = (s.itens||[]).reduce((a, it) => a + Number(it.valor||0), 0);
-                  const total = (parseFloat(cotacaoFrete||0) + seguroJoiner + parseFloat(cotacaoEmbalagem||0));
+                  const valorDecl  = s.seguro === "sim" ? s.valor_seguro : null;
+                  const totalItens = (s.itens||[]).reduce((a, it) => a + Number(it.valor||0), 0);
+                  const total      = parseFloat(cotacaoFrete||0) + parseFloat(cotacaoEmbalagem||0);
                   const inp2 = { width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
                   const lbl2 = { fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4, display:"block" };
                   return (
@@ -2680,9 +2680,9 @@ function AdminTab({ owner = false, userCog = "" }) {
                           <input value={cotacaoFrete} onChange={e => setCotacaoFrete(e.target.value)} placeholder="0,00" style={inp2} />
                         </div>
                         <div>
-                          <label style={lbl2}>SEGURO</label>
+                          <label style={lbl2}>VALOR DECLARADO</label>
                           <div style={{ ...inp2, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.04)", lineHeight:1.5 }}>
-                            {seguroJoiner > 0 ? `R$ ${seguroJoiner.toFixed(2).replace(".",",")}` : "Não solicitado"}
+                            {valorDecl ? `R$ ${valorDecl}` : "—"}
                             {totalItens > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>val. itens: R$ {totalItens.toFixed(2).replace(".",",")}</div>}
                           </div>
                         </div>
@@ -3395,7 +3395,7 @@ function EnvioTab({ user, itens }) {
           </select>
         </div>
         <div style={fld}>
-          <label style={lbl}>Deseja adicionar seguro?</label>
+          <label style={lbl}>Declaração de conteúdo</label>
           <div style={{ display:"flex", gap:8 }}>
             {["sim","nao"].map(v => (
               <button key={v} onClick={() => setSeguro(v)} style={{
@@ -3408,7 +3408,7 @@ function EnvioTab({ user, itens }) {
           </div>
         </div>
         {seguro === "sim" && (
-          <div style={fld}><label style={lbl}>Valor do seguro da caixa (R$)</label><input style={inp} type="number" value={valorSeguro} onChange={e => setValorSeguro(e.target.value)} placeholder="0,00" /></div>
+          <div style={fld}><label style={lbl}>Valor declarado da caixa (R$)</label><input style={inp} type="number" value={valorSeguro} onChange={e => setValorSeguro(e.target.value)} placeholder="0,00" /></div>
         )}
       </div>
 
