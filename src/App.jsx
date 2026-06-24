@@ -2880,6 +2880,33 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 }
 
 function EnvioTab({ user, itens }) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [senha,    setSenha]    = useState("");
+  const [senhaErr, setSenhaErr] = useState(false);
+
+  if (!unlocked) return (
+    <div style={{ maxWidth:360, margin:"80px auto", padding:"0 16px", textAlign:"center" }}>
+      <div style={{ fontSize:32, marginBottom:16 }}>🚧</div>
+      <div style={{ fontSize:14, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Em construção</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:28, lineHeight:1.6 }}>
+        Esta funcionalidade ainda está sendo preparada.<br />Em breve disponível para todas.
+      </div>
+      <input
+        type="password"
+        placeholder="senha de acesso"
+        value={senha}
+        onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
+        onKeyDown={e => { if (e.key === "Enter") { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); } }}
+        style={{ width:"100%", background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.14)"}`, borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box", textAlign:"center", marginBottom:8 }}
+      />
+      {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>senha incorreta</div>}
+      <button onClick={() => { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); }}
+        style={{ width:"100%", padding:"10px 0", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+        ACESSAR →
+      </button>
+    </div>
+  );
+
   const WA_GOM = "5524992501917";
   const antigomItens = itens.filter(i => i.status === "ANTIGOM");
 
