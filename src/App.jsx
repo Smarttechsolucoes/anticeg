@@ -795,6 +795,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
   if (statusFiltro === "finalizados") filtered = filtered.filter(i => i.status === "Enviado Nacional");
   if (statusFiltro === "andamento")   filtered = filtered.filter(i => i.status !== "Enviado Nacional");
+  if (statusFiltro === "pendente")    filtered = filtered.filter(i =>
+    (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
+    (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
+    (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
+  );
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
   const tPend  = filtered.reduce((a,b) =>
@@ -937,6 +942,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           {[
             { id: "tudo",        label: "Tudo" },
             { id: "andamento",   label: "Em andamento" },
+            { id: "pendente",    label: "Pendente" },
             { id: "finalizados", label: "Finalizados" },
           ].map(f => (
             <button key={f.id} onClick={() => setStatusFiltro(f.id)} style={{
