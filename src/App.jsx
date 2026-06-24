@@ -2880,9 +2880,33 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 }
 
 function EnvioTab({ user, itens }) {
-  const [unlocked, setUnlocked] = useState(false);
-  const [senha,    setSenha]    = useState("");
-  const [senhaErr, setSenhaErr] = useState(false);
+  const WA_GOM = "5524992501917";
+  const antigomItens = itens.filter(i => i.status === "ANTIGOM");
+
+  const [unlocked,    setUnlocked]    = useState(false);
+  const [senha,       setSenha]       = useState("");
+  const [senhaErr,    setSenhaErr]    = useState(false);
+  const [nome,        setNome]        = useState(user.nome    || "");
+  const [handle,      setHandle]      = useState(user.twitter || "");
+  const [whatsapp,    setWhatsapp]    = useState(user.whatsapp || "");
+  const [destinatario,setDestinatario]= useState("");
+  const [cpf,         setCpf]         = useState("");
+  const [cep,         setCep]         = useState("");
+  const [endereco,    setEndereco]    = useState("");
+  const [numero,      setNumero]      = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [bairro,      setBairro]      = useState("");
+  const [cidade,      setCidade]      = useState("");
+  const [estado,      setEstado]      = useState("");
+  const [cepLoading,  setCepLoading]  = useState(false);
+  const [selecionados,setSelecionados]= useState(() => antigomItens.map(i => i.id));
+  const [metodo,      setMetodo]      = useState("");
+  const [seguro,      setSeguro]      = useState("");
+  const [valorSeguro, setValorSeguro] = useState("");
+  const [confirmou,   setConfirmou]   = useState(false);
+  const [ciente1,     setCiente1]     = useState(false);
+  const [ciente2,     setCiente2]     = useState(false);
+  const [erro,        setErro]        = useState("");
 
   if (!unlocked) return (
     <div style={{ maxWidth:360, margin:"80px auto", padding:"0 16px", textAlign:"center" }}>
@@ -2906,31 +2930,6 @@ function EnvioTab({ user, itens }) {
       </button>
     </div>
   );
-
-  const WA_GOM = "5524992501917";
-  const antigomItens = itens.filter(i => i.status === "ANTIGOM");
-
-  const [nome,        setNome]        = useState(user.nome    || "");
-  const [handle,      setHandle]      = useState(user.twitter || "");
-  const [whatsapp,    setWhatsapp]    = useState(user.whatsapp || "");
-  const [destinatario,setDestinatario]= useState("");
-  const [cpf,         setCpf]         = useState("");
-  const [cep,         setCep]         = useState("");
-  const [endereco,    setEndereco]    = useState("");
-  const [numero,      setNumero]      = useState("");
-  const [complemento, setComplemento] = useState("");
-  const [bairro,      setBairro]      = useState("");
-  const [cidade,      setCidade]      = useState("");
-  const [estado,      setEstado]      = useState("");
-  const [cepLoading,  setCepLoading]  = useState(false);
-  const [selecionados,setSelecionados]= useState(() => antigomItens.map(i => i.id));
-  const [metodo,      setMetodo]      = useState("");
-  const [seguro,      setSeguro]      = useState("");
-  const [valorSeguro, setValorSeguro] = useState("");
-  const [confirmou,   setConfirmou]   = useState(false);
-  const [ciente1,     setCiente1]     = useState(false);
-  const [ciente2,     setCiente2]     = useState(false);
-  const [erro,        setErro]        = useState("");
 
   async function buscarCep(val) {
     const clean = val.replace(/\D/g, "");
