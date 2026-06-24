@@ -1431,11 +1431,11 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                       <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:12 }}>Cotação disponível</div>
                       {opcoes.length > 0 ? (
                         <>
-                          {s.status === "aguardando pagamento" && s.modalidade_escolhida ? (
-                            <div style={{ background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
-                              <div style={{ fontSize:10, color:"#BAFF39", letterSpacing:"1px", marginBottom:4 }}>MODALIDADE CONFIRMADA</div>
-                              <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
-                              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>Até {s.modalidade_escolhida.prazo} · Aguardando confirmação do pagamento</div>
+                          {["aguardando pagamento","pagamento confirmado","enviado"].includes(s.status) && s.modalidade_escolhida ? (
+                            <div style={{ background: s.status === "aguardando pagamento" ? "rgba(255,209,102,.06)" : "rgba(186,255,57,.06)", border:`1px solid ${s.status === "aguardando pagamento" ? "rgba(255,209,102,.22)" : "rgba(186,255,57,.22)"}`, borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
+                              <div style={{ fontSize:10, color: s.status === "aguardando pagamento" ? "#FFD166" : "#BAFF39", letterSpacing:"1px", marginBottom:4 }}>{s.status === "aguardando pagamento" ? "AGUARDANDO PAGAMENTO" : "MODALIDADE CONFIRMADA"}</div>
+                              <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
+                              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
                             </div>
                           ) : (
                             <>
