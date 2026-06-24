@@ -269,7 +269,7 @@ function CegModal({ ceg, onClose }) {
                     <div className="ceg-joiner-name">{joiner}</div>
                     {items.map(item => (
                       <div key={item.id} className="ceg-joiner-item">
-                        <span className="ceg-item-name">{item.nome_do_item}</span>
+                        <span className="ceg-item-name"><InfoContent info={item.nome_do_item} /></span>
                         <StatusChip status={item.status} />
                       </div>
                     ))}
@@ -342,7 +342,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                   <>
                     <tr key={item.id}>
                       <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
-                      <td><div className="item-title">{item.nome_do_item}</div></td>
+                      <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                       {!guest && <>
                         <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
                         <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
@@ -388,7 +388,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                   <span className="ml-val-label" style={{ color:"rgba(245,240,232,.5)", fontSize:11 }}>{item.nome || item.cog || "—"}</span>
                   <StatusChip status={item.status} />
                 </div>
-                <div className="ml-card-name">{item.nome_do_item}</div>
+                <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
                 <div className="ml-card-vals">
                   {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
                   {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
@@ -979,7 +979,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 <>
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
-                    <td><div className="item-title">{item.nome_do_item}</div></td>
+                    <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
@@ -1050,7 +1050,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
                 <StatusChip status={item.status} />
               </div>
-              <div className="ml-card-name">{item.nome_do_item}</div>
+              <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
               {temPendente && (
                 <div className="ml-card-pend-banner">
                   <span className="ml-pend-dot" />
