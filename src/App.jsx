@@ -760,7 +760,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [avisosModal, setAvisosModal] = useState(false);
 
   useEffect(() => {
-    supabase.from("pushes").select("*").eq("active", true).order("created_at", { ascending: false })
+    supabase.from("pushes").select("*").eq("active", true)
+      .or(`joiner_cog.is.null,joiner_cog.eq.${user.cog}`)
+      .order("created_at", { ascending: false })
       .then(async ({ data }) => {
         if (!data?.length) { setAvisos([]); return; }
         if (user.guest) { setAvisos(data); return; }
@@ -2194,6 +2196,30 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const [envioSolic,        setEnvioSolic]        = useState([]);
+  const [envioLoading,      setEnvioLoading]      = useState(null);
+
+  async function confirmarEnvio(s) {
+    if (!window.confirm(`Confirmar envio de ${(s.itens||[]).length} item(s) para ${s.destinatario}? Eles serão marcados como Finalizado.`)) return;
+    setEnvioLoading(s.id);
+    for (const it of (s.itens || [])) {
+      await supabase.from("masterlist").update({ status: "Enviado Nacional" }).eq("id", it.id);
+    }
+    await supabase.from("envio_solicitacoes").update({ status: "enviado" }).eq("id", s.id);
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status: "enviado" } : x));
+    setEnvioLoading(null);
+  }
+
+  async function corrigirItem(s, it) {
+    const nomeItem = it.nome || it.nome_do_item || it.ceg || "item";
+    if (!window.confirm(`Corrigir "${nomeItem}"? O status volta para ANTIGOM e o joiner receberá uma notificação.`)) return;
+    await supabase.from("masterlist").update({ status: "ANTIGOM" }).eq("id", it.id);
+    await supabase.from("pushes").insert([{
+      message: `O item "${nomeItem}" (${it.ceg}) ainda não chegou à GOM. Entre em contato com a GOM para mais informações.`,
+      active: true,
+      joiner_cog: s.joiner_cog,
+    }]);
+    alert(`Status revertido e notificação enviada para ${s.joiner_nome || s.joiner_cog}.`);
+  }
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -2484,47 +2510,70 @@ function AdminTab({ owner = false, userCog = "" }) {
       {adminMainTab === "envios" && (
         <div>
           <div style={{ marginBottom:16, fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>
-            {envioSolic.filter(e => e.status === "pendente").length} solicitações pendentes
+            {envioSolic.filter(e => e.status === "pendente").length} pendente(s) · {envioSolic.filter(e => e.status === "em cotação").length} em cotação · {envioSolic.filter(e => e.status === "enviado").length} enviado(s)
           </div>
           {envioSolic.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
-          ) : envioSolic.map(s => (
-            <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${s.status === "pendente" ? "rgba(186,255,57,.18)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{s.joiner_nome || s.joiner_cog}</span>
-                  {s.joiner_handle && <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>{s.joiner_handle}</span>}
+          ) : envioSolic.map(s => {
+            const statusColor = { pendente:"#BAFF39", "em cotação":"#FF5C1A", enviado:"rgba(245,240,232,.35)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", enviado:"rgba(245,240,232,.1)" }[s.status] || "rgba(245,240,232,.1)";
+            return (
+              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
+                {/* Cabeçalho */}
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{s.joiner_nome || s.joiner_cog}</div>
+                    {s.joiner_handle && <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{s.joiner_handle}</div>}
+                  </div>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <span style={{ fontSize:10, color:statusColor, fontFamily:"'DM Mono',monospace", border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", textTransform:"uppercase" }}>{s.status}</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
+                  </div>
                 </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:10, color: s.status === "pendente" ? "#BAFF39" : "rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", border:`1px solid ${s.status === "pendente" ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.1)"}`, borderRadius:4, padding:"2px 7px" }}>{s.status}</span>
-                  <span style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
+
+                {/* Endereço */}
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:10, lineHeight:1.8, background:"rgba(245,240,232,.03)", borderRadius:6, padding:"10px 12px" }}>
+                  <strong style={{ color:"rgba(245,240,232,.7)" }}>Dest.:</strong> {s.destinatario} · CPF: {s.cpf}<br />
+                  {s.endereco}, {s.numero}{s.complemento ? ` (${s.complemento})` : ""} — {s.bairro}, {s.cidade}/{s.estado} · CEP {s.cep}<br />
+                  <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Seguro:</strong> {s.seguro === "sim" ? `Sim — R$ ${s.valor_seguro}` : "Não"}
+                </div>
+
+                {/* Itens */}
+                {s.itens?.length > 0 && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Itens solicitados</div>
+                    {s.itens.map((it, idx) => (
+                      <div key={idx} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"5px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                        <span>{it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span></span>
+                        {s.status === "enviado" && (
+                          <button onClick={() => corrigirItem(s, it)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:4, padding:"3px 8px", cursor:"pointer", whiteSpace:"nowrap", marginLeft:8 }}>
+                            Corrigir
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Ações */}
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {s.status === "pendente" && (
+                    <button onClick={async () => {
+                      await supabase.from("envio_solicitacoes").update({ status:"em cotação" }).eq("id", s.id);
+                      setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"em cotação" } : x));
+                    }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                      Em cotação
+                    </button>
+                  )}
+                  {(s.status === "pendente" || s.status === "em cotação") && (
+                    <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
+                      {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
+                    </button>
+                  )}
                 </div>
               </div>
-              <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:8, lineHeight:1.7 }}>
-                <strong style={{ color:"rgba(245,240,232,.7)" }}>Destinatário:</strong> {s.destinatario} · CPF: {s.cpf}<br />
-                <strong style={{ color:"rgba(245,240,232,.7)" }}>Endereço:</strong> {s.endereco}, {s.numero}{s.complemento ? ` (${s.complemento})` : ""} — {s.bairro}, {s.cidade}/{s.estado} · CEP {s.cep}<br />
-                <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Seguro:</strong> {s.seguro === "sim" ? `Sim — R$ ${s.valor_seguro}` : "Não"}
-              </div>
-              {s.itens?.length > 0 && (
-                <div style={{ marginBottom:10 }}>
-                  <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>Itens</div>
-                  {s.itens.map((it, idx) => (
-                    <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
-                      {it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {s.status === "pendente" && (
-                <button onClick={async () => {
-                  await supabase.from("envio_solicitacoes").update({ status:"em cotação" }).eq("id", s.id);
-                  setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"em cotação" } : x));
-                }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.08)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.2)", borderRadius:5, padding:"5px 12px", cursor:"pointer" }}>
-                  Marcar como em cotação
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
