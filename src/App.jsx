@@ -74,6 +74,8 @@ function buildEmailHTML(_toNome, contentRows) {
 </body></html>`;
 }
 
+const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
+
 const supabase = createClient(
   "https://ghjfsmwwcfpfvrouyrka.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
@@ -1415,8 +1417,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                 {/* Cotação */}
                 {s.cotacao_valor && (() => {
                   const opcoes = s.cotacao_opcoes || [];
-                  const emb    = parseFloat(s.cotacao_embalagem||0);
-                  const minVal = opcoes.length > 0 ? Math.min(...opcoes.map(o => parseFloat(o.valor||0))) : 0;
+                  const emb    = pf(s.cotacao_embalagem);
+                  const minVal = opcoes.length > 0 ? Math.min(...opcoes.map(o => pf(o.valor))) : 0;
                   const formaIcon = { "PAC":"🟢","SEDEX":"🟠","Correios":"🟢","Jadlog":"🔴","Mini Envios":"📦" };
                   return (
                     <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:9, padding:"14px 16px", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
@@ -1426,17 +1428,17 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                           {s.status === "aguardando pagamento" && s.modalidade_escolhida ? (
                             <div style={{ background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
                               <div style={{ fontSize:10, color:"#BAFF39", letterSpacing:"1px", marginBottom:4 }}>MODALIDADE CONFIRMADA</div>
-                              <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(parseFloat(s.modalidade_escolhida.valor||0)+emb).toFixed(2).replace(".",",")}</div>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
                               <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>Até {s.modalidade_escolhida.prazo} · Aguardando confirmação do pagamento</div>
                             </div>
                           ) : (
                             <>
                               {["enviado","cancelado"].includes(s.status) ? null : <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Toque para selecionar a modalidade</div>}
                               {opcoes.map((op, idx) => {
-                                const isBest     = parseFloat(op.valor) === minVal;
+                                const isBest     = pf(op.valor) === minVal;
                                 const isSelected = opcaoEscolhida[s.id] === idx;
                                 const canSelect  = !["enviado","cancelado","aguardando pagamento"].includes(s.status);
-                                const total      = (parseFloat(op.valor||0) + emb).toFixed(2).replace(".",",");
+                                const total      = (pf(op.valor) + emb).toFixed(2).replace(".",",");
                                 return (
                                   <div key={idx} onClick={() => canSelect && setOpcaoEscolhida(prev => ({ ...prev, [s.id]: isSelected ? undefined : idx }))} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:6, borderRadius:8, cursor: canSelect ? "pointer" : "default", transition:"all .15s", background: isSelected ? "rgba(201,168,240,.1)" : isBest ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px solid ${isSelected ? "rgba(201,168,240,.5)" : isBest ? "rgba(186,255,57,.22)" : "rgba(245,240,232,.08)"}` }}>
                                     <div>
@@ -1458,7 +1460,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                               {opcaoEscolhida[s.id] !== undefined && (() => {
                                 const chosen = opcoes[opcaoEscolhida[s.id]];
                                 if (!chosen) return null;
-                                const totalChosen = (parseFloat(chosen.valor||0) + emb).toFixed(2).replace(".",",");
+                                const totalChosen = (pf(chosen.valor) + emb).toFixed(2).replace(".",",");
                                 const waMsg = encodeURIComponent(`Olá! Gostaria de confirmar meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${chosen.forma} (até ${chosen.prazo})\nTotal: R$ ${totalChosen}\n\nVou realizar o PIX! 💚`);
                                 return (
                                   <button onClick={async () => {
@@ -2352,8 +2354,8 @@ function AdminTab({ owner = false, userCog = "" }) {
     const preenchidas = cotacaoOpcoes.filter(o => o.forma && o.valor && o.prazo);
     if (preenchidas.length === 0) { alert("Preencha ao menos uma modalidade completa."); return; }
     const valorDeclarado = s.seguro === "sim" ? s.valor_seguro : null;
-    const emb      = parseFloat(cotacaoEmbalagem||0);
-    const minPreco = Math.min(...preenchidas.map(o => parseFloat(o.valor||0)));
+    const emb      = pf(cotacaoEmbalagem);
+    const minPreco = Math.min(...preenchidas.map(o => pf(o.valor)));
     const bestOp   = preenchidas.find(o => parseFloat(o.valor) === minPreco);
     const totalFmt = (minPreco + emb).toFixed(2).replace(".", ",");
     await supabase.from("envio_solicitacoes").update({
@@ -2760,8 +2762,8 @@ function AdminTab({ owner = false, userCog = "" }) {
                 {s.status === "em cotação" && cotacaoAberta === s.id && (() => {
                   const valorDecl  = s.seguro === "sim" ? s.valor_seguro : null;
                   const totalItens = (s.itens||[]).reduce((a, it) => a + Number(it.valor||0), 0);
-                  const emb        = parseFloat(cotacaoEmbalagem||0);
-                  const precos     = cotacaoOpcoes.map(o => parseFloat(o.valor||0)).filter(v => v > 0);
+                  const emb        = pf(cotacaoEmbalagem);
+                  const precos     = cotacaoOpcoes.map(o => pf(o.valor)).filter(v => v > 0);
                   const minPreco   = precos.length > 0 ? Math.min(...precos) : 0;
                   const inp2 = { width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
                   const lbl2 = { fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4, display:"block" };
