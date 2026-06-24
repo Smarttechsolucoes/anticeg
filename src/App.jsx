@@ -2660,7 +2660,8 @@ function AdminTab({ owner = false, userCog = "" }) {
 
                 {/* Form cotação */}
                 {s.status === "em cotação" && cotacaoAberta === s.id && (() => {
-                  const seguroJoiner = s.seguro === "sim" ? parseFloat(s.valor_seguro||0) : 0;
+                  const seguroJoiner  = s.seguro === "sim" ? parseFloat(s.valor_seguro||0) : 0;
+                  const totalItens    = (s.itens||[]).reduce((a, it) => a + Number(it.valor||0), 0);
                   const total = (parseFloat(cotacaoFrete||0) + seguroJoiner + parseFloat(cotacaoEmbalagem||0));
                   const inp2 = { width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
                   const lbl2 = { fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4, display:"block" };
@@ -2680,8 +2681,9 @@ function AdminTab({ owner = false, userCog = "" }) {
                         </div>
                         <div>
                           <label style={lbl2}>SEGURO</label>
-                          <div style={{ ...inp2, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.04)" }}>
+                          <div style={{ ...inp2, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.04)", lineHeight:1.5 }}>
                             {seguroJoiner > 0 ? `R$ ${seguroJoiner.toFixed(2).replace(".",",")}` : "Não solicitado"}
+                            {totalItens > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>val. itens: R$ {totalItens.toFixed(2).replace(".",",")}</div>}
                           </div>
                         </div>
                         <div>
@@ -3236,7 +3238,7 @@ function EnvioTab({ user, itens }) {
 
     setLoading(true);
     const itensSel = antigomItens.filter(i => selecionados.includes(i.id))
-      .map(i => ({ id: i.id, ceg: i.ceg, nome: i.nome_do_item }));
+      .map(i => ({ id: i.id, ceg: i.ceg, nome: i.nome_do_item, valor: Number(i.valor_item||0) }));
 
     const { error } = await supabase.from("envio_solicitacoes").insert([{
       joiner_cog:      user.cog,
