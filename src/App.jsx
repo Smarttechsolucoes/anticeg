@@ -1276,6 +1276,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
   const [meuEnvios,    setMeuEnvios]    = useState([]);
+  const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
 
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
@@ -1385,8 +1386,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           {meuEnvios.length === 0 ? (
             <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma solicitação de envio ainda.</div>
           ) : meuEnvios.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
-            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", "aguardando pagamento":"rgba(255,209,102,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
@@ -1422,26 +1423,55 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                       <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:12 }}>Cotação disponível</div>
                       {opcoes.length > 0 ? (
                         <>
-                          {opcoes.map((op, idx) => {
-                            const isBest = parseFloat(op.valor) === minVal;
-                            const total  = (parseFloat(op.valor||0) + emb).toFixed(2).replace(".",",");
-                            return (
-                              <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:6, borderRadius:8, background: isBest ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px solid ${isBest ? "rgba(186,255,57,.22)" : "rgba(245,240,232,.08)"}` }}>
-                                <div>
-                                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                                    <span>{formaIcon[op.forma] || "📦"}</span>
-                                    <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8" }}>{op.forma}</span>
-                                    {isBest && opcoes.length > 1 && <span style={{ fontSize:9, background:"#BAFF39", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700, letterSpacing:".03em" }}>Melhor preço</span>}
+                          {s.status === "aguardando pagamento" && s.modalidade_escolhida ? (
+                            <div style={{ background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
+                              <div style={{ fontSize:10, color:"#BAFF39", letterSpacing:"1px", marginBottom:4 }}>MODALIDADE CONFIRMADA</div>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(parseFloat(s.modalidade_escolhida.valor||0)+emb).toFixed(2).replace(".",",")}</div>
+                              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>Até {s.modalidade_escolhida.prazo} · Aguardando confirmação do pagamento</div>
+                            </div>
+                          ) : (
+                            <>
+                              {["enviado","cancelado"].includes(s.status) ? null : <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Toque para selecionar a modalidade</div>}
+                              {opcoes.map((op, idx) => {
+                                const isBest     = parseFloat(op.valor) === minVal;
+                                const isSelected = opcaoEscolhida[s.id] === idx;
+                                const canSelect  = !["enviado","cancelado","aguardando pagamento"].includes(s.status);
+                                const total      = (parseFloat(op.valor||0) + emb).toFixed(2).replace(".",",");
+                                return (
+                                  <div key={idx} onClick={() => canSelect && setOpcaoEscolhida(prev => ({ ...prev, [s.id]: isSelected ? undefined : idx }))} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:6, borderRadius:8, cursor: canSelect ? "pointer" : "default", transition:"all .15s", background: isSelected ? "rgba(201,168,240,.1)" : isBest ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px solid ${isSelected ? "rgba(201,168,240,.5)" : isBest ? "rgba(186,255,57,.22)" : "rgba(245,240,232,.08)"}` }}>
+                                    <div>
+                                      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+                                        <span>{formaIcon[op.forma] || "📦"}</span>
+                                        <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8" }}>{op.forma}</span>
+                                        {isBest && opcoes.length > 1 && <span style={{ fontSize:9, background:"#BAFF39", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700 }}>Melhor preço</span>}
+                                        {isSelected && <span style={{ fontSize:9, background:"#C9A8F0", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700 }}>Selecionado</span>}
+                                      </div>
+                                      <div style={{ fontSize:10, color:"rgba(245,240,232,.4)" }}>Até {op.prazo}</div>
+                                    </div>
+                                    <div style={{ textAlign:"right" }}>
+                                      <div style={{ fontSize:15, fontWeight:900, color: isSelected ? "#C9A8F0" : isBest ? "#BAFF39" : "#F5F0E8" }}>R$ {total}</div>
+                                      {emb > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)" }}>frete R$ {op.valor} + emb. R$ {s.cotacao_embalagem}</div>}
+                                    </div>
                                   </div>
-                                  <div style={{ fontSize:10, color:"rgba(245,240,232,.4)" }}>Até {op.prazo}</div>
-                                </div>
-                                <div style={{ textAlign:"right" }}>
-                                  <div style={{ fontSize:15, fontWeight:900, color: isBest ? "#BAFF39" : "#F5F0E8" }}>R$ {total}</div>
-                                  {emb > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)" }}>frete R$ {op.valor} + emb. R$ {s.cotacao_embalagem}</div>}
-                                </div>
-                              </div>
-                            );
-                          })}
+                                );
+                              })}
+                              {opcaoEscolhida[s.id] !== undefined && (() => {
+                                const chosen = opcoes[opcaoEscolhida[s.id]];
+                                if (!chosen) return null;
+                                const totalChosen = (parseFloat(chosen.valor||0) + emb).toFixed(2).replace(".",",");
+                                const waMsg = encodeURIComponent(`Olá! Gostaria de confirmar meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${chosen.forma} (até ${chosen.prazo})\nTotal: R$ ${totalChosen}\n\nVou realizar o PIX! 💚`);
+                                return (
+                                  <button onClick={async () => {
+                                    await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"aguardando pagamento" }).eq("id", s.id);
+                                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: chosen, status:"aguardando pagamento" } : x));
+                                    window.open(`https://wa.me/5524992501917?text=${waMsg}`, "_blank");
+                                  }} style={{ width:"100%", marginTop:6, padding:"10px", background:"rgba(201,168,240,.15)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.35)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                                    Confirmar {chosen.forma} — R$ {totalChosen} e enviar PIX →
+                                  </button>
+                                );
+                              })()}
+                            </>
+                          )}
                           {s.cotacao_obs && <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:8, lineHeight:1.6 }}>{s.cotacao_obs}</div>}
                         </>
                       ) : (
@@ -2677,8 +2707,8 @@ function AdminTab({ owner = false, userCog = "" }) {
           {envioSolic.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
           ) : envioSolic.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
-            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", "aguardando pagamento":"rgba(255,209,102,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
                 {/* Cabeçalho */}
@@ -2801,7 +2831,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                       Enviar cotação
                     </button>
                   )}
-                  {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada") && (
+                  {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada" || s.status === "aguardando pagamento") && (
                     <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
                       {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
                     </button>
