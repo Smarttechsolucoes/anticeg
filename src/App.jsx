@@ -1850,18 +1850,63 @@ function EmailJSTestBlock() {
         <button onClick={testar} disabled={status === "sending"} style={{
           background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.15)", color:"var(--offwhite)",
           borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer"
-        }}>Testar →</button>
+        }}>Testar →</button><EmailTypeBadge type="teste" />
       </div>
       {status && <div style={{ fontSize:11, color:statusMsg[status].color, marginTop:8, fontFamily:"'DM Mono',monospace" }}>{statusMsg[status].text}</div>}
     </div>
   );
 }
 
+const EMAIL_TYPE_BADGE = {
+  pagamento: { label: "pagamento", bg: "rgba(186,255,57,.1)",  color: "#BAFF39", border: "rgba(186,255,57,.25)" },
+  report:    { label: "report",    bg: "rgba(255,92,26,.1)",   color: "#FF5C1A", border: "rgba(255,92,26,.3)"  },
+  teste:     { label: "teste",     bg: "rgba(201,168,240,.1)", color: "#C9A8F0", border: "rgba(201,168,240,.3)"},
+};
+function EmailTypeBadge({ type }) {
+  const t = EMAIL_TYPE_BADGE[type] || EMAIL_TYPE_BADGE.pagamento;
+  return (
+    <span style={{ display:"inline-block", fontSize:9, letterSpacing:"1px", textTransform:"uppercase",
+      background:t.bg, color:t.color, border:`1px solid ${t.border}`,
+      borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", verticalAlign:"middle" }}>
+      {t.label}
+    </span>
+  );
+}
+
 function NotificarTodosBlock() {
-  const [status, setStatus]   = useState(null); // null | "loading" | "sending" | "done" | "error" | "notcfg"
-  const [resultado, setResultado] = useState(null); // { enviados, semEmail, semPendencia }
+  const [status, setStatus]       = useState(null);
+  const [resultado, setResultado] = useState(null);
+  const [lista, setLista]         = useState(null);   // null | [] | [{nome, cog, email, nItens, total}]
+  const [listaLoading, setListaLoading] = useState(false);
+  const [listaOpen, setListaOpen] = useState(false);
 
   const configured = !EJS_SERVICE.startsWith("YOUR");
+
+  async function carregarLista() {
+    setListaLoading(true);
+    try {
+      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email").not("email", "is", null).neq("email", "");
+      const { data: itens }   = await supabase.from("masterlist").select("cog, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf").neq("cog","disponivel");
+      const resultado = (joiners || []).reduce((acc, j) => {
+        const meus = (itens || []).filter(i => i.cog === j.cog);
+        const pendentes = meus.filter(i =>
+          (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
+          (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
+          (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
+        );
+        if (pendentes.length === 0) return acc;
+        const total = pendentes.reduce((s, i) =>
+          s + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
+            + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
+            + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0), 0);
+        acc.push({ nome: j.nome || j.cog, cog: j.cog, email: j.email, nItens: pendentes.length, total });
+        return acc;
+      }, []);
+      setLista(resultado);
+      setListaOpen(true);
+    } catch (e) { console.error(e); }
+    setListaLoading(false);
+  }
 
   async function notificarTodos() {
     if (!configured) { setStatus("notcfg"); return; }
@@ -1929,7 +1974,7 @@ function NotificarTodosBlock() {
       `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`
     ).join("");
     const content = `<tr><td style="background:#111111;padding:20px 40px 8px">
-  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Você tem <strong style="color:#F5F0E8">${mockItems.length} items</strong> com pagamento em aberto:</p>
+  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p>
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(mockTotal)}</div><div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">+ R$&nbsp;${fmtBRL(mockMulta)} de multa por atraso</div></td></tr></table>
 </td></tr>`;
     const html = buildEmailHTML("Antigom Exemplo", content);
@@ -1940,24 +1985,64 @@ function NotificarTodosBlock() {
 
   return (
     <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10 }}>
-      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Notificar todos os joiners</div>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Notificar todos os joiners</div>
+        <EmailTypeBadge type="pagamento" />
+      </div>
       <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>
         Envia um e-mail para cada joiner com pagamentos em aberto. Use após atualizar a planilha.
       </div>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-      <button onClick={notificarTodos} disabled={!!status && status !== "done" && status !== "error" && status !== "notcfg"} style={{
-        background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
-        color:"#C9A8F0", borderRadius:8, padding:"9px 18px",
-        fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".05em"
-      }}>
-        {status === "loading" ? "Carregando dados..." : status === "sending" ? "Enviando e-mails..." : "✉ Notificar todos →"}
-      </button>
-      <button onClick={previewEmail} style={{
-        background:"none", border:"1px solid rgba(245,240,232,.12)",
-        color:"rgba(245,240,232,.45)", borderRadius:8, padding:"9px 14px",
-        fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
-      }}>visualizar e-mail</button>
+        <button onClick={notificarTodos} disabled={!!status && status !== "done" && status !== "error" && status !== "notcfg"} style={{
+          background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
+          color:"#C9A8F0", borderRadius:8, padding:"9px 18px",
+          fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".05em"
+        }}>
+          {status === "loading" ? "Carregando dados..." : status === "sending" ? "Enviando e-mails..." : "✉ Notificar todos →"}
+        </button>
+        <button onClick={() => { if (listaOpen) { setListaOpen(false); } else if (lista) { setListaOpen(true); } else { carregarLista(); } }} style={{
+          background:"none", border:"1px solid rgba(245,240,232,.15)",
+          color:"rgba(245,240,232,.55)", borderRadius:8, padding:"9px 14px",
+          fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+        }}>{listaLoading ? "carregando..." : listaOpen ? "ocultar lista" : "ver destinatários"}</button>
+        <button onClick={previewEmail} style={{
+          background:"none", border:"1px solid rgba(245,240,232,.12)",
+          color:"rgba(245,240,232,.35)", borderRadius:8, padding:"9px 14px",
+          fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+        }}>visualizar e-mail</button>
       </div>
+
+      {listaOpen && lista !== null && (
+        <div style={{ marginTop:12, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto", gap:0,
+            background:"rgba(245,240,232,.04)", padding:"6px 12px",
+            fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+            <span>Nome</span><span>@</span><span>E-mail</span><span style={{ textAlign:"center" }}>Itens</span><span style={{ textAlign:"right" }}>Total</span>
+          </div>
+          {lista.length === 0
+            ? <div style={{ padding:"12px", fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum joiner com pagamento pendente e e-mail cadastrado.</div>
+            : lista.map((r, i) => (
+              <div key={r.cog} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto", gap:0,
+                padding:"8px 12px", borderTop:"1px solid rgba(245,240,232,.05)",
+                background: i % 2 === 0 ? "transparent" : "rgba(245,240,232,.02)" }}>
+                <span style={{ fontSize:11, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome}</span>
+                <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>@{r.cog}</span>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.email}</span>
+                <span style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textAlign:"center", paddingLeft:8 }}>{r.nItens}i</span>
+                <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textAlign:"right", paddingLeft:12, fontWeight:700 }}>R${fmtBRL(r.total)}</span>
+              </div>
+            ))
+          }
+          {lista.length > 0 && (
+            <div style={{ padding:"6px 12px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between",
+              fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+              <span>{lista.length} destinatário{lista.length !== 1 ? "s" : ""}</span>
+              <span style={{ color:"#BAFF39" }}>R${fmtBRL(lista.reduce((s, r) => s + r.total, 0))} total em aberto</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {status === "notcfg" && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Configure o EmailJS primeiro.</div>}
       {status === "error"   && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Erro ao enviar. Tente novamente.</div>}
       {status === "done" && resultado && (
@@ -2240,9 +2325,12 @@ function AdminTab({ owner = false, userCog = "" }) {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
                 {r.status === "pendente" ? (
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <EmailTypeBadge type="report" />
                   <button onClick={() => marcarResolvido(r)} style={{ background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.3)", color: "#4ade80", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
                     Resolver ✓
                   </button>
+                  </div>
                 ) : (
                   <>
                     <span style={{ fontSize: 11, color: "#4ade80" }}>✓ resolvido</span>
@@ -2438,7 +2526,7 @@ function AdminPagamentos({ data, joiners }) {
                       marginTop:8, background:"none", border:"1px solid rgba(245,240,232,.12)",
                       color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
                       fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
-                    }}>✉ Notificar por e-mail</button>
+                    }}>✉ Notificar por e-mail</button> <EmailTypeBadge type="pagamento" />
                   );
                 })()}
               </div>
