@@ -794,8 +794,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
 
   let filtered = [...itens];
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
-  if (statusFiltro === "finalizados") filtered = filtered.filter(i => i.status === "Enviado Nacional");
-  if (statusFiltro === "andamento")   filtered = filtered.filter(i => i.status !== "Enviado Nacional");
+  if (STATUS_STEPS.some(s => s.id === statusFiltro)) filtered = filtered.filter(i => i.status === statusFiltro);
   if (statusFiltro === "pendente")    filtered = filtered.filter(i =>
     (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
     (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
@@ -958,9 +957,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           borderRadius:6, padding:"5px 10px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", outline:"none"
         }}>
           <option value="tudo">Tudo</option>
-          <option value="andamento">Em andamento</option>
-          <option value="pendente">Pendente</option>
-          <option value="finalizados">Finalizados</option>
+          <option value="pendente">⚠ Pendente</option>
+          {STATUS_STEPS.map(s => (
+            <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
+          ))}
         </select>
         <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} style={{
           background:"#0d0d0d", border:"1px solid rgba(245,240,232,.18)", color:"rgba(245,240,232,.8)",
