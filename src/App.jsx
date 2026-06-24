@@ -1275,6 +1275,12 @@ function StaffPanel() {
 function PerfilTab({ user, onUpdate, owner = false }) {
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
+  const [meuEnvios,    setMeuEnvios]    = useState([]);
+
+  useEffect(() => {
+    supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setMeuEnvios(data); });
+  }, [user.cog]);
 
   function reportarProblema() {
     setFeedbackTipo("bug");
@@ -1355,6 +1361,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
       <div className="perfil-subtabs" style={{ display:"flex", gap:6, marginBottom:24 }}>
         {[
           { id:"dados",     label:"Dados" },
+          { id:"envios",    label:"Envios", badge: meuEnvios.filter(e => e.status === "cotação enviada").length || null },
           { id:"tutorial",  label:"Tutorial" },
           { id:"feedback",  label:"Feedbacks" },
           ...(owner ? [{ id:"staff", label:"Staff" }] : []),
@@ -1365,10 +1372,59 @@ function PerfilTab({ user, onUpdate, owner = false }) {
             border:    `1px solid ${perfilSubTab === t.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
             borderRadius:6, padding:"6px 16px", fontSize:11,
             fontFamily:"'DM Mono',monospace", fontWeight: perfilSubTab === t.id ? 700 : 400,
-            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase"
-          }}>{t.label}</button>
+            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase", position:"relative"
+          }}>
+            {t.label}
+            {t.badge > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 5px", lineHeight:1.4 }}>{t.badge}</span>}
+          </button>
         ))}
       </div>
+
+      {perfilSubTab === "envios" && (
+        <div>
+          {meuEnvios.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma solicitação de envio ainda.</div>
+          ) : meuEnvios.map(s => {
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.4)" }[s.status] || "rgba(245,240,232,.4)";
+            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", enviado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.08)";
+            return (
+              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <span style={{ fontSize:12, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
+                  <span style={{ fontSize:10, color:statusColor, fontFamily:"'DM Mono',monospace", border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", textTransform:"uppercase" }}>{s.status}</span>
+                </div>
+
+                {/* Itens */}
+                {s.itens?.length > 0 && (
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:5 }}>Itens solicitados</div>
+                    {s.itens.map((it, idx) => (
+                      <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                        {it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Método */}
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom: s.cotacao_valor ? 10 : 0 }}>
+                  Método: {s.metodo} · Seguro: {s.seguro === "sim" ? `Sim — R$ ${s.valor_seguro}` : "Não"}
+                </div>
+
+                {/* Cotação */}
+                {s.cotacao_valor && (
+                  <div style={{ background:"rgba(201,168,240,.07)", border:"1px solid rgba(201,168,240,.2)", borderRadius:7, padding:"12px 14px", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
+                    <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:8 }}>Cotação disponível</div>
+                    <div style={{ fontSize:18, fontWeight:700, color:"#F5F0E8", marginBottom:4 }}>R$ {s.cotacao_valor}</div>
+                    <div style={{ fontSize:11, color:"rgba(245,240,232,.55)" }}>Prazo estimado: <strong style={{ color:"#F5F0E8" }}>{s.cotacao_prazo}</strong></div>
+                    {s.cotacao_obs && <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:6, lineHeight:1.6 }}>{s.cotacao_obs}</div>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {perfilSubTab === "dados" && (
         <div className="login-box" style={{ gap: 14 }}>
@@ -2197,6 +2253,10 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
+  const [cotacaoAberta,     setCotacaoAberta]     = useState(null);
+  const [cotacaoValor,      setCotacaoValor]      = useState("");
+  const [cotacaoPrazo,      setCotacaoPrazo]      = useState("");
+  const [cotacaoObs,        setCotacaoObs]        = useState("");
 
   async function confirmarEnvio(s) {
     if (!window.confirm(`Confirmar envio de ${(s.itens||[]).length} item(s) para ${s.destinatario}? Eles serão marcados como Finalizado.`)) return;
@@ -2207,6 +2267,24 @@ function AdminTab({ owner = false, userCog = "" }) {
     await supabase.from("envio_solicitacoes").update({ status: "enviado" }).eq("id", s.id);
     setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status: "enviado" } : x));
     setEnvioLoading(null);
+  }
+
+  async function enviarCotacao(s) {
+    if (!cotacaoValor || !cotacaoPrazo) { alert("Preencha valor e prazo."); return; }
+    await supabase.from("envio_solicitacoes").update({
+      cotacao_valor: cotacaoValor,
+      cotacao_prazo: cotacaoPrazo,
+      cotacao_obs:   cotacaoObs || null,
+      cotacao_at:    new Date().toISOString(),
+      status:        "cotação enviada",
+    }).eq("id", s.id);
+    await supabase.from("pushes").insert([{
+      message: `Sua cotação de envio está disponível! Valor: R$ ${cotacaoValor}. Prazo: ${cotacaoPrazo}. Acesse Meu Perfil → Envios para ver os detalhes.`,
+      active: true,
+      joiner_cog: s.joiner_cog,
+    }]);
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação enviada", cotacao_valor:cotacaoValor, cotacao_prazo:cotacaoPrazo, cotacao_obs:cotacaoObs } : x));
+    setCotacaoAberta(null); setCotacaoValor(""); setCotacaoPrazo(""); setCotacaoObs("");
   }
 
   async function corrigirItem(s, it) {
@@ -2515,8 +2593,8 @@ function AdminTab({ owner = false, userCog = "" }) {
           {envioSolic.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
           ) : envioSolic.map(s => {
-            const statusColor = { pendente:"#BAFF39", "em cotação":"#FF5C1A", enviado:"rgba(245,240,232,.35)" }[s.status] || "rgba(245,240,232,.35)";
-            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", enviado:"rgba(245,240,232,.1)" }[s.status] || "rgba(245,240,232,.1)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.35)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", enviado:"rgba(245,240,232,.1)" }[s.status] || "rgba(245,240,232,.1)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
                 {/* Cabeçalho */}
@@ -2555,6 +2633,39 @@ function AdminTab({ owner = false, userCog = "" }) {
                   </div>
                 )}
 
+                {/* Cotação recebida */}
+                {s.cotacao_valor && (
+                  <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.18)", borderRadius:7, padding:"10px 14px", marginBottom:10, fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.7)", lineHeight:1.8 }}>
+                    <strong style={{ color:"#C9A8F0" }}>Cotação enviada</strong><br />
+                    Valor: <strong style={{ color:"#F5F0E8" }}>R$ {s.cotacao_valor}</strong> · Prazo: <strong style={{ color:"#F5F0E8" }}>{s.cotacao_prazo}</strong>
+                    {s.cotacao_obs && <><br />{s.cotacao_obs}</>}
+                  </div>
+                )}
+
+                {/* Form cotação */}
+                {s.status === "em cotação" && cotacaoAberta === s.id && (
+                  <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"14px", marginBottom:10, display:"flex", flexDirection:"column", gap:8 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                      <div>
+                        <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>VALOR (R$) *</div>
+                        <input value={cotacaoValor} onChange={e => setCotacaoValor(e.target.value)} placeholder="ex: 28,50" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>PRAZO ESTIMADO *</div>
+                        <input value={cotacaoPrazo} onChange={e => setCotacaoPrazo(e.target.value)} placeholder="ex: 5–8 dias úteis" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>OBSERVAÇÃO (opcional)</div>
+                      <input value={cotacaoObs} onChange={e => setCotacaoObs(e.target.value)} placeholder="Informações adicionais..." style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => enviarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>Enviar cotação →</button>
+                      <button onClick={() => setCotacaoAberta(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Ações */}
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   {s.status === "pendente" && (
@@ -2565,7 +2676,12 @@ function AdminTab({ owner = false, userCog = "" }) {
                       Em cotação
                     </button>
                   )}
-                  {(s.status === "pendente" || s.status === "em cotação") && (
+                  {s.status === "em cotação" && cotacaoAberta !== s.id && (
+                    <button onClick={() => { setCotacaoAberta(s.id); setCotacaoValor(""); setCotacaoPrazo(""); setCotacaoObs(""); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.08)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                      Enviar cotação
+                    </button>
+                  )}
+                  {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada") && (
                     <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
                       {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
                     </button>
