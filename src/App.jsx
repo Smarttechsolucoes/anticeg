@@ -1820,7 +1820,7 @@ function EmailJSTestBlock() {
     if (!configured) { setStatus("notcfg"); return; }
     setStatus("sending");
     try {
-      await sendEmailJoiner(testEmail.trim(), "você", "Teste de e-mail ANTICEG ✓", "Se você recebeu este e-mail, a configuração do EmailJS está funcionando corretamente!");
+      await sendEmailJoiner(testEmail.trim(), "você", "Teste de e-mail ANTICEG ✓", buildEmailHTML("você", `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 8px;font-size:13px;color:#F5F0E8;font-weight:700;line-height:1.6">Configura&ccedil;&atilde;o confirmada ✓</p><p style="margin:0;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Se voc&ecirc; recebeu este e-mail, o EmailJS est&aacute; funcionando corretamente e os envios autom&aacute;ticos est&atilde;o ativos.</p></td></tr>`));
       setStatus("ok");
     } catch { setStatus("error"); }
   }
@@ -2066,7 +2066,7 @@ function AdminTab({ owner = false, userCog = "" }) {
         joinerInfo.email,
         joinerInfo.nome || rep.joiner_cog,
         "Seu report foi resolvido ✓",
-        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39;margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div><p style="margin:0;font-size:12px;color:rgba(245,240,232,0.4);line-height:1.6">Qualquer dúvida, entre em contato pelo WhatsApp.</p></td></tr>`)
+        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
       );
     }
     setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido" } : x));
