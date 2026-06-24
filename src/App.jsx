@@ -2192,7 +2192,8 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [disponiveisData, setDisponiveisData] = useState([]);
   const [joinersData, setJoinersData] = useState([]);
   const [confirmacoes, setConfirmacoes] = useState([]);
-  const [staffAcessos, setStaffAcessos] = useState(null);
+  const [staffAcessos,      setStaffAcessos]      = useState(null);
+  const [envioSolic,        setEnvioSolic]        = useState([]);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -2218,6 +2219,8 @@ function AdminTab({ owner = false, userCog = "" }) {
       .then(({ data }) => { if (data) setFeedbacks(data); });
     supabase.from("confirmacoes").select("*").eq("visto", false).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setConfirmacoes(data); });
+    supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setEnvioSolic(data); });
     // Masterlist separada: joiners reais (sem disponivel) e disponíveis
     (async () => {
       const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
@@ -2317,6 +2320,7 @@ function AdminTab({ owner = false, userCog = "" }) {
             temAcesso("disponiveis") && { id:"disponiveis", label:"Disponíveis" },
             temAcesso("blocklist")   && { id:"blocklist",   label:"Blocklist" },
             temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status !== "resolvido").length || null },
+            temAcesso("envios")      && { id:"envios",      label:"Envios",  badge: envioSolic.filter(e => e.status === "pendente").length || null },
           ].filter(Boolean);
         })().map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
@@ -2476,6 +2480,53 @@ function AdminTab({ owner = false, userCog = "" }) {
       {adminMainTab === "pagamentos"  && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
       {adminMainTab === "disponiveis" && <AdminDisponivel data={disponiveisData} />}
       {adminMainTab === "blocklist"   && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
+
+      {adminMainTab === "envios" && (
+        <div>
+          <div style={{ marginBottom:16, fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>
+            {envioSolic.filter(e => e.status === "pendente").length} solicitações pendentes
+          </div>
+          {envioSolic.length === 0 ? (
+            <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
+          ) : envioSolic.map(s => (
+            <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${s.status === "pendente" ? "rgba(186,255,57,.18)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{s.joiner_nome || s.joiner_cog}</span>
+                  {s.joiner_handle && <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>{s.joiner_handle}</span>}
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:10, color: s.status === "pendente" ? "#BAFF39" : "rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", border:`1px solid ${s.status === "pendente" ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.1)"}`, borderRadius:4, padding:"2px 7px" }}>{s.status}</span>
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
+                </div>
+              </div>
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:8, lineHeight:1.7 }}>
+                <strong style={{ color:"rgba(245,240,232,.7)" }}>Destinatário:</strong> {s.destinatario} · CPF: {s.cpf}<br />
+                <strong style={{ color:"rgba(245,240,232,.7)" }}>Endereço:</strong> {s.endereco}, {s.numero}{s.complemento ? ` (${s.complemento})` : ""} — {s.bairro}, {s.cidade}/{s.estado} · CEP {s.cep}<br />
+                <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Seguro:</strong> {s.seguro === "sim" ? `Sim — R$ ${s.valor_seguro}` : "Não"}
+              </div>
+              {s.itens?.length > 0 && (
+                <div style={{ marginBottom:10 }}>
+                  <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>Itens</div>
+                  {s.itens.map((it, idx) => (
+                    <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                      {it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {s.status === "pendente" && (
+                <button onClick={async () => {
+                  await supabase.from("envio_solicitacoes").update({ status:"em cotação" }).eq("id", s.id);
+                  setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"em cotação" } : x));
+                }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.08)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.2)", borderRadius:5, padding:"5px 12px", cursor:"pointer" }}>
+                  Marcar como em cotação
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2907,6 +2958,8 @@ function EnvioTab({ user, itens }) {
   const [ciente1,     setCiente1]     = useState(false);
   const [ciente2,     setCiente2]     = useState(false);
   const [erro,        setErro]        = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [enviado,     setEnviado]     = useState(false);
 
   if (!unlocked) return (
     <div style={{ maxWidth:360, margin:"80px auto", padding:"0 16px", textAlign:"center" }}>
@@ -2952,12 +3005,9 @@ function EnvioTab({ user, itens }) {
     setSelecionados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     setErro("");
     const missing = [];
-    if (!nome)         missing.push("nome");
-    if (!handle)       missing.push("@");
-    if (!whatsapp)     missing.push("WhatsApp");
     if (!destinatario) missing.push("nome do destinatário");
     if (!cpf)          missing.push("CPF");
     if (!cep)          missing.push("CEP");
@@ -2972,35 +3022,33 @@ function EnvioTab({ user, itens }) {
     if (!confirmou || !ciente1 || !ciente2) missing.push("todas as confirmações");
     if (missing.length > 0) { setErro(`Preencha: ${missing.join(", ")}.`); return; }
 
-    const itensSel   = antigomItens.filter(i => selecionados.includes(i.id));
-    const itensTexto = itensSel.map(i => `• ${i.nome_do_item} (${i.ceg})`).join("\n");
+    setLoading(true);
+    const itensSel = antigomItens.filter(i => selecionados.includes(i.id))
+      .map(i => ({ id: i.id, ceg: i.ceg, nome: i.nome_do_item }));
 
-    const msg = [
-      `*SOLICITAÇÃO DE ENVIO NACIONAL*`,
-      ``,
-      `*Nome:* ${nome}`,
-      `*@:* ${handle}`,
-      `*WhatsApp:* ${whatsapp}`,
-      ``,
-      `*Destinatário:* ${destinatario}`,
-      `*CPF:* ${cpf}`,
-      `*CEP:* ${cep}`,
-      `*Endereço:* ${endereco}, ${numero}${complemento ? ` — ${complemento}` : ""}`,
-      `*Bairro:* ${bairro}`,
-      `*Cidade:* ${cidade} — ${estado}`,
-      ``,
-      `*Itens solicitados:*`,
-      itensTexto,
-      ``,
-      `*Método de envio:* ${metodo}`,
-      `*Seguro:* ${seguro === "sim" ? `Sim — R$ ${valorSeguro}` : "Não"}`,
-      ``,
-      `✅ Revisou todas as informações`,
-      `✅ Ciente que a GOM não se responsabiliza por dados incorretos`,
-      `✅ Ciente que todos os itens listados e/ou disponíveis serão enviados`,
-    ].join("\n");
+    const { error } = await supabase.from("envio_solicitacoes").insert([{
+      joiner_cog:      user.cog,
+      joiner_nome:     nome,
+      joiner_handle:   handle,
+      destinatario,
+      cpf,
+      cep,
+      endereco,
+      numero,
+      complemento:     complemento || null,
+      bairro,
+      cidade,
+      estado,
+      itens:           itensSel,
+      metodo,
+      seguro,
+      valor_seguro:    seguro === "sim" ? valorSeguro : null,
+      status:          "pendente",
+    }]);
 
-    window.open(`https://wa.me/${WA_GOM}?text=${encodeURIComponent(msg)}`, "_blank");
+    setLoading(false);
+    if (error) { setErro("Erro ao enviar. Tente novamente."); return; }
+    setEnviado(true);
   }
 
   const inp = {
@@ -3018,6 +3066,19 @@ function EnvioTab({ user, itens }) {
   };
   const row2 = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 };
   const fld  = { marginBottom:12 };
+  const stat = { fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", padding:"9px 0", borderBottom:"1px solid rgba(245,240,232,.06)" };
+
+  if (enviado) return (
+    <div style={{ maxWidth:480, margin:"60px auto", padding:"0 16px", textAlign:"center" }}>
+      <div style={{ fontSize:36, marginBottom:16 }}>📦</div>
+      <div style={{ fontSize:16, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>Solicitação enviada!</div>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.9, background:"#111", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"20px 24px", textAlign:"left" }}>
+        Sua solicitação foi recebida com sucesso.<br /><br />
+        O prazo de cotação é de <strong style={{ color:"#F5F0E8" }}>5 dias úteis</strong> a partir do preenchimento deste formulário.<br /><br />
+        A cotação estará disponível dentro do seu acesso com os valores e taxas.
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ maxWidth:560, margin:"0 auto", padding:"24px 16px 100px" }}>
@@ -3027,14 +3088,15 @@ function EnvioTab({ user, itens }) {
         <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>Preencha os dados abaixo para solicitar o envio dos seus itens.</div>
       </div>
 
-      {/* SEUS DADOS */}
+      {/* SEUS DADOS — somente leitura */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Seus dados</div>
-        <div style={fld}><label style={lbl}>Seu nome (igual à planilha)</label><input style={inp} value={nome} onChange={e => setNome(e.target.value)} /></div>
+        <div style={fld}><label style={lbl}>Nome</label><div style={stat}>{nome || "—"}</div></div>
         <div style={row2}>
-          <div style={fld}><label style={lbl}>@ (Twitter/X/Threads/Insta)</label><input style={inp} value={handle} onChange={e => setHandle(e.target.value)} placeholder="@" /></div>
-          <div style={fld}><label style={lbl}>WhatsApp da comunidade</label><input style={inp} value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="(XX) XXXXX-XXXX" /></div>
+          <div style={fld}><label style={lbl}>@</label><div style={stat}>{handle || "—"}</div></div>
+          <div style={fld}><label style={lbl}>WhatsApp</label><div style={stat}>{whatsapp || "—"}</div></div>
         </div>
+        <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>Dados incorretos? Atualize em Meu Perfil.</div>
       </div>
 
       {/* DESTINATÁRIO */}
@@ -3112,12 +3174,10 @@ function EnvioTab({ user, itens }) {
           <label style={lbl}>Método de envio</label>
           <select style={{ ...inp, cursor:"pointer" }} value={metodo} onChange={e => setMetodo(e.target.value)}>
             <option value="">Selecione...</option>
-            <option value="PAC">PAC</option>
-            <option value="SEDEX">SEDEX</option>
-            <option value="SEDEX 10">SEDEX 10</option>
-            <option value="SEDEX 12">SEDEX 12</option>
+            <option value="Correios">Correios</option>
             <option value="Jadlog">Jadlog</option>
-            <option value="Total Express">Total Express</option>
+            <option value="Mini Envios">Mini Envios (somente photocards)</option>
+            <option value="Mais econômico">Método mais econômico (a critério da GOM)</option>
           </select>
         </div>
         <div style={fld}>
@@ -3164,16 +3224,13 @@ function EnvioTab({ user, itens }) {
 
       {erro && <div style={{ fontSize:11, color:"#FF5C1A", fontFamily:"'DM Mono',monospace", marginBottom:12, lineHeight:1.5 }}>{erro}</div>}
 
-      <button onClick={handleSubmit} style={{
+      <button onClick={handleSubmit} disabled={loading} style={{
         width:"100%", padding:"14px 0", background:"var(--laranja)", color:"#111",
         border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace",
-        cursor:"pointer", letterSpacing:"1px",
+        cursor: loading ? "not-allowed" : "pointer", letterSpacing:"1px", opacity: loading ? 0.7 : 1,
       }}>
-        SOLICITAR ENVIO VIA WHATSAPP →
+        {loading ? "ENVIANDO..." : "SOLICITAR ENVIO →"}
       </button>
-      <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", textAlign:"center", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
-        Abrirá o WhatsApp com a mensagem preenchida para enviar à GOM.
-      </div>
     </div>
   );
 }
