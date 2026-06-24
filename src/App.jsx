@@ -1385,8 +1385,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           {meuEnvios.length === 0 ? (
             <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma solicitação de envio ainda.</div>
           ) : meuEnvios.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.4)" }[s.status] || "rgba(245,240,232,.4)";
-            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", enviado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.08)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
@@ -1455,6 +1455,20 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                     </div>
                   );
                 })()}
+
+                {/* Cancelar solicitação */}
+                {s.status !== "enviado" && s.status !== "cancelado" && (
+                  <button onClick={async () => {
+                    if (!window.confirm("Cancelar esta solicitação de envio?")) return;
+                    await supabase.from("envio_solicitacoes").update({ status:"cancelado" }).eq("id", s.id);
+                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, status:"cancelado" } : x));
+                  }} style={{ marginTop:10, fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.25)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 14px", cursor:"pointer", width:"100%" }}>
+                    Cancelar solicitação
+                  </button>
+                )}
+                {s.status === "cancelado" && (
+                  <div style={{ marginTop:8, fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>Solicitação cancelada</div>
+                )}
               </div>
             );
           })}
@@ -2333,6 +2347,30 @@ function AdminTab({ owner = false, userCog = "" }) {
     setCotacaoAberta(null); setCotacaoOpcoes([{ forma:"", valor:"", prazo:"" }]); setCotacaoEmbalagem(""); setCotacaoObs("");
   }
 
+  async function cancelarCotacao(s) {
+    if (!window.confirm("Cancelar a cotação enviada? O joiner será notificado e a solicitação volta para 'em cotação'.")) return;
+    await supabase.from("envio_solicitacoes").update({
+      status: "em cotação", cotacao_opcoes: null, cotacao_frete: null, cotacao_forma: null,
+      cotacao_embalagem: null, cotacao_valor: null, cotacao_prazo: null, cotacao_obs: null,
+      cotacao_at: null, cotacao_seguro: null,
+    }).eq("id", s.id);
+    await supabase.from("pushes").insert([{
+      message: "Sua cotação de envio foi cancelada e será refeita em breve. Aguarde a nova cotação.",
+      active: true, joiner_cog: s.joiner_cog,
+    }]);
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"em cotação", cotacao_opcoes:null, cotacao_frete:null, cotacao_forma:null, cotacao_embalagem:null, cotacao_valor:null, cotacao_prazo:null, cotacao_obs:null, cotacao_seguro:null } : x));
+  }
+
+  async function cancelarSolicitacaoAdmin(s) {
+    if (!window.confirm("Cancelar esta solicitação de envio? O joiner será notificado.")) return;
+    await supabase.from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
+    await supabase.from("pushes").insert([{
+      message: "Sua solicitação de envio foi cancelada. Entre em contato com a GOM para mais informações.",
+      active: true, joiner_cog: s.joiner_cog,
+    }]);
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cancelado" } : x));
+  }
+
   async function corrigirItem(s, it) {
     const nomeItem = it.nome || it.nome_do_item || it.ceg || "item";
     if (!window.confirm(`Corrigir "${nomeItem}"? O status volta para ANTIGOM e o joiner receberá uma notificação.`)) return;
@@ -2639,8 +2677,8 @@ function AdminTab({ owner = false, userCog = "" }) {
           {envioSolic.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
           ) : envioSolic.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.35)" }[s.status] || "rgba(245,240,232,.35)";
-            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", enviado:"rgba(245,240,232,.1)" }[s.status] || "rgba(245,240,232,.1)";
+            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
                 {/* Cabeçalho */}
@@ -2766,6 +2804,16 @@ function AdminTab({ owner = false, userCog = "" }) {
                   {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada") && (
                     <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
                       {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
+                    </button>
+                  )}
+                  {s.status === "cotação enviada" && (
+                    <button onClick={() => cancelarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                      Cancelar cotação
+                    </button>
+                  )}
+                  {s.status !== "enviado" && s.status !== "cancelado" && (
+                    <button onClick={() => cancelarSolicitacaoAdmin(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.2)", border:"1px solid rgba(245,240,232,.08)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                      Cancelar solicitação
                     </button>
                   )}
                 </div>
