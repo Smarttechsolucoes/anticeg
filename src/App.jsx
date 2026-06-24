@@ -539,7 +539,7 @@ const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border:
 const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "block", marginBottom: 5 };
 
 function ReportModal({ user, item, onClose }) {
-  const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, outro: false });
+  const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
   const [motivoItem, setMotivoItem] = useState(null);
   const [preencheuForms, setPreencheuForms] = useState(null);
@@ -565,6 +565,7 @@ function ReportModal({ user, item, onClose }) {
       erro_frete:      erros.frete,
       erro_taxa:       erros.taxa,
       erro_pagamento:  erros.pagamento,
+      erro_recebido:   erros.recebido,
       erro_outro:      erros.outro,
       motivo_item:     erros.item   ? motivoItem        : null,
       correcao_valor:  erros.valor  ? correcoes.valor  : null,
@@ -679,6 +680,7 @@ function ReportModal({ user, item, onClose }) {
                   </div>
                 </div>
               )}
+              <CheckRow k="recebido" label="Já recebi esse item" />
               <CheckRow k="outro" label="Outro problema" />
             </div>
 
@@ -2404,6 +2406,7 @@ function AdminTab({ owner = false, userCog = "" }) {
             r.erro_frete     && "Frete incorreto",
             r.erro_taxa      && "Taxa RF incorreta",
             r.erro_pagamento && "Já paguei (pendente)",
+            r.erro_recebido  && "Já recebi esse item",
             r.erro_outro     && "Outro problema",
           ].filter(Boolean);
           return (
