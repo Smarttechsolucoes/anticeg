@@ -1873,6 +1873,61 @@ function EmailTypeBadge({ type }) {
   );
 }
 
+function EmailPreviewsBlock() {
+  function open(html) {
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+  }
+
+  function previewPagamento() {
+    const mockItems = [
+      { nome_do_item: "Leebit SKZOO Plush", ceg: "7TH FAN", pend: 85.00 },
+      { nome_do_item: "Photo Card Set", ceg: "SKZ", pend: 45.00 },
+      { nome_do_item: "Frete Internacional", ceg: "", pend: 22.50 },
+    ];
+    const mockTotal = mockItems.reduce((s, i) => s + i.pend, 0);
+    const mockMulta = 3.00;
+    const itemRows = mockItems.map(it =>
+      `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`
+    ).join("");
+    open(buildEmailHTML("Antigom Exemplo", `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(mockTotal + mockMulta)}</div><div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(mockTotal)} item + R$&nbsp;${fmtBRL(mockMulta)} multa</div></td></tr></table></td></tr>`));
+  }
+
+  function previewReport() {
+    open(buildEmailHTML("Antigom Exemplo", `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">Leebit SKZOO Plush — 7TH FAN</div></div></td></tr>`));
+  }
+
+  function previewTeste() {
+    open(buildEmailHTML("Antigom Exemplo", `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 8px;font-size:13px;color:#F5F0E8;font-weight:700;line-height:1.6">Configura&ccedil;&atilde;o confirmada ✓</p><p style="margin:0;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Se voc&ecirc; recebeu este e-mail, o EmailJS est&aacute; funcionando corretamente e os envios autom&aacute;ticos est&atilde;o ativos.</p></td></tr>`));
+  }
+
+  const tipos = [
+    { type:"pagamento", label:"Pagamento em aberto",  desc:"Notificar Todos e notificar individual",  fn: previewPagamento },
+    { type:"report",    label:"Report resolvido",     desc:"Disparado ao clicar em Resolver ✓",       fn: previewReport    },
+    { type:"teste",     label:"Teste de integração",  desc:"Disparado pelo EmailJS Test Block",       fn: previewTeste     },
+  ];
+
+  return (
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Prévia de e-mails</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:14 }}>Estrutura de cada tipo de e-mail enviado pelo sistema.</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {tipos.map(t => (
+          <div key={t.type} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8 }}>
+            <EmailTypeBadge type={t.type} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{t.label}</div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{t.desc}</div>
+            </div>
+            <button onClick={t.fn} style={{ background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.45)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>visualizar →</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NotificarTodosBlock() {
   const [status, setStatus]       = useState(null);
   const [resultado, setResultado] = useState(null);
@@ -1930,15 +1985,14 @@ function NotificarTodosBlock() {
     if (!configured) { setStatus("notcfg"); return; }
     setStatus("loading");
     try {
-      // Busca todos os joiners com email
-      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email").not("email", "is", null).neq("email", "");
-      if (!joiners?.length) { setStatus("done"); setResultado({ enviados:0, semEmail:0, semPendencia:0 }); return; }
+      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email, last_notified_at").not("email", "is", null).neq("email", "");
+      if (!joiners?.length) { setStatus("done"); setResultado({ enviados:0, semPendencia:0, cooldown:0 }); return; }
 
-      // Busca todos os itens pendentes
       const { data: itens } = await supabase.from("masterlist").select("cog, nome_do_item, ceg, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf, venc_item, venc_frete, venc_rf").neq("cog","disponivel");
 
       setStatus("sending");
-      let enviados = 0, semPendencia = 0;
+      let enviados = 0, semPendencia = 0, cooldown = 0;
+      const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 
       for (const j of joiners) {
         const meus = (itens || []).filter(i => i.cog === j.cog);
@@ -1949,6 +2003,11 @@ function NotificarTodosBlock() {
         );
 
         if (pendentes.length === 0) { semPendencia++; continue; }
+
+        const ultimoEnvio = j.last_notified_at
+          ? new Date(j.last_notified_at).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+          : null;
+        if (ultimoEnvio === hoje) { cooldown++; continue; }
 
         const totalPend = pendentes.reduce((s,i) =>
           s + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
@@ -1969,10 +2028,11 @@ function NotificarTodosBlock() {
 </td></tr>`;
         const corpo = buildEmailHTML(j.nome || j.cog, emailContent);
         await sendEmailJoiner(j.email, j.nome, "📋 Pagamentos em aberto — ANTICEG", corpo);
+        await supabase.from("joiners").update({ last_notified_at: new Date().toISOString() }).eq("cog", j.cog);
         enviados++;
       }
 
-      setResultado({ enviados, semEmail: 0, semPendencia });
+      setResultado({ enviados, semPendencia, cooldown });
       setStatus("done");
     } catch (e) {
       console.error(e);
@@ -2023,11 +2083,6 @@ function NotificarTodosBlock() {
           color:"rgba(245,240,232,.55)", borderRadius:8, padding:"9px 14px",
           fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
         }}>{listaLoading ? "carregando..." : listaOpen ? "ocultar lista" : "ver destinatários"}</button>
-        <button onClick={previewEmail} style={{
-          background:"none", border:"1px solid rgba(245,240,232,.12)",
-          color:"rgba(245,240,232,.35)", borderRadius:8, padding:"9px 14px",
-          fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
-        }}>visualizar e-mail</button>
       </div>
 
       {listaOpen && lista !== null && (
@@ -2067,7 +2122,8 @@ function NotificarTodosBlock() {
       {status === "done" && resultado && (
         <div style={{ fontSize:11, color:"#4ade80", marginTop:8, fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
           ✓ {resultado.enviados} e-mail(s) enviado(s)
-          {resultado.semPendencia > 0 && <span style={{ color:"rgba(245,240,232,.52)" }}> · {resultado.semPendencia} sem pendências (não notificados)</span>}
+          {resultado.semPendencia > 0 && <span style={{ color:"rgba(245,240,232,.52)" }}> · {resultado.semPendencia} sem pendência</span>}
+          {resultado.cooldown > 0 && <span style={{ color:"rgba(245,240,232,.52)" }}> · {resultado.cooldown} já notificado(s) hoje</span>}
         </div>
       )}
     </div>
@@ -2247,6 +2303,7 @@ function AdminTab({ owner = false, userCog = "" }) {
       </div>
 
       <EmailJSTestBlock />
+      <EmailPreviewsBlock />
       <NotificarTodosBlock />
 
       <div style={{ marginTop: 28, marginBottom: 28 }}>
