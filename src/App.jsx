@@ -1907,12 +1907,34 @@ function NotificarTodosBlock() {
     }
   }
 
+  function previewEmail() {
+    const mockItems = [
+      { nome_do_item: "Leebit SKZOO Plush", ceg: "7TH FAN", pend: 85.00 },
+      { nome_do_item: "Photo Card Set", ceg: "SKZ", pend: 45.00 },
+      { nome_do_item: "Frete Internacional", ceg: "", pend: 22.50 },
+    ];
+    const mockTotal = mockItems.reduce((s, i) => s + i.pend, 0);
+    const mockMulta = 3.00;
+    const itemRows = mockItems.map(it =>
+      `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`
+    ).join("");
+    const content = `<tr><td style="background:#111111;padding:20px 40px 8px">
+  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Você tem <strong style="color:#F5F0E8">${mockItems.length} items</strong> com pagamento em aberto:</p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(mockTotal)}</div><div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">+ R$&nbsp;${fmtBRL(mockMulta)} de multa por atraso</div></td></tr></table>
+</td></tr>`;
+    const html = buildEmailHTML("Antigom Exemplo", content);
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+  }
+
   return (
     <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10 }}>
       <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Notificar todos os joiners</div>
       <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>
         Envia um e-mail para cada joiner com pagamentos em aberto. Use após atualizar a planilha.
       </div>
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
       <button onClick={notificarTodos} disabled={!!status && status !== "done" && status !== "error" && status !== "notcfg"} style={{
         background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
         color:"#C9A8F0", borderRadius:8, padding:"9px 18px",
@@ -1920,6 +1942,12 @@ function NotificarTodosBlock() {
       }}>
         {status === "loading" ? "Carregando dados..." : status === "sending" ? "Enviando e-mails..." : "✉ Notificar todos →"}
       </button>
+      <button onClick={previewEmail} style={{
+        background:"none", border:"1px solid rgba(245,240,232,.12)",
+        color:"rgba(245,240,232,.45)", borderRadius:8, padding:"9px 14px",
+        fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+      }}>visualizar e-mail</button>
+      </div>
       {status === "notcfg" && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Configure o EmailJS primeiro.</div>}
       {status === "error"   && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Erro ao enviar. Tente novamente.</div>}
       {status === "done" && resultado && (
