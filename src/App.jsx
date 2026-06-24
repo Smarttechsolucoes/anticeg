@@ -1886,7 +1886,7 @@ function NotificarTodosBlock() {
     setListaLoading(true);
     try {
       const { data: joiners } = await supabase.from("joiners").select("cog, nome, email").not("email", "is", null).neq("email", "");
-      const { data: itens }   = await supabase.from("masterlist").select("cog, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf").neq("cog","disponivel");
+      const { data: itens }   = await supabase.from("masterlist").select("cog, nome_do_item, ceg, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf, venc_item, venc_frete, venc_rf").neq("cog","disponivel");
       const resultado = (joiners || []).reduce((acc, j) => {
         const meus = (itens || []).filter(i => i.cog === j.cog);
         const pendentes = meus.filter(i =>
@@ -1899,13 +1899,31 @@ function NotificarTodosBlock() {
           s + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
             + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
             + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0), 0);
-        acc.push({ nome: j.nome || j.cog, cog: j.cog, email: j.email, nItens: pendentes.length, total });
+        const totalMulta = pendentes.reduce((s, i) =>
+          s + diasAtraso(i.venc_item) + diasAtraso(i.venc_frete) + diasAtraso(i.venc_rf), 0);
+        acc.push({ nome: j.nome || j.cog, cog: j.cog, email: j.email, nItens: pendentes.length, total, totalMulta, pendentes });
         return acc;
       }, []);
       setLista(resultado);
       setListaOpen(true);
     } catch (e) { console.error(e); }
     setListaLoading(false);
+  }
+
+  function previewJoiner(r) {
+    const itemRows = r.pendentes.map(i => {
+      const v = (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
+              + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
+              + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0);
+      return `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${i.nome_do_item}${i.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${i.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(v)}</td></tr>`;
+    }).join("");
+    const content = `<tr><td style="background:#111111;padding:20px 40px 8px">
+  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(r.total)}</div>${r.totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">+ R$&nbsp;${fmtBRL(r.totalMulta)} de multa por atraso</div>` : ""}</td></tr></table>
+</td></tr>`;
+    const w = window.open("", "_blank");
+    w.document.write(buildEmailHTML(r.nome, content));
+    w.document.close();
   }
 
   async function notificarTodos() {
@@ -2014,22 +2032,23 @@ function NotificarTodosBlock() {
 
       {listaOpen && lista !== null && (
         <div style={{ marginTop:12, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto", gap:0,
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0,
             background:"rgba(245,240,232,.04)", padding:"6px 12px",
             fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
-            <span>Nome</span><span>@</span><span>E-mail</span><span style={{ textAlign:"center" }}>Itens</span><span style={{ textAlign:"right" }}>Total</span>
+            <span>Nome</span><span>@</span><span>E-mail</span><span style={{ textAlign:"center" }}>Itens</span><span style={{ textAlign:"right" }}>Total</span><span></span>
           </div>
           {lista.length === 0
             ? <div style={{ padding:"12px", fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum joiner com pagamento pendente e e-mail cadastrado.</div>
             : lista.map((r, i) => (
-              <div key={r.cog} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto", gap:0,
+              <div key={r.cog} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0,
                 padding:"8px 12px", borderTop:"1px solid rgba(245,240,232,.05)",
-                background: i % 2 === 0 ? "transparent" : "rgba(245,240,232,.02)" }}>
+                background: i % 2 === 0 ? "transparent" : "rgba(245,240,232,.02)", alignItems:"center" }}>
                 <span style={{ fontSize:11, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome}</span>
                 <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>@{r.cog}</span>
                 <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.email}</span>
                 <span style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textAlign:"center", paddingLeft:8 }}>{r.nItens}i</span>
                 <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textAlign:"right", paddingLeft:12, fontWeight:700 }}>R${fmtBRL(r.total)}</span>
+                <button onClick={() => previewJoiner(r)} style={{ marginLeft:10, background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.45)", borderRadius:4, padding:"3px 8px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>ver</button>
               </div>
             ))
           }
