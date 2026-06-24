@@ -1413,11 +1413,18 @@ function PerfilTab({ user, onUpdate, owner = false }) {
 
                 {/* Cotação */}
                 {s.cotacao_valor && (
-                  <div style={{ background:"rgba(201,168,240,.07)", border:"1px solid rgba(201,168,240,.2)", borderRadius:7, padding:"12px 14px", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
-                    <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:8 }}>Cotação disponível</div>
-                    <div style={{ fontSize:18, fontWeight:700, color:"#F5F0E8", marginBottom:4 }}>R$ {s.cotacao_valor}</div>
+                  <div style={{ background:"rgba(201,168,240,.07)", border:"1px solid rgba(201,168,240,.2)", borderRadius:7, padding:"14px 16px", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
+                    <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:10 }}>Cotação disponível</div>
+                    <div style={{ fontSize:22, fontWeight:900, color:"#F5F0E8", marginBottom:6 }}>R$ {s.cotacao_valor}</div>
+                    {(s.cotacao_frete || s.cotacao_seguro || s.cotacao_embalagem) && (
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginBottom:8, display:"flex", flexDirection:"column", gap:2 }}>
+                        {s.cotacao_frete     && <span>Frete ({s.cotacao_forma}): <strong style={{ color:"rgba(245,240,232,.7)" }}>R$ {s.cotacao_frete}</strong></span>}
+                        {s.cotacao_seguro    && <span>Seguro: <strong style={{ color:"rgba(245,240,232,.7)" }}>R$ {s.cotacao_seguro}</strong></span>}
+                        {s.cotacao_embalagem && <span>Embalagem: <strong style={{ color:"rgba(245,240,232,.7)" }}>R$ {s.cotacao_embalagem}</strong></span>}
+                      </div>
+                    )}
                     <div style={{ fontSize:11, color:"rgba(245,240,232,.55)" }}>Prazo estimado: <strong style={{ color:"#F5F0E8" }}>{s.cotacao_prazo}</strong></div>
-                    {s.cotacao_obs && <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:6, lineHeight:1.6 }}>{s.cotacao_obs}</div>}
+                    {s.cotacao_obs && <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:6, lineHeight:1.6 }}>{s.cotacao_obs}</div>}
                   </div>
                 )}
               </div>
@@ -2254,7 +2261,9 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
   const [cotacaoAberta,     setCotacaoAberta]     = useState(null);
-  const [cotacaoValor,      setCotacaoValor]      = useState("");
+  const [cotacaoFrete,      setCotacaoFrete]      = useState("");
+  const [cotacaoForma,      setCotacaoForma]      = useState("");
+  const [cotacaoEmbalagem,  setCotacaoEmbalagem]  = useState("");
   const [cotacaoPrazo,      setCotacaoPrazo]      = useState("");
   const [cotacaoObs,        setCotacaoObs]        = useState("");
 
@@ -2270,21 +2279,28 @@ function AdminTab({ owner = false, userCog = "" }) {
   }
 
   async function enviarCotacao(s) {
-    if (!cotacaoValor || !cotacaoPrazo) { alert("Preencha valor e prazo."); return; }
+    if (!cotacaoFrete || !cotacaoForma || !cotacaoPrazo) { alert("Preencha forma de envio, frete e prazo."); return; }
+    const seguroVal   = s.seguro === "sim" ? parseFloat(s.valor_seguro || 0) : 0;
+    const totalVal    = (parseFloat(cotacaoFrete||0) + seguroVal + parseFloat(cotacaoEmbalagem||0)).toFixed(2);
+    const totalFmt    = totalVal.replace(".", ",");
     await supabase.from("envio_solicitacoes").update({
-      cotacao_valor: cotacaoValor,
-      cotacao_prazo: cotacaoPrazo,
-      cotacao_obs:   cotacaoObs || null,
-      cotacao_at:    new Date().toISOString(),
-      status:        "cotação enviada",
+      cotacao_frete:     cotacaoFrete,
+      cotacao_forma:     cotacaoForma,
+      cotacao_seguro:    seguroVal > 0 ? String(seguroVal.toFixed(2)) : null,
+      cotacao_embalagem: cotacaoEmbalagem || null,
+      cotacao_valor:     totalFmt,
+      cotacao_prazo:     cotacaoPrazo,
+      cotacao_obs:       cotacaoObs || null,
+      cotacao_at:        new Date().toISOString(),
+      status:            "cotação enviada",
     }).eq("id", s.id);
     await supabase.from("pushes").insert([{
-      message: `Sua cotação de envio está disponível! Valor: R$ ${cotacaoValor}. Prazo: ${cotacaoPrazo}. Acesse Meu Perfil → Envios para ver os detalhes.`,
+      message: `Sua cotação de envio está disponível! Total: R$ ${totalFmt} via ${cotacaoForma}. Prazo: ${cotacaoPrazo}. Acesse Meu Perfil → Envios para ver os detalhes.`,
       active: true,
       joiner_cog: s.joiner_cog,
     }]);
-    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação enviada", cotacao_valor:cotacaoValor, cotacao_prazo:cotacaoPrazo, cotacao_obs:cotacaoObs } : x));
-    setCotacaoAberta(null); setCotacaoValor(""); setCotacaoPrazo(""); setCotacaoObs("");
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação enviada", cotacao_frete:cotacaoFrete, cotacao_forma:cotacaoForma, cotacao_seguro:seguroVal>0?String(seguroVal):null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:cotacaoPrazo, cotacao_obs:cotacaoObs } : x));
+    setCotacaoAberta(null); setCotacaoFrete(""); setCotacaoForma(""); setCotacaoEmbalagem(""); setCotacaoPrazo(""); setCotacaoObs("");
   }
 
   async function corrigirItem(s, it) {
@@ -2643,28 +2659,59 @@ function AdminTab({ owner = false, userCog = "" }) {
                 )}
 
                 {/* Form cotação */}
-                {s.status === "em cotação" && cotacaoAberta === s.id && (
-                  <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"14px", marginBottom:10, display:"flex", flexDirection:"column", gap:8 }}>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                {s.status === "em cotação" && cotacaoAberta === s.id && (() => {
+                  const seguroJoiner = s.seguro === "sim" ? parseFloat(s.valor_seguro||0) : 0;
+                  const total = (parseFloat(cotacaoFrete||0) + seguroJoiner + parseFloat(cotacaoEmbalagem||0));
+                  const inp2 = { width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
+                  const lbl2 = { fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4, display:"block" };
+                  return (
+                    <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(201,168,240,.15)", borderRadius:8, padding:"14px", marginBottom:10, display:"flex", flexDirection:"column", gap:10 }}>
                       <div>
-                        <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>VALOR (R$) *</div>
-                        <input value={cotacaoValor} onChange={e => setCotacaoValor(e.target.value)} placeholder="ex: 28,50" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                        <label style={lbl2}>FORMA DE ENVIO *</label>
+                        <select value={cotacaoForma} onChange={e => setCotacaoForma(e.target.value)} style={{ ...inp2, cursor:"pointer" }}>
+                          <option value="">Selecione...</option>
+                          {["Correios","Jadlog","Mini Envios","Pack","SEDEX"].map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                        <div>
+                          <label style={lbl2}>FRETE (R$) *</label>
+                          <input value={cotacaoFrete} onChange={e => setCotacaoFrete(e.target.value)} placeholder="0,00" style={inp2} />
+                        </div>
+                        <div>
+                          <label style={lbl2}>SEGURO</label>
+                          <div style={{ ...inp2, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.04)" }}>
+                            {seguroJoiner > 0 ? `R$ ${seguroJoiner.toFixed(2).replace(".",",")}` : "Não solicitado"}
+                          </div>
+                        </div>
+                        <div>
+                          <label style={lbl2}>EMBALAGEM (R$)</label>
+                          <input value={cotacaoEmbalagem} onChange={e => setCotacaoEmbalagem(e.target.value)} placeholder="0,00" style={inp2} />
+                        </div>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <div>
+                          <label style={lbl2}>PRAZO ESTIMADO *</label>
+                          <input value={cotacaoPrazo} onChange={e => setCotacaoPrazo(e.target.value)} placeholder="ex: 5–8 dias úteis" style={inp2} />
+                        </div>
+                        <div>
+                          <label style={lbl2}>TOTAL CALCULADO</label>
+                          <div style={{ ...inp2, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.25)", color:"#C9A8F0", fontWeight:700, fontSize:13 }}>
+                            R$ {total.toFixed(2).replace(".",",")}
+                          </div>
+                        </div>
                       </div>
                       <div>
-                        <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>PRAZO ESTIMADO *</div>
-                        <input value={cotacaoPrazo} onChange={e => setCotacaoPrazo(e.target.value)} placeholder="ex: 5–8 dias úteis" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                        <label style={lbl2}>OBSERVAÇÃO (opcional)</label>
+                        <input value={cotacaoObs} onChange={e => setCotacaoObs(e.target.value)} placeholder="Informações adicionais..." style={inp2} />
+                      </div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={() => enviarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>Enviar cotação →</button>
+                        <button onClick={() => setCotacaoAberta(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>Cancelar</button>
                       </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>OBSERVAÇÃO (opcional)</div>
-                      <input value={cotacaoObs} onChange={e => setCotacaoObs(e.target.value)} placeholder="Informações adicionais..." style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
-                    </div>
-                    <div style={{ display:"flex", gap:8 }}>
-                      <button onClick={() => enviarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>Enviar cotação →</button>
-                      <button onClick={() => setCotacaoAberta(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>Cancelar</button>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Ações */}
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
