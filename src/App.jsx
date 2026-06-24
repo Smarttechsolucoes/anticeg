@@ -24,6 +24,46 @@ async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
   }
 }
 
+function buildEmailHTML(toNome, contentRows) {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ANTICEG</title></head>
+<body style="margin:0;padding:0;background:#1a1a1a;font-family:'Courier New',Courier,monospace">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1a1a;padding:32px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%">
+  <tr>
+    <td align="center" style="background:#0D0D0D;padding:40px 40px 34px;border-bottom:3px solid #FF5C1A">
+      <div style="font-size:34px;font-weight:900;color:#F5F0E8;letter-spacing:5px;margin-bottom:6px">ANTI<span style="color:#FF5C1A">CEG</span></div>
+      <div style="font-size:9px;letter-spacing:3px;color:rgba(245,240,232,0.3);text-transform:uppercase">comunidade antigom &middot; compras em grupo</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#111111;padding:32px 40px 8px">
+      <div style="font-size:11px;color:rgba(245,240,232,0.35);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Olá,</div>
+      <div style="font-size:20px;font-weight:700;color:#F5F0E8">${toNome}</div>
+    </td>
+  </tr>
+  ${contentRows}
+  <tr><td style="background:#111111;padding:8px 40px 28px"><div style="height:1px;background:rgba(255,92,26,0.2)"></div></td></tr>
+  <tr>
+    <td align="center" style="background:#111111;padding:0 40px 36px">
+      <a href="https://anticeg.vercel.app/masterlist" style="display:inline-block;background:#FF5C1A;color:#ffffff;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 36px;border-radius:4px">ACESSAR O PORTAL &rarr;</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="background:#0D0D0D;padding:24px 40px;border-top:1px solid #1e1e1e">
+      <div style="font-size:15px;font-weight:900;color:#F5F0E8;letter-spacing:3px;margin-bottom:4px">ANTI<span style="color:#FF5C1A">CEG</span></div>
+      <div style="font-size:9px;color:rgba(245,240,232,0.2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">comunidade antigom</div>
+      <div><a href="https://anticeg.vercel.app" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">Portal</a><span style="color:rgba(245,240,232,0.1)">&middot;</span><a href="https://wa.me/5524992501917" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">WhatsApp</a></div>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
 const supabase = createClient(
   "https://ghjfsmwwcfpfvrouyrka.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
@@ -1844,10 +1884,18 @@ function NotificarTodosBlock() {
         const totalMulta = pendentes.reduce((s,i) =>
           s + diasAtraso(i.venc_item) + diasAtraso(i.venc_frete) + diasAtraso(i.venc_rf), 0);
 
-        const linhas = pendentes.map(i => `• ${i.nome_do_item}${i.ceg ? ` (${i.ceg})` : ""}`).join("\n");
-        const corpo = `Você tem ${pendentes.length} item(ns) com pagamento em aberto:\n\n${linhas}\n\nTotal: R$${fmtBRL(totalPend)}${totalMulta > 0 ? ` + R$${fmtBRL(totalMulta)} de multa por atraso` : ""}.\n\nAcesse o portal para efetuar o pagamento ou fale pelo WhatsApp.`;
-
-        await sendEmailJoiner(j.email, j.nome, "📋 Resumo de pagamentos em aberto — ANTICEG", corpo);
+        const itemRows = pendentes.map(i => {
+          const v = (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
+                  + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
+                  + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0);
+          return `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${i.nome_do_item}${i.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${i.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(v)}</td></tr>`;
+        }).join("");
+        const emailContent = `<tr><td style="background:#111111;padding:20px 40px 8px">
+  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Você tem <strong style="color:#F5F0E8">${pendentes.length} item${pendentes.length > 1 ? "s" : ""}</strong> com pagamento em aberto:</p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(totalPend)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">+ R$&nbsp;${fmtBRL(totalMulta)} de multa por atraso</div>` : ""}</td></tr></table>
+</td></tr>`;
+        const corpo = buildEmailHTML(j.nome || j.cog, emailContent);
+        await sendEmailJoiner(j.email, j.nome, "📋 Pagamentos em aberto — ANTICEG", corpo);
         enviados++;
       }
 
@@ -1980,7 +2028,7 @@ function AdminTab({ owner = false, userCog = "" }) {
         joinerInfo.email,
         joinerInfo.nome || rep.joiner_cog,
         "Seu report foi resolvido ✓",
-        `Olá! Seu report sobre o item "${rep.item_nome}" foi marcado como resolvido. Qualquer dúvida, fale com a gente pelo WhatsApp.`
+        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39;margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div><p style="margin:0;font-size:12px;color:rgba(245,240,232,0.4);line-height:1.6">Qualquer dúvida, entre em contato pelo WhatsApp.</p></td></tr>`)
       );
     }
     setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido" } : x));
@@ -2345,7 +2393,8 @@ function AdminPagamentos({ data, joiners }) {
                 {(() => {
                   const joinerInfo = (joiners || []).find(jn => jn.cog === j.cog);
                   if (!joinerInfo?.email) return null;
-                  const corpo = `Olá, ${j.nome}! Você tem ${j.itens.length} item(ns) com pagamento em aberto no total de R$${fmtBRL(total + totalMulta)}${totalMulta > 0 ? ` (inclui R$${fmtBRL(totalMulta)} de multa por atraso)` : ""}. Efetue o pagamento pelo link no portal. Qualquer dúvida, fale pelo WhatsApp.`;
+                  const itemRowsInd = j.itens.map(it => `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`).join("");
+                  const corpo = buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Você tem <strong style="color:#F5F0E8">${j.itens.length} item${j.itens.length > 1 ? "s" : ""}</strong> com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">+ R$&nbsp;${fmtBRL(totalMulta)} de multa por atraso</div>` : ""}</td></tr></table></td></tr>`);
                   return (
                     <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
                       marginTop:8, background:"none", border:"1px solid rgba(245,240,232,.12)",
