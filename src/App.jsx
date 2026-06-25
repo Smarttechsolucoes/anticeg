@@ -2216,7 +2216,29 @@ function NotifResolvido({ notif, user, onDismiss }) {
   );
 }
 
-function PushAdminCard({ p, onDesativar }) {
+function PushListFiltrada({ pushes, onDesativar, onReativar }) {
+  const [filtro, setFiltro] = useState("ativos");
+  const ativos    = pushes.filter(p => p.active);
+  const inativos  = pushes.filter(p => !p.active);
+  const lista     = filtro === "ativos" ? ativos : inativos;
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+        {[["ativos", ativos.length], ["desativados", inativos.length]].map(([key, count]) => (
+          <button key={key} onClick={() => setFiltro(key)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: filtro === key ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: filtro === key ? "rgba(255,92,26,.1)" : "transparent", color: filtro === key ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: filtro === key ? 700 : 400 }}>
+            {key} ({count})
+          </button>
+        ))}
+      </div>
+      {lista.length === 0
+        ? <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum aviso {filtro}.</div>
+        : lista.map(p => <PushAdminCard key={p.id} p={p} onDesativar={() => onDesativar(p.id)} onReativar={() => onReativar(p.id)} />)
+      }
+    </div>
+  );
+}
+
+function PushAdminCard({ p, onDesativar, onReativar }) {
   const [aberto, setAberto] = useState(false);
   const [leituras, setLeituras] = useState(null);
 
@@ -2244,7 +2266,7 @@ function PushAdminCard({ p, onDesativar }) {
         </button>
         {p.active
           ? <button onClick={onDesativar} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.3)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>desativar</button>
-          : <span style={{ fontSize: 10, color: "rgba(245,240,232,.2)" }}>desativado</span>
+          : <button onClick={onReativar} style={{ background: "rgba(186,255,57,.07)", border: "1px solid rgba(186,255,57,.2)", color: "#BAFF39", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>reativar</button>
         }
       </div>
       {aberto && (
@@ -2822,6 +2844,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
     await supabase.from("pushes").update({ active: false }).eq("id", id);
     setPushes(p => p.map(x => x.id === id ? { ...x, active: false } : x));
   }
+  async function reativarPush(id) {
+    await supabase.from("pushes").update({ active: true }).eq("id", id);
+    setPushes(p => p.map(x => x.id === id ? { ...x, active: true } : x));
+  }
 
   async function marcarResolvido(rep) {
     const { error } = await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
@@ -2986,8 +3012,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
             {sendingPush ? "..." : "Enviar →"}
           </button>
         </div>
-        {pushes.length === 0 && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)" }}>Nenhum aviso enviado ainda.</div>}
-        {pushes.map(p => <PushAdminCard key={p.id} p={p} onDesativar={() => desativarPush(p.id)} />)}
+        <PushListFiltrada pushes={pushes} onDesativar={desativarPush} onReativar={reativarPush} />
       </div>
 
       </>}
