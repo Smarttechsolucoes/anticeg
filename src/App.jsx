@@ -2136,7 +2136,7 @@ function RegrasTab() {
             </div>
           );
         })}
-        <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: 24 }}>
+        <div style={{ background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 8, padding: 24 }}>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", marginBottom: 16, letterSpacing: 1 }}>⋆ Contato & Suporte</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 10, fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.7)" }}><span style={{ color: "var(--verde)" }}>☆</span><span>Dúvidas? Chama a Nanda no WhatsApp!</span></div>
@@ -2190,7 +2190,7 @@ function NotifResolvido({ notif, user, onDismiss }) {
 
   return (
     <>
-      <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 900, width: "calc(100% - 48px)", maxWidth: 520, background: "#1a1a1a", border: "1px solid rgba(74,222,128,.3)", borderRadius: 12, padding: "16px 20px", boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
+      <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 900, width: "calc(100% - 48px)", maxWidth: 520, background: "var(--card-bg)", border: "1px solid rgba(74,222,128,.3)", borderRadius: 12, padding: "16px 20px", boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <span style={{ fontSize: 20 }}>✓</span>
           <div style={{ flex: 1 }}>
@@ -3821,7 +3821,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex:800, background:"rgba(0,0,0,.88)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.1)", borderRadius:14, width:"100%", maxWidth:440, padding:30, display:"flex", flexDirection:"column", gap:14 }}>
+      <div style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.1)", borderRadius:14, width:"100%", maxWidth:440, padding:30, display:"flex", flexDirection:"column", gap:14 }}>
         <div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, lineHeight:1.1, color:"var(--offwhite)", marginBottom:8 }}>
             CONFIRME SEUS DADOS E EVITE ERROS<br/><span style={{ color:"var(--laranja)" }}>NA SUA MASTERLIST</span>
@@ -4003,7 +4003,7 @@ function EnvioTab({ user, itens }) {
     <div style={{ maxWidth:480, margin:"60px auto", padding:"0 16px", textAlign:"center" }}>
       <div style={{ fontSize:36, marginBottom:16 }}>📦</div>
       <div style={{ fontSize:16, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>Solicitação enviada!</div>
-      <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.9, background:"#111", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"20px 24px", textAlign:"left" }}>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.9, background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"20px 24px", textAlign:"left" }}>
         Sua solicitação foi recebida com sucesso.<br /><br />
         O prazo de cotação é de <strong style={{ color:"#F5F0E8" }}>5 dias úteis</strong> a partir do preenchimento deste formulário.<br /><br />
         A cotação estará disponível dentro do seu acesso com os valores e taxas.
