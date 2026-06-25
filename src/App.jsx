@@ -1490,10 +1490,13 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [meuEnvios,      setMeuEnvios]      = useState([]);
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
+  const [meuReports,     setMeuReports]     = useState(null);
 
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMeuEnvios(data); });
+    supabase.from("reports").select("id, item_nome, ceg, status, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+      .then(({ data }) => { setMeuReports(data || []); });
   }, [user.cog]);
 
   function reportarProblema() {
@@ -1572,12 +1575,13 @@ function PerfilTab({ user, onUpdate, owner = false }) {
         </div>
       </div>
 
-      <div className="perfil-subtabs" style={{ display:"flex", gap:6, marginBottom:24 }}>
+      <div className="perfil-subtabs" style={{ display:"flex", gap:6, marginBottom:24, flexWrap:"wrap" }}>
         {[
           { id:"dados",     label:"Dados" },
           { id:"envios",    label:"Envios", badge: meuEnvios.filter(e => e.status === "pagamento em aberto").length || null },
           { id:"tutorial",  label:"Tutorial" },
           { id:"feedback",  label:"Feedbacks" },
+          { id:"suporte",   label:"Suporte", badge: (meuReports || []).filter(r => r.status === "pendente").length || null },
           ...(owner ? [{ id:"staff", label:"Staff" }] : []),
         ].map(t => (
           <button key={t.id} onClick={() => setPerfilSubTab(t.id)} style={{
@@ -1801,12 +1805,47 @@ function PerfilTab({ user, onUpdate, owner = false }) {
         <FeedbackForm user={user} defaultTipo={feedbackTipo} />
       )}
 
+      {perfilSubTab === "suporte" && (
+        <div>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", lineHeight:1.7, marginBottom:20 }}>
+            Seus reports de itens ficam aqui. A gente analisa cada um e entra em contato quando estiver resolvido.
+          </div>
+          {meuReports === null ? (
+            <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+          ) : meuReports.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum report enviado ainda.</div>
+          ) : meuReports.map(r => {
+            const resolvido = r.status === "resolvido";
+            return (
+              <div key={r.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"var(--card-bg)", border:`1px solid ${resolvido ? "rgba(74,222,128,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:8, marginBottom:8 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{r.item_nome || r.ceg || "—"}</div>
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>
+                    {r.ceg && <span style={{ marginRight:8 }}>{r.ceg}</span>}
+                    {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize:9, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap",
+                  padding:"3px 9px", borderRadius:4,
+                  color: resolvido ? "#4ade80" : "rgba(245,240,232,.5)",
+                  border: `1px solid ${resolvido ? "rgba(74,222,128,.35)" : "rgba(245,240,232,.15)"}`,
+                  background: resolvido ? "rgba(74,222,128,.07)" : "transparent",
+                }}>
+                  {resolvido ? "✓ resolvido" : "🔍 em análise"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {perfilSubTab === "staff" && owner && <StaffPanel />}
     </div>
   );
 }
 
-function CalendarTab({ user, itens }) {
+function CalendarTab({ user, itens, calEventos, setCalEventos }) {
   const now = new Date();
   const [calYear, setCalYear]   = useState(now.getFullYear());
   const [calMonth, setCalMonth] = useState(now.getMonth());
@@ -1814,17 +1853,11 @@ function CalendarTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [dayDetail, setDayDetail] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 640);
-  const [calEventos, setCalEventos] = useState([]);
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
-  }, []);
-
-  useEffect(() => {
-    supabase.from("cal_eventos").select("*").order("data")
-      .then(({ data }) => { if (data) setCalEventos(data); });
   }, []);
 
   useEffect(() => {
@@ -1868,7 +1901,7 @@ function CalendarTab({ user, itens }) {
     if (item.venc_frete)    addEv(item.venc_frete,    `${item.ceg}: Frete`, "frete");
     if (item.venc_rf)       addEv(item.venc_rf,       `${item.ceg}: Taxa RF`, "taxa");
   });
-  calEventos.forEach(ev => {
+  (calEventos || []).forEach(ev => {
     if (!ev.data_fim || ev.data_fim <= ev.data) {
       addEv(ev.data, ev.titulo, ev.tipo || "envio");
     } else {
@@ -2665,24 +2698,23 @@ function AdminPinBlock() {
   );
 }
 
-function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
+function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
-  const [pushes, setPushes] = useState([]);
-  const [feedbacks, setFeedbacks] = useState([]);
+  const [pushes, setPushes] = useState(null);
+  const [feedbacks, setFeedbacks] = useState(null);
   const [novoPush, setNovoPush] = useState("");
   const [sendingPush, setSendingPush] = useState(false);
-  const [pendentesData, setPendentesData] = useState([]);
-  const [disponiveisData, setDisponiveisData] = useState([]);
-  const [joinersData, setJoinersData] = useState([]);
+  const [pendentesData, setPendentesData] = useState(null);
+  const [disponiveisData, setDisponiveisData] = useState(null);
+  const [joinersData, setJoinersData] = useState(null);
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
-  const [calEventos,        setCalEventos]        = useState([]);
   const [novoEvData,        setNovoEvData]        = useState("");
   const [novoEvDataFim,     setNovoEvDataFim]     = useState("");
   const [novoEvTitulo,      setNovoEvTitulo]      = useState("");
@@ -2701,6 +2733,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   const [pushManualMsg,     setPushManualMsg]     = useState("");
   const [pushManualSending, setPushManualSending] = useState(false);
   const [corrigirOk,        setCorrigirOk]        = useState(null); // item id
+  const loadedTabsRef = useRef(new Set());
 
   async function confirmarEnvio(s) {
     if (!rastreioCodigo.trim()) { alert("Informe o código de rastreio antes de confirmar."); return; }
@@ -2788,10 +2821,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
       active: true,
       joiner_cog: s.joiner_cog,
     }]);
+    setPendentesData(prev => (prev || []).map(row => row.id === it.id ? { ...row, status: "ANTIGOM" } : row));
     setCorrigirOk(it.id);
     setTimeout(() => setCorrigirOk(null), 3000);
   }
 
+  // Core: dados leves necessários para sidebar + home dashboard
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
@@ -2810,60 +2845,71 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
       });
     supabase.from("reports").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setReports(data); });
-    supabase.from("pushes").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setPushes(data); });
-    supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setFeedbacks(data); });
     supabase.from("confirmacoes").select("*").eq("visto", false).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setConfirmacoes(data); });
     supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
-    supabase.from("cal_eventos").select("*").order("data")
-      .then(({ data }) => { if (data) setCalEventos(data); });
-    // Masterlist separada: joiners reais (sem disponivel) e disponíveis
-    (async () => {
-      const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
-
-      // Itens de joiners reais — exclui cog "disponivel" na query
-      let joiners_all = [], from = 0;
-      while (true) {
-        const { data } = await supabase.from("masterlist")
-          .select(sel)
-          .neq("cog", "disponivel")
-          .range(from, from + 999);
-        if (!data || data.length === 0) break;
-        joiners_all = [...joiners_all, ...data];
-        if (data.length < 1000) break;
-        from += 1000;
-      }
-      setPendentesData(joiners_all);
-
-      // Itens disponíveis para venda
-      const { data: dispData } = await supabase.from("masterlist")
-        .select(sel)
-        .eq("cog", "disponivel");
-      setDisponiveisData(dispData || []);
-
-      const { data: jData } = await supabase.from("joiners").select("cog, nome, bloqueado").order("nome");
-      setJoinersData(jData || []);
-    })();
   }, []);
+
+  // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
+  useEffect(() => {
+    const loaded = loadedTabsRef.current;
+
+    if (adminMainTab === "geral" && !loaded.has("geral")) {
+      loaded.add("geral");
+      supabase.from("pushes").select("*").order("created_at", { ascending: false })
+        .then(({ data }) => { if (data) setPushes(data); });
+      supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
+        .then(({ data }) => { if (data) setFeedbacks(data); });
+    }
+
+    const needsJoiners = ["reports", "pagamentos", "blocklist"].includes(adminMainTab);
+    if (needsJoiners && !loaded.has("joiners")) {
+      loaded.add("joiners");
+      supabase.from("joiners").select("cog, nome, email, bloqueado").order("nome")
+        .then(({ data }) => { if (data) setJoinersData(data); });
+    }
+
+    const needsMasterlist = ["pagamentos", "blocklist"].includes(adminMainTab);
+    if (needsMasterlist && !loaded.has("masterlist")) {
+      loaded.add("masterlist");
+      (async () => {
+        const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+        let all = [], from = 0;
+        while (true) {
+          const { data } = await supabase.from("masterlist").select(sel).neq("cog", "disponivel").range(from, from + 999);
+          if (!data || data.length === 0) break;
+          all = [...all, ...data];
+          if (data.length < 1000) break;
+          from += 1000;
+        }
+        setPendentesData(all);
+      })();
+    }
+
+    if (adminMainTab === "disponiveis" && !loaded.has("disponiveis")) {
+      loaded.add("disponiveis");
+      const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+      supabase.from("masterlist").select(sel).eq("cog", "disponivel")
+        .then(({ data }) => { if (data) setDisponiveisData(data); });
+    }
+  }, [adminMainTab]);
 
   async function enviarPush() {
     if (!novoPush.trim()) return;
     setSendingPush(true);
     const { data } = await supabase.from("pushes").insert([{ message: novoPush.trim() }]).select().single();
-    if (data) setPushes(p => [data, ...p]);
+    if (data) setPushes(p => [data, ...(p || [])]);
     setNovoPush("");
     setSendingPush(false);
   }
   async function desativarPush(id) {
     await supabase.from("pushes").update({ active: false }).eq("id", id);
-    setPushes(p => p.map(x => x.id === id ? { ...x, active: false } : x));
+    setPushes(p => (p || []).map(x => x.id === id ? { ...x, active: false } : x));
   }
   async function reativarPush(id) {
     await supabase.from("pushes").update({ active: true }).eq("id", id);
-    setPushes(p => p.map(x => x.id === id ? { ...x, active: true } : x));
+    setPushes(p => (p || []).map(x => x.id === id ? { ...x, active: true } : x));
   }
 
   async function marcarResolvido(rep) {
@@ -2875,7 +2921,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
       type: "report_resolved",
       report_id: rep.id,
     }]);
-    const joinerInfo = joinersData.find(j => j.cog === rep.joiner_cog);
+    const joinerInfo = (joinersData || []).find(j => j.cog === rep.joiner_cog);
     if (joinerInfo?.email) {
       sendEmailJoiner(
         joinerInfo.email,
@@ -3029,7 +3075,36 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
             {sendingPush ? "..." : "Enviar →"}
           </button>
         </div>
-        <PushListFiltrada pushes={pushes} onDesativar={desativarPush} onReativar={reativarPush} />
+        {pushes === null
+          ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+          : <PushListFiltrada pushes={pushes} onDesativar={desativarPush} onReativar={reativarPush} />
+        }
+      </div>
+
+      <div style={{ marginTop:28 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:12 }}>
+          Feedbacks dos joiners
+          {feedbacks?.length > 0 && <span style={{ marginLeft:8, fontSize:11, fontWeight:400, color:"rgba(245,240,232,.35)" }}>({feedbacks.length})</span>}
+        </div>
+        {feedbacks === null ? (
+          <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+        ) : feedbacks.length === 0 ? (
+          <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>Nenhum feedback recebido ainda.</div>
+        ) : feedbacks.map(fb => {
+          const tipoColor = { bug:"var(--laranja)", sugestão:"#64B5F6", elogio:"#4ade80" }[fb.tipo] || "rgba(245,240,232,.4)";
+          return (
+            <div key={fb.id} style={{ padding:"12px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{fb.tipo}</span>
+                <span style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{fb.joiner_nome}</span>
+                <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>
+                  {new Date(fb.created_at).toLocaleDateString("pt-BR")}
+                </span>
+              </div>
+              <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", lineHeight:1.6 }}>{fb.message}</div>
+            </div>
+          );
+        })}
       </div>
 
       </>}
@@ -3133,9 +3208,21 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
       </div>}
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
-      {adminMainTab === "pagamentos"  && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
-      {adminMainTab === "disponiveis" && <AdminDisponivel data={disponiveisData} />}
-      {adminMainTab === "blocklist"   && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
+      {adminMainTab === "pagamentos"  && (
+        pendentesData === null || joinersData === null
+          ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+          : <AdminPagamentos data={pendentesData} joiners={joinersData} />
+      )}
+      {adminMainTab === "disponiveis" && (
+        disponiveisData === null
+          ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+          : <AdminDisponivel data={disponiveisData} />
+      )}
+      {adminMainTab === "blocklist"   && (
+        pendentesData === null || joinersData === null
+          ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+          : <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />
+      )}
 
       {adminMainTab === "agenda" && owner && (
         <div>
@@ -3172,7 +3259,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
           </div>
 
           {/* Lista */}
-          {calEventos.length === 0 ? (
+          {calEventos === null ? (
+            <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+          ) : calEventos.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>Nenhuma data manual adicionada ainda.</div>
           ) : calEventos.map(ev => {
             const tipoColor = { envio:"#64B5F6", item:"var(--laranja)", frete:"var(--lilas)", taxa:"var(--verde)" }[ev.tipo] || "#64B5F6";
@@ -4340,6 +4429,7 @@ export default function App() {
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showPerfilModal, setShowPerfilModal] = useState(false);
   const [perfilPushAtivo, setPerfilPushAtivo] = useState(true);
+  const [calEventos, setCalEventos] = useState(null);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -4348,6 +4438,8 @@ export default function App() {
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
     supabase.from("config").select("value").eq("key", "admin_pin").single()
       .then(({ data }) => { if (data?.value) setAdminPinStored(data.value); });
+    supabase.from("cal_eventos").select("*").order("data")
+      .then(({ data }) => { if (data) setCalEventos(data); });
     // Atualiza dados do joiner em cache (foto, nome, etc.)
     const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; } })();
     if (cached?.cog && !cached?.guest) {
@@ -4636,11 +4728,11 @@ export default function App() {
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
-      {tab === "calendario" && <CalendarTab user={user} itens={itens} />}
+      {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
       {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} />}
+      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
 
