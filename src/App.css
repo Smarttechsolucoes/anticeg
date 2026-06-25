@@ -348,7 +348,7 @@ td { padding:10px; vertical-align:middle; }
 .chip-taxa      { background:rgba(255,92,26,.12); color:var(--laranja); }
 .chip-aqui      { background:rgba(201,168,240,.12); color:var(--lilas); }
 .chip-nacional  { background:rgba(186,255,57,.12); color:var(--verde); }
-.chip-enviado   { background:rgba(186,255,57,.2); color:var(--verde); border:1px solid rgba(186,255,57,.3); }
+.chip-enviado   { background:rgba(120,120,120,.15); color:#888; border:1px solid rgba(120,120,120,.2); }
 .chip-loja-disp { background:rgba(255,180,0,.12); color:#ffb400; border:1px solid rgba(255,180,0,.3); }
 .chip-loja-vend { background:rgba(120,120,120,.15); color:#888; border:1px solid rgba(120,120,120,.2); }
 
