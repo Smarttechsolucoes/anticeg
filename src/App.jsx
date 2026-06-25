@@ -1514,6 +1514,17 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                 {s.status === "cancelado" && (
                   <div style={{ marginTop:8, fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>Solicitação cancelada</div>
                 )}
+                {s.status === "enviado" && s.rastreio_codigo && (
+                  <div style={{ marginTop:10, background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px", fontFamily:"'DM Mono',monospace" }}>
+                    <div style={{ fontSize:10, color:"#BAFF39", letterSpacing:"1px", marginBottom:6 }}>RASTREIO</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", letterSpacing:".05em" }}>{s.rastreio_codigo}</div>
+                    {s.rastreio_link && (
+                      <a href={s.rastreio_link} target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:6, fontSize:10, color:"#BAFF39", textDecoration:"underline", fontFamily:"'DM Mono',monospace" }}>
+                        Rastrear encomenda →
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -2347,20 +2358,32 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
+  const [rastreioAberto,    setRastreioAberto]    = useState(null);
+  const [rastreioCodigo,    setRastreioCodigo]    = useState("");
+  const [rastreioLink,      setRastreioLink]      = useState("");
   const [cotacaoAberta,     setCotacaoAberta]     = useState(null);
   const [cotacaoOpcoes,     setCotacaoOpcoes]     = useState([{ forma:"", valor:"", prazo:"" }]);
   const [cotacaoEmbalagem,  setCotacaoEmbalagem]  = useState("");
   const [cotacaoObs,        setCotacaoObs]        = useState("");
 
   async function confirmarEnvio(s) {
-    if (!window.confirm(`Confirmar envio de ${(s.itens||[]).length} item(s) para ${s.destinatario}? Eles serão marcados como Finalizado.`)) return;
+    if (!rastreioCodigo.trim()) { alert("Informe o código de rastreio antes de confirmar."); return; }
     setEnvioLoading(s.id);
     for (const it of (s.itens || [])) {
       await supabase.from("masterlist").update({ status: "Enviado Nacional" }).eq("id", it.id);
     }
-    await supabase.from("envio_solicitacoes").update({ status: "enviado" }).eq("id", s.id);
-    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status: "enviado" } : x));
+    await supabase.from("envio_solicitacoes").update({
+      status: "enviado",
+      rastreio_codigo: rastreioCodigo.trim(),
+      rastreio_link: rastreioLink.trim() || null,
+    }).eq("id", s.id);
+    const pushMsg = rastreioLink.trim()
+      ? `Seu pedido foi enviado! Código de rastreio: ${rastreioCodigo.trim()}. Acompanhe em: ${rastreioLink.trim()}`
+      : `Seu pedido foi enviado! Código de rastreio: ${rastreioCodigo.trim()}.`;
+    await supabase.from("pushes").insert([{ message: pushMsg, active: true, joiner_cog: s.joiner_cog }]);
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"enviado", rastreio_codigo:rastreioCodigo.trim(), rastreio_link:rastreioLink.trim()||null } : x));
     setEnvioLoading(null);
+    setRastreioAberto(null); setRastreioCodigo(""); setRastreioLink("");
   }
 
   async function enviarCotacao(s) {
@@ -2853,9 +2876,30 @@ function AdminTab({ owner = false, userCog = "" }) {
                     </button>
                   )}
                   {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada" || s.status === "aguardando pagamento" || s.status === "pagamento confirmado") && (
-                    <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
-                      {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
-                    </button>
+                    rastreioAberto === s.id ? (
+                      <div style={{ width:"100%", marginTop:4, display:"flex", flexDirection:"column", gap:6 }}>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+                          <div>
+                            <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>CÓDIGO DE RASTREIO *</div>
+                            <input value={rastreioCodigo} onChange={e => setRastreioCodigo(e.target.value)} placeholder="ex: AA123456789BR" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.18)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>LINK DE RASTREIO (opcional)</div>
+                            <input value={rastreioLink} onChange={e => setRastreioLink(e.target.value)} placeholder="https://..." style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.18)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", gap:6 }}>
+                          <button onClick={() => confirmarEnvio(s)} disabled={envioLoading === s.id} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
+                            {envioLoading === s.id ? "Processando..." : "📦 Confirmar Envio"}
+                          </button>
+                          <button onClick={() => { setRastreioAberto(null); setRastreioCodigo(""); setRastreioLink(""); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setRastreioAberto(s.id); setRastreioCodigo(""); setRastreioLink(""); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
+                        📦 Confirmar Envio
+                      </button>
+                    )
                   )}
                   {s.status === "aguardando pagamento" && (
                     <button onClick={async () => {
