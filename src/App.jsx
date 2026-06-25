@@ -2476,7 +2476,10 @@ function NotificarTodosBlock() {
       setStatus("sending");
       let enviados = 0, semPendencia = 0, cooldown = 0;
       const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+      const ts   = new Date().toISOString();
 
+      // monta a lista de quem precisa receber e-mail
+      const paraEnviar = [];
       for (const j of joiners) {
         const meus = (itens || []).filter(i => i.cog === j.cog);
         const pendentes = meus.filter(i =>
@@ -2484,35 +2487,41 @@ function NotificarTodosBlock() {
           (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
           (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
         );
-
         if (pendentes.length === 0) { semPendencia++; continue; }
-
         const ultimoEnvio = j.last_notified_at
           ? new Date(j.last_notified_at).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
           : null;
         if (ultimoEnvio === hoje) { cooldown++; continue; }
+        paraEnviar.push({ j, pendentes });
+      }
 
-        const totalPend = pendentes.reduce((s,i) =>
-          s + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
-            + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
-            + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0), 0);
-        const totalMulta = pendentes.reduce((s,i) =>
-          s + diasAtraso(i.venc_item) + diasAtraso(i.venc_frete) + diasAtraso(i.venc_rf), 0);
-
-        const itemRows = pendentes.map(i => {
-          const v = (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
-                  + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
-                  + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0);
-          return `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${i.nome_do_item}${i.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${i.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(v)}</td></tr>`;
-        }).join("");
-        const emailContent = `<tr><td style="background:#111111;padding:20px 40px 8px">
+      // envia em lotes de 5 (respeita limite de taxa do EmailJS)
+      const BATCH = 5;
+      for (let i = 0; i < paraEnviar.length; i += BATCH) {
+        await Promise.all(paraEnviar.slice(i, i + BATCH).map(async ({ j, pendentes }) => {
+          const totalPend = pendentes.reduce((s,it) =>
+            s + (isPendente(it.pago_item)  ? Number(it.valor_item||0)  : 0)
+              + (isPendente(it.pago_frete) ? Number(it.frete_inter||0) : 0)
+              + (isPendente(it.pago_rf)    ? Number(it.taxa_rf||0)     : 0), 0);
+          const totalMulta = pendentes.reduce((s,it) =>
+            s + diasAtraso(it.venc_item) + diasAtraso(it.venc_frete) + diasAtraso(it.venc_rf), 0);
+          const itemRows = pendentes.map(it => {
+            const v = (isPendente(it.pago_item)  ? Number(it.valor_item||0)  : 0)
+                    + (isPendente(it.pago_frete) ? Number(it.frete_inter||0) : 0)
+                    + (isPendente(it.pago_rf)    ? Number(it.taxa_rf||0)     : 0);
+            return `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(v)}</td></tr>`;
+          }).join("");
+          const emailContent = `<tr><td style="background:#111111;padding:20px 40px 8px">
   <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p>
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(totalPend + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(totalPend)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table>
 </td></tr>`;
-        const corpo = buildEmailHTML(j.nome || j.cog, emailContent);
-        await sendEmailJoiner(j.email, j.nome, "📋 Pagamentos em aberto — ANTICEG", corpo);
-        await supabase.from("joiners").update({ last_notified_at: new Date().toISOString() }).eq("cog", j.cog);
-        enviados++;
+          const corpo = buildEmailHTML(j.nome || j.cog, emailContent);
+          await Promise.all([
+            sendEmailJoiner(j.email, j.nome, "📋 Pagamentos em aberto — ANTICEG", corpo),
+            supabase.from("joiners").update({ last_notified_at: ts }).eq("cog", j.cog),
+          ]);
+          enviados++;
+        }));
       }
 
       setResultado({ enviados, semPendencia, cooldown });
@@ -2691,6 +2700,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   const [pushManualId,      setPushManualId]      = useState(null);
   const [pushManualMsg,     setPushManualMsg]     = useState("");
   const [pushManualSending, setPushManualSending] = useState(false);
+  const [corrigirOk,        setCorrigirOk]        = useState(null); // item id
 
   async function confirmarEnvio(s) {
     if (!rastreioCodigo.trim()) { alert("Informe o código de rastreio antes de confirmar."); return; }
@@ -2771,13 +2781,15 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   async function corrigirItem(s, it) {
     const nomeItem = it.nome || it.nome_do_item || it.ceg || "item";
     if (!window.confirm(`Corrigir "${nomeItem}"? O status volta para ANTIGOM e o joiner receberá uma notificação.`)) return;
-    await supabase.from("masterlist").update({ status: "ANTIGOM" }).eq("id", it.id);
+    const { error } = await supabase.from("masterlist").update({ status: "ANTIGOM" }).eq("id", it.id);
+    if (error) { alert("Erro ao corrigir: " + error.message); return; }
     await supabase.from("pushes").insert([{
       message: `O item "${nomeItem}" (${it.ceg}) ainda não chegou à GOM. Entre em contato com a GOM para mais informações.`,
       active: true,
       joiner_cog: s.joiner_cog,
     }]);
-    alert(`Status revertido e notificação enviada para ${s.joiner_nome || s.joiner_cog}.`);
+    setCorrigirOk(it.id);
+    setTimeout(() => setCorrigirOk(null), 3000);
   }
 
   useEffect(() => {
@@ -3258,9 +3270,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
                       <div key={idx} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"5px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
                         <span>{it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span></span>
                         {s.status === "enviado" && (
-                          <button onClick={() => corrigirItem(s, it)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:4, padding:"3px 8px", cursor:"pointer", whiteSpace:"nowrap", marginLeft:8 }}>
-                            Corrigir
-                          </button>
+                          corrigirOk === it.id
+                            ? <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#4ade80", marginLeft:8, whiteSpace:"nowrap" }}>✓ revertido</span>
+                            : <button onClick={() => corrigirItem(s, it)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:4, padding:"3px 8px", cursor:"pointer", whiteSpace:"nowrap", marginLeft:8 }}>
+                                Corrigir
+                              </button>
                         )}
                       </div>
                     ))}
