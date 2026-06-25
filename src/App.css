@@ -29,18 +29,12 @@ body.high-contrast {
   color: #111 !important;
 }
 
-/* Texto de corpo → preto; deixa elementos coloridos com seus próprios estilos */
-body.high-contrast p,
-body.high-contrast span:not([class]),
-body.high-contrast td,
-body.high-contrast th,
-body.high-contrast li,
-body.high-contrast label { color: #111 !important; }
+/* Força todo texto escuro — cobre inline styles com rgba(245,240,232,...) */
+body.high-contrast * { color: #111 !important; }
 
-/* Textos inline com rgba apagado → preto visível */
-body.high-contrast .sum-label,
-body.high-contrast .sum-sub,
-body.high-contrast .sum-value { color: #111 !important; }
+/* Restaura texto branco em elementos com fundo colorido */
+body.high-contrast .admin-sidebar-badge,
+body.high-contrast .login-btn { color: #fff !important; }
 
 /* Cores semânticas mantidas */
 body.high-contrast .tab-btn.active          { color: var(--laranja) !important; border-color:var(--laranja) !important; }
