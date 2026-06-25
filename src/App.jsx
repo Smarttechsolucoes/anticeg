@@ -1038,7 +1038,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 </div>
               ))}
               {avisos.length > 1 && (
-                <button onClick={() => { avisos.forEach(a => marcarLido(a.id)); setAvisosModal(false); }} style={{
+                <button onClick={async () => { await Promise.all(avisos.map(a => marcarLido(a.id))); setAvisosModal(false); }} style={{
                   background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)",
                   color:"rgba(201,168,240,.6)", borderRadius:8, padding:"10px",
                   fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
@@ -2696,11 +2696,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
     for (const it of (s.itens || [])) {
       await supabase.from("masterlist").update({ status: "Enviado Nacional" }).eq("id", it.id);
     }
-    await supabase.from("envio_solicitacoes").update({
+    const { error } = await supabase.from("envio_solicitacoes").update({
       status: "enviado",
       rastreio_codigo: rastreioCodigo.trim(),
       rastreio_link: rastreioLink.trim() || null,
     }).eq("id", s.id);
+    if (error) { alert("Erro ao confirmar envio: " + error.message); setEnvioLoading(null); return; }
     const pushMsg = rastreioLink.trim()
       ? `Seu pedido foi enviado! Código de rastreio: ${rastreioCodigo.trim()}. Acompanhe em: ${rastreioLink.trim()}`
       : `Seu pedido foi enviado! Código de rastreio: ${rastreioCodigo.trim()}.`;
@@ -2718,7 +2719,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
     const minPreco = Math.min(...preenchidas.map(o => pf(o.valor)));
     const bestOp   = preenchidas.find(o => parseFloat(o.valor) === minPreco);
     const totalFmt = (minPreco + emb).toFixed(2).replace(".", ",");
-    await supabase.from("envio_solicitacoes").update({
+    const { error: errCot } = await supabase.from("envio_solicitacoes").update({
       cotacao_opcoes:    preenchidas,
       cotacao_frete:     bestOp.valor,
       cotacao_forma:     bestOp.forma,
@@ -2730,6 +2731,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
       cotacao_at:        new Date().toISOString(),
       status:            "pagamento em aberto",
     }).eq("id", s.id);
+    if (errCot) { alert("Erro ao enviar cotação: " + errCot.message); return; }
     await supabase.from("pushes").insert([{
       message: `Sua cotação de envio está disponível! A partir de R$ ${totalFmt} via ${bestOp.forma}. Acesse Meu Perfil → Envios para ver as opções.`,
       active: true,
@@ -3375,7 +3377,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
                   )}
                   {s.status === "pagamento em aberto" && (
                     <button onClick={async () => {
-                      await supabase.from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
+                      const { error: ePgto } = await supabase.from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
+                      if (ePgto) { alert("Erro: " + ePgto.message); return; }
                       await supabase.from("pushes").insert([{ message:"Seu pagamento foi confirmado! Em breve seu pedido será enviado.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"pagamento confirmado" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
@@ -3384,7 +3387,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
                   )}
                   {s.status === "pagamento confirmado" && (
                     <button onClick={async () => {
-                      await supabase.from("envio_solicitacoes").update({ status:"embalando" }).eq("id", s.id);
+                      const { error: eEmb } = await supabase.from("envio_solicitacoes").update({ status:"embalando" }).eq("id", s.id);
+                      if (eEmb) { alert("Erro: " + eEmb.message); return; }
                       await supabase.from("pushes").insert([{ message:"Seu pedido está sendo embalado! Em breve você receberá o código de rastreio.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"embalando" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.1)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.28)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
@@ -3924,7 +3928,7 @@ function EnvioTab({ user, itens }) {
         setCidade(data.localidade  || "");
         setEstado(data.uf          || "");
       }
-    } catch {}
+    } catch { setErro("Não foi possível buscar o CEP. Preencha o endereço manualmente."); }
     setCepLoading(false);
   }
 
@@ -4355,7 +4359,7 @@ export default function App() {
   }, []);
 
   function handleAdminBypass() {
-    if (adminPortalInput === user?.senha || isAdminUser(user)) {
+    if (isAdminUser(user)) {
       localStorage.setItem("anticeg_admin_bypass", "1");
       setBypassManutencao(true);
       setShowAdminPortal(false);
