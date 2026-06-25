@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import "./LandingPage.css";
+import supabase from "./supabase.js";
 import bonequinha from "./assets/bonequinha.png";
 
-const supabase = createClient(
-  "https://ghjfsmwwcfpfvrouyrka.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
-);
 
 const WA = "5524992501917";
 const WA_ACESSO = `https://wa.me/${WA}?text=${encodeURIComponent("Olá! Quero solicitar acesso ao portal ANTICEG.")}`;

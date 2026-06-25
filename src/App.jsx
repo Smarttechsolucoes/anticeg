@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import supabase from "./supabase.js";
 import emailjs from "@emailjs/browser";
 import "./App.css";
 import LandingPage from "./LandingPage";
@@ -76,10 +76,6 @@ function buildEmailHTML(_toNome, contentRows) {
 
 const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
-const supabase = createClient(
-  "https://ghjfsmwwcfpfvrouyrka.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM"
-);
 
 const WHATSAPP_NUM = "5524992501917";
 const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
