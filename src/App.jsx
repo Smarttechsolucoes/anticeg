@@ -849,6 +849,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
         if (!data) return;
         const map = {};
         data.forEach(s => (s.itens || []).forEach(it => { map[it.id] = s; }));
+        console.log("[envioByItem] solic:", data.length, "| keys:", Object.keys(map));
         setEnvioByItem(map);
       });
   }, [user.cog, guest]);
@@ -1107,6 +1108,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               const envioSolic = envioByItem[item.id];
               const envioStatus = envioSolic?.status;
               const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
+              if (Object.keys(envioByItem).length > 0 && item.id) console.log(`[ML item ${item.id}] envioSolic:`, envioSolic?.status || "none");
               const envioColor = ENVIO_STEP_COLORS[envioStatus] || "rgba(245,240,232,.5)";
               const envioExpanded = openEnvioML === item.id;
               return (
