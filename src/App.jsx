@@ -786,6 +786,48 @@ function EnvioMiniBar({ status }) {
   );
 }
 
+const ENVIO_STEP_LABELS_SHORT = [
+  "Cotação\nenviada", "Cotação\nem andamento", "Pgto.\nem aberto",
+  "Pgto.\nconfirmado", "Embalando", "Finalizado",
+];
+
+function EnvioFlowStepper({ status }) {
+  const idx = ENVIO_STEPS.indexOf(status);
+  const color = ENVIO_STEP_COLORS[status] || "rgba(245,240,232,.35)";
+  return (
+    <div style={{ display:"flex", alignItems:"flex-start", gap:0, padding:"10px 4px 4px", overflowX:"auto" }}>
+      {ENVIO_STEPS.map((step, i) => {
+        const isPast    = i < idx;
+        const isCurrent = i === idx;
+        const isFuture  = i > idx;
+        return (
+          <div key={i} style={{ display:"flex", alignItems:"flex-start", flex:1, minWidth:44 }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1 }}>
+              {/* dot */}
+              <div style={{ width:10, height:10, borderRadius:"50%", flexShrink:0,
+                background: isCurrent ? color : isPast ? color : "transparent",
+                border: `2px solid ${isCurrent ? color : isPast ? color : "rgba(245,240,232,.15)"}`,
+                boxShadow: isCurrent ? `0 0 6px ${color}88` : "none",
+              }} />
+              {/* label */}
+              <div style={{ marginTop:5, fontSize:8, fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.4, whiteSpace:"pre-line",
+                color: isCurrent ? color : isPast ? "rgba(245,240,232,.45)" : "rgba(245,240,232,.2)",
+                fontWeight: isCurrent ? 700 : 400,
+              }}>{ENVIO_STEP_LABELS_SHORT[i]}</div>
+            </div>
+            {/* connecting line */}
+            {i < ENVIO_STEPS.length - 1 && (
+              <div style={{ height:2, flex:1, marginTop:4, borderRadius:1, flexShrink:0, minWidth:8,
+                background: i < idx ? color : "rgba(245,240,232,.08)",
+              }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
@@ -1104,12 +1146,14 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                           <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{envioExpanded ? "▲" : "▼"}</span>
                         </div>
                         {envioExpanded && (
-                          <div style={{ marginTop:6, padding:"8px 10px", borderRadius:6, background:"rgba(245,240,232,.03)", fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.5)", lineHeight:1.8 }}>
-                            <div><span style={{ color:"rgba(245,240,232,.28)" }}>Itens:</span> {(envioSolic.itens||[]).length}</div>
-                            {envioSolic.metodo && <div><span style={{ color:"rgba(245,240,232,.28)" }}>Método:</span> {envioSolic.metodo}</div>}
-                            {envioSolic.cotacao_valor && <div><span style={{ color:"rgba(245,240,232,.28)" }}>Frete:</span> R$ {envioSolic.cotacao_valor}</div>}
-                            {envioSolic.modalidade_escolhida && <div><span style={{ color:"rgba(245,240,232,.28)" }}>Modalidade:</span> {envioSolic.modalidade_escolhida.forma} — R$ {envioSolic.modalidade_escolhida.valor}</div>}
-                            {envioSolic.rastreio_codigo && <div><span style={{ color:"rgba(245,240,232,.28)" }}>Rastreio:</span> {envioSolic.rastreio_codigo}</div>}
+                          <div style={{ marginTop:4 }}>
+                            <EnvioFlowStepper status={envioStatus} />
+                            {(envioSolic.rastreio_codigo || envioSolic.modalidade_escolhida) && (
+                              <div style={{ marginTop:4, padding:"6px 8px", borderRadius:5, background:"rgba(245,240,232,.03)", fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.45)", lineHeight:1.8 }}>
+                                {envioSolic.modalidade_escolhida && <span>{envioSolic.modalidade_escolhida.forma} · R$ {envioSolic.modalidade_escolhida.valor}</span>}
+                                {envioSolic.rastreio_codigo && <span> · Rastreio: {envioSolic.rastreio_codigo}</span>}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
