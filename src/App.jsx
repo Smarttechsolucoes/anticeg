@@ -1058,6 +1058,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               const envioSolic = envioByItem[item.id];
               const envioStatus = envioSolic?.status;
               const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
+              if (item.status === "Envio Liberado") console.log("[render] item.id:", item.id, "typeof:", typeof item.id, "envioSolic:", envioSolic, "keys:", Object.keys(envioByItem).slice(0,5));
               return (
                 <>
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
