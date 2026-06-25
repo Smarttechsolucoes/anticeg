@@ -1134,7 +1134,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               const isOpen = openDrawer === item.id;
               return (
                 <>
-                  <tr key={item.id} style={{ borderLeft:"3px solid rgba(120,120,120,.25)", filter:"grayscale(1)", opacity:.7 }}>
+                  <tr key={item.id} style={{ borderLeft:"3px solid rgba(120,120,120,.25)", filter:"grayscale(1)" }}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
@@ -1230,7 +1230,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           const ai = getStepIdx(item.status);
           const isOpen = openDrawer === item.id;
           return (
-            <div key={item.id} className="ml-card" style={{ borderLeft:"3px solid rgba(120,120,120,.25)", filter:"grayscale(1)", opacity:.7 }}>
+            <div key={item.id} className="ml-card" style={{ borderLeft:"3px solid rgba(120,120,120,.25)", filter:"grayscale(1)" }}>
               <div className="ml-card-top">
                 <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
                 <StatusChip status={item.status} />
