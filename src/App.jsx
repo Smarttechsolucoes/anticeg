@@ -1828,7 +1828,19 @@ function CalendarTab({ user, itens }) {
     if (item.venc_frete)    addEv(item.venc_frete,    `${item.ceg}: Frete`, "frete");
     if (item.venc_rf)       addEv(item.venc_rf,       `${item.ceg}: Taxa RF`, "taxa");
   });
-  calEventos.forEach(ev => addEv(ev.data, ev.titulo, ev.tipo || "envio"));
+  calEventos.forEach(ev => {
+    if (!ev.data_fim || ev.data_fim <= ev.data) {
+      addEv(ev.data, ev.titulo, ev.tipo || "envio");
+    } else {
+      const cur = new Date(ev.data + "T12:00:00");
+      const end = new Date(ev.data_fim + "T12:00:00");
+      while (cur <= end) {
+        const ds = cur.toISOString().slice(0, 10);
+        addEv(ds, ev.titulo, ev.tipo || "envio");
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+  });
 
   const firstDay = new Date(calYear, calMonth, 1);
   let startDow = firstDay.getDay();
@@ -2601,6 +2613,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   const [envioLoading,      setEnvioLoading]      = useState(null);
   const [calEventos,        setCalEventos]        = useState([]);
   const [novoEvData,        setNovoEvData]        = useState("");
+  const [novoEvDataFim,     setNovoEvDataFim]     = useState("");
   const [novoEvTitulo,      setNovoEvTitulo]      = useState("");
   const [novoEvTipo,        setNovoEvTipo]        = useState("envio");
   const [savingEv,          setSavingEv]          = useState(false);
@@ -3046,23 +3059,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:16 }}>Adicionar data ao calendário</div>
 
           {/* Form */}
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
-            <input type="date" value={novoEvData} onChange={e => setNovoEvData(e.target.value)}
-              style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20, alignItems:"center" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+              <input type="date" value={novoEvData} onChange={e => setNovoEvData(e.target.value)}
+                style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
+              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.35)" }}>à</span>
+              <input type="date" value={novoEvDataFim} min={novoEvData || undefined} onChange={e => setNovoEvDataFim(e.target.value)}
+                style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color: novoEvDataFim ? "var(--offwhite)" : "rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
+            </div>
             <input type="text" placeholder="Título (ex: Envio CEG Stray Kids)" value={novoEvTitulo} onChange={e => setNovoEvTitulo(e.target.value)}
               style={{ flex:1, minWidth:200, background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
             <select value={novoEvTipo} onChange={e => setNovoEvTipo(e.target.value)}
               style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none", cursor:"pointer" }}>
               <option value="envio">Envio Nacional</option>
-              <option value="item">💰 Venc. Item</option>
-              <option value="frete">✈ Frete</option>
-              <option value="taxa">📋 Taxa RF</option>
+              <option value="item">Venc. Item</option>
+              <option value="frete">Frete</option>
+              <option value="taxa">Taxa RF</option>
             </select>
             <button disabled={!novoEvData || !novoEvTitulo.trim() || savingEv} onClick={async () => {
               setSavingEv(true);
-              const { data } = await supabase.from("cal_eventos").insert([{ data: novoEvData, titulo: novoEvTitulo.trim(), tipo: novoEvTipo }]).select().single();
+              const payload = { data: novoEvData, titulo: novoEvTitulo.trim(), tipo: novoEvTipo, data_fim: novoEvDataFim || null };
+              const { data } = await supabase.from("cal_eventos").insert([payload]).select().single();
               if (data) setCalEventos(prev => [...prev, data].sort((a,b) => a.data.localeCompare(b.data)));
-              setNovoEvData(""); setNovoEvTitulo(""); setNovoEvTipo("envio");
+              setNovoEvData(""); setNovoEvDataFim(""); setNovoEvTitulo(""); setNovoEvTipo("envio");
               setSavingEv(false);
             }} style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"8px 18px", cursor:"pointer", letterSpacing:".08em", opacity: (!novoEvData || !novoEvTitulo.trim()) ? .4 : 1 }}>
               {savingEv ? "..." : "+ Adicionar"}
@@ -3076,7 +3095,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
             const tipoColor = { envio:"#64B5F6", item:"var(--laranja)", frete:"var(--lilas)", taxa:"var(--verde)" }[ev.tipo] || "#64B5F6";
             return (
               <div key={ev.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:8, border:"1px solid rgba(245,240,232,.07)", marginBottom:6, background:"rgba(245,240,232,.02)" }}>
-                <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)", minWidth:90 }}>{new Date(ev.data + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)", minWidth:90, whiteSpace:"nowrap" }}>
+                  {new Date(ev.data + "T12:00:00").toLocaleDateString("pt-BR")}
+                  {ev.data_fim && <> <span style={{ color:"rgba(245,240,232,.25)" }}>à</span> {new Date(ev.data_fim + "T12:00:00").toLocaleDateString("pt-BR")}</>}
+                </span>
                 <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}44`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{ev.tipo}</span>
                 <span style={{ flex:1, fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{ev.titulo}</span>
                 <button onClick={async () => {
