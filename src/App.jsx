@@ -801,10 +801,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   useEffect(() => {
     if (guest || !user.cog) return;
     supabase.from("envio_solicitacoes").select("id,status,itens").eq("joiner_cog", user.cog)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        console.log("[envioByItem] cog:", user.cog, "data:", data, "error:", error);
         if (!data) return;
         const map = {};
         data.forEach(s => (s.itens || []).forEach(it => { map[it.id] = s; }));
+        console.log("[envioByItem] map:", map);
         setEnvioByItem(map);
       });
   }, [user.cog, guest]);
