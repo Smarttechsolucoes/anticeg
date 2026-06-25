@@ -17,124 +17,152 @@
   --a11y-scale: 1;
 }
 
-/* ── Alto contraste (dark colorido — mantém tema escuro, boost de visibilidade) ── */
+/* ── Alto contraste (fundo branco, cores preservadas) ── */
 body.high-contrast {
-  --card-bg:  #1e1e1e;
-  --preto:    #0D0D0D;
-  --offwhite: #FFFFFF;
-  --laranja:  #FF7240;
-  --lilas:    #D4AAFF;
-  --verde:    #CDFF5A;
-  background: #0D0D0D !important;
+  --card-bg:  #f0f0f0;
+  --preto:    #ffffff;
+  --offwhite: #111111;
+  --laranja:  #c0390b;
+  --lilas:    #5500bb;
+  --verde:    #1a6b00;
+  background: #fff !important;
+  color: #111 !important;
 }
 
-/* Todo texto → branco puro para máximo contraste com o fundo escuro */
-body.high-contrast * { color: #FFFFFF !important; }
+/* Texto de corpo → preto; deixa elementos coloridos com seus próprios estilos */
+body.high-contrast p,
+body.high-contrast span:not([class]),
+body.high-contrast td,
+body.high-contrast th,
+body.high-contrast li,
+body.high-contrast label { color: #111 !important; }
 
-/* Restaura cores semânticas onde importa */
-body.high-contrast .tab-btn.active,
-body.high-contrast .bottom-nav-btn.active    { color: var(--laranja) !important; }
-body.high-contrast .notif-info *             { color: var(--verde)   !important; }
-body.high-contrast .regras-acc-title         { color: var(--laranja) !important; }
+/* Textos inline com rgba apagado → preto visível */
+body.high-contrast .sum-label,
+body.high-contrast .sum-sub,
+body.high-contrast .sum-value { color: #111 !important; }
+
+/* Cores semânticas mantidas */
+body.high-contrast .tab-btn.active          { color: var(--laranja) !important; border-color:var(--laranja) !important; }
+body.high-contrast .bottom-nav-btn.active   { color: var(--laranja) !important; }
+body.high-contrast .regras-acc-title        { color: var(--laranja) !important; }
 body.high-contrast .cal-agenda-today .cal-agenda-daynum { color: var(--laranja) !important; }
 
-/* Estrutura — mantém escuro, sobe contraste de bordas */
-body.high-contrast .topbar        { background:#111 !important; border-color:#444 !important; }
-body.high-contrast .tabs-bar      { background:#111 !important; border-color:#444 !important; }
-body.high-contrast .side-nav      { background:#1a1a1a !important; border-color:#444 !important; }
-body.high-contrast .bottom-nav    { background:#111 !important; border-color:#444 !important; }
+/* Estrutura */
+body.high-contrast .topbar        { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .tabs-bar      { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .side-nav      { background:#f5f5f5 !important; border-color:#ccc !important; }
+body.high-contrast .side-nav-overlay { background:rgba(0,0,0,.4) !important; }
+body.high-contrast .bottom-nav    { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .main,
+body.high-contrast .admin-wrap,
+body.high-contrast .cal-main      { background:#fff !important; }
 
 /* Cards */
 body.high-contrast .sum-card,
-body.high-contrast .ml-card       { background:#1e1e1e !important; border-color:#444 !important; }
-body.high-contrast .ml-card-vals  { background:#2a2a2a !important; }
+body.high-contrast .ml-card       { background:#f0f0f0 !important; border-color:#999 !important; }
+body.high-contrast .ml-card-vals  { background:#e2e2e2 !important; }
 body.high-contrast .modal-box,
-body.high-contrast .ceg-modal     { background:#1e1e1e !important; border-color:#555 !important; }
+body.high-contrast .ceg-modal     { background:#fff !important; border-color:#555 !important; }
 
 /* Tabela */
 body.high-contrast .table-wrap               { border-color:#555 !important; }
 body.high-contrast .col-group-header th,
-body.high-contrast .thead-cols th            { background:#2a2a2a !important; border-color:#555 !important; }
-body.high-contrast tbody tr                  { background:#1a1a1a !important; border-color:#333 !important; }
-body.high-contrast tbody tr:hover            { background:#252525 !important; }
-body.high-contrast .drawer-inner             { background:#222 !important; border-color:#444 !important; }
-body.high-contrast .total-row td            { background:#252525 !important; }
+body.high-contrast .thead-cols th            { background:#e8e8e8 !important; border-color:#aaa !important; }
+body.high-contrast tbody tr                  { background:#fff !important; border-color:#ddd !important; }
+body.high-contrast tbody tr:hover            { background:#f0f0f0 !important; }
+body.high-contrast .drawer-inner             { background:#f9f9f9 !important; border-color:#ccc !important; }
+body.high-contrast .total-row td            { background:#ececec !important; }
 
-/* Chips */
+/* Chips — mantém cor de fundo, borda mais visível */
 body.high-contrast .status-chip,
 body.high-contrast .pay-badge,
 body.high-contrast .pay-pago,
-body.high-contrast .pay-pendente  { border-color:#555 !important; }
+body.high-contrast .pay-pendente  { border-color:#777 !important; }
 
 /* Inputs */
 body.high-contrast input,
 body.high-contrast textarea,
-body.high-contrast select          { background:#2a2a2a !important; border-color:#555 !important; color:#fff !important; }
+body.high-contrast select          { background:#fff !important; border-color:#555 !important; color:#111 !important; }
+body.high-contrast .search-input,
+body.high-contrast .login-input,
+body.high-contrast .admin-input    { background:#fff !important; border-color:#555 !important; }
 
 /* Calendário */
-body.high-contrast .cal-grid-wrap  { background:#1a1a1a !important; border-color:#444 !important; }
-body.high-contrast .cal-weekdays   { background:#222 !important; border-color:#444 !important; }
-body.high-contrast .cal-day        { background:#1e1e1e !important; border-color:#333 !important; }
-body.high-contrast .cal-day.today  { background:#252520 !important; border-color:var(--laranja) !important; }
-body.high-contrast .cal-day.empty  { background:#181818 !important; }
-body.high-contrast .cal-nav-btn    { background:#2a2a2a !important; border-color:#555 !important; }
-body.high-contrast .cal-day-popup  { background:#1e1e1e !important; border-color:#555 !important; }
-body.high-contrast .cal-agenda-day { background:#1a1a1a !important; border-left-color:#444 !important; }
-body.high-contrast .cal-agenda-day.cal-agenda-today { background:#1f1a14 !important; border-left-color:var(--laranja) !important; }
-body.high-contrast .cal-agenda-empty { background:#181818 !important; border-color:#333 !important; }
+body.high-contrast .cal-grid-wrap  { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .cal-weekdays   { background:#e8e8e8 !important; border-color:#ccc !important; }
+body.high-contrast .cal-day        { background:#fff !important; border-color:#ddd !important; }
+body.high-contrast .cal-day.today  { background:#fff8f5 !important; border-color:var(--laranja) !important; }
+body.high-contrast .cal-day.empty  { background:#f5f5f5 !important; }
+body.high-contrast .cal-nav-btn    { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .cal-day-popup  { background:#fff !important; border-color:#ccc !important; }
+body.high-contrast .cal-agenda-day { background:#f0f0f0 !important; border-left-color:#ccc !important; }
+body.high-contrast .cal-agenda-day.cal-agenda-today { background:#fff3ee !important; border-left-color:var(--laranja) !important; }
+body.high-contrast .cal-agenda-empty { background:#f5f5f5 !important; border-color:#ddd !important; }
 body.high-contrast .cal-mini-dot   { opacity:1 !important; }
 body.high-contrast .cal-event      { opacity:1 !important; }
 
 /* Admin sidebar */
-body.high-contrast .admin-sidebar           { border-color:#444 !important; }
-body.high-contrast .admin-sidebar-item      { color:#ccc !important; }
-body.high-contrast .admin-sidebar-item:hover { background:#2a2a2a !important; color:#fff !important; }
-body.high-contrast .admin-sidebar-item.active { background:rgba(255,114,64,.15) !important; color:var(--laranja) !important; }
-body.high-contrast .admin-sidebar-badge     { background:var(--laranja) !important; color:#111 !important; }
-body.high-contrast .admin-sidebar-group-label { color:#777 !important; }
+body.high-contrast .admin-sidebar           { border-color:#ccc !important; }
+body.high-contrast .admin-sidebar-item      { color:#444 !important; }
+body.high-contrast .admin-sidebar-item:hover { background:#eee !important; color:#111 !important; }
+body.high-contrast .admin-sidebar-item.active { background:rgba(192,57,11,.1) !important; color:var(--laranja) !important; }
+body.high-contrast .admin-sidebar-badge     { background:var(--laranja) !important; color:#fff !important; }
+body.high-contrast .admin-sidebar-group-label { color:#888 !important; }
 
 /* Store */
-body.high-contrast .store-card              { background:#1e1e1e !important; border-color:#444 !important; }
-body.high-contrast .store-card-img          { background:#2a2a2a !important; }
-body.high-contrast .store-claim-wpp         { border-color:var(--verde) !important; }
-body.high-contrast .claim-success-banner    { border-color:var(--verde) !important; }
+body.high-contrast .store-card              { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .store-card-img          { background:#e0e0e0 !important; }
+body.high-contrast .store-claim-wpp         { background:#e8ffe8 !important; border-color:var(--verde) !important; }
+body.high-contrast .claim-prazo-box         { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .claim-success-banner    { background:#e8ffe8 !important; border-color:var(--verde) !important; }
 
 /* Admin forms */
-body.high-contrast .admin-form              { background:#1e1e1e !important; border-color:#444 !important; }
+body.high-contrast .admin-form              { background:#f5f5f5 !important; border-color:#ccc !important; }
 body.high-contrast .admin-item,
-body.high-contrast .admin-item-wrap         { background:#1e1e1e !important; border-color:#444 !important; }
-body.high-contrast .admin-edit-form         { background:#222 !important; border-color:#444 !important; }
+body.high-contrast .admin-item-wrap         { background:#f0f0f0 !important; border-color:#bbb !important; }
+body.high-contrast .admin-edit-form         { background:#e8e8e8 !important; border-color:#ccc !important; }
 
 /* CEG */
-body.high-contrast .ceg-summary-card        { background:#1e1e1e !important; border-color:#444 !important; }
+body.high-contrast .ceg-summary-card        { background:#f0f0f0 !important; border-color:#aaa !important; }
 body.high-contrast .ceg-modal-overlay,
-body.high-contrast .modal-overlay           { background:rgba(0,0,0,.75) !important; }
-
-/* Regras */
-body.high-contrast .regras-contato-box      { background:#1e1e1e !important; border-color:#444 !important; }
-body.high-contrast .regras-search-input     { background:#2a2a2a !important; border-color:#555 !important; }
-body.high-contrast .regras-acc              { background:#1e1e1e !important; border-color:#444 !important; }
-body.high-contrast .regras-acc-toggle       { background:transparent !important; }
-body.high-contrast .regras-list mark        { background:rgba(212,170,255,.2) !important; }
-
-/* Tooltip */
-body.high-contrast .cog-tip::after          { background:#2a2a2a !important; border-color:#555 !important; }
-
-/* Chip */
-body.high-contrast .chip-prevenda           { background:#333 !important; border-color:#555 !important; }
+body.high-contrast .modal-overlay           { background:rgba(0,0,0,.5) !important; }
 
 /* Banners */
-body.high-contrast .blocklist-banner        { background:rgba(255,0,0,.12) !important; border-color:#f55 !important; }
+body.high-contrast .notif-info              { background:rgba(26,107,0,.08) !important; border-color:var(--verde) !important; }
+body.high-contrast .notif-pagamento,
+body.high-contrast .ml-card-pend-banner     { background:rgba(192,57,11,.08) !important; border-color:var(--laranja) !important; }
+body.high-contrast .blocklist-banner        { background:#fff0f0 !important; border-color:#c00 !important; }
 
 /* Timeline */
-body.high-contrast .tl-dot                  { background:#2a2a2a !important; border-color:#555 !important; }
-body.high-contrast .prog-seg                { background:#333 !important; }
+body.high-contrast .tl-dot                  { background:#e8e8e8 !important; border-color:#888 !important; }
+body.high-contrast .tl-done .tl-dot         { border-color:var(--verde) !important; background:rgba(26,107,0,.08) !important; }
+body.high-contrast .tl-active .tl-dot       { border-color:var(--laranja) !important; background:rgba(192,57,11,.08) !important; }
+body.high-contrast .timeline-step::after    { background:#ccc !important; }
+body.high-contrast .tl-done::after          { background:var(--verde) !important; }
+body.high-contrast .prog-seg                { background:#ccc !important; }
+body.high-contrast .done-seg .prog-seg-fill { background:var(--verde) !important; }
+body.high-contrast .active-seg .prog-seg-fill { background:var(--laranja) !important; }
 
-/* Widget a11y — mantém visível */
-body.high-contrast .a11y-btn                { background:#2a2a2a !important; border-color:#555 !important; }
-body.high-contrast .a11y-panel              { background:#1e1e1e !important; border-color:#555 !important; }
-body.high-contrast .a11y-ctrl-btn           { background:#2a2a2a !important; border-color:#555 !important; }
-body.high-contrast .a11y-ctrl-btn.active    { background:#333 !important; border-color:#777 !important; }
+/* Regras */
+body.high-contrast .regras-contato-box      { background:#f0f0f0 !important; border-color:#ccc !important; }
+body.high-contrast .regras-search-input     { background:#fff !important; border-color:#aaa !important; }
+body.high-contrast .regras-acc              { background:#f0f0f0 !important; border-color:#aaa !important; }
+body.high-contrast .regras-acc-toggle       { background:transparent !important; }
+body.high-contrast .regras-list mark        { background:rgba(85,0,187,.15) !important; color:#000 !important; }
+body.high-contrast .side-nav-item.active    { background:rgba(192,57,11,.08) !important; border-color:var(--laranja) !important; }
+
+/* Tooltip */
+body.high-contrast .cog-tip::after          { background:#fff !important; border-color:#555 !important; }
+
+/* Chip */
+body.high-contrast .chip-prevenda           { background:#ddd !important; border-color:#888 !important; }
+
+/* Widget a11y */
+body.high-contrast .a11y-btn                { background:#fff !important; border-color:#333 !important; }
+body.high-contrast .a11y-panel              { background:#fff !important; border-color:#333 !important; }
+body.high-contrast .a11y-ctrl-btn           { background:#eee !important; border-color:#555 !important; }
+body.high-contrast .a11y-ctrl-btn.active    { background:#ddd !important; border-color:#333 !important; }
 body.high-contrast .a11y-toggle { background:#bbb !important; }
 body.high-contrast .a11y-toggle.on { background:#5500bb !important; }
 body.high-contrast .a11y-toggle::after { background:#fff !important; }
