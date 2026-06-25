@@ -838,6 +838,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [reportItem, setReportItem] = useState(null);
   const [avisos, setAvisos] = useState([]);
   const [avisosModal, setAvisosModal] = useState(false);
+  const [avisosHistorico, setAvisosHistorico] = useState(null);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [envioByItem,      setEnvioByItem]      = useState({});
   const [showFinalizados,  setShowFinalizados]  = useState(false);
 
@@ -986,22 +988,26 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
         </div>
-        {avisos.length > 0 && (
-          <button onClick={() => setAvisosModal(true)} className="sum-card" style={{
-            border:"1px solid rgba(201,168,240,.3)", textAlign:"left", cursor:"pointer"
-          }}>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div className="sum-label">Mural de avisos</div>
-              <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>
-            </div>
-            <div style={{ fontSize:12, color:"#C9A8F0", marginTop:6, lineHeight:1.5, fontFamily:"'DM Mono',monospace", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
-              {avisos[0].message}
-            </div>
-            <div className="sum-sub" style={{ marginTop:4 }}>
-              {avisos.length > 1 ? `${avisos.length} avisos não lidos` : "1 aviso não lido"}
-            </div>
-          </button>
-        )}
+        <button onClick={() => setAvisosModal(true)} className="sum-card" style={{
+          border:`1px solid ${avisos.length > 0 ? "rgba(201,168,240,.3)" : "rgba(245,240,232,.08)"}`, textAlign:"left", cursor:"pointer"
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <div className="sum-label">Mural de avisos</div>
+            {avisos.length > 0 && <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>}
+          </div>
+          {avisos.length > 0 ? (
+            <>
+              <div style={{ fontSize:12, color:"#C9A8F0", marginTop:6, lineHeight:1.5, fontFamily:"'DM Mono',monospace", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+                {avisos[0].message}
+              </div>
+              <div className="sum-sub" style={{ marginTop:4 }}>
+                {avisos.length > 1 ? `${avisos.length} avisos não lidos` : "1 aviso não lido"}
+              </div>
+            </>
+          ) : (
+            <div className="sum-sub" style={{ marginTop:6 }}>Você não tem nenhum aviso.</div>
+          )}
+        </button>
       </div>
 
       {avisosModal && (
@@ -1037,6 +1043,38 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                   color:"rgba(201,168,240,.6)", borderRadius:8, padding:"10px",
                   fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
                 }}>✓ Marcar todos como lido</button>
+              )}
+            </div>
+
+            {/* Histórico */}
+            <div style={{ marginTop:20, paddingTop:16, borderTop:"1px solid rgba(245,240,232,.06)" }}>
+              {avisosHistorico === null ? (
+                <button onClick={async () => {
+                  setLoadingHistorico(true);
+                  const q = supabase.from("pushes").select("*").eq("active", false).order("created_at", { ascending: false });
+                  if (!user.guest) q.or(`joiner_cog.is.null,joiner_cog.eq.${user.cog}`);
+                  const { data } = await q;
+                  setAvisosHistorico(data || []);
+                  setLoadingHistorico(false);
+                }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, letterSpacing:".03em" }}>
+                  {loadingHistorico ? "carregando..." : "↓ ver avisos anteriores"}
+                </button>
+              ) : avisosHistorico.length === 0 ? (
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum aviso anterior.</div>
+              ) : (
+                <>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:10 }}>Avisos anteriores</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {avisosHistorico.map(a => (
+                      <div key={a.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8, padding:"12px 14px" }}>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>
+                          {new Date(a.created_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
+                        </div>
+                        <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", lineHeight:1.75, fontFamily:"'DM Mono',monospace" }}>{a.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
