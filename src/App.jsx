@@ -2664,6 +2664,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   const [cotacaoOpcoes,     setCotacaoOpcoes]     = useState([{ forma:"", valor:"", prazo:"" }]);
   const [cotacaoEmbalagem,  setCotacaoEmbalagem]  = useState("");
   const [cotacaoObs,        setCotacaoObs]        = useState("");
+  const [pushManualId,      setPushManualId]      = useState(null);
+  const [pushManualMsg,     setPushManualMsg]     = useState("");
+  const [pushManualSending, setPushManualSending] = useState(false);
 
   async function confirmarEnvio(s) {
     if (!rastreioCodigo.trim()) { alert("Informe o código de rastreio antes de confirmar."); return; }
@@ -3384,6 +3387,42 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
                     </button>
                   )}
                 </div>
+
+                {/* Push manual */}
+                <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                  {pushManualId === s.id ? (
+                    <div style={{ display:"flex", gap:8 }}>
+                      <input
+                        autoFocus
+                        value={pushManualMsg}
+                        onChange={e => setPushManualMsg(e.target.value)}
+                        onKeyDown={async e => {
+                          if (e.key === "Escape") { setPushManualId(null); setPushManualMsg(""); }
+                          if (e.key === "Enter" && pushManualMsg.trim() && !pushManualSending) {
+                            setPushManualSending(true);
+                            await supabase.from("pushes").insert([{ message: pushManualMsg.trim(), active: true, joiner_cog: s.joiner_cog }]);
+                            setPushManualId(null); setPushManualMsg(""); setPushManualSending(false);
+                          }
+                        }}
+                        placeholder={`Mensagem para ${s.joiner_nome || s.joiner_cog}...`}
+                        style={{ flex:1, background:"#0d0d0d", border:"1px solid rgba(201,168,240,.25)", borderRadius:6, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none" }}
+                      />
+                      <button disabled={!pushManualMsg.trim() || pushManualSending} onClick={async () => {
+                        setPushManualSending(true);
+                        await supabase.from("pushes").insert([{ message: pushManualMsg.trim(), active: true, joiner_cog: s.joiner_cog }]);
+                        setPushManualId(null); setPushManualMsg(""); setPushManualSending(false);
+                      }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, opacity: pushManualMsg.trim() ? 1 : .4 }}>
+                        {pushManualSending ? "..." : "Enviar →"}
+                      </button>
+                      <button onClick={() => { setPushManualId(null); setPushManualMsg(""); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.25)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 10px", cursor:"pointer" }}>✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setPushManualId(s.id); setPushManualMsg(""); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(201,168,240,.45)", border:"1px solid rgba(201,168,240,.15)", borderRadius:6, padding:"5px 12px", cursor:"pointer" }}>
+                      📢 Enviar push para {s.joiner_nome || s.joiner_cog}
+                    </button>
+                  )}
+                </div>
+
               </div>
               }
             </div>
