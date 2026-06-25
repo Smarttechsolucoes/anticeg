@@ -871,7 +871,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
         const lidosIds = new Set((lidos || []).map(r => r.push_id));
         setAvisos(data.filter(p => !lidosIds.has(p.id)));
       });
-  }, []);
+  }, [user.cog]);
 
   async function marcarLido(pushId) {
     if (!user.guest) await supabase.from("push_reads").insert([{ push_id: pushId, joiner_cog: user.cog }]);
@@ -909,8 +909,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
     const es = envioByItem[i.id]?.status;
     return es && es !== "cancelado" && i.status !== "Enviado Nacional";
   });
-  const filteredAtivos      = statusFiltro === "tudo" ? filtered.filter(i => i.status !== "Enviado Nacional") : filtered;
-  const filteredFinalizados = statusFiltro === "tudo" ? filtered.filter(i => i.status === "Enviado Nacional") : [];
   if (ordenacao === "ceg")      filtered.sort((a,b) => (a.ceg||"").localeCompare(b.ceg||""));
   if (ordenacao === "venc")     filtered.sort((a,b) => {
     const va = [a.venc_item, a.venc_frete, a.venc_rf].filter(Boolean).sort()[0] || "9999";
@@ -925,6 +923,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
     (Number(a.valor_item||0)+Number(a.frete_inter||0)+Number(a.taxa_rf||0)) -
     (Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0))
   );
+  const filteredAtivos      = statusFiltro === "tudo" ? filtered.filter(i => i.status !== "Enviado Nacional") : filtered;
+  const filteredFinalizados = statusFiltro === "tudo" ? filtered.filter(i => i.status === "Enviado Nacional") : [];
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
   const tPend  = filtered.reduce((a,b) =>
@@ -949,11 +949,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   return (
     <div className="main">
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
-      {!guest && (
-        <div className="notif-info">
-          ℹ Os pagamentos foram atualizados de acordo com o preenchimento do forms de pagamento no dia 23/06/2026 às 15:49. Caso tenha realizado após esse horário, ainda será atualizado.
-        </div>
-      )}
       {temAntigomEmAberto && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
@@ -1838,7 +1833,8 @@ function CalendarTab({ user, itens }) {
       while (true) {
         const { data } = await supabase.from("masterlist")
           .select("ceg, venc_item, venc_frete, venc_rf, pago_item, pago_frete, pago_rf")
-          .or("venc_item.not.is.null,venc_frete.not.is.null,venc_rf.not.is.null");
+          .or("venc_item.not.is.null,venc_frete.not.is.null,venc_rf.not.is.null")
+          .range(from, from + 999);
         if (!data || data.length === 0) break;
         all = [...all, ...data];
         if (data.length < 1000) break;
@@ -2763,7 +2759,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
 
   async function cancelarSolicitacaoAdmin(s) {
     if (!window.confirm("Cancelar esta solicitação de envio? O joiner será notificado.")) return;
-    await supabase.from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
+    const { error } = await supabase.from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
+    if (error) { alert("Erro ao cancelar: " + error.message); return; }
     await supabase.from("pushes").insert([{
       message: "Sua solicitação de envio foi cancelada. Entre em contato com a GOM para mais informações.",
       active: true, joiner_cog: s.joiner_cog,
