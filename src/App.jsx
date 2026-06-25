@@ -1055,7 +1055,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               const isOpen = openDrawer === item.id;
               const envioSolic = envioByItem[item.id];
               const envioStatus = envioSolic?.status;
-              const showEnvio = item.status === "Envio Liberado" && envioStatus && envioStatus !== "cancelado";
+              const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
               return (
                 <>
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
@@ -1136,7 +1136,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                           + (pendRf    ? diasAtraso(item.venc_rf)    : 0);
           const envioSolicCard = envioByItem[item.id];
           const envioStatusCard = envioSolicCard?.status;
-          const showEnvioCard = item.status === "Envio Liberado" && envioStatusCard && envioStatusCard !== "cancelado";
+          const showEnvioCard = envioStatusCard && envioStatusCard !== "cancelado" && item.status !== "Enviado Nacional";
           return (
             <div key={item.id} className="ml-card" style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { border:"1.5px solid rgba(220,50,50,.55)" } : {}}>
               <div className="ml-card-top">
