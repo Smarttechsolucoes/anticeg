@@ -2539,11 +2539,12 @@ function NotificarTodosBlock() {
   );
 }
 
-function AdminTab({ owner = false, userCog = "" }) {
+function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
-  const [adminMainTab, setAdminMainTab] = useState(owner ? "geral" : "cadastros");
+  const [adminMainTab, setAdminMainTab] = useState("home");
+  useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [novoPush, setNovoPush] = useState("");
@@ -2821,6 +2822,35 @@ function AdminTab({ owner = false, userCog = "" }) {
 
         {/* Conteúdo */}
         <div className="admin-content">
+
+      {adminMainTab === "home" && (() => {
+        const cards = [
+          { id:"envios",    icon:"◫", label:"Envios",    count: envioSolic.filter(e => e.status === "solicitação de envio").length, sub:"nova solicitação", color:"#BAFF39", bg:"rgba(186,255,57,.06)", border:"rgba(186,255,57,.18)" },
+          { id:"reports",   icon:"⚑", label:"Reports",   count: reports.filter(r => r.status !== "resolvido").length, sub:"pendente", color:"var(--laranja)", bg:"rgba(255,92,26,.06)", border:"rgba(255,92,26,.2)" },
+          { id:"cadastros", icon:"👤", label:"Cadastros", count: confirmacoes.length, sub:"aguardando", color:"var(--lilas)", bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.18)" },
+        ].filter(c => c.count > 0);
+        return (
+          <div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10, marginBottom:24 }}>
+              {cards.length === 0 ? (
+                <div style={{ gridColumn:"1/-1", padding:"32px 0", textAlign:"center", fontFamily:"'DM Mono',monospace", fontSize:12, color:"rgba(245,240,232,.3)" }}>
+                  nada pendente por aqui ✓
+                </div>
+              ) : cards.map(c => (
+                <div key={c.id} onClick={() => setAdminMainTab(c.id)} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:10, padding:"18px 16px", cursor:"pointer", transition:"all .15s" }}>
+                  <div style={{ fontSize:20, marginBottom:8 }}>{c.icon}</div>
+                  <div style={{ fontSize:28, fontWeight:900, color:c.color, fontFamily:"'DM Mono',monospace", lineHeight:1 }}>{c.count}</div>
+                  <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", marginTop:4, textTransform:"uppercase", letterSpacing:"1px" }}>{c.label}</div>
+                  <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:2 }}>{c.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.2)", letterSpacing:".05em" }}>
+              selecione uma seção na barra lateral →
+            </div>
+          </div>
+        );
+      })()}
 
       {adminMainTab === "geral" && owner && <>
       <AdminLinks />
@@ -4107,6 +4137,7 @@ export default function App() {
     const slug = window.location.pathname.replace(/^\//, "").split(/[?#]/)[0];
     return TAB_SLUGS.includes(slug) ? slug : "masterlist";
   });
+  const [adminReset, setAdminReset] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
@@ -4405,7 +4436,7 @@ export default function App() {
         {!user.guest && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
         {isAdminUser(user) && (
-          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => changeTab("admin")}>⚙ Admin</button>
+          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => { setAdminReset(v => v + 1); changeTab("admin"); }}>⚙ Admin</button>
         )}
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} />}
@@ -4414,7 +4445,7 @@ export default function App() {
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
       {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} />}
+      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
 
