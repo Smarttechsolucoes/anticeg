@@ -796,7 +796,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [reportItem, setReportItem] = useState(null);
   const [avisos, setAvisos] = useState([]);
   const [avisosModal, setAvisosModal] = useState(false);
-  const [envioByItem, setEnvioByItem] = useState({});
+  const [envioByItem,      setEnvioByItem]      = useState({});
+  const [showFinalizados,  setShowFinalizados]  = useState(false);
 
   useEffect(() => {
     if (guest || !user.cog) return;
@@ -858,6 +859,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
     const es = envioByItem[i.id]?.status;
     return es && es !== "cancelado" && i.status !== "Enviado Nacional";
   });
+  const filteredAtivos      = statusFiltro === "tudo" ? filtered.filter(i => i.status !== "Enviado Nacional") : filtered;
+  const filteredFinalizados = statusFiltro === "tudo" ? filtered.filter(i => i.status === "Enviado Nacional") : [];
   if (ordenacao === "ceg")      filtered.sort((a,b) => (a.ceg||"").localeCompare(b.ceg||""));
   if (ordenacao === "venc")     filtered.sort((a,b) => {
     const va = [a.venc_item, a.venc_frete, a.venc_rf].filter(Boolean).sort()[0] || "9999";
@@ -1052,10 +1055,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
+            {filteredAtivos.length === 0 && filteredFinalizados.length === 0 && (
               <tr><td colSpan={7} className="empty-cell">nenhum item para esse filtro</td></tr>
             )}
-            {filtered.map(item => {
+            {filteredAtivos.map(item => {
               const ai = getStepIdx(item.status);
               const isOpen = openDrawer === item.id;
               const envioSolic = envioByItem[item.id];
@@ -1102,10 +1105,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 </>
               );
             })}
-            {filtered.length > 0 && !guest && (
+            {filteredAtivos.length > 0 && !guest && (
               <tr className="total-row">
                 <td colSpan={2}><span className="total-label">Total visível</span></td>
-                <td><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.52)"}}>{filtered.length} itens</span></td>
+                <td><span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"rgba(245,240,232,.52)"}}>{filteredAtivos.length} itens</span></td>
                 <td colSpan={3}><span className="total-val">R${fmtBRL(tTotal)}</span></td>
                 <td>
                   {tPend > 0 && (
@@ -1117,15 +1120,42 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 </td>
               </tr>
             )}
+            {filteredFinalizados.length > 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding:"4px 0" }}>
+                  <button onClick={() => setShowFinalizados(v => !v)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", padding:"6px 0", letterSpacing:".05em" }}>
+                    {showFinalizados ? "▲" : "▼"} {filteredFinalizados.length} finalizado(s)
+                  </button>
+                </td>
+              </tr>
+            )}
+            {showFinalizados && filteredFinalizados.map(item => {
+              const ai = getStepIdx(item.status);
+              const isOpen = openDrawer === item.id;
+              return (
+                <>
+                  <tr key={item.id} style={{ opacity:.4 }}>
+                    <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
+                    <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
+                    <td><StatusChip status={item.status} /></td>
+                    <td><InfoCell info={item.info_adicionais} isOpen={isOpen} itemId={item.id} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} /></td>
+                  </tr>
+                  {isOpen && <tr key={`drawer-${item.id}`} className="drawer-row"><td colSpan={7}><Timeline activeIdx={ai} /></td></tr>}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>
       {/* Mobile cards — hidden on desktop via CSS */}
       <div className="ml-cards">
-        {filtered.length === 0 && (
+        {filteredAtivos.length === 0 && filteredFinalizados.length === 0 && (
           <div style={{ padding:"32px 0", textAlign:"center", color:"rgba(245,240,232,.52)", fontSize:"var(--fs-xs)" }}>nenhum item para esse filtro</div>
         )}
-        {filtered.map(item => {
+        {filteredAtivos.map(item => {
           const ai = getStepIdx(item.status);
           const isOpen = openDrawer === item.id;
           const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
@@ -1185,6 +1215,29 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               <div className="ml-card-footer">
                 <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
                 {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar erro</button>}
+              </div>
+              {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
+            </div>
+          );
+        })}
+
+        {filteredFinalizados.length > 0 && (
+          <button onClick={() => setShowFinalizados(v => !v)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", padding:"10px 0", marginTop:4, letterSpacing:".05em" }}>
+            {showFinalizados ? "▲" : "▼"} {filteredFinalizados.length} finalizado(s)
+          </button>
+        )}
+        {showFinalizados && filteredFinalizados.map(item => {
+          const ai = getStepIdx(item.status);
+          const isOpen = openDrawer === item.id;
+          return (
+            <div key={item.id} className="ml-card" style={{ opacity:.4 }}>
+              <div className="ml-card-top">
+                <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
+                <StatusChip status={item.status} />
+              </div>
+              <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
+              <div className="ml-card-footer">
+                <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
               </div>
               {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
             </div>
