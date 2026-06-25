@@ -840,7 +840,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [avisosModal, setAvisosModal] = useState(false);
   const [envioByItem,      setEnvioByItem]      = useState({});
   const [showFinalizados,  setShowFinalizados]  = useState(false);
-  const [openEnvioML,      setOpenEnvioML]      = useState(null);
 
   useEffect(() => {
     if (guest || !user.cog) return;
@@ -1108,7 +1107,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               const envioStatus = envioSolic?.status;
               const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
               const envioColor = ENVIO_STEP_COLORS[envioStatus] || "rgba(245,240,232,.5)";
-              const envioExpanded = openEnvioML === item.id;
               return (
                 <>
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
@@ -1118,10 +1116,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
                     <td>
-                      <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                        <StatusChip status={item.status} />
-                        {item.status !== "Enviado Nacional" && !showEnvio && <ProgressMini activeIdx={ai} />}
-                        {showEnvio && <EnvioMiniBar status={envioStatus} />}
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {showEnvio ? (
+                          <>
+                            <span style={{ fontSize:9, color:envioColor, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{ENVIO_STATUS_LABEL[envioStatus] || envioStatus}</span>
+                            <EnvioMiniBar status={envioStatus} />
+                          </>
+                        ) : (
+                          <>
+                            <StatusChip status={item.status} />
+                            {item.status !== "Enviado Nacional" && <ProgressMini activeIdx={ai} />}
+                          </>
+                        )}
                       </div>
                     </td>
                     <td style={{ maxWidth: 260 }}>
@@ -1134,31 +1140,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                       />
                     </td>
                   </tr>
-                  {showEnvio && (
-                    <tr key={`envio-${item.id}`} style={{ background:"rgba(245,240,232,.015)" }}>
-                      <td colSpan={7} style={{ padding:"0 8px 6px" }}>
-                        <div onClick={() => setOpenEnvioML(envioExpanded ? null : item.id)} style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", padding:"6px 10px", borderRadius:7, border:`1px solid rgba(${envioStatus==="solicitação de envio"?"186,255,57":envioStatus==="cotação em andamento"?"255,92,26":envioStatus==="pagamento em aberto"?"201,168,240":envioStatus==="pagamento confirmado"?"255,209,102":envioStatus==="embalando"?"100,181,246":"245,240,232"},.15)`, background:`rgba(${envioStatus==="solicitação de envio"?"186,255,57":envioStatus==="cotação em andamento"?"255,92,26":envioStatus==="pagamento em aberto"?"201,168,240":envioStatus==="pagamento confirmado"?"255,209,102":envioStatus==="embalando"?"100,181,246":"245,240,232"},.04)` }}>
-                          <div style={{ flex:1, display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
-                            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)" }}>{envioSolic.created_at ? new Date(envioSolic.created_at).toLocaleDateString("pt-BR") : "—"}</span>
-                            {envioSolic.metodo && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)" }}>{envioSolic.metodo}</span>}
-                          </div>
-                          <span style={{ fontSize:9, color:envioColor, border:`1px solid ${envioColor}33`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", whiteSpace:"nowrap" }}>{ENVIO_STATUS_LABEL[envioStatus] || envioStatus}</span>
-                          <span style={{ fontSize:10, color:"rgba(245,240,232,.3)" }}>{envioExpanded ? "▲" : "▼"}</span>
-                        </div>
-                        {envioExpanded && (
-                          <div style={{ marginTop:4 }}>
-                            <EnvioFlowStepper status={envioStatus} />
-                            {(envioSolic.rastreio_codigo || envioSolic.modalidade_escolhida) && (
-                              <div style={{ marginTop:4, padding:"6px 8px", borderRadius:5, background:"rgba(245,240,232,.03)", fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.45)", lineHeight:1.8 }}>
-                                {envioSolic.modalidade_escolhida && <span>{envioSolic.modalidade_escolhida.forma} · R$ {envioSolic.modalidade_escolhida.valor}</span>}
-                                {envioSolic.rastreio_codigo && <span> · Rastreio: {envioSolic.rastreio_codigo}</span>}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
                   {isOpen && (
                     <tr key={`drawer-${item.id}`} className="drawer-row">
                       <td colSpan={7}><Timeline activeIdx={ai} /></td>
