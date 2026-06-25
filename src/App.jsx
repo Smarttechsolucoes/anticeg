@@ -801,12 +801,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   useEffect(() => {
     if (guest || !user.cog) return;
     supabase.from("envio_solicitacoes").select("id,status,itens").eq("joiner_cog", user.cog)
-      .then(({ data, error }) => {
-        console.log("[envioByItem] cog:", user.cog, "data:", data, "error:", error);
+      .then(({ data }) => {
         if (!data) return;
         const map = {};
         data.forEach(s => (s.itens || []).forEach(it => { map[it.id] = s; }));
-        console.log("[envioByItem] map:", map);
         setEnvioByItem(map);
       });
   }, [user.cog, guest]);
@@ -1058,7 +1056,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
               const envioSolic = envioByItem[item.id];
               const envioStatus = envioSolic?.status;
               const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
-              if (item.status === "Envio Liberado") console.log("[render] item.id:", item.id, "typeof:", typeof item.id, "envioSolic:", envioSolic, "keys:", Object.keys(envioByItem).slice(0,5));
               return (
                 <>
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
@@ -3460,7 +3457,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 
 function EnvioTab({ user, itens }) {
   const WA_GOM = "5524992501917";
-  const antigomItens = itens.filter(i => i.status === "ANTIGOM");
+  const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
 
   const [unlocked,    setUnlocked]    = useState(false);
   const [senha,       setSenha]       = useState("");
