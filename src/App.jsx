@@ -2539,6 +2539,49 @@ function NotificarTodosBlock() {
   );
 }
 
+function AdminPinBlock() {
+  const [pin,     setPin]     = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving,  setSaving]  = useState(false);
+  const [msg,     setMsg]     = useState("");
+
+  async function salvar() {
+    if (!pin.trim()) return;
+    if (pin !== confirm) { setMsg("Os PINs não coincidem."); return; }
+    setSaving(true);
+    const { data } = await supabase.from("config").select("id").eq("key","admin_pin").maybeSingle();
+    if (data) await supabase.from("config").update({ value: pin }).eq("key","admin_pin");
+    else       await supabase.from("config").insert({ key:"admin_pin", value: pin });
+    setMsg("PIN salvo! Vai valer no próximo acesso."); setPin(""); setConfirm(""); setSaving(false);
+  }
+
+  async function remover() {
+    if (!window.confirm("Remover o PIN? O admin ficará sem senha.")) return;
+    await supabase.from("config").delete().eq("key","admin_pin");
+    setMsg("PIN removido."); setPin(""); setConfirm("");
+  }
+
+  return (
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>PIN de acesso Admin</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginBottom:12 }}>Exige senha ao clicar em Admin. Deixe vazio para desativar.</div>
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+        <input type="password" placeholder="Novo PIN" value={pin} onChange={e => { setPin(e.target.value); setMsg(""); }}
+          style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:13, padding:"8px 12px", outline:"none", width:130, letterSpacing:4 }} />
+        <input type="password" placeholder="Confirmar" value={confirm} onChange={e => { setConfirm(e.target.value); setMsg(""); }}
+          style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:13, padding:"8px 12px", outline:"none", width:130, letterSpacing:4 }} />
+        <button onClick={salvar} disabled={saving || !pin} style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"8px 16px", cursor:"pointer", opacity: pin ? 1 : .4 }}>
+          {saving ? "..." : "Salvar PIN"}
+        </button>
+        <button onClick={remover} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, padding:"8px 14px", cursor:"pointer" }}>
+          Remover
+        </button>
+      </div>
+      {msg && <div style={{ marginTop:8, fontSize:11, fontFamily:"'DM Mono',monospace", color: msg.includes("coincidem") ? "var(--laranja)" : "var(--verde)" }}>{msg}</div>}
+    </div>
+  );
+}
+
 function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
@@ -2854,6 +2897,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
 
       {adminMainTab === "geral" && owner && <>
       <AdminLinks />
+      <AdminPinBlock />
+
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Modo Manutenção</div>
@@ -4138,6 +4183,11 @@ export default function App() {
     return TAB_SLUGS.includes(slug) ? slug : "masterlist";
   });
   const [adminReset, setAdminReset] = useState(0);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminPinModal, setAdminPinModal] = useState(false);
+  const [adminPinInput, setAdminPinInput] = useState("");
+  const [adminPinError, setAdminPinError] = useState(false);
+  const [adminPinStored, setAdminPinStored] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
@@ -4156,6 +4206,8 @@ export default function App() {
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
+    supabase.from("config").select("value").eq("key", "admin_pin").single()
+      .then(({ data }) => { if (data?.value) setAdminPinStored(data.value); });
     // Atualiza dados do joiner em cache (foto, nome, etc.)
     const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; } })();
     if (cached?.cog && !cached?.guest) {
@@ -4436,7 +4488,10 @@ export default function App() {
         {!user.guest && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
         {isAdminUser(user) && (
-          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => { setAdminReset(v => v + 1); changeTab("admin"); }}>⚙ Admin</button>
+          <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
+            if (adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
+            else { setAdminReset(v => v + 1); changeTab("admin"); }
+          }}>⚙ Admin</button>
         )}
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} />}
@@ -4457,6 +4512,41 @@ export default function App() {
         <a href="https://forms.gle/SyG2Zz8Lovreq8kn9" target="_blank" rel="noopener noreferrer" className="fab-pag">
           💳 Pagar agora
         </a>
+      )}
+
+      {/* Modal PIN Admin */}
+      {adminPinModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }} onClick={() => setAdminPinModal(false)}>
+          <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"32px 28px", width:300, display:"flex", flexDirection:"column", gap:16 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--laranja)", letterSpacing:1 }}>⚙ ADMIN</div>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.45)" }}>// insira o PIN de acesso</div>
+            <input
+              autoFocus
+              type="password"
+              value={adminPinInput}
+              onChange={e => { setAdminPinInput(e.target.value); setAdminPinError(false); }}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  if (adminPinInput === adminPinStored) {
+                    setAdminUnlocked(true); setAdminPinModal(false);
+                    setAdminReset(v => v + 1); changeTab("admin");
+                  } else { setAdminPinError(true); setAdminPinInput(""); }
+                }
+              }}
+              placeholder="••••••"
+              style={{ background:"#0d0d0d", border:`1px solid ${adminPinError ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, borderRadius:8, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:18, padding:"12px 16px", outline:"none", letterSpacing:4, textAlign:"center" }}
+            />
+            {adminPinError && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"var(--laranja)", textAlign:"center" }}>PIN incorreto. Tente novamente.</div>}
+            <button onClick={() => {
+              if (adminPinInput === adminPinStored) {
+                setAdminUnlocked(true); setAdminPinModal(false);
+                setAdminReset(v => v + 1); changeTab("admin");
+              } else { setAdminPinError(true); setAdminPinInput(""); }
+            }} style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:8, fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, padding:"12px", cursor:"pointer", letterSpacing:".08em" }}>
+              ENTRAR →
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
