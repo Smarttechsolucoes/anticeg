@@ -21,16 +21,16 @@
 body.high-contrast {
   --card-bg:  #f0f0f0;
   --preto:    #ffffff;
-  --offwhite: #111111;
+  --offwhite: #000000;
   --laranja:  #c0390b;
   --lilas:    #5500bb;
   --verde:    #1a6b00;
   background: #fff !important;
-  color: #111 !important;
+  color: #000 !important;
 }
 
-/* Força todo texto escuro — cobre inline styles com rgba(245,240,232,...) */
-body.high-contrast * { color: #111 !important; }
+/* Força todo texto preto — cobre inline styles com rgba(245,240,232,...) */
+body.high-contrast * { color: #000 !important; }
 
 /* Restaura texto branco em elementos com fundo colorido */
 body.high-contrast .admin-sidebar-badge,
@@ -98,11 +98,11 @@ body.high-contrast .cal-event      { opacity:1 !important; }
 
 /* Admin sidebar */
 body.high-contrast .admin-sidebar           { border-color:#ccc !important; }
-body.high-contrast .admin-sidebar-item      { color:#444 !important; }
-body.high-contrast .admin-sidebar-item:hover { background:#eee !important; color:#111 !important; }
+body.high-contrast .admin-sidebar-item      { color:#000 !important; }
+body.high-contrast .admin-sidebar-item:hover { background:#eee !important; color:#000 !important; }
 body.high-contrast .admin-sidebar-item.active { background:rgba(192,57,11,.1) !important; color:var(--laranja) !important; }
 body.high-contrast .admin-sidebar-badge     { background:var(--laranja) !important; color:#fff !important; }
-body.high-contrast .admin-sidebar-group-label { color:#888 !important; }
+body.high-contrast .admin-sidebar-group-label { color:#555 !important; }
 
 /* Store */
 body.high-contrast .store-card              { background:#f0f0f0 !important; border-color:#aaa !important; }
