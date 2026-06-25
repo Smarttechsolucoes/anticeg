@@ -1079,7 +1079,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                         ) : (
                           <>
                             <StatusChip status={item.status} />
-                            <ProgressMini activeIdx={ai} />
+                            {item.status !== "Enviado Nacional" && <ProgressMini activeIdx={ai} />}
                           </>
                         )}
                       </div>
