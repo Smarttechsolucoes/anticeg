@@ -2358,6 +2358,8 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
+  const [filtroEnvio,       setFiltroEnvio]       = useState("todos");
+  const [expandedEnvio,     setExpandedEnvio]     = useState(new Set());
   const [rastreioAberto,    setRastreioAberto]    = useState(null);
   const [rastreioCodigo,    setRastreioCodigo]    = useState("");
   const [rastreioLink,      setRastreioLink]      = useState("");
@@ -2739,16 +2741,58 @@ function AdminTab({ owner = false, userCog = "" }) {
 
       {adminMainTab === "envios" && (
         <div>
-          <div style={{ marginBottom:16, fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>
-            {envioSolic.filter(e => e.status === "solicitação de envio").length} nova(s) · {envioSolic.filter(e => e.status === "cotação em andamento").length} em cotação · {envioSolic.filter(e => e.status === "pagamento em aberto").length} aguardando pgto · {envioSolic.filter(e => e.status === "enviado").length} enviado(s)
-          </div>
-          {envioSolic.length === 0 ? (
-            <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
-          ) : envioSolic.map(s => {
+          {/* Filtros */}
+          {(() => {
+            const FILTROS = [
+              { key:"todos",                  label:"Todas" },
+              { key:"solicitação de envio",   label:"Nova" },
+              { key:"cotação em andamento",   label:"Cotação" },
+              { key:"pagamento em aberto",    label:"Pgto. aberto" },
+              { key:"pagamento confirmado",   label:"Pgto. confirmado" },
+              { key:"embalando",              label:"Embalando" },
+              { key:"enviado",                label:"Enviado" },
+              { key:"cancelado",              label:"Cancelado" },
+            ];
+            return (
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+                {FILTROS.map(f => {
+                  const count = f.key === "todos" ? envioSolic.length : envioSolic.filter(e => e.status === f.key).length;
+                  const active = filtroEnvio === f.key;
+                  return (
+                    <button key={f.key} onClick={() => setFiltroEnvio(f.key)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:20, cursor:"pointer", border: active ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.15)", background: active ? "rgba(255,92,26,.12)" : "transparent", color: active ? "var(--laranja)" : "rgba(245,240,232,.45)", fontWeight: active ? 700 : 400 }}>
+                      {f.label}{count > 0 ? ` (${count})` : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const lista = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
+            if (lista.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}.</div>;
+            return lista.map(s => {
             const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.25)", "cotação em andamento":"rgba(255,92,26,.3)", "pagamento em aberto":"rgba(201,168,240,.3)", "pagamento confirmado":"rgba(255,209,102,.3)", embalando:"rgba(100,181,246,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
+            const expanded = expandedEnvio.has(s.id);
+            const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
             return (
-              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
+              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, marginBottom:8, overflow:"hidden" }}>
+                {/* Linha colapsada — sempre visível */}
+                <div onClick={toggleExpand} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", cursor:"pointer", gap:10 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{s.joiner_nome}</div>
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>{s.joiner_cog} · {s.itens?.length || 0} item(s) · {s.metodo}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                    <span style={{ fontSize:9, color:statusColor, border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap" }}>{s.status}</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
+                    <span style={{ fontSize:12, color:"rgba(245,240,232,.4)" }}>{expanded ? "▲" : "▼"}</span>
+                  </div>
+                </div>
+
+                {/* Conteúdo expandido */}
+                {expanded && <div style={{ padding:"0 16px 16px" }}>
                 {/* Cabeçalho */}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
                   <div>
@@ -2931,8 +2975,11 @@ function AdminTab({ owner = false, userCog = "" }) {
                   )}
                 </div>
               </div>
+              }
+            </div>
             );
-          })}
+          });
+          })()}
         </div>
       )}
     </div>
