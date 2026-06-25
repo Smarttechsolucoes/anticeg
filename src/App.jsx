@@ -2756,9 +2756,16 @@ function AdminTab({ owner = false, userCog = "" }) {
     setManutencaoAdmin(novo);
   }
 
+  const totalPend = envioSolic.filter(e => e.status === "solicitação de envio").length
+                  + reports.filter(r => r.status !== "resolvido").length
+                  + confirmacoes.length;
+  const greetMsg = totalPend > 0
+    ? `${totalPend} pendência${totalPend > 1 ? "s" : ""} esperando você →`
+    : "tudo em dia! bom trabalho ✓";
+
   return (
     <div className="admin-wrap">
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
         <h2 className="admin-title" style={{ margin:0 }}>⚙ Admin</h2>
         <a href="https://docs.google.com/spreadsheets/d/1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
           display:"flex", alignItems:"center", gap:6,
@@ -2769,6 +2776,11 @@ function AdminTab({ owner = false, userCog = "" }) {
         }}>
           ↗ Planilha
         </a>
+      </div>
+
+      <div className="admin-greeting">
+        <span className="admin-greeting-prompt">// </span>
+        <span className="admin-greeting-msg">{greetMsg}</span>
       </div>
 
       <div className="admin-layout">

@@ -488,7 +488,11 @@ td { padding:10px; vertical-align:middle; }
   .admin-sidebar-item { width:auto; padding:5px 12px; border:1px solid rgba(245,240,232,.12); border-radius:20px; }
   .admin-sidebar-item.active { border-color:var(--laranja); }
 }
-.admin-title { font-size:var(--fs-md); color:var(--offwhite); margin:0 0 24px; font-weight:700; letter-spacing:.5px; }
+.admin-title { font-size:var(--fs-md); color:var(--offwhite); margin:0; font-weight:700; letter-spacing:.5px; }
+.admin-greeting { font-family:'DM Mono',monospace; font-size:12px; color:rgba(245,240,232,.35); margin-bottom:20px; margin-top:6px; overflow:hidden; white-space:nowrap; }
+.admin-greeting-prompt { color:var(--laranja); }
+.admin-greeting-msg { display:inline-block; overflow:hidden; white-space:nowrap; vertical-align:bottom; animation: admin-type .6s steps(40,end) both; }
+@keyframes admin-type { from { width:0 } to { width:100% } }
 .admin-form { background:#111; border:1px solid #1e1e1e; border-radius:10px; padding:20px; margin-bottom:32px; display:flex; flex-direction:column; gap:14px; }
 .admin-foto-row { display:flex; gap:16px; align-items:flex-start; }
 .admin-foto-label { cursor:pointer; flex-shrink:0; }
