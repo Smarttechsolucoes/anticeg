@@ -2956,7 +2956,7 @@ function AdminTab({ owner = false, userCog = "" }) {
               style={{ flex:1, minWidth:200, background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
             <select value={novoEvTipo} onChange={e => setNovoEvTipo(e.target.value)}
               style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none", cursor:"pointer" }}>
-              <option value="envio">📦 Envio</option>
+              <option value="envio">Envio Nacional</option>
               <option value="item">💰 Venc. Item</option>
               <option value="frete">✈ Frete</option>
               <option value="taxa">📋 Taxa RF</option>
