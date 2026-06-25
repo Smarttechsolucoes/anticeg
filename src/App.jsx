@@ -3231,17 +3231,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0 }) {
 
                 {/* Conteúdo expandido */}
                 {expanded && <div style={{ padding:"0 16px 16px" }}>
-                {/* Cabeçalho */}
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{s.joiner_nome || s.joiner_cog}</div>
-                    {s.joiner_handle && <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{s.joiner_handle}</div>}
-                  </div>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <span style={{ fontSize:10, color:statusColor, fontFamily:"'DM Mono',monospace", border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", textTransform:"uppercase" }}>{s.status}</span>
-                    <span style={{ fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
-                  </div>
-                </div>
+                {s.joiner_handle && <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:10, marginTop:2 }}>{s.joiner_handle}</div>}
 
                 {/* Endereço */}
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:10, lineHeight:1.8, background:"rgba(245,240,232,.03)", borderRadius:6, padding:"10px 12px" }}>
