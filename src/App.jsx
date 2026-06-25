@@ -1123,7 +1123,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
             {filteredFinalizados.length > 0 && (
               <tr>
                 <td colSpan={7} style={{ padding:"4px 0" }}>
-                  <button onClick={() => setShowFinalizados(v => !v)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", padding:"6px 0", letterSpacing:".05em" }}>
+                  <button onClick={() => setShowFinalizados(v => !v)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.48)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", letterSpacing:"1px", cursor:"pointer", padding:"6px 0" }}>
                     {showFinalizados ? "▲" : "▼"} {filteredFinalizados.length} finalizado(s)
                   </button>
                 </td>
