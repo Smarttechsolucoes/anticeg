@@ -787,43 +787,49 @@ function EnvioMiniBar({ status }) {
 }
 
 const ENVIO_STEP_LABELS_SHORT = [
-  "Cotação\nenviada", "Cotação\nem andamento", "Pgto.\nem aberto",
-  "Pgto.\nconfirmado", "Embalando", "Finalizado",
+  "Cotação enviada", "Cotação em andamento", "Pgto. em aberto",
+  "Pgto. confirmado", "Embalando", "Finalizado",
 ];
 
 function EnvioFlowStepper({ status }) {
   const idx = ENVIO_STEPS.indexOf(status);
   const color = ENVIO_STEP_COLORS[status] || "rgba(245,240,232,.35)";
+  const label = ENVIO_STEP_LABELS_SHORT[idx] ?? status;
+  const pct   = idx < 0 ? 0 : Math.round((idx / (ENVIO_STEPS.length - 1)) * 100);
   return (
-    <div style={{ display:"flex", alignItems:"flex-start", gap:0, padding:"10px 4px 4px", overflowX:"auto" }}>
-      {ENVIO_STEPS.map((step, i) => {
-        const isPast    = i < idx;
-        const isCurrent = i === idx;
-        const isFuture  = i > idx;
-        return (
-          <div key={i} style={{ display:"flex", alignItems:"flex-start", flex:1, minWidth:44 }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1 }}>
-              {/* dot */}
-              <div style={{ width:10, height:10, borderRadius:"50%", flexShrink:0,
-                background: isCurrent ? color : isPast ? color : "transparent",
-                border: `2px solid ${isCurrent ? color : isPast ? color : "rgba(245,240,232,.15)"}`,
-                boxShadow: isCurrent ? `0 0 6px ${color}88` : "none",
+    <div style={{ padding:"8px 0 6px" }}>
+      {/* barra de progresso */}
+      <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:8 }}>
+        {ENVIO_STEPS.map((_, i) => {
+          const isPast    = i < idx;
+          const isCurrent = i === idx;
+          return (
+            <div key={i} style={{ display:"flex", alignItems:"center", flex:1 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", flexShrink:0,
+                background: (isPast || isCurrent) ? color : "rgba(245,240,232,.12)",
+                border: `1.5px solid ${(isPast || isCurrent) ? color : "rgba(245,240,232,.15)"}`,
+                boxShadow: isCurrent ? `0 0 5px ${color}99` : "none",
+                transform: isCurrent ? "scale(1.4)" : "scale(1)",
+                transition: "transform .2s",
               }} />
-              {/* label */}
-              <div style={{ marginTop:5, fontSize:8, fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.4, whiteSpace:"pre-line",
-                color: isCurrent ? color : isPast ? "rgba(245,240,232,.45)" : "rgba(245,240,232,.2)",
-                fontWeight: isCurrent ? 700 : 400,
-              }}>{ENVIO_STEP_LABELS_SHORT[i]}</div>
+              {i < ENVIO_STEPS.length - 1 && (
+                <div style={{ flex:1, height:1.5, borderRadius:1,
+                  background: isPast ? color : "rgba(245,240,232,.08)",
+                }} />
+              )}
             </div>
-            {/* connecting line */}
-            {i < ENVIO_STEPS.length - 1 && (
-              <div style={{ height:2, flex:1, marginTop:4, borderRadius:1, flexShrink:0, minWidth:8,
-                background: i < idx ? color : "rgba(245,240,232,.08)",
-              }} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      {/* label do passo atual */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color, fontWeight:700, letterSpacing:".04em" }}>
+          {label}
+        </span>
+        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:".04em" }}>
+          {idx + 1}/{ENVIO_STEPS.length}
+        </span>
+      </div>
     </div>
   );
 }
