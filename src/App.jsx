@@ -3795,8 +3795,19 @@ function EnvioTab({ user, itens }) {
     <div style={{ maxWidth:360, margin:"80px auto", padding:"0 16px", textAlign:"center" }}>
       <div style={{ fontSize:32, marginBottom:16 }}>🚧</div>
       <div style={{ fontSize:14, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Em construção</div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:28, lineHeight:1.6 }}>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:20, lineHeight:1.6 }}>
         Esta funcionalidade ainda está sendo preparada.<br />Em breve disponível para todas.
+      </div>
+
+      {/* Aviso de envio */}
+      <div style={{ background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.2)", borderRadius:10, padding:"16px", marginBottom:24, textAlign:"left" }}>
+        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"#64B5F6", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>◫ Envio Nacional</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"#F5F0E8", letterSpacing:1, marginBottom:6 }}>SOLICITAÇÃO ENVIO NACIONAL</div>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>03/07/2026</span>
+          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)" }}>à</span>
+          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>05/07/2026</span>
+        </div>
       </div>
       <input
         type="password"
