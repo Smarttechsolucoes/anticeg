@@ -470,7 +470,24 @@ td { padding:10px; vertical-align:middle; }
 .store-filter-select option { background:#2e2e2e; color:var(--offwhite); }
 
 /* Admin */
-.admin-wrap { max-width:780px; margin:0 auto; padding:32px 24px 60px; }
+.admin-wrap { max-width:1040px; margin:0 auto; padding:32px 24px 60px; }
+.admin-layout { display:flex; gap:0; align-items:flex-start; }
+.admin-sidebar { width:176px; flex-shrink:0; position:sticky; top:24px; border-right:1px solid rgba(245,240,232,.07); padding-right:16px; margin-right:24px; }
+.admin-sidebar-group { margin-bottom:20px; }
+.admin-sidebar-group-label { font-size:9px; font-family:'DM Mono',monospace; color:rgba(245,240,232,.28); letter-spacing:1.5px; text-transform:uppercase; padding:0 6px; margin-bottom:6px; }
+.admin-sidebar-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; color:rgba(245,240,232,.45); background:none; border:none; width:100%; text-align:left; transition:all .12s; position:relative; letter-spacing:.03em; }
+.admin-sidebar-item:hover { background:rgba(245,240,232,.05); color:rgba(245,240,232,.8); }
+.admin-sidebar-item.active { background:rgba(255,92,26,.1); color:var(--laranja); font-weight:700; }
+.admin-sidebar-badge { background:var(--laranja); color:#111; border-radius:99px; font-size:9px; font-weight:700; padding:1px 6px; line-height:1.4; margin-left:auto; }
+.admin-content { flex:1; min-width:0; }
+@media (max-width:680px) {
+  .admin-layout { flex-direction:column; }
+  .admin-sidebar { width:100%; position:static; border-right:none; border-bottom:1px solid rgba(245,240,232,.07); padding-right:0; margin-right:0; padding-bottom:12px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:4px; }
+  .admin-sidebar-group { margin-bottom:0; display:contents; }
+  .admin-sidebar-group-label { display:none; }
+  .admin-sidebar-item { width:auto; padding:5px 12px; border:1px solid rgba(245,240,232,.12); border-radius:20px; }
+  .admin-sidebar-item.active { border-color:var(--laranja); }
+}
 .admin-title { font-size:var(--fs-md); color:var(--offwhite); margin:0 0 24px; font-weight:700; letter-spacing:.5px; }
 .admin-form { background:#111; border:1px solid #1e1e1e; border-radius:10px; padding:20px; margin-bottom:32px; display:flex; flex-direction:column; gap:14px; }
 .admin-foto-row { display:flex; gap:16px; align-items:flex-start; }

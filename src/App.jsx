@@ -2758,7 +2758,7 @@ function AdminTab({ owner = false, userCog = "" }) {
 
   return (
     <div className="admin-wrap">
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <h2 className="admin-title" style={{ margin:0 }}>⚙ Admin</h2>
         <a href="https://docs.google.com/spreadsheets/d/1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
           display:"flex", alignItems:"center", gap:6,
@@ -2771,34 +2771,44 @@ function AdminTab({ owner = false, userCog = "" }) {
         </a>
       </div>
 
-      <div className="admin-main-tabs" style={{ display:"flex", gap:8, marginBottom:24, marginTop:16 }}>
+      <div className="admin-layout">
+        {/* Sidebar */}
         {(() => {
           const meuAcesso = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
           const temAcesso = (id) => owner || !meuAcesso || meuAcesso.includes(id);
-          return [
-            ...(owner ? [{ id:"geral", label:"Geral" }] : []),
-            temAcesso("cadastros")   && { id:"cadastros",   label:"Cadastros",   badge: confirmacoes.length || null },
-            temAcesso("pagamentos")  && { id:"pagamentos",  label:"Pagamentos" },
-            temAcesso("disponiveis") && { id:"disponiveis", label:"Disponíveis" },
-            temAcesso("blocklist")   && { id:"blocklist",   label:"Blocklist" },
-            temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status !== "resolvido").length || null },
-            temAcesso("envios")      && { id:"envios",      label:"Envios",  badge: envioSolic.filter(e => e.status === "solicitação de envio").length || null },
-            ...(owner ? [{ id:"agenda", label:"Agenda" }] : []),
-          ].filter(Boolean);
-        })().map(t => (
-          <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
-            background: adminMainTab === t.id ? "var(--laranja)" : "transparent",
-            color:      adminMainTab === t.id ? "#111" : "rgba(245,240,232,.5)",
-            border:    `1px solid ${adminMainTab === t.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
-            borderRadius:6, padding:"6px 16px", fontSize:11,
-            fontFamily:"'DM Mono',monospace", fontWeight: adminMainTab === t.id ? 700 : 400,
-            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase", position:"relative"
-          }}>
-            {t.label}
-            {t.badge > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"var(--laranja)", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 5px", lineHeight:1.4 }}>{t.badge}</span>}
-          </button>
-        ))}
-      </div>
+          const nav = (id, label, icon, badge) => (
+            <button key={id} className={`admin-sidebar-item${adminMainTab === id ? " active" : ""}`} onClick={() => setAdminMainTab(id)}>
+              <span>{icon}</span>{label}
+              {badge > 0 && <span className="admin-sidebar-badge">{badge}</span>}
+            </button>
+          );
+          return (
+            <nav className="admin-sidebar">
+              <div className="admin-sidebar-group">
+                <div className="admin-sidebar-group-label">Operacional</div>
+                {temAcesso("envios")    && nav("envios",    "Envios",    "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
+                {temAcesso("reports")   && nav("reports",   "Reports",   "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
+                {temAcesso("cadastros") && nav("cadastros", "Cadastros", "👤", confirmacoes.length || 0)}
+              </div>
+              <div className="admin-sidebar-group">
+                <div className="admin-sidebar-group-label">Financeiro</div>
+                {temAcesso("pagamentos")  && nav("pagamentos",  "Pagamentos",  "💸", 0)}
+                {temAcesso("disponiveis") && nav("disponiveis", "Disponíveis", "🛒", 0)}
+              </div>
+              {owner && (
+                <div className="admin-sidebar-group">
+                  <div className="admin-sidebar-group-label">Config</div>
+                  {nav("geral",     "Geral",     "⚙", 0)}
+                  {nav("agenda",    "Agenda",    "📅", 0)}
+                  {temAcesso("blocklist") && nav("blocklist", "Blocklist", "🚫", 0)}
+                </div>
+              )}
+            </nav>
+          );
+        })()}
+
+        {/* Conteúdo */}
+        <div className="admin-content">
 
       {adminMainTab === "geral" && owner && <>
       <AdminLinks />
@@ -3235,6 +3245,9 @@ function AdminTab({ owner = false, userCog = "" }) {
           })()}
         </div>
       )}
+
+        </div> {/* admin-content */}
+      </div> {/* admin-layout */}
     </div>
   );
 }
