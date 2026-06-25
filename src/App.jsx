@@ -1653,7 +1653,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                   const opcoes = s.cotacao_opcoes || [];
                   const emb    = pf(s.cotacao_embalagem);
                   const minVal = opcoes.length > 0 ? Math.min(...opcoes.map(o => pf(o.valor))) : 0;
-                  const formaIcon = { "PAC":"🟢","SEDEX":"🟠","Correios":"🟢","Jadlog":"🔴","Mini Envios":"📦" };
+                  const formaCor = { "PAC":"#003DA5","SEDEX":"#E87722","Correios":"#003DA5","Jadlog":"#E63946","JADLOG":"#E63946","Mini Envios":"#6B7280","Busca":"#6B7280" };
                   return (
                     <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:9, padding:"14px 16px", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
                       <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:12 }}>Cotação disponível</div>
@@ -1682,17 +1682,22 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                                 const total      = (pf(op.valor) + emb).toFixed(2).replace(".",",");
                                 return (
                                   <div key={idx} onClick={() => canSelect && setOpcaoEscolhida(prev => ({ ...prev, [s.id]: isSelected ? undefined : idx }))} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:6, borderRadius:8, cursor: canSelect ? "pointer" : "default", transition:"all .15s", background: isSelected ? "rgba(201,168,240,.1)" : isBest ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px solid ${isSelected ? "rgba(201,168,240,.5)" : isBest ? "rgba(186,255,57,.22)" : "rgba(245,240,232,.08)"}` }}>
-                                    <div>
-                                      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                                        <span>{formaIcon[op.forma] || "📦"}</span>
-                                        <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8" }}>{op.forma}</span>
-                                        {isBest && opcoes.length > 1 && <span style={{ fontSize:9, background:"#BAFF39", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700 }}>Melhor preço</span>}
-                                        {isSelected && <span style={{ fontSize:9, background:"#C9A8F0", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700 }}>Selecionado</span>}
+                                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                      <div style={{ width:36, height:36, borderRadius:8, background: formaCor[op.forma] || "#555", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                                        <span style={{ fontSize:9, fontWeight:900, color:"#fff", letterSpacing:"-.5px", textAlign:"center", lineHeight:1.1 }}>{(op.forma||"").slice(0,3).toUpperCase()}</span>
                                       </div>
-                                      <div style={{ fontSize:10, color:"rgba(245,240,232,.4)" }}>Até {op.prazo}</div>
+                                      <div>
+                                        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+                                          <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8" }}>{op.forma}</span>
+                                          {isBest && opcoes.length > 1 && <span style={{ fontSize:9, background:"#BAFF39", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700 }}>Melhor preço</span>}
+                                          {isSelected && <span style={{ fontSize:9, background:"#C9A8F0", color:"#111", borderRadius:3, padding:"1px 6px", fontWeight:700 }}>✓ Selecionado</span>}
+                                        </div>
+                                        <div style={{ fontSize:10, color:"rgba(245,240,232,.4)" }}>Até {op.prazo}</div>
+                                      </div>
                                     </div>
                                     <div style={{ textAlign:"right" }}>
                                       <div style={{ fontSize:15, fontWeight:900, color: isSelected ? "#C9A8F0" : isBest ? "#BAFF39" : "#F5F0E8" }}>R$ {total}</div>
+                                      {op.valor_original && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", textDecoration:"line-through" }}>R$ {pf(op.valor_original).toFixed(2).replace(".",",")}</div>}
                                       {emb > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)" }}>frete R$ {op.valor} + emb. R$ {s.cotacao_embalagem}</div>}
                                     </div>
                                   </div>
@@ -2722,7 +2727,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [rastreioCodigo,    setRastreioCodigo]    = useState("");
   const [rastreioLink,      setRastreioLink]      = useState("");
   const [cotacaoAberta,     setCotacaoAberta]     = useState(null);
-  const [cotacaoOpcoes,     setCotacaoOpcoes]     = useState([{ forma:"", valor:"", prazo:"" }]);
+  const [cotacaoOpcoes,     setCotacaoOpcoes]     = useState([{ forma:"", valor:"", valor_original:"", prazo:"" }]);
   const [cotacaoEmbalagem,  setCotacaoEmbalagem]  = useState("");
   const [cotacaoObs,        setCotacaoObs]        = useState("");
   const [pushManualId,      setPushManualId]      = useState(null);
@@ -3390,12 +3395,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(201,168,240,.15)", borderRadius:8, padding:"14px", marginBottom:10, display:"flex", flexDirection:"column", gap:10 }}>
                       <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px" }}>MODALIDADES *</div>
                       {cotacaoOpcoes.map((op, idx) => (
-                        <div key={idx} style={{ display:"grid", gridTemplateColumns:"130px 1fr 1fr auto", gap:6, alignItems:"center" }}>
+                        <div key={idx} style={{ display:"grid", gridTemplateColumns:"130px 1fr 1fr 1fr auto", gap:6, alignItems:"center" }}>
                           <select value={op.forma} onChange={e => { const a=[...cotacaoOpcoes]; a[idx]={...a[idx],forma:e.target.value}; setCotacaoOpcoes(a); }} style={{ ...inp2, cursor:"pointer" }}>
                             <option value="">Modalidade...</option>
                             {formas.map(f => <option key={f} value={f}>{f}</option>)}
                           </select>
-                          <input value={op.valor} onChange={e => { const a=[...cotacaoOpcoes]; a[idx]={...a[idx],valor:e.target.value}; setCotacaoOpcoes(a); }} placeholder="Valor R$" style={inp2} />
+                          <input value={op.valor} onChange={e => { const a=[...cotacaoOpcoes]; a[idx]={...a[idx],valor:e.target.value}; setCotacaoOpcoes(a); }} placeholder="Valor c/ desconto" style={inp2} />
+                          <input value={op.valor_original||""} onChange={e => { const a=[...cotacaoOpcoes]; a[idx]={...a[idx],valor_original:e.target.value}; setCotacaoOpcoes(a); }} placeholder="Valor original (opcional)" style={inp2} />
                           <input value={op.prazo} onChange={e => { const a=[...cotacaoOpcoes]; a[idx]={...a[idx],prazo:e.target.value}; setCotacaoOpcoes(a); }} placeholder="Prazo (ex: 9 dias úteis)" style={inp2} />
                           {cotacaoOpcoes.length > 1
                             ? <button onClick={() => setCotacaoOpcoes(cotacaoOpcoes.filter((_,i) => i !== idx))} style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:15, padding:"0 4px" }}>✕</button>
@@ -3404,7 +3410,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                         </div>
                       ))}
                       {cotacaoOpcoes.length < 4 && (
-                        <button onClick={() => setCotacaoOpcoes([...cotacaoOpcoes, { forma:"", valor:"", prazo:"" }])} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.35)", border:"1px dashed rgba(245,240,232,.15)", borderRadius:5, padding:"5px", cursor:"pointer" }}>+ modalidade</button>
+                        <button onClick={() => setCotacaoOpcoes([...cotacaoOpcoes, { forma:"", valor:"", valor_original:"", prazo:"" }])} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.35)", border:"1px dashed rgba(245,240,232,.15)", borderRadius:5, padding:"5px", cursor:"pointer" }}>+ modalidade</button>
                       )}
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                         <div>
