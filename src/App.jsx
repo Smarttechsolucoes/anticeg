@@ -4509,7 +4509,9 @@ export default function App() {
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
       if (notifs?.length > 0) setNotificacoes(notifs);
 
-      const { data: allPushes } = await supabase.from("pushes").select("*").eq("active", true).order("created_at", { ascending: false });
+      const { data: allPushes } = await supabase.from("pushes").select("*").eq("active", true)
+        .or(`joiner_cog.is.null,joiner_cog.eq.${u.cog}`)
+        .order("created_at", { ascending: false });
       if (allPushes?.length > 0) {
         const { data: lidos } = await supabase.from("push_reads").select("push_id").eq("joiner_cog", u.cog);
         const lidosIds = new Set((lidos || []).map(r => r.push_id));
