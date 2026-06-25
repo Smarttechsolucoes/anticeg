@@ -1364,7 +1364,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
       <div className="perfil-subtabs" style={{ display:"flex", gap:6, marginBottom:24 }}>
         {[
           { id:"dados",     label:"Dados" },
-          { id:"envios",    label:"Envios", badge: meuEnvios.filter(e => e.status === "cotação enviada").length || null },
+          { id:"envios",    label:"Envios", badge: meuEnvios.filter(e => e.status === "pagamento em aberto").length || null },
           { id:"tutorial",  label:"Tutorial" },
           { id:"feedback",  label:"Feedbacks" },
           ...(owner ? [{ id:"staff", label:"Staff" }] : []),
@@ -1388,8 +1388,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           {meuEnvios.length === 0 ? (
             <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma solicitação de envio ainda.</div>
           ) : meuEnvios.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", "pagamento confirmado":"#BAFF39", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
-            const statusBorder = { pendente:"rgba(186,255,57,.2)", "em cotação":"rgba(255,92,26,.25)", "cotação enviada":"rgba(201,168,240,.25)", "aguardando pagamento":"rgba(255,209,102,.25)", "pagamento confirmado":"rgba(186,255,57,.2)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
+            const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+            const statusBorder = { "solicitação de envio":"rgba(186,255,57,.2)", "cotação em andamento":"rgba(255,92,26,.25)", "pagamento em aberto":"rgba(201,168,240,.25)", "pagamento confirmado":"rgba(255,209,102,.25)", embalando:"rgba(100,181,246,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
@@ -1431,15 +1431,15 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                       <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:12 }}>Cotação disponível</div>
                       {opcoes.length > 0 ? (
                         <>
-                          {["aguardando pagamento","pagamento confirmado","enviado"].includes(s.status) && s.modalidade_escolhida ? (
+                          {["pagamento em aberto","pagamento confirmado","embalando","enviado"].includes(s.status) && s.modalidade_escolhida ? (
                             <>
-                              <div style={{ background: s.status === "aguardando pagamento" ? "rgba(255,209,102,.06)" : "rgba(186,255,57,.06)", border:`1px solid ${s.status === "aguardando pagamento" ? "rgba(255,209,102,.22)" : "rgba(186,255,57,.22)"}`, borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
-                                <div style={{ fontSize:10, color: s.status === "aguardando pagamento" ? "#FFD166" : "#BAFF39", letterSpacing:"1px", marginBottom:4 }}>{s.status === "aguardando pagamento" ? "AGUARDANDO PAGAMENTO" : "MODALIDADE CONFIRMADA"}</div>
+                              <div style={{ background: s.status === "pagamento em aberto" ? "rgba(201,168,240,.06)" : "rgba(186,255,57,.06)", border:`1px solid ${s.status === "pagamento em aberto" ? "rgba(201,168,240,.22)" : "rgba(186,255,57,.22)"}`, borderRadius:8, padding:"12px 14px", marginBottom:8, fontFamily:"'DM Mono',monospace" }}>
+                                <div style={{ fontSize:10, color: s.status === "pagamento em aberto" ? "#C9A8F0" : "#BAFF39", letterSpacing:"1px", marginBottom:4 }}>{s.status === "pagamento em aberto" ? "PAGAMENTO EM ABERTO" : "MODALIDADE CONFIRMADA"}</div>
                                 <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
                                 <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
                               </div>
-                              {s.status === "aguardando pagamento" && (
-                                <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:2 }}>
+                              {s.status === "pagamento em aberto" && (
+                                <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:2 }}>
                                   📎 Enviar comprovante no WhatsApp →
                                 </a>
                               )}
@@ -1450,7 +1450,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                               {opcoes.map((op, idx) => {
                                 const isBest     = pf(op.valor) === minVal;
                                 const isSelected = opcaoEscolhida[s.id] === idx;
-                                const canSelect  = !["enviado","cancelado","aguardando pagamento","pagamento confirmado"].includes(s.status);
+                                const canSelect  = !["enviado","cancelado","pagamento em aberto","pagamento confirmado","embalando"].includes(s.status);
                                 const total      = (pf(op.valor) + emb).toFixed(2).replace(".",",");
                                 return (
                                   <div key={idx} onClick={() => canSelect && setOpcaoEscolhida(prev => ({ ...prev, [s.id]: isSelected ? undefined : idx }))} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:6, borderRadius:8, cursor: canSelect ? "pointer" : "default", transition:"all .15s", background: isSelected ? "rgba(201,168,240,.1)" : isBest ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px solid ${isSelected ? "rgba(201,168,240,.5)" : isBest ? "rgba(186,255,57,.22)" : "rgba(245,240,232,.08)"}` }}>
@@ -1470,15 +1470,15 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                                   </div>
                                 );
                               })}
-                              {opcaoEscolhida[s.id] !== undefined && !["aguardando pagamento","pagamento confirmado","enviado","cancelado"].includes(s.status) && (() => {
+                              {opcaoEscolhida[s.id] !== undefined && !["pagamento em aberto","pagamento confirmado","embalando","enviado","cancelado"].includes(s.status) && (() => {
                                 const chosen = opcoes[opcaoEscolhida[s.id]];
                                 if (!chosen) return null;
                                 const totalChosen = (pf(chosen.valor) + emb).toFixed(2).replace(".",",");
                                 const waMsg = encodeURIComponent(`Olá! Gostaria de confirmar meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${chosen.forma} (até ${chosen.prazo})\nTotal: R$ ${totalChosen}\n\nVou realizar o PIX! 💚`);
                                 return (
                                   <button onClick={async () => {
-                                    await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"aguardando pagamento" }).eq("id", s.id);
-                                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: chosen, status:"aguardando pagamento" } : x));
+                                    await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"pagamento em aberto" }).eq("id", s.id);
+                                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: chosen, status:"pagamento em aberto" } : x));
                                     window.open(`https://wa.me/5524992501917?text=${waMsg}`, "_blank");
                                   }} style={{ width:"100%", marginTop:6, padding:"10px", background:"rgba(201,168,240,.15)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.35)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                                     Confirmar {chosen.forma} — R$ {totalChosen} e enviar PIX →
@@ -1502,7 +1502,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                 })()}
 
                 {/* Cancelar solicitação */}
-                {s.status !== "enviado" && s.status !== "cancelado" && (
+                {["solicitação de envio","cotação em andamento","pagamento em aberto"].includes(s.status) && (
                   <button onClick={async () => {
                     if (!window.confirm("Cancelar esta solicitação de envio?")) return;
                     await supabase.from("envio_solicitacoes").update({ status:"cancelado" }).eq("id", s.id);
@@ -2404,21 +2404,21 @@ function AdminTab({ owner = false, userCog = "" }) {
       cotacao_prazo:     bestOp.prazo,
       cotacao_obs:       cotacaoObs || null,
       cotacao_at:        new Date().toISOString(),
-      status:            "cotação enviada",
+      status:            "pagamento em aberto",
     }).eq("id", s.id);
     await supabase.from("pushes").insert([{
       message: `Sua cotação de envio está disponível! A partir de R$ ${totalFmt} via ${bestOp.forma}. Acesse Meu Perfil → Envios para ver as opções.`,
       active: true,
       joiner_cog: s.joiner_cog,
     }]);
-    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação enviada", cotacao_opcoes:preenchidas, cotacao_frete:bestOp.valor, cotacao_forma:bestOp.forma, cotacao_seguro:valorDeclarado||null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:bestOp.prazo, cotacao_obs:cotacaoObs } : x));
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"pagamento em aberto", cotacao_opcoes:preenchidas, cotacao_frete:bestOp.valor, cotacao_forma:bestOp.forma, cotacao_seguro:valorDeclarado||null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:bestOp.prazo, cotacao_obs:cotacaoObs } : x));
     setCotacaoAberta(null); setCotacaoOpcoes([{ forma:"", valor:"", prazo:"" }]); setCotacaoEmbalagem(""); setCotacaoObs("");
   }
 
   async function cancelarCotacao(s) {
     if (!window.confirm("Cancelar a cotação enviada? O joiner será notificado e a solicitação volta para 'em cotação'.")) return;
     await supabase.from("envio_solicitacoes").update({
-      status: "em cotação", cotacao_opcoes: null, cotacao_frete: null, cotacao_forma: null,
+      status: "cotação em andamento", cotacao_opcoes: null, cotacao_frete: null, cotacao_forma: null,
       cotacao_embalagem: null, cotacao_valor: null, cotacao_prazo: null, cotacao_obs: null,
       cotacao_at: null, cotacao_seguro: null,
     }).eq("id", s.id);
@@ -2426,7 +2426,7 @@ function AdminTab({ owner = false, userCog = "" }) {
       message: "Sua cotação de envio foi cancelada e será refeita em breve. Aguarde a nova cotação.",
       active: true, joiner_cog: s.joiner_cog,
     }]);
-    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"em cotação", cotacao_opcoes:null, cotacao_frete:null, cotacao_forma:null, cotacao_embalagem:null, cotacao_valor:null, cotacao_prazo:null, cotacao_obs:null, cotacao_seguro:null } : x));
+    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento", cotacao_opcoes:null, cotacao_frete:null, cotacao_forma:null, cotacao_embalagem:null, cotacao_valor:null, cotacao_prazo:null, cotacao_obs:null, cotacao_seguro:null } : x));
   }
 
   async function cancelarSolicitacaoAdmin(s) {
@@ -2576,7 +2576,7 @@ function AdminTab({ owner = false, userCog = "" }) {
             temAcesso("disponiveis") && { id:"disponiveis", label:"Disponíveis" },
             temAcesso("blocklist")   && { id:"blocklist",   label:"Blocklist" },
             temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status !== "resolvido").length || null },
-            temAcesso("envios")      && { id:"envios",      label:"Envios",  badge: envioSolic.filter(e => e.status === "pendente").length || null },
+            temAcesso("envios")      && { id:"envios",      label:"Envios",  badge: envioSolic.filter(e => e.status === "solicitação de envio").length || null },
           ].filter(Boolean);
         })().map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
@@ -2740,13 +2740,13 @@ function AdminTab({ owner = false, userCog = "" }) {
       {adminMainTab === "envios" && (
         <div>
           <div style={{ marginBottom:16, fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>
-            {envioSolic.filter(e => e.status === "pendente").length} pendente(s) · {envioSolic.filter(e => e.status === "em cotação").length} em cotação · {envioSolic.filter(e => e.status === "enviado").length} enviado(s)
+            {envioSolic.filter(e => e.status === "solicitação de envio").length} nova(s) · {envioSolic.filter(e => e.status === "cotação em andamento").length} em cotação · {envioSolic.filter(e => e.status === "pagamento em aberto").length} aguardando pgto · {envioSolic.filter(e => e.status === "enviado").length} enviado(s)
           </div>
           {envioSolic.length === 0 ? (
             <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação ainda.</div>
           ) : envioSolic.map(s => {
-            const statusColor  = { pendente:"#BAFF39", "em cotação":"#FF5C1A", "cotação enviada":"#C9A8F0", "aguardando pagamento":"#FFD166", "pagamento confirmado":"#BAFF39", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
-            const statusBorder = { pendente:"rgba(186,255,57,.25)", "em cotação":"rgba(255,92,26,.3)", "cotação enviada":"rgba(201,168,240,.3)", "aguardando pagamento":"rgba(255,209,102,.3)", "pagamento confirmado":"rgba(186,255,57,.25)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
+            const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusBorder = { "solicitação de envio":"rgba(186,255,57,.25)", "cotação em andamento":"rgba(255,92,26,.3)", "pagamento em aberto":"rgba(201,168,240,.3)", "pagamento confirmado":"rgba(255,209,102,.3)", embalando:"rgba(100,181,246,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             return (
               <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:12 }}>
                 {/* Cabeçalho */}
@@ -2801,7 +2801,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                 )}
 
                 {/* Form cotação */}
-                {s.status === "em cotação" && cotacaoAberta === s.id && (() => {
+                {s.status === "cotação em andamento" && cotacaoAberta === s.id && (() => {
                   const valorDecl  = s.seguro === "sim" ? s.valor_seguro : null;
                   const totalItens = (s.itens||[]).reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
                   const emb        = pf(cotacaoEmbalagem);
@@ -2862,20 +2862,20 @@ function AdminTab({ owner = false, userCog = "" }) {
 
                 {/* Ações */}
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {s.status === "pendente" && (
+                  {s.status === "solicitação de envio" && (
                     <button onClick={async () => {
-                      await supabase.from("envio_solicitacoes").update({ status:"em cotação" }).eq("id", s.id);
-                      setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"em cotação" } : x));
+                      await supabase.from("envio_solicitacoes").update({ status:"cotação em andamento" }).eq("id", s.id);
+                      setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
-                      Em cotação
+                      Iniciar cotação
                     </button>
                   )}
-                  {s.status === "em cotação" && cotacaoAberta !== s.id && (
+                  {s.status === "cotação em andamento" && cotacaoAberta !== s.id && (
                     <button onClick={() => { setCotacaoAberta(s.id); setCotacaoOpcoes([{ forma:"", valor:"", prazo:"" }]); setCotacaoEmbalagem(""); setCotacaoObs(""); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.08)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Enviar cotação
                     </button>
                   )}
-                  {(s.status === "pendente" || s.status === "em cotação" || s.status === "cotação enviada" || s.status === "aguardando pagamento" || s.status === "pagamento confirmado") && (
+                  {["solicitação de envio","cotação em andamento","pagamento em aberto","pagamento confirmado","embalando"].includes(s.status) && (
                     rastreioAberto === s.id ? (
                       <div style={{ width:"100%", marginTop:4, display:"flex", flexDirection:"column", gap:6 }}>
                         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
@@ -2901,7 +2901,7 @@ function AdminTab({ owner = false, userCog = "" }) {
                       </button>
                     )
                   )}
-                  {s.status === "aguardando pagamento" && (
+                  {s.status === "pagamento em aberto" && (
                     <button onClick={async () => {
                       await supabase.from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
                       await supabase.from("pushes").insert([{ message:"Seu pagamento foi confirmado! Em breve seu pedido será enviado.", active:true, joiner_cog:s.joiner_cog }]);
@@ -2910,12 +2910,21 @@ function AdminTab({ owner = false, userCog = "" }) {
                       ✓ Pagamento confirmado
                     </button>
                   )}
-                  {s.status === "cotação enviada" && (
+                  {s.status === "pagamento confirmado" && (
+                    <button onClick={async () => {
+                      await supabase.from("envio_solicitacoes").update({ status:"embalando" }).eq("id", s.id);
+                      await supabase.from("pushes").insert([{ message:"Seu pedido está sendo embalado! Em breve você receberá o código de rastreio.", active:true, joiner_cog:s.joiner_cog }]);
+                      setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"embalando" } : x));
+                    }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.1)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.28)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
+                      📦 Embalando
+                    </button>
+                  )}
+                  {s.status === "pagamento em aberto" && (
                     <button onClick={() => cancelarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Cancelar cotação
                     </button>
                   )}
-                  {s.status !== "enviado" && s.status !== "cancelado" && (
+                  {!["enviado","embalando","pagamento confirmado","cancelado"].includes(s.status) && (
                     <button onClick={() => cancelarSolicitacaoAdmin(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.2)", border:"1px solid rgba(245,240,232,.08)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Cancelar solicitação
                     </button>
@@ -3442,7 +3451,7 @@ function EnvioTab({ user, itens }) {
       metodo,
       seguro,
       valor_seguro:    seguro === "sim" ? valorSeguro : null,
-      status:          "pendente",
+      status:          "solicitação de envio",
     }]);
 
     setLoading(false);
