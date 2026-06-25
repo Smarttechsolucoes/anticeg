@@ -763,6 +763,14 @@ const ENVIO_STEP_COLORS = {
   "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166",
   embalando:"#64B5F6", enviado:"#BAFF39", cancelado:"rgba(245,240,232,.3)",
 };
+const ENVIO_STATUS_LABEL = {
+  "solicitação de envio": "Cotação enviada",
+  "cotação em andamento": "Cotação em andamento",
+  "pagamento em aberto":  "Pgto. em aberto",
+  "pagamento confirmado": "Pgto. confirmado",
+  "embalando":            "Embalando",
+  "enviado":              "Finalizado",
+};
 
 function EnvioMiniBar({ status }) {
   const idx = ENVIO_STEPS.indexOf(status);
@@ -1060,7 +1068,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         {showEnvio ? (
                           <>
-                            <span style={{ fontSize:9, color: ENVIO_STEP_COLORS[envioStatus] || "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{envioStatus}</span>
+                            <span style={{ fontSize:9, color: ENVIO_STEP_COLORS[envioStatus] || "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{ENVIO_STATUS_LABEL[envioStatus] || envioStatus}</span>
                             <EnvioMiniBar status={envioStatus} />
                           </>
                         ) : (
@@ -1135,7 +1143,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                 <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
                 {showEnvioCard ? (
                   <div style={{ textAlign:"right" }}>
-                    <span style={{ fontSize:9, color: ENVIO_STEP_COLORS[envioStatusCard] || "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{envioStatusCard}</span>
+                    <span style={{ fontSize:9, color: ENVIO_STEP_COLORS[envioStatusCard] || "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{ENVIO_STATUS_LABEL[envioStatusCard] || envioStatusCard}</span>
                     <EnvioMiniBar status={envioStatusCard} />
                   </div>
                 ) : (
