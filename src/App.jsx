@@ -1775,11 +1775,17 @@ function CalendarTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [dayDetail, setDayDetail] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 640);
+  const [calEventos, setCalEventos] = useState([]);
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
+  }, []);
+
+  useEffect(() => {
+    supabase.from("cal_eventos").select("*").order("data")
+      .then(({ data }) => { if (data) setCalEventos(data); });
   }, []);
 
   useEffect(() => {
@@ -1822,6 +1828,7 @@ function CalendarTab({ user, itens }) {
     if (item.venc_frete)    addEv(item.venc_frete,    `${item.ceg}: Frete`, "frete");
     if (item.venc_rf)       addEv(item.venc_rf,       `${item.ceg}: Taxa RF`, "taxa");
   });
+  calEventos.forEach(ev => addEv(ev.data, ev.titulo, ev.tipo || "envio"));
 
   const firstDay = new Date(calYear, calMonth, 1);
   let startDow = firstDay.getDay();
@@ -1887,7 +1894,7 @@ function CalendarTab({ user, itens }) {
 
   const legend = (
     <div className="cal-legend" style={{ marginBottom:12 }}>
-      {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"]].map(([c,l]) => (
+      {[["laranja","Venc. Item"],["lilas","Frete"],["verde","Taxa RF"],["azul","Envio"]].map(([c,l]) => (
         <div key={c} className="cal-legend-item"><div className={`leg-dot leg-${c}`}/>{l}</div>
       ))}
     </div>
@@ -2548,6 +2555,11 @@ function AdminTab({ owner = false, userCog = "" }) {
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
+  const [calEventos,        setCalEventos]        = useState([]);
+  const [novoEvData,        setNovoEvData]        = useState("");
+  const [novoEvTitulo,      setNovoEvTitulo]      = useState("");
+  const [novoEvTipo,        setNovoEvTipo]        = useState("envio");
+  const [savingEv,          setSavingEv]          = useState(false);
   const [filtroEnvio,       setFiltroEnvio]       = useState("todos");
   const [expandedEnvio,     setExpandedEnvio]     = useState(new Set());
   const [rastreioAberto,    setRastreioAberto]    = useState(null);
@@ -2669,6 +2681,8 @@ function AdminTab({ owner = false, userCog = "" }) {
       .then(({ data }) => { if (data) setConfirmacoes(data); });
     supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
+    supabase.from("cal_eventos").select("*").order("data")
+      .then(({ data }) => { if (data) setCalEventos(data); });
     // Masterlist separada: joiners reais (sem disponivel) e disponíveis
     (async () => {
       const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
@@ -2769,6 +2783,7 @@ function AdminTab({ owner = false, userCog = "" }) {
             temAcesso("blocklist")   && { id:"blocklist",   label:"Blocklist" },
             temAcesso("reports")     && { id:"reports",     label:"Reports", badge: reports.filter(r => r.status !== "resolvido").length || null },
             temAcesso("envios")      && { id:"envios",      label:"Envios",  badge: envioSolic.filter(e => e.status === "solicitação de envio").length || null },
+            ...(owner ? [{ id:"agenda", label:"Agenda" }] : []),
           ].filter(Boolean);
         })().map(t => (
           <button key={t.id} onClick={() => setAdminMainTab(t.id)} style={{
@@ -2928,6 +2943,54 @@ function AdminTab({ owner = false, userCog = "" }) {
       {adminMainTab === "pagamentos"  && <AdminPagamentos data={pendentesData} joiners={joinersData} />}
       {adminMainTab === "disponiveis" && <AdminDisponivel data={disponiveisData} />}
       {adminMainTab === "blocklist"   && <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />}
+
+      {adminMainTab === "agenda" && owner && (
+        <div>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:16 }}>Adicionar data ao calendário</div>
+
+          {/* Form */}
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
+            <input type="date" value={novoEvData} onChange={e => setNovoEvData(e.target.value)}
+              style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
+            <input type="text" placeholder="Título (ex: Envio CEG Stray Kids)" value={novoEvTitulo} onChange={e => setNovoEvTitulo(e.target.value)}
+              style={{ flex:1, minWidth:200, background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none" }} />
+            <select value={novoEvTipo} onChange={e => setNovoEvTipo(e.target.value)}
+              style={{ background:"#0d0d0d", border:"1px solid #222", borderRadius:6, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"8px 12px", outline:"none", cursor:"pointer" }}>
+              <option value="envio">📦 Envio</option>
+              <option value="item">💰 Venc. Item</option>
+              <option value="frete">✈ Frete</option>
+              <option value="taxa">📋 Taxa RF</option>
+            </select>
+            <button disabled={!novoEvData || !novoEvTitulo.trim() || savingEv} onClick={async () => {
+              setSavingEv(true);
+              const { data } = await supabase.from("cal_eventos").insert([{ data: novoEvData, titulo: novoEvTitulo.trim(), tipo: novoEvTipo }]).select().single();
+              if (data) setCalEventos(prev => [...prev, data].sort((a,b) => a.data.localeCompare(b.data)));
+              setNovoEvData(""); setNovoEvTitulo(""); setNovoEvTipo("envio");
+              setSavingEv(false);
+            }} style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"8px 18px", cursor:"pointer", letterSpacing:".08em", opacity: (!novoEvData || !novoEvTitulo.trim()) ? .4 : 1 }}>
+              {savingEv ? "..." : "+ Adicionar"}
+            </button>
+          </div>
+
+          {/* Lista */}
+          {calEventos.length === 0 ? (
+            <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>Nenhuma data manual adicionada ainda.</div>
+          ) : calEventos.map(ev => {
+            const tipoColor = { envio:"#64B5F6", item:"var(--laranja)", frete:"var(--lilas)", taxa:"var(--verde)" }[ev.tipo] || "#64B5F6";
+            return (
+              <div key={ev.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:8, border:"1px solid rgba(245,240,232,.07)", marginBottom:6, background:"rgba(245,240,232,.02)" }}>
+                <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)", minWidth:90 }}>{new Date(ev.data + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}44`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{ev.tipo}</span>
+                <span style={{ flex:1, fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{ev.titulo}</span>
+                <button onClick={async () => {
+                  await supabase.from("cal_eventos").delete().eq("id", ev.id);
+                  setCalEventos(prev => prev.filter(x => x.id !== ev.id));
+                }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:14, padding:"2px 6px", borderRadius:4 }}>✕</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {adminMainTab === "envios" && (
         <div>
