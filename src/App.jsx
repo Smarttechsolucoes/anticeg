@@ -1405,8 +1405,9 @@ function StaffPanel() {
 function PerfilTab({ user, onUpdate, owner = false }) {
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
-  const [meuEnvios,    setMeuEnvios]    = useState([]);
+  const [meuEnvios,      setMeuEnvios]      = useState([]);
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
+  const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
 
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
@@ -1518,12 +1519,25 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           ) : meuEnvios.map(s => {
             const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.2)", "cotação em andamento":"rgba(255,92,26,.25)", "pagamento em aberto":"rgba(201,168,240,.25)", "pagamento confirmado":"rgba(255,209,102,.25)", embalando:"rgba(100,181,246,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
+            const expanded = expandedEnvio.has(s.id);
+            const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
             return (
-              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"16px 18px", marginBottom:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <span style={{ fontSize:12, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</span>
-                  <span style={{ fontSize:10, color:statusColor, fontFamily:"'DM Mono',monospace", border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", textTransform:"uppercase" }}>{s.status}</span>
+              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, marginBottom:8, overflow:"hidden" }}>
+                {/* Linha colapsada */}
+                <div onClick={toggleExpand} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", cursor:"pointer", gap:10 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")} · {s.itens?.length || 0} item(s)</div>
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{s.metodo || "—"}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                    <span style={{ fontSize:9, color:statusColor, border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap" }}>{ENVIO_STATUS_LABEL[s.status] || s.status}</span>
+                    <span style={{ fontSize:12, color:"rgba(245,240,232,.4)" }}>{expanded ? "▲" : "▼"}</span>
+                  </div>
                 </div>
+
+                {/* Conteúdo expandido */}
+                {expanded && <div style={{ padding:"0 16px 16px" }}>
+                <div style={{ height:1, background:"rgba(245,240,232,.06)", marginBottom:12 }} />
 
                 {/* Itens */}
                 {s.itens?.length > 0 && (() => {
@@ -1653,6 +1667,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                     )}
                   </div>
                 )}
+                </div>}
               </div>
             );
           })}
