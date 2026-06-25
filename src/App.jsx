@@ -854,6 +854,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
     (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
     (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
   );
+  if (statusFiltro === "envio") filtered = filtered.filter(i => {
+    const es = envioByItem[i.id]?.status;
+    return es && es !== "cancelado" && i.status !== "Enviado Nacional";
+  });
   if (ordenacao === "ceg")      filtered.sort((a,b) => (a.ceg||"").localeCompare(b.ceg||""));
   if (ordenacao === "venc")     filtered.sort((a,b) => {
     const va = [a.venc_item, a.venc_frete, a.venc_rf].filter(Boolean).sort()[0] || "9999";
@@ -1012,6 +1016,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
         }}>
           <option value="tudo">Tudo</option>
           <option value="pendente">Pendente</option>
+          <option value="envio">Em envio</option>
           {STATUS_STEPS.map(s => (
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
