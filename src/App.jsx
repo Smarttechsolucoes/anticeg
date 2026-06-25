@@ -750,6 +750,34 @@ function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
   );
 }
 
+const ENVIO_STEPS = [
+  "solicitação de envio",
+  "cotação em andamento",
+  "pagamento em aberto",
+  "pagamento confirmado",
+  "embalando",
+  "enviado",
+];
+const ENVIO_STEP_COLORS = {
+  "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A",
+  "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166",
+  embalando:"#64B5F6", enviado:"#BAFF39", cancelado:"rgba(245,240,232,.3)",
+};
+
+function EnvioMiniBar({ status }) {
+  const idx = ENVIO_STEPS.indexOf(status);
+  const color = ENVIO_STEP_COLORS[status] || "rgba(245,240,232,.3)";
+  return (
+    <div style={{ display:"flex", gap:2, marginTop:4 }}>
+      {ENVIO_STEPS.slice(0, -1).map((_, i) => (
+        <div key={i} style={{ flex:1, height:3, borderRadius:2,
+          background: i < idx ? color : i === idx ? color : "rgba(245,240,232,.12)",
+          opacity: i > idx ? 1 : 1 }} />
+      ))}
+    </div>
+  );
+}
+
 function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
@@ -760,6 +788,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
   const [reportItem, setReportItem] = useState(null);
   const [avisos, setAvisos] = useState([]);
   const [avisosModal, setAvisosModal] = useState(false);
+  const [envioByItem, setEnvioByItem] = useState({});
+
+  useEffect(() => {
+    if (guest || !user.cog) return;
+    supabase.from("envio_solicitacoes").select("id,status,itens").eq("joiner_cog", user.cog)
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        data.forEach(s => (s.itens || []).forEach(it => { map[it.id] = s; }));
+        setEnvioByItem(map);
+      });
+  }, [user.cog, guest]);
 
   useEffect(() => {
     supabase.from("pushes").select("*").eq("active", true)
@@ -1005,6 +1045,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
             {filtered.map(item => {
               const ai = getStepIdx(item.status);
               const isOpen = openDrawer === item.id;
+              const envioSolic = envioByItem[item.id];
+              const envioStatus = envioSolic?.status;
+              const showEnvio = item.status === "Envio Liberado" && envioStatus && envioStatus !== "cancelado";
               return (
                 <>
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
@@ -1015,8 +1058,17 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                        <StatusChip status={item.status} />
-                        <ProgressMini activeIdx={ai} />
+                        {showEnvio ? (
+                          <>
+                            <span style={{ fontSize:9, color: ENVIO_STEP_COLORS[envioStatus] || "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{envioStatus}</span>
+                            <EnvioMiniBar status={envioStatus} />
+                          </>
+                        ) : (
+                          <>
+                            <StatusChip status={item.status} />
+                            <ProgressMini activeIdx={ai} />
+                          </>
+                        )}
                       </div>
                     </td>
                     <td style={{ maxWidth: 260 }}>
@@ -1074,11 +1126,21 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
           const multaItem = (pendItem  ? diasAtraso(item.venc_item)  : 0)
                           + (pendFrete ? diasAtraso(item.venc_frete) : 0)
                           + (pendRf    ? diasAtraso(item.venc_rf)    : 0);
+          const envioSolicCard = envioByItem[item.id];
+          const envioStatusCard = envioSolicCard?.status;
+          const showEnvioCard = item.status === "Envio Liberado" && envioStatusCard && envioStatusCard !== "cancelado";
           return (
             <div key={item.id} className="ml-card" style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { border:"1.5px solid rgba(220,50,50,.55)" } : {}}>
               <div className="ml-card-top">
                 <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
-                <StatusChip status={item.status} />
+                {showEnvioCard ? (
+                  <div style={{ textAlign:"right" }}>
+                    <span style={{ fontSize:9, color: ENVIO_STEP_COLORS[envioStatusCard] || "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em" }}>{envioStatusCard}</span>
+                    <EnvioMiniBar status={envioStatusCard} />
+                  </div>
+                ) : (
+                  <StatusChip status={item.status} />
+                )}
               </div>
               <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
               {temPendente && (
