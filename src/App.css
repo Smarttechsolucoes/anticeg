@@ -148,6 +148,7 @@ body.high-contrast .cog-tip::after { background:#fff !important; border-color:#5
 body.high-contrast .chip-prevenda { background:#ddd !important; border:1px solid #888 !important; }
 
 /* Regras da comunidade */
+body.high-contrast .regras-contato-box { background:#f0f0f0 !important; border-color:#ccc !important; }
 body.high-contrast .regras-search-input { background:#fff !important; border-color:#aaa !important; }
 body.high-contrast .regras-acc { background:#f0f0f0 !important; border-color:#aaa !important; }
 body.high-contrast .regras-acc-toggle { background:transparent !important; }

@@ -2142,7 +2142,7 @@ function RegrasTab() {
             </div>
           );
         })}
-        <div style={{ background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 8, padding: 24 }}>
+        <div className="regras-contato-box" style={{ background: "var(--card-bg)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 8, padding: 24 }}>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", marginBottom: 16, letterSpacing: 1 }}>⋆ Contato & Suporte</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 10, fontSize: "var(--fs-xs)", color: "rgba(245,240,232,.7)" }}><span style={{ color: "var(--verde)" }}>☆</span><span>Dúvidas? Chama a Nanda no WhatsApp!</span></div>
