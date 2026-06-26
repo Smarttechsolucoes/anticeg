@@ -953,8 +953,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
     <div className="main">
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
       {avisoMasterlist && (
-        <div style={{ background:"rgba(186,255,57,.06)", borderBottom:"1px solid rgba(186,255,57,.15)", padding:"10px 16px", fontSize:12, color:"rgba(245,240,232,.75)", fontFamily:"'DM Mono',monospace", letterSpacing:".02em" }}>
-          {avisoMasterlist}
+        <div style={{ background:"rgba(186,255,57,.07)", borderBottom:"1px solid rgba(186,255,57,.18)", padding:"11px 20px", display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ flexShrink:0, width:6, height:6, borderRadius:"50%", background:"#BAFF39", boxShadow:"0 0 6px #BAFF39" }} />
+          <span style={{ flex:1, fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", letterSpacing:".04em", fontWeight:600 }}>{avisoMasterlist}</span>
+          <span style={{ flexShrink:0, fontSize:9, color:"rgba(186,255,57,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase" }}>anticeg</span>
         </div>
       )}
       {temAntigomEmAberto && (
