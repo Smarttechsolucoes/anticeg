@@ -2316,7 +2316,15 @@ function PushAdminCard({ p, onDesativar, onReativar }) {
   return (
     <div style={{ background: "var(--card-bg)", border: `1px solid ${p.active ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius: 8, marginBottom: 6, opacity: p.active ? 1 : 0.5 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-        <div style={{ flex: 1, fontSize: 12, color: p.active ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>{p.message}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 12, color: p.active ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>{p.message}</div>
+          <div style={{ marginTop: 5 }}>
+            {p.joiner_cog
+              ? <span style={{ fontSize: 9, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.25)", borderRadius:4, padding:"2px 7px", color:"var(--lilas)", letterSpacing:".05em" }}>→ @{p.joiner_cog}</span>
+              : <span style={{ fontSize: 9, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.2)", borderRadius:4, padding:"2px 7px", color:"var(--laranja)", letterSpacing:".05em" }}>→ todas as joiners</span>
+            }
+          </div>
+        </div>
         <div style={{ fontSize: 10, color: "rgba(245,240,232,.25)", whiteSpace: "nowrap" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</div>
         <button onClick={verLeituras} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.35)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
           {aberto ? "▴ ocultar" : "▾ quem viu"}
