@@ -4806,6 +4806,7 @@ export default function App() {
           user={user}
           onOk={async () => {
             await supabase.from("push_reads").insert([{ push_id: p.id, joiner_cog: user.cog }]);
+            if (p.joiner_cog) await supabase.from("pushes").update({ active: false }).eq("id", p.id);
             setPushAtivos(prev => prev.filter(x => x.id !== p.id));
           }}
           onX={() => setPushAtivos(prev => prev.filter(x => x.id !== p.id))}
