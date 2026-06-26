@@ -3207,30 +3207,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           </button>
         </div>
 
-        {/* Preview das banners ativas como a joiner vê */}
-        {pushes?.some(p => p.active) && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 8 }}>preview — como aparece na tela da joiner</div>
-            {pushes.filter(p => p.active).map(p => (
-              <div key={p.id} style={{ background: "rgba(15,15,15,.95)", border: "1px solid rgba(245,240,232,.14)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, display: "flex", gap: 14, alignItems: "flex-start" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: "var(--offwhite)", lineHeight: 1.5 }}>{p.message}</div>
-                  <div style={{ marginTop: 6 }}>
-                    {p.joiner_cog
-                      ? <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", background: "rgba(201,168,240,.1)", border: "1px solid rgba(201,168,240,.2)", borderRadius: 4, padding: "2px 7px", color: "var(--lilas)" }}>→ @{p.joiner_cog}</span>
-                      : <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", background: "rgba(255,92,26,.08)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 4, padding: "2px 7px", color: "var(--laranja)" }}>→ todas as joiners</span>
-                    }
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 6, padding: "4px 12px", color: "#BAFF39" }}>ok</span>
-                  <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 6, padding: "4px 10px", color: "rgba(245,240,232,.3)" }}>✕</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {pushes === null
           ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
           : <PushListFiltrada pushes={pushes} onDesativar={desativarPush} onReativar={reativarPush} />
