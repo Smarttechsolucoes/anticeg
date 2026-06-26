@@ -952,13 +952,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   return (
     <>
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
-      {avisoMasterlist && (
-        <div style={{ background:"rgba(186,255,57,.07)", borderBottom:"1px solid rgba(186,255,57,.18)", padding:"10px 20px", display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ flexShrink:0, width:6, height:6, borderRadius:"50%", background:"#BAFF39", boxShadow:"0 0 6px #BAFF39" }} />
-          <span style={{ flex:1, fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", letterSpacing:".04em", fontWeight:600 }}>{avisoMasterlist}</span>
-          <span style={{ flexShrink:0, fontSize:9, color:"rgba(186,255,57,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase" }}>anticeg</span>
-        </div>
-      )}
     <div className="main">
       {temAntigomEmAberto && (
         <div className="notif-pagamento">
@@ -4903,7 +4896,15 @@ export default function App() {
         </div>
       )}
 
-      <div className="topbar">
+      {avisoMasterlist && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:300, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(186,255,57,.2)", padding:"8px 20px", display:"flex", alignItems:"center", gap:10, backdropFilter:"blur(8px)" }}>
+          <span style={{ flexShrink:0, width:6, height:6, borderRadius:"50%", background:"#BAFF39", boxShadow:"0 0 6px #BAFF39" }} />
+          <span style={{ flex:1, fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", letterSpacing:".04em", fontWeight:600 }}>{avisoMasterlist}</span>
+          <span style={{ flexShrink:0, fontSize:9, color:"rgba(186,255,57,.35)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase" }}>anticeg</span>
+        </div>
+      )}
+
+      <div className="topbar" style={avisoMasterlist ? { marginTop:36 } : undefined}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <button className="topbar-hamburger" onClick={() => setSideOpen(true)} aria-label="Menu">
             <span /><span /><span />
