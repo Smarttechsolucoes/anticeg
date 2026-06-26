@@ -1666,11 +1666,25 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                                 <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
                                 <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
                               </div>
-                              {s.status === "pagamento em aberto" && (
-                                <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:2 }}>
-                                  📎 Enviar comprovante no WhatsApp →
-                                </a>
-                              )}
+                              {s.status === "pagamento em aberto" && (() => {
+                                const PIX_KEY  = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+                                const totalPix = (pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",");
+                                return (
+                                  <>
+                                    <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"12px 14px", marginTop:8 }}>
+                                      <div style={{ fontSize:9, color:"#BAFF39", letterSpacing:"1px", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>CHAVE PIX — MERCADO PAGO</div>
+                                      <div style={{ fontSize:10, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Fernanda Gomes Medeiros · R$ {totalPix}</div>
+                                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                                        <div style={{ flex:1, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"7px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
+                                        <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); }} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer" }}>Copiar</button>
+                                      </div>
+                                    </div>
+                                    <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
+                                      📎 Enviar comprovante no WhatsApp →
+                                    </a>
+                                  </>
+                                );
+                              })()}
                             </>
                           ) : (
                             <>
