@@ -2717,6 +2717,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
+  const [searchReport, setSearchReport] = useState("");
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState(null);
@@ -3125,9 +3126,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       </>}
 
       {adminMainTab === "reports" && <div>
+        <input
+          value={searchReport}
+          onChange={e => setSearchReport(e.target.value)}
+          placeholder="Buscar por joiner ou item..."
+          style={{ width:"100%", marginBottom:12, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"8px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }}
+        />
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           {["pendentes", "finalizados"].map(t => {
-            const count = t === "pendentes" ? reports.filter(r => r.status !== "resolvido").length : reports.filter(r => r.status === "resolvido").length;
+            const q = searchReport.trim().toLowerCase();
+            const base = reports.filter(r => !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) || r.item_nome?.toLowerCase().includes(q));
+            const count = t === "pendentes" ? base.filter(r => r.status !== "resolvido").length : base.filter(r => r.status === "resolvido").length;
             const active = adminTab === t;
             return (
               <button key={t} onClick={() => setAdminTab(t)} style={{
@@ -3146,10 +3155,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             );
           })}
         </div>
-        {reports.filter(r => adminTab === "pendentes" ? r.status !== "resolvido" : r.status === "resolvido").length === 0 && (
-          <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report {adminTab === "pendentes" ? "pendente" : "finalizado"} ainda.</div>
-        )}
-        {reports.filter(r => adminTab === "pendentes" ? r.status !== "resolvido" : r.status === "resolvido").map(r => {
+        {(() => {
+          const q = searchReport.trim().toLowerCase();
+          const filteredReports = reports
+            .filter(r => adminTab === "pendentes" ? r.status !== "resolvido" : r.status === "resolvido")
+            .filter(r => !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) || r.item_nome?.toLowerCase().includes(q));
+          if (filteredReports.length === 0) return <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report {adminTab === "pendentes" ? "pendente" : "finalizado"}{q ? ` para "${searchReport}"` : ""} ainda.</div>;
+          return filteredReports.map(r => {
           const erroLabels = [
             r.erro_item      && "Item incorreto",
             r.erro_valor     && "Valor incorreto",
@@ -3219,7 +3231,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             </div>
           </div>
           );
-        })}
+        });
+        })()}
       </div>}
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
