@@ -3160,7 +3160,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             if (!byJoiner[key]) byJoiner[key] = { nome: r.joiner_nome, cog: r.joiner_cog, reports: [] };
             byJoiner[key].reports.push(r);
           });
-          const grupos = Object.values(byJoiner);
+          const grupos = Object.values(byJoiner).sort((a, b) => b.reports.length - a.reports.length);
 
           const ReportCard = ({ r }) => {
             const erroLabels = [
