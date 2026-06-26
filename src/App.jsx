@@ -2740,6 +2740,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [feedbacks, setFeedbacks] = useState(null);
   const [novoPush, setNovoPush] = useState("");
   const [sendingPush, setSendingPush] = useState(false);
+  const [pushDestinatario, setPushDestinatario] = useState("todos");
+  const [pushJoinerSearch, setPushJoinerSearch] = useState("");
+  const [pushJoiners, setPushJoiners] = useState(null);
+  const [pushJoinerSel, setPushJoinerSel] = useState(null);
   const [pendentesData, setPendentesData] = useState(null);
   const [disponiveisData, setDisponiveisData] = useState(null);
   const [joinersData, setJoinersData] = useState(null);
@@ -2929,10 +2933,15 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   async function enviarPush() {
     if (!novoPush.trim()) return;
+    if (pushDestinatario === "especifico" && !pushJoinerSel) return;
     setSendingPush(true);
-    const { data } = await supabase.from("pushes").insert([{ message: novoPush.trim() }]).select().single();
+    const payload = { message: novoPush.trim(), active: true };
+    if (pushDestinatario === "especifico") payload.joiner_cog = pushJoinerSel.cog;
+    const { data } = await supabase.from("pushes").insert([payload]).select().single();
     if (data) setPushes(p => [data, ...(p || [])]);
     setNovoPush("");
+    setPushJoinerSel(null);
+    setPushJoinerSearch("");
     setSendingPush(false);
   }
   async function desativarPush(id) {
@@ -3101,6 +3110,48 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       <div style={{ marginTop: 28, marginBottom: 28 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--offwhite)", marginBottom: 12 }}>Avisos / Push para joiners</div>
+        {/* Seleção de destinatário */}
+        <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+          {[["todos","→ Todas as joiners"],["especifico","→ Joiner específica"]].map(([val, label]) => (
+            <button key={val} onClick={() => { setPushDestinatario(val); setPushJoinerSel(null); setPushJoinerSearch(""); if (val === "especifico" && !pushJoiners) { supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setPushJoiners(data || [])); } }}
+              style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"5px 14px", borderRadius:20, cursor:"pointer", border: pushDestinatario === val ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: pushDestinatario === val ? "rgba(255,92,26,.12)" : "transparent", color: pushDestinatario === val ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: pushDestinatario === val ? 700 : 400 }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Seletor de joiner específica */}
+        {pushDestinatario === "especifico" && (
+          <div style={{ marginBottom:12, position:"relative" }}>
+            {pushJoinerSel ? (
+              <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.25)", borderRadius:8, padding:"8px 14px" }}>
+                <span style={{ flex:1, fontSize:12, color:"var(--offwhite)" }}>{pushJoinerSel.nome} <span style={{ color:"var(--lilas)", fontSize:11 }}>@{pushJoinerSel.cog}</span></span>
+                <button onClick={() => { setPushJoinerSel(null); setPushJoinerSearch(""); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontSize:14, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
+              </div>
+            ) : (
+              <>
+                <input value={pushJoinerSearch} onChange={e => setPushJoinerSearch(e.target.value)} placeholder="Buscar joiner por nome ou @cog..."
+                  style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"9px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }} />
+                {pushJoinerSearch.trim().length > 0 && pushJoiners && (
+                  <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#141414", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, maxHeight:200, overflowY:"auto", zIndex:10 }}>
+                    {pushJoiners.filter(j => j.nome?.toLowerCase().includes(pushJoinerSearch.toLowerCase()) || j.cog?.toLowerCase().includes(pushJoinerSearch.toLowerCase())).slice(0,10).map(j => (
+                      <div key={j.cog} onClick={() => { setPushJoinerSel(j); setPushJoinerSearch(""); }}
+                        style={{ padding:"9px 14px", fontSize:12, color:"var(--offwhite)", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.06)" }}
+                        onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,.04)"}
+                        onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                        {j.nome} <span style={{ color:"rgba(245,240,232,.35)", fontSize:11 }}>@{j.cog}</span>
+                      </div>
+                    ))}
+                    {pushJoiners.filter(j => j.nome?.toLowerCase().includes(pushJoinerSearch.toLowerCase()) || j.cog?.toLowerCase().includes(pushJoinerSearch.toLowerCase())).length === 0 && (
+                      <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>nenhuma joiner encontrada</div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <input
             value={novoPush} onChange={e => setNovoPush(e.target.value)}
@@ -3108,7 +3159,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             placeholder="Ex: Atenção! Prazo de pagamento amanhã..."
             style={{ flex: 1, background: "#0d0d0d", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "10px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }}
           />
-          <button onClick={enviarPush} disabled={sendingPush || !novoPush.trim()} style={{ background: "var(--laranja)", color: "#000", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 12, fontFamily: "'DM Mono',monospace", fontWeight: 700, cursor: "pointer", opacity: novoPush.trim() ? 1 : 0.4 }}>
+          <button onClick={enviarPush} disabled={sendingPush || !novoPush.trim() || (pushDestinatario === "especifico" && !pushJoinerSel)} style={{ background: "var(--laranja)", color: "#000", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 12, fontFamily: "'DM Mono',monospace", fontWeight: 700, cursor: "pointer", opacity: (novoPush.trim() && (pushDestinatario === "todos" || pushJoinerSel)) ? 1 : 0.4 }}>
             {sendingPush ? "..." : "Enviar →"}
           </button>
         </div>
