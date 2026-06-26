@@ -356,7 +356,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                         {item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}
                         <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
                           <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                          <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
+                          {pendingReportIds.has(item.id)
+                            ? <span className="report-row-btn" style={{ opacity:.5, cursor:"default" }}>⚑ em análise</span>
+                            : <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>}
                         </div>
                       </td>
                     </tr>
@@ -396,7 +398,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
                 <div className="ml-card-footer">
                   <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                  {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>}
+                  {!guest && (pendingReportIds.has(item.id)
+                    ? <span className="report-row-btn" style={{ opacity:.5, cursor:"default" }}>⚑ em análise</span>
+                    : <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>)}
                 </div>
                 {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
               </div>
@@ -405,7 +409,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
         </div>
       )}
 
-      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
+      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
     </div>
   );
 }
@@ -536,7 +540,7 @@ function CegTab({ user, itens }) {
 const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.12)", borderRadius: 6, padding: "10px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12 };
 const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "block", marginBottom: 5 };
 
-function ReportModal({ user, item, onClose }) {
+function ReportModal({ user, item, onClose, onReported }) {
   const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
   const [motivoItem, setMotivoItem] = useState(null);
@@ -577,6 +581,7 @@ function ReportModal({ user, item, onClose }) {
     }]);
     setLoading(false);
     if (error) { alert("Erro ao enviar: " + error.message); return; }
+    onReported?.(item.id);
     setSent(true);
   }
 
@@ -736,11 +741,13 @@ function InfoContent({ info }) {
   );
 }
 
-function InfoCell({ info, isOpen, onToggleDrawer, onReport }) {
+function InfoCell({ info, isOpen, onToggleDrawer, onReport, isPending }) {
   return (
     <div style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
       <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={onToggleDrawer} style={{ flexShrink:0, marginTop:1 }}>▾</button>
-      <button onClick={onReport} className="report-row-btn" style={{ flexShrink:0, marginTop:1 }}>⚑ Reportar erro</button>
+      {isPending
+        ? <span className="report-row-btn" style={{ flexShrink:0, marginTop:1, opacity:.5, cursor:"default" }}>⚑ em análise</span>
+        : <button onClick={onReport} className="report-row-btn" style={{ flexShrink:0, marginTop:1 }}>⚑ Reportar erro</button>}
       <InfoContent info={info} />
     </div>
   );
@@ -830,7 +837,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -944,7 +951,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
 
   return (
     <div className="main">
-      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
+      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
       {temAntigomEmAberto && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
@@ -1219,7 +1226,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [] }) {
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
-                    <td><InfoCell info={item.info_adicionais} isOpen={isOpen} itemId={item.id} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} /></td>
+                    <td><InfoCell info={item.info_adicionais} isOpen={isOpen} itemId={item.id} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
                   {isOpen && <tr key={`drawer-${item.id}`} className="drawer-row"><td colSpan={7}><Timeline activeIdx={ai} /></td></tr>}
                 </>
@@ -2932,6 +2939,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   async function marcarResolvido(rep) {
     const { error } = await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
     if (error) { alert("Erro ao resolver report: " + error.message); return; }
+    await supabase.from("pushes").insert([{
+      message: `Seu report sobre "${rep.item_nome}" foi atualizado! Acesse a aba Suporte e verifique se está correto.`,
+      active: true,
+      joiner_cog: rep.joiner_cog,
+    }]);
     await supabase.from("notifications").insert([{
       joiner_cog: rep.joiner_cog,
       message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
@@ -4489,6 +4501,7 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
+  const [pendingReportIds, setPendingReportIds] = useState(new Set());
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [manutencao, setManutencao] = useState(false);
   const [bypassManutencao, setBypassManutencao] = useState(
@@ -4581,6 +4594,10 @@ export default function App() {
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
       if (notifs?.length > 0) setNotificacoes(notifs);
+
+      const { data: myReports } = await supabase.from("reports")
+        .select("item_id, status").eq("joiner_cog", u.cog);
+      if (myReports) setPendingReportIds(new Set(myReports.filter(r => r.status === "pendente").map(r => r.item_id)));
 
       const { data: allPushes } = await supabase.from("pushes").select("*").eq("active", true)
         .or(`joiner_cog.is.null,joiner_cog.eq.${u.cog}`)
@@ -4797,7 +4814,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
