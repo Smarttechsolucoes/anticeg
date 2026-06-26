@@ -837,7 +837,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "" }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -952,6 +952,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   return (
     <div className="main">
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
+      {avisoMasterlist && (
+        <div style={{ background:"rgba(186,255,57,.06)", borderBottom:"1px solid rgba(186,255,57,.15)", padding:"10px 16px", fontSize:12, color:"rgba(245,240,232,.75)", fontFamily:"'DM Mono',monospace", letterSpacing:".02em" }}>
+          {avisoMasterlist}
+        </div>
+      )}
       {temAntigomEmAberto && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
@@ -2685,6 +2690,45 @@ function NotificarTodosBlock() {
   );
 }
 
+function AvisoMasterlistBlock() {
+  const [texto, setTexto] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState(false);
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key","aviso_masterlist").single()
+      .then(({ data }) => { if (data?.value) setTexto(data.value); });
+  }, []);
+
+  async function salvar() {
+    setSaving(true);
+    await supabase.from("config").upsert({ key:"aviso_masterlist", value: texto.trim() }, { onConflict:"key" });
+    setSaving(false); setOk(true); setTimeout(() => setOk(false), 2000);
+  }
+
+  async function limpar() {
+    setTexto("");
+    await supabase.from("config").upsert({ key:"aviso_masterlist", value:"" }, { onConflict:"key" });
+  }
+
+  return (
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Alerta fixo da Masterlist</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:12 }}>Aparece no topo para todas as joiners enquanto preenchido.</div>
+      <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={2} placeholder="Ex: ✓ Masterlist atualizada em 27/06 às 19h03 — pagamentos conferidos"
+        style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none", resize:"vertical" }} />
+      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+        <button onClick={salvar} disabled={saving} style={{ background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:8, padding:"7px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
+          {saving ? "..." : ok ? "✓ Salvo" : "Salvar"}
+        </button>
+        <button onClick={limpar} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:8, padding:"7px 14px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+          Limpar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminPinBlock() {
   const [pin,     setPin]     = useState("");
   const [confirm, setConfirm] = useState("");
@@ -3087,6 +3131,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "geral" && owner && <>
       <AdminLinks />
       <AdminPinBlock />
+
+      <AvisoMasterlistBlock />
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
         <div style={{ flex:1 }}>
@@ -4588,6 +4634,7 @@ export default function App() {
   const [pendingReportIds, setPendingReportIds] = useState(new Set());
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [manutencao, setManutencao] = useState(false);
+  const [avisoMasterlist, setAvisoMasterlist] = useState("");
   const [bypassManutencao, setBypassManutencao] = useState(
     () => localStorage.getItem("anticeg_admin_bypass") === "1"
   );
@@ -4600,6 +4647,8 @@ export default function App() {
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
+    supabase.from("config").select("value").eq("key", "aviso_masterlist").single()
+      .then(({ data }) => { if (data?.value) setAvisoMasterlist(data.value); });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
     supabase.from("config").select("value").eq("key", "admin_pin").single()
@@ -4898,7 +4947,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
