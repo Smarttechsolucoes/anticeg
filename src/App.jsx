@@ -4822,7 +4822,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {pushAtivos.map((p, i) => (
+      {tab !== "admin" && pushAtivos.map((p, i) => (
         <PushBanner
           key={p.id}
           push={p}
