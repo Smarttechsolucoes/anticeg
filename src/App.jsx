@@ -2718,6 +2718,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [searchReport, setSearchReport] = useState("");
+  const [openReportJoiner, setOpenReportJoiner] = useState(null);
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState(null);
@@ -3128,110 +3129,129 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "reports" && <div>
         <input
           value={searchReport}
-          onChange={e => setSearchReport(e.target.value)}
-          placeholder="Buscar por joiner ou item..."
+          onChange={e => { setSearchReport(e.target.value); setOpenReportJoiner(null); }}
+          placeholder="Buscar joiner ou item..."
           style={{ width:"100%", marginBottom:12, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"8px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }}
         />
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          {["pendentes", "finalizados"].map(t => {
-            const q = searchReport.trim().toLowerCase();
-            const base = reports.filter(r => !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) || r.item_nome?.toLowerCase().includes(q));
-            const count = t === "pendentes" ? base.filter(r => r.status !== "resolvido").length : base.filter(r => r.status === "resolvido").length;
-            const active = adminTab === t;
-            return (
-              <button key={t} onClick={() => setAdminTab(t)} style={{
-                background: active ? "rgba(245,240,232,.08)" : "none",
-                border: `1px solid ${active ? "rgba(245,240,232,.2)" : "rgba(245,240,232,.07)"}`,
-                color: active ? "var(--offwhite)" : "rgba(245,240,232,.35)",
-                borderRadius: 8, padding: "6px 16px", fontSize: 12,
-                fontFamily: "'DM Mono',monospace", fontWeight: active ? 700 : 400, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 7, textTransform: "uppercase", letterSpacing: ".08em"
-              }}>
-                {t}
-                {count > 0 && (
-                  <span style={{ background: t === "pendentes" ? "var(--laranja)" : "rgba(74,222,128,.2)", color: t === "pendentes" ? "#000" : "#4ade80", borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
         {(() => {
           const q = searchReport.trim().toLowerCase();
-          const filteredReports = reports
-            .filter(r => adminTab === "pendentes" ? r.status !== "resolvido" : r.status === "resolvido")
-            .filter(r => !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) || r.item_nome?.toLowerCase().includes(q));
-          if (filteredReports.length === 0) return <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", padding: "16px 0" }}>Nenhum report {adminTab === "pendentes" ? "pendente" : "finalizado"}{q ? ` para "${searchReport}"` : ""} ainda.</div>;
-          return filteredReports.map(r => {
-          const erroLabels = [
-            r.erro_item      && "Item incorreto",
-            r.erro_valor     && "Valor incorreto",
-            r.erro_frete     && "Frete incorreto",
-            r.erro_taxa      && "Taxa RF incorreta",
-            r.erro_pagamento && "Já paguei (pendente)",
-            r.erro_recebido  && "Já recebi esse item",
-            r.erro_outro     && "Outro problema",
-          ].filter(Boolean);
-          return (
-          <div key={r.id} style={{ padding: "14px 16px", background: "var(--card-bg)", border: `1px solid ${r.status === "resolvido" ? "rgba(74,222,128,.15)" : "rgba(255,92,26,.25)"}`, borderRadius: 10, marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--offwhite)" }}>
-                  {r.joiner_nome} <span className="cog-tip" data-nome={r.joiner_nome} style={{ fontSize: 10, color: "rgba(245,240,232,.3)", fontWeight: 400 }}>@{r.joiner_cog}</span>
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 3 }}>
-                  {r.item_nome} <span style={{ color: "rgba(245,240,232,.25)" }}>· {r.ceg}</span>
+          const base = reports.filter(r =>
+            !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) || r.item_nome?.toLowerCase().includes(q)
+          );
+          const pendentes  = base.filter(r => r.status !== "resolvido");
+          const finalizados = base.filter(r => r.status === "resolvido");
+
+          // Tabs
+          const tabBtnStyle = active => ({
+            background: active ? "rgba(245,240,232,.08)" : "none",
+            border: `1px solid ${active ? "rgba(245,240,232,.2)" : "rgba(245,240,232,.07)"}`,
+            color: active ? "var(--offwhite)" : "rgba(245,240,232,.35)",
+            borderRadius: 8, padding: "6px 16px", fontSize: 12,
+            fontFamily: "'DM Mono',monospace", fontWeight: active ? 700 : 400, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 7, textTransform: "uppercase", letterSpacing: ".08em"
+          });
+
+          const lista = adminTab === "pendentes" ? pendentes : finalizados;
+
+          // Agrupar por joiner
+          const byJoiner = {};
+          lista.forEach(r => {
+            const key = r.joiner_cog || r.joiner_nome || "—";
+            if (!byJoiner[key]) byJoiner[key] = { nome: r.joiner_nome, cog: r.joiner_cog, reports: [] };
+            byJoiner[key].reports.push(r);
+          });
+          const grupos = Object.values(byJoiner);
+
+          const ReportCard = ({ r }) => {
+            const erroLabels = [
+              r.erro_item      && "Item incorreto",
+              r.erro_valor     && "Valor incorreto",
+              r.erro_frete     && "Frete incorreto",
+              r.erro_taxa      && "Taxa RF incorreta",
+              r.erro_pagamento && "Já paguei (pendente)",
+              r.erro_recebido  && "Já recebi esse item",
+              r.erro_outro     && "Outro problema",
+            ].filter(Boolean);
+            return (
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"var(--offwhite)", marginBottom:3 }}>
+                  {r.item_nome} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>· {r.ceg}</span>
                 </div>
                 {erroLabels.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                    {erroLabels.map(l => (
-                      <span key={l} style={{ fontSize: 10, background: "rgba(255,92,26,.12)", border: "1px solid rgba(255,92,26,.25)", borderRadius: 4, padding: "2px 7px", color: "var(--laranja)" }}>{l}</span>
-                    ))}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:4 }}>
+                    {erroLabels.map(l => <span key={l} style={{ fontSize:9, background:"rgba(255,92,26,.12)", border:"1px solid rgba(255,92,26,.25)", borderRadius:3, padding:"1px 6px", color:"var(--laranja)" }}>{l}</span>)}
                   </div>
                 )}
                 {(r.motivo_item || r.correcao_valor || r.correcao_frete || r.correcao_taxa) && (
-                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.4)", display: "flex", flexDirection: "column", gap: 2 }}>
-                    {r.motivo_item     && <span>↳ Item: {r.motivo_item}</span>}
-                    {r.correcao_valor  && <span>↳ Valor correto: {r.correcao_valor}</span>}
-                    {r.correcao_frete  && <span>↳ Frete correto: {r.correcao_frete}</span>}
-                    {r.correcao_taxa   && <span>↳ Taxa correta: {r.correcao_taxa}</span>}
+                  <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.4)", display:"flex", flexDirection:"column", gap:1 }}>
+                    {r.motivo_item    && <span>↳ {r.motivo_item}</span>}
+                    {r.correcao_valor && <span>↳ Valor: {r.correcao_valor}</span>}
+                    {r.correcao_frete && <span>↳ Frete: {r.correcao_frete}</span>}
+                    {r.correcao_taxa  && <span>↳ Taxa: {r.correcao_taxa}</span>}
                   </div>
                 )}
                 {r.erro_pagamento && (r.pag_data || r.pag_valor || r.pag_metodo) && (
-                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.4)", display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {r.pag_data   && <span>Data pag: <strong style={{ color: "var(--offwhite)" }}>{new Date(r.pag_data + "T12:00:00").toLocaleDateString("pt-BR")}</strong></span>}
-                    {r.pag_valor  && <span>Valor: <strong style={{ color: "var(--offwhite)" }}>{r.pag_valor}</strong></span>}
-                    {r.pag_metodo && <span>Método: <strong style={{ color: "var(--offwhite)" }}>{r.pag_metodo}</strong></span>}
-                    {r.pag_data_forms && <span>Forms em: <strong style={{ color: "var(--offwhite)" }}>{new Date(r.pag_data_forms).toLocaleString("pt-BR")}</strong></span>}
+                  <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.4)", display:"flex", flexWrap:"wrap", gap:8 }}>
+                    {r.pag_data   && <span>Data: {new Date(r.pag_data+"T12:00:00").toLocaleDateString("pt-BR")}</span>}
+                    {r.pag_valor  && <span>Valor: {r.pag_valor}</span>}
+                    {r.pag_metodo && <span>Método: {r.pag_metodo}</span>}
                   </div>
                 )}
-                {r.observacao && (
-                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.5)", fontStyle: "italic" }}>"{r.observacao}"</div>
-                )}
-                <div style={{ fontSize: 10, color: "rgba(245,240,232,.2)", marginTop: 6 }}>
-                  Reportado em {new Date(r.created_at).toLocaleString("pt-BR")}
+                {r.observacao && <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.45)", fontStyle:"italic" }}>"{r.observacao}"</div>}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:8 }}>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(r.created_at).toLocaleString("pt-BR")}</div>
+                  {r.status === "pendente" ? (
+                    <div style={{ display:"flex", gap:6 }}>
+                      <EmailTypeBadge type="report" />
+                      <button onClick={() => marcarResolvido(r)} style={{ background:"rgba(74,222,128,.1)", border:"1px solid rgba(74,222,128,.3)", color:"#4ade80", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Resolver ✓</button>
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontSize:10, color:"#4ade80" }}>✓ resolvido</span>
+                      <button onClick={() => desfazerResolvido(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>desfazer</button>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                {r.status === "pendente" ? (
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                  <EmailTypeBadge type="report" />
-                  <button onClick={() => marcarResolvido(r)} style={{ background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.3)", color: "#4ade80", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Resolver ✓
-                  </button>
-                  </div>
-                ) : (
-                  <>
-                    <span style={{ fontSize: 11, color: "#4ade80" }}>✓ resolvido</span>
-                    <button onClick={() => desfazerResolvido(r.id)} style={{ background: "none", border: "1px solid rgba(245,240,232,.1)", color: "rgba(245,240,232,.3)", borderRadius: 6, padding: "4px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      desfazer
-                    </button>
-                  </>
-                )}
+            );
+          };
+
+          return (
+            <>
+              <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+                <button style={tabBtnStyle(adminTab === "pendentes")} onClick={() => { setAdminTab("pendentes"); setOpenReportJoiner(null); }}>
+                  Pendentes {pendentes.length > 0 && <span style={{ background:"var(--laranja)", color:"#000", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{pendentes.length}</span>}
+                </button>
+                <button style={tabBtnStyle(adminTab === "finalizados")} onClick={() => { setAdminTab("finalizados"); setOpenReportJoiner(null); }}>
+                  Finalizados {finalizados.length > 0 && <span style={{ background:"rgba(74,222,128,.2)", color:"#4ade80", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{finalizados.length}</span>}
+                </button>
               </div>
-            </div>
-          </div>
+              {grupos.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", padding:"16px 0" }}>Nenhum report{q ? ` para "${searchReport}"` : ""}.</div>}
+              {grupos.map(g => {
+                const isOpen = openReportJoiner === g.cog;
+                const pendCount = g.reports.filter(r => r.status !== "resolvido").length;
+                return (
+                  <div key={g.cog} style={{ background:"var(--card-bg)", border:`1px solid ${pendCount > 0 ? "rgba(255,92,26,.2)" : "rgba(74,222,128,.12)"}`, borderRadius:10, marginBottom:6, overflow:"hidden" }}>
+                    <div onClick={() => setOpenReportJoiner(isOpen ? null : g.cog)} style={{ display:"flex", alignItems:"center", padding:"12px 16px", cursor:"pointer", gap:10 }}>
+                      <div style={{ flex:1 }}>
+                        <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{g.nome}</span>
+                        <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginLeft:8 }}>@{g.cog}</span>
+                      </div>
+                      <span style={{ fontSize:10, background: pendCount > 0 ? "rgba(255,92,26,.15)" : "rgba(74,222,128,.12)", color: pendCount > 0 ? "var(--laranja)" : "#4ade80", border:`1px solid ${pendCount > 0 ? "rgba(255,92,26,.3)" : "rgba(74,222,128,.25)"}`, borderRadius:99, padding:"2px 9px", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>
+                        {g.reports.length} report{g.reports.length > 1 ? "s" : ""}
+                      </span>
+                      <span style={{ fontSize:12, color:"rgba(245,240,232,.4)", transition:"transform .15s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "none" }}>▾</span>
+                    </div>
+                    {isOpen && (
+                      <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"4px 16px 12px" }}>
+                        {g.reports.map(r => <ReportCard key={r.id} r={r} />)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
           );
-        });
         })()}
       </div>}
 
