@@ -3513,6 +3513,26 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       Cancelar solicitação
                     </button>
                   )}
+                  {["cancelado","enviado"].includes(s.status) && (
+                    <button onClick={async () => {
+                      await supabase.from("envio_solicitacoes").update({
+                        status:"solicitação de envio",
+                        cotacao_opcoes:null, cotacao_valor:null, cotacao_frete:null,
+                        cotacao_forma:null, cotacao_prazo:null, cotacao_embalagem:null,
+                        cotacao_obs:null, modalidade_escolhida:null,
+                        rastreio_codigo:null, rastreio_link:null,
+                      }).eq("id", s.id);
+                      setEnvioSolic(prev => prev.map(x => x.id === s.id ? {
+                        ...x, status:"solicitação de envio",
+                        cotacao_opcoes:null, cotacao_valor:null, cotacao_frete:null,
+                        cotacao_forma:null, cotacao_prazo:null, cotacao_embalagem:null,
+                        cotacao_obs:null, modalidade_escolhida:null,
+                        rastreio_codigo:null, rastreio_link:null,
+                      } : x));
+                    }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.06)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.2)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                      ↺ Reabrir solicitação
+                    </button>
+                  )}
                 </div>
 
                 {/* Push manual */}
