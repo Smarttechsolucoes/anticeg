@@ -1571,37 +1571,43 @@ function PerfilTab({ user, onUpdate, owner = false }) {
     <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "var(--fs-lg)", color: "var(--laranja)", letterSpacing: 1, marginTop: 8, marginBottom: 4, paddingTop: 16, borderTop: "1px solid #1e1e1e" }}>{t}</div>
   );
 
+  const navPerfil = (id, icon, label, badge) => (
+    <button key={id} className={`admin-sidebar-item${perfilSubTab === id ? " active" : ""}`} onClick={() => setPerfilSubTab(id)}>
+      <span>{icon}</span>{label}
+      {badge > 0 && <span className="admin-sidebar-badge">{badge}</span>}
+    </button>
+  );
+
   return (
-    <div className="main" style={{ maxWidth: 600, margin: "0 auto" }}>
-      <div className="page-header">
-        <div>
-          <div className="page-eyebrow">anticeg · seu perfil</div>
-          <div className="page-title">MEU<span> PERFIL</span></div>
-        </div>
+    <div className="admin-wrap">
+      <h2 className="admin-title" style={{ marginBottom:4 }}>Meu Perfil</h2>
+      <div className="admin-greeting" style={{ marginBottom:20 }}>
+        <span className="admin-greeting-prompt">// </span>
+        <span className="admin-greeting-msg">{user.nome || user.cog}</span>
       </div>
 
-      <div className="perfil-subtabs" style={{ display:"flex", gap:6, marginBottom:24, flexWrap:"wrap" }}>
-        {[
-          { id:"dados",     label:"Dados" },
-          { id:"envios",    label:"Envios", badge: meuEnvios.filter(e => e.status === "pagamento em aberto").length || null },
-          { id:"tutorial",  label:"Tutorial" },
-          { id:"feedback",  label:"Feedbacks" },
-          { id:"suporte",   label:"Suporte", badge: (meuReports || []).filter(r => r.status === "pendente").length || null },
-          ...(owner ? [{ id:"staff", label:"Staff" }] : []),
-        ].map(t => (
-          <button key={t.id} onClick={() => setPerfilSubTab(t.id)} style={{
-            background: perfilSubTab === t.id ? "var(--laranja)" : "transparent",
-            color:      perfilSubTab === t.id ? "#111" : "rgba(245,240,232,.5)",
-            border:    `1px solid ${perfilSubTab === t.id ? "var(--laranja)" : "rgba(245,240,232,.18)"}`,
-            borderRadius:6, padding:"6px 16px", fontSize:11,
-            fontFamily:"'DM Mono',monospace", fontWeight: perfilSubTab === t.id ? 700 : 400,
-            cursor:"pointer", letterSpacing:".08em", textTransform:"uppercase", position:"relative"
-          }}>
-            {t.label}
-            {t.badge > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 5px", lineHeight:1.4 }}>{t.badge}</span>}
-          </button>
-        ))}
-      </div>
+      <div className="admin-layout">
+        <nav className="admin-sidebar">
+          <div className="admin-sidebar-group">
+            <div className="admin-sidebar-group-label">Conta</div>
+            {navPerfil("dados",   "👤", "Dados", 0)}
+            {navPerfil("envios",  "◫",  "Envios",  meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
+            {navPerfil("suporte", "⚑",  "Suporte", (meuReports || []).filter(r => r.status === "pendente").length)}
+          </div>
+          <div className="admin-sidebar-group">
+            <div className="admin-sidebar-group-label">Conteúdo</div>
+            {navPerfil("tutorial", "☆", "Tutorial",  0)}
+            {navPerfil("feedback", "✉", "Feedbacks", 0)}
+          </div>
+          {owner && (
+            <div className="admin-sidebar-group">
+              <div className="admin-sidebar-group-label">Config</div>
+              {navPerfil("staff", "⚙", "Staff", 0)}
+            </div>
+          )}
+        </nav>
+
+        <div className="admin-content">
 
       {perfilSubTab === "envios" && (
         <div>
@@ -1865,6 +1871,9 @@ function PerfilTab({ user, onUpdate, owner = false }) {
       )}
 
       {perfilSubTab === "staff" && owner && <StaffPanel />}
+
+        </div>{/* admin-content */}
+      </div>{/* admin-layout */}
     </div>
   );
 }
@@ -4176,10 +4185,18 @@ function EnvioTab({ user, itens }) {
   const [erro,        setErro]        = useState("");
   const [loading,     setLoading]     = useState(false);
   const [enviado,     setEnviado]     = useState(false);
+  const [envioSubTab, setEnvioSubTab] = useState("form");
+  const [meuEnvios,   setMeuEnvios]   = useState([]);
+  const [expandedEnvio, setExpandedEnvio] = useState(new Set());
+  const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
 
-  if (!unlocked) return (
-    <div style={{ maxWidth:360, margin:"80px auto", padding:"0 16px", textAlign:"center" }}>
-      {/* Aviso de envio */}
+  useEffect(() => {
+    supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setMeuEnvios(data); });
+  }, [user.cog]);
+
+  const lockScreen = (
+    <div style={{ maxWidth:360, margin:"40px auto", padding:"0 16px", textAlign:"center" }}>
       <div style={{ background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.2)", borderRadius:10, padding:"16px", marginBottom:24, textAlign:"left" }}>
         <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"#64B5F6", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>◫ Envio Nacional</div>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"#F5F0E8", letterSpacing:1, marginBottom:6 }}>SOLICITAÇÃO ENVIO NACIONAL</div>
@@ -4204,6 +4221,7 @@ function EnvioTab({ user, itens }) {
       </button>
     </div>
   );
+
 
   async function buscarCep(val) {
     const clean = val.replace(/\D/g, "");
@@ -4289,8 +4307,8 @@ function EnvioTab({ user, itens }) {
   const fld  = { marginBottom:12 };
   const stat = { fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", padding:"9px 0", borderBottom:"1px solid rgba(245,240,232,.06)" };
 
-  if (enviado) return (
-    <div style={{ maxWidth:480, margin:"60px auto", padding:"0 16px", textAlign:"center" }}>
+  const enviadoScreen = (
+    <div style={{ textAlign:"center", padding:"40px 16px" }}>
       <div style={{ fontSize:36, marginBottom:16 }}>📦</div>
       <div style={{ fontSize:16, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>Solicitação enviada!</div>
       <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.9, background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"20px 24px", textAlign:"left" }}>
@@ -4298,16 +4316,40 @@ function EnvioTab({ user, itens }) {
         O prazo de cotação é de <strong style={{ color:"#F5F0E8" }}>5 dias úteis</strong> a partir do preenchimento deste formulário.<br /><br />
         A cotação estará disponível dentro do seu acesso com os valores e taxas.
       </div>
+      <button onClick={() => { setEnvioSubTab("solicitacoes"); }} style={{ marginTop:16, padding:"9px 24px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
+        Ver minhas solicitações →
+      </button>
     </div>
   );
 
   return (
-    <div style={{ maxWidth:560, margin:"0 auto", padding:"24px 16px 100px" }}>
-      <div style={{ marginBottom:20 }}>
-        <div style={{ fontSize:11, letterSpacing:"2px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>// solicitação</div>
-        <div style={{ fontSize:20, fontWeight:700, color:"#F5F0E8" }}>Envio Nacional</div>
-        <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>Preencha os dados abaixo para solicitar o envio dos seus itens.</div>
+    <div className="admin-wrap">
+      <h2 className="admin-title" style={{ marginBottom:4 }}>◫ Envio Nacional</h2>
+      <div className="admin-greeting" style={{ marginBottom:20 }}>
+        <span className="admin-greeting-prompt">// </span>
+        <span className="admin-greeting-msg">gerencie seus envios nacionais</span>
       </div>
+      <div className="admin-layout">
+        <nav className="admin-sidebar">
+          <div className="admin-sidebar-group">
+            <div className="admin-sidebar-group-label">Envio</div>
+            <button className={`admin-sidebar-item${envioSubTab === "form" ? " active" : ""}`} onClick={() => setEnvioSubTab("form")}>
+              <span>◫</span>Pedir Envio
+            </button>
+            <button className={`admin-sidebar-item${envioSubTab === "solicitacoes" ? " active" : ""}`} onClick={() => setEnvioSubTab("solicitacoes")}>
+              <span>📦</span>Minhas Solicitações
+              {meuEnvios.filter(e => e.status === "pagamento em aberto").length > 0 && (
+                <span className="admin-sidebar-badge">{meuEnvios.filter(e => e.status === "pagamento em aberto").length}</span>
+              )}
+            </button>
+          </div>
+        </nav>
+
+        <div className="admin-content">
+
+        {/* ── PEDIR ENVIO ── */}
+        {envioSubTab === "form" && (
+          !unlocked ? lockScreen : enviado ? enviadoScreen : (<div style={{ paddingBottom:60 }}>
 
       {/* SEUS DADOS — somente leitura */}
       <div style={sec}>
@@ -4452,6 +4494,147 @@ function EnvioTab({ user, itens }) {
       }}>
         {loading ? "ENVIANDO..." : "SOLICITAR ENVIO →"}
       </button>
+    </div>))}
+
+        {/* ── MINHAS SOLICITAÇÕES ── */}
+        {envioSubTab === "solicitacoes" && (
+          <div>
+            {meuEnvios.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+                Nenhuma solicitação ainda.<br />
+                <button onClick={() => setEnvioSubTab("form")} style={{ marginTop:12, padding:"8px 20px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  Pedir Envio →
+                </button>
+              </div>
+            ) : meuEnvios.map(s => {
+              const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+              const statusBorder = { "solicitação de envio":"rgba(186,255,57,.2)", "cotação em andamento":"rgba(255,92,26,.25)", "pagamento em aberto":"rgba(201,168,240,.25)", "pagamento confirmado":"rgba(255,209,102,.25)", embalando:"rgba(100,181,246,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
+              const expanded = expandedEnvio.has(s.id);
+              const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
+              return (
+                <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, marginBottom:8, overflow:"hidden" }}>
+                  <div onClick={toggleExpand} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", cursor:"pointer", gap:10 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{new Date(s.created_at).toLocaleDateString("pt-BR")} · {s.itens?.length || 0} item(s)</div>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{s.metodo || "—"}</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                      <span style={{ fontSize:9, color:statusColor, border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap" }}>{ENVIO_STATUS_LABEL[s.status] || s.status}</span>
+                      <span style={{ fontSize:12, color:"rgba(245,240,232,.4)" }}>{expanded ? "▲" : "▼"}</span>
+                    </div>
+                  </div>
+                  {expanded && <div style={{ padding:"0 16px 16px" }}>
+                    <div style={{ height:1, background:"rgba(245,240,232,.06)", marginBottom:8 }} />
+                    <EnvioFlowStepper status={s.status} />
+                    <div style={{ height:1, background:"rgba(245,240,232,.06)", marginTop:8, marginBottom:12 }} />
+                    {s.itens?.length > 0 && (() => {
+                      const totalCaixa = s.itens.reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
+                      return (
+                        <div style={{ marginBottom:10 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:5 }}>
+                            <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase" }}>Itens solicitados</div>
+                            {totalCaixa > 0 && <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>Total: <strong style={{ color:"#F5F0E8" }}>R$ {totalCaixa.toFixed(2).replace(".",",")}</strong></div>}
+                          </div>
+                          {s.itens.map((it, idx) => (
+                            <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                              {it.nome || it.nome_do_item || "—"} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom: s.cotacao_valor ? 10 : 0 }}>
+                      Método: {s.metodo} · Val. declarado: {s.seguro === "sim" ? `R$ ${s.valor_seguro}` : "—"}
+                    </div>
+                    {s.cotacao_valor && (() => {
+                      const opcoes = s.cotacao_opcoes || [];
+                      const emb    = pf(s.cotacao_embalagem);
+                      const formaCor = { "PAC":"#003DA5","SEDEX":"#E87722","Correios":"#003DA5","Jadlog":"#E63946","JADLOG":"#E63946","Mini Envios":"#6B7280","Busca":"#6B7280" };
+                      return (
+                        <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:9, padding:"14px 16px", marginTop:8, fontFamily:"'DM Mono',monospace" }}>
+                          <div style={{ fontSize:10, letterSpacing:"1px", color:"#C9A8F0", textTransform:"uppercase", marginBottom:12 }}>Cotação disponível</div>
+                          {opcoes.length > 0 ? (
+                            <>
+                              {["pagamento em aberto","pagamento confirmado","embalando","enviado"].includes(s.status) && s.modalidade_escolhida ? (
+                                <>
+                                  <div style={{ background: s.status === "pagamento em aberto" ? "rgba(201,168,240,.06)" : "rgba(186,255,57,.06)", border:`1px solid ${s.status === "pagamento em aberto" ? "rgba(201,168,240,.22)" : "rgba(186,255,57,.22)"}`, borderRadius:8, padding:"12px 14px", marginBottom:8 }}>
+                                    <div style={{ fontSize:10, color: s.status === "pagamento em aberto" ? "#C9A8F0" : "#BAFF39", letterSpacing:"1px", marginBottom:4 }}>{s.status === "pagamento em aberto" ? "PAGAMENTO EM ABERTO" : "MODALIDADE CONFIRMADA"}</div>
+                                    <div style={{ fontSize:15, fontWeight:900, color:"#F5F0E8" }}>{s.modalidade_escolhida.forma} — R$ {(pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",")}</div>
+                                    <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
+                                  </div>
+                                  {s.status === "pagamento em aberto" && (() => {
+                                    const PIX_KEY  = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+                                    const totalPix = (pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",");
+                                    return (
+                                      <>
+                                        <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"12px 14px", marginTop:8 }}>
+                                          <div style={{ fontSize:9, color:"#BAFF39", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX — MERCADO PAGO</div>
+                                          <div style={{ fontSize:10, color:"rgba(245,240,232,.5)", marginBottom:6 }}>Fernanda Gomes Medeiros · R$ {totalPix}</div>
+                                          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                                            <div style={{ flex:1, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"7px 10px", fontSize:10, color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
+                                            <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); }} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer" }}>Copiar</button>
+                                          </div>
+                                        </div>
+                                        <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
+                                          📎 Enviar comprovante no WhatsApp →
+                                        </a>
+                                      </>
+                                    );
+                                  })()}
+                                </>
+                              ) : (
+                                <>
+                                  {!["enviado","cancelado"].includes(s.status) && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:6 }}>Toque para selecionar a modalidade</div>}
+                                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                    {opcoes.map((o, oi) => {
+                                      const sel = opcaoEscolhida[s.id] === oi;
+                                      const cor = formaCor[o.forma] || "#6B7280";
+                                      const totalOp = (pf(o.valor)+emb).toFixed(2).replace(".",",");
+                                      return (
+                                        <button key={oi} onClick={() => setOpcaoEscolhida(prev => ({ ...prev, [s.id]: oi }))}
+                                          style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", borderRadius:7, border:`1px solid ${sel ? cor : "rgba(245,240,232,.1)"}`, background: sel ? `${cor}18` : "rgba(0,0,0,.2)", cursor:"pointer", transition:"all .15s" }}>
+                                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                            <div style={{ width:8, height:8, borderRadius:"50%", background: sel ? cor : "rgba(245,240,232,.2)", flexShrink:0 }} />
+                                            <div style={{ textAlign:"left" }}>
+                                              <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8" }}>{o.forma}</div>
+                                              <div style={{ fontSize:9, color:"rgba(245,240,232,.4)" }}>Até {o.prazo}</div>
+                                            </div>
+                                          </div>
+                                          <div style={{ textAlign:"right" }}>
+                                            <div style={{ fontSize:13, fontWeight:700, color:sel ? cor : "#F5F0E8" }}>R$ {totalOp}</div>
+                                            {emb > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)" }}>frete {o.valor} + emb. {s.cotacao_embalagem}</div>}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  {opcaoEscolhida[s.id] !== undefined && !["enviado","cancelado"].includes(s.status) && (
+                                    <button onClick={async () => {
+                                      const op = opcoes[opcaoEscolhida[s.id]];
+                                      await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: op, status: "pagamento em aberto" }).eq("id", s.id);
+                                      setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: op, status: "pagamento em aberto" } : x));
+                                    }} style={{ width:"100%", marginTop:10, padding:"10px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:7, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                                      Confirmar modalidade →
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <div style={{ fontSize:11, color:"rgba(245,240,232,.4)" }}>Aguardando cotação...</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        </div>{/* admin-content */}
+      </div>{/* admin-layout */}
     </div>
   );
 }
