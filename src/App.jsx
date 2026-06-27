@@ -1807,7 +1807,7 @@ ${p.comprovante_url ? `<div style="margin-top:8px;font-size:12px">Comprovante an
             comprovante_url: publicUrl,
             obs:           pagObs || null,
           }]).select().single();
-          if (error) { setPagStatus("idle"); setPagErro("Erro ao enviar. Tente novamente."); return; }
+          if (error) { setPagStatus("idle"); setPagErro(`Erro ao salvar demanda: ${error.message}`); return; }
           setMeusPagamentos(prev => [nova, ...prev]);
           setPagRecibo(nova);
           setPagStatus("enviado");
