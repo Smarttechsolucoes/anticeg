@@ -1740,25 +1740,37 @@ function PerfilTab({ user, onUpdate, owner = false }) {
               const sel = pagSelecionados.has(item.id);
               const sub = subtotalItem(item);
               const multa = multaItem(item);
-              const partes = [
-                !item.pago_item  && Number(item.valor_item ||0) > 0 ? `item ${Number(item.valor_item ).toFixed(0)}` : null,
-                !item.pago_frete && Number(item.frete_inter||0) > 0 ? `frete ${Number(item.frete_inter).toFixed(0)}` : null,
-                !item.pago_rf    && Number(item.taxa_rf    ||0) > 0 ? `rf ${Number(item.taxa_rf    ).toFixed(0)}` : null,
+              const cols = [
+                !item.pago_item  && Number(item.valor_item ||0) > 0 ? { label:"ITEM",  val:Number(item.valor_item ),  cor:"rgba(245,240,232,.6)" } : null,
+                !item.pago_frete && Number(item.frete_inter||0) > 0 ? { label:"FRETE", val:Number(item.frete_inter),  cor:"rgba(245,240,232,.6)" } : null,
+                !item.pago_rf    && Number(item.taxa_rf    ||0) > 0 ? { label:"RF",    val:Number(item.taxa_rf    ),  cor:"rgba(245,240,232,.6)" } : null,
+                multa > 0                                            ? { label:"MULTA", val:multa,                     cor:"#ff6b6b"              } : null,
               ].filter(Boolean);
               return (
                 <div key={item.id} onClick={() => setPagSelecionados(prev => { const n = new Set(prev); n.has(item.id) ? n.delete(item.id) : n.add(item.id); return n; })}
-                  style={{ display:"flex", alignItems:"flex-start", gap:12, background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", marginBottom:6, cursor:"pointer", transition:"all .12s" }}>
-                  <div style={{ width:18, height:18, borderRadius:4, flexShrink:0, marginTop:2, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    {sel && <span style={{ fontSize:11, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+                  style={{ background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", marginBottom:6, cursor:"pointer", transition:"all .12s" }}>
+                  {/* Linha do nome */}
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ width:18, height:18, borderRadius:4, flexShrink:0, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {sel && <span style={{ fontSize:11, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
+                      <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>{item.ceg}</div>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:900, color: sel ? "#BAFF39" : "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>R$ {sub.toFixed(2).replace(".",",")}</div>
                   </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{item.nome_do_item}</div>
-                    <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
-                  </div>
-                  <div style={{ textAlign:"right", flexShrink:0 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color: sel ? "#BAFF39" : "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>R$ {sub.toFixed(2).replace(".",",")}</div>
-                    {partes.length > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{partes.join(" + ")}{multa > 0 ? ` + multa ${multa.toFixed(0)}` : ""}</div>}
-                  </div>
+                  {/* Colunas de breakdown */}
+                  {cols.length > 0 && (
+                    <div style={{ display:"flex", gap:0, marginTop:10, marginLeft:30, borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:8 }}>
+                      {cols.map(c => (
+                        <div key={c.label} style={{ flex:1, textAlign:"center" }}>
+                          <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>{c.label}</div>
+                          <div style={{ fontSize:11, fontWeight:700, color:c.cor, fontFamily:"'DM Mono',monospace" }}>R${c.val.toFixed(2).replace(".",",")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
