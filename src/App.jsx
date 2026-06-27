@@ -1711,7 +1711,17 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   <tbody>${itensHTML}</tbody>
   <tfoot><tr class="total-row"><td>Total</td><td style="text-align:right">R$${Number(p.valor_total).toFixed(2).replace(".",",")}</td></tr></tfoot>
 </table>
-${p.comprovante_url ? `<div style="margin-top:8px;font-size:12px">Comprovante anexado: <a href="${p.comprovante_url}" target="_blank">${p.comprovante_url.split("/").pop()}</a></div>` : ""}
+${p.comprovante_url ? (() => {
+            const ext = p.comprovante_url.split(".").pop().toLowerCase().split("?")[0];
+            const isImg = ["jpg","jpeg","png","gif","webp"].includes(ext);
+            return `<div style="margin-top:24px;border-top:1px solid #eee;padding-top:16px">
+  <div style="font-size:12px;color:#888;margin-bottom:10px">Comprovante anexado</div>
+  ${isImg
+    ? `<img src="${p.comprovante_url}" style="max-width:100%;border:1px solid #eee;border-radius:4px" />`
+    : `<embed src="${p.comprovante_url}" type="application/pdf" width="100%" height="700px" style="border:1px solid #eee;border-radius:4px" />`
+  }
+</div>`;
+          })() : ""}
 <div class="footer">ANTICEG · GOM · Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
 <script>window.onload=()=>window.print();</script>
 </body></html>`;
