@@ -1539,6 +1539,12 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [reportItem,       setReportItem]       = useState(null);
   const [pagRecibo,        setPagRecibo]        = useState(null);
   const [pagSubTab,        setPagSubTab]        = useState("enviar"); // enviar | historico
+  // "outros" no pagamento
+  const [pagOutros,         setPagOutros]       = useState(false);
+  const [pagOutrosNome,     setPagOutrosNome]   = useState("");
+  const [pagOutrosItem,     setPagOutrosItem]   = useState("");
+  const [pagOutrosFrete,    setPagOutrosFrete]  = useState("");
+  const [pagOutrosRF,       setPagOutrosRF]     = useState("");
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
   // ── repasse ──
@@ -1558,6 +1564,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [repasseRecibo,       setRepasseRecibo]       = useState(null);
   const [meusRepassos,        setMeusRepassos]        = useState([]);
   const [repasseSubTab,       setRepasseSubTab]       = useState("enviar");
+  const [repasseOutrosNome,   setRepasseOutrosNome]   = useState("");
+  const [repasseOutrosCeg,    setRepasseOutrosCeg]    = useState("");
 
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
@@ -1831,19 +1839,25 @@ ${p.comprovante_url ? (() => {
                                 + (i.pago_frete ? 0 : Number(i.frete_inter||0))
                                 + (i.pago_rf    ? 0 : Number(i.taxa_rf    ||0))
                                 + multaItem(i);
-        const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0);
+        const outrosValTotal = pagOutros ? (Number(pagOutrosItem.replace(",",".")||0) + Number(pagOutrosFrete.replace(",",".")||0) + Number(pagOutrosRF.replace(",",".")||0)) : 0;
+        const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0) + outrosValTotal;
+        const temItens = itensSel.length > 0 || (pagOutros && pagOutrosNome.trim() && outrosValTotal > 0);
 
         async function handleSubmit() {
-          if (itensSel.length === 0 || !pagComprovante) return;
+          if (!temItens || !pagComprovante) return;
           setPagStatus("enviando"); setPagErro("");
           const ext  = pagComprovante.name.split(".").pop();
           const path = `${user.cog}/${Date.now()}.${ext}`;
           const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: true });
           if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+          const itensPayload = [
+            ...itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0), multa:multaItem(i) })),
+            ...(pagOutros && pagOutrosNome.trim() ? [{ id:null, ceg:"—", nome_do_item:pagOutrosNome.trim(), valor_item:Number(pagOutrosItem.replace(",",".")||0), frete_inter:Number(pagOutrosFrete.replace(",",".")||0), taxa_rf:Number(pagOutrosRF.replace(",",".")||0), multa:0 }] : []),
+          ];
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
             joiner_cog:    user.cog,
-            itens:         itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0), multa:multaItem(i) })),
+            itens:         itensPayload,
             valor_total:   total,
             comprovante_url: publicUrl,
             obs:           pagObs || null,
@@ -2038,9 +2052,35 @@ ${p.comprovante_url ? (() => {
                 </>
               );
             })()}
+            {/* Outros */}
+            <div onClick={() => setPagOutros(p => !p)}
+              style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 0", marginTop:4, cursor:"pointer", borderTop:"1px solid rgba(245,240,232,.06)" }}>
+              <div style={{ width:16, height:16, borderRadius:3, flexShrink:0, background: pagOutros ? "#BAFF39" : "transparent", border:`2px solid ${pagOutros ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {pagOutros && <span style={{ fontSize:10, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+              </div>
+              <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)" }}>Outro item (não cadastrado)</span>
+            </div>
+            {pagOutros && (
+              <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"12px 14px", marginBottom:4, display:"flex", flexDirection:"column", gap:10 }}>
+                <div>
+                  <div style={{ fontSize:9, letterSpacing:".8px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>Nome do item</div>
+                  <input value={pagOutrosNome} onChange={e => setPagOutrosNome(e.target.value)} placeholder="Descreva o item..."
+                    style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"8px 11px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", width:"100%", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap:8 }}>
+                  {[["Item R$", pagOutrosItem, setPagOutrosItem], ["Frete R$", pagOutrosFrete, setPagOutrosFrete], ["Taxa RF R$", pagOutrosRF, setPagOutrosRF]].map(([label, val, set]) => (
+                    <div key={label}>
+                      <div style={{ fontSize:9, letterSpacing:".8px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>{label}</div>
+                      <input type="text" inputMode="decimal" value={val} onChange={e => set(e.target.value)} placeholder="0,00"
+                        style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"8px 11px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", width:"100%", outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderTop:"1px solid rgba(245,240,232,.08)", borderBottom:"1px solid rgba(245,240,232,.08)", margin:"8px 0 16px" }}>
               <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", textTransform:"uppercase" }}>Total selecionado</span>
-              <span style={{ fontSize:18, fontWeight:900, color: itensSel.length > 0 ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
+              <span style={{ fontSize:18, fontWeight:900, color: temItens ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
             </div>
             <div style={{ marginBottom:12 }}>
               <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Comprovante de pagamento</div>
@@ -2058,8 +2098,8 @@ ${p.comprovante_url ? (() => {
               <textarea value={pagObs} onChange={e => setPagObs(e.target.value)} rows={2} placeholder="Ex: paguei os 3 itens juntos" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", resize:"none", boxSizing:"border-box" }} />
             </div>
             {pagErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>{pagErro}</div>}
-            <button onClick={handleSubmit} disabled={itensSel.length === 0 || !pagComprovante || pagStatus === "enviando"}
-              style={{ width:"100%", padding:"14px 0", background: itensSel.length > 0 && pagComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: itensSel.length > 0 && pagComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: itensSel.length > 0 && pagComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
+            <button onClick={handleSubmit} disabled={!temItens || !pagComprovante || pagStatus === "enviando"}
+              style={{ width:"100%", padding:"14px 0", background: temItens && pagComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: temItens && pagComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: temItens && pagComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
               {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${total.toFixed(2).replace(".",",")}`}
             </button>
 
@@ -2110,8 +2150,10 @@ ${p.comprovante_url ? (() => {
 
       {/* ── REPASSE ── */}
       {perfilSubTab === "repasse" && (() => {
+        const isOutros = repasseItem?.id === "outros";
         async function handleSubmitRepasse() {
           if (!repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante) return;
+          if (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim())) return;
           setRepasseStatus("enviando"); setRepasseErro("");
           const ext  = repasseComprovante.name.split(".").pop();
           const path = `repassos/${user.cog}/${Date.now()}.${ext}`;
@@ -2119,14 +2161,16 @@ ${p.comprovante_url ? (() => {
           if (upErr) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const custosPagosArr = [...repasseCustos];
+          const nomeItem = isOutros ? repasseOutrosNome.trim() : repasseItem.nome_do_item;
+          const cegItem  = isOutros ? repasseOutrosCeg.trim()  : repasseItem.ceg;
           const { data: nova, error } = await supabase.from("repassos").insert([{
             joiner_cog:     user.cog,
             joiner_nome:    user.nome || user.cog,
             joiner_twitter: user.twitter || null,
-            item_id:        repasseItem.id,
-            ceg:            repasseItem.ceg,
-            nome_do_item:   repasseItem.nome_do_item,
-            item_status:    repasseItem.status,
+            item_id:        isOutros ? null : repasseItem.id,
+            ceg:            cegItem,
+            nome_do_item:   nomeItem,
+            item_status:    isOutros ? "outros" : repasseItem.status,
             novo_dono_cog:  repasseNovoDono.cog,
             novo_dono_nome: repasseNovoDono.nome,
             novo_dono_twitter: repasseNovoDono.twitter || null,
@@ -2140,7 +2184,7 @@ ${p.comprovante_url ? (() => {
           if (error) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar: ${error.message}`); return; }
           // Notifica novo dono
           await supabase.from("pushes").insert([{
-            message: `${user.nome || user.cog} quer te repassar o item "${repasseItem.nome_do_item}" (${repasseItem.ceg}). Aguarde confirmação da admin!`,
+            message: `${user.nome || user.cog} quer te repassar o item "${nomeItem}" (${cegItem}). Aguarde confirmação da admin!`,
             active: true,
             joiner_cog: repasseNovoDono.cog,
           }]);
@@ -2233,19 +2277,31 @@ ${p.comprovante_url ? (() => {
                 {/* Seleção do item */}
                 <div>
                   <span style={labelSt}>Item a repassar</span>
-                  {meusItens.length === 0
-                    ? <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum item encontrado na sua masterlist.</div>
-                    : <select value={repasseItem?.id || ""} onChange={e => {
-                        const found = meusItens.find(i => i.id === Number(e.target.value));
-                        setRepasseItem(found || null);
-                      }}
-                      style={{ ...inputSt, appearance:"none", cursor:"pointer" }}>
-                        <option value="" style={{ color:"#111" }}>Selecione um item...</option>
-                        {meusItens.map(i => (
-                          <option key={i.id} value={i.id} style={{ color:"#111" }}>[{i.ceg}] {i.nome_do_item} — {i.status}</option>
-                        ))}
-                      </select>
-                  }
+                  <select value={repasseItem?.id ?? ""} onChange={e => {
+                      if (e.target.value === "outros") { setRepasseItem({ id:"outros" }); }
+                      else { const found = meusItens.find(i => i.id === Number(e.target.value)); setRepasseItem(found || null); }
+                    }}
+                    style={{ ...inputSt, appearance:"none", cursor:"pointer" }}>
+                    <option value="" style={{ color:"#111" }}>Selecione um item...</option>
+                    {meusItens.map(i => (
+                      <option key={i.id} value={i.id} style={{ color:"#111" }}>[{i.ceg}] {i.nome_do_item} — {i.status}</option>
+                    ))}
+                    <option value="outros" style={{ color:"#111" }}>Outro item (não cadastrado)...</option>
+                  </select>
+                  {repasseItem?.id === "outros" && (
+                    <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:8 }}>
+                      <div>
+                        <div style={{ fontSize:9, letterSpacing:".8px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>Nome do item</div>
+                        <input value={repasseOutrosNome} onChange={e => setRepasseOutrosNome(e.target.value)} placeholder="Descreva o item..."
+                          style={inputSt} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:9, letterSpacing:".8px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>CEG</div>
+                        <input value={repasseOutrosCeg} onChange={e => setRepasseOutrosCeg(e.target.value)} placeholder="Ex: 6TH FAN MEETING CARD"
+                          style={inputSt} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Novo dono */}
@@ -2355,11 +2411,15 @@ ${p.comprovante_url ? (() => {
 
                 {repasseErro && <div style={{ fontSize:11, color:"#ff6b6b", fontFamily:"'DM Mono',monospace" }}>{repasseErro}</div>}
 
-                <button onClick={handleSubmitRepasse}
-                  disabled={repasseStatus === "enviando" || !repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante}
-                  style={{ background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, padding:"12px 0", fontSize:13, fontFamily:"'DM Mono',monospace", fontWeight:900, cursor:"pointer", opacity: (!repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante) ? 0.4 : 1, transition:"opacity .12s" }}>
-                  {repasseStatus === "enviando" ? "Enviando..." : "Enviar repasse"}
-                </button>
+                {(() => {
+                  const disabled = repasseStatus === "enviando" || !repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante || (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim()));
+                  return (
+                    <button onClick={handleSubmitRepasse} disabled={disabled}
+                      style={{ background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, padding:"12px 0", fontSize:13, fontFamily:"'DM Mono',monospace", fontWeight:900, cursor:"pointer", opacity: disabled ? 0.4 : 1, transition:"opacity .12s", width:"100%" }}>
+                      {repasseStatus === "enviando" ? "Enviando..." : "Enviar repasse"}
+                    </button>
+                  );
+                })()}
               </div>
             )}
           </div>
