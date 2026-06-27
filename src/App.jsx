@@ -1191,7 +1191,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                           const pStatus = pagDemandaMap[item.id];
                           if (!pStatus) return null;
                           return (
-                            <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border: pStatus === "pago" ? "1px solid rgba(186,255,57,.35)" : "1px solid rgba(201,168,240,.35)", color: pStatus === "pago" ? "#BAFF39" : "#C9A8F0", background: pStatus === "pago" ? "rgba(186,255,57,.06)" : "rgba(201,168,240,.06)" }}>
+                            <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border: pStatus === "pago" ? "1px solid rgba(186,255,57,.35)" : "1px solid rgba(167,139,250,.6)", color: pStatus === "pago" ? "#BAFF39" : "#A78BFA", background: pStatus === "pago" ? "rgba(186,255,57,.06)" : "rgba(167,139,250,.15)" }}>
                               {pStatus === "pago" ? "✓ pago" : "◉ em análise"}
                             </span>
                           );
