@@ -1535,8 +1535,10 @@ function PerfilTab({ user, onUpdate, owner = false }) {
       .then(({ data }) => { if (data) setMeuEnvios(data); });
     supabase.from("reports").select("id, item_nome, ceg, status, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { setMeuReports(data || []); });
-    supabase.from("masterlist").select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf")
-      .eq("cog", user.cog).eq("pago_item", false).gt("valor_item", 0)
+    supabase.from("masterlist")
+      .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf")
+      .eq("cog", user.cog)
+      .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)")
       .then(({ data }) => {
         if (data) {
           setItensPendentes(data);
@@ -1668,7 +1670,10 @@ function PerfilTab({ user, onUpdate, owner = false }) {
       {/* ── PAGAMENTOS ── */}
       {perfilSubTab === "pagamentos" && (() => {
         const itensSel = itensPendentes.filter(i => pagSelecionados.has(i.id));
-        const total = itensSel.reduce((acc, i) => acc + Number(i.valor_item||0) + Number(i.frete_inter||0) + Number(i.taxa_rf||0), 0);
+        const subtotalItem = i => (i.pago_item  ? 0 : Number(i.valor_item ||0))
+                                + (i.pago_frete ? 0 : Number(i.frete_inter||0))
+                                + (i.pago_rf    ? 0 : Number(i.taxa_rf    ||0));
+        const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0);
 
         async function handleSubmit() {
           if (itensSel.length === 0 || !pagComprovante) return;
@@ -1680,7 +1685,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
             joiner_cog:    user.cog,
-            itens:         itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:Number(i.valor_item||0), frete_inter:Number(i.frete_inter||0), taxa_rf:Number(i.taxa_rf||0) })),
+            itens:         itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0) })),
             valor_total:   total,
             comprovante_url: publicUrl,
             obs:           pagObs || null,
@@ -1729,7 +1734,12 @@ function PerfilTab({ user, onUpdate, owner = false }) {
             )}
             {itensPendentes.map(item => {
               const sel = pagSelecionados.has(item.id);
-              const subtotal = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
+              const sub = subtotalItem(item);
+              const partes = [
+                !item.pago_item  && Number(item.valor_item ||0) > 0 ? `item ${Number(item.valor_item ).toFixed(0)}` : null,
+                !item.pago_frete && Number(item.frete_inter||0) > 0 ? `frete ${Number(item.frete_inter).toFixed(0)}` : null,
+                !item.pago_rf    && Number(item.taxa_rf    ||0) > 0 ? `rf ${Number(item.taxa_rf    ).toFixed(0)}` : null,
+              ].filter(Boolean);
               return (
                 <div key={item.id} onClick={() => setPagSelecionados(prev => { const n = new Set(prev); n.has(item.id) ? n.delete(item.id) : n.add(item.id); return n; })}
                   style={{ display:"flex", alignItems:"flex-start", gap:12, background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", marginBottom:6, cursor:"pointer", transition:"all .12s" }}>
@@ -1741,8 +1751,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                     <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
                   </div>
                   <div style={{ textAlign:"right", flexShrink:0 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color: sel ? "#BAFF39" : "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>R$ {subtotal.toFixed(2).replace(".",",")}</div>
-                    {Number(item.frete_inter) > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>item {Number(item.valor_item).toFixed(0)} + frete {Number(item.frete_inter).toFixed(0)}{Number(item.taxa_rf) > 0 ? ` + rf ${Number(item.taxa_rf).toFixed(0)}` : ""}</div>}
+                    <div style={{ fontSize:12, fontWeight:700, color: sel ? "#BAFF39" : "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>R$ {sub.toFixed(2).replace(".",",")}</div>
+                    {partes.length > 1 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{partes.join(" + ")}</div>}
                   </div>
                 </div>
               );
