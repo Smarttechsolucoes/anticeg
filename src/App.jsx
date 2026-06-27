@@ -4524,75 +4524,131 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         </div>
       )}
 
-      {/* ── DEMANDAS DE PAGAMENTO (mock test) ── */}
+      {/* ── DEMANDAS DE PAGAMENTO ── */}
       {adminMainTab === "demandas" && (() => {
         const pendentes  = pagDemandas.filter(d => d.status === "em_analise");
         const resolvidas = pagDemandas.filter(d => d.status === "pago");
+
         async function confirmar(id) {
           await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
           const d = pagDemandas.find(x => x.id === id);
           if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
           setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
         }
-        const CardDemanda = ({ d, showBtn }) => (
-          <div style={{ background:"var(--card-bg)", border:`1px solid ${d.status === "em_analise" ? "rgba(201,168,240,.25)" : "rgba(186,255,57,.15)"}`, borderRadius:10, padding:"16px", marginBottom:8 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-              <div>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
-                  <span style={{ fontSize:9, padding:"2px 8px", borderRadius:4, border: d.status === "em_analise" ? "1px solid rgba(201,168,240,.3)" : "1px solid rgba(186,255,57,.3)", color: d.status === "em_analise" ? "#C9A8F0" : "#BAFF39", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
-                    {d.status === "em_analise" ? "EM ANÁLISE" : "PAGO"}
-                  </span>
+        async function reabrir(id) {
+          await supabase.from("pagamento_demandas").update({ status: "em_analise" }).eq("id", id);
+          setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
+        }
+
+        const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
+
+        const CardDemanda = ({ d }) => {
+          const isPend = d.status === "em_analise";
+          const nome = joinerNome(d.joiner_cog);
+          return (
+            <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"16px", marginBottom:8 }}>
+              {/* Header */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    {nome && <span style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{nome}</span>}
+                    <span style={{ fontSize:11, color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
+                    <span style={{ fontSize:9, padding:"2px 8px", borderRadius:4, fontFamily:"'DM Mono',monospace", fontWeight:700, textTransform:"uppercase", letterSpacing:".05em",
+                      border: isPend ? "1px solid rgba(167,139,250,.35)" : "1px solid rgba(186,255,57,.25)",
+                      color: isPend ? "#A78BFA" : "#BAFF39",
+                      background: isPend ? "rgba(167,139,250,.08)" : "rgba(186,255,57,.06)" }}>
+                      {isPend ? "em análise" : "pago"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:4 }}>
+                    {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+                  </div>
                 </div>
-                <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>
-                  {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+                <div style={{ fontSize:17, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>
+                  R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
                 </div>
               </div>
-              <div style={{ fontSize:16, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>
-                R$ {d.valor_total.toFixed(2).replace(".",",")}
+
+              {/* Itens com breakdown */}
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginBottom:10, display:"flex", flexDirection:"column", gap:6 }}>
+                {d.itens.map((it, i) => {
+                  const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
+                  const partes = [
+                    Number(it.valor_item)>0  && `item R$${Number(it.valor_item).toFixed(2).replace(".",",")}`,
+                    Number(it.frete_inter)>0 && `frete R$${Number(it.frete_inter).toFixed(2).replace(".",",")}`,
+                    Number(it.taxa_rf)>0     && `RF R$${Number(it.taxa_rf).toFixed(2).replace(".",",")}`,
+                    Number(it.multa)>0       && `multa R$${Number(it.multa).toFixed(2).replace(".",",")}`,
+                  ].filter(Boolean);
+                  return (
+                    <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 }}>
+                      <div style={{ minWidth:0, flex:1 }}>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.75)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace: adminIsMobile ? "normal" : "nowrap" }}>
+                          {it.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>({it.ceg})</span>
+                        </div>
+                        {partes.length > 0 && (
+                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.6 }}>
+                            {partes.join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flexShrink:0 }}>
+                        R$ {itTotal.toFixed(2).replace(".",",")}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
 
-            {/* Itens */}
-            <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginBottom:10 }}>
-              {d.itens.map((it, i) => (
-                <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", padding:"3px 0" }}>
-                  <span>{it.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span></span>
-                  <span>R$ {(it.valor_item + it.frete_inter + it.taxa_rf).toFixed(2).replace(".",",")}</span>
-                </div>
-              ))}
-            </div>
+              {/* Comprovante + obs */}
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom: (isPend || !isPend) ? 10 : 0 }}>
+                {d.comprovante_url && (
+                  <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>
+                    ↓ ver comprovante
+                  </a>
+                )}
+                {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>{d.obs}</span>}
+              </div>
 
-            {/* Comprovante + obs */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-              {d.comprovante_url && (
-                <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"3px 10px", color:"#64B5F6", textDecoration:"none" }}>
-                  ↓ ver comprovante
-                </a>
+              {/* Ações */}
+              {isPend ? (
+                <button onClick={() => confirmar(d.id)}
+                  style={{ width:"100%", padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>
+                  ✓ Confirmar pagamento
+                </button>
+              ) : (
+                <button onClick={() => reabrir(d.id)}
+                  style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>
+                  ↩ Reabrir
+                </button>
               )}
-              {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>{d.obs}</span>}
             </div>
+          );
+        };
 
-            {showBtn && (
-              <button onClick={() => confirmar(d.id)} style={{ width:"100%", marginTop:12, padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>
-                ✓ Confirmar pagamento
-              </button>
-            )}
-          </div>
-        );
         return (
           <div>
             {pendentes.length === 0 && resolvidas.length === 0 && (
               <div style={{ textAlign:"center", padding:"48px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhuma demanda ainda.</div>
             )}
-            {pendentes.length > 0 && <>
-              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>{pendentes.length} em análise</div>
-              {pendentes.map(d => <CardDemanda key={d.id} d={d} showBtn />)}
-            </>}
-            {resolvidas.length > 0 && <>
-              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", margin:"20px 0 10px" }}>confirmados</div>
-              {resolvidas.map(d => <CardDemanda key={d.id} d={d} showBtn={false} />)}
-            </>}
+            {pendentes.length > 0 && (
+              <>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                  <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>Em análise</div>
+                  <div style={{ background:"rgba(167,139,250,.2)", color:"#A78BFA", borderRadius:99, fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", padding:"1px 7px" }}>{pendentes.length}</div>
+                </div>
+                {pendentes.map(d => <CardDemanda key={d.id} d={d} />)}
+              </>
+            )}
+            {resolvidas.length > 0 && (
+              <>
+                <div style={{ display:"flex", alignItems:"center", gap:8, margin:"24px 0 12px" }}>
+                  <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>Confirmados</div>
+                  <div style={{ background:"rgba(186,255,57,.12)", color:"#BAFF39", borderRadius:99, fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", padding:"1px 7px" }}>{resolvidas.length}</div>
+                </div>
+                {resolvidas.map(d => <CardDemanda key={d.id} d={d} />)}
+              </>
+            )}
           </div>
         );
       })()}
