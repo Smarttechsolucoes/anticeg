@@ -1527,6 +1527,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
   const [pagErro,         setPagErro]         = useState("");
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
+  const [showReportPicker, setShowReportPicker] = useState(false);
+  const [reportItem,       setReportItem]       = useState(null);
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
 
@@ -1812,9 +1814,51 @@ function PerfilTab({ user, onUpdate, owner = false }) {
               style={{ width:"100%", padding:"14px 0", background: itensSel.length > 0 && pagComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: itensSel.length > 0 && pagComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: itensSel.length > 0 && pagComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
               {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${total.toFixed(2).replace(".",",")}`}
             </button>
+
+            {/* Reportar problema */}
+            <button onClick={() => setShowReportPicker(true)}
+              style={{ width:"100%", marginTop:10, padding:"10px 0", background:"transparent", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
+              ⚑ Reportar problema
+            </button>
           </div>
         );
       })()}
+
+      {/* Seletor de item para report */}
+      {showReportPicker && (
+        <div className="modal-overlay" onClick={() => setShowReportPicker(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:400 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Reportar problema</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:16 }}>Selecione o item com problema:</div>
+            {itensPendentes.length === 0 && (
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", padding:"16px 0" }}>Nenhum item disponível.</div>
+            )}
+            {itensPendentes.map(item => (
+              <div key={item.id} onClick={() => { setReportItem(item); setShowReportPicker(false); }}
+                style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"11px 14px", marginBottom:6, background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, cursor:"pointer", transition:"border-color .12s" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor="rgba(245,240,232,.2)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.07)"}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{item.nome_do_item}</div>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
+                </div>
+                <span style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>→</span>
+              </div>
+            ))}
+            <button onClick={() => setShowReportPicker(false)} style={{ width:"100%", marginTop:8, padding:"10px", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:12, cursor:"pointer" }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* ReportModal após seleção */}
+      {reportItem && (
+        <ReportModal
+          user={user}
+          item={reportItem}
+          onClose={() => setReportItem(null)}
+          onReported={() => setReportItem(null)}
+        />
+      )}
 
       {perfilSubTab === "envios" && (
         <div>
