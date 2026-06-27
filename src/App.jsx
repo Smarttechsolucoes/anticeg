@@ -173,16 +173,21 @@ function diasAtraso(vencimento) {
   return diff > 0 ? diff : 0;
 }
 
-function ValCell({ val, status, vencimento }) {
+function ValCell({ val, status, vencimento, emAnalise }) {
   if (!Number(val)) return <span className="zero-val">—</span>;
   const pendente = isPendente(status);
-  const cls = pendente ? "pend" : "pago";
-  const dias = pendente ? diasAtraso(vencimento) : 0;
+  const dias = pendente && !emAnalise ? diasAtraso(vencimento) : 0;
   const multa = dias * 1;
+  const numStyle = emAnalise && pendente
+    ? { color: "#A78BFA", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700 }
+    : undefined;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <span className={`td-val ${cls}`}>R${fmtBRL(val)}</span>
-      <PayBadge status={status} />
+      {numStyle
+        ? <span style={numStyle}>R${fmtBRL(val)}</span>
+        : <span className={`td-val ${pendente ? "pend" : "pago"}`}>R${fmtBRL(val)}</span>}
+      {!emAnalise && <PayBadge status={status} />}
+      {emAnalise && pendente && <span style={{ fontSize: 9, color: "#A78BFA", fontFamily: "'DM Mono',monospace", letterSpacing: ".05em" }}>em análise</span>}
       {dias > 0 && (
         <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
           ⚠ multa R${fmtBRL(multa)} ({dias}d)
@@ -390,9 +395,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 </div>
                 <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
                   {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
@@ -1171,9 +1176,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         {showEnvio ? (
@@ -1248,9 +1253,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr key={item.id} className="row-finalizado">
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
                     <td><InfoCell info={item.info_adicionais} isOpen={isOpen} itemId={item.id} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
@@ -1312,9 +1317,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
               {!guest && (
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
                   {total > 0 && (
                     <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>
                       total R${fmtBRL(total)}
