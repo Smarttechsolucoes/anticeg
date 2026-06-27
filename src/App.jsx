@@ -2251,7 +2251,6 @@ ${p.comprovante_url ? (() => {
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{repasseNovoDono.nome}</div>
                         <div style={{ fontSize:11, color:"rgba(167,139,250,.8)", fontFamily:"'DM Mono',monospace" }}>@{repasseNovoDono.cog}</div>
-                        {repasseNovoDono.email && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{repasseNovoDono.email}</div>}
                       </div>
                       <button onClick={() => { setRepasseNovoDono(null); setRepasseNovoDonoSearch(""); }}
                         style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.4)", fontSize:16, cursor:"pointer", padding:4 }}>✕</button>
@@ -2260,7 +2259,7 @@ ${p.comprovante_url ? (() => {
                     <div>
                       <input value={repasseNovoDonoSearch} onChange={e => {
                           setRepasseNovoDonoSearch(e.target.value);
-                          if (!repasseJoiners) supabase.from("joiners").select("cog,nome,email,twitter").order("nome").then(({ data }) => setRepasseJoiners(data || []));
+                          if (!repasseJoiners) supabase.from("joiners").select("cog,nome,twitter").order("nome").then(({ data }) => setRepasseJoiners(data || []));
                         }}
                         placeholder="Buscar joiner por nome ou @..."
                         style={inputSt} />
