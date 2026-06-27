@@ -1798,7 +1798,7 @@ ${p.comprovante_url ? `<div style="margin-top:8px;font-size:12px">Comprovante an
           const ext  = pagComprovante.name.split(".").pop();
           const path = `${user.cog}/${Date.now()}.${ext}`;
           const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: true });
-          if (upErr) { setPagStatus("idle"); setPagErro("Erro ao enviar arquivo. Tente novamente."); return; }
+          if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
             joiner_cog:    user.cog,
