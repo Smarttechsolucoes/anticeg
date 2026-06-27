@@ -845,6 +845,22 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [openDrawer, setOpenDrawer] = useState(null);
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
+
+  const [pagDemandaMap, setPagDemandaMap] = useState({});
+  useEffect(() => {
+    if (user.guest) return;
+    supabase.from("pagamento_demandas").select("itens, status").eq("joiner_cog", user.cog)
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        data.forEach(d => {
+          (d.itens || []).forEach(it => {
+            if (!map[it.id] || d.status === "em_analise") map[it.id] = d.status;
+          });
+        });
+        setPagDemandaMap(map);
+      });
+  }, [user.cog]);
   const [avisos, setAvisos] = useState([]);
   const [avisosModal, setAvisosModal] = useState(false);
   const [avisosHistorico, setAvisosHistorico] = useState(null);
@@ -1171,6 +1187,15 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                             {item.status !== "Enviado Nacional" && <ProgressMini activeIdx={ai} />}
                           </>
                         )}
+                        {(() => {
+                          const pStatus = pagDemandaMap[item.id];
+                          if (!pStatus) return null;
+                          return (
+                            <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border: pStatus === "pago" ? "1px solid rgba(186,255,57,.35)" : "1px solid rgba(201,168,240,.35)", color: pStatus === "pago" ? "#BAFF39" : "#C9A8F0", background: pStatus === "pago" ? "rgba(186,255,57,.06)" : "rgba(201,168,240,.06)" }}>
+                              {pStatus === "pago" ? "✓ pago" : "◉ em análise"}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td style={{ maxWidth: 260 }}>
@@ -1494,6 +1519,14 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
   const [meuEnvios,      setMeuEnvios]      = useState([]);
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
+  // ── pagamentos ──
+  const [itensPendentes,  setItensPendentes]  = useState([]);
+  const [pagSelecionados, setPagSelecionados] = useState(new Set());
+  const [pagComprovante,  setPagComprovante]  = useState(null);
+  const [pagObs,          setPagObs]          = useState("");
+  const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
+  const [pagErro,         setPagErro]         = useState("");
+  const [meusPagamentos,  setMeusPagamentos]  = useState([]);
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
 
@@ -1502,6 +1535,16 @@ function PerfilTab({ user, onUpdate, owner = false }) {
       .then(({ data }) => { if (data) setMeuEnvios(data); });
     supabase.from("reports").select("id, item_nome, ceg, status, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { setMeuReports(data || []); });
+    supabase.from("masterlist").select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf")
+      .eq("cog", user.cog).eq("pago_item", false).gt("valor_item", 0)
+      .then(({ data }) => {
+        if (data) {
+          setItensPendentes(data);
+          setPagSelecionados(new Set(data.map(i => i.id)));
+        }
+      });
+    supabase.from("pagamento_demandas").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setMeusPagamentos(data); });
   }, [user.cog]);
 
   function reportarProblema() {
@@ -1602,9 +1645,10 @@ function PerfilTab({ user, onUpdate, owner = false }) {
         <nav className="admin-sidebar">
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conta</div>
-            {navPerfil("dados",   "○", "Dados", 0)}
-            {navPerfil("envios",  "◫",  "Envios",  meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
-            {navPerfil("suporte", "⚑",  "Suporte", (meuReports || []).filter(r => r.status === "pendente").length)}
+            {navPerfil("dados",      "○",  "Dados",      0)}
+            {navPerfil("pagamentos", "💸", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
+            {navPerfil("envios",     "◫",  "Envios",     meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
+            {navPerfil("suporte",    "⚑",  "Suporte",    (meuReports || []).filter(r => r.status === "pendente").length)}
           </div>
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conteúdo</div>
@@ -1620,6 +1664,116 @@ function PerfilTab({ user, onUpdate, owner = false }) {
         </nav>
 
         <div className="admin-content">
+
+      {/* ── PAGAMENTOS ── */}
+      {perfilSubTab === "pagamentos" && (() => {
+        const itensSel = itensPendentes.filter(i => pagSelecionados.has(i.id));
+        const total = itensSel.reduce((acc, i) => acc + Number(i.valor_item||0) + Number(i.frete_inter||0) + Number(i.taxa_rf||0), 0);
+
+        async function handleSubmit() {
+          if (itensSel.length === 0 || !pagComprovante) return;
+          setPagStatus("enviando"); setPagErro("");
+          const ext  = pagComprovante.name.split(".").pop();
+          const path = `${user.cog}/${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: true });
+          if (upErr) { setPagStatus("idle"); setPagErro("Erro ao enviar arquivo. Tente novamente."); return; }
+          const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+          const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
+            joiner_cog:    user.cog,
+            itens:         itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:Number(i.valor_item||0), frete_inter:Number(i.frete_inter||0), taxa_rf:Number(i.taxa_rf||0) })),
+            valor_total:   total,
+            comprovante_url: publicUrl,
+            obs:           pagObs || null,
+          }]).select().single();
+          if (error) { setPagStatus("idle"); setPagErro("Erro ao enviar. Tente novamente."); return; }
+          setMeusPagamentos(prev => [nova, ...prev]);
+          setPagStatus("enviado");
+        }
+
+        if (pagStatus === "enviado") return (
+          <div style={{ textAlign:"center", padding:"48px 16px" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>✓</div>
+            <div style={{ fontSize:15, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>Enviado para análise!</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", lineHeight:1.8 }}>
+              Seu comprovante foi recebido.<br />Assim que confirmado, o status atualiza aqui.
+            </div>
+            {meusPagamentos.length > 0 && (
+              <div style={{ marginTop:24, textAlign:"left" }}>
+                <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>Histórico</div>
+                {meusPagamentos.map(p => (
+                  <div key={p.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", marginBottom:6, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div>
+                      <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#F5F0E8" }}>{p.itens.length} item(s) · R$ {Number(p.valor_total).toFixed(2).replace(".",",")}</div>
+                      <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</div>
+                    </div>
+                    <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 10px", borderRadius:4, border: p.status === "pago" ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(201,168,240,.3)", color: p.status === "pago" ? "#BAFF39" : "#C9A8F0", textTransform:"uppercase" }}>
+                      {p.status === "pago" ? "PAGO" : "EM ANÁLISE"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+        if (itensPendentes.length === 0) return (
+          <div style={{ textAlign:"center", padding:"48px 16px", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+            Nenhum item com pagamento pendente no momento.
+          </div>
+        );
+
+        return (
+          <div style={{ paddingBottom:40 }}>
+            <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:16 }}>
+              Selecione os itens que está pagando
+            </div>
+            {itensPendentes.map(item => {
+              const sel = pagSelecionados.has(item.id);
+              const subtotal = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
+              return (
+                <div key={item.id} onClick={() => setPagSelecionados(prev => { const n = new Set(prev); n.has(item.id) ? n.delete(item.id) : n.add(item.id); return n; })}
+                  style={{ display:"flex", alignItems:"flex-start", gap:12, background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", marginBottom:6, cursor:"pointer", transition:"all .12s" }}>
+                  <div style={{ width:18, height:18, borderRadius:4, flexShrink:0, marginTop:2, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    {sel && <span style={{ fontSize:11, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{item.nome_do_item}</div>
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
+                  </div>
+                  <div style={{ textAlign:"right", flexShrink:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color: sel ? "#BAFF39" : "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>R$ {subtotal.toFixed(2).replace(".",",")}</div>
+                    {Number(item.frete_inter) > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>item {Number(item.valor_item).toFixed(0)} + frete {Number(item.frete_inter).toFixed(0)}{Number(item.taxa_rf) > 0 ? ` + rf ${Number(item.taxa_rf).toFixed(0)}` : ""}</div>}
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderTop:"1px solid rgba(245,240,232,.08)", borderBottom:"1px solid rgba(245,240,232,.08)", margin:"8px 0 16px" }}>
+              <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", textTransform:"uppercase" }}>Total selecionado</span>
+              <span style={{ fontSize:18, fontWeight:900, color: itensSel.length > 0 ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Comprovante de pagamento</div>
+              <label style={{ display:"flex", alignItems:"center", gap:10, background: pagComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${pagComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
+                <input type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => setPagComprovante(e.target.files[0] || null)} />
+                <span style={{ fontSize:16 }}>{pagComprovante ? "✓" : "↑"}</span>
+                <div>
+                  <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: pagComprovante ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{pagComprovante ? pagComprovante.name : "Clique para anexar (jpg, png, pdf)"}</div>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Obrigatório</div>
+                </div>
+              </label>
+            </div>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Observações (opcional)</div>
+              <textarea value={pagObs} onChange={e => setPagObs(e.target.value)} rows={2} placeholder="Ex: paguei os 3 itens juntos" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", resize:"none", boxSizing:"border-box" }} />
+            </div>
+            {pagErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>{pagErro}</div>}
+            <button onClick={handleSubmit} disabled={itensSel.length === 0 || !pagComprovante || pagStatus === "enviando"}
+              style={{ width:"100%", padding:"14px 0", background: itensSel.length > 0 && pagComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: itensSel.length > 0 && pagComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: itensSel.length > 0 && pagComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
+              {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${total.toFixed(2).replace(".",",")}`}
+            </button>
+          </div>
+        );
+      })()}
 
       {perfilSubTab === "envios" && (
         <div>
@@ -2832,6 +2986,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [pushManualSending, setPushManualSending] = useState(false);
   const [corrigirOk,        setCorrigirOk]        = useState(null); // item id
   const [joinerUpdates,     setJoinerUpdates]     = useState([]);
+  const [pagDemandas,       setPagDemandas]       = useState([]);
   const loadedTabsRef = useRef(new Set());
 
   async function confirmarEnvio(s) {
@@ -2950,6 +3105,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setEnvioSolic(data); });
     supabase.from("joiner_updates").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setJoinerUpdates(data); });
+    supabase.from("pagamento_demandas").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setPagDemandas(data); });
   }, []);
 
   // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
@@ -3057,7 +3214,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const totalPend = envioSolic.filter(e => e.status === "solicitação de envio").length
                   + reports.filter(r => r.status !== "resolvido").length
                   + confirmacoes.length
-                  + joinerUpdates.filter(u => !u.lido).length;
+                  + joinerUpdates.filter(u => !u.lido).length
+                  + pagDemandas.filter(d => d.status === "em_analise").length;
   const greetMsg = totalPend > 0
     ? `${totalPend} pendência${totalPend > 1 ? "s" : ""} esperando você →`
     : "tudo em dia! bom trabalho ✓";
@@ -3101,6 +3259,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("reports")   && nav("reports",   "Reports",   "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
                 {temAcesso("cadastros") && nav("cadastros", "Cadastros", "👤", confirmacoes.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
+                {temAcesso("demandas") && nav("demandas", "Demandas", "◉", pagDemandas.filter(d => d.status === "em_analise").length || 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -3766,6 +3925,79 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           })()}
         </div>
       )}
+
+      {/* ── DEMANDAS DE PAGAMENTO (mock test) ── */}
+      {adminMainTab === "demandas" && (() => {
+        const pendentes  = pagDemandas.filter(d => d.status === "em_analise");
+        const resolvidas = pagDemandas.filter(d => d.status === "pago");
+        async function confirmar(id) {
+          await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
+          const d = pagDemandas.find(x => x.id === id);
+          if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+          setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
+        }
+        const CardDemanda = ({ d, showBtn }) => (
+          <div style={{ background:"var(--card-bg)", border:`1px solid ${d.status === "em_analise" ? "rgba(201,168,240,.25)" : "rgba(186,255,57,.15)"}`, borderRadius:10, padding:"16px", marginBottom:8 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
+                  <span style={{ fontSize:9, padding:"2px 8px", borderRadius:4, border: d.status === "em_analise" ? "1px solid rgba(201,168,240,.3)" : "1px solid rgba(186,255,57,.3)", color: d.status === "em_analise" ? "#C9A8F0" : "#BAFF39", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
+                    {d.status === "em_analise" ? "EM ANÁLISE" : "PAGO"}
+                  </span>
+                </div>
+                <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>
+                  {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+                </div>
+              </div>
+              <div style={{ fontSize:16, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>
+                R$ {d.valor_total.toFixed(2).replace(".",",")}
+              </div>
+            </div>
+
+            {/* Itens */}
+            <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginBottom:10 }}>
+              {d.itens.map((it, i) => (
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", padding:"3px 0" }}>
+                  <span>{it.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)" }}>({it.ceg})</span></span>
+                  <span>R$ {(it.valor_item + it.frete_inter + it.taxa_rf).toFixed(2).replace(".",",")}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Comprovante + obs */}
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              {d.comprovante_url && (
+                <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"3px 10px", color:"#64B5F6", textDecoration:"none" }}>
+                  ↓ ver comprovante
+                </a>
+              )}
+              {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>{d.obs}</span>}
+            </div>
+
+            {showBtn && (
+              <button onClick={() => confirmar(d.id)} style={{ width:"100%", marginTop:12, padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>
+                ✓ Confirmar pagamento
+              </button>
+            )}
+          </div>
+        );
+        return (
+          <div>
+            {pendentes.length === 0 && resolvidas.length === 0 && (
+              <div style={{ textAlign:"center", padding:"48px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhuma demanda ainda.</div>
+            )}
+            {pendentes.length > 0 && <>
+              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>{pendentes.length} em análise</div>
+              {pendentes.map(d => <CardDemanda key={d.id} d={d} showBtn />)}
+            </>}
+            {resolvidas.length > 0 && <>
+              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", margin:"20px 0 10px" }}>confirmados</div>
+              {resolvidas.map(d => <CardDemanda key={d.id} d={d} showBtn={false} />)}
+            </>}
+          </div>
+        );
+      })()}
 
       {/* ── ATUALIZAÇÕES DE PERFIL ── */}
       {adminMainTab === "atualizacoes" && (
