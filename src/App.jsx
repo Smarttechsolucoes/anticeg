@@ -1646,7 +1646,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conta</div>
             {navPerfil("dados",      "○",  "Dados",      0)}
-            {navPerfil("pagamentos", "💸", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
+            {navPerfil("pagamentos", "◎", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
             {navPerfil("envios",     "◫",  "Envios",     meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
             {navPerfil("suporte",    "⚑",  "Suporte",    (meuReports || []).filter(r => r.status === "pendente").length)}
           </div>
