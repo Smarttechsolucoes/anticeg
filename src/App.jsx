@@ -1429,15 +1429,18 @@ const STAFF_MEMBERS = [
 ];
 
 const ALL_ACESSOS = [
-  { id:"cadastros",   label:"Cadastros" },
-  { id:"pagamentos",  label:"Pagamentos" },
-  { id:"disponiveis", label:"Disponíveis" },
-  { id:"blocklist",   label:"Blocklist" },
-  { id:"reports",     label:"Reports" },
-  { id:"geral",       label:"Config / Geral" },
+  { id:"envios",       label:"Envios" },
+  { id:"reports",      label:"Reports" },
+  { id:"cadastros",    label:"Cadastros" },
+  { id:"atualizacoes", label:"Atualizações" },
+  { id:"demandas",     label:"Demandas + Repassos" },
+  { id:"pagamentos",   label:"Pagamentos" },
+  { id:"disponiveis",  label:"Disponíveis" },
+  { id:"blocklist",    label:"Blocklist" },
+  { id:"geral",        label:"Config / Geral" },
 ];
 
-const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports"];
+const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports","envios","demandas"];
 
 function StaffPanel() {
   const [acessos, setAcessos] = useState(null); // { nathy_mrnd: [...] }
