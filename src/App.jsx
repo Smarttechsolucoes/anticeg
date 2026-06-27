@@ -1529,6 +1529,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
+  const [pagRecibo,        setPagRecibo]        = useState(null);
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
 
@@ -1698,32 +1699,76 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           }]).select().single();
           if (error) { setPagStatus("idle"); setPagErro("Erro ao enviar. Tente novamente."); return; }
           setMeusPagamentos(prev => [nova, ...prev]);
+          setPagRecibo(nova);
           setPagStatus("enviado");
         }
 
-        if (pagStatus === "enviado") return (
-          <div style={{ textAlign:"center", padding:"48px 16px" }}>
-            <div style={{ fontSize:32, marginBottom:12 }}>✓</div>
-            <div style={{ fontSize:15, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>Enviado para análise!</div>
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", lineHeight:1.8 }}>
-              Seu comprovante foi recebido.<br />Assim que confirmado, o status atualiza aqui.
-            </div>
-            {meusPagamentos.length > 0 && (
-              <div style={{ marginTop:24, textAlign:"left" }}>
-                <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>Histórico</div>
-                {meusPagamentos.map(p => (
-                  <div key={p.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", marginBottom:6, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <div>
-                      <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#F5F0E8" }}>{p.itens.length} item(s) · R$ {Number(p.valor_total).toFixed(2).replace(".",",")}</div>
-                      <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</div>
-                    </div>
-                    <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 10px", borderRadius:4, border: p.status === "pago" ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(201,168,240,.3)", color: p.status === "pago" ? "#BAFF39" : "#C9A8F0", textTransform:"uppercase" }}>
-                      {p.status === "pago" ? "PAGO" : "EM ANÁLISE"}
-                    </span>
-                  </div>
-                ))}
+        if (pagStatus === "enviado" && pagRecibo) return (
+          <div style={{ paddingBottom:40 }}>
+            {/* Cabeçalho do comprovante */}
+            <div style={{ textAlign:"center", padding:"28px 0 20px" }}>
+              <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.3)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px", fontSize:20 }}>✓</div>
+              <div style={{ fontSize:15, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>Comprovante de envio</div>
+              <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:4, letterSpacing:"1px" }}>
+                #{String(pagRecibo.id).slice(-6).toUpperCase()} · {new Date(pagRecibo.created_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
               </div>
-            )}
+            </div>
+
+            {/* Card comprovante */}
+            <div style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden", marginBottom:16 }}>
+              {/* Status */}
+              <div style={{ background:"rgba(201,168,240,.07)", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".8px", textTransform:"uppercase" }}>Status</span>
+                <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"3px 10px", borderRadius:4, border:"1px solid rgba(201,168,240,.35)", color:"#C9A8F0", textTransform:"uppercase", letterSpacing:".5px" }}>◉ Em análise</span>
+              </div>
+
+              {/* Itens */}
+              <div style={{ padding:"14px 16px 0" }}>
+                <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>Itens</div>
+                {pagRecibo.itens.map((it, idx) => {
+                  const itTotal = Number(it.valor_item||0) + Number(it.frete_inter||0) + Number(it.taxa_rf||0) + Number(it.multa||0);
+                  return (
+                    <div key={idx} style={{ paddingBottom:10, marginBottom:10, borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{it.nome_do_item}</div>
+                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}</div>
+                        </div>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:8 }}>R${itTotal.toFixed(2).replace(".",",")}</div>
+                      </div>
+                      <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                        {Number(it.valor_item) > 0 && <span style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>item R${Number(it.valor_item).toFixed(2).replace(".",",")}</span>}
+                        {Number(it.frete_inter) > 0 && <span style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>frete R${Number(it.frete_inter).toFixed(2).replace(".",",")}</span>}
+                        {Number(it.taxa_rf) > 0 && <span style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>rf R${Number(it.taxa_rf).toFixed(2).replace(".",",")}</span>}
+                        {Number(it.multa) > 0 && <span style={{ fontSize:9, color:"#ff6b6b", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>multa R${Number(it.multa).toFixed(2).replace(".",",")}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Total */}
+              <div style={{ padding:"12px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".5px" }}>Total pago</span>
+                <span style={{ fontSize:17, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(pagRecibo.valor_total).toFixed(2).replace(".",",")}</span>
+              </div>
+
+              {/* Comprovante anexado */}
+              {pagRecibo.comprovante_url && (
+                <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px" }}>Comprovante anexado</span>
+                  <a href={pagRecibo.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver arquivo</a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.8, marginBottom:16 }}>
+              Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
+            </div>
+
+            <button onClick={() => setPagStatus("idle")} style={{ width:"100%", padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              ← Voltar
+            </button>
           </div>
         );
 
