@@ -2235,9 +2235,9 @@ ${p.comprovante_url ? (() => {
                         setRepasseItem(found || null);
                       }}
                       style={{ ...inputSt, appearance:"none", cursor:"pointer" }}>
-                        <option value="">Selecione um item...</option>
+                        <option value="" style={{ color:"#111" }}>Selecione um item...</option>
                         {meusItens.map(i => (
-                          <option key={i.id} value={i.id}>[{i.ceg}] {i.nome_do_item} — {i.status}</option>
+                          <option key={i.id} value={i.id} style={{ color:"#111" }}>[{i.ceg}] {i.nome_do_item} — {i.status}</option>
                         ))}
                       </select>
                   }
