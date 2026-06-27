@@ -334,7 +334,7 @@ td { padding:10px; vertical-align:middle; }
 .item-title { font-size:var(--fs-xs); color:var(--offwhite); max-width:320px; }
 .item-detail { font-size:10px; color:rgba(245,240,232,.52); margin-top:3px; }
 .td-val { font-size:var(--fs-xs); font-family:'DM Mono',monospace; }
-.td-val.pago { color:var(--verde); }
+.td-val.pago { color:rgba(245,240,232,.55); }
 .td-val.pend { color:var(--laranja); }
 .td-val.zero { color:rgba(245,240,232,.48); }
 .zero-val { color:rgba(245,240,232,.38); }
