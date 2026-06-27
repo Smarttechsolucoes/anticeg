@@ -1602,7 +1602,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
         <nav className="admin-sidebar">
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conta</div>
-            {navPerfil("dados",   "👤", "Dados", 0)}
+            {navPerfil("dados",   "○", "Dados", 0)}
             {navPerfil("envios",  "◫",  "Envios",  meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
             {navPerfil("suporte", "⚑",  "Suporte", (meuReports || []).filter(r => r.status === "pendente").length)}
           </div>
@@ -4413,7 +4413,7 @@ function EnvioTab({ user, itens }) {
               <span>◫</span>Pedir Envio
             </button>
             <button className={`admin-sidebar-item${envioSubTab === "solicitacoes" ? " active" : ""}`} onClick={() => setEnvioSubTab("solicitacoes")}>
-              <span>📦</span>Minhas Solicitações
+              <span>◈</span>Minhas Solicitações
               {meuEnvios.filter(e => e.status === "pagamento em aberto").length > 0 && (
                 <span className="admin-sidebar-badge">{meuEnvios.filter(e => e.status === "pagamento em aberto").length}</span>
               )}
