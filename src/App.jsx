@@ -1520,6 +1520,9 @@ function StaffPanel() {
 }
 
 function PerfilTab({ user, onUpdate, owner = false }) {
+  const [winW, setWinW] = useState(window.innerWidth);
+  useEffect(() => { const h = () => setWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const isMobile = winW <= 680;
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
   const [meuEnvios,      setMeuEnvios]      = useState([]);
@@ -1921,9 +1924,57 @@ ${p.comprovante_url ? (() => {
                 Nenhum item com pagamento pendente no momento.
               </div>
             )}
-            {/* Cabeçalho da tabela */}
+            {/* Lista de itens — tabela no desktop, cards no mobile */}
             {itensPendentes.length > 0 && (() => {
               const temMulta = itensPendentes.some(i => multaItem(i) > 0);
+              const toggle = id => setPagSelecionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+              const fmtV = v => v > 0 ? `R$${Number(v).toFixed(2).replace(".",",")}` : null;
+
+              if (isMobile) return (
+                <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
+                  {itensPendentes.map(item => {
+                    const sel = pagSelecionados.has(item.id);
+                    const sub = subtotalItem(item);
+                    const multa = multaItem(item);
+                    const valItem  = !item.pago_item  ? Number(item.valor_item ||0) : 0;
+                    const valFrete = !item.pago_frete ? Number(item.frete_inter||0) : 0;
+                    const valRf    = !item.pago_rf    ? Number(item.taxa_rf    ||0) : 0;
+                    const cols = [
+                      valItem  > 0 ? { label:"Item",  v:valItem  } : null,
+                      valFrete > 0 ? { label:"Frete", v:valFrete } : null,
+                      valRf    > 0 ? { label:"RF",    v:valRf    } : null,
+                      multa    > 0 ? { label:"Multa", v:multa, red:true } : null,
+                    ].filter(Boolean);
+                    return (
+                      <div key={item.id} onClick={() => toggle(item.id)}
+                        style={{ background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: cols.length > 0 ? 10 : 0 }}>
+                          <div style={{ width:16, height:16, borderRadius:3, flexShrink:0, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            {sel && <span style={{ fontSize:10, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
+                            <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</div>
+                          </div>
+                          <div style={{ fontSize:14, fontWeight:900, color: sel ? "#BAFF39" : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>R${sub.toFixed(2).replace(".",",")}</div>
+                        </div>
+                        {cols.length > 0 && (
+                          <div style={{ display:"flex", gap:0, borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:8 }}>
+                            {cols.map(c => (
+                              <div key={c.label} style={{ flex:1, textAlign:"center" }}>
+                                <div style={{ fontSize:8, letterSpacing:"1px", color: c.red ? "rgba(255,107,107,.5)" : "rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>{c.label}</div>
+                                <div style={{ fontSize:11, fontWeight:700, color: c.red ? "#ff6b6b" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>R${c.v.toFixed(2).replace(".",",")}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+
+              // Desktop — tabela com grid
               const gridCols = `30px 1fr 72px 72px 56px${temMulta ? " 66px" : ""} 80px`;
               const thStyle = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:6 };
               return (
@@ -1937,35 +1988,26 @@ ${p.comprovante_url ? (() => {
                     {temMulta && <div style={{ ...thStyle, color:"rgba(255,107,107,.5)" }}>Multa</div>}
                     <div style={{ ...thStyle, color:"rgba(245,240,232,.5)" }}>Total</div>
                   </div>
-
                   {itensPendentes.map(item => {
                     const sel = pagSelecionados.has(item.id);
                     const sub = subtotalItem(item);
                     const multa = multaItem(item);
-                    const fmtV = v => v > 0 ? `R$${v.toFixed(2).replace(".",",")}` : <span style={{ opacity:.2 }}>—</span>;
                     return (
-                      <div key={item.id} onClick={() => setPagSelecionados(prev => { const n = new Set(prev); n.has(item.id) ? n.delete(item.id) : n.add(item.id); return n; })}
+                      <div key={item.id} onClick={() => toggle(item.id)}
                         style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", alignItems:"center", background: sel ? "rgba(186,255,57,.04)" : "transparent", borderRadius:7, padding:"9px 0", marginBottom:2, cursor:"pointer", transition:"background .12s", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
-                        {/* Checkbox */}
                         <div style={{ display:"flex", justifyContent:"center" }}>
-                          <div style={{ width:16, height:16, borderRadius:3, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <div style={{ width:16, height:16, borderRadius:3, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
                             {sel && <span style={{ fontSize:10, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
                           </div>
                         </div>
-                        {/* Nome */}
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
                           <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</div>
                         </div>
-                        {/* Valor item */}
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_item ? Number(item.valor_item||0) : 0)}</div>
-                        {/* Frete */}
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_frete ? Number(item.frete_inter||0) : 0)}</div>
-                        {/* RF */}
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_rf ? Number(item.taxa_rf||0) : 0)}</div>
-                        {/* Multa */}
-                        {temMulta && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", fontWeight: multa > 0 ? 700 : 400, textAlign:"right" }}>{fmtV(multa)}</div>}
-                        {/* Total */}
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_item ? Number(item.valor_item||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_frete ? Number(item.frete_inter||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_rf ? Number(item.taxa_rf||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
+                        {temMulta && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", fontWeight: multa > 0 ? 700 : 400, textAlign:"right" }}>{fmtV(multa) || <span style={{opacity:.2}}>—</span>}</div>}
                         <div style={{ fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", color: sel ? "#BAFF39" : "rgba(245,240,232,.45)", textAlign:"right" }}>R${sub.toFixed(2).replace(".",",")}</div>
                       </div>
                     );
