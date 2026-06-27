@@ -1559,6 +1559,18 @@ function PerfilTab({ user, onUpdate, owner = false }) {
     const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
     if (err) { setError("Erro ao salvar."); setLoading(false); return; }
 
+    const camposAlterados = {};
+    const mapa = { nome: user.nome, twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
+    for (const [campo, valorNovo] of Object.entries(updates)) {
+      const valorAntigo = mapa[campo] || "";
+      if ((valorNovo || "") !== (valorAntigo || "")) {
+        camposAlterados[campo] = { de: valorAntigo || "", para: valorNovo || "" };
+      }
+    }
+    if (Object.keys(camposAlterados).length > 0) {
+      await supabase.from("joiner_updates").insert([{ joiner_cog: user.cog, campos: camposAlterados }]);
+    }
+
     const updatedUser = { ...user, ...updates };
     localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
     onUpdate(updatedUser);
@@ -2819,6 +2831,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [pushManualMsg,     setPushManualMsg]     = useState("");
   const [pushManualSending, setPushManualSending] = useState(false);
   const [corrigirOk,        setCorrigirOk]        = useState(null); // item id
+  const [joinerUpdates,     setJoinerUpdates]     = useState([]);
   const loadedTabsRef = useRef(new Set());
 
   async function confirmarEnvio(s) {
@@ -2935,6 +2948,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setConfirmacoes(data); });
     supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
+    supabase.from("joiner_updates").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setJoinerUpdates(data); });
   }, []);
 
   // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
@@ -3041,7 +3056,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   const totalPend = envioSolic.filter(e => e.status === "solicitação de envio").length
                   + reports.filter(r => r.status !== "resolvido").length
-                  + confirmacoes.length;
+                  + confirmacoes.length
+                  + joinerUpdates.filter(u => !u.lido).length;
   const greetMsg = totalPend > 0
     ? `${totalPend} pendência${totalPend > 1 ? "s" : ""} esperando você →`
     : "tudo em dia! bom trabalho ✓";
@@ -3084,6 +3100,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("envios")    && nav("envios",    "Envios",    "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
                 {temAcesso("reports")   && nav("reports",   "Reports",   "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
                 {temAcesso("cadastros") && nav("cadastros", "Cadastros", "👤", confirmacoes.length || 0)}
+                {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -3747,6 +3764,65 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             );
           });
           })()}
+        </div>
+      )}
+
+      {/* ── ATUALIZAÇÕES DE PERFIL ── */}
+      {adminMainTab === "atualizacoes" && (
+        <div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)" }}>
+              {joinerUpdates.filter(u => !u.lido).length} não lida(s)
+            </div>
+            {joinerUpdates.some(u => !u.lido) && (
+              <button onClick={async () => {
+                await supabase.from("joiner_updates").update({ lido: true }).eq("lido", false);
+                setJoinerUpdates(prev => prev.map(u => ({ ...u, lido: true })));
+              }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"5px 12px", cursor:"pointer" }}>
+                marcar todas como lidas
+              </button>
+            )}
+          </div>
+
+          {joinerUpdates.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"48px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
+              Nenhuma atualização de perfil ainda.
+            </div>
+          ) : joinerUpdates.map(u => {
+            const campos = u.campos || {};
+            const nomes = { nome:"Nome", twitter:"@", whatsapp:"WhatsApp", email:"E-mail" };
+            return (
+              <div key={u.id} style={{ background: u.lido ? "var(--card-bg)" : "rgba(201,168,240,.05)", border:`1px solid ${u.lido ? "rgba(245,240,232,.07)" : "rgba(201,168,240,.25)"}`, borderRadius:10, padding:"14px 16px", marginBottom:8, display:"flex", alignItems:"flex-start", gap:12 }}>
+                {!u.lido && <div style={{ width:6, height:6, borderRadius:"50%", background:"#C9A8F0", flexShrink:0, marginTop:5 }} />}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>@{u.joiner_cog}</span>
+                    <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+                      {new Date(u.created_at).toLocaleDateString("pt-BR")} às {new Date(u.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
+                    </span>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {Object.entries(campos).map(([campo, { de, para }]) => (
+                      <div key={campo} style={{ fontSize:11, fontFamily:"'DM Mono',monospace", display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:9, background:"rgba(245,240,232,.07)", borderRadius:4, padding:"2px 6px", color:"rgba(245,240,232,.4)", textTransform:"uppercase", letterSpacing:".05em" }}>{nomes[campo] || campo}</span>
+                        <span style={{ color:"rgba(245,240,232,.35)", textDecoration:"line-through", maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{de || "—"}</span>
+                        <span style={{ color:"rgba(245,240,232,.25)" }}>→</span>
+                        <span style={{ color:"#F5F0E8", maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{para || "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {!u.lido && (
+                  <button onClick={async () => {
+                    await supabase.from("joiner_updates").update({ lido: true }).eq("id", u.id);
+                    setJoinerUpdates(prev => prev.map(x => x.id === u.id ? { ...x, lido: true } : x));
+                  }} style={{ flexShrink:0, fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"4px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
+                    ✓ lida
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
