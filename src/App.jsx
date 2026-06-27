@@ -2196,12 +2196,17 @@ ${p.comprovante_url ? (() => {
                     const statusLabel = r.status === "aprovado" ? "✓ aprovado" : r.status === "recusado" ? "✗ recusado" : "◉ pendente";
                     return (
                       <div key={r.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"14px 16px", marginBottom:10 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                          <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.nome_do_item}</div>
-                          <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em" }}>{statusLabel}</span>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome_do_item}</div>
+                          <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", flexShrink:0 }}>{statusLabel}</span>
                         </div>
-                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace" }}>CEG: {r.ceg} · Para: {r.novo_dono_nome} <span style={{color:"rgba(167,139,250,.7)"}}>@{r.novo_dono_cog}</span></div>
-                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Valor: R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")} · {new Date(r.created_at).toLocaleDateString("pt-BR")}</div>
+                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", wordBreak:"break-word" }}>
+                          <span style={{ color:"rgba(245,240,232,.3)" }}>CEG:</span> {r.ceg}
+                        </div>
+                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:2, wordBreak:"break-word" }}>
+                          <span style={{ color:"rgba(245,240,232,.3)" }}>Para:</span> {r.novo_dono_nome} <span style={{color:"rgba(167,139,250,.7)"}}>@{r.novo_dono_cog}</span>
+                        </div>
+                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")} · {new Date(r.created_at).toLocaleDateString("pt-BR")}</div>
                         {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginTop:4, fontStyle:"italic" }}>{r.obs}</div>}
                       </div>
                     );
@@ -2211,7 +2216,7 @@ ${p.comprovante_url ? (() => {
             )}
 
             {repasseSubTab === "enviar" && (
-              <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+              <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 14 : 18 }}>
                 {/* Disclaimer */}
                 <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
                   ⚠ Formulários com informações divergentes da planilha serão desconsiderados.
@@ -2330,9 +2335,9 @@ ${p.comprovante_url ? (() => {
                   <span style={labelSt}>Comprovação do repasse (print da conversa)</span>
                   <label style={{ display:"flex", alignItems:"center", gap:10, background: repasseComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${repasseComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
                     <input type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => setRepasseComprovante(e.target.files[0] || null)} />
-                    <span style={{ fontSize:18, opacity:.5 }}>{repasseComprovante ? "✓" : "+"}</span>
-                    <div>
-                      <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", color: repasseComprovante ? "#BAFF39" : "rgba(245,240,232,.45)" }}>
+                    <span style={{ fontSize:18, opacity:.5, flexShrink:0 }}>{repasseComprovante ? "✓" : "+"}</span>
+                    <div style={{ minWidth:0, flex:1 }}>
+                      <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", color: repasseComprovante ? "#BAFF39" : "rgba(245,240,232,.45)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                         {repasseComprovante ? repasseComprovante.name : "Selecionar arquivo"}
                       </div>
                       <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Imagem ou PDF</div>
@@ -3531,6 +3536,9 @@ function AdminPinBlock() {
 }
 
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos }) {
+  const [adminWinW, setAdminWinW] = useState(window.innerWidth);
+  useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const adminIsMobile = adminWinW <= 680;
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
@@ -4632,7 +4640,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 </div>
                 <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", paddingTop:2 }}>{statusLabel}</span>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 16px", marginBottom:10 }}>
+              <div style={{ display:"grid", gridTemplateColumns: adminIsMobile ? "1fr" : "1fr 1fr", gap: adminIsMobile ? "10px 0" : "6px 16px", marginBottom:10 }}>
                 <div>
                   <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>De</div>
                   <div style={{ fontSize:12, fontWeight:600, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.joiner_nome}</div>
