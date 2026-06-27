@@ -11,7 +11,8 @@ const EJS_TEMPLATE = "template_3x4zqua";
 const EJS_KEY      = "FoEjO0bZC4mn9ebeN";
 
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
-  if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return;
+  return; // emails temporariamente desativados
+  if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return; // eslint-disable-line no-unreachable
   try {
     await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
       to_email: toEmail,
