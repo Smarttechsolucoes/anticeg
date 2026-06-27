@@ -1673,6 +1673,52 @@ function PerfilTab({ user, onUpdate, owner = false }) {
 
       {/* ── PAGAMENTOS ── */}
       {perfilSubTab === "pagamentos" && (() => {
+        function exportarComprovante(p) {
+          const itensHTML = p.itens.map(it => {
+            const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
+            const partes = [
+              Number(it.valor_item)>0  ? `Item: R$${Number(it.valor_item ).toFixed(2).replace(".",",")}` : null,
+              Number(it.frete_inter)>0 ? `Frete: R$${Number(it.frete_inter).toFixed(2).replace(".",",")}` : null,
+              Number(it.taxa_rf)>0     ? `RF: R$${Number(it.taxa_rf    ).toFixed(2).replace(".",",")}` : null,
+              Number(it.multa)>0       ? `Multa: R$${Number(it.multa    ).toFixed(2).replace(".",",")}` : null,
+            ].filter(Boolean).join("  ·  ");
+            return `<tr>
+              <td style="padding:10px 0;border-bottom:1px solid #eee">
+                <strong>${it.nome_do_item}</strong>
+                <div style="font-size:11px;color:#888;margin-top:2px">${it.ceg}${partes ? `  —  ${partes}` : ""}</div>
+              </td>
+              <td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;font-weight:700">R$${itTotal.toFixed(2).replace(".",",")}</td>
+            </tr>`;
+          }).join("");
+          const dataFmt = new Date(p.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+          const protocolo = `#${String(p.id).slice(-6).toUpperCase()}`;
+          const status = p.status === "pago" ? "PAGO" : "EM ANÁLISE";
+          const statusColor = p.status === "pago" ? "#2e7d32" : "#6a1b9a";
+          const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Comprovante ${protocolo}</title>
+<style>
+  body{font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:40px auto;color:#111;font-size:13px;line-height:1.6}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#888;font-size:12px;margin-bottom:24px}
+  .badge{display:inline-block;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.05em;background:${p.status==="pago"?"#e8f5e9":"#f3e5f5"};color:${statusColor}}
+  table{width:100%;border-collapse:collapse;margin:20px 0}
+  .total-row td{padding:12px 0;font-weight:900;font-size:15px;border-top:2px solid #111}
+  .footer{margin-top:24px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:12px}
+  @media print{body{margin:20px}}
+</style></head><body>
+<h1>Comprovante de pagamento</h1>
+<div class="sub">${protocolo}  ·  ${dataFmt}  ·  <span class="badge">${status}</span></div>
+<table>
+  <tbody>${itensHTML}</tbody>
+  <tfoot><tr class="total-row"><td>Total</td><td style="text-align:right">R$${Number(p.valor_total).toFixed(2).replace(".",",")}</td></tr></tfoot>
+</table>
+${p.comprovante_url ? `<div style="margin-top:8px;font-size:12px">Comprovante anexado: <a href="${p.comprovante_url}" target="_blank">${p.comprovante_url.split("/").pop()}</a></div>` : ""}
+<div class="footer">ANTICEG · GOM · Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+          const w = window.open("","_blank");
+          w.document.write(html);
+          w.document.close();
+        }
         if (pagSubTab === "historico") return (
           <div style={{ paddingBottom:40 }}>
             <div style={{ display:"flex", gap:6, marginBottom:20 }}>
@@ -1721,13 +1767,15 @@ function PerfilTab({ user, onUpdate, owner = false }) {
                 </div>
                 {/* Rodapé */}
                 <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Total</span>
-                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                     {p.comprovante_url && (
-                      <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ comprovante</a>
+                      <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver anexo</a>
                     )}
-                    <span style={{ fontSize:14, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(p.valor_total).toFixed(2).replace(".",",")}</span>
+                    <button onClick={() => exportarComprovante(p)} style={{ fontSize:9, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, padding:"3px 10px", cursor:"pointer" }}>
+                      ↓ exportar
+                    </button>
                   </div>
+                  <span style={{ fontSize:14, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(p.valor_total).toFixed(2).replace(".",",")}</span>
                 </div>
               </div>
             ))}
@@ -1828,9 +1876,14 @@ function PerfilTab({ user, onUpdate, owner = false }) {
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
 
-            <button onClick={() => { setPagStatus("idle"); setPagSubTab("historico"); }} style={{ width:"100%", padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-              Ver histórico →
-            </button>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => exportarComprovante(pagRecibo)} style={{ flex:1, padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                ↓ Exportar
+              </button>
+              <button onClick={() => { setPagStatus("idle"); setPagSubTab("historico"); }} style={{ flex:1, padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                Ver histórico →
+              </button>
+            </div>
           </div>
         );
 
