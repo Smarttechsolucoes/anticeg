@@ -1530,6 +1530,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
   const [pagRecibo,        setPagRecibo]        = useState(null);
+  const [pagSubTab,        setPagSubTab]        = useState("enviar"); // enviar | historico
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
 
@@ -1672,6 +1673,67 @@ function PerfilTab({ user, onUpdate, owner = false }) {
 
       {/* ── PAGAMENTOS ── */}
       {perfilSubTab === "pagamentos" && (() => {
+        if (pagSubTab === "historico") return (
+          <div style={{ paddingBottom:40 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+              {[["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
+                <button key={id} onClick={() => setPagSubTab(id)}
+                  style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {meusPagamentos.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum envio de comprovante ainda.</div>
+            ) : meusPagamentos.map(p => (
+              <div key={p.id} style={{ background:"var(--card-bg)", border:`1px solid ${p.status==="pago" ? "rgba(186,255,57,.12)" : "rgba(201,168,240,.1)"}`, borderRadius:12, marginBottom:10, overflow:"hidden" }}>
+                {/* Cabeçalho */}
+                <div style={{ padding:"12px 16px", borderBottom:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".8px" }}>
+                      #{String(p.id).slice(-6).toUpperCase()} · {new Date(p.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+                    </div>
+                  </div>
+                  <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 10px", borderRadius:4, border: p.status==="pago" ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(201,168,240,.3)", color: p.status==="pago" ? "#BAFF39" : "#C9A8F0", textTransform:"uppercase", letterSpacing:".5px" }}>
+                    {p.status==="pago" ? "✓ Pago" : "◉ Em análise"}
+                  </span>
+                </div>
+                {/* Itens */}
+                <div style={{ padding:"12px 16px 0" }}>
+                  {p.itens.map((it, idx) => {
+                    const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
+                    return (
+                      <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.nome_do_item}</div>
+                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}</div>
+                          <div style={{ display:"flex", gap:10, marginTop:2, flexWrap:"wrap" }}>
+                            {Number(it.valor_item)>0  && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>item R${Number(it.valor_item ).toFixed(2).replace(".",",")}</span>}
+                            {Number(it.frete_inter)>0 && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>frete R${Number(it.frete_inter).toFixed(2).replace(".",",")}</span>}
+                            {Number(it.taxa_rf)>0     && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>rf R${Number(it.taxa_rf    ).toFixed(2).replace(".",",")}</span>}
+                            {Number(it.multa)>0       && <span style={{ fontSize:9, color:"#ff6b6b", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>multa R${Number(it.multa).toFixed(2).replace(".",",")}</span>}
+                          </div>
+                        </div>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>R${itTotal.toFixed(2).replace(".",",")}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Rodapé */}
+                <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Total</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    {p.comprovante_url && (
+                      <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ comprovante</a>
+                    )}
+                    <span style={{ fontSize:14, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(p.valor_total).toFixed(2).replace(".",",")}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+
         const itensSel = itensPendentes.filter(i => pagSelecionados.has(i.id));
         const multaItem = i => (!i.pago_item  && Number(i.valor_item ||0) > 0 ? diasAtraso(i.venc_item)  : 0)
                              + (!i.pago_frete && Number(i.frete_inter||0) > 0 ? diasAtraso(i.venc_frete) : 0)
@@ -1766,8 +1828,8 @@ function PerfilTab({ user, onUpdate, owner = false }) {
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
 
-            <button onClick={() => setPagStatus("idle")} style={{ width:"100%", padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-              ← Voltar
+            <button onClick={() => { setPagStatus("idle"); setPagSubTab("historico"); }} style={{ width:"100%", padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              Ver histórico →
             </button>
           </div>
         );
@@ -1775,6 +1837,14 @@ function PerfilTab({ user, onUpdate, owner = false }) {
 
         return (
           <div style={{ paddingBottom:40 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+              {[["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
+                <button key={id} onClick={() => setPagSubTab(id)}
+                  style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
             <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:16 }}>
               Selecione os itens que está pagando
             </div>
