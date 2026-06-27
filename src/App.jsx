@@ -1716,17 +1716,17 @@ function PerfilTab({ user, onUpdate, owner = false }) {
           </div>
         );
 
-        if (itensPendentes.length === 0) return (
-          <div style={{ textAlign:"center", padding:"48px 16px", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
-            Nenhum item com pagamento pendente no momento.
-          </div>
-        );
 
         return (
           <div style={{ paddingBottom:40 }}>
             <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:16 }}>
               Selecione os itens que está pagando
             </div>
+            {itensPendentes.length === 0 && (
+              <div style={{ padding:"16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, marginBottom:8, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
+                Nenhum item com pagamento pendente no momento.
+              </div>
+            )}
             {itensPendentes.map(item => {
               const sel = pagSelecionados.has(item.id);
               const subtotal = Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
