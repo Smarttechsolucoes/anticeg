@@ -4851,7 +4851,7 @@ export default function App() {
                 { id:"cegs",       icon:"◈", label:"CEGs" },
                 { id:"calendario", icon:"◫", label:"Calendário" },
                 ...(!user.guest ? [{ id:"perfil", icon:"○", label:"Meu Perfil" }] : []),
-                ...(!user.guest ? [{ id:"envio",  icon:"📦", label:"Envio Nacional" }] : []),
+                ...(!user.guest ? [{ id:"envio",  icon:"◫", label:"Envio Nacional" }] : []),
                 { id:"regras",     icon:"☆", label:"Links & Regras" },
                 ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
               ].map(item => (
