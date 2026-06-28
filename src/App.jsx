@@ -3800,6 +3800,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [adminTab, setAdminTab] = useState("pendentes");
   const [searchReport, setSearchReport] = useState("");
   const [openReportJoiner, setOpenReportJoiner] = useState(null);
+  const [adminRepasseSearch,     setAdminRepasseSearch]     = useState("");
+  const [adminRepasseTab,        setAdminRepasseTab]        = useState("pendentes");
+  const [adminRepasseOpenJoiner, setAdminRepasseOpenJoiner] = useState(null);
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState(null);
@@ -4911,113 +4914,149 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {/* ── REPASSOS ── */}
       {adminMainTab === "repassos" && (() => {
-        const lista = adminRepassos || [];
-        const pendentes  = lista.filter(r => r.status === "pendente");
-        const resolvidos = lista.filter(r => r.status !== "pendente");
+        const [searchRepasse,     setSearchRepasse]     = [adminRepasseSearch,     setAdminRepasseSearch];
+        const [repasseAdminTab,   setRepasseAdminTab]   = [adminRepasseTab,        setAdminRepasseTab];
+        const [openRepasseJoiner, setOpenRepasseJoiner] = [adminRepasseOpenJoiner, setAdminRepasseOpenJoiner];
 
         async function aprovarRepasse(r) {
           await supabase.from("repassos").update({ status: "aprovado" }).eq("id", r.id);
-          // Notifica dono original
-          await supabase.from("pushes").insert([{
-            message: `Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`,
-            active: true, joiner_cog: r.joiner_cog,
-          }]);
-          // Notifica novo dono
-          await supabase.from("pushes").insert([{
-            message: `Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`,
-            active: true, joiner_cog: r.novo_dono_cog,
-          }]);
+          await supabase.from("pushes").insert([{ message:`Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`, active:true, joiner_cog:r.joiner_cog }]);
+          await supabase.from("pushes").insert([{ message:`Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`, active:true, joiner_cog:r.novo_dono_cog }]);
           setAdminRepassos(prev => prev.map(x => x.id === r.id ? { ...x, status:"aprovado" } : x));
         }
-
         async function recusarRepasse(r) {
           await supabase.from("repassos").update({ status: "recusado" }).eq("id", r.id);
-          await supabase.from("pushes").insert([{
-            message: `Seu repasse de "${r.nome_do_item}" foi recusado. Entre em contato com a admin para mais informações.`,
-            active: true, joiner_cog: r.joiner_cog,
-          }]);
+          await supabase.from("pushes").insert([{ message:`Seu repasse de "${r.nome_do_item}" foi recusado. Entre em contato com a admin para mais informações.`, active:true, joiner_cog:r.joiner_cog }]);
           setAdminRepassos(prev => prev.map(x => x.id === r.id ? { ...x, status:"recusado" } : x));
         }
+        async function reabrirRepasse(id) {
+          await supabase.from("repassos").update({ status: "pendente" }).eq("id", id);
+          setAdminRepassos(prev => prev.map(x => x.id === id ? { ...x, status:"pendente" } : x));
+        }
 
-        function CardRepasse({ r }) {
-          const statusColor = r.status === "aprovado" ? "#BAFF39" : r.status === "recusado" ? "#ff6b6b" : "rgba(167,139,250,.9)";
-          const statusLabel = r.status === "aprovado" ? "✓ aprovado" : r.status === "recusado" ? "✗ recusado" : "◉ pendente";
-          const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
-          return (
-            <div style={{ background:"var(--card-bg)", border:`1px solid ${r.status==="pendente" ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"14px 16px", marginBottom:12 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.nome_do_item}</div>
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>CEG: {r.ceg} · {new Date(r.created_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</div>
+        const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
+
+        const RepasseCard = ({ r }) => (
+          <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+              <div>
+                <div style={{ fontSize:11, fontWeight:600, color:"var(--offwhite)", marginBottom:2 }}>
+                  {r.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>· {r.ceg}</span>
                 </div>
-                <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", paddingTop:2 }}>{statusLabel}</span>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns: adminIsMobile ? "1fr" : "1fr 1fr", gap: adminIsMobile ? "10px 0" : "6px 16px", marginBottom:10 }}>
-                <div>
-                  <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>De</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.joiner_nome}</div>
-                  <div style={{ fontSize:10, color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace" }}>@{r.joiner_cog}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>Para</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.novo_dono_nome}</div>
-                  <div style={{ fontSize:10, color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace" }}>@{r.novo_dono_cog}</div>
+                <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
+                  {new Date(r.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+                  {r.novo_dono_nome && <> · para <strong style={{color:"rgba(167,139,250,.8)"}}>{r.novo_dono_nome}</strong> @{r.novo_dono_cog}</>}
                 </div>
               </div>
-              <div style={{ display:"flex", gap:16, flexWrap:"wrap", marginBottom:8 }}>
-                <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                  <span style={{ color:"rgba(245,240,232,.35)" }}>Quitado: </span>
-                  <span style={{ color: r.item_quitado ? "#BAFF39" : "#ff6b6b", fontWeight:700 }}>{r.item_quitado ? "Sim" : "Não"}</span>
-                </div>
-                <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                  <span style={{ color:"rgba(245,240,232,.35)" }}>Valor: </span>
-                  <span style={{ color:"#F5F0E8", fontWeight:700 }}>R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")}</span>
-                </div>
-                {(r.custos_pagos || []).length > 0 && (
-                  <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                    <span style={{ color:"rgba(245,240,232,.35)" }}>Já pagos: </span>
-                    <span style={{ color:"#F5F0E8" }}>{r.custos_pagos.map(c => custosMap[c] || c).join(", ")}</span>
-                  </div>
-                )}
+              <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>
+                R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")}
               </div>
-              {!r.item_quitado && r.valor_pendente_descricao && (
-                <div style={{ background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.15)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", marginBottom:8, lineHeight:1.5 }}>
-                  <span style={{ color:"#ff6b6b", fontWeight:700 }}>Pendências: </span>{r.valor_pendente_descricao}
-                </div>
-              )}
-              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            </div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:6 }}>
+              <span style={{ fontSize:9, padding:"1px 7px", borderRadius:3, fontFamily:"'DM Mono',monospace", border: r.item_quitado ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(255,107,107,.3)", color: r.item_quitado ? "#BAFF39" : "#ff6b6b", background: r.item_quitado ? "rgba(186,255,57,.06)" : "rgba(255,107,107,.06)" }}>
+                {r.item_quitado ? "quitado" : "não quitado"}
+              </span>
+              {(r.custos_pagos || []).map(c => (
+                <span key={c} style={{ fontSize:9, padding:"1px 7px", borderRadius:3, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.5)" }}>{custosMap[c]||c}</span>
+              ))}
+            </div>
+            {!r.item_quitado && r.valor_pendente_descricao && (
+              <div style={{ fontSize:10, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", marginBottom:6, fontStyle:"italic" }}>↳ {r.valor_pendente_descricao}</div>
+            )}
+            {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontStyle:"italic", marginBottom:6 }}>"{r.obs}"</div>}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginTop:4 }}>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {r.comprovacao_url && (
-                  <a href={r.comprovacao_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"3px 10px", color:"#64B5F6", textDecoration:"none" }}>
-                    ↓ ver comprovação
+                  <a href={r.comprovacao_url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:4, padding:"3px 8px", color:"#64B5F6", textDecoration:"none" }}>
+                    ↗ ver comprovação
                   </a>
                 )}
-                {r.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>{r.obs}</span>}
               </div>
-              {r.status === "pendente" && (
-                <div style={{ display:"flex", gap:8, marginTop:12 }}>
-                  <button onClick={() => aprovarRepasse(r)} style={{ flex:1, padding:"9px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    ✓ Aprovar
-                  </button>
-                  <button onClick={() => recusarRepasse(r)} style={{ flex:1, padding:"9px", background:"rgba(255,107,107,.08)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    ✗ Recusar
-                  </button>
+              {r.status === "pendente" ? (
+                <div style={{ display:"flex", gap:6 }}>
+                  <button onClick={() => aprovarRepasse(r)} style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>✓ Aprovar</button>
+                  <button onClick={() => recusarRepasse(r)} style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>✗ Recusar</button>
+                </div>
+              ) : (
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: r.status==="aprovado" ? "#BAFF39" : "#ff6b6b" }}>
+                    {r.status === "aprovado" ? "✓ aprovado" : r.status === "cancelado" ? "— cancelado" : "✗ recusado"}
+                  </span>
+                  {r.status !== "cancelado" && (
+                    <button onClick={() => reabrirRepasse(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>↩ reabrir</button>
+                  )}
                 </div>
               )}
             </div>
-          );
-        }
+          </div>
+        );
+
+        const q    = (searchRepasse||"").trim().toLowerCase();
+        const base = (adminRepassos||[]).filter(r =>
+          !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) ||
+                r.novo_dono_nome?.toLowerCase().includes(q) || r.nome_do_item?.toLowerCase().includes(q)
+        );
+        const pendentes  = base.filter(r => r.status === "pendente");
+        const resolvidos = base.filter(r => r.status !== "pendente");
+        const lista      = repasseAdminTab === "pendentes" ? pendentes : resolvidos;
+
+        const tabBtnStyle = active => ({
+          background: active ? "rgba(245,240,232,.08)" : "none",
+          border: `1px solid ${active ? "rgba(245,240,232,.2)" : "rgba(245,240,232,.07)"}`,
+          color: active ? "var(--offwhite)" : "rgba(245,240,232,.35)",
+          borderRadius:8, padding:"6px 16px", fontSize:12,
+          fontFamily:"'DM Mono',monospace", fontWeight: active ? 700 : 400, cursor:"pointer",
+          display:"flex", alignItems:"center", gap:7, textTransform:"uppercase", letterSpacing:".08em",
+        });
+
+        // Agrupar por joiner
+        const byJoiner = {};
+        lista.forEach(r => {
+          const key = r.joiner_cog || "—";
+          if (!byJoiner[key]) byJoiner[key] = { nome:r.joiner_nome, cog:r.joiner_cog, repassos:[] };
+          byJoiner[key].repassos.push(r);
+        });
+        const grupos = Object.values(byJoiner).sort((a,b) => b.repassos.length - a.repassos.length);
 
         return (
           <div>
-            {lista.length === 0 && <div style={{ textAlign:"center", padding:"48px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum repasse ainda.</div>}
-            {pendentes.length > 0 && <>
-              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>{pendentes.length} pendente{pendentes.length > 1 ? "s" : ""}</div>
-              {pendentes.map(r => <CardRepasse key={r.id} r={r} />)}
-            </>}
-            {resolvidos.length > 0 && <>
-              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", margin:"20px 0 10px" }}>resolvidos</div>
-              {resolvidos.map(r => <CardRepasse key={r.id} r={r} />)}
-            </>}
+            <input value={searchRepasse||""} onChange={e => { setSearchRepasse(e.target.value); setOpenRepasseJoiner(null); }}
+              placeholder="Buscar joiner ou item..."
+              style={{ width:"100%", marginBottom:12, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"8px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }}
+            />
+            <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+              <button style={tabBtnStyle(repasseAdminTab==="pendentes")} onClick={() => { setRepasseAdminTab("pendentes"); setOpenRepasseJoiner(null); }}>
+                Pendentes {pendentes.length > 0 && <span style={{ background:"var(--laranja)", color:"#000", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{pendentes.length}</span>}
+              </button>
+              <button style={tabBtnStyle(repasseAdminTab==="resolvidos")} onClick={() => { setRepasseAdminTab("resolvidos"); setOpenRepasseJoiner(null); }}>
+                Resolvidos {resolvidos.length > 0 && <span style={{ background:"rgba(74,222,128,.2)", color:"#4ade80", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{resolvidos.length}</span>}
+              </button>
+            </div>
+            {grupos.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", padding:"16px 0" }}>Nenhum repasse{q ? ` para "${searchRepasse}"` : ""}.</div>}
+            {grupos.map(g => {
+              const isOpen = openRepasseJoiner === g.cog;
+              const pendCount = g.repassos.filter(r => r.status === "pendente").length;
+              return (
+                <div key={g.cog} style={{ background:"var(--card-bg)", border:`1px solid ${pendCount > 0 ? "rgba(167,139,250,.25)" : "rgba(74,222,128,.1)"}`, borderRadius:10, marginBottom:6, overflow:"hidden" }}>
+                  <div onClick={() => setOpenRepasseJoiner(isOpen ? null : g.cog)} style={{ display:"flex", alignItems:"center", padding:"12px 16px", cursor:"pointer", gap:10 }}>
+                    <div style={{ flex:1 }}>
+                      <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{g.nome}</span>
+                      <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginLeft:8 }}>@{g.cog}</span>
+                    </div>
+                    <span style={{ fontSize:10, background: pendCount > 0 ? "rgba(167,139,250,.15)" : "rgba(74,222,128,.12)", color: pendCount > 0 ? "#A78BFA" : "#4ade80", border:`1px solid ${pendCount > 0 ? "rgba(167,139,250,.3)" : "rgba(74,222,128,.25)"}`, borderRadius:99, padding:"2px 9px", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>
+                      {g.repassos.length} repasse{g.repassos.length > 1 ? "s" : ""}
+                    </span>
+                    <span style={{ fontSize:12, color:"rgba(245,240,232,.4)", transition:"transform .15s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "none" }}>▾</span>
+                  </div>
+                  {isOpen && (
+                    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"4px 16px 12px" }}>
+                      {g.repassos.map(r => <RepasseCard key={r.id} r={r} />)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
       })()}
