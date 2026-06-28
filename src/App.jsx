@@ -3883,6 +3883,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [adminRepasseTab,        setAdminRepasseTab]        = useState("pendentes");
   const [adminRepasseOpenJoiner, setAdminRepasseOpenJoiner] = useState(null);
   const [adminPagSubTab,         setAdminPagSubTab]         = useState("formulario");
+  const [fbRespostaAberta, setFbRespostaAberta] = useState(null);
+  const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
+  const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState(null);
@@ -4341,10 +4344,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         ) : feedbacks.length === 0 ? (
           <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>Nenhum feedback recebido ainda.</div>
         ) : (() => {
-          const [fbRespostaAberta, setFbRespostaAberta] = useState(null);
-          const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
-          const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
-
           async function enviarResposta(fb) {
             if (!fbRespostaTexto.trim()) return;
             setFbRespostaEnv(true);
