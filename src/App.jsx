@@ -2842,7 +2842,7 @@ ${compHTML}
         <div>
           <div style={{ position:"relative", width:"100%", paddingBottom:"56.25%", borderRadius:10, overflow:"hidden", background:"#000" }}>
             <iframe
-              src="TUTORIAL_VIDEO_URL"
+              src="https://drive.google.com/file/d/15A_JdCaKfpT2ZNm0ccMrA39-VGIL1tMt/preview"
               title="Tutorial ANTICEG"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
