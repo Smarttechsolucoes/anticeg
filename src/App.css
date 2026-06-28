@@ -680,7 +680,7 @@ td { padding:10px; vertical-align:middle; }
 
   /* Modais genéricos */
   .modal-overlay, .ceg-modal-overlay { padding:0; align-items:flex-end; }
-  .modal-box { padding:20px 16px 36px !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; border-radius:16px 16px 0 0 !important; max-height:88vh; overflow-y:auto; }
+  .modal-box { padding:20px 16px 36px !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; border-radius:16px 16px 0 0 !important; max-height:88vh; overflow-y:auto; overflow:hidden !important; }
 
   /* Perfil */
   .login-box { gap:12px; }

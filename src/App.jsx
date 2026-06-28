@@ -1047,8 +1047,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
       {avisosModal && (
         <div className="modal-overlay" onClick={() => setAvisosModal(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:480 }}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:480, display:"flex", flexDirection:"column", maxHeight:"85vh", overflow:"hidden", padding:0 }}>
+            {/* Header fixo */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 16px", borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
               <div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
                   MURAL DE <span style={{ color:"#C9A8F0" }}>AVISOS</span>
@@ -1057,6 +1058,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               </div>
               <button onClick={() => setAvisosModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
+            {/* Conteúdo rolável */}
+            <div style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               {avisos.map((a, i) => (
                 <div key={a.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"16px 18px" }}>
@@ -1112,6 +1115,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 </>
               )}
             </div>
+            </div> {/* fim conteúdo rolável */}
           </div>
         </div>
       )}
