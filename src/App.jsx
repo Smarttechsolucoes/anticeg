@@ -1570,6 +1570,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [repasseSubTab,       setRepasseSubTab]       = useState("enviar");
   const [repasseOutrosNome,   setRepasseOutrosNome]   = useState("");
   const [repasseOutrosCeg,    setRepasseOutrosCeg]    = useState("");
+  const [repasseCiente,       setRepasseCiente]       = useState(false);
 
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
@@ -2438,10 +2439,21 @@ ${p.comprovante_url ? (() => {
                     rows={2} style={{ ...inputSt, resize:"vertical" }} />
                 </div>
 
+                {/* Checkbox de ciente */}
+                <div onClick={() => setRepasseCiente(p => !p)}
+                  style={{ display:"flex", alignItems:"flex-start", gap:12, background: repasseCiente ? "rgba(186,255,57,.04)" : "rgba(245,240,232,.02)", border:`1px solid ${repasseCiente ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.1)"}`, borderRadius:10, padding:"14px", cursor:"pointer", transition:"all .12s" }}>
+                  <div style={{ width:18, height:18, borderRadius:4, flexShrink:0, marginTop:1, background: repasseCiente ? "#BAFF39" : "transparent", border:`2px solid ${repasseCiente ? "#BAFF39" : "rgba(245,240,232,.25)"}`, display:"flex", alignItems:"center", justifyContent:"center", transition:"all .12s" }}>
+                    {repasseCiente && <span style={{ fontSize:11, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+                  </div>
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
+                    Eu, <strong style={{ color:"#F5F0E8" }}>{user.nome || user.cog}</strong>, sou responsável por repassar todas as informações e regras da CEG do item ao novo dono. Estou ciente de que o item será enviado para outra pessoa, <strong style={{ color:"#F5F0E8" }}>sem possibilidade de cancelamento</strong>.
+                  </div>
+                </div>
+
                 {repasseErro && <div style={{ fontSize:11, color:"#ff6b6b", fontFamily:"'DM Mono',monospace" }}>{repasseErro}</div>}
 
                 {(() => {
-                  const disabled = repasseStatus === "enviando" || !repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante || (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim()));
+                  const disabled = repasseStatus === "enviando" || !repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante || !repasseCiente || (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim()));
                   return (
                     <button onClick={handleSubmitRepasse} disabled={disabled}
                       style={{ background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, padding:"12px 0", fontSize:13, fontFamily:"'DM Mono',monospace", fontWeight:900, cursor:"pointer", opacity: disabled ? 0.4 : 1, transition:"opacity .12s", width:"100%" }}>
