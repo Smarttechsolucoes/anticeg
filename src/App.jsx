@@ -1059,7 +1059,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               <button onClick={() => setAvisosModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
             {/* Conteúdo rolável */}
-            <div style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px" }}>
+            <div className="avisos-scroll" style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               {avisos.map((a, i) => (
                 <div key={a.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"16px 18px" }}>

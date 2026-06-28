@@ -425,6 +425,12 @@ td { padding:10px; vertical-align:middle; }
 .ceg-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:500; display:flex; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(4px); }
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:600; display:flex; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(4px); }
 .modal-box { background:#111; border:1px solid #2a2a2a; border-radius:12px; width:100%; max-width:400px; padding:24px; }
+
+.avisos-scroll { scrollbar-width:thin; scrollbar-color:rgba(201,168,240,.25) transparent; }
+.avisos-scroll::-webkit-scrollbar { width:4px; }
+.avisos-scroll::-webkit-scrollbar-track { background:transparent; }
+.avisos-scroll::-webkit-scrollbar-thumb { background:rgba(201,168,240,.25); border-radius:99px; }
+.avisos-scroll::-webkit-scrollbar-thumb:hover { background:rgba(201,168,240,.5); }
 .modal-title { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-lg); color:var(--offwhite); letter-spacing:1px; }
 .ceg-modal { background:#111; border:1px solid #2a2a2a; border-radius:10px; width:100%; max-width:560px; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
 .ceg-modal-header { display:flex; align-items:flex-start; justify-content:space-between; padding:24px 24px 16px; border-bottom:1px solid #1e1e1e; }
