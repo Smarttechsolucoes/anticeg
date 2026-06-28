@@ -2266,8 +2266,23 @@ ${p.comprovante_url ? (() => {
             {repasseSubTab === "enviar" && (
               <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 14 : 18 }}>
                 {/* Disclaimer */}
-                <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
-                  ⚠ Formulários com informações divergentes da planilha serão desconsiderados.
+                <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+                  <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(255,92,26,.7)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>Leia antes de preencher</div>
+                  {[
+                    "Este formulário deve ser preenchido pelo dono original do item que deseja repassá-lo dentro da comunidade.",
+                    "Só é permitido repassar itens totalmente pagos à Nanda e com o formulário de pagamento devidamente preenchido.",
+                    "Repasses são permitidos dentro da comunidade ANTIGOM, inclusive no grupo V&T, sem necessidade de autorização prévia.",
+                    "Repasses para pessoas fora da comunidade não são permitidos e serão cancelados.",
+                    "Não podem ser repassados: itens fanmade, revistas e caixas de Mercari.",
+                    "O joiner original é responsável por repassar todas as informações e regras ao novo dono.",
+                    "Ao preencher este formulário, você está ciente de que o item será enviado para outra pessoa, sem possibilidade de cancelamento.",
+                    "Repasses não informados via formulário não serão considerados pela GOM.",
+                  ].map((r, i) => (
+                    <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
+                      <span style={{ color:"rgba(255,92,26,.5)", fontSize:11, flexShrink:0, marginTop:1 }}>☆</span>
+                      <span style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{r}</span>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Dono atual (fixado) */}
