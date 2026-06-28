@@ -1599,7 +1599,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMeuEnvios(data); });
-    supabase.from("reports").select("id, item_nome, ceg, status, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+    supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { setMeuReports(data || []); });
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
@@ -2856,40 +2856,75 @@ ${compHTML}
         <FeedbackForm user={user} defaultTipo={feedbackTipo} />
       )}
 
-      {perfilSubTab === "suporte" && (
-        <div>
-          <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", lineHeight:1.7, marginBottom:20 }}>
-            Seus reports de itens ficam aqui. A gente analisa cada um e entra em contato quando estiver resolvido.
-          </div>
-          {meuReports === null ? (
-            <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
-          ) : meuReports.length === 0 ? (
-            <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum report enviado ainda.</div>
-          ) : meuReports.map(r => {
-            const resolvido = r.status === "resolvido";
-            return (
-              <div key={r.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"var(--card-bg)", border:`1px solid ${resolvido ? "rgba(74,222,128,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:8, marginBottom:8 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{r.item_nome || r.ceg || "—"}</div>
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>
-                    {r.ceg && <span style={{ marginRight:8 }}>{r.ceg}</span>}
-                    {new Date(r.created_at).toLocaleDateString("pt-BR")}
+      {perfilSubTab === "suporte" && (() => {
+        const [expandedReports, setExpandedReports] = useState(new Set());
+        const toggleReport = id => setExpandedReports(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+        const ERRO_LABELS = { erro_item:"Nome do item", erro_valor:"Valor do item", erro_frete:"Frete", erro_taxa:"Taxa RF", erro_pagamento:"Pagamento", erro_recebido:"Item recebido", erro_outro:"Outro" };
+
+        return (
+          <div>
+            <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", lineHeight:1.7, marginBottom:20 }}>
+              Seus reports de itens ficam aqui. A gente analisa cada um e entra em contato quando estiver resolvido.
+            </div>
+            {meuReports === null ? (
+              <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+            ) : meuReports.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum report enviado ainda.</div>
+            ) : meuReports.map(r => {
+              const resolvido = r.status === "resolvido";
+              const expanded  = expandedReports.has(r.id);
+              const errosMarcados = Object.keys(ERRO_LABELS).filter(k => r[k]);
+              const temDetalhes = errosMarcados.length > 0 || r.observacao;
+              return (
+                <div key={r.id} style={{ background:"var(--card-bg)", border:`1px solid ${resolvido ? "rgba(74,222,128,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:8, marginBottom:8, overflow:"hidden" }}>
+                  {/* Header — clicável se tiver detalhes */}
+                  <div onClick={() => temDetalhes && toggleReport(r.id)}
+                    style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", cursor: temDetalhes ? "pointer" : "default" }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{r.item_nome || r.ceg || "—"}</div>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>
+                        {r.ceg && <span style={{ marginRight:8 }}>{r.ceg}</span>}
+                        {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                      <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap", padding:"3px 9px", borderRadius:4, color: resolvido ? "#4ade80" : "rgba(245,240,232,.5)", border:`1px solid ${resolvido ? "rgba(74,222,128,.35)" : "rgba(245,240,232,.15)"}`, background: resolvido ? "rgba(74,222,128,.07)" : "transparent" }}>
+                        {resolvido ? "✓ resolvido" : "🔍 em análise"}
+                      </span>
+                      {temDetalhes && <span style={{ fontSize:11, color:"rgba(245,240,232,.3)" }}>{expanded ? "▲" : "▼"}</span>}
+                    </div>
                   </div>
+
+                  {/* Detalhes expandidos */}
+                  {expanded && temDetalhes && (
+                    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+                      {errosMarcados.length > 0 && (
+                        <div>
+                          <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Problemas reportados</div>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                            {errosMarcados.map(k => (
+                              <span key={k} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"2px 9px", borderRadius:4, border:"1px solid rgba(255,92,26,.3)", color:"rgba(255,92,26,.8)", background:"rgba(255,92,26,.06)" }}>
+                                {ERRO_LABELS[k]}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {r.motivo_item    && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Motivo</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{r.motivo_item}</div></div>}
+                      {r.correcao_valor && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Valor correto</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.correcao_valor}</div></div>}
+                      {r.correcao_frete && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Frete correto</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.correcao_frete}</div></div>}
+                      {r.correcao_taxa  && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Taxa correta</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.correcao_taxa}</div></div>}
+                      {r.pag_valor      && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Pagamento informado</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>R$ {r.pag_valor}{r.pag_metodo ? ` · ${r.pag_metodo}` : ""}{r.pag_data ? ` · ${r.pag_data}` : ""}</div></div>}
+                      {r.observacao     && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Observação</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, fontStyle:"italic" }}>{r.observacao}</div></div>}
+                    </div>
+                  )}
                 </div>
-                <span style={{
-                  fontSize:9, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap",
-                  padding:"3px 9px", borderRadius:4,
-                  color: resolvido ? "#4ade80" : "rgba(245,240,232,.5)",
-                  border: `1px solid ${resolvido ? "rgba(74,222,128,.35)" : "rgba(245,240,232,.15)"}`,
-                  background: resolvido ? "rgba(74,222,128,.07)" : "transparent",
-                }}>
-                  {resolvido ? "✓ resolvido" : "🔍 em análise"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {perfilSubTab === "staff" && owner && <StaffPanel />}
 
