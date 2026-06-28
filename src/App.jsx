@@ -2319,33 +2319,105 @@ ${p.comprovante_url ? (() => {
               ))}
             </div>
 
-            {repasseSubTab === "historico" && (
-              <div>
-                {meusRepassos.length === 0
-                  ? <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum repasse registrado.</div>
-                  : meusRepassos.map(r => {
-                    const statusColor = r.status === "aprovado" ? "#BAFF39" : r.status === "recusado" ? "#ff6b6b" : "rgba(167,139,250,.9)";
-                    const statusLabel = r.status === "aprovado" ? "✓ aprovado" : r.status === "recusado" ? "✗ recusado" : "◉ pendente";
-                    return (
-                      <div key={r.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"14px 16px", marginBottom:10 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
-                          <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome_do_item}</div>
-                          <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", flexShrink:0 }}>{statusLabel}</span>
+            {repasseSubTab === "historico" && (() => {
+
+              function exportarComprovanteRepasse(r) {
+                const protocolo = `#${String(r.id).slice(-6).toUpperCase()}`;
+                const dataFmt   = new Date(r.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+                const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
+                const statusStr = r.status === "aprovado" ? "APROVADO" : r.status === "recusado" ? "RECUSADO" : "PENDENTE";
+                const statusColor = r.status === "aprovado" ? "#2e7d32" : r.status === "recusado" ? "#b71c1c" : "#6a1b9a";
+                const custosList = (r.custos_pagos || []).map(c => custosMap[c]||c).join(", ") || "Nenhum";
+                const compHTML = r.comprovacao_url ? (() => {
+                  const ext = r.comprovacao_url.split(".").pop().toLowerCase().split("?")[0];
+                  const isImg = ["jpg","jpeg","png","gif","webp"].includes(ext);
+                  return `<div style="margin-top:24px;border-top:1px solid #eee;padding-top:16px">
+  <div style="font-size:12px;color:#888;margin-bottom:10px">Comprovante de acordo</div>
+  ${isImg ? `<img src="${r.comprovacao_url}" style="max-width:100%;border:1px solid #eee;border-radius:4px" />` : `<a href="${r.comprovacao_url}" style="font-size:12px;color:#1565c0">↗ Ver comprovante</a>`}
+</div>`;
+                })() : "";
+                const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Comprovante de Repasse ${protocolo}</title>
+<style>
+  body{font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:40px auto;color:#111;font-size:13px;line-height:1.6}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#888;font-size:12px;margin-bottom:24px}
+  .badge{display:inline-block;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.05em;background:${r.status==="aprovado"?"#e8f5e9":r.status==="recusado"?"#ffebee":"#f3e5f5"};color:${statusColor}}
+  .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+  .label{color:#888}
+  .total{font-weight:900;font-size:15px;border-top:2px solid #111 !important;padding-top:12px !important}
+  .footer{margin-top:24px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:12px}
+  @media print{body{margin:20px}}
+</style></head><body>
+<h1>Comprovante de Repasse</h1>
+<div class="sub">${protocolo}  ·  ${dataFmt}  ·  <span class="badge">${statusStr}</span></div>
+<div class="row"><span class="label">Item</span><span><strong>${r.nome_do_item}</strong></span></div>
+<div class="row"><span class="label">CEG</span><span>${r.ceg || "—"}</span></div>
+<div class="row"><span class="label">De (dono original)</span><span>${r.joiner_nome} @${r.joiner_cog}</span></div>
+<div class="row"><span class="label">Para (novo dono)</span><span>${r.novo_dono_nome} @${r.novo_dono_cog}</span></div>
+<div class="row"><span class="label">Item quitado</span><span>${r.item_quitado ? "Sim" : "Não"}</span></div>
+<div class="row"><span class="label">Custos já pagos</span><span>${custosList}</span></div>
+${r.valor_pendente_descricao ? `<div class="row"><span class="label">Valor pendente</span><span>${r.valor_pendente_descricao}</span></div>` : ""}
+<div class="row total"><span>Valor acordado</span><span>R$ ${Number(r.valor_acordado).toFixed(2).replace(".",",")}</span></div>
+${r.obs ? `<div class="row"><span class="label">Observações</span><span>${r.obs}</span></div>` : ""}
+${compHTML}
+<div class="footer">ANTICEG · GOM · Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+                const w = window.open("","_blank");
+                w.document.write(html);
+                w.document.close();
+              }
+
+              async function cancelarRepasse(id) {
+                if (!window.confirm("Cancelar este repasse? Essa ação não pode ser desfeita.")) return;
+                await supabase.from("repassos").update({ status: "cancelado" }).eq("id", id);
+                setMeusRepassos(prev => prev.map(x => x.id === id ? { ...x, status:"cancelado" } : x));
+              }
+
+              return (
+                <div>
+                  {meusRepassos.length === 0
+                    ? <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum repasse registrado.</div>
+                    : meusRepassos.map(r => {
+                      const statusColor  = r.status === "aprovado" ? "#BAFF39" : r.status === "recusado" ? "#ff6b6b" : r.status === "cancelado" ? "rgba(245,240,232,.25)" : "rgba(167,139,250,.9)";
+                      const statusBorder = r.status === "aprovado" ? "rgba(186,255,57,.2)" : r.status === "recusado" ? "rgba(255,107,107,.2)" : r.status === "cancelado" ? "rgba(245,240,232,.06)" : "rgba(167,139,250,.2)";
+                      const statusLabel  = r.status === "aprovado" ? "✓ aprovado" : r.status === "recusado" ? "✗ recusado" : r.status === "cancelado" ? "— cancelado" : "◉ pendente";
+                      return (
+                        <div key={r.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"14px 16px", marginBottom:10, opacity: r.status === "cancelado" ? .5 : 1 }}>
+                          {/* Header */}
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:8 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome_do_item}</div>
+                            <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", flexShrink:0 }}>{statusLabel}</span>
+                          </div>
+                          {/* Detalhes */}
+                          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.8 }}>
+                            <span style={{ color:"rgba(245,240,232,.25)" }}>CEG:</span> {r.ceg}<br/>
+                            <span style={{ color:"rgba(245,240,232,.25)" }}>Para:</span> {r.novo_dono_nome} <span style={{color:"rgba(167,139,250,.7)"}}>@{r.novo_dono_cog}</span><br/>
+                            <span style={{ color:"rgba(245,240,232,.25)" }}>Valor:</span> R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")} · {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                          </div>
+                          {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", marginTop:6, fontStyle:"italic" }}>{r.obs}</div>}
+                          {/* Ações */}
+                          {r.status !== "cancelado" && (
+                            <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                              <button onClick={() => exportarComprovanteRepasse(r)}
+                                style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:4, padding:"4px 10px", cursor:"pointer", letterSpacing:".05em" }}>
+                                ↓ exportar comprovante
+                              </button>
+                              {r.status === "pendente" && (
+                                <button onClick={() => cancelarRepasse(r.id)}
+                                  style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(255,107,107,.25)", color:"rgba(255,107,107,.6)", borderRadius:4, padding:"4px 10px", cursor:"pointer", letterSpacing:".05em" }}>
+                                  ✕ cancelar repasse
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", wordBreak:"break-word" }}>
-                          <span style={{ color:"rgba(245,240,232,.3)" }}>CEG:</span> {r.ceg}
-                        </div>
-                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:2, wordBreak:"break-word" }}>
-                          <span style={{ color:"rgba(245,240,232,.3)" }}>Para:</span> {r.novo_dono_nome} <span style={{color:"rgba(167,139,250,.7)"}}>@{r.novo_dono_cog}</span>
-                        </div>
-                        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")} · {new Date(r.created_at).toLocaleDateString("pt-BR")}</div>
-                        {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", marginTop:4, fontStyle:"italic" }}>{r.obs}</div>}
-                      </div>
-                    );
-                  })
-                }
-              </div>
-            )}
+                      );
+                    })
+                  }
+                </div>
+              );
+            })()}
 
             {repasseSubTab === "enviar" && (
               <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 14 : 18 }}>
