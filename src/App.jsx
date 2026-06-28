@@ -3796,6 +3796,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const adminIsMobile = adminWinW <= 680;
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
+  const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
+  const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [searchReport, setSearchReport] = useState("");
@@ -4100,8 +4102,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       <div className="admin-layout">
         {/* Sidebar */}
         {(() => {
-          const meuAcesso = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
-          const temAcesso = (id) => owner || !meuAcesso || meuAcesso.includes(id);
           const nav = (id, label, icon, badge) => (
             <button key={id} className={`admin-sidebar-item${adminMainTab === id ? " active" : ""}`} onClick={() => setAdminMainTab(id)}>
               <span>{icon}</span>{label}
