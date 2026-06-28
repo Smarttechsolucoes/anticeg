@@ -2839,16 +2839,16 @@ ${compHTML}
       )}
 
       {perfilSubTab === "tutorial" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          {TUTORIAL_STEPS.map((s, i) => (
-            <div key={i} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"18px 20px", display:"flex", gap:16, alignItems:"flex-start" }}>
-              <span style={{ fontSize:28, flexShrink:0 }}>{s.icon}</span>
-              <div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--offwhite)", letterSpacing:.5, marginBottom:6 }}>{s.title}</div>
-                <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", lineHeight:1.7 }}>{s.text}</div>
-              </div>
-            </div>
-          ))}
+        <div>
+          <div style={{ position:"relative", width:"100%", paddingBottom:"56.25%", borderRadius:10, overflow:"hidden", background:"#000" }}>
+            <iframe
+              src="TUTORIAL_VIDEO_URL"
+              title="Tutorial ANTICEG"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", border:"none" }}
+            />
+          </div>
         </div>
       )}
 
