@@ -2226,14 +2226,14 @@ ${p.comprovante_url ? (() => {
               {/* Card principal — mesmo estilo dos envios */}
               <div style={{ background:"var(--card-bg)", border:"1px solid rgba(167,139,250,.25)", borderRadius:10, overflow:"hidden", marginBottom:16 }}>
                 {/* Header */}
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
-                  <div>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.nome_do_item}</div>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, padding:"14px 16px", borderBottom:"1px solid rgba(245,240,232,.06)", flexWrap:"wrap" }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{r.nome_do_item}</div>
                     <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>
                       {r.ceg} · {new Date(r.created_at).toLocaleDateString("pt-BR")} às {new Date(r.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
                     </div>
                   </div>
-                  <span style={{ fontSize:9, fontWeight:700, color:"#A78BFA", border:"1px solid rgba(167,139,250,.35)", borderRadius:4, padding:"2px 9px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em", whiteSpace:"nowrap" }}>
+                  <span style={{ fontSize:9, fontWeight:700, color:"#A78BFA", border:"1px solid rgba(167,139,250,.35)", borderRadius:4, padding:"2px 9px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em", whiteSpace:"nowrap", flexShrink:0 }}>
                     ◉ Em análise
                   </span>
                 </div>
@@ -2257,7 +2257,7 @@ ${p.comprovante_url ? (() => {
                   </div>
 
                   {/* Detalhes */}
-                  <div style={{ display:"flex", gap:16, flexWrap:"wrap", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:12 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:12 }}>
                     <div>
                       <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Valor acordado</div>
                       <div style={{ fontSize:14, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")}</div>
@@ -2267,9 +2267,15 @@ ${p.comprovante_url ? (() => {
                       <div style={{ fontSize:12, fontWeight:700, color: r.item_quitado ? "#BAFF39" : "#ff6b6b", fontFamily:"'DM Mono',monospace" }}>{r.item_quitado ? "Sim" : "Não"}</div>
                     </div>
                     {(r.custos_pagos || []).length > 0 && (
-                      <div>
-                        <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Já pagos</div>
+                      <div style={{ gridColumn:"1 / -1" }}>
+                        <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Custos já pagos</div>
                         <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.custos_pagos.map(c => custosMap[c]||c).join(", ")}</div>
+                      </div>
+                    )}
+                    {r.valor_pendente_descricao && (
+                      <div style={{ gridColumn:"1 / -1" }}>
+                        <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(255,107,107,.45)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Valores pendentes</div>
+                        <div style={{ fontSize:11, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>{r.valor_pendente_descricao}</div>
                       </div>
                     )}
                   </div>
@@ -2310,10 +2316,10 @@ ${p.comprovante_url ? (() => {
         const subTabs = [["enviar","◎ Enviar"],["historico","≡ Histórico"]];
         return (
           <div style={{ padding:"4px 0" }}>
-            <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+            <div style={{ display:"flex", gap:8, marginBottom:20, overflowX:"auto", paddingBottom:2 }}>
               {subTabs.map(([id, label]) => (
                 <button key={id} onClick={() => setRepasseSubTab(id)}
-                  style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"5px 14px", borderRadius:20, cursor:"pointer", border: repasseSubTab===id ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: repasseSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: repasseSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: repasseSubTab===id ? 700 : 400 }}>
+                  style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding: isMobile ? "7px 18px" : "5px 14px", borderRadius:20, cursor:"pointer", border: repasseSubTab===id ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: repasseSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: repasseSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: repasseSubTab===id ? 700 : 400, whiteSpace:"nowrap", flexShrink:0 }}>
                   {label}
                 </button>
               ))}
@@ -2385,12 +2391,12 @@ ${compHTML}
                       return (
                         <div key={r.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, padding:"14px 16px", marginBottom:10, opacity: r.status === "cancelado" ? .5 : 1 }}>
                           {/* Header */}
-                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:8 }}>
-                            <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome_do_item}</div>
-                            <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", flexShrink:0 }}>{statusLabel}</span>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flex:1, minWidth:0, lineHeight:1.4 }}>{r.nome_do_item}</div>
+                            <span style={{ fontSize:9, fontWeight:700, color:statusColor, fontFamily:"'DM Mono',monospace", letterSpacing:".05em", flexShrink:0, border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px" }}>{statusLabel}</span>
                           </div>
                           {/* Detalhes */}
-                          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.8 }}>
+                          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.9 }}>
                             <span style={{ color:"rgba(245,240,232,.25)" }}>CEG:</span> {r.ceg}<br/>
                             <span style={{ color:"rgba(245,240,232,.25)" }}>Para:</span> {r.novo_dono_nome} <span style={{color:"rgba(167,139,250,.7)"}}>@{r.novo_dono_cog}</span><br/>
                             <span style={{ color:"rgba(245,240,232,.25)" }}>Valor:</span> R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")} · {new Date(r.created_at).toLocaleDateString("pt-BR")}
@@ -2398,14 +2404,14 @@ ${compHTML}
                           {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", marginTop:6, fontStyle:"italic" }}>{r.obs}</div>}
                           {/* Ações */}
                           {r.status !== "cancelado" && (
-                            <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                            <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 6 : 8, marginTop:12 }}>
                               <button onClick={() => exportarComprovanteRepasse(r)}
-                                style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:4, padding:"4px 10px", cursor:"pointer", letterSpacing:".05em" }}>
+                                style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.5)", borderRadius:6, padding: isMobile ? "10px 0" : "5px 12px", cursor:"pointer", letterSpacing:".05em", textAlign:"center" }}>
                                 ↓ exportar comprovante
                               </button>
                               {r.status === "pendente" && (
                                 <button onClick={() => cancelarRepasse(r.id)}
-                                  style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(255,107,107,.25)", color:"rgba(255,107,107,.6)", borderRadius:4, padding:"4px 10px", cursor:"pointer", letterSpacing:".05em" }}>
+                                  style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(255,107,107,.3)", color:"rgba(255,107,107,.7)", borderRadius:6, padding: isMobile ? "10px 0" : "5px 12px", cursor:"pointer", letterSpacing:".05em", textAlign:"center" }}>
                                   ✕ cancelar repasse
                                 </button>
                               )}
@@ -2551,7 +2557,7 @@ ${compHTML}
                       const on = repasseCustos.has(k);
                       return (
                         <button key={k} onClick={() => setRepasseCustos(prev => { const n = new Set(prev); on ? n.delete(k) : n.add(k); return n; })}
-                          style={{ padding:"7px 16px", borderRadius:20, border: on ? "1px solid rgba(186,255,57,.4)" : "1px solid rgba(245,240,232,.1)", background: on ? "rgba(186,255,57,.08)" : "transparent", color: on ? "#BAFF39" : "rgba(245,240,232,.45)", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight: on ? 700 : 400, cursor:"pointer" }}>
+                          style={{ padding: isMobile ? "9px 20px" : "7px 16px", borderRadius:20, border: on ? "1px solid rgba(186,255,57,.4)" : "1px solid rgba(245,240,232,.1)", background: on ? "rgba(186,255,57,.08)" : "transparent", color: on ? "#BAFF39" : "rgba(245,240,232,.45)", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight: on ? 700 : 400, cursor:"pointer" }}>
                           {on ? "✓ " : ""}{label}
                         </button>
                       );
