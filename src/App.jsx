@@ -2271,7 +2271,7 @@ ${p.comprovante_url ? (() => {
                   {[
                     "Este formulário deve ser preenchido pelo dono original do item que deseja repassá-lo dentro da comunidade.",
                     "Só é permitido repassar itens totalmente pagos à Nanda e com o formulário de pagamento devidamente preenchido.",
-                    "Repasses são permitidos dentro da comunidade ANTIGOM, inclusive no grupo V&T, sem necessidade de autorização prévia.",
+                    "Repasses são permitidos dentro da comunidade ANTIGOM, inclusive no grupo V&T da comunidade, sem necessidade de autorização prévia.",
                     "Repasses para pessoas fora da comunidade não são permitidos e serão cancelados.",
                     "Não podem ser repassados: itens fanmade, revistas e caixas de Mercari.",
                     "O joiner original é responsável por repassar todas as informações e regras ao novo dono.",
