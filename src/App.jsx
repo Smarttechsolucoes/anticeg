@@ -853,6 +853,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [reportItem, setReportItem] = useState(null);
 
   const [pagDemandaMap, setPagDemandaMap] = useState({});
+  const [repasseMap,    setRepasseMap]    = useState({});
   useEffect(() => {
     if (user.guest) return;
     supabase.from("pagamento_demandas").select("itens, status").eq("joiner_cog", user.cog)
@@ -865,6 +866,13 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           });
         });
         setPagDemandaMap(map);
+      });
+    supabase.from("repassos").select("item_id, status").eq("joiner_cog", user.cog)
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        data.forEach(d => { if (d.item_id && d.status === "pendente") map[d.item_id] = "pendente"; });
+        setRepasseMap(map);
       });
   }, [user.cog]);
   const [avisos, setAvisos] = useState([]);
@@ -1202,6 +1210,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                             </span>
                           );
                         })()}
+                        {repasseMap[item.id] === "pendente" && (
+                          <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"#FF5C1A", background:"rgba(255,92,26,.08)" }}>
+                            ⇄ repasse em análise
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td style={{ maxWidth: 260 }}>
@@ -1316,6 +1329,13 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 </div>
               )}
               {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
+              {repasseMap[item.id] === "pendente" && (
+                <div style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 0 2px", marginBottom:2 }}>
+                  <span style={{ fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 8px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"#FF5C1A", background:"rgba(255,92,26,.08)" }}>
+                    ⇄ repasse em análise
+                  </span>
+                </div>
+              )}
               {!guest && (
                 <div className="ml-card-vals">
                   {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} /></div>}
