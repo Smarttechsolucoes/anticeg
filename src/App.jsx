@@ -2198,22 +2198,85 @@ ${p.comprovante_url ? (() => {
           setRepasseStatus("enviado");
         }
 
-        if (repasseRecibo) return (
-          <div style={{ padding: "20px 0" }}>
-            <div style={{ background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.2)", borderRadius:12, padding:"20px 22px", marginBottom:16 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Repasse enviado!</div>
-              <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>Protocolo #{String(repasseRecibo.id).slice(0,8).toUpperCase()}</div>
+        if (repasseRecibo) {
+          const r = repasseRecibo;
+          const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
+          return (
+            <div style={{ paddingTop:4 }}>
+              {/* Card principal — mesmo estilo dos envios */}
+              <div style={{ background:"var(--card-bg)", border:"1px solid rgba(167,139,250,.25)", borderRadius:10, overflow:"hidden", marginBottom:16 }}>
+                {/* Header */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.nome_do_item}</div>
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>
+                      {r.ceg} · {new Date(r.created_at).toLocaleDateString("pt-BR")} às {new Date(r.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+                    </div>
+                  </div>
+                  <span style={{ fontSize:9, fontWeight:700, color:"#A78BFA", border:"1px solid rgba(167,139,250,.35)", borderRadius:4, padding:"2px 9px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".05em", whiteSpace:"nowrap" }}>
+                    ◉ Em análise
+                  </span>
+                </div>
+
+                {/* Corpo */}
+                <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:14 }}>
+
+                  {/* De → Para */}
+                  <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr auto 1fr", gap:10, alignItems:"center" }}>
+                    <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"10px 12px" }}>
+                      <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>De</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.joiner_nome}</div>
+                      <div style={{ fontSize:10, color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace" }}>@{r.joiner_cog}</div>
+                    </div>
+                    <div style={{ textAlign:"center", fontSize:16, color:"rgba(245,240,232,.2)" }}>→</div>
+                    <div style={{ background:"rgba(167,139,250,.06)", border:"1px solid rgba(167,139,250,.2)", borderRadius:8, padding:"10px 12px" }}>
+                      <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(167,139,250,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>Para</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{r.novo_dono_nome}</div>
+                      <div style={{ fontSize:10, color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace" }}>@{r.novo_dono_cog}</div>
+                    </div>
+                  </div>
+
+                  {/* Detalhes */}
+                  <div style={{ display:"flex", gap:16, flexWrap:"wrap", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:12 }}>
+                    <div>
+                      <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Valor acordado</div>
+                      <div style={{ fontSize:14, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Quitado</div>
+                      <div style={{ fontSize:12, fontWeight:700, color: r.item_quitado ? "#BAFF39" : "#ff6b6b", fontFamily:"'DM Mono',monospace" }}>{r.item_quitado ? "Sim" : "Não"}</div>
+                    </div>
+                    {(r.custos_pagos || []).length > 0 && (
+                      <div>
+                        <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Já pagos</div>
+                        <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.custos_pagos.map(c => custosMap[c]||c).join(", ")}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {r.obs && (
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontStyle:"italic", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10 }}>
+                      {r.obs}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Protocolo + nota */}
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:4, letterSpacing:".05em" }}>
+                Protocolo #{String(r.id).slice(0,8).toUpperCase()}
+              </div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:20, lineHeight:1.6 }}>
+                A notificação foi enviada para {r.novo_dono_nome}. A admin irá processar o repasse em breve.
+              </div>
+
+              <button onClick={() => { setRepasseRecibo(null); setRepasseItem(null); setRepasseNovoDono(null); setRepasseNovoDonoSearch(""); setRepasseQuitado(null); setRepasseCustos(new Set()); setRepassePendDesc(""); setRepasseValor(""); setRepasseComprovante(null); setRepasseObs(""); setRepasseStatus("idle"); setRepasseCiente(false); }}
+                style={{ background:"transparent", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.6)", borderRadius:8, padding:"9px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                Novo repasse
+              </button>
             </div>
-            <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", marginBottom:8 }}>Item: <strong style={{color:"#F5F0E8"}}>{repasseRecibo.nome_do_item}</strong> ({repasseRecibo.ceg})</div>
-            <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", marginBottom:8 }}>Novo dono: <strong style={{color:"#F5F0E8"}}>{repasseRecibo.novo_dono_nome}</strong> <span style={{color:"rgba(167,139,250,.8)"}}>@{repasseRecibo.novo_dono_cog}</span></div>
-            <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", marginBottom:16 }}>Valor acordado: <strong style={{color:"#F5F0E8"}}>R$ {Number(repasseRecibo.valor_acordado).toFixed(2).replace(".",",")}</strong></div>
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>A notificação foi enviada para {repasseRecibo.novo_dono_nome}. A admin irá processar o repasse em breve.</div>
-            <button onClick={() => { setRepasseRecibo(null); setRepasseItem(null); setRepasseNovoDono(null); setRepasseNovoDonoSearch(""); setRepasseQuitado(null); setRepasseCustos(new Set()); setRepassePendDesc(""); setRepasseValor(""); setRepasseComprovante(null); setRepasseObs(""); setRepasseStatus("idle"); }}
-              style={{ marginTop:20, background:"transparent", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.6)", borderRadius:8, padding:"9px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-              Novo repasse
-            </button>
-          </div>
-        );
+          );
+        }
 
         const novoDonoFiltered = (repasseJoiners || []).filter(j =>
           j.cog !== user.cog &&
