@@ -2282,8 +2282,15 @@ ${p.comprovante_url ? (() => {
                 <div>
                   <span style={labelSt}>Item a repassar</span>
                   <select value={repasseItem?.id ?? ""} onChange={e => {
-                      if (e.target.value === "outros") { setRepasseItem({ id:"outros" }); }
-                      else { const found = meusItens.find(i => i.id === Number(e.target.value)); setRepasseItem(found || null); }
+                      if (e.target.value === "outros") { setRepasseItem({ id:"outros" }); setRepasseValor(""); }
+                      else {
+                        const found = meusItens.find(i => i.id === Number(e.target.value));
+                        setRepasseItem(found || null);
+                        if (found) {
+                          const v = Number(found.valor_item||0) + Number(found.frete_inter||0) + Number(found.taxa_rf||0);
+                          setRepasseValor(v > 0 ? v.toFixed(2).replace(".",",") : "");
+                        }
+                      }
                     }}
                     style={{ ...inputSt, appearance:"none", cursor:"pointer" }}>
                     <option value="" style={{ color:"#111" }}>Selecione um item...</option>
@@ -2388,6 +2395,9 @@ ${p.comprovante_url ? (() => {
                   <span style={labelSt}>Valor total acordado no repasse (R$)</span>
                   <input type="text" inputMode="decimal" value={repasseValor} onChange={e => setRepasseValor(e.target.value)}
                     placeholder="Ex: 85,00" style={inputSt} />
+                  <div style={{ fontSize:10, color:"rgba(255,92,26,.7)", fontFamily:"'DM Mono',monospace", marginTop:6, lineHeight:1.5 }}>
+                    ⚠ Repasses com valor adicional cobrado não serão autorizados.
+                  </div>
                 </div>
 
                 {/* Comprovação */}
