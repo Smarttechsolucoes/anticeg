@@ -2275,8 +2275,6 @@ ${p.comprovante_url ? (() => {
                     "Repasses são permitidos dentro da comunidade ANTIGOM, inclusive no grupo V&T da comunidade, sem necessidade de autorização prévia.",
                     "Repasses para pessoas fora da comunidade não são permitidos e serão cancelados.",
                     "Não podem ser repassados: itens fanmade, revistas e caixas de Mercari.",
-                    "O joiner original é responsável por repassar todas as informações e regras ao novo dono.",
-                    "Ao preencher este formulário, você está ciente de que o item será enviado para outra pessoa, sem possibilidade de cancelamento.",
                     "Repasses não informados via formulário não serão considerados pela GOM.",
                   ].map((r, i) => (
                     <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
