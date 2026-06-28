@@ -3592,7 +3592,8 @@ function NotificarTodosBlock() {
 
       {listaOpen && lista !== null && (
         <div style={{ marginTop:12, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0,
+          <div style={{ overflowX:"auto" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0, minWidth:480,
             background:"rgba(245,240,232,.04)", padding:"6px 12px",
             fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
             <span>Nome</span><span>@</span><span>E-mail</span><span style={{ textAlign:"center" }}>Itens</span><span style={{ textAlign:"right" }}>Total</span><span></span>
@@ -3600,7 +3601,7 @@ function NotificarTodosBlock() {
           {lista.length === 0
             ? <div style={{ padding:"12px", fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum joiner com pagamento pendente e e-mail cadastrado.</div>
             : lista.map((r, i) => (
-              <div key={r.cog} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0,
+              <div key={r.cog} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0, minWidth:480,
                 padding:"8px 12px", borderTop:"1px solid rgba(245,240,232,.05)",
                 background: i % 2 === 0 ? "transparent" : "rgba(245,240,232,.02)", alignItems:"center" }}>
                 <span style={{ fontSize:11, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome}</span>
@@ -3612,6 +3613,7 @@ function NotificarTodosBlock() {
               </div>
             ))
           }
+          </div>
           {lista.length > 0 && (
             <div style={{ padding:"6px 12px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between",
               fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
@@ -4522,7 +4524,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(201,168,240,.15)", borderRadius:8, padding:"14px", marginBottom:10, display:"flex", flexDirection:"column", gap:10 }}>
                       <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px" }}>MODALIDADES *</div>
                       {cotacaoOpcoes.map((op, idx) => (
-                        <div key={idx} style={{ display:"grid", gridTemplateColumns:"130px 1fr 1fr 1fr auto", gap:6, alignItems:"center" }}>
+                        <div key={idx} style={{ display:"grid", gridTemplateColumns: adminIsMobile ? "1fr 1fr" : "130px 1fr 1fr 1fr auto", gap:6, alignItems:"center" }}>
                           <select value={op.forma} onChange={e => { const a=[...cotacaoOpcoes]; a[idx]={...a[idx],forma:e.target.value}; setCotacaoOpcoes(a); }} style={{ ...inp2, cursor:"pointer" }}>
                             <option value="">Modalidade...</option>
                             {formas.map(f => <option key={f} value={f}>{f}</option>)}
@@ -5415,6 +5417,9 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 function EnvioTab({ user, itens }) {
   const WA_GOM = "5524992501917";
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
+  const [envioWinW, setEnvioWinW] = useState(window.innerWidth);
+  useEffect(() => { const h = () => setEnvioWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const envioIsMobile = envioWinW <= 680;
 
   const [unlocked,    setUnlocked]    = useState(false);
   const [senha,       setSenha]       = useState("");
@@ -5560,7 +5565,7 @@ function EnvioTab({ user, itens }) {
     background:"#111", border:"1px solid rgba(245,240,232,.07)",
     borderRadius:10, padding:"20px 20px 16px", marginBottom:12,
   };
-  const row2 = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 };
+  const row2 = { display:"grid", gridTemplateColumns: envioIsMobile ? "1fr" : "1fr 1fr", gap:10 };
   const fld  = { marginBottom:12 };
   const stat = { fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", padding:"9px 0", borderBottom:"1px solid rgba(245,240,232,.06)" };
 
@@ -6393,7 +6398,7 @@ export default function App() {
       {/* Modal PIN Admin */}
       {adminPinModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }} onClick={() => setAdminPinModal(false)}>
-          <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"32px 28px", width:300, display:"flex", flexDirection:"column", gap:16 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"32px 28px", width:"min(300px, calc(100% - 32px))", display:"flex", flexDirection:"column", gap:16 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--laranja)", letterSpacing:1 }}>⚙ ADMIN</div>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.45)" }}>// insira o PIN de acesso</div>
             <input

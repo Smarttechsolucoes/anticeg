@@ -461,7 +461,7 @@ td { padding:10px; vertical-align:middle; }
 .claim-prazo-date { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-xl); color:var(--laranja); letter-spacing:1px; }
 .claim-prazo-sub { font-family:'DM Mono',monospace; font-size:10px; color:rgba(245,240,232,.52); }
 
-.claim-success-banner { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#0a1a0a; border:1px solid #2a5a2a; border-radius:10px; padding:14px 20px; display:flex; align-items:center; gap:14px; color:#5cb85c; font-family:'DM Mono',monospace; font-size:12px; z-index:999; box-shadow:0 4px 24px rgba(0,0,0,.5); }
+.claim-success-banner { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#0a1a0a; border:1px solid #2a5a2a; border-radius:10px; padding:14px 20px; display:flex; align-items:center; gap:14px; color:#5cb85c; font-family:'DM Mono',monospace; font-size:12px; z-index:999; box-shadow:0 4px 24px rgba(0,0,0,.5); max-width:calc(100% - 32px); }
 
 .modal-cancel-btn { flex:1; background:none; border:1px solid #333; color:rgba(245,240,232,.62); font-family:'DM Mono',monospace; font-size:var(--fs-xs); padding:10px; border-radius:6px; cursor:pointer; }
 .modal-cancel-btn:hover { border-color:#555; color:rgba(245,240,232,.7); }
@@ -865,3 +865,28 @@ td { padding:10px; vertical-align:middle; }
 .regras-acc-laranja .regras-list-icon { color:var(--laranja); }
 .regras-acc-verde .regras-list-icon { color:var(--verde); }
 .regras-list mark { background:rgba(201,168,240,.25); color:var(--offwhite); border-radius:2px; padding:0 2px; }
+
+/* ── Refinamentos mobile ≤680px ──────────────────────────── */
+@media (max-width:680px) {
+  /* admin-money-row: 4 col → 2 col */
+  .admin-money-row { grid-template-columns:1fr 1fr; }
+
+  /* admin-wrap padding horizontal menor */
+  .admin-wrap { padding-left:12px; padding-right:12px; }
+
+  /* Regras: padding menor */
+  .regras-acc-toggle { padding:14px 16px; }
+  .regras-list { padding:0 16px 16px; }
+
+  /* claim-success-banner: sobe acima da bottom nav */
+  .claim-success-banner { bottom:80px; }
+
+  /* store: 1 col em telas muito pequenas */
+  .store-grid { grid-template-columns:1fr 1fr; gap:8px; }
+
+  /* Perfil subtabs text menor */
+  .perfil-subtabs button { font-size:10px; padding:7px 12px; }
+
+  /* Summary row: 2 col */
+  .summary-row { grid-template-columns:1fr 1fr; }
+}
