@@ -843,7 +843,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "" }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", onOpenPagamentos }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -1001,11 +1001,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       </div>
 
       <div className="summary-row">
-        <a className="sum-card sum-card-link" href="https://forms.gle/SyG2Zz8Lovreq8kn9" target="_blank" rel="noopener noreferrer">
+        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer" }}>
           <div className="sum-label">Forms de Pagamento</div>
           <div className="sum-value orange">CLIQUE AQUI</div>
           <div className="sum-sub">pague o que está em aberto</div>
-        </a>
+        </div>
         {!guest && (
           <div className="sum-card" style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : undefined }}>
             <div className="sum-label">Total a pagar</div>
@@ -1548,12 +1548,13 @@ function StaffPanel() {
   );
 }
 
-function PerfilTab({ user, onUpdate, owner = false }) {
+function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) {
   const [winW, setWinW] = useState(window.innerWidth);
   useEffect(() => { const h = () => setWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const isMobile = winW <= 680;
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
+  useEffect(() => { if (openPagamentosSignal > 0) setPerfilSubTab("pagamentos"); }, [openPagamentosSignal]);
   const [meuEnvios,      setMeuEnvios]      = useState([]);
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
   // ── pagamentos ──
@@ -6454,6 +6455,7 @@ export default function App() {
     return TAB_SLUGS.includes(slug) ? slug : "masterlist";
   });
   const [adminReset, setAdminReset] = useState(0);
+  const [openPagamentosSignal, setOpenPagamentosSignal] = useState(0);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPinModal, setAdminPinModal] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState("");
@@ -6788,10 +6790,10 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
-      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} />}
+      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} />}
       {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} />}
