@@ -1554,6 +1554,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
   const isMobile = winW <= 680;
   const [perfilSubTab, setPerfilSubTab] = useState("dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
+  const [feedbackSubTab, setFeedbackSubTab] = useState("enviar");
   useEffect(() => { if (openPagamentosSignal > 0) setPerfilSubTab("pagamentos"); }, [openPagamentosSignal]);
   const [meuEnvios,      setMeuEnvios]      = useState([]);
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
@@ -2896,33 +2897,52 @@ ${compHTML}
       )}
 
       {perfilSubTab === "feedback" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
-          <FeedbackForm user={user} defaultTipo={feedbackTipo} onSent={() => {
-            supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
-              .then(({ data }) => { setMeusFeedbacks(data || []); });
-          }} />
-          {meusFeedbacks && meusFeedbacks.length > 0 && (
-            <div>
-              <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:12 }}>Seus feedbacks anteriores</div>
-              {meusFeedbacks.map(fb => {
-                const tipoColor = { bug:"var(--laranja)", sugestão:"#64B5F6", elogio:"#4ade80" }[fb.tipo] || "rgba(245,240,232,.4)";
-                return (
-                  <div key={fb.id} style={{ background:"var(--card-bg)", border:`1px solid ${fb.resposta ? "rgba(167,139,250,.18)" : "rgba(245,240,232,.07)"}`, borderRadius:8, padding:"12px 16px", marginBottom:8 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6, flexWrap:"wrap" }}>
-                      <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{fb.tipo}</span>
-                      <span style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>{new Date(fb.created_at).toLocaleDateString("pt-BR")}</span>
-                    </div>
-                    <div style={{ fontSize:12, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom: fb.resposta ? 10 : 0 }}>{fb.message}</div>
-                    {fb.resposta && (
-                      <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:6, padding:"8px 12px" }}>
-                        <div style={{ fontSize:9, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>↩ Resposta da Nanda</div>
-                        <div style={{ fontSize:11, color:"rgba(245,240,232,.75)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{fb.resposta}</div>
+        <div>
+          {/* Sub-abas */}
+          <div style={{ display:"flex", gap:8, marginBottom:20, overflowX:"auto", paddingBottom:2 }}>
+            {[["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => {
+              const respondidos = id === "historico" && (meusFeedbacks || []).filter(f => f.resposta).length;
+              return (
+                <button key={id} onClick={() => setFeedbackSubTab(id)}
+                  style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding: isMobile ? "7px 18px" : "5px 14px", borderRadius:20, cursor:"pointer", border: feedbackSubTab===id ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: feedbackSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: feedbackSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: feedbackSubTab===id ? 700 : 400, whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                  {label}
+                  {respondidos > 0 && <span style={{ background:"#A78BFA", color:"#000", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px" }}>{respondidos}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {feedbackSubTab === "enviar" && (
+            <FeedbackForm user={user} defaultTipo={feedbackTipo} onSent={() => {
+              supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+                .then(({ data }) => { setMeusFeedbacks(data || []); setFeedbackSubTab("historico"); });
+            }} />
+          )}
+
+          {feedbackSubTab === "historico" && (
+            meusFeedbacks === null
+              ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+              : meusFeedbacks.length === 0
+                ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum feedback enviado ainda.</div>
+                : meusFeedbacks.map(fb => {
+                    const tipoColor = { bug:"var(--laranja)", sugestão:"#64B5F6", elogio:"#4ade80" }[fb.tipo] || "rgba(245,240,232,.4)";
+                    return (
+                      <div key={fb.id} style={{ background:"var(--card-bg)", border:`1px solid ${fb.resposta ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"14px 16px", marginBottom:10 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+                          <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{fb.tipo}</span>
+                          {fb.resposta && <span style={{ fontSize:9, color:"#A78BFA", border:"1px solid rgba(167,139,250,.3)", borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace" }}>↩ respondido</span>}
+                          <span style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>{new Date(fb.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        <div style={{ fontSize:12, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom: fb.resposta ? 12 : 0 }}>{fb.message}</div>
+                        {fb.resposta && (
+                          <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:7, padding:"10px 14px" }}>
+                            <div style={{ fontSize:9, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>↩ Resposta da Nanda</div>
+                            <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>{fb.resposta}</div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })
           )}
         </div>
       )}
