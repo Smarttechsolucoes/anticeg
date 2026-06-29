@@ -1579,6 +1579,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
   const [meusFeedbacks,  setMeusFeedbacks]  = useState(null);
+  const [expandedReports, setExpandedReports] = useState(new Set());
   // ── repasse ──
   const [meusItens,           setMeusItens]           = useState([]);
   const [repasseItem,         setRepasseItem]         = useState(null);
@@ -2927,7 +2928,6 @@ ${compHTML}
       )}
 
       {perfilSubTab === "suporte" && (() => {
-        const [expandedReports, setExpandedReports] = useState(new Set());
         const toggleReport = id => setExpandedReports(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
         const ERRO_LABELS = { erro_item:"Nome do item", erro_valor:"Valor do item", erro_frete:"Frete", erro_taxa:"Taxa RF", erro_pagamento:"Pagamento", erro_recebido:"Item recebido", erro_outro:"Outro" };
