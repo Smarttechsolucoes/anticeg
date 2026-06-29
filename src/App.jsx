@@ -2139,7 +2139,7 @@ ${p.comprovante_url ? (() => {
                     </div>
                     <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
                       <div>
-                        <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px", marginBottom:2 }}>Favorecida</div>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px", marginBottom:2 }}>Nome da conta</div>
                         <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.75)", fontWeight:700 }}>Fernanda Gomes Medeiros</div>
                       </div>
                       <div>
