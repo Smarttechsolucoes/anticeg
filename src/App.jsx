@@ -1561,6 +1561,7 @@ function PerfilTab({ user, onUpdate, owner = false }) {
   const [pagSelecionados, setPagSelecionados] = useState(new Set());
   const [pagComprovante,  setPagComprovante]  = useState(null);
   const [pagObs,          setPagObs]          = useState("");
+  const [pixCopiado,      setPixCopiado]      = useState(false);
   const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
   const [pagErro,         setPagErro]         = useState("");
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
@@ -2115,6 +2116,42 @@ ${p.comprovante_url ? (() => {
               <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", textTransform:"uppercase" }}>Total selecionado</span>
               <span style={{ fontSize:18, fontWeight:900, color: temItens ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
             </div>
+            {/* Dados PIX */}
+            {(() => {
+              const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+              function copiar() {
+                navigator.clipboard.writeText(PIX_KEY);
+                setPixCopiado(true);
+                setTimeout(() => setPixCopiado(false), 2000);
+              }
+              return (
+                <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.18)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+                  <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>Dados para pagamento</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    <div>
+                      <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px", marginBottom:3 }}>Chave PIX — Mercado Pago</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <div style={{ flex:1, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"8px 11px", fontSize:11, fontFamily:"'DM Mono',monospace", color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
+                        <button onClick={copiar} style={{ flexShrink:0, padding:"8px 14px", background: pixCopiado ? "rgba(186,255,57,.2)" : "rgba(186,255,57,.1)", color:"#BAFF39", border:`1px solid ${pixCopiado ? "rgba(186,255,57,.5)" : "rgba(186,255,57,.25)"}`, borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", transition:"all .15s", whiteSpace:"nowrap" }}>
+                          {pixCopiado ? "✓ copiado" : "copiar"}
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+                      <div>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px", marginBottom:2 }}>Favorecida</div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.75)", fontWeight:700 }}>Fernanda Gomes Medeiros</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px", marginBottom:2 }}>Valor</div>
+                        <div style={{ fontSize:13, fontFamily:"'DM Mono',monospace", color:"#BAFF39", fontWeight:900 }}>R$ {total.toFixed(2).replace(".",",")}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div style={{ marginBottom:12 }}>
               <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Comprovante de pagamento</div>
               <label style={{ display:"flex", alignItems:"center", gap:10, background: pagComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${pagComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
