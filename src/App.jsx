@@ -1968,13 +1968,19 @@ ${p.comprovante_url ? (() => {
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
 
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => exportarComprovante(pagRecibo)} style={{ flex:1, padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                ↓ Exportar
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagSubTab("enviar"); }}
+                style={{ width:"100%", padding:"13px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:13, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
+                + Enviar novo comprovante
               </button>
-              <button onClick={() => { setPagStatus("idle"); setPagSubTab("historico"); }} style={{ flex:1, padding:"12px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:12, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                Ver histórico →
-              </button>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => exportarComprovante(pagRecibo)} style={{ flex:1, padding:"10px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:11, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  ↓ Exportar
+                </button>
+                <button onClick={() => { setPagStatus("idle"); setPagSubTab("historico"); }} style={{ flex:1, padding:"10px 0", background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, fontSize:11, fontWeight:700, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  Ver histórico →
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -1984,7 +1990,7 @@ ${p.comprovante_url ? (() => {
           <div style={{ paddingBottom:40 }}>
             <div style={{ display:"flex", gap:6, marginBottom:20 }}>
               {[["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
-                <button key={id} onClick={() => setPagSubTab(id)}
+                <button key={id} onClick={() => { if (id === "enviar" && pagStatus === "enviado") { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); } setPagSubTab(id); }}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
                   {label}
                 </button>
