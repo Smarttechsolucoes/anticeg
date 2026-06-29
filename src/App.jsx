@@ -3923,6 +3923,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [fbRespostaAberta, setFbRespostaAberta] = useState(null);
   const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
   const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
+  const [adminPixCopiado,  setAdminPixCopiado]  = useState(false);
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState(null);
@@ -4580,6 +4581,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
       {adminMainTab === "pagamentos" && (() => {
+        const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+        const PixBar = () => (
+          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"9px 14px", marginBottom:16, flexWrap:"wrap" }}>
+            <span style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>PIX · Mercado Pago</span>
+            <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</span>
+            <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); setAdminPixCopiado(true); setTimeout(() => setAdminPixCopiado(false), 2000); }}
+              style={{ flexShrink:0, padding:"5px 12px", background: adminPixCopiado ? "rgba(186,255,57,.2)" : "rgba(186,255,57,.08)", color:"#BAFF39", border:`1px solid ${adminPixCopiado ? "rgba(186,255,57,.5)" : "rgba(186,255,57,.2)"}`, borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
+              {adminPixCopiado ? "✓ copiado" : "copiar"}
+            </button>
+          </div>
+        );
         const formPend = pagDemandas.filter(d => d.status === "em_analise").length;
         const subTabs = [
           temAcesso("demandas")  && { id:"formulario", label:"Formulário", badge: formPend },
@@ -4601,6 +4613,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
         return (
           <div>
+            <PixBar />
             <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:2 }}>
               {subTabs.map(t => (
                 <button key={t.id} style={tabSt(adminPagSubTab === t.id)} onClick={() => setAdminPagSubTab(t.id)}>
@@ -4779,6 +4792,20 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "envios" && (
         <div>
+          {/* PIX */}
+          {(() => {
+            const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+            return (
+              <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"9px 14px", marginBottom:16, flexWrap:"wrap" }}>
+                <span style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>PIX · Mercado Pago</span>
+                <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</span>
+                <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); setAdminPixCopiado(true); setTimeout(() => setAdminPixCopiado(false), 2000); }}
+                  style={{ flexShrink:0, padding:"5px 12px", background: adminPixCopiado ? "rgba(186,255,57,.2)" : "rgba(186,255,57,.08)", color:"#BAFF39", border:`1px solid ${adminPixCopiado ? "rgba(186,255,57,.5)" : "rgba(186,255,57,.2)"}`, borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
+                  {adminPixCopiado ? "✓ copiado" : "copiar"}
+                </button>
+              </div>
+            );
+          })()}
           {/* Filtros */}
           {(() => {
             const FILTROS = [
