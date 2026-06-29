@@ -3910,8 +3910,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const adminIsMobile = adminWinW <= 680;
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
-  const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
-  const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [searchReport, setSearchReport] = useState("");
@@ -3939,6 +3937,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [joinersData, setJoinersData] = useState(null);
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
+  const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
+  const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
   const [novoEvData,        setNovoEvData]        = useState("");
