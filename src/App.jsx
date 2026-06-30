@@ -6678,7 +6678,6 @@ function AccessibilityWidget() {
 
 export default function App() {
   const [page, setPage] = useState("landing");
-  const [sideOpen, setSideOpen] = useState(false);
   const [user, setUser] = useState(() => {
     try {
       if (localStorage.getItem("anticeg_session_v") !== SESSION_VERSION) {
@@ -6979,47 +6978,6 @@ export default function App() {
           onSkip={() => setShowPerfilModal(false)}
         />
       )}
-      {/* Side drawer overlay */}
-      {sideOpen && (
-        <div className="side-nav-overlay" onClick={() => setSideOpen(false)}>
-          <nav className="side-nav" onClick={e => e.stopPropagation()}>
-            <div className="side-nav-header">
-              <span className="topbar-logo" style={{ fontSize:20 }}>ANTI<span>CEG</span></span>
-              <button className="side-nav-close" onClick={() => setSideOpen(false)}>✕</button>
-            </div>
-            {!user.guest && (
-              <div className="side-nav-user">
-                <div className="user-dot" />
-                <span>{user.nome || `@${user.cog}`}</span>
-              </div>
-            )}
-            <div className="side-nav-items">
-              {[
-                { id:"masterlist", icon:"☰", label:"Masterlist" },
-                { id:"cegs",       icon:"◈", label:"CEGs" },
-                { id:"calendario", icon:"◫", label:"Calendário" },
-                ...(!user.guest ? [{ id:"perfil", icon:"○", label:"Meu Perfil" }] : []),
-                ...(!user.guest ? [{ id:"envio",  icon:"◫", label:"Envio Nacional" }] : []),
-                { id:"regras",     icon:"☆", label:"Links & Regras" },
-                ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
-              ].map(item => (
-                <button key={item.id} className={`side-nav-item ${tab === item.id ? "active" : ""}`}
-                  onClick={() => { changeTab(item.id); setSideOpen(false); }}>
-                  <span className="side-nav-icon">{item.icon}</span>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <div className="side-nav-footer">
-              {user.guest ? (
-                <button className="side-nav-logout" onClick={handleLogout}>ENTRAR →</button>
-              ) : (
-                <button className="side-nav-logout" onClick={() => { handleLogout(); setSideOpen(false); }}>Sair ↗</button>
-              )}
-            </div>
-          </nav>
-        </div>
-      )}
 
       <div style={{ position:"sticky", top:0, zIndex:300 }}>
         {avisoMasterlist && (
@@ -7031,9 +6989,6 @@ export default function App() {
         )}
       <div className="topbar">
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <button className="topbar-hamburger" onClick={() => setSideOpen(true)} aria-label="Menu">
-            <span /><span /><span />
-          </button>
           <a className="topbar-logo" href="#">ANTI<span>CEG</span></a>
         </div>
         <div className="topbar-right">
