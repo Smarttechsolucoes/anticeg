@@ -1795,16 +1795,38 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
   // foto
   const [fotoUrl, setFotoUrl] = useState(user.foto_perfil || "");
   const [fotoLoading, setFotoLoading] = useState(false);
+  const [fotoErro, setFotoErro] = useState("");
   const fileInputRef = useRef(null);
 
   async function handleFotoUpload(e) {
     const file = e.target.files[0];
+    e.target.value = ""; // permite escolher o mesmo arquivo de novo depois de um erro
     if (!file) return;
+    setFotoErro("");
+
+    if (file.size > 15 * 1024 * 1024) {
+      setFotoErro("Essa imagem é muito grande (máx. 15MB). Tente outra foto.");
+      return;
+    }
+
     setFotoLoading(true);
     // Redimensiona para 200x200 usando canvas
     const img = new Image();
-    img.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const timeout = setTimeout(() => {
+      setFotoErro("Demorou demais pra processar a imagem. Tente outra foto.");
+      setFotoLoading(false);
+      URL.revokeObjectURL(objectUrl);
+    }, 15000);
+
+    img.onerror = () => {
+      clearTimeout(timeout);
+      URL.revokeObjectURL(objectUrl);
+      setFotoErro("Não conseguimos abrir essa imagem. Se for foto do iPhone (formato HEIC), troque pra JPG ou PNG e tente de novo.");
+      setFotoLoading(false);
+    };
     img.onload = async () => {
+      clearTimeout(timeout);
       const canvas = document.createElement("canvas");
       canvas.width = 200; canvas.height = 200;
       const ctx = canvas.getContext("2d");
@@ -1813,19 +1835,23 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
       const sy = (img.height - size) / 2;
       ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
       canvas.toBlob(async (blob) => {
+        URL.revokeObjectURL(objectUrl);
+        if (!blob) { setFotoErro("Erro ao processar a imagem. Tente outra foto."); setFotoLoading(false); return; }
         const path = `${user.cog}/avatar.jpg`;
         await supabase.storage.from("avatars").remove([path]);
         const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: true });
-        if (upErr) { setError("Erro ao fazer upload."); setFotoLoading(false); return; }
+        if (upErr) { setFotoErro("Erro ao fazer upload: " + upErr.message); setFotoLoading(false); return; }
         const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-        await supabase.from("joiners").update({ foto_perfil: publicUrl }).eq("cog", user.cog);
-        const updatedUser = { ...user, foto_perfil: publicUrl };
+        const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
+        await supabase.from("joiners").update({ foto_perfil: cacheBustedUrl }).eq("cog", user.cog);
+        const updatedUser = { ...user, foto_perfil: cacheBustedUrl };
         localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
         onUpdate(updatedUser);
-        setFotoUrl(publicUrl);
+        setFotoUrl(cacheBustedUrl);
         setFotoLoading(false);
       }, "image/jpeg", 0.9);
     };
+    img.src = objectUrl;
   }
 
   async function handleSalvar() {
@@ -3059,6 +3085,7 @@ ${compHTML}
             <button type="button" onClick={() => fileInputRef.current.click()} disabled={fotoLoading} style={{ background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.15)", color:"var(--offwhite)", borderRadius:6, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".03em" }}>
               {fotoLoading ? "Enviando..." : "Alterar foto"}
             </button>
+            {fotoErro && <div style={{ fontSize:11, color:"var(--laranja)", textAlign:"center", maxWidth:280, lineHeight:1.5 }}>{fotoErro}</div>}
           </div>
           <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
           <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
