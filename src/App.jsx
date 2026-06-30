@@ -91,7 +91,7 @@ const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd"];
-const SESSION_VERSION = "2";
+const SESSION_VERSION = "3";
 function isAdminUser(user) {
   return OWNER_EMAILS.includes(user?.email) || OWNER_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c"
       || STAFF_EMAILS.includes(user?.email) || STAFF_COGS.includes(user?.cog);
