@@ -196,7 +196,7 @@ const CEG_GRUPO = {
 
 // Concessões manuais de badges (exceções decididas pela admin, fora do cálculo automático)
 const BADGES_MANUAIS = {
-  fefacollector: ["wolfchan", "quokka"],
+  fefacollector: ["quokka"],
 };
 
 const BADGES_DEF = [
