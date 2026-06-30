@@ -212,6 +212,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
       + (i.pago_rf ? Number(i.taxa_rf || 0) : 0), 0);
   const enviosFeitos = envios.filter(e => e.status === "enviado").length;
   const temItem3D = itens.some(i => /3d/i.test(i.nome_do_item || ""));
+  const fmtR = v => `R$${v.toFixed(2).replace(".", ",")}`;
 
   const earned = {
     foxiny:   itens.length > 0,
@@ -224,7 +225,24 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
     leebit:   totalPago >= 7000,
   };
 
-  return BADGES_DEF.map(b => ({ ...b, earned: !!earned[b.id] }));
+  const wolfchanFaltam = [
+    envios.length === 0     ? "fazer um Envio Nacional" : null,
+    pagamentos.length === 0 ? "usar o forms de pagamento" : null,
+    reports.length === 0    ? "reportar um erro" : null,
+  ].filter(Boolean);
+
+  const detalhe = {
+    foxiny:   earned.foxiny   ? "Conquistado pra sempre — não some, mesmo crescendo na comunidade." : "Adicione pelo menos 1 item na sua masterlist pra conquistar.",
+    puppym:   earned.puppym   ? `Conquistado com ${cegsDistintos} CEGs — fica valendo pra sempre.` : `Você tem ${cegsDistintos}/20 CEGs vinculadas. Faltam ${20 - cegsDistintos} pra conquistar.`,
+    wolfchan: earned.wolfchan ? "Conquistado pra sempre — você já usou os 3 recursos." : `Falta: ${wolfchanFaltam.join(", ")}.`,
+    bbokari:  earned.bbokari  ? `Conquistado com ${enviosFeitos} envios concluídos — fica valendo pra sempre.` : `Você tem ${enviosFeitos}/3 envios concluídos pelo site.`,
+    jiniret:  earned.jiniret  ? `Em dia! ${multasPagas} multa(s) paga(s) até agora. Pague sempre antes do vencimento pra não perder esse badge (precisa ficar abaixo de 10).` : `Você já tem ${multasPagas} multas pagas. Fique abaixo de 10 pra reconquistar.`,
+    dwaekki:  earned.dwaekki  ? "Conquistado pra sempre — você já comprou um item 3D." : "Compre algum item com \"3D\" no nome pra conquistar.",
+    quokka:   earned.quokka   ? `Conquistado pra sempre — você já participou de ${gruposDistintos} grupos diferentes.` : `Você participou de ${gruposDistintos}/2 grupos diferentes. Participe de outro grupo pra conquistar.`,
+    leebit:   earned.leebit   ? `Conquistado pra sempre — você gastou ${fmtR(totalPago)} acumulado.` : `Você gastou ${fmtR(totalPago)} de R$7.000,00 necessários. Faltam ${fmtR(7000 - totalPago)}.`,
+  };
+
+  return BADGES_DEF.map(b => ({ ...b, earned: !!earned[b.id], detalhe: detalhe[b.id] }));
 }
 
 function NovoBadgePopup({ badge, onClose }) {
@@ -1851,6 +1869,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conta</div>
             {navPerfil("dados",      "○",  "Dados",      0)}
+            {navPerfil("badges",     "🏅", "Badges",     0)}
             {navPerfil("pagamentos", "◎", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
             {navPerfil("repasse",    "⇄",  "Repasse",    meusRepassos.filter(r => r.status === "pendente").length)}
             {navPerfil("envios",     "◫",  "Envios",     meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
@@ -2989,9 +3008,37 @@ ${compHTML}
         </div>
       )}
 
+      {perfilSubTab === "badges" && (() => {
+        const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount });
+        return (
+          <div style={{ paddingBottom: 40 }}>
+            <BadgesRow badges={badges} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {badges.map(b => (
+                <div key={b.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", background: "var(--card-bg)", border: `1px solid ${b.earned ? "rgba(186,255,57,.18)" : "rgba(245,240,232,.07)"}`, borderRadius: 10, padding: "14px 16px" }}>
+                  <div style={{ width: 44, height: 39, flexShrink: 0, clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)", background: b.earned ? (b.color === "dourado" ? "linear-gradient(160deg, #FFE9A8, #D4AF37)" : "#fff") : "#2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", background: "#fff" }}>
+                      <img src={b.img} alt={b.label} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.65)", opacity: b.earned ? 1 : .4, filter: b.earned ? "none" : "grayscale(1)" }} />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, color: "var(--offwhite)", letterSpacing: .5 }}>{b.label}</span>
+                      <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", fontWeight: 700, letterSpacing: ".05em", padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", color: b.earned ? "var(--verde)" : "rgba(245,240,232,.4)", background: b.earned ? "rgba(186,255,57,.1)" : "rgba(245,240,232,.06)" }}>
+                        {b.earned ? "✓ Conquistado" : "Bloqueado"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "rgba(245,240,232,.55)", lineHeight: 1.5 }}>{b.detalhe}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {perfilSubTab === "dados" && (
         <div className="login-box" style={{ gap: 14 }}>
-          <BadgesRow badges={computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount })} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingBottom: 16, borderBottom: "1px solid #1e1e1e" }}>
             <div className="avatar-perfil" onClick={() => fileInputRef.current.click()} title="Clique para trocar a foto">
               <img src={fotoUrl || bonequinha} alt="foto de perfil" />
