@@ -218,7 +218,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
       + (i.pago_frete ? Number(i.frete_inter || 0) : 0)
       + (i.pago_rf ? Number(i.taxa_rf || 0) : 0), 0);
   const enviosFeitos = envios.filter(e => e.status === "enviado").length;
-  const temItem3D = itens.some(i => /3d/i.test(i.nome_do_item || ""));
+  const temItem3D = itens.some(i => /3d/i.test(i.nome_do_item || "") || (i.ceg || "").trim().toUpperCase() === "GET COOL");
   const fmtR = v => `R$${v.toFixed(2).replace(".", ",")}`;
   const manuais = BADGES_MANUAIS[cog] || [];
 
