@@ -276,7 +276,7 @@ function BadgesRow({ badges }) {
   return (
     <div>
       <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:12 }}>
-        🏅 Conquistas
+        Conquistas
       </div>
       <div className="badges-row">
         <div className="badge-line badge-line-top" />
@@ -1869,7 +1869,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conta</div>
             {navPerfil("dados",      "○",  "Dados",      0)}
-            {navPerfil("badges",     "🏅", "Badges",     0)}
+            {navPerfil("badges",     "✦", "Badges",     0)}
             {navPerfil("pagamentos", "◎", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
             {navPerfil("repasse",    "⇄",  "Repasse",    meusRepassos.filter(r => r.status === "pendente").length)}
             {navPerfil("envios",     "◫",  "Envios",     meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
@@ -4461,7 +4461,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "👤", confirmacoes.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
-                {temAcesso("badges")       && nav("badges",       "Badges",       "🏅", 0)}
+                {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -4960,7 +4960,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "badges" && (
         <div>
-          <h3 className="admin-title" style={{ fontSize:16, marginBottom:14 }}>🏅 Badges do joiner</h3>
+          <h3 className="admin-title" style={{ fontSize:16, marginBottom:14 }}>Badges do joiner</h3>
           <div style={{ display:"flex", gap:8, marginBottom:16 }}>
             <input className="login-input" type="text" placeholder="@ ou nome do joiner" value={badgesSearch}
               onChange={e => setBadgesSearch(e.target.value)}
@@ -6570,7 +6570,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     { id:"cegs",       icon:"◈", label:"CEGs" },
     { id:"calendario", icon:"◫", label:"Datas" },
     ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
-    ...(!isGuest ? [{ id:"envio",  icon:"📦", label:"Envio" }] : []),
+    ...(!isGuest ? [{ id:"envio",  icon:"▢", label:"Envio" }] : []),
     { id:"regras",     icon:"☆", label:"Links" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
@@ -7087,16 +7087,6 @@ export default function App() {
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
-
-      {!user.guest && tab !== "perfil" && itens.some(i =>
-        (isPendente(i.pago_item) && Number(i.valor_item) > 0) ||
-        (isPendente(i.pago_frete) && Number(i.frete_inter) > 0) ||
-        (isPendente(i.pago_rf) && Number(i.taxa_rf) > 0)
-      ) && (
-        <button className="fab-pag" onClick={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }}>
-          💳 Pagar agora
-        </button>
-      )}
 
       {/* Modal PIN Admin */}
       {adminPinModal && (

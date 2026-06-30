@@ -786,29 +786,6 @@ td { padding:10px; vertical-align:middle; }
   .bottom-nav-icon { font-size: 18px; line-height: 1; }
   .bottom-nav-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
 
-  /* ── FAB pagamento ── */
-  .fab-pag {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    position: fixed;
-    bottom: 76px;
-    right: 16px;
-    z-index: 190;
-    background: var(--laranja);
-    color: #111;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    padding: 10px 16px;
-    border-radius: 999px;
-    box-shadow: 0 4px 20px rgba(255,92,26,.4);
-    white-space: nowrap;
-  }
 }
 
 @media (max-width: 400px) {
@@ -837,10 +814,9 @@ td { padding:10px; vertical-align:middle; }
 .ml-pend-dot { width:6px; height:6px; border-radius:50%; background:var(--laranja); flex-shrink:0; }
 .ml-pend-tags { font-size:9px; font-weight:400; color:rgba(255,92,26,.6); letter-spacing:.05em; text-transform:uppercase; margin-left:auto; }
 
-/* ── BOTTOM NAV / FAB pagamento — escondidos no desktop (mobile usa @media max-width:768px acima) ── */
+/* ── BOTTOM NAV — escondido no desktop (mobile usa @media max-width:768px acima) ── */
 @media (min-width: 769px) {
   .bottom-nav { display:none; }
-  .fab-pag { display:none; }
 }
 
 /* ── CALENDAR DAY POPUP ────────────────────────────────────── */
