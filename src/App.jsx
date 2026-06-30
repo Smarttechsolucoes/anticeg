@@ -4,6 +4,14 @@ import emailjs from "@emailjs/browser";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import bonequinha from "./assets/bonequinha.png";
+import badgeFoxiny   from "./assets/badges/foxiny.jpg";
+import badgePuppym   from "./assets/badges/puppym.jpg";
+import badgeWolfchan from "./assets/badges/wolfchan.jpg";
+import badgeBbokari  from "./assets/badges/bbokari.jpg";
+import badgeJiniret  from "./assets/badges/jiniret.jpg";
+import badgeDwaekki  from "./assets/badges/dwaekki.jpg";
+import badgeQuokka   from "./assets/badges/quokka.jpg";
+import badgeLeebit   from "./assets/badges/leebit.png";
 
 // ── EmailJS config ── preencha após criar conta em emailjs.com
 const EJS_SERVICE  = "service_wguc7si";
@@ -172,6 +180,106 @@ function diasAtraso(vencimento) {
   const venc = new Date(vencimento + "T12:00:00");
   const diff = Math.floor((hoje - venc) / 86400000);
   return diff > 0 ? diff : 0;
+}
+
+// ── Badges de gamificação (SKZOO) ──────────────────────────────
+const CEG_GRUPO = {
+  "DO IT": "Stray Kids", "DO IT CARDS": "Stray Kids", "DO IT CARDS2": "Stray Kids",
+  "DO IT EXTRAS": "Stray Kids", "POP-UP DO IT": "Stray Kids", "SKZOO": "Stray Kids",
+  "DOMINATE JAPAN": "Stray Kids", "DOMINATE DVD": "Stray Kids",
+  "6TH FAN MEETING CARD": "Stray Kids", "6TH FANMEETING MERCH": "Stray Kids",
+  "6th GEN": "Stray Kids", "ATE LIP": "Stray Kids", "BAHNGS": "Stray Kids",
+  "BTS": "BTS", "ATEEZ": "ATEEZ",
+};
+
+const BADGES_DEF = [
+  { id: "foxiny",   img: badgeFoxiny,   label: "Foxiny",   desc: "Novo membro — poucas CEGs vinculadas", color: "laranja" },
+  { id: "puppym",   img: badgePuppym,   label: "Puppym",   desc: "Joiner fiel — 20+ CEGs ativas", color: "verde" },
+  { id: "wolfchan", img: badgeWolfchan, label: "Wolfchan",  desc: "Usou envio nacional, forms de pagamento e reportar erro", color: "lilas" },
+  { id: "bbokari",  img: badgeBbokari,  label: "Bbokari",   desc: "3+ envios concluídos pelo site", color: "laranja" },
+  { id: "jiniret",  img: badgeJiniret,  label: "Jiniret",   desc: "Menos de 10 multas pagas", color: "verde" },
+  { id: "dwaekki",  img: badgeDwaekki,  label: "Dwaekki",   desc: "Comprou item(ns) 3D", color: "lilas" },
+  { id: "quokka",   img: badgeQuokka,   label: "Quokka",    desc: "Multifandom — 2+ grupos diferentes", color: "laranja" },
+  { id: "leebit",   img: badgeLeebit,   label: "Leebit",    desc: "Gastou mais de R$7.000 acumulado", color: "dourado" },
+];
+
+function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [], multasPagas = 0 }) {
+  const cegsDistintos = new Set(itens.map(i => i.ceg)).size;
+  const gruposDistintos = new Set(itens.map(i => CEG_GRUPO[i.ceg]).filter(Boolean)).size;
+  const totalPago = itens.reduce((a, i) =>
+    a + (i.pago_item ? Number(i.valor_item || 0) : 0)
+      + (i.pago_frete ? Number(i.frete_inter || 0) : 0)
+      + (i.pago_rf ? Number(i.taxa_rf || 0) : 0), 0);
+  const enviosFeitos = envios.filter(e => e.status === "enviado").length;
+  const temItem3D = itens.some(i => /3d/i.test(i.nome_do_item || ""));
+
+  const earned = {
+    foxiny:   itens.length > 0,
+    puppym:   cegsDistintos >= 20,
+    wolfchan: envios.length > 0 && pagamentos.length > 0 && reports.length > 0,
+    bbokari:  enviosFeitos >= 3,
+    jiniret:  multasPagas < 10,
+    dwaekki:  temItem3D,
+    quokka:   gruposDistintos >= 2,
+    leebit:   totalPago >= 7000,
+  };
+
+  return BADGES_DEF.map(b => ({ ...b, earned: !!earned[b.id] }));
+}
+
+function NovoBadgePopup({ badge, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 5000);
+    return () => clearTimeout(t);
+  }, [badge.id]);
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.78)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }} onClick={onClose}>
+      <div style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.12)", borderRadius:16, padding:"32px 28px", width:"min(320px, 100%)", display:"flex", flexDirection:"column", alignItems:"center", gap:10, textAlign:"center", animation:"badgePopIn .35s ease" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1.5px", color:"var(--verde)", textTransform:"uppercase" }}>🎉 Novo badge conquistado!</div>
+        <div className={`badge-hex-wrap badge-earned ${badge.color === "dourado" ? "badge-hex-glow" : ""}`} style={{ margin:"10px 0" }}>
+          <div className={`badge-hex badge-hex-${badge.color}`} style={{ width:96, height:86 }}>
+            <div className="badge-hex-inner">
+              <div className="badge-hex-circle" style={{ width:66, height:66 }}>
+                <img src={badge.img} alt={badge.label} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1 }}>{badge.label}</div>
+        <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>{badge.desc}</div>
+        <button onClick={onClose} className="login-btn" style={{ marginTop:14, width:"100%" }}>FECHAR</button>
+      </div>
+    </div>
+  );
+}
+
+function BadgesRow({ badges }) {
+  return (
+    <div>
+      <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:12 }}>
+        🏅 Conquistas
+      </div>
+      <div className="badges-row">
+        <div className="badge-line badge-line-top" />
+        <div className="badge-line badge-line-bottom" />
+        <div className="badge-line badge-line-connector" />
+        {badges.map(b => (
+          <div key={b.id} className={`badge-hex-wrap ${b.earned ? "badge-earned" : "badge-locked"} ${b.earned && b.color === "dourado" ? "badge-hex-glow" : ""}`} title={b.desc}>
+            <div className={`badge-hex badge-hex-${b.color}`}>
+              <div className="badge-hex-inner">
+                <div className="badge-hex-circle">
+                  <img src={b.img} alt={b.label} />
+                </div>
+              </div>
+            </div>
+            <div className="badge-hex-label">{b.label}</div>
+            <span className="badge-pill-desc">{b.desc}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ValCell({ val, status, vencimento, emAnalise }) {
@@ -1466,7 +1574,7 @@ const ALL_ACESSOS = [
   { id:"geral",        label:"Config / Geral" },
 ];
 
-const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports","envios","demandas"];
+const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports","envios","demandas","badges"];
 
 function StaffPanel() {
   const [acessos, setAcessos] = useState(null); // { nathy_mrnd: [...] }
@@ -1601,31 +1709,47 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
   const [repasseOutrosNome,   setRepasseOutrosNome]   = useState("");
   const [repasseOutrosCeg,    setRepasseOutrosCeg]    = useState("");
   const [repasseCiente,       setRepasseCiente]       = useState(false);
+  // ── badges ──
+  const [multasPagasCount, setMultasPagasCount] = useState(0);
 
   useEffect(() => {
-    supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setMeuEnvios(data); });
-    supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
-      .then(({ data }) => { setMeuReports(data || []); });
-    supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
-      .then(({ data }) => { setMeusFeedbacks(data || []); });
-    supabase.from("masterlist")
-      .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
-      .eq("cog", user.cog)
-      .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)")
-      .then(({ data }) => {
-        if (data) {
-          setItensPendentes(data);
-          setPagSelecionados(new Set(data.map(i => i.id)));
-        }
-      });
-    supabase.from("pagamento_demandas").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setMeusPagamentos(data); });
-    supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
-      .eq("cog", user.cog).order("ceg").order("nome_do_item")
-      .then(({ data }) => { if (data) setMeusItens(data); });
-    supabase.from("repassos").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setMeusRepassos(data); });
+    let cancelled = false;
+    async function load() {
+      const [
+        { data: envios },
+        { data: reports },
+        { data: feedbacksData },
+        { data: pendentes },
+        { data: pagamentos },
+        { data: itensData },
+        { data: repassosData },
+        { count: multasCount },
+      ] = await Promise.all([
+        supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("masterlist")
+          .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
+          .eq("cog", user.cog)
+          .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)"),
+        supabase.from("pagamento_demandas").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
+          .eq("cog", user.cog).order("ceg").order("nome_do_item"),
+        supabase.from("repassos").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
+      ]);
+      if (cancelled) return;
+      if (envios) setMeuEnvios(envios);
+      setMeuReports(reports || []);
+      setMeusFeedbacks(feedbacksData || []);
+      if (pendentes) { setItensPendentes(pendentes); setPagSelecionados(new Set(pendentes.map(i => i.id))); }
+      if (pagamentos) setMeusPagamentos(pagamentos);
+      if (itensData) setMeusItens(itensData);
+      if (repassosData) setMeusRepassos(repassosData);
+      setMultasPagasCount(multasCount || 0);
+    }
+    load();
+    return () => { cancelled = true; };
   }, [user.cog]);
 
   function reportarProblema() {
@@ -2867,6 +2991,7 @@ ${compHTML}
 
       {perfilSubTab === "dados" && (
         <div className="login-box" style={{ gap: 14 }}>
+          <BadgesRow badges={computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount })} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, paddingBottom: 16, borderBottom: "1px solid #1e1e1e" }}>
             <div className="avatar-perfil" onClick={() => fileInputRef.current.click()} title="Clique para trocar a foto">
               <img src={fotoUrl || bonequinha} alt="foto de perfil" />
@@ -3949,6 +4074,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
   const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
   const [adminPixCopiado,  setAdminPixCopiado]  = useState(false);
+  const [badgesSearch,  setBadgesSearch]  = useState("");
+  const [badgesJoiner,  setBadgesJoiner]  = useState(null);
+  const [badgesLoading, setBadgesLoading] = useState(false);
+  const [badgesErro,    setBadgesErro]    = useState("");
   const [adminMainTab, setAdminMainTab] = useState("home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   const [pushes, setPushes] = useState(null);
@@ -4215,6 +4344,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setManutencaoAdmin(novo);
   }
 
+  async function buscarBadgesJoiner() {
+    const termo = badgesSearch.trim().replace(/^@/, "");
+    if (!termo) return;
+    setBadgesLoading(true); setBadgesErro(""); setBadgesJoiner(null);
+    const { data: joiner } = await supabase.from("joiners").select("*")
+      .or(`cog.ilike.%${termo}%,nome.ilike.%${termo}%`).limit(1).single();
+    if (!joiner) { setBadgesErro("Joiner não encontrado."); setBadgesLoading(false); return; }
+
+    const [{ data: itens }, { data: envios }, { data: reports }, { data: pagamentos }, { count: multasPagas }] = await Promise.all([
+      supabase.from("masterlist").select("ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf").eq("cog", joiner.cog),
+      supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", joiner.cog),
+      supabase.from("reports").select("id").eq("joiner_cog", joiner.cog),
+      supabase.from("pagamento_demandas").select("id").eq("joiner_cog", joiner.cog),
+      supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", joiner.cog),
+    ]);
+
+    setBadgesJoiner({
+      joiner,
+      badges: computeBadges({ itens: itens || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasPagas || 0 }),
+    });
+    setBadgesLoading(false);
+  }
+
   const totalPend = envioSolic.filter(e => e.status === "solicitação de envio").length
                   + reports.filter(r => r.status !== "resolvido").length
                   + confirmacoes.length
@@ -4262,6 +4414,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "👤", confirmacoes.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
+                {temAcesso("badges")       && nav("badges",       "Badges",       "🏅", 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -4756,6 +4909,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         disponiveisData === null
           ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
           : <AdminDisponivel data={disponiveisData} />
+      )}
+
+      {adminMainTab === "badges" && (
+        <div>
+          <h3 className="admin-title" style={{ fontSize:16, marginBottom:14 }}>🏅 Badges do joiner</h3>
+          <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+            <input className="login-input" type="text" placeholder="@ ou nome do joiner" value={badgesSearch}
+              onChange={e => setBadgesSearch(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && buscarBadgesJoiner()}
+              style={{ flex:1 }} />
+            <button className="login-btn" onClick={buscarBadgesJoiner} disabled={badgesLoading} style={{ width:"auto", padding:"0 20px" }}>
+              {badgesLoading ? "..." : "Buscar"}
+            </button>
+          </div>
+          {badgesErro && <div className="login-error">{badgesErro}</div>}
+          {badgesJoiner && (
+            <div style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:16 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>{badgesJoiner.joiner.nome || badgesJoiner.joiner.cog}</div>
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>@{badgesJoiner.joiner.cog}</div>
+              <BadgesRow badges={badgesJoiner.badges} />
+            </div>
+          )}
+        </div>
       )}
 
       {adminMainTab === "agenda" && owner && (
@@ -6502,6 +6678,7 @@ export default function App() {
   const [showPerfilModal, setShowPerfilModal] = useState(false);
   const [perfilPushAtivo, setPerfilPushAtivo] = useState(true);
   const [calEventos, setCalEventos] = useState(null);
+  const [badgePopupQueue, setBadgePopupQueue] = useState([]);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
@@ -6623,6 +6800,41 @@ export default function App() {
     }
   }, []);
 
+  // ── detecta badges novos ao abrir o site (qualquer aba, não só Meu Perfil) ──
+  useEffect(() => {
+    if (!user || user.guest || !user.cog) return;
+    let cancelled = false;
+    (async () => {
+      const [
+        { data: itensData },
+        { data: envios },
+        { data: reports },
+        { data: pagamentos },
+        { count: multasCount },
+      ] = await Promise.all([
+        supabase.from("masterlist").select("ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf").eq("cog", user.cog),
+        supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", user.cog),
+        supabase.from("reports").select("id").eq("joiner_cog", user.cog),
+        supabase.from("pagamento_demandas").select("id").eq("joiner_cog", user.cog),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
+      ]);
+      if (cancelled) return;
+      const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0 });
+      const earnedIds = computed.filter(b => b.earned).map(b => b.id);
+      const storeKey = `anticeg_badges_${user.cog}`;
+      let prevSeen = null;
+      try { prevSeen = JSON.parse(localStorage.getItem(storeKey)); } catch { prevSeen = null; }
+      if (prevSeen === null) {
+        localStorage.setItem(storeKey, JSON.stringify(earnedIds));
+      } else {
+        const novos = computed.filter(b => b.earned && !prevSeen.includes(b.id));
+        if (novos.length) setBadgePopupQueue(q => [...q, ...novos]);
+        localStorage.setItem(storeKey, JSON.stringify(earnedIds));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.cog, user?.guest]);
+
   function handleVerCegs() {
     setUser({ guest: true });
     setItens([]);
@@ -6638,6 +6850,9 @@ export default function App() {
   return (
     <div>
       <AccessibilityWidget />
+      {badgePopupQueue.length > 0 && (
+        <NovoBadgePopup badge={badgePopupQueue[0]} onClose={() => setBadgePopupQueue(q => q.slice(1))} />
+      )}
       {manutencao && !bypassManutencao && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 9999,
