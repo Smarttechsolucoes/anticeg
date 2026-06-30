@@ -3056,7 +3056,9 @@ ${compHTML}
               <div className="avatar-perfil-overlay">{fotoLoading ? "..." : "trocar"}</div>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFotoUpload} />
-            <div style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>clique na foto para alterar</div>
+            <button type="button" onClick={() => fileInputRef.current.click()} disabled={fotoLoading} style={{ background:"rgba(245,240,232,.07)", border:"1px solid rgba(245,240,232,.15)", color:"var(--offwhite)", borderRadius:6, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".03em" }}>
+              {fotoLoading ? "Enviando..." : "Alterar foto"}
+            </button>
           </div>
           <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
           <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
