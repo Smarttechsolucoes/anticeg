@@ -195,9 +195,7 @@ const CEG_GRUPO = {
 };
 
 // Concessões manuais de badges (exceções decididas pela admin, fora do cálculo automático)
-const BADGES_MANUAIS = {
-  fefacollector: ["quokka"],
-};
+const BADGES_MANUAIS = {};
 
 const BADGES_DEF = [
   { id: "foxiny",   img: badgeFoxiny,   label: "Foxiny",   desc: "Novo membro — poucas CEGs vinculadas", color: "laranja" },
