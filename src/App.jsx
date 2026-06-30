@@ -189,7 +189,14 @@ const CEG_GRUPO = {
   "DOMINATE JAPAN": "Stray Kids", "DOMINATE DVD": "Stray Kids",
   "6TH FAN MEETING CARD": "Stray Kids", "6TH FANMEETING MERCH": "Stray Kids",
   "6th GEN": "Stray Kids", "ATE LIP": "Stray Kids", "BAHNGS": "Stray Kids",
+  "SKZOOTOPIA": "Stray Kids", "SKZ ALBUNS": "Stray Kids", "WOLFGANG": "Stray Kids",
+  "KMS KARMA": "Stray Kids", "POP-UP KARMA": "Stray Kids",
   "BTS": "BTS", "ATEEZ": "ATEEZ",
+};
+
+// Concessões manuais de badges (exceções decididas pela admin, fora do cálculo automático)
+const BADGES_MANUAIS = {
+  fefacollector: ["wolfchan", "quokka"],
 };
 
 const BADGES_DEF = [
@@ -203,7 +210,7 @@ const BADGES_DEF = [
   { id: "leebit",   img: badgeLeebit,   label: "Leebit",    desc: "Gastou mais de R$7.000 acumulado", color: "dourado" },
 ];
 
-function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [], multasPagas = 0 }) {
+function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [], multasPagas = 0, cog = null }) {
   const cegsDistintos = new Set(itens.map(i => i.ceg)).size;
   const gruposDistintos = new Set(itens.map(i => CEG_GRUPO[i.ceg]).filter(Boolean)).size;
   const totalPago = itens.reduce((a, i) =>
@@ -213,6 +220,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
   const enviosFeitos = envios.filter(e => e.status === "enviado").length;
   const temItem3D = itens.some(i => /3d/i.test(i.nome_do_item || ""));
   const fmtR = v => `R$${v.toFixed(2).replace(".", ",")}`;
+  const manuais = BADGES_MANUAIS[cog] || [];
 
   const earned = {
     foxiny:   itens.length > 0,
@@ -224,6 +232,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
     quokka:   gruposDistintos >= 2,
     leebit:   totalPago >= 7000,
   };
+  manuais.forEach(id => { earned[id] = true; });
 
   const wolfchanFaltam = [
     envios.length === 0     ? "fazer um Envio Nacional" : null,
@@ -242,7 +251,11 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
     leebit:   earned.leebit   ? `Conquistado pra sempre — você gastou ${fmtR(totalPago)} acumulado.` : `Você gastou ${fmtR(totalPago)} de R$7.000,00 necessários. Faltam ${fmtR(7000 - totalPago)}.`,
   };
 
-  return BADGES_DEF.map(b => ({ ...b, earned: !!earned[b.id], detalhe: detalhe[b.id] }));
+  return BADGES_DEF.map(b => ({
+    ...b,
+    earned: !!earned[b.id],
+    detalhe: manuais.includes(b.id) ? "Conquistado — concedido pela equipe ANTICEG." : detalhe[b.id],
+  }));
 }
 
 function NovoBadgePopup({ badge, onClose }) {
@@ -3009,7 +3022,7 @@ ${compHTML}
       )}
 
       {perfilSubTab === "badges" && (() => {
-        const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount });
+        const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount, cog: user.cog });
         return (
           <div style={{ paddingBottom: 40 }}>
             <BadgesRow badges={badges} />
@@ -4409,7 +4422,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     setBadgesJoiner({
       joiner,
-      badges: computeBadges({ itens: itens || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasPagas || 0 }),
+      badges: computeBadges({ itens: itens || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasPagas || 0, cog: joiner.cog }),
     });
     setBadgesLoading(false);
   }
@@ -6865,7 +6878,7 @@ export default function App() {
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
       ]);
       if (cancelled) return;
-      const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0 });
+      const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0, cog: user.cog });
       const earnedIds = computed.filter(b => b.earned).map(b => b.id);
       const storeKey = `anticeg_badges_${user.cog}`;
       let prevSeen = null;
