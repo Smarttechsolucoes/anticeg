@@ -66,7 +66,7 @@ function buildEmailHTML(_toNome, contentRows) {
     <td align="center" style="background:#0D0D0D;padding:24px 40px;border-top:1px solid #1e1e1e">
       <div style="font-size:15px;font-weight:900;color:#F5F0E8;letter-spacing:3px;margin-bottom:4px">ANTI<span style="color:#FF5C1A">CEG</span></div>
       <div style="font-size:9px;color:rgba(245,240,232,0.2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">comunidade antigom</div>
-      <div><a href="https://anticeg.vercel.app" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">Portal</a><span style="color:rgba(245,240,232,0.1)">&middot;</span><a href="https://wa.me/5524992501917" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">WhatsApp</a></div>
+      <div><a href="https://anticeg.vercel.app" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">Portal</a><span style="color:rgba(245,240,232,0.1)">&middot;</span><a href="https://wa.me/5524992782023" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">WhatsApp</a></div>
     </td>
   </tr>
 </table>
@@ -78,7 +78,7 @@ function buildEmailHTML(_toNome, contentRows) {
 const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
 
-const WHATSAPP_NUM = "5524992501917";
+const WHATSAPP_NUM = "5524992782023";
 const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
@@ -2765,7 +2765,7 @@ ${compHTML}
                                         <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); }} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer" }}>Copiar</button>
                                       </div>
                                     </div>
-                                    <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
+                                    <a href={`https://wa.me/5524992782023?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
                                       📎 Enviar comprovante no WhatsApp →
                                     </a>
                                   </>
@@ -2812,7 +2812,7 @@ ${compHTML}
                                   <button onClick={async () => {
                                     await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"pagamento em aberto" }).eq("id", s.id);
                                     setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: chosen, status:"pagamento em aberto" } : x));
-                                    window.open(`https://wa.me/5524992501917?text=${waMsg}`, "_blank");
+                                    window.open(`https://wa.me/5524992782023?text=${waMsg}`, "_blank");
                                   }} style={{ width:"100%", marginTop:6, padding:"10px", background:"rgba(201,168,240,.15)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.35)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                                     Confirmar {chosen.forma} — R$ {totalChosen} e enviar PIX →
                                   </button>
@@ -5855,7 +5855,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 }
 
 function EnvioTab({ user, itens }) {
-  const WA_GOM = "5524992501917";
+  const WA_GOM = "5524992782023";
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
   const [envioWinW, setEnvioWinW] = useState(window.innerWidth);
   useEffect(() => { const h = () => setEnvioWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
@@ -6277,7 +6277,7 @@ function EnvioTab({ user, itens }) {
                                             <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); }} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer" }}>Copiar</button>
                                           </div>
                                         </div>
-                                        <a href={`https://wa.me/5524992501917?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
+                                        <a href={`https://wa.me/5524992782023?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
                                           📎 Enviar comprovante no WhatsApp →
                                         </a>
                                       </>
@@ -6826,14 +6826,14 @@ export default function App() {
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
 
-      {!user.guest && itens.some(i =>
+      {!user.guest && tab !== "perfil" && itens.some(i =>
         (isPendente(i.pago_item) && Number(i.valor_item) > 0) ||
         (isPendente(i.pago_frete) && Number(i.frete_inter) > 0) ||
         (isPendente(i.pago_rf) && Number(i.taxa_rf) > 0)
       ) && (
-        <a href="https://forms.gle/SyG2Zz8Lovreq8kn9" target="_blank" rel="noopener noreferrer" className="fab-pag">
+        <button className="fab-pag" onClick={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }}>
           💳 Pagar agora
-        </a>
+        </button>
       )}
 
       {/* Modal PIN Admin */}

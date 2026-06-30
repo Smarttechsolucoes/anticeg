@@ -755,6 +755,8 @@ td { padding:10px; vertical-align:middle; }
     font-weight: 700;
     letter-spacing: .06em;
     text-decoration: none;
+    border: none;
+    cursor: pointer;
     padding: 10px 16px;
     border-radius: 999px;
     box-shadow: 0 4px 20px rgba(255,92,26,.4);
@@ -788,11 +790,11 @@ td { padding:10px; vertical-align:middle; }
 .ml-pend-dot { width:6px; height:6px; border-radius:50%; background:var(--laranja); flex-shrink:0; }
 .ml-pend-tags { font-size:9px; font-weight:400; color:rgba(255,92,26,.6); letter-spacing:.05em; text-transform:uppercase; margin-left:auto; }
 
-/* ── BOTTOM NAV (mobile only) ──────────────────────────────── */
-.bottom-nav { display:none; }
-
-/* ── FAB pagamento (mobile only) ──────────────────────────── */
-.fab-pag { display:none; }
+/* ── BOTTOM NAV / FAB pagamento — escondidos no desktop (mobile usa @media max-width:768px acima) ── */
+@media (min-width: 769px) {
+  .bottom-nav { display:none; }
+  .fab-pag { display:none; }
+}
 
 /* ── CALENDAR DAY POPUP ────────────────────────────────────── */
 .cal-day-popup-overlay { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.7); display:flex; align-items:flex-end; backdrop-filter:blur(4px); }

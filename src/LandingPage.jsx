@@ -4,7 +4,7 @@ import supabase from "./supabase.js";
 import bonequinha from "./assets/bonequinha.png";
 
 
-const WA = "5524992501917";
+const WA = "5524992782023";
 const WA_ACESSO = `https://wa.me/${WA}?text=${encodeURIComponent("Olá! Quero solicitar acesso ao portal ANTICEG.")}`;
 
 export default function LandingPage({ onLogin, onVerCegs }) {
