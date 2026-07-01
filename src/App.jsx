@@ -7035,7 +7035,7 @@ export default function App() {
               EM MANUTENÇÃO
             </div>
             <div style={{ fontSize: 13, color: "rgba(245,240,232,.5)", lineHeight: 1.6 }}>
-              O site vai voltar em breve! Estamos atualizando os dados e corrigindo alguns bugs para melhorar sua experiência.
+              Estamos atualizando os pagamentos e a base de dados. Voltaremos às 19h!
             </div>
             <a href="https://docs.google.com/spreadsheets/d/1iVi-DUq2glx5moyba5zuJktt45a9sYW5LoQXd4vkcHM"
               target="_blank" rel="noopener noreferrer"
