@@ -4978,7 +4978,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               async function confirmar(id) {
                 await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
                 const d = pagDemandas.find(x => x.id === id);
-                if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+                if (d) {
+                  await Promise.all(
+                    (d.itens || []).filter(it => it.id != null).map(it => {
+                      const patch = {};
+                      if (Number(it.valor_item  || 0) > 0) patch.pago_item  = true;
+                      if (Number(it.frete_inter || 0) > 0) patch.pago_frete = true;
+                      if (Number(it.taxa_rf     || 0) > 0) patch.pago_rf    = true;
+                      if (!Object.keys(patch).length) return Promise.resolve();
+                      return supabase.from("masterlist").update(patch).eq("id", it.id);
+                    })
+                  );
+                  await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+                }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
               async function reabrir(id) {
@@ -5478,7 +5490,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         async function confirmar(id) {
           await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
           const d = pagDemandas.find(x => x.id === id);
-          if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+          if (d) {
+            await Promise.all(
+              (d.itens || []).filter(it => it.id != null).map(it => {
+                const patch = {};
+                if (Number(it.valor_item  || 0) > 0) patch.pago_item  = true;
+                if (Number(it.frete_inter || 0) > 0) patch.pago_frete = true;
+                if (Number(it.taxa_rf     || 0) > 0) patch.pago_rf    = true;
+                if (!Object.keys(patch).length) return Promise.resolve();
+                return supabase.from("masterlist").update(patch).eq("id", it.id);
+              })
+            );
+            await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+          }
           setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
         }
         async function reabrir(id) {
