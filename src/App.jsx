@@ -1708,7 +1708,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
   const [pagRecibo,        setPagRecibo]        = useState(null);
-  const [pagSubTab,        setPagSubTab]        = useState("enviar"); // enviar | historico
+  const [pagSubTab,        setPagSubTab]        = useState("pendentes"); // pendentes | enviar | historico
   // "outros" no pagamento
   const [pagOutros,         setPagOutros]       = useState(false);
   const [pagOutrosNome,     setPagOutrosNome]   = useState("");
@@ -1989,7 +1989,7 @@ ${p.comprovante_url ? (() => {
         if (pagSubTab === "historico") return (
           <div style={{ paddingBottom:40 }}>
             <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-              {[["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
+              {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
                 <button key={id} onClick={() => setPagSubTab(id)}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
                   {label}
@@ -2175,10 +2175,82 @@ ${p.comprovante_url ? (() => {
         );
 
 
+        if (pagSubTab === "pendentes") {
+          const grandTotal = itensPendentes.reduce((a, i) =>
+            a + (!i.pago_item  ? Number(i.valor_item ||0) : 0)
+              + (!i.pago_frete ? Number(i.frete_inter||0) : 0)
+              + (!i.pago_rf    ? Number(i.taxa_rf    ||0) : 0)
+              + multaItem(i), 0);
+          const grandMulta = itensPendentes.reduce((a, i) => a + multaItem(i), 0);
+          const tabBar = (
+            <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+              {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
+                <button key={id} onClick={() => setPagSubTab(id)}
+                  style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          );
+          return (
+            <div style={{ paddingBottom:40 }}>
+              {tabBar}
+              {itensPendentes.length === 0 ? (
+                <div style={{ padding:"16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
+                  Nenhum item com pagamento pendente no momento.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12 }}>
+                    {itensPendentes.map(item => {
+                      const isAn = emAnaliseIds.has(item.id);
+                      const valItem  = !item.pago_item  ? Number(item.valor_item ||0) : 0;
+                      const valFrete = !item.pago_frete ? Number(item.frete_inter||0) : 0;
+                      const valRf    = !item.pago_rf    ? Number(item.taxa_rf    ||0) : 0;
+                      const multa    = multaItem(item);
+                      const itemTotal = valItem + valFrete + valRf + multa;
+                      return (
+                        <div key={item.id} style={{ background:"var(--card-bg)", border:`1px solid ${isAn ? "rgba(201,168,240,.15)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px" }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                            <div style={{ flex:1, minWidth:0, paddingRight:10 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
+                              <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
+                            </div>
+                            <div style={{ textAlign:"right", flexShrink:0 }}>
+                              <div style={{ fontSize:13, fontWeight:900, color: isAn ? "#C9A8F0" : "#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R${itemTotal.toFixed(2).replace(".",",")}</div>
+                              {isAn && <div style={{ fontSize:8, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginTop:1 }}>em análise</div>}
+                            </div>
+                          </div>
+                          <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                            {valItem  > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>item R${valItem.toFixed(2).replace(".",",")}</span>}
+                            {valFrete > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>frete R${valFrete.toFixed(2).replace(".",",")}</span>}
+                            {valRf    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>RF R${valRf.toFixed(2).replace(".",",")}</span>}
+                            {multa    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b", fontWeight:700 }}>⚠ multa R${multa.toFixed(2).replace(".",",")}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ padding:"12px 14px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase" }}>Total em aberto</div>
+                      {grandMulta > 0 && <div style={{ fontSize:9, color:"rgba(255,107,107,.6)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>inclui R${grandMulta.toFixed(2).replace(".",",")} de multa</div>}
+                    </div>
+                    <div style={{ fontSize:16, fontWeight:900, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>R${grandTotal.toFixed(2).replace(".",",")}</div>
+                  </div>
+                  <button onClick={() => setPagSubTab("enviar")} style={{ width:"100%", padding:"12px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
+                    ◎ Enviar comprovante →
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        }
+
         return (
           <div style={{ paddingBottom:40 }}>
             <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-              {[["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
+              {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
                 <button key={id} onClick={() => { if (id === "enviar" && pagStatus === "enviado") { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); } setPagSubTab(id); }}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
                   {label}
