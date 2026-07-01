@@ -534,9 +534,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 </div>
                 <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /></div>}
                   {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
@@ -1003,11 +1003,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         data.forEach(d => {
           (d.itens || []).forEach(it => {
             if (!map[it.id] || d.status === "em_analise") map[it.id] = d.status;
-            if (d.status === "pago" && it.id != null) {
-              if (!confirm[it.id]) confirm[it.id] = {};
-              if (Number(it.valor_item  || 0) > 0) confirm[it.id].item  = true;
-              if (Number(it.frete_inter || 0) > 0) confirm[it.id].frete = true;
-              if (Number(it.taxa_rf     || 0) > 0) confirm[it.id].rf    = true;
+            if (d.status === "pago") {
+              const k = `${it.ceg}::${it.nome_do_item}`;
+              if (!confirm[k]) confirm[k] = {};
+              if (Number(it.valor_item  || 0) > 0) confirm[k].item  = true;
+              if (Number(it.frete_inter || 0) > 0) confirm[k].frete = true;
+              if (Number(it.taxa_rf     || 0) > 0) confirm[k].rf    = true;
             }
           });
         });
@@ -1107,14 +1108,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const filteredFinalizados = statusFiltro === "tudo" ? filtered.filter(i => i.status === "Enviado Nacional") : [];
 
   const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
-  const tPend  = filtered.reduce((a,b) =>
-    a + (isPendente(b.pago_item)  && !pagConfirmMap[b.id]?.item  ? Number(b.valor_item||0)  : 0)
-      + (isPendente(b.pago_frete) && !pagConfirmMap[b.id]?.frete ? Number(b.frete_inter||0) : 0)
-      + (isPendente(b.pago_rf)    && !pagConfirmMap[b.id]?.rf    ? Number(b.taxa_rf||0)     : 0), 0);
-  const tMulta = itens.reduce((a,b) =>
-    a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.item  ? diasAtraso(b.venc_item)  : 0)
-      + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.frete ? diasAtraso(b.venc_frete) : 0)
-      + (isPendente(b.pago_rf)    && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.rf    ? diasAtraso(b.venc_rf)    : 0), 0);
+  const tPend  = filtered.reduce((a,b) => {
+    const ck = `${b.ceg}::${b.nome_do_item}`;
+    return a + (isPendente(b.pago_item)  && !pagConfirmMap[ck]?.item  ? Number(b.valor_item||0)  : 0)
+             + (isPendente(b.pago_frete) && !pagConfirmMap[ck]?.frete ? Number(b.frete_inter||0) : 0)
+             + (isPendente(b.pago_rf)    && !pagConfirmMap[ck]?.rf    ? Number(b.taxa_rf||0)     : 0);
+  }, 0);
+  const tMulta = itens.reduce((a,b) => {
+    const ck = `${b.ceg}::${b.nome_do_item}`;
+    return a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.item  ? diasAtraso(b.venc_item)  : 0)
+             + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.frete ? diasAtraso(b.venc_frete) : 0)
+             + (isPendente(b.pago_rf)    && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.rf    ? diasAtraso(b.venc_rf)    : 0);
+  }, 0);
 
 
   const temPendente = !guest && pendV > 0;
@@ -1336,9 +1341,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         {showEnvio ? (
@@ -1418,9 +1423,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr key={item.id} className="row-finalizado">
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
                     <td><InfoCell info={item.info_adicionais} isOpen={isOpen} itemId={item.id} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
@@ -1440,7 +1445,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           const ai = getStepIdx(item.status);
           const isOpen = openDrawer === item.id;
           const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
-          const cfm       = pagConfirmMap[item.id] || {};
+          const cfm       = pagConfirmMap[`${item.ceg}::${item.nome_do_item}`] || {};
           const pendItem  = !guest && isPendente(item.pago_item)  && Number(item.valor_item) > 0  && !cfm.item;
           const pendFrete = !guest && isPendente(item.pago_frete) && Number(item.frete_inter) > 0 && !cfm.frete;
           const pendRf    = !guest && isPendente(item.pago_rf)    && Number(item.taxa_rf) > 0     && !cfm.rf;
@@ -1491,9 +1496,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               )}
               {!guest && (
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[item.id]?.rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /></div>}
                   {total > 0 && (
                     <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>
                       total R${fmtBRL(total)}
@@ -1786,15 +1791,16 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) 
       if (pendentes && pagamentos) {
         const cfm = {};
         pagamentos.filter(d => d.status === "pago").forEach(d => {
-          (d.itens || []).filter(it => it.id != null).forEach(it => {
-            if (!cfm[it.id]) cfm[it.id] = {};
-            if (Number(it.valor_item  || 0) > 0) cfm[it.id].item  = true;
-            if (Number(it.frete_inter || 0) > 0) cfm[it.id].frete = true;
-            if (Number(it.taxa_rf     || 0) > 0) cfm[it.id].rf    = true;
+          (d.itens || []).filter(it => it.ceg && it.nome_do_item).forEach(it => {
+            const k = `${it.ceg}::${it.nome_do_item}`;
+            if (!cfm[k]) cfm[k] = {};
+            if (Number(it.valor_item  || 0) > 0) cfm[k].item  = true;
+            if (Number(it.frete_inter || 0) > 0) cfm[k].frete = true;
+            if (Number(it.taxa_rf     || 0) > 0) cfm[k].rf    = true;
           });
         });
         const stillPending = pendentes.filter(i => {
-          const c = cfm[i.id] || {};
+          const c = cfm[`${i.ceg}::${i.nome_do_item}`] || {};
           return (!i.pago_item  && Number(i.valor_item ||0) > 0 && !c.item)
               || (!i.pago_frete && Number(i.frete_inter||0) > 0 && !c.frete)
               || (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 && !c.rf);
@@ -5008,21 +5014,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const resolvidas = pagDemandas.filter(d => d.status === "pago");
 
               async function confirmar(id) {
-                await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
+                const { error } = await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
+                if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
-                if (d) {
-                  await Promise.all(
-                    (d.itens || []).filter(it => it.id != null).map(it => {
-                      const patch = {};
-                      if (Number(it.valor_item  || 0) > 0) patch.pago_item  = true;
-                      if (Number(it.frete_inter || 0) > 0) patch.pago_frete = true;
-                      if (Number(it.taxa_rf     || 0) > 0) patch.pago_rf    = true;
-                      if (!Object.keys(patch).length) return Promise.resolve();
-                      return supabase.from("masterlist").update(patch).eq("id", it.id);
-                    })
-                  );
-                  await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
-                }
+                if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
               async function reabrir(id) {
@@ -5520,21 +5515,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         const resolvidas = pagDemandas.filter(d => d.status === "pago");
 
         async function confirmar(id) {
-          await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
+          const { error } = await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
+          if (error) { alert("Erro ao confirmar: " + error.message); return; }
           const d = pagDemandas.find(x => x.id === id);
-          if (d) {
-            await Promise.all(
-              (d.itens || []).filter(it => it.id != null).map(it => {
-                const patch = {};
-                if (Number(it.valor_item  || 0) > 0) patch.pago_item  = true;
-                if (Number(it.frete_inter || 0) > 0) patch.pago_frete = true;
-                if (Number(it.taxa_rf     || 0) > 0) patch.pago_rf    = true;
-                if (!Object.keys(patch).length) return Promise.resolve();
-                return supabase.from("masterlist").update(patch).eq("id", it.id);
-              })
-            );
-            await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
-          }
+          if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
           setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
         }
         async function reabrir(id) {
