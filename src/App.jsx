@@ -7037,16 +7037,7 @@ export default function App() {
             <div style={{ fontSize: 13, color: "rgba(245,240,232,.5)", lineHeight: 1.6 }}>
               Estamos atualizando os pagamentos e a base de dados. Voltaremos às 19h!
             </div>
-            <a href="https://docs.google.com/spreadsheets/d/1iVi-DUq2glx5moyba5zuJktt45a9sYW5LoQXd4vkcHM"
-              target="_blank" rel="noopener noreferrer"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "var(--laranja)", color: "#0D0D0D",
-                fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 600,
-                padding: "14px 28px", borderRadius: 6, textDecoration: "none", letterSpacing: 1
-              }}>
-              📊 Acessar Planilha
-            </a>
+
             <div style={{ fontSize: 10, color: "rgba(245,240,232,.2)", letterSpacing: 2, textTransform: "uppercase" }}>
               anticeg · masterlist
             </div>
