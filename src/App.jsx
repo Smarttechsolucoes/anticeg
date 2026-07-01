@@ -1102,9 +1102,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       + (isPendente(b.pago_frete) ? Number(b.frete_inter||0) : 0)
       + (isPendente(b.pago_rf)    ? Number(b.taxa_rf||0)     : 0), 0);
   const tMulta = itens.reduce((a,b) =>
-    a + (isPendente(b.pago_item)  ? diasAtraso(b.venc_item)  : 0)
-      + (isPendente(b.pago_frete) ? diasAtraso(b.venc_frete) : 0)
-      + (isPendente(b.pago_rf)    ? diasAtraso(b.venc_rf)    : 0), 0);
+    a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" ? diasAtraso(b.venc_item)  : 0)
+      + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" ? diasAtraso(b.venc_frete) : 0)
+      + (isPendente(b.pago_rf)    && pagDemandaMap[b.id] !== "em_analise" ? diasAtraso(b.venc_rf)    : 0), 0);
 
 
   const temPendente = !guest && pendV > 0;
@@ -1437,9 +1437,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           const totalPend = (pendItem  ? Number(item.valor_item||0)  : 0)
                           + (pendFrete ? Number(item.frete_inter||0) : 0)
                           + (pendRf    ? Number(item.taxa_rf||0)     : 0);
-          const multaItem = (pendItem  ? diasAtraso(item.venc_item)  : 0)
-                          + (pendFrete ? diasAtraso(item.venc_frete) : 0)
-                          + (pendRf    ? diasAtraso(item.venc_rf)    : 0);
+          const emAnalise = pagDemandaMap[item.id] === "em_analise";
+          const multaItem = (!emAnalise && pendItem  ? diasAtraso(item.venc_item)  : 0)
+                          + (!emAnalise && pendFrete ? diasAtraso(item.venc_frete) : 0)
+                          + (!emAnalise && pendRf    ? diasAtraso(item.venc_rf)    : 0);
           const envioSolicCard = envioByItem[item.id];
           const envioStatusCard = envioSolicCard?.status;
           const showEnvioCard = envioStatusCard && envioStatusCard !== "cancelado" && item.status !== "Enviado Nacional";
@@ -2048,10 +2049,18 @@ ${p.comprovante_url ? (() => {
           </div>
         );
 
+        const emAnaliseIds = new Set(
+          meusPagamentos
+            .filter(d => d.status === "em_analise")
+            .flatMap(d => (d.itens || []).map(it => it.id))
+        );
         const itensSel = itensPendentes.filter(i => pagSelecionados.has(i.id));
-        const multaItem = i => (!i.pago_item  && Number(i.valor_item ||0) > 0 ? diasAtraso(i.venc_item)  : 0)
-                             + (!i.pago_frete && Number(i.frete_inter||0) > 0 ? diasAtraso(i.venc_frete) : 0)
-                             + (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 ? diasAtraso(i.venc_rf)    : 0);
+        const multaItem = i => {
+          if (emAnaliseIds.has(i.id)) return 0;
+          return (!i.pago_item  && Number(i.valor_item ||0) > 0 ? diasAtraso(i.venc_item)  : 0)
+               + (!i.pago_frete && Number(i.frete_inter||0) > 0 ? diasAtraso(i.venc_frete) : 0)
+               + (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 ? diasAtraso(i.venc_rf)    : 0);
+        };
         const subtotalItem = i => (i.pago_item  ? 0 : Number(i.valor_item ||0))
                                 + (i.pago_frete ? 0 : Number(i.frete_inter||0))
                                 + (i.pago_rf    ? 0 : Number(i.taxa_rf    ||0))
