@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import supabase from "./supabase.js";
 import emailjs from "@emailjs/browser";
 import "./App.css";
@@ -481,8 +481,8 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 const ai = getStepIdx(item.status);
                 const isOpen = openDrawer === item.id;
                 return (
-                  <>
-                    <tr key={item.id}>
+                  <Fragment key={item.id}>
+                    <tr>
                       <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
                       <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                       {!guest && <>
@@ -500,18 +500,18 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                         {item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}
                         <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
                           <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                          {pendingReportIds.has(item.id)
+                          {pendingReportIds?.has(item.id)
                             ? <span className="report-row-btn" style={{ opacity:.5, cursor:"default" }}>⚑ em análise</span>
                             : <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>}
                         </div>
                       </td>
                     </tr>
                     {isOpen && (
-                      <tr key={`drawer-${item.id}`} className="drawer-row">
+                      <tr className="drawer-row">
                         <td colSpan={7}><Timeline activeIdx={ai} /></td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -542,7 +542,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
                 <div className="ml-card-footer">
                   <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                  {!guest && (pendingReportIds.has(item.id)
+                  {!guest && (pendingReportIds?.has(item.id)
                     ? <span className="report-row-btn" style={{ opacity:.5, cursor:"default" }}>⚑ em análise</span>
                     : <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>)}
                 </div>
@@ -927,7 +927,7 @@ function EnvioMiniBar({ status }) {
       {ENVIO_STEPS.slice(0, -1).map((_, i) => (
         <div key={i} style={{ flex:1, height:3, borderRadius:2,
           background: i < idx ? color : i === idx ? color : "rgba(245,240,232,.12)",
-          opacity: i > idx ? 1 : 1 }} />
+          opacity: i > idx ? 0.4 : 1 }} />
       ))}
     </div>
   );
@@ -1337,8 +1337,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
               const envioColor = ENVIO_STEP_COLORS[envioStatus] || "rgba(245,240,232,.5)";
               return (
-                <>
-                  <tr key={item.id} style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
+                <Fragment key={item.id}>
+                  <tr style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
@@ -1377,18 +1377,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                       <InfoCell
                         info={item.info_adicionais}
                         isOpen={isOpen}
-                        itemId={item.id}
                         onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)}
                         onReport={() => setReportItem(item)}
+                        isPending={pendingReportIds.has(item.id)}
                       />
                     </td>
                   </tr>
                   {isOpen && (
-                    <tr key={`drawer-${item.id}`} className="drawer-row">
+                    <tr className="drawer-row">
                       <td colSpan={7}><Timeline activeIdx={ai} /></td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
             {filteredAtivos.length > 0 && !guest && (
@@ -1419,18 +1419,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               const ai = getStepIdx(item.status);
               const isOpen = openDrawer === item.id;
               return (
-                <>
-                  <tr key={item.id} className="row-finalizado">
+                <Fragment key={item.id}>
+                  <tr className="row-finalizado">
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
                     <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
                     <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
-                    <td><InfoCell info={item.info_adicionais} isOpen={isOpen} itemId={item.id} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
+                    <td><InfoCell info={item.info_adicionais} isOpen={isOpen} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
-                  {isOpen && <tr key={`drawer-${item.id}`} className="drawer-row"><td colSpan={7}><Timeline activeIdx={ai} /></td></tr>}
-                </>
+                  {isOpen && <tr className="drawer-row"><td colSpan={7}><Timeline activeIdx={ai} /></td></tr>}
+                </Fragment>
               );
             })}
           </tbody>
