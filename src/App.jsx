@@ -6464,7 +6464,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       setGrupoErr("Você é a host deste grupo — não precisa entrar nele.");
       setGrupoLoading(false); return;
     }
-    // preenche endereço da host
+    // preenche endereço da host (só se existir)
+    const temEndereco = !!(data.cep || data.endereco);
     if (data.destinatario) setDestinatario(data.destinatario);
     if (data.cpf)          setCpf(data.cpf);
     if (data.cep)          setCep(data.cep);
@@ -6475,6 +6476,10 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     if (data.cidade)       setCidade(data.cidade);
     if (data.estado)       setEstado(data.estado);
     setGrupoCodigo(codigo);
+    if (!temEndereco) {
+      setGrupoErr("Grupo encontrado, mas a host ainda não salvou o endereço. Peça para ela clicar em \"Salvar endereço no grupo\" primeiro.");
+      setGrupoLoading(false); return;
+    }
     setGrupoOk(true);
     setGrupoLoading(false);
   }
