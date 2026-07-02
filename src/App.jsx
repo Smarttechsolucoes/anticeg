@@ -6471,10 +6471,10 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
       {!unlocked && (
         <div style={{ position:"sticky", top:0, zIndex:20, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(100,181,246,.3)", padding:"12px 16px", backdropFilter:"blur(12px)", marginBottom:16, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10 }}>
           <div style={{ flex:1, minWidth:180 }}>
-            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#64B5F6" }}>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:14, color:"#64B5F6" }}>
               {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário fechado · aguarde a abertura"}
             </div>
-            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginTop:3 }}>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)", marginTop:3 }}>
               Prévia dos seus itens · para solicitar envio aguarde a abertura
             </div>
           </div>
