@@ -500,9 +500,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                         {item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}
                         <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
                           <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                          {pendingReportIds?.has(item.id)
-                            ? <span className="report-row-btn" style={{ opacity:.5, cursor:"default" }}>⚑ em análise</span>
-                            : <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>}
+                          <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
                         </div>
                       </td>
                     </tr>
@@ -542,9 +540,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
                 <div className="ml-card-footer">
                   <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                  {!guest && (pendingReportIds?.has(item.id)
-                    ? <span className="report-row-btn" style={{ opacity:.5, cursor:"default" }}>⚑ em análise</span>
-                    : <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>)}
+                  {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>}
                 </div>
                 {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
               </div>
