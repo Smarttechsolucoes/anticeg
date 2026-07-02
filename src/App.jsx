@@ -930,49 +930,73 @@ function EnvioMiniBar({ status }) {
 }
 
 const ENVIO_STEP_LABELS_SHORT = [
-  "Cotação enviada", "Cotação em andamento", "Pgto. em aberto",
-  "Pgto. confirmado", "Embalando", "Finalizado",
+  "Cotação enviada", "Em cotação", "Pgto. aberto",
+  "Pgto. pago", "Embalando", "Enviado!",
+];
+
+const ENVIO_STEP_DESC = [
+  "Sua solicitação chegou — a GOM vai calcular o frete e te enviar a cotação.",
+  "Estamos calculando o melhor frete para o seu endereço.",
+  "Cotação disponível! Realize o pagamento via PIX para confirmar.",
+  "Pagamento confirmado. Seu pacote será preparado em breve.",
+  "Seu pacote está sendo embalado e preparado para postagem.",
+  "Postado! Acompanhe pelo código de rastreio.",
 ];
 
 function EnvioFlowStepper({ status }) {
-  const idx = ENVIO_STEPS.indexOf(status);
+  const idx   = ENVIO_STEPS.indexOf(status);
   const color = ENVIO_STEP_COLORS[status] || "rgba(245,240,232,.35)";
-  const label = ENVIO_STEP_LABELS_SHORT[idx] ?? status;
-  const pct   = idx < 0 ? 0 : Math.round((idx / (ENVIO_STEPS.length - 1)) * 100);
   return (
-    <div style={{ padding:"8px 0 6px" }}>
-      {/* barra de progresso */}
-      <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:8 }}>
+    <div style={{ padding:"8px 0 10px" }}>
+      {/* dots + linha */}
+      <div style={{ display:"flex", alignItems:"center", marginBottom:8 }}>
         {ENVIO_STEPS.map((_, i) => {
           const isPast    = i < idx;
           const isCurrent = i === idx;
           return (
             <div key={i} style={{ display:"flex", alignItems:"center", flex:1 }}>
               <div style={{ width:8, height:8, borderRadius:"50%", flexShrink:0,
-                background: (isPast || isCurrent) ? color : "rgba(245,240,232,.12)",
-                border: `1.5px solid ${(isPast || isCurrent) ? color : "rgba(245,240,232,.15)"}`,
-                boxShadow: isCurrent ? `0 0 5px ${color}99` : "none",
-                transform: isCurrent ? "scale(1.4)" : "scale(1)",
+                background: (isPast || isCurrent) ? color : "rgba(245,240,232,.1)",
+                border: `1.5px solid ${(isPast || isCurrent) ? color : "rgba(245,240,232,.13)"}`,
+                boxShadow: isCurrent ? `0 0 6px ${color}bb` : "none",
+                transform: isCurrent ? "scale(1.5)" : "scale(1)",
                 transition: "transform .2s",
               }} />
               {i < ENVIO_STEPS.length - 1 && (
                 <div style={{ flex:1, height:1.5, borderRadius:1,
-                  background: isPast ? color : "rgba(245,240,232,.08)",
+                  background: isPast ? color : "rgba(245,240,232,.07)",
                 }} />
               )}
             </div>
           );
         })}
       </div>
-      {/* label do passo atual */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color, fontWeight:700, letterSpacing:".04em" }}>
-          {label}
-        </span>
-        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:".04em" }}>
-          {idx + 1}/{ENVIO_STEPS.length}
-        </span>
+
+      {/* labels de todos os passos */}
+      <div style={{ display:"flex", marginBottom:10 }}>
+        {ENVIO_STEP_LABELS_SHORT.map((lbl, i) => {
+          const isPast    = i < idx;
+          const isCurrent = i === idx;
+          return (
+            <div key={i} style={{ flex:1, fontSize:8, fontFamily:"'DM Mono',monospace",
+              textAlign:"center", lineHeight:1.3, padding:"0 1px",
+              color: isCurrent ? color : isPast ? `${color}70` : "rgba(245,240,232,.18)",
+              fontWeight: isCurrent ? 700 : 400,
+            }}>
+              {lbl}
+            </div>
+          );
+        })}
       </div>
+
+      {/* descrição do passo atual */}
+      {ENVIO_STEP_DESC[idx] && (
+        <div style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${color}33`, borderRadius:6, padding:"8px 10px",
+          fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>
+          <span style={{ color, fontWeight:700, marginRight:6 }}>→</span>
+          {ENVIO_STEP_DESC[idx]}
+        </div>
+      )}
     </div>
   );
 }
