@@ -977,7 +977,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", onOpenPagamentos }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", onOpenPagamentos }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -1126,6 +1126,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       (i.pago_rf    === false && Number(i.taxa_rf     || 0) > 0)
     )
   );
+  const nEnvioLiberado = !guest ? itens.filter(i => i.status === "Envio Liberado").length : 0;
 
   return (
     <>
@@ -1134,6 +1135,15 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       {temAntigomEmAberto && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
+        </div>
+      )}
+      {nEnvioLiberado > 0 && (
+        <div style={{ background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"10px 16px", marginBottom:12, fontSize:12, fontFamily:"'DM Mono',monospace", color:"#64B5F6", display:"flex", alignItems:"center", gap:8 }}>
+          <span>📬</span>
+          <span>
+            {nEnvioLiberado === 1 ? "1 item pronto" : `${nEnvioLiberado} itens prontos`} para Envio Nacional
+            {proximoEnvio ? <> · <strong>forms abre {proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
+          </span>
         </div>
       )}
       <div className="page-header">
@@ -4177,6 +4187,50 @@ function NotificarTodosBlock() {
   );
 }
 
+function ProximoEnvioBlock() {
+  const [texto, setTexto] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState(false);
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key","proximo_envio").single()
+      .then(({ data }) => { if (data?.value) setTexto(data.value); });
+  }, []);
+
+  async function salvar() {
+    setSaving(true);
+    await supabase.from("config").upsert({ key:"proximo_envio", value: texto.trim() }, { onConflict:"key" });
+    setSaving(false); setOk(true); setTimeout(() => setOk(false), 2000);
+  }
+
+  async function limpar() {
+    setTexto("");
+    await supabase.from("config").upsert({ key:"proximo_envio", value:"" }, { onConflict:"key" });
+  }
+
+  return (
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(100,181,246,.15)", borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Próximo round de Envio Nacional</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:12 }}>Aparece nos itens "Envio Liberado" e na tela de acesso do forms. Ex: <span style={{ color:"rgba(245,240,232,.6)" }}>10/07 a 12/07</span></div>
+      <input
+        type="text"
+        value={texto}
+        onChange={e => setTexto(e.target.value)}
+        placeholder="Ex: 10/07 a 12/07 · ou deixe vazio para ocultar"
+        style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
+      />
+      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+        <button onClick={salvar} disabled={saving} style={{ background:"rgba(100,181,246,.12)", border:"1px solid rgba(100,181,246,.3)", color:"#64B5F6", borderRadius:8, padding:"7px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
+          {saving ? "..." : ok ? "✓ Salvo" : "Salvar"}
+        </button>
+        <button onClick={limpar} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:8, padding:"7px 14px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+          Limpar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AvisoMasterlistBlock() {
   const [texto, setTexto] = useState("");
   const [saving, setSaving] = useState(false);
@@ -4670,6 +4724,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       <AdminLinks />
       <AdminPinBlock />
 
+      <ProximoEnvioBlock />
       <AvisoMasterlistBlock />
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${manutencaoAdmin ? "rgba(255,90,31,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10 }}>
@@ -6234,7 +6289,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
-function EnvioTab({ user, itens }) {
+function EnvioTab({ user, itens, proximoEnvio = "" }) {
   const WA_GOM = "5524992782023";
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
   const [envioWinW, setEnvioWinW] = useState(window.innerWidth);
@@ -6282,11 +6337,15 @@ function EnvioTab({ user, itens }) {
       <div style={{ background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.2)", borderRadius:10, padding:"16px", marginBottom:24, textAlign:"left" }}>
         <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"#64B5F6", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>◫ Envio Nacional</div>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"#F5F0E8", letterSpacing:1, marginBottom:6 }}>SOLICITAÇÃO ENVIO NACIONAL</div>
-        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>03/07/2026</span>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)" }}>à</span>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>05/07/2026</span>
-        </div>
+        {proximoEnvio ? (
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>
+            📬 {proximoEnvio}
+          </div>
+        ) : (
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.35)" }}>
+            aguardando próxima data
+          </div>
+        )}
       </div>
       <input
         type="password"
@@ -6882,12 +6941,15 @@ export default function App() {
   const [perfilPushAtivo, setPerfilPushAtivo] = useState(true);
   const [calEventos, setCalEventos] = useState(null);
   const [badgePopupQueue, setBadgePopupQueue] = useState([]);
+  const [proximoEnvio, setProximoEnvio] = useState("");
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "aviso_masterlist").single()
       .then(({ data }) => { if (data?.value) setAvisoMasterlist(data.value); });
+    supabase.from("config").select("value").eq("key", "proximo_envio").single()
+      .then(({ data }) => { if (data?.value) setProximoEnvio(data.value); });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
     supabase.from("config").select("value").eq("key", "admin_pin").single()
@@ -7181,11 +7243,11 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} />}
-      {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} />}
+      {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} />}
 
