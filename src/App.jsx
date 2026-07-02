@@ -6337,36 +6337,6 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
       .then(({ data }) => { if (data) setMeuEnvios(data); });
   }, [user.cog]);
 
-  const lockScreen = (
-    <div style={{ maxWidth:360, margin:"40px auto", padding:"0 16px", textAlign:"center" }}>
-      <div style={{ background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.2)", borderRadius:10, padding:"16px", marginBottom:24, textAlign:"left" }}>
-        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"#64B5F6", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>◫ Envio Nacional</div>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"#F5F0E8", letterSpacing:1, marginBottom:6 }}>SOLICITAÇÃO ENVIO NACIONAL</div>
-        {proximoEnvio ? (
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>
-            📬 {proximoEnvio}
-          </div>
-        ) : (
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.35)" }}>
-            aguardando próxima data
-          </div>
-        )}
-      </div>
-      <input
-        type="password"
-        placeholder="senha de acesso"
-        value={senha}
-        onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
-        onKeyDown={e => { if (e.key === "Enter") { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); } }}
-        style={{ width:"100%", background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.14)"}`, borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box", textAlign:"center", marginBottom:8 }}
-      />
-      {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>senha incorreta</div>}
-      <button onClick={() => { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); }}
-        style={{ width:"100%", padding:"10px 0", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-        ACESSAR →
-      </button>
-    </div>
-  );
 
 
   async function buscarCep(val) {
@@ -6495,7 +6465,38 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
 
         {/* ── PEDIR ENVIO ── */}
         {envioSubTab === "form" && (
-          !unlocked ? lockScreen : enviado ? enviadoScreen : (<div style={{ paddingBottom:60 }}>
+          enviado ? enviadoScreen : (<div style={{ paddingBottom:60, position:"relative" }}>
+
+      {/* BANNER DE PRÉVIA quando formulário ainda não abriu */}
+      {!unlocked && (
+        <div style={{ position:"sticky", top:0, zIndex:20, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(100,181,246,.3)", padding:"12px 16px", backdropFilter:"blur(12px)", marginBottom:16, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10 }}>
+          <div style={{ flex:1, minWidth:180 }}>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#64B5F6" }}>
+              {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário fechado · aguarde a abertura"}
+            </div>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginTop:3 }}>
+              Prévia dos seus itens · para solicitar envio aguarde a abertura
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
+            <div style={{ display:"flex", gap:6 }}>
+              <input type="password" placeholder="senha" value={senha}
+                onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
+                onKeyDown={e => { if (e.key === "Enter") { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); } }}
+                style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
+              />
+              <button onClick={() => { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); }}
+                style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
+                ACESSAR →
+              </button>
+            </div>
+            {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
+          </div>
+        </div>
+      )}
+
+      {/* conteúdo do form — visível mas não interativo antes do unlock */}
+      <div style={!unlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
 
       {/* SEUS DADOS — somente leitura */}
       <div style={sec}>
@@ -6640,6 +6641,7 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
       }}>
         {loading ? "ENVIANDO..." : "SOLICITAR ENVIO →"}
       </button>
+      </div>{/* fim wrapper pointer-events */}
     </div>))}
 
         {/* ── MINHAS SOLICITAÇÕES ── */}
