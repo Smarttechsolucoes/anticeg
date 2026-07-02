@@ -5014,14 +5014,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const resolvidas = pagDemandas.filter(d => d.status === "pago");
 
               async function confirmar(id) {
-                const { error } = await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
+                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago" });
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
               async function reabrir(id) {
-                await supabase.from("pagamento_demandas").update({ status: "em_analise" }).eq("id", id);
+                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise" });
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
