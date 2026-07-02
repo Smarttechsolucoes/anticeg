@@ -6532,10 +6532,10 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <div style={{ display:"flex", gap:6 }}>
               <input type="password" placeholder="senha" value={senha}
                 onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
-                onKeyDown={e => { if (e.key === "Enter") { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); } }}
+                onKeyDown={e => { if (e.key === "Enter") { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); } }}
                 style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
               />
-              <button onClick={() => { if (senha === "2MINAFOREVER") setUnlocked(true); else setSenhaErr(true); }}
+              <button onClick={() => { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); }}
                 style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
                 ACESSAR →
               </button>
