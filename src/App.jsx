@@ -3045,6 +3045,20 @@ ${compHTML}
                 <EnvioFlowStepper status={s.status} />
                 <div style={{ height:1, background:"rgba(245,240,232,.06)", marginTop:8, marginBottom:12 }} />
 
+                {/* Código do grupo */}
+                {s.grupo_envio_codigo && (
+                  <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                    <div>
+                      <div style={{ fontSize:9, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:3 }}>👥 Envio em grupo</div>
+                      <div style={{ fontSize:16, fontWeight:900, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", letterSpacing:"3px" }}>{s.grupo_envio_codigo}</div>
+                    </div>
+                    <button onClick={() => navigator.clipboard.writeText(s.grupo_envio_codigo)}
+                      style={{ background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.25)", color:"#C9A8F0", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                      Copiar código
+                    </button>
+                  </div>
+                )}
+
                 {/* Itens */}
                 {s.itens?.length > 0 && (() => {
                   const totalCaixa = s.itens.reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
@@ -6877,6 +6891,21 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                     <div style={{ height:1, background:"rgba(245,240,232,.06)", marginBottom:8 }} />
                     <EnvioFlowStepper status={s.status} />
                     <div style={{ height:1, background:"rgba(245,240,232,.06)", marginTop:8, marginBottom:12 }} />
+
+                    {/* Código do grupo */}
+                    {s.grupo_envio_codigo && (
+                      <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                        <div>
+                          <div style={{ fontSize:9, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:3 }}>👥 Envio em grupo</div>
+                          <div style={{ fontSize:16, fontWeight:900, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", letterSpacing:"3px" }}>{s.grupo_envio_codigo}</div>
+                        </div>
+                        <button onClick={() => navigator.clipboard.writeText(s.grupo_envio_codigo)}
+                          style={{ background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.25)", color:"#C9A8F0", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          Copiar código
+                        </button>
+                      </div>
+                    )}
+
                     {s.itens?.length > 0 && (() => {
                       const totalCaixa = s.itens.reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
                       return (
