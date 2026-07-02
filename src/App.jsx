@@ -6422,7 +6422,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   async function criarGrupo() {
     const codigo = gerarCodigoGrupo();
     setGrupoCodigo(codigo);
-    await supabase.from("grupos_envio").insert([{ codigo, host_cog: user.cog }]);
+    const { error } = await supabase.from("grupos_envio").insert([{ codigo, host_cog: user.cog }]);
+    if (error) { setGrupoErr("Erro ao criar grupo. Rode a migração SQL primeiro (supabase/sql/grupos_envio.sql)."); setGrupoCodigo(""); setGrupoMode(null); }
   }
 
   async function entrarNoGrupo() {
@@ -6508,24 +6509,24 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     }
 
     const { error } = await supabase.from("envio_solicitacoes").insert([{
-      joiner_cog:          user.cog,
-      joiner_nome:         nome,
-      joiner_handle:       handle,
+      joiner_cog:    user.cog,
+      joiner_nome:   nome,
+      joiner_handle: handle,
       destinatario,
       cpf,
       cep,
       endereco,
       numero,
-      complemento:         complemento || null,
+      complemento:   complemento || null,
       bairro,
       cidade,
       estado,
-      itens:               itensSel,
+      itens:         itensSel,
       metodo,
       seguro,
-      valor_seguro:        seguro === "sim" ? valorSeguro : null,
-      status:              "solicitação de envio",
-      grupo_envio_codigo:  grupoCodigo || null,
+      valor_seguro:  seguro === "sim" ? valorSeguro : null,
+      status:        "solicitação de envio",
+      ...(grupoCodigo ? { grupo_envio_codigo: grupoCodigo } : {}),
     }]);
 
     setLoading(false);
