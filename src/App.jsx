@@ -6427,6 +6427,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [grupoLoading, setGrupoLoading] = useState(false);
   const [grupoErr,     setGrupoErr]     = useState("");
   const [grupoOk,      setGrupoOk]      = useState(false);
+  const [salvandoEnd,  setSalvandoEnd]  = useState(false);
+  const [endSalvo,     setEndSalvo]     = useState(false);
 
   function gerarCodigoGrupo() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -6440,6 +6442,13 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     setGrupoLoading(false);
     if (error) { setGrupoErr("Não foi possível criar o grupo — rode a migração SQL (supabase/sql/grupos_envio.sql) e tente novamente."); setGrupoMode(null); return; }
     setGrupoCodigo(codigo);
+  }
+
+  async function salvarEnderecoGrupo() {
+    if (!grupoCodigo || (!cep && !endereco)) return;
+    setSalvandoEnd(true);
+    await supabase.from("grupos_envio").update({ destinatario, cpf, cep, endereco, numero, complemento: complemento || null, bairro, cidade, estado }).eq("codigo", grupoCodigo);
+    setSalvandoEnd(false); setEndSalvo(true); setTimeout(() => setEndSalvo(false), 3000);
   }
 
   async function entrarNoGrupo() {
@@ -6672,10 +6681,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
         {grupoMode === "criar" && grupoCodigo && (
           <div>
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>
-              Compartilhe este código com suas amigas. O endereço que você preencher abaixo vai ser preenchido automaticamente para elas.
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
               <div style={{ background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.3)", borderRadius:8, padding:"10px 18px", fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:900, color:"#C9A8F0", letterSpacing:"3px" }}>
                 {grupoCodigo}
               </div>
@@ -6688,6 +6694,13 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                 Cancelar
               </button>
             </div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:8, lineHeight:1.6 }}>
+              Preencha o endereço abaixo e clique em <strong style={{ color:"#C9A8F0" }}>Salvar endereço no grupo</strong> antes de compartilhar o código. Suas amigas vão entrar com o código e o endereço preenche automaticamente.
+            </div>
+            <button onClick={salvarEnderecoGrupo} disabled={salvandoEnd || (!cep && !endereco)}
+              style={{ background: endSalvo ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.12)", border:`1px solid ${endSalvo ? "rgba(186,255,57,.3)" : "rgba(201,168,240,.25)"}`, color: endSalvo ? "#BAFF39" : "#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor: (!cep && !endereco) ? "not-allowed" : "pointer", opacity: (!cep && !endereco) ? 0.5 : 1 }}>
+              {salvandoEnd ? "Salvando..." : endSalvo ? "✓ Endereço salvo!" : "Salvar endereço no grupo"}
+            </button>
           </div>
         )}
 
