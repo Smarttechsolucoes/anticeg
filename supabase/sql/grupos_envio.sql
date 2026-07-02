@@ -16,14 +16,20 @@ create table if not exists grupos_envio (
   created_at   timestamptz default now()
 );
 
--- Permitir que qualquer joiner logada leia e insira grupos
 alter table grupos_envio enable row level security;
+
+drop policy if exists "grupos_envio_select" on grupos_envio;
+drop policy if exists "grupos_envio_insert" on grupos_envio;
+drop policy if exists "grupos_envio_update" on grupos_envio;
 
 create policy "grupos_envio_select" on grupos_envio
   for select using (true);
 
 create policy "grupos_envio_insert" on grupos_envio
   for insert with check (true);
+
+create policy "grupos_envio_update" on grupos_envio
+  for update using (true) with check (true);
 
 -- Adicionar código de grupo à tabela de solicitações
 alter table envio_solicitacoes
