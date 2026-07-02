@@ -977,7 +977,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", onOpenPagamentos }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", onOpenPagamentos, onOpenEnvio }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -1138,12 +1138,17 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         </div>
       )}
       {nEnvioLiberado > 0 && (
-        <div style={{ background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"10px 16px", marginBottom:12, fontSize:12, fontFamily:"'DM Mono',monospace", color:"#64B5F6", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"10px 16px", marginBottom:12, fontSize:12, fontFamily:"'DM Mono',monospace", color:"#64B5F6", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
           <span>📬</span>
-          <span>
+          <span style={{ flex:1 }}>
             {nEnvioLiberado === 1 ? "1 item pronto" : `${nEnvioLiberado} itens prontos`} para Envio Nacional
             {proximoEnvio ? <> · <strong>forms abre {proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
           </span>
+          {onOpenEnvio && (
+            <button onClick={onOpenEnvio} style={{ background:"rgba(100,181,246,.15)", border:"1px solid rgba(100,181,246,.4)", borderRadius:5, color:"#64B5F6", fontSize:11, fontFamily:"'DM Mono',monospace", padding:"3px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
+              clique aqui →
+            </button>
+          )}
         </div>
       )}
       <div className="page-header">
@@ -7243,7 +7248,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} />}
