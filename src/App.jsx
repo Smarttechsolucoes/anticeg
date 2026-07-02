@@ -6539,8 +6539,9 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
           </select>
         </div>
       </div>
+      </div>{/* fim wrapper bloqueado — parte 1 */}
 
-      {/* ITENS */}
+      {/* ITENS — sempre clicável */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Itens disponíveis para envio</div>
         {antigomItens.length === 0 ? (
@@ -6577,6 +6578,7 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
         )}
       </div>
 
+      <div style={!unlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
       {/* ENVIO */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Método de envio</div>
