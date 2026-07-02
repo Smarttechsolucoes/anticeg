@@ -6434,10 +6434,12 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   }
 
   async function criarGrupo() {
+    setGrupoLoading(true);
     const codigo = gerarCodigoGrupo();
-    setGrupoCodigo(codigo);
     const { error } = await supabase.from("grupos_envio").insert([{ codigo, host_cog: user.cog }]);
-    if (error) { setGrupoErr("Erro ao criar grupo. Rode a migração SQL primeiro (supabase/sql/grupos_envio.sql)."); setGrupoCodigo(""); setGrupoMode(null); }
+    setGrupoLoading(false);
+    if (error) { setGrupoErr("Não foi possível criar o grupo — rode a migração SQL (supabase/sql/grupos_envio.sql) e tente novamente."); setGrupoMode(null); return; }
+    setGrupoCodigo(codigo);
   }
 
   async function entrarNoGrupo() {
@@ -6657,9 +6659,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
         {!grupoMode && !grupoCodigo && (
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            <button onClick={async () => { setGrupoMode("criar"); await criarGrupo(); }}
+            <button onClick={async () => { setGrupoMode("criar"); criarGrupo(); }}
               style={{ background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-              ✦ Criar grupo
+              {grupoLoading ? "Criando..." : "✦ Criar grupo"}
             </button>
             <button onClick={() => setGrupoMode("entrar")}
               style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.5)", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
