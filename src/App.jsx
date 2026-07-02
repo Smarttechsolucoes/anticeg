@@ -534,9 +534,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                 </div>
                 <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
                   {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
                 </div>
                 {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
@@ -553,7 +553,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
         </div>
       )}
 
-      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
+      {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
     </div>
   );
 }
