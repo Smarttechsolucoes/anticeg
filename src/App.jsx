@@ -6427,8 +6427,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [grupoLoading, setGrupoLoading] = useState(false);
   const [grupoErr,     setGrupoErr]     = useState("");
   const [grupoOk,      setGrupoOk]      = useState(false);
-  const [salvandoEnd,  setSalvandoEnd]  = useState(false);
-  const [endSalvo,     setEndSalvo]     = useState(false);
 
   function gerarCodigoGrupo() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -6438,17 +6436,14 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   async function criarGrupo() {
     setGrupoLoading(true);
     const codigo = gerarCodigoGrupo();
-    const { error } = await supabase.from("grupos_envio").insert([{ codigo, host_cog: user.cog }]);
+    const { error } = await supabase.from("grupos_envio").insert([{
+      codigo, host_cog: user.cog,
+      destinatario, cpf, cep, endereco, numero,
+      complemento: complemento || null, bairro, cidade, estado,
+    }]);
     setGrupoLoading(false);
-    if (error) { setGrupoErr("Não foi possível criar o grupo — rode a migração SQL (supabase/sql/grupos_envio.sql) e tente novamente."); setGrupoMode(null); return; }
+    if (error) { setGrupoErr("Não foi possível criar o grupo — tente novamente."); setGrupoMode(null); return; }
     setGrupoCodigo(codigo);
-  }
-
-  async function salvarEnderecoGrupo() {
-    if (!grupoCodigo || (!cep && !endereco)) return;
-    setSalvandoEnd(true);
-    await supabase.from("grupos_envio").update({ destinatario, cpf, cep, endereco, numero, complemento: complemento || null, bairro, cidade, estado }).eq("codigo", grupoCodigo);
-    setSalvandoEnd(false); setEndSalvo(true); setTimeout(() => setEndSalvo(false), 3000);
   }
 
   async function entrarNoGrupo() {
@@ -6667,81 +6662,45 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         <div style={{ fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>Dados incorretos? Atualize em Meu Perfil.</div>
       </div>
 
-      {/* GRUPO DE ENVIO */}
-      <div style={{ ...sec, border: grupoCodigo ? "1px solid rgba(201,168,240,.25)" : "1px solid rgba(245,240,232,.07)" }}>
-        <div style={{ fontSize:10, letterSpacing:"1.5px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>👥 Envio em grupo <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>(opcional)</span></div>
-
-        {!grupoMode && !grupoCodigo && (
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            <button onClick={async () => { setGrupoMode("criar"); criarGrupo(); }}
-              style={{ background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-              {grupoLoading ? "Criando..." : "✦ Criar grupo"}
-            </button>
-            <button onClick={() => setGrupoMode("entrar")}
-              style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.5)", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-              Entrar em grupo de amiga
-            </button>
-          </div>
-        )}
-
-        {grupoMode === "criar" && grupoCodigo && (
-          <div>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-              <div style={{ background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.3)", borderRadius:8, padding:"10px 18px", fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:900, color:"#C9A8F0", letterSpacing:"3px" }}>
-                {grupoCodigo}
+      {/* GRUPO — entrar em grupo de amiga (antes do form) */}
+      {(grupoMode === "entrar" || grupoOk) && (
+        <div style={{ ...sec, border: grupoOk ? "1px solid rgba(201,168,240,.3)" : "1px solid rgba(245,240,232,.07)" }}>
+          <div style={{ fontSize:10, letterSpacing:"1.5px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>👥 Envio em grupo</div>
+          {grupoMode === "entrar" && !grupoOk && (
+            <div>
+              <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>Peça o código da host e cole aqui — o endereço preenche automaticamente.</div>
+              <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                <input value={grupoInput} onChange={e => setGrupoInput(e.target.value.toUpperCase())}
+                  placeholder="código (ex: BAFF39)"
+                  style={{ ...inp, width:160, textTransform:"uppercase", letterSpacing:"2px", textAlign:"center" }}
+                />
+                <button onClick={entrarNoGrupo} disabled={grupoLoading}
+                  style={{ background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                  {grupoLoading ? "..." : "Entrar →"}
+                </button>
+                <button onClick={() => { setGrupoMode(null); setGrupoInput(""); setGrupoErr(""); }}
+                  style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Cancelar</button>
               </div>
-              <button onClick={() => navigator.clipboard.writeText(grupoCodigo)}
-                style={{ background:"none", border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.6)", borderRadius:7, padding:"6px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                Copiar
-              </button>
-              <button onClick={() => { setGrupoMode(null); setGrupoCodigo(""); }}
-                style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                Cancelar
-              </button>
+              {grupoErr && <div style={{ marginTop:6, fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>{grupoErr}</div>}
             </div>
-            <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:8, lineHeight:1.6 }}>
-              Preencha o endereço abaixo e clique em <strong style={{ color:"#C9A8F0" }}>Salvar endereço no grupo</strong> antes de compartilhar o código. Suas amigas vão entrar com o código e o endereço preenche automaticamente.
-            </div>
-            <button onClick={salvarEnderecoGrupo} disabled={salvandoEnd || (!cep && !endereco)}
-              style={{ background: endSalvo ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.12)", border:`1px solid ${endSalvo ? "rgba(186,255,57,.3)" : "rgba(201,168,240,.25)"}`, color: endSalvo ? "#BAFF39" : "#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor: (!cep && !endereco) ? "not-allowed" : "pointer", opacity: (!cep && !endereco) ? 0.5 : 1 }}>
-              {salvandoEnd ? "Salvando..." : endSalvo ? "✓ Endereço salvo!" : "Salvar endereço no grupo"}
-            </button>
-          </div>
-        )}
-
-        {grupoMode === "entrar" && !grupoOk && (
-          <div>
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>
-              Peça o código da host do grupo e cole aqui. O endereço dela vai preencher automaticamente.
-            </div>
-            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              <input value={grupoInput} onChange={e => setGrupoInput(e.target.value.toUpperCase())}
-                placeholder="código do grupo (ex: BAFF39)"
-                style={{ ...inp, width:180, textTransform:"uppercase", letterSpacing:"2px", textAlign:"center" }}
-              />
-              <button onClick={entrarNoGrupo} disabled={grupoLoading}
-                style={{ background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
-                {grupoLoading ? "..." : "Entrar →"}
-              </button>
-              <button onClick={() => { setGrupoMode(null); setGrupoInput(""); setGrupoErr(""); }}
-                style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                Cancelar
-              </button>
-            </div>
-            {grupoErr && <div style={{ marginTop:6, fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>{grupoErr}</div>}
-          </div>
-        )}
-
-        {grupoOk && grupoCodigo && (
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ fontSize:14 }}>✓</span>
+          )}
+          {grupoOk && <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ color:"#C9A8F0" }}>✓</span>
             <div>
               <div style={{ fontSize:11, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>Grupo {grupoCodigo} — endereço preenchido!</div>
               <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Confirme os dados abaixo antes de enviar.</div>
             </div>
-          </div>
-        )}
-      </div>
+          </div>}
+        </div>
+      )}
+      {!grupoMode && !grupoCodigo && (
+        <div style={{ marginBottom:12, textAlign:"right" }}>
+          <button onClick={() => setGrupoMode("entrar")}
+            style={{ background:"none", border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.6)", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+            👥 Entrar em grupo de amiga
+          </button>
+        </div>
+      )}
 
       {/* DESTINATÁRIO */}
       <div style={sec}>
@@ -6773,6 +6732,48 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           </select>
         </div>
       </div>
+
+      {/* CRIAR GRUPO — só aparece após endereço preenchido, sem grupo ativo */}
+      {!grupoCodigo && !grupoOk && cep && endereco && (
+        <div style={{ marginTop:16, paddingTop:14, borderTop:"1px solid rgba(201,168,240,.1)" }}>
+          {!grupoMode && (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+                Vai enviar junto com amigas para o mesmo endereço?
+              </div>
+              <button onClick={() => { setGrupoMode("criar"); criarGrupo(); }}
+                disabled={grupoLoading}
+                style={{ background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                {grupoLoading ? "Criando..." : "✦ Criar grupo de envio"}
+              </button>
+            </div>
+          )}
+          {grupoMode === "criar" && !grupoCodigo && grupoLoading && (
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Criando grupo...</div>
+          )}
+          {grupoErr && <div style={{ marginTop:6, fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>{grupoErr}</div>}
+        </div>
+      )}
+      {grupoMode === "criar" && grupoCodigo && (
+        <div style={{ marginTop:14, paddingTop:14, borderTop:"1px solid rgba(201,168,240,.15)", display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Código do grupo criado:</div>
+          <div style={{ background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.3)", borderRadius:8, padding:"8px 18px", fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:900, color:"#C9A8F0", letterSpacing:"3px" }}>
+            {grupoCodigo}
+          </div>
+          <button onClick={() => navigator.clipboard.writeText(grupoCodigo)}
+            style={{ background:"none", border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.6)", borderRadius:7, padding:"6px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+            Copiar
+          </button>
+          <button onClick={() => { setGrupoMode(null); setGrupoCodigo(""); }}
+            style={{ background:"none", border:"none", color:"rgba(245,240,232,.2)", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+            Cancelar
+          </button>
+          <div style={{ width:"100%", fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
+            Compartilhe este código com suas amigas — elas entram pelo botão "Entrar em grupo de amiga" e o endereço preenche automaticamente.
+          </div>
+        </div>
+      )}
+
       </div>{/* fim wrapper bloqueado — parte 1 */}
 
       {/* ITENS — sempre clicável */}
