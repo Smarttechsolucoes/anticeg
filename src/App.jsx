@@ -4193,43 +4193,89 @@ function NotificarTodosBlock() {
 }
 
 function ProximoEnvioBlock() {
-  const [texto, setTexto] = useState("");
+  const [texto,  setTexto]  = useState("");
+  const [inicio, setInicio] = useState("");
+  const [fim,    setFim]    = useState("");
   const [saving, setSaving] = useState(false);
-  const [ok, setOk] = useState(false);
+  const [ok,     setOk]     = useState(false);
 
   useEffect(() => {
-    supabase.from("config").select("value").eq("key","proximo_envio").single()
-      .then(({ data }) => { if (data?.value) setTexto(data.value); });
+    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim"])
+      .then(({ data }) => {
+        if (!data) return;
+        data.forEach(r => {
+          if (r.key === "proximo_envio")        setTexto(r.value  || "");
+          if (r.key === "envio_abertura_inicio") setInicio(r.value || "");
+          if (r.key === "envio_abertura_fim")    setFim(r.value    || "");
+        });
+      });
   }, []);
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const [, m, d] = iso.split("-");
+    return `${d}/${m}`;
+  }
 
   async function salvar() {
     setSaving(true);
-    await supabase.from("config").upsert({ key:"proximo_envio", value: texto.trim() }, { onConflict:"key" });
-    setSaving(false); setOk(true); setTimeout(() => setOk(false), 2000);
+    const textoFinal = texto.trim() || (inicio && fim ? `${fmtDate(inicio)} a ${fmtDate(fim)}` : "");
+    await Promise.all([
+      supabase.from("config").upsert({ key:"proximo_envio",         value: textoFinal }, { onConflict:"key" }),
+      supabase.from("config").upsert({ key:"envio_abertura_inicio", value: inicio     }, { onConflict:"key" }),
+      supabase.from("config").upsert({ key:"envio_abertura_fim",    value: fim        }, { onConflict:"key" }),
+    ]);
+    if (!texto.trim() && textoFinal) setTexto(textoFinal);
+    setSaving(false); setOk(true); setTimeout(() => setOk(false), 2500);
   }
 
   async function limpar() {
-    setTexto("");
-    await supabase.from("config").upsert({ key:"proximo_envio", value:"" }, { onConflict:"key" });
+    setTexto(""); setInicio(""); setFim("");
+    await Promise.all([
+      supabase.from("config").upsert({ key:"proximo_envio",         value:"" }, { onConflict:"key" }),
+      supabase.from("config").upsert({ key:"envio_abertura_inicio", value:"" }, { onConflict:"key" }),
+      supabase.from("config").upsert({ key:"envio_abertura_fim",    value:"" }, { onConflict:"key" }),
+    ]);
   }
 
+  const hoje = new Date().toISOString().slice(0, 10);
+  const ativo = inicio && fim && hoje >= inicio && hoje <= fim;
+
   return (
-    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(100,181,246,.15)", borderRadius:10 }}>
-      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Próximo round de Envio Nacional</div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:12 }}>Aparece nos itens "Envio Liberado" e na tela de acesso do forms. Ex: <span style={{ color:"rgba(245,240,232,.6)" }}>10/07 a 12/07</span></div>
-      <input
-        type="text"
-        value={texto}
-        onChange={e => setTexto(e.target.value)}
-        placeholder="Ex: 10/07 a 12/07 · ou deixe vazio para ocultar"
-        style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
+    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${ativo ? "rgba(186,255,57,.25)" : "rgba(100,181,246,.15)"}`, borderRadius:10 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Próximo round de Envio Nacional</div>
+        {ativo && <span style={{ fontSize:10, background:"rgba(186,255,57,.15)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace" }}>● ABERTO AGORA</span>}
+      </div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:12 }}>
+        Defina o período → o forms abre e fecha automaticamente. O texto de exibição é preenchido automaticamente (ou edite manualmente).
+      </div>
+
+      <div style={{ display:"flex", gap:10, marginBottom:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>ABERTURA</div>
+          <input type="date" value={inicio} onChange={e => setInicio(e.target.value)}
+            style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"8px 10px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none", colorScheme:"dark" }} />
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>ENCERRAMENTO</div>
+          <input type="date" value={fim} onChange={e => setFim(e.target.value)}
+            style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"8px 10px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none", colorScheme:"dark" }} />
+        </div>
+      </div>
+
+      <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>TEXTO DE EXIBIÇÃO (opcional — preenchido auto se vazio)</div>
+      <input type="text" value={texto} onChange={e => setTexto(e.target.value)}
+        placeholder="Ex: 03/07 a 05/07 · ou deixe vazio para gerar automaticamente"
+        style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"9px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
       />
+
       <div style={{ display:"flex", gap:8, marginTop:8 }}>
         <button onClick={salvar} disabled={saving} style={{ background:"rgba(100,181,246,.12)", border:"1px solid rgba(100,181,246,.3)", color:"#64B5F6", borderRadius:8, padding:"7px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
           {saving ? "..." : ok ? "✓ Salvo" : "Salvar"}
         </button>
         <button onClick={limpar} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:8, padding:"7px 14px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-          Limpar
+          Limpar tudo
         </button>
       </div>
     </div>
@@ -6294,7 +6340,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
-function EnvioTab({ user, itens, proximoEnvio = "" }) {
+function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
   const WA_GOM = "5524992782023";
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
   const [envioWinW, setEnvioWinW] = useState(window.innerWidth);
@@ -6331,6 +6377,10 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
   const [meuEnvios,   setMeuEnvios]   = useState([]);
   const [expandedEnvio, setExpandedEnvio] = useState(new Set());
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
+  const efetivamenteUnlocked = unlocked || isAutoUnlocked;
 
   useEffect(() => {
     supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
@@ -6468,7 +6518,7 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
           enviado ? enviadoScreen : (<div style={{ paddingBottom:60, position:"relative" }}>
 
       {/* BANNER DE PRÉVIA quando formulário ainda não abriu */}
-      {!unlocked && (
+      {!efetivamenteUnlocked && (
         <div style={{ position:"sticky", top:0, zIndex:20, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(100,181,246,.3)", padding:"12px 16px", backdropFilter:"blur(12px)", marginBottom:16, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10 }}>
           <div style={{ flex:1, minWidth:180 }}>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:14, color:"#64B5F6" }}>
@@ -6496,7 +6546,7 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
       )}
 
       {/* conteúdo do form — visível mas não interativo antes do unlock */}
-      <div style={!unlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
+      <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
 
       {/* SEUS DADOS — somente leitura */}
       <div style={sec}>
@@ -6578,7 +6628,7 @@ function EnvioTab({ user, itens, proximoEnvio = "" }) {
         )}
       </div>
 
-      <div style={!unlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
+      <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
       {/* ENVIO */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Método de envio</div>
@@ -6950,15 +7000,24 @@ export default function App() {
   const [perfilPushAtivo, setPerfilPushAtivo] = useState(true);
   const [calEventos, setCalEventos] = useState(null);
   const [badgePopupQueue, setBadgePopupQueue] = useState([]);
-  const [proximoEnvio, setProximoEnvio] = useState("");
+  const [proximoEnvio,        setProximoEnvio]        = useState("");
+  const [envioAberturaInicio, setEnvioAberturaInicio] = useState("");
+  const [envioAberturaFim,    setEnvioAberturaFim]    = useState("");
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "aviso_masterlist").single()
       .then(({ data }) => { if (data?.value) setAvisoMasterlist(data.value); });
-    supabase.from("config").select("value").eq("key", "proximo_envio").single()
-      .then(({ data }) => { if (data?.value) setProximoEnvio(data.value); });
+    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim"])
+      .then(({ data }) => {
+        if (!data) return;
+        data.forEach(r => {
+          if (r.key === "proximo_envio")        setProximoEnvio(r.value        || "");
+          if (r.key === "envio_abertura_inicio") setEnvioAberturaInicio(r.value || "");
+          if (r.key === "envio_abertura_fim")    setEnvioAberturaFim(r.value    || "");
+        });
+      });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
     supabase.from("config").select("value").eq("key", "admin_pin").single()
@@ -7256,7 +7315,7 @@ export default function App() {
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} />}
-      {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} />}
+      {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} />}
 
