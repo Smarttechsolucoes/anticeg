@@ -6427,6 +6427,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [grupoLoading, setGrupoLoading] = useState(false);
   const [grupoErr,     setGrupoErr]     = useState("");
   const [grupoOk,      setGrupoOk]      = useState(false);
+  const [grupoTutorial, setGrupoTutorial] = useState(false);
 
   function gerarCodigoGrupo() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -6694,11 +6695,75 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         </div>
       )}
       {!grupoMode && !grupoCodigo && (
-        <div style={{ marginBottom:12, textAlign:"right" }}>
-          <button onClick={() => setGrupoMode("entrar")}
-            style={{ background:"none", border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.6)", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-            👥 Entrar em grupo de amiga
-          </button>
+        <div style={{ marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
+            <button onClick={() => { if (!cep || !endereco) { setGrupoErr("Preencha o endereço antes de criar o grupo."); } else { setGrupoMode("criar"); criarGrupo(); } }}
+              style={{ background:"rgba(255,114,64,.1)", border:"1px solid rgba(255,114,64,.3)", color:"#FF7240", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+              🏠 Sou a host — criar grupo
+            </button>
+            <button onClick={() => { setGrupoErr(""); setGrupoMode("entrar"); }}
+              style={{ background:"none", border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.6)", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+              👥 Entrar em grupo de amiga
+            </button>
+            <button onClick={() => setGrupoTutorial(v => !v)}
+              style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:0, marginLeft:"auto", textDecoration:"underline", textDecorationStyle:"dotted", textUnderlineOffset:3 }}>
+              {grupoTutorial ? "▲ fechar" : "? como funciona"}
+            </button>
+          </div>
+          {grupoErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginTop:4 }}>{grupoErr}</div>}
+        </div>
+      )}
+
+      {/* TUTORIAL GRUPO */}
+      {grupoTutorial && !grupoMode && !grupoCodigo && (
+        <div style={{ background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.15)", borderRadius:12, padding:"20px 18px", marginBottom:16 }}>
+          <div style={{ fontSize:10, letterSpacing:"2px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:16 }}>👥 Como funciona o envio em grupo</div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+            {/* HOST */}
+            <div style={{ background:"rgba(255,114,64,.06)", border:"1px solid rgba(255,114,64,.18)", borderRadius:10, padding:"14px 14px" }}>
+              <div style={{ fontSize:9, letterSpacing:"2px", color:"#FF7240", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🏠 Host · quem tem o endereço</div>
+              {[
+                ["1", "Preencha seus dados e o endereço completo de entrega."],
+                ["2", <>Vai aparecer <strong style={{color:"#F5F0E8"}}>\"Criar grupo de envio\"</strong> no final do endereço — clique.</>],
+                ["3", "Copie o código de 6 letras e mande para as amigas."],
+                ["4", "Escolha seus itens e envie normalmente."],
+              ].map(([n, txt]) => (
+                <div key={n} style={{ display:"flex", gap:8, marginBottom:8, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.5 }}>
+                  <span style={{ background:"rgba(255,114,64,.15)", color:"#FF7240", borderRadius:"50%", width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontFamily:"'DM Mono',monospace", flexShrink:0, marginTop:1 }}>{n}</span>
+                  <span>{txt}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* GUEST */}
+            <div style={{ background:"rgba(201,168,240,.05)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"14px 14px" }}>
+              <div style={{ fontSize:9, letterSpacing:"2px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🤝 Amiga · quem entra no grupo</div>
+              {[
+                ["1", "Peça o código de 6 letras para a host do grupo."],
+                ["2", <>Clique em <strong style={{color:"#F5F0E8"}}>\"Entrar em grupo de amiga\"</strong> aqui em cima.</>],
+                ["3", "Cole o código — o endereço preenche automaticamente."],
+                ["4", "Escolha seus próprios itens e envie."],
+              ].map(([n, txt]) => (
+                <div key={n} style={{ display:"flex", gap:8, marginBottom:8, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.5 }}>
+                  <span style={{ background:"rgba(201,168,240,.15)", color:"#C9A8F0", borderRadius:"50%", width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontFamily:"'DM Mono',monospace", flexShrink:0, marginTop:1 }}>{n}</span>
+                  <span>{txt}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {[
+              ["📦", "Não tem limite de pessoas por grupo — quantas amigas quiser podem usar o mesmo código."],
+              ["🛍️", "Cada uma escolhe e paga seus próprios itens — o grupo só compartilha o endereço."],
+              ["⚠️", "A host precisa preencher o endereço antes de criar o grupo — o botão só aparece quando o endereço está preenchido."],
+            ].map(([icon, txt]) => (
+              <div key={icon} style={{ display:"flex", gap:8, fontSize:11, color:"rgba(245,240,232,.35)", lineHeight:1.5 }}>
+                <span style={{flexShrink:0}}>{icon}</span><span>{txt}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -6733,27 +6798,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         </div>
       </div>
 
-      {/* CRIAR GRUPO — só aparece após endereço preenchido, sem grupo ativo */}
-      {!grupoCodigo && !grupoOk && cep && endereco && (
-        <div style={{ marginTop:16, paddingTop:14, borderTop:"1px solid rgba(201,168,240,.1)" }}>
-          {!grupoMode && (
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
-              <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
-                Vai enviar junto com amigas para o mesmo endereço?
-              </div>
-              <button onClick={() => { setGrupoMode("criar"); criarGrupo(); }}
-                disabled={grupoLoading}
-                style={{ background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:7, padding:"7px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                {grupoLoading ? "Criando..." : "✦ Criar grupo de envio"}
-              </button>
-            </div>
-          )}
-          {grupoMode === "criar" && !grupoCodigo && grupoLoading && (
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Criando grupo...</div>
-          )}
-          {grupoErr && <div style={{ marginTop:6, fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>{grupoErr}</div>}
-        </div>
-      )}
       {grupoMode === "criar" && grupoCodigo && (
         <div style={{ marginTop:14, paddingTop:14, borderTop:"1px solid rgba(201,168,240,.15)", display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
           <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Código do grupo criado:</div>
