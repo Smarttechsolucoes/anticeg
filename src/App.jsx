@@ -5181,6 +5181,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const CardDemanda = ({ d }) => {
                 const isPend = d.status === "em_analise";
                 const nome = joinerNome(d.joiner_cog);
+                const fmtV = v => Number(v) > 0 ? `R$${Number(v).toFixed(2).replace(".",",")}` : null;
+                const temMulta = d.itens.some(it => Number(it.multa) > 0);
+                const gridCols = `1fr 72px 72px 56px${temMulta ? " 66px" : ""} 80px`;
+                const thStyle = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:6 };
+                const dash = <span style={{opacity:.2}}>—</span>;
                 return (
                   <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:12, padding:"16px", marginBottom:10 }}>
 
@@ -5200,21 +5205,31 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       </div>
                     </div>
 
-                    {/* itens no estilo masterlist */}
-                    <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:14 }}>
+                    {/* tabela de itens */}
+                    <div style={{ overflowX:"auto" }}>
+                      {/* cabeçalho da tabela */}
+                      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", paddingBottom:6, borderBottom:"1px solid rgba(245,240,232,.07)", marginBottom:2, minWidth:380 }}>
+                        <div style={{ ...thStyle, textAlign:"left" }}>Item</div>
+                        <div style={thStyle}>Item R$</div>
+                        <div style={thStyle}>Frete</div>
+                        <div style={thStyle}>RF</div>
+                        {temMulta && <div style={{ ...thStyle, color:"rgba(255,107,107,.5)" }}>Multa</div>}
+                        <div style={{ ...thStyle, color:"rgba(245,240,232,.5)" }}>Total</div>
+                      </div>
+                      {/* linhas */}
                       {d.itens.map((it, i) => {
-                        const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
+                        const total = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
                         return (
-                          <div key={i}>
-                            <div style={{ fontSize:12, fontWeight:600, color:"#F5F0E8", lineHeight:1.4, marginBottom:2 }}>{it.nome_do_item}</div>
-                            <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>{it.ceg}</div>
-                            <div className="ml-card-vals">
-                              {Number(it.valor_item)  > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span>    <span className="td-val pend">R$ {Number(it.valor_item).toFixed(2).replace(".",",")}</span></div>}
-                              {Number(it.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span>   <span className="td-val pend">R$ {Number(it.frete_inter).toFixed(2).replace(".",",")}</span></div>}
-                              {Number(it.taxa_rf)     > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span> <span className="td-val pend">R$ {Number(it.taxa_rf).toFixed(2).replace(".",",")}</span></div>}
-                              {Number(it.multa)       > 0 && <div className="ml-val-row"><span className="ml-val-label" style={{color:"#ff6b6b"}}>multa</span> <span style={{fontSize:"var(--fs-xs)",fontFamily:"'DM Mono',monospace",color:"#ff6b6b"}}>R$ {Number(it.multa).toFixed(2).replace(".",",")}</span></div>}
-                              {itTotal > 0 && <div className="ml-val-total">total R$ {itTotal.toFixed(2).replace(".",",")}</div>}
+                          <div key={i} style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.04)", minWidth:380 }}>
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.nome_do_item}</div>
+                              <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}</div>
                             </div>
+                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.valor_item)  || dash}</div>
+                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.frete_inter) || dash}</div>
+                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.taxa_rf)     || dash}</div>
+                            {temMulta && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", fontWeight:700, textAlign:"right" }}>{fmtV(it.multa) || dash}</div>}
+                            <div style={{ fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", color:"#BAFF39", textAlign:"right" }}>R${total.toFixed(2).replace(".",",")}</div>
                           </div>
                         );
                       })}
@@ -5222,16 +5237,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
                     {/* comprovante + obs */}
                     {(d.comprovante_url || d.obs) && (
-                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:12 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
                         {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
                         {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
                       </div>
                     )}
 
-                    {isPend
-                      ? <button onClick={() => confirmar(d.id)} style={{ width:"100%", padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
-                      : <button onClick={() => reabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
-                    }
+                    <div style={{ marginTop:12 }}>
+                      {isPend
+                        ? <button onClick={() => confirmar(d.id)} style={{ width:"100%", padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
+                        : <button onClick={() => reabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
+                      }
+                    </div>
                   </div>
                 );
               };
