@@ -6293,14 +6293,57 @@ function AdminPagamentos({ data, joiners, subtab }) {
             </div>
             {isOpen && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
-                {j.itens.map((item, idx) => (
-                  <div key={idx} style={{ display:"flex", gap:8, alignItems:"center", fontSize:11, color:"rgba(245,240,232,.5)", padding:"4px 0", borderBottom: idx < j.itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
-                    <span style={{ flex:1 }}><InfoContent info={item.nome_do_item} /></span>
-                    <span style={{ fontSize:10, color:"rgba(245,240,232,.48)" }}>{item.ceg}</span>
-                    <span style={{ color:"var(--laranja)", fontWeight:600 }}>R${fmtBRL(item.pend)}</span>
-                    {item.multa > 0 && <span style={{ fontSize:10, color:"#ff6b6b", fontWeight:700 }}>+R${fmtBRL(item.multa)}</span>}
-                  </div>
-                ))}
+                {(() => {
+                  const temMulta = j.itens.some(i => i.multa > 0);
+                  const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", padding:"6px 0 6px", fontWeight:400 };
+                  const tdS = { fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.55)", padding:"7px 0", verticalAlign:"middle" };
+                  const dash = <span style={{ color:"rgba(245,240,232,.18)" }}>—</span>;
+                  const fmt = v => `R$${fmtBRL(v)}`;
+                  return (
+                    <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
+                      <colgroup>
+                        <col />
+                        <col style={{ width:66 }} />
+                        <col style={{ width:66 }} />
+                        <col style={{ width:46 }} />
+                        {temMulta && <col style={{ width:62 }} />}
+                        <col style={{ width:72 }} />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th style={{ ...thS, textAlign:"left" }}>Item</th>
+                          <th style={thS}>Item R$</th>
+                          <th style={thS}>Frete</th>
+                          <th style={thS}>RF</th>
+                          {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.45)" }}>Multa</th>}
+                          <th style={thS}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {j.itens.map((item, idx) => {
+                          const vItem  = isPendente(item.pago_item)  ? Number(item.valor_item  || 0) : 0;
+                          const vFrete = isPendente(item.pago_frete) ? Number(item.frete_inter || 0) : 0;
+                          const vRf    = isPendente(item.pago_rf)    ? Number(item.taxa_rf     || 0) : 0;
+                          const vMulta = item.multa || 0;
+                          const total  = vItem + vFrete + vRf + vMulta;
+                          return (
+                            <tr key={idx} style={{ borderTop:"1px solid rgba(245,240,232,.05)" }}>
+                              <td style={{ padding:"7px 8px 7px 0", verticalAlign:"middle" }}>
+                                <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.8)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}><InfoContent info={item.nome_do_item} /></div>
+                                <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>{item.ceg}</div>
+                              </td>
+                              <td style={tdS}>{vItem  > 0 ? fmt(vItem)  : dash}</td>
+                              <td style={tdS}>{vFrete > 0 ? fmt(vFrete) : dash}</td>
+                              <td style={tdS}>{vRf    > 0 ? fmt(vRf)    : dash}</td>
+                              {temMulta && <td style={{ ...tdS, color: vMulta > 0 ? "rgba(255,107,107,.8)" : undefined }}>{vMulta > 0 ? fmt(vMulta) : dash}</td>}
+                              <td style={{ ...tdS, color: vMulta > 0 ? "#ff6b6b" : "#BAFF39", fontWeight:700 }}>{fmt(total)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
                 {(() => {
                   const joinerInfo = (joiners || []).find(jn => jn.cog === j.cog);
                   if (!joinerInfo?.email) return null;
