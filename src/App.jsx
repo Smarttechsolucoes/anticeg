@@ -1234,17 +1234,25 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       </div>
 
       {totalModal && (() => {
-        const linhas = itens.flatMap(i => {
+        const linhas = itens.map(i => {
           const ck = `${i.ceg}::${i.nome_do_item}`;
-          const rows = [];
-          if (isPendente(i.pago_item)  && !pagConfirmMap[ck]?.item  && Number(i.valor_item||0)  > 0) rows.push({ label:"Item",   val: Number(i.valor_item), multa: diasAtraso(i.venc_item),  item: i });
-          if (isPendente(i.pago_frete) && !pagConfirmMap[ck]?.frete && Number(i.frete_inter||0) > 0) rows.push({ label:"Frete",  val: Number(i.frete_inter), multa: diasAtraso(i.venc_frete), item: i });
-          if (isPendente(i.pago_rf)    && !pagConfirmMap[ck]?.rf    && Number(i.taxa_rf||0)     > 0) rows.push({ label:"RF",     val: Number(i.taxa_rf),    multa: diasAtraso(i.venc_rf),    item: i });
-          return rows;
-        });
+          const vItem  = isPendente(i.pago_item)  && !pagConfirmMap[ck]?.item  ? Number(i.valor_item  || 0) : 0;
+          const vFrete = isPendente(i.pago_frete) && !pagConfirmMap[ck]?.frete ? Number(i.frete_inter || 0) : 0;
+          const vRf    = isPendente(i.pago_rf)    && !pagConfirmMap[ck]?.rf    ? Number(i.taxa_rf     || 0) : 0;
+          const mItem  = vItem  > 0 ? diasAtraso(i.venc_item)  : 0;
+          const mFrete = vFrete > 0 ? diasAtraso(i.venc_frete) : 0;
+          const mRf    = vRf    > 0 ? diasAtraso(i.venc_rf)    : 0;
+          const total  = vItem + vFrete + vRf + mItem + mFrete + mRf;
+          return total > 0 ? { i, vItem, vFrete, vRf, mItem, mFrete, mRf, total } : null;
+        }).filter(Boolean);
+        const temMulta = linhas.some(r => r.mItem + r.mFrete + r.mRf > 0);
+        const cols = `1fr 68px 68px 52px${temMulta ? " 62px" : ""} 76px`;
+        const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:8 };
+        const tdS = { fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.6)" };
+        const dash = <span style={{ color:"rgba(245,240,232,.2)" }}>—</span>;
         return (
           <div className="modal-overlay" onClick={() => setTotalModal(false)}>
-            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:460, display:"flex", flexDirection:"column", maxHeight:"85vh", overflow:"hidden", padding:0 }}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:560, display:"flex", flexDirection:"column", maxHeight:"85vh", overflow:"hidden", padding:0 }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 16px", borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
                 <div>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
@@ -1258,21 +1266,34 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 {linhas.length === 0 ? (
                   <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
                 ) : (
-                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                    {linhas.map((row, idx) => (
-                      <div key={idx} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${row.multa > 0 ? "rgba(255,107,107,.18)" : "rgba(245,240,232,.08)"}`, borderRadius:10, padding:"12px 16px" }}>
-                        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.item.nome_do_item}</div>
-                            <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{row.item.ceg} · {row.label}</div>
-                          </div>
-                          <div style={{ textAlign:"right", flexShrink:0 }}>
-                            <div style={{ fontSize:14, fontWeight:700, color: row.multa > 0 ? "#ff6b6b" : "var(--lilas)", fontFamily:"'DM Mono',monospace" }}>R${fmtBRL(row.val + row.multa)}</div>
-                            {row.multa > 0 && <div style={{ fontSize:10, color:"rgba(255,107,107,.6)", fontFamily:"'DM Mono',monospace" }}>+R${fmtBRL(row.multa)} multa</div>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div style={{ overflowX:"auto" }}>
+                    <div style={{ display:"grid", gridTemplateColumns:cols, minWidth:360 }}>
+                      {/* header */}
+                      <div style={{ ...thS, textAlign:"left" }}>Item</div>
+                      <div style={thS}>Item R$</div>
+                      <div style={thS}>Frete</div>
+                      <div style={thS}>RF</div>
+                      {temMulta && <div style={{ ...thS, color:"rgba(255,107,107,.5)" }}>Multa</div>}
+                      <div style={thS}>Total</div>
+                      {/* rows */}
+                      {linhas.map((row, idx) => {
+                        const multa = row.mItem + row.mFrete + row.mRf;
+                        const hasMulta = multa > 0;
+                        return (
+                          <React.Fragment key={idx}>
+                            <div style={{ padding:"10px 0", borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                              <div style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.i.nome_do_item}</div>
+                              <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{row.i.ceg}</div>
+                            </div>
+                            <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vItem > 0 ? `R$${fmtBRL(row.vItem)}` : dash}</div>
+                            <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</div>
+                            <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</div>
+                            {temMulta && <div style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</div>}
+                            <div style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>R${fmtBRL(row.total)}</div>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
