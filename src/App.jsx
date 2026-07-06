@@ -5178,63 +5178,43 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               }
               const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
 
-              const tagStyle = (cor) => ({ fontSize:9, padding:"2px 7px", borderRadius:4, fontFamily:"'DM Mono',monospace", fontWeight:700, textTransform:"uppercase", letterSpacing:".05em", border:`1px solid ${cor}55`, color:cor, background:`${cor}12` });
-
               const CardDemanda = ({ d }) => {
                 const isPend = d.status === "em_analise";
                 const nome = joinerNome(d.joiner_cog);
                 return (
-                  <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:12, padding:"18px 18px 14px", marginBottom:10 }}>
+                  <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:12, padding:"16px", marginBottom:10 }}>
 
-                    {/* cabeçalho: joiner + total */}
+                    {/* cabeçalho */}
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
-                      <div style={{ minWidth:0 }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:3 }}>
-                          {nome && <span style={{ fontSize:15, fontWeight:800, color:"#F5F0E8" }}>{nome}</span>}
+                      <div>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:2 }}>
+                          {nome && <span style={{ fontSize:14, fontWeight:800, color:"#F5F0E8" }}>{nome}</span>}
                           <span style={{ fontSize:11, color:"rgba(167,139,250,.65)", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
                         </div>
-                        <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace" }}>
                           {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
                         </div>
                       </div>
-                      <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
-                        <div style={{ fontSize:20, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1 }}>
-                          R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
-                        </div>
-                        <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>{d.itens.length} item(s)</div>
+                      <div style={{ fontSize:18, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>
+                        R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
                       </div>
                     </div>
 
-                    {/* itens */}
-                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+                    {/* itens no estilo masterlist */}
+                    <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:14 }}>
                       {d.itens.map((it, i) => {
-                        const cobranças = [
-                          Number(it.valor_item)  > 0 && { label:"item",   val:it.valor_item,  cor:"#64B5F6" },
-                          Number(it.frete_inter) > 0 && { label:"frete",  val:it.frete_inter, cor:"#FFB74D" },
-                          Number(it.taxa_rf)     > 0 && { label:"RF",     val:it.taxa_rf,     cor:"#CE93D8" },
-                          Number(it.multa)       > 0 && { label:"multa",  val:it.multa,       cor:"#FF6B6B" },
-                        ].filter(Boolean);
-                        const itTotal = cobranças.reduce((a, c) => a + Number(c.val), 0);
+                        const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
                         return (
-                          <div key={i} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8, padding:"10px 12px" }}>
-                            {/* nome + ceg */}
-                            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, marginBottom:cobranças.length > 0 ? 8 : 0 }}>
-                              <div style={{ minWidth:0, flex:1 }}>
-                                <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", lineHeight:1.4, marginBottom:3 }}>{it.nome_do_item}</div>
-                                <span style={tagStyle("rgba(245,240,232,.4)")}>{it.ceg}</span>
-                              </div>
-                              <div style={{ fontSize:13, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.7)", flexShrink:0 }}>R$ {itTotal.toFixed(2).replace(".",",")}</div>
+                          <div key={i}>
+                            <div style={{ fontSize:12, fontWeight:600, color:"#F5F0E8", lineHeight:1.4, marginBottom:2 }}>{it.nome_do_item}</div>
+                            <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>{it.ceg}</div>
+                            <div className="ml-card-vals">
+                              {Number(it.valor_item)  > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span>    <span className="td-val pend">R$ {Number(it.valor_item).toFixed(2).replace(".",",")}</span></div>}
+                              {Number(it.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span>   <span className="td-val pend">R$ {Number(it.frete_inter).toFixed(2).replace(".",",")}</span></div>}
+                              {Number(it.taxa_rf)     > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span> <span className="td-val pend">R$ {Number(it.taxa_rf).toFixed(2).replace(".",",")}</span></div>}
+                              {Number(it.multa)       > 0 && <div className="ml-val-row"><span className="ml-val-label" style={{color:"#ff6b6b"}}>multa</span> <span style={{fontSize:"var(--fs-xs)",fontFamily:"'DM Mono',monospace",color:"#ff6b6b"}}>R$ {Number(it.multa).toFixed(2).replace(".",",")}</span></div>}
+                              {itTotal > 0 && <div className="ml-val-total">total R$ {itTotal.toFixed(2).replace(".",",")}</div>}
                             </div>
-                            {/* cobranças */}
-                            {cobranças.length > 0 && (
-                              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                                {cobranças.map(c => (
-                                  <span key={c.label} style={tagStyle(c.cor)}>
-                                    {c.label} R$ {Number(c.val).toFixed(2).replace(".",",")}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
                           </div>
                         );
                       })}
