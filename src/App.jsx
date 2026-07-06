@@ -1001,7 +1001,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", onOpenPagamentos, onOpenEnvio }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", bannerEnvioVisivel = true, onOpenPagamentos, onOpenEnvio }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -1161,7 +1161,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
         </div>
       )}
-      {nEnvioLiberado > 0 && (
+      {nEnvioLiberado > 0 && bannerEnvioVisivel && (
         <div style={{ background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"10px 16px", marginBottom:12, fontSize:12, fontFamily:"'DM Mono',monospace", color:"#64B5F6", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
           <span>📬</span>
           <span style={{ flex:1 }}>
@@ -4234,17 +4234,19 @@ function ProximoEnvioBlock() {
   const [texto,  setTexto]  = useState("");
   const [inicio, setInicio] = useState("");
   const [fim,    setFim]    = useState("");
-  const [saving, setSaving] = useState(false);
-  const [ok,     setOk]     = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [ok,      setOk]      = useState(false);
+  const [bannerOn, setBannerOn] = useState(true);
 
   useEffect(() => {
-    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim"])
+    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim","banner_envio_visivel"])
       .then(({ data }) => {
         if (!data) return;
         data.forEach(r => {
           if (r.key === "proximo_envio")        setTexto(r.value  || "");
           if (r.key === "envio_abertura_inicio") setInicio(r.value || "");
           if (r.key === "envio_abertura_fim")    setFim(r.value    || "");
+          if (r.key === "banner_envio_visivel")  setBannerOn(r.value !== "false");
         });
       });
   }, []);
@@ -4274,6 +4276,12 @@ function ProximoEnvioBlock() {
       supabase.from("config").upsert({ key:"envio_abertura_inicio", value:"" }, { onConflict:"key" }),
       supabase.from("config").upsert({ key:"envio_abertura_fim",    value:"" }, { onConflict:"key" }),
     ]);
+  }
+
+  async function toggleBanner() {
+    const novoValor = !bannerOn;
+    setBannerOn(novoValor);
+    await supabase.from("config").upsert({ key:"banner_envio_visivel", value: novoValor ? "true" : "false" }, { onConflict:"key" });
   }
 
   const hoje = new Date().toISOString().slice(0, 10);
@@ -4308,12 +4316,15 @@ function ProximoEnvioBlock() {
         style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"9px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
       />
 
-      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+      <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap", alignItems:"center" }}>
         <button onClick={salvar} disabled={saving} style={{ background:"rgba(100,181,246,.12)", border:"1px solid rgba(100,181,246,.3)", color:"#64B5F6", borderRadius:8, padding:"7px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
           {saving ? "..." : ok ? "✓ Salvo" : "Salvar"}
         </button>
         <button onClick={limpar} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:8, padding:"7px 14px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
           Limpar tudo
+        </button>
+        <button onClick={toggleBanner} style={{ marginLeft:"auto", background: bannerOn ? "rgba(186,255,57,.08)" : "rgba(245,240,232,.04)", border:`1px solid ${bannerOn ? "rgba(186,255,57,.25)" : "rgba(245,240,232,.12)"}`, color: bannerOn ? "#BAFF39" : "rgba(245,240,232,.35)", borderRadius:8, padding:"7px 14px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+          {bannerOn ? "📬 Banner visível — ocultar" : "📭 Banner oculto — mostrar"}
         </button>
       </div>
     </div>
@@ -7247,19 +7258,21 @@ export default function App() {
   const [proximoEnvio,        setProximoEnvio]        = useState("");
   const [envioAberturaInicio, setEnvioAberturaInicio] = useState("");
   const [envioAberturaFim,    setEnvioAberturaFim]    = useState("");
+  const [bannerEnvioVisivel,  setBannerEnvioVisivel]  = useState(true);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "aviso_masterlist").single()
       .then(({ data }) => { if (data?.value) setAvisoMasterlist(data.value); });
-    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim"])
+    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim","banner_envio_visivel"])
       .then(({ data }) => {
         if (!data) return;
         data.forEach(r => {
           if (r.key === "proximo_envio")        setProximoEnvio(r.value        || "");
           if (r.key === "envio_abertura_inicio") setEnvioAberturaInicio(r.value || "");
           if (r.key === "envio_abertura_fim")    setEnvioAberturaFim(r.value    || "");
+          if (r.key === "banner_envio_visivel")  setBannerEnvioVisivel(r.value !== "false");
         });
       });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
@@ -7555,7 +7568,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} />}
