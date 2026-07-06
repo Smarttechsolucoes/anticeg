@@ -5481,26 +5481,33 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             );
           })()}
-          {/* Filtros */}
+          {/* Cards de status */}
           {(() => {
             const FILTROS = [
-              { key:"todos",                  label:"Todas" },
-              { key:"solicitação de envio",   label:"Nova" },
-              { key:"cotação em andamento",   label:"Cotação" },
-              { key:"pagamento em aberto",    label:"Pgto. aberto" },
-              { key:"pagamento confirmado",   label:"Pgto. confirmado" },
-              { key:"embalando",              label:"Embalando" },
-              { key:"enviado",                label:"Enviado" },
-              { key:"cancelado",              label:"Cancelado" },
+              { key:"todos",                  label:"Todas",             icon:"◈", cor:"rgba(245,240,232,.55)", bg:"rgba(245,240,232,.04)", border:"rgba(245,240,232,.1)" },
+              { key:"solicitação de envio",   label:"Nova",              icon:"✦", cor:"#BAFF39",              bg:"rgba(186,255,57,.06)",  border:"rgba(186,255,57,.2)"  },
+              { key:"cotação em andamento",   label:"Cotação",           icon:"◎", cor:"#FF5C1A",              bg:"rgba(255,92,26,.06)",   border:"rgba(255,92,26,.2)"   },
+              { key:"pagamento em aberto",    label:"Pgto. aberto",      icon:"◷", cor:"#C9A8F0",              bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.2)" },
+              { key:"pagamento confirmado",   label:"Pgto. confirmado",  icon:"✓", cor:"#FFD166",              bg:"rgba(255,209,102,.06)", border:"rgba(255,209,102,.2)" },
+              { key:"embalando",              label:"Embalando",         icon:"□", cor:"#64B5F6",              bg:"rgba(100,181,246,.06)", border:"rgba(100,181,246,.2)" },
+              { key:"enviado",               label:"Enviado",            icon:"→", cor:"rgba(245,240,232,.6)", bg:"rgba(245,240,232,.03)", border:"rgba(245,240,232,.1)" },
+              { key:"cancelado",             label:"Cancelado",          icon:"✕", cor:"rgba(245,240,232,.3)", bg:"rgba(245,240,232,.02)", border:"rgba(245,240,232,.08)"},
             ];
             return (
-              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px, 1fr))", gap:8, marginBottom:20 }}>
                 {FILTROS.map(f => {
                   const count = f.key === "todos" ? envioSolic.length : envioSolic.filter(e => e.status === f.key).length;
                   const active = filtroEnvio === f.key;
                   return (
-                    <button key={f.key} onClick={() => setFiltroEnvio(f.key)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:20, cursor:"pointer", border: active ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.15)", background: active ? "rgba(255,92,26,.12)" : "transparent", color: active ? "var(--laranja)" : "rgba(245,240,232,.45)", fontWeight: active ? 700 : 400 }}>
-                      {f.label}{count > 0 ? ` (${count})` : ""}
+                    <button key={f.key} onClick={() => setFiltroEnvio(f.key)} style={{
+                      textAlign:"left", cursor:"pointer", borderRadius:10, padding:"12px 14px",
+                      background: active ? f.bg : "var(--card-bg)",
+                      border:`1px solid ${active ? f.border : "rgba(245,240,232,.07)"}`,
+                      transition:"all .15s", outline:"none",
+                    }}>
+                      <div style={{ fontSize:18, color: active ? f.cor : "rgba(245,240,232,.25)", marginBottom:4, lineHeight:1 }}>{f.icon}</div>
+                      <div style={{ fontSize:22, fontWeight:900, color: active ? f.cor : "rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginBottom:4 }}>{count}</div>
+                      <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color: active ? f.cor : "rgba(245,240,232,.35)", fontWeight: active ? 700 : 400 }}>{f.label}</div>
                     </button>
                   );
                 })}
