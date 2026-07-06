@@ -4426,6 +4426,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [adminRepasseTab,        setAdminRepasseTab]        = useState("pendentes");
   const [adminRepasseOpenJoiner, setAdminRepasseOpenJoiner] = useState(null);
   const [adminPagSubTab,         setAdminPagSubTab]         = useState("formulario");
+  const [formularioFiltro,       setFormularioFiltro]       = useState("analise");
   const [fbRespostaAberta, setFbRespostaAberta] = useState(null);
   const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
   const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
@@ -5228,23 +5229,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 );
               };
 
+              const listaAtiva = formularioFiltro === "analise" ? pendentes : resolvidas;
               return (
                 <div>
-                  {pendentes.length === 0 && resolvidas.length === 0 && <div style={{ textAlign:"center", padding:"48px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum formulário ainda.</div>}
-                  {pendentes.length > 0 && <>
-                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                      <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>Em análise</div>
-                      <div style={{ background:"rgba(167,139,250,.2)", color:"#A78BFA", borderRadius:99, fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", padding:"1px 7px" }}>{pendentes.length}</div>
-                    </div>
-                    {pendentes.map(d => <CardDemanda key={d.id} d={d} />)}
-                  </>}
-                  {resolvidas.length > 0 && <>
-                    <div style={{ display:"flex", alignItems:"center", gap:8, margin:"24px 0 12px" }}>
-                      <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>Confirmados</div>
-                      <div style={{ background:"rgba(186,255,57,.12)", color:"#BAFF39", borderRadius:99, fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", padding:"1px 7px" }}>{resolvidas.length}</div>
-                    </div>
-                    {resolvidas.map(d => <CardDemanda key={d.id} d={d} />)}
-                  </>}
+                  {/* mini filtro */}
+                  <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+                    <button onClick={() => setFormularioFiltro("analise")}
+                      style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", border: formularioFiltro === "analise" ? "1px solid rgba(167,139,250,.4)" : "1px solid rgba(245,240,232,.08)", background: formularioFiltro === "analise" ? "rgba(167,139,250,.12)" : "transparent", color: formularioFiltro === "analise" ? "#A78BFA" : "rgba(245,240,232,.35)" }}>
+                      Em análise
+                      {pendentes.length > 0 && <span style={{ background:"rgba(167,139,250,.25)", color:"#A78BFA", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px" }}>{pendentes.length}</span>}
+                    </button>
+                    <button onClick={() => setFormularioFiltro("confirmados")}
+                      style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", border: formularioFiltro === "confirmados" ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(245,240,232,.08)", background: formularioFiltro === "confirmados" ? "rgba(186,255,57,.08)" : "transparent", color: formularioFiltro === "confirmados" ? "#BAFF39" : "rgba(245,240,232,.35)" }}>
+                      Confirmados
+                      {resolvidas.length > 0 && <span style={{ background:"rgba(186,255,57,.15)", color:"#BAFF39", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px" }}>{resolvidas.length}</span>}
+                    </button>
+                  </div>
+
+                  {listaAtiva.length === 0
+                    ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
+                        {formularioFiltro === "analise" ? "Nenhum formulário em análise." : "Nenhum pagamento confirmado ainda."}
+                      </div>
+                    : listaAtiva.map(d => <CardDemanda key={d.id} d={d} />)
+                  }
                 </div>
               );
             })()}
