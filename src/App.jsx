@@ -1166,7 +1166,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <span>📬</span>
           <span style={{ flex:1 }}>
             {nEnvioLiberado === 1 ? "1 item pronto" : `${nEnvioLiberado} itens prontos`} para Envio Nacional
-            {proximoEnvio ? <> · <strong>forms abre {proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
+            {proximoEnvio ? <> · <strong>{proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
           </span>
           {onOpenEnvio && (
             <button onClick={onOpenEnvio} style={{ background:"rgba(100,181,246,.15)", border:"1px solid rgba(100,181,246,.4)", borderRadius:5, color:"#64B5F6", fontSize:11, fontFamily:"'DM Mono',monospace", padding:"3px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
