@@ -4876,27 +4876,50 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <div className="admin-content">
 
       {adminMainTab === "home" && (() => {
-        const cards = [
-          { id:"envios",    icon:"◫", label:"Envios",    count: envioSolic.filter(e => e.status === "solicitação de envio").length, sub:"nova solicitação", color:"#BAFF39", bg:"rgba(186,255,57,.06)", border:"rgba(186,255,57,.18)" },
-          { id:"reports",   icon:"⚑", label:"Reports",   count: reports.filter(r => r.status !== "resolvido").length, sub:"pendente", color:"var(--laranja)", bg:"rgba(255,92,26,.06)", border:"rgba(255,92,26,.2)" },
-          { id:"cadastros", icon:"👤", label:"Cadastros", count: confirmacoes.length, sub:"aguardando", color:"var(--lilas)", bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.18)" },
+        const ENVIO_CARDS = [
+          { key:"solicitação de envio",  label:"Nova",             icon:"✦", cor:"#BAFF39",              bg:"rgba(186,255,57,.06)",  border:"rgba(186,255,57,.2)"  },
+          { key:"cotação em andamento",  label:"Cotação",          icon:"◎", cor:"#FF5C1A",              bg:"rgba(255,92,26,.06)",   border:"rgba(255,92,26,.2)"   },
+          { key:"pagamento em aberto",   label:"Pgto. aberto",     icon:"◷", cor:"#C9A8F0",              bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.2)" },
+          { key:"pagamento confirmado",  label:"Pgto. confirmado", icon:"✓", cor:"#FFD166",              bg:"rgba(255,209,102,.06)", border:"rgba(255,209,102,.2)" },
+          { key:"embalando",             label:"Embalando",        icon:"□", cor:"#64B5F6",              bg:"rgba(100,181,246,.06)", border:"rgba(100,181,246,.2)" },
+          { key:"enviado",              label:"Enviado",           icon:"→", cor:"rgba(245,240,232,.6)", bg:"rgba(245,240,232,.03)", border:"rgba(245,240,232,.1)" },
+          { key:"cancelado",            label:"Cancelado",         icon:"✕", cor:"rgba(245,240,232,.3)", bg:"rgba(245,240,232,.02)", border:"rgba(245,240,232,.08)"},
+        ];
+        const otherCards = [
+          { id:"reports",   icon:"⚑", label:"Reports",   count: (reports||[]).filter(r => r.status !== "resolvido").length, sub:"pendente", color:"var(--laranja)", bg:"rgba(255,92,26,.06)", border:"rgba(255,92,26,.2)" },
+          { id:"cadastros", icon:"👤", label:"Cadastros", count: (confirmacoes||[]).length, sub:"aguardando", color:"var(--lilas)", bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.18)" },
         ].filter(c => c.count > 0);
         return (
           <div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10, marginBottom:24 }}>
-              {cards.length === 0 ? (
-                <div style={{ gridColumn:"1/-1", padding:"32px 0", textAlign:"center", fontFamily:"'DM Mono',monospace", fontSize:12, color:"rgba(245,240,232,.3)" }}>
-                  nada pendente por aqui ✓
-                </div>
-              ) : cards.map(c => (
-                <div key={c.id} onClick={() => setAdminMainTab(c.id)} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:10, padding:"18px 16px", cursor:"pointer", transition:"all .15s" }}>
-                  <div style={{ fontSize:20, marginBottom:8 }}>{c.icon}</div>
-                  <div style={{ fontSize:28, fontWeight:900, color:c.color, fontFamily:"'DM Mono',monospace", lineHeight:1 }}>{c.count}</div>
-                  <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", marginTop:4, textTransform:"uppercase", letterSpacing:"1px" }}>{c.label}</div>
-                  <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:2 }}>{c.sub}</div>
-                </div>
-              ))}
+            {/* Envios por status */}
+            <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:8 }}>Envios</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px, 1fr))", gap:8, marginBottom:20 }}>
+              {ENVIO_CARDS.map(f => {
+                const count = envioSolic.filter(e => e.status === f.key).length;
+                return (
+                  <div key={f.key} onClick={() => { setFiltroEnvio(f.key); setAdminMainTab("envios"); }}
+                    style={{ background: count > 0 ? f.bg : "var(--card-bg)", border:`1px solid ${count > 0 ? f.border : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"14px 14px", cursor:"pointer", transition:"all .15s" }}>
+                    <div style={{ fontSize:16, color: count > 0 ? f.cor : "rgba(245,240,232,.2)", marginBottom:4, lineHeight:1 }}>{f.icon}</div>
+                    <div style={{ fontSize:24, fontWeight:900, color: count > 0 ? f.cor : "rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginBottom:4 }}>{count}</div>
+                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color: count > 0 ? f.cor : "rgba(245,240,232,.25)", fontWeight: count > 0 ? 700 : 400 }}>{f.label}</div>
+                  </div>
+                );
+              })}
             </div>
+            {/* Outros pendentes */}
+            {otherCards.length > 0 && <>
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:8 }}>Outros</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:10, marginBottom:24 }}>
+                {otherCards.map(c => (
+                  <div key={c.id} onClick={() => setAdminMainTab(c.id)} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:10, padding:"18px 16px", cursor:"pointer", transition:"all .15s" }}>
+                    <div style={{ fontSize:20, marginBottom:8 }}>{c.icon}</div>
+                    <div style={{ fontSize:28, fontWeight:900, color:c.color, fontFamily:"'DM Mono',monospace", lineHeight:1 }}>{c.count}</div>
+                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", marginTop:4, textTransform:"uppercase", letterSpacing:"1px" }}>{c.label}</div>
+                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:2 }}>{c.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </>}
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.2)", letterSpacing:".05em" }}>
               selecione uma seção na barra lateral →
             </div>
@@ -5481,39 +5504,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             );
           })()}
-          {/* Cards de status */}
-          {(() => {
-            const FILTROS = [
-              { key:"todos",                  label:"Todas",             icon:"◈", cor:"rgba(245,240,232,.55)", bg:"rgba(245,240,232,.04)", border:"rgba(245,240,232,.1)" },
-              { key:"solicitação de envio",   label:"Nova",              icon:"✦", cor:"#BAFF39",              bg:"rgba(186,255,57,.06)",  border:"rgba(186,255,57,.2)"  },
-              { key:"cotação em andamento",   label:"Cotação",           icon:"◎", cor:"#FF5C1A",              bg:"rgba(255,92,26,.06)",   border:"rgba(255,92,26,.2)"   },
-              { key:"pagamento em aberto",    label:"Pgto. aberto",      icon:"◷", cor:"#C9A8F0",              bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.2)" },
-              { key:"pagamento confirmado",   label:"Pgto. confirmado",  icon:"✓", cor:"#FFD166",              bg:"rgba(255,209,102,.06)", border:"rgba(255,209,102,.2)" },
-              { key:"embalando",              label:"Embalando",         icon:"□", cor:"#64B5F6",              bg:"rgba(100,181,246,.06)", border:"rgba(100,181,246,.2)" },
-              { key:"enviado",               label:"Enviado",            icon:"→", cor:"rgba(245,240,232,.6)", bg:"rgba(245,240,232,.03)", border:"rgba(245,240,232,.1)" },
-              { key:"cancelado",             label:"Cancelado",          icon:"✕", cor:"rgba(245,240,232,.3)", bg:"rgba(245,240,232,.02)", border:"rgba(245,240,232,.08)"},
-            ];
-            return (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px, 1fr))", gap:8, marginBottom:20 }}>
-                {FILTROS.map(f => {
-                  const count = f.key === "todos" ? envioSolic.length : envioSolic.filter(e => e.status === f.key).length;
-                  const active = filtroEnvio === f.key;
-                  return (
-                    <button key={f.key} onClick={() => setFiltroEnvio(f.key)} style={{
-                      textAlign:"left", cursor:"pointer", borderRadius:10, padding:"12px 14px",
-                      background: active ? f.bg : "var(--card-bg)",
-                      border:`1px solid ${active ? f.border : "rgba(245,240,232,.07)"}`,
-                      transition:"all .15s", outline:"none",
-                    }}>
-                      <div style={{ fontSize:18, color: active ? f.cor : "rgba(245,240,232,.25)", marginBottom:4, lineHeight:1 }}>{f.icon}</div>
-                      <div style={{ fontSize:22, fontWeight:900, color: active ? f.cor : "rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginBottom:4 }}>{count}</div>
-                      <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color: active ? f.cor : "rgba(245,240,232,.35)", fontWeight: active ? 700 : 400 }}>{f.label}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
+          {/* Indicador do filtro ativo */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>Exibindo:</span>
+            <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", fontWeight:700 }}>
+              {filtroEnvio === "todos" ? "todas" : filtroEnvio}
+            </span>
+            {filtroEnvio !== "todos" && (
+              <button onClick={() => setFiltroEnvio("todos")} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:12, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
+            )}
+          </div>
 
           {(() => {
             const lista = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
