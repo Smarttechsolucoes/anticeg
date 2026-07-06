@@ -1010,6 +1010,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
 
+  const [totalModal, setTotalModal] = useState(false);
   const [pagDemandaMap,  setPagDemandaMap]  = useState({});
   const [pagConfirmMap,  setPagConfirmMap]  = useState({});
   const [repasseMap,    setRepasseMap]    = useState({});
@@ -1194,14 +1195,14 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="sum-sub">pague o que está em aberto</div>
         </div>
         {!guest && (
-          <div className="sum-card" style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : undefined }}>
+          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : undefined, cursor:"pointer" }}>
             <div className="sum-label">Total a pagar</div>
             <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>
               R${fmtBRL(tPend + tMulta)}
             </div>
             {tMulta > 0
               ? <div className="sum-sub" style={{ color:"rgba(255,107,107,.7)" }}>R${fmtBRL(tPend)} + R${fmtBRL(tMulta)} multa</div>
-              : <div className="sum-sub">sem atraso</div>
+              : <div className="sum-sub">ver detalhes →</div>
             }
           </div>
         )}
@@ -1231,6 +1232,54 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           )}
         </button>
       </div>
+
+      {totalModal && (() => {
+        const linhas = itens.flatMap(i => {
+          const ck = `${i.ceg}::${i.nome_do_item}`;
+          const rows = [];
+          if (isPendente(i.pago_item)  && !pagConfirmMap[ck]?.item  && Number(i.valor_item||0)  > 0) rows.push({ label:"Item",   val: Number(i.valor_item), multa: diasAtraso(i.venc_item),  item: i });
+          if (isPendente(i.pago_frete) && !pagConfirmMap[ck]?.frete && Number(i.frete_inter||0) > 0) rows.push({ label:"Frete",  val: Number(i.frete_inter), multa: diasAtraso(i.venc_frete), item: i });
+          if (isPendente(i.pago_rf)    && !pagConfirmMap[ck]?.rf    && Number(i.taxa_rf||0)     > 0) rows.push({ label:"RF",     val: Number(i.taxa_rf),    multa: diasAtraso(i.venc_rf),    item: i });
+          return rows;
+        });
+        return (
+          <div className="modal-overlay" onClick={() => setTotalModal(false)}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:460, display:"flex", flexDirection:"column", maxHeight:"85vh", overflow:"hidden", padding:0 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 16px", borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
+                <div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
+                    PENDÊNCIAS <span style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>R${fmtBRL(tPend + tMulta)}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2 }}>{linhas.length} item{linhas.length !== 1 ? "ns" : ""} em aberto</div>
+                </div>
+                <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
+              </div>
+              <div style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px" }}>
+                {linhas.length === 0 ? (
+                  <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {linhas.map((row, idx) => (
+                      <div key={idx} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${row.multa > 0 ? "rgba(255,107,107,.18)" : "rgba(245,240,232,.08)"}`, borderRadius:10, padding:"12px 16px" }}>
+                        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.item.nome_do_item}</div>
+                            <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{row.item.ceg} · {row.label}</div>
+                          </div>
+                          <div style={{ textAlign:"right", flexShrink:0 }}>
+                            <div style={{ fontSize:14, fontWeight:700, color: row.multa > 0 ? "#ff6b6b" : "var(--lilas)", fontFamily:"'DM Mono',monospace" }}>R${fmtBRL(row.val + row.multa)}</div>
+                            {row.multa > 0 && <div style={{ fontSize:10, color:"rgba(255,107,107,.6)", fontFamily:"'DM Mono',monospace" }}>+R${fmtBRL(row.multa)} multa</div>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {avisosModal && (
         <div className="modal-overlay" onClick={() => setAvisosModal(false)}>
@@ -3818,8 +3867,9 @@ function NotifResolvido({ notif, user, onDismiss }) {
 
 function PushListFiltrada({ pushes, onDesativar, onReativar }) {
   const [filtro, setFiltro] = useState("ativos");
-  const ativos    = pushes.filter(p => p.active);
-  const inativos  = pushes.filter(p => !p.active);
+  const isConsumed = p => p.joiner_cog && (p.push_reads?.length ?? 0) > 0;
+  const ativos    = pushes.filter(p => p.active && !isConsumed(p));
+  const inativos  = pushes.filter(p => !p.active && !isConsumed(p));
   const lista     = filtro === "ativos" ? ativos : inativos;
   return (
     <div>
@@ -4605,7 +4655,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     if (adminMainTab === "geral" && !loaded.has("geral")) {
       loaded.add("geral");
-      supabase.from("pushes").select("*").order("created_at", { ascending: false })
+      supabase.from("pushes").select("*, push_reads(push_id)").order("created_at", { ascending: false })
         .then(({ data }) => { if (data) setPushes(data); });
       supabase.from("feedbacks").select("*").order("created_at", { ascending: false })
         .then(({ data }) => { if (data) setFeedbacks(data); });
@@ -7520,7 +7570,7 @@ export default function App() {
           user={user}
           onOk={async () => {
             await supabase.from("push_reads").insert([{ push_id: p.id, joiner_cog: user.cog }]);
-            if (p.joiner_cog) await supabase.from("pushes").update({ active: false }).eq("id", p.id);
+            if (p.joiner_cog) await supabase.from("pushes").delete().eq("id", p.id);
             setPushAtivos(prev => prev.filter(x => x.id !== p.id));
           }}
           onX={() => setPushAtivos(prev => prev.filter(x => x.id !== p.id))}
