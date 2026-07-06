@@ -5178,49 +5178,76 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               }
               const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
 
+              const tagStyle = (cor) => ({ fontSize:9, padding:"2px 7px", borderRadius:4, fontFamily:"'DM Mono',monospace", fontWeight:700, textTransform:"uppercase", letterSpacing:".05em", border:`1px solid ${cor}55`, color:cor, background:`${cor}12` });
+
               const CardDemanda = ({ d }) => {
                 const isPend = d.status === "em_analise";
                 const nome = joinerNome(d.joiner_cog);
                 return (
-                  <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"16px", marginBottom:8 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                      <div>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-                          {nome && <span style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{nome}</span>}
-                          <span style={{ fontSize:11, color:"rgba(167,139,250,.7)", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
-                          <span style={{ fontSize:9, padding:"2px 8px", borderRadius:4, fontFamily:"'DM Mono',monospace", fontWeight:700, textTransform:"uppercase", letterSpacing:".05em", border: isPend ? "1px solid rgba(167,139,250,.35)" : "1px solid rgba(186,255,57,.25)", color: isPend ? "#A78BFA" : "#BAFF39", background: isPend ? "rgba(167,139,250,.08)" : "rgba(186,255,57,.06)" }}>
-                            {isPend ? "em análise" : "pago"}
-                          </span>
+                  <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:12, padding:"18px 18px 14px", marginBottom:10 }}>
+
+                    {/* cabeçalho: joiner + total */}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:3 }}>
+                          {nome && <span style={{ fontSize:15, fontWeight:800, color:"#F5F0E8" }}>{nome}</span>}
+                          <span style={{ fontSize:11, color:"rgba(167,139,250,.65)", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
                         </div>
-                        <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:4 }}>
+                        <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
                           {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
                         </div>
                       </div>
-                      <div style={{ fontSize:17, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>
-                        R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
+                      <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
+                        <div style={{ fontSize:20, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1 }}>
+                          R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
+                        </div>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>{d.itens.length} item(s)</div>
                       </div>
                     </div>
-                    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginBottom:10, display:"flex", flexDirection:"column", gap:6 }}>
+
+                    {/* itens */}
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
                       {d.itens.map((it, i) => {
-                        const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
-                        const partes = [Number(it.valor_item)>0 && `item R$${Number(it.valor_item).toFixed(2).replace(".",",")}`, Number(it.frete_inter)>0 && `frete R$${Number(it.frete_inter).toFixed(2).replace(".",",")}`, Number(it.taxa_rf)>0 && `RF R$${Number(it.taxa_rf).toFixed(2).replace(".",",")}`, Number(it.multa)>0 && `multa R$${Number(it.multa).toFixed(2).replace(".",",")}`].filter(Boolean);
+                        const cobranças = [
+                          Number(it.valor_item)  > 0 && { label:"item",   val:it.valor_item,  cor:"#64B5F6" },
+                          Number(it.frete_inter) > 0 && { label:"frete",  val:it.frete_inter, cor:"#FFB74D" },
+                          Number(it.taxa_rf)     > 0 && { label:"RF",     val:it.taxa_rf,     cor:"#CE93D8" },
+                          Number(it.multa)       > 0 && { label:"multa",  val:it.multa,       cor:"#FF6B6B" },
+                        ].filter(Boolean);
+                        const itTotal = cobranças.reduce((a, c) => a + Number(c.val), 0);
                         return (
-                          <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 }}>
-                            <div style={{ minWidth:0, flex:1 }}>
-                              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.75)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace: adminIsMobile ? "normal" : "nowrap" }}>
-                                {it.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>({it.ceg})</span>
+                          <div key={i} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8, padding:"10px 12px" }}>
+                            {/* nome + ceg */}
+                            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, marginBottom:cobranças.length > 0 ? 8 : 0 }}>
+                              <div style={{ minWidth:0, flex:1 }}>
+                                <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", lineHeight:1.4, marginBottom:3 }}>{it.nome_do_item}</div>
+                                <span style={tagStyle("rgba(245,240,232,.4)")}>{it.ceg}</span>
                               </div>
-                              {partes.length > 0 && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.6 }}>{partes.join(" · ")}</div>}
+                              <div style={{ fontSize:13, fontWeight:800, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.7)", flexShrink:0 }}>R$ {itTotal.toFixed(2).replace(".",",")}</div>
                             </div>
-                            <div style={{ fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flexShrink:0 }}>R$ {itTotal.toFixed(2).replace(".",",")}</div>
+                            {/* cobranças */}
+                            {cobranças.length > 0 && (
+                              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                                {cobranças.map(c => (
+                                  <span key={c.label} style={tagStyle(c.cor)}>
+                                    {c.label} R$ {Number(c.val).toFixed(2).replace(".",",")}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:10 }}>
-                      {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
-                      {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>{d.obs}</span>}
-                    </div>
+
+                    {/* comprovante + obs */}
+                    {(d.comprovante_url || d.obs) && (
+                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:12 }}>
+                        {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
+                        {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
+                      </div>
+                    )}
+
                     {isPend
                       ? <button onClick={() => confirmar(d.id)} style={{ width:"100%", padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
                       : <button onClick={() => reabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
