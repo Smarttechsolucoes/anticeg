@@ -4543,6 +4543,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [novoEvTipo,        setNovoEvTipo]        = useState("envio");
   const [savingEv,          setSavingEv]          = useState(false);
   const [filtroEnvio,       setFiltroEnvio]       = useState("todos");
+  const [verGrupos,         setVerGrupos]         = useState(false);
   const [expandedEnvio,     setExpandedEnvio]     = useState(new Set());
   const [rastreioAberto,    setRastreioAberto]    = useState(null);
   const [rastreioCodigo,    setRastreioCodigo]    = useState("");
@@ -4587,7 +4588,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const valorDeclarado = s.seguro === "sim" ? s.valor_seguro : null;
     const emb      = pf(cotacaoEmbalagem);
     const minPreco = Math.min(...preenchidas.map(o => pf(o.valor)));
-    const bestOp   = preenchidas.find(o => parseFloat(o.valor) === minPreco);
+    const bestOp   = preenchidas.find(o => pf(o.valor) === minPreco);
     const totalFmt = (minPreco + emb).toFixed(2).replace(".", ",");
     const { error: errCot } = await supabase.from("envio_solicitacoes").update({
       cotacao_opcoes:    preenchidas,
@@ -5504,27 +5505,74 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             );
           })()}
-          {/* Indicador do filtro ativo */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
-            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>Exibindo:</span>
-            <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", fontWeight:700 }}>
-              {filtroEnvio === "todos" ? "todas" : filtroEnvio}
-            </span>
-            {filtroEnvio !== "todos" && (
-              <button onClick={() => setFiltroEnvio("todos")} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:12, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
-            )}
+          {/* Controles: filtro ativo + toggle de visualização */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:14 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>Exibindo:</span>
+              <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", fontWeight:700 }}>
+                {filtroEnvio === "todos" ? "todas" : filtroEnvio}
+              </span>
+              {filtroEnvio !== "todos" && (
+                <button onClick={() => setFiltroEnvio("todos")} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:12, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
+              )}
+            </div>
+            <div style={{ display:"flex", gap:4 }}>
+              {[["individual", false], ["por grupo", true]].map(([label, val]) => (
+                <button key={label} onClick={() => setVerGrupos(val)}
+                  style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", padding:"4px 10px", borderRadius:4, cursor:"pointer", border:`1px solid ${verGrupos === val ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background: verGrupos === val ? "rgba(201,168,240,.12)" : "transparent", color: verGrupos === val ? "#C9A8F0" : "rgba(245,240,232,.3)", transition:"all .15s" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {(() => {
             const lista = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
             if (lista.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}.</div>;
-            return lista.map(s => {
+
+            const displayLista = verGrupos
+              ? [...lista].sort((a, b) => {
+                  const ga = a.grupo_envio_codigo || "￿";
+                  const gb = b.grupo_envio_codigo || "￿";
+                  return ga.localeCompare(gb);
+                })
+              : lista;
+
+            const grupoCounts = {};
+            if (verGrupos) {
+              for (const s of lista) {
+                if (s.grupo_envio_codigo) grupoCounts[s.grupo_envio_codigo] = (grupoCounts[s.grupo_envio_codigo] || 0) + 1;
+              }
+            }
+
+            const seenGrupos = new Set();
+            let showedIndiv = false;
+
+            return displayLista.map(s => {
             const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.25)", "cotação em andamento":"rgba(255,92,26,.3)", "pagamento em aberto":"rgba(201,168,240,.3)", "pagamento confirmado":"rgba(255,209,102,.3)", embalando:"rgba(100,181,246,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             const expanded = expandedEnvio.has(s.id);
             const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
+
+            const isGrupo = verGrupos && !!s.grupo_envio_codigo;
+            const isFirstGrupo = isGrupo && !seenGrupos.has(s.grupo_envio_codigo);
+            if (isGrupo) seenGrupos.add(s.grupo_envio_codigo);
+            const showIndivSep = verGrupos && !isGrupo && !showedIndiv && seenGrupos.size > 0;
+            if (showIndivSep) showedIndiv = true;
+
             return (
-              <div key={s.id} style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, marginBottom:8, overflow:"hidden" }}>
+              <Fragment key={s.id}>
+                {isFirstGrupo && (
+                  <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.22)", borderRadius:8, padding:"10px 14px", marginBottom:6, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontWeight:900, color:"#C9A8F0", fontSize:14, letterSpacing:3 }}>{s.grupo_envio_codigo}</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>👥 {grupoCounts[s.grupo_envio_codigo]} joiner(s)</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>{s.endereco}{s.numero ? `, ${s.numero}` : ""}{s.complemento ? ` (${s.complemento})` : ""} — {s.bairro}, {s.cidade}/{s.estado}</span>
+                  </div>
+                )}
+                {showIndivSep && (
+                  <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.25)", marginBottom:8, marginTop:4 }}>Sem grupo</div>
+                )}
+              <div style={{ background:"var(--card-bg)", border:`1px solid ${statusBorder}`, borderRadius:10, marginBottom:8, overflow:"hidden", ...(isGrupo ? { marginLeft:12 } : {}) }}>
                 {/* Linha colapsada — sempre visível */}
                 <div onClick={toggleExpand} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", cursor:"pointer", gap:10 }}>
                   <div style={{ flex:1, minWidth:0 }}>
@@ -5776,6 +5824,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               }
             </div>
+            </Fragment>
             );
           });
           })()}
