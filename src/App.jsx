@@ -1280,7 +1280,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                         const multa = row.mItem + row.mFrete + row.mRf;
                         const hasMulta = multa > 0;
                         return (
-                          <React.Fragment key={idx}>
+                          <Fragment key={idx}>
                             <div style={{ padding:"10px 0", borderTop:"1px solid rgba(245,240,232,.06)" }}>
                               <div style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.i.nome_do_item}</div>
                               <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{row.i.ceg}</div>
@@ -1290,7 +1290,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                             <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</div>
                             {temMulta && <div style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</div>}
                             <div style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>R${fmtBRL(row.total)}</div>
-                          </React.Fragment>
+                          </Fragment>
                         );
                       })}
                     </div>
