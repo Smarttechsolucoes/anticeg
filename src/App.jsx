@@ -1817,14 +1817,15 @@ function StaffPanel() {
   );
 }
 
-function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0 }) {
+function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, initialSubTab = null, onSubTabChange }) {
   const [winW, setWinW] = useState(window.innerWidth);
   useEffect(() => { const h = () => setWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const isMobile = winW <= 680;
-  const [perfilSubTab, setPerfilSubTab] = useState("dados");
+  const [perfilSubTab, setPerfilSubTab] = useState(initialSubTab || "dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
   const [feedbackSubTab, setFeedbackSubTab] = useState("enviar");
   useEffect(() => { if (openPagamentosSignal > 0) setPerfilSubTab("pagamentos"); }, [openPagamentosSignal]);
+  useEffect(() => { onSubTabChange?.(perfilSubTab); }, [perfilSubTab]);
   const [meuEnvios,      setMeuEnvios]      = useState([]);
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
   // ── pagamentos ──
@@ -4494,7 +4495,7 @@ function AdminPinBlock() {
   );
 }
 
-function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos }) {
+function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
   const [adminWinW, setAdminWinW] = useState(window.innerWidth);
   useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const adminIsMobile = adminWinW <= 680;
@@ -4516,8 +4517,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [badgesJoiner,  setBadgesJoiner]  = useState(null);
   const [badgesLoading, setBadgesLoading] = useState(false);
   const [badgesErro,    setBadgesErro]    = useState("");
-  const [adminMainTab, setAdminMainTab] = useState("home");
+  const [adminMainTab, setAdminMainTab] = useState(initialSubTab || "home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
+  useEffect(() => { onSubTabChange?.(adminMainTab); }, [adminMainTab]);
   const [pushes, setPushes] = useState(null);
   const [feedbacks, setFeedbacks] = useState(null);
   const [novoPush, setNovoPush] = useState("");
@@ -7341,10 +7343,15 @@ export default function App() {
   });
   const [itens, setItens] = useState([]);
   const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin"];
-  const [tab, setTab] = useState(() => {
-    const slug = window.location.pathname.replace(/^\//, "").split(/[?#]/)[0];
-    return TAB_SLUGS.includes(slug) ? slug : "masterlist";
-  });
+  const parseUrlParts = () => {
+    const parts = window.location.pathname.replace(/^\//, "").split("/");
+    const tab = parts[0] || "masterlist";
+    const sub = parts[1] || null;
+    return { tab: TAB_SLUGS.includes(tab) ? tab : "masterlist", sub };
+  };
+  const [tab, setTab] = useState(() => parseUrlParts().tab);
+  const [initAdminSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "admin"  ? p.sub : null; });
+  const [initPerfilSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "perfil" ? p.sub : null; });
   const [adminReset, setAdminReset] = useState(0);
   const [openPagamentosSignal, setOpenPagamentosSignal] = useState(0);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -7414,12 +7421,21 @@ export default function App() {
 
   useEffect(() => {
     const handler = () => {
-      const slug = window.location.pathname.replace(/^\//, "").split(/[?#]/)[0];
+      const { tab: slug } = parseUrlParts();
       if (TAB_SLUGS.includes(slug)) setTab(slug);
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
   }, []);
+
+  function handleAdminSubTab(subTab) {
+    const path = subTab === "home" ? "/admin" : `/admin/${subTab}`;
+    history.replaceState(null, "", path);
+  }
+  function handlePerfilSubTab(subTab) {
+    const path = subTab === "dados" ? "/perfil" : `/perfil/${subTab}`;
+    history.replaceState(null, "", path);
+  }
 
   function handleAdminBypass() {
     if (isAdminUser(user)) {
@@ -7684,10 +7700,10 @@ export default function App() {
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
-      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} />}
+      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
       {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} />}
+      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
 
