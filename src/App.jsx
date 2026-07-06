@@ -1262,39 +1262,49 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 </div>
                 <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
-              <div style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px" }}>
+              <div style={{ overflowY:"auto", flex:1, padding:"0 24px 24px" }}>
                 {linhas.length === 0 ? (
                   <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
                 ) : (
-                  <div style={{ overflowX:"auto" }}>
-                    <div style={{ display:"grid", gridTemplateColumns:cols, minWidth:360 }}>
-                      {/* header */}
-                      <div style={{ ...thS, textAlign:"left" }}>Item</div>
-                      <div style={thS}>Item R$</div>
-                      <div style={thS}>Frete</div>
-                      <div style={thS}>RF</div>
-                      {temMulta && <div style={{ ...thS, color:"rgba(255,107,107,.5)" }}>Multa</div>}
-                      <div style={thS}>Total</div>
-                      {/* rows */}
+                  <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
+                    <colgroup>
+                      <col style={{ width:"auto" }} />
+                      <col style={{ width:72 }} />
+                      <col style={{ width:72 }} />
+                      <col style={{ width:52 }} />
+                      {temMulta && <col style={{ width:66 }} />}
+                      <col style={{ width:76 }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th style={{ ...thS, textAlign:"left", padding:"16px 0 8px" }}>Item</th>
+                        <th style={{ ...thS, padding:"16px 0 8px" }}>Item R$</th>
+                        <th style={{ ...thS, padding:"16px 0 8px" }}>Frete</th>
+                        <th style={{ ...thS, padding:"16px 0 8px" }}>RF</th>
+                        {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.5)", padding:"16px 0 8px" }}>Multa</th>}
+                        <th style={{ ...thS, padding:"16px 0 8px" }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {linhas.map((row, idx) => {
                         const multa = row.mItem + row.mFrete + row.mRf;
                         const hasMulta = multa > 0;
                         return (
-                          <Fragment key={idx}>
-                            <div style={{ padding:"10px 0", borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                          <tr key={idx} style={{ borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                            <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
                               <div style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.i.nome_do_item}</div>
                               <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{row.i.ceg}</div>
-                            </div>
-                            <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vItem > 0 ? `R$${fmtBRL(row.vItem)}` : dash}</div>
-                            <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</div>
-                            <div style={{ ...tdS, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</div>
-                            {temMulta && <div style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</div>}
-                            <div style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"flex-end" }}>R${fmtBRL(row.total)}</div>
-                          </Fragment>
+                            </td>
+                            <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vItem > 0 ? `R$${fmtBRL(row.vItem)}` : dash}</td>
+                            <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</td>
+                            <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</td>
+                            {temMulta && <td style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, padding:"10px 0", verticalAlign:"middle" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</td>}
+                            <td style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, padding:"10px 0", verticalAlign:"middle" }}>R${fmtBRL(row.total)}</td>
+                          </tr>
                         );
                       })}
-                    </div>
-                  </div>
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
