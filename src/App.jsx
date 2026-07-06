@@ -5784,7 +5784,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           const { error } = await supabase.from("pagamento_demandas").update({ status: "pago" }).eq("id", id);
           if (error) { alert("Erro ao confirmar: " + error.message); return; }
           const d = pagDemandas.find(x => x.id === id);
-          if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+          if (d) {
+            for (const it of (d.itens || [])) {
+              if (!it.id) continue;
+              const updates = {};
+              if (Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
+              if (Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
+              if (Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
+              if (Object.keys(updates).length > 0)
+                await supabase.from("masterlist").update(updates).eq("id", it.id);
+            }
+            await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+          }
           setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
         }
         async function reabrir(id) {
