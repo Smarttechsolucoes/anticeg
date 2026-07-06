@@ -5832,35 +5832,58 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 </div>
               </div>
 
-              {/* Itens com breakdown */}
-              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginBottom:10, display:"flex", flexDirection:"column", gap:6 }}>
-                {d.itens.map((it, i) => {
-                  const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
-                  const partes = [
-                    Number(it.valor_item)>0  && `item R$${Number(it.valor_item).toFixed(2).replace(".",",")}`,
-                    Number(it.frete_inter)>0 && `frete R$${Number(it.frete_inter).toFixed(2).replace(".",",")}`,
-                    Number(it.taxa_rf)>0     && `RF R$${Number(it.taxa_rf).toFixed(2).replace(".",",")}`,
-                    Number(it.multa)>0       && `multa R$${Number(it.multa).toFixed(2).replace(".",",")}`,
-                  ].filter(Boolean);
-                  return (
-                    <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 }}>
-                      <div style={{ minWidth:0, flex:1 }}>
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.75)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace: adminIsMobile ? "normal" : "nowrap" }}>
-                          {it.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>({it.ceg})</span>
-                        </div>
-                        {partes.length > 0 && (
-                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.6 }}>
-                            {partes.join(" · ")}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flexShrink:0 }}>
-                        R$ {itTotal.toFixed(2).replace(".",",")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Itens em tabela */}
+              {(() => {
+                const temMulta = d.itens.some(it => Number(it.multa||0) > 0);
+                const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", padding:"10px 0 6px", fontWeight:400 };
+                const tdS = { fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.55)", padding:"8px 0", verticalAlign:"middle" };
+                const dash = <span style={{ color:"rgba(245,240,232,.18)" }}>—</span>;
+                const fmt = v => `R$${Number(v).toFixed(2).replace(".",",")}`;
+                return (
+                  <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed", borderTop:"1px solid rgba(245,240,232,.06)", marginBottom:10 }}>
+                    <colgroup>
+                      <col />
+                      <col style={{ width:68 }} />
+                      <col style={{ width:68 }} />
+                      <col style={{ width:46 }} />
+                      {temMulta && <col style={{ width:62 }} />}
+                      <col style={{ width:74 }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th style={{ ...thS, textAlign:"left" }}>Item</th>
+                        <th style={thS}>Item R$</th>
+                        <th style={thS}>Frete</th>
+                        <th style={thS}>RF</th>
+                        {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.45)" }}>Multa</th>}
+                        <th style={thS}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.itens.map((it, i) => {
+                        const vItem  = Number(it.valor_item  || 0);
+                        const vFrete = Number(it.frete_inter || 0);
+                        const vRf    = Number(it.taxa_rf     || 0);
+                        const vMulta = Number(it.multa       || 0);
+                        const total  = vItem + vFrete + vRf + vMulta;
+                        return (
+                          <tr key={i} style={{ borderTop:"1px solid rgba(245,240,232,.05)" }}>
+                            <td style={{ padding:"8px 8px 8px 0", verticalAlign:"middle" }}>
+                              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.8)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.nome_do_item}</div>
+                              <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>{it.ceg}</div>
+                            </td>
+                            <td style={tdS}>{vItem  > 0 ? fmt(vItem)  : dash}</td>
+                            <td style={tdS}>{vFrete > 0 ? fmt(vFrete) : dash}</td>
+                            <td style={tdS}>{vRf    > 0 ? fmt(vRf)    : dash}</td>
+                            {temMulta && <td style={{ ...tdS, color: vMulta > 0 ? "rgba(255,107,107,.8)" : undefined }}>{vMulta > 0 ? fmt(vMulta) : dash}</td>}
+                            <td style={{ ...tdS, color: vMulta > 0 ? "#ff6b6b" : "#BAFF39", fontWeight:700 }}>{fmt(total)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
 
               {/* Comprovante + obs */}
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom: (isPend || !isPend) ? 10 : 0 }}>
