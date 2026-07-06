@@ -5559,6 +5559,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {s.status === "solicitação de envio" && (
                     <button onClick={async () => {
                       await supabase.from("envio_solicitacoes").update({ status:"cotação em andamento" }).eq("id", s.id);
+                      await supabase.from("pushes").insert([{ message:"Sua solicitação de envio está sendo processada — em até 5 dias úteis você receberá a cotação.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Iniciar cotação
