@@ -1832,6 +1832,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [itensPendentes,  setItensPendentes]  = useState([]);
   const [pagSelecionados, setPagSelecionados] = useState(new Set());
   const [pagComprovante,  setPagComprovante]  = useState(null);
+  const [pagUsarCodigo,   setPagUsarCodigo]   = useState(false);
+  const [pagCodigoTx,     setPagCodigoTx]     = useState("");
   const [pagObs,          setPagObs]          = useState("");
   const [pixCopiado,      setPixCopiado]      = useState(false);
   const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
@@ -2223,24 +2225,36 @@ ${p.comprovante_url ? (() => {
         const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0) + outrosValTotal;
         const temItens = itensSel.length > 0 || (pagOutros && pagOutrosNome.trim() && outrosValTotal > 0);
 
+        const temComprovante = pagUsarCodigo ? pagCodigoTx.trim().length > 0 : !!pagComprovante;
+
         async function handleSubmit() {
-          if (!temItens || !pagComprovante) return;
+          if (!temItens || !temComprovante) return;
           setPagStatus("enviando"); setPagErro("");
-          const ext  = pagComprovante.name.split(".").pop();
-          const path = `${user.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: true });
-          if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
-          const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+
+          let comprovanteUrl = null;
+          let obsFinal = pagObs || null;
+
+          if (pagUsarCodigo) {
+            obsFinal = `Código da transação: ${pagCodigoTx.trim()}${pagObs ? "\n" + pagObs : ""}`;
+          } else {
+            const ext  = pagComprovante.name.split(".").pop();
+            const path = `${user.cog}/${Date.now()}.${ext}`;
+            const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: true });
+            if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
+            const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+            comprovanteUrl = publicUrl;
+          }
+
           const itensPayload = [
             ...itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0), multa:multaItem(i) })),
             ...(pagOutros && pagOutrosNome.trim() ? [{ id:null, ceg:"—", nome_do_item:pagOutrosNome.trim(), valor_item:Number(pagOutrosItem.replace(",",".")||0), frete_inter:Number(pagOutrosFrete.replace(",",".")||0), taxa_rf:Number(pagOutrosRF.replace(",",".")||0), multa:0 }] : []),
           ];
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
-            joiner_cog:    user.cog,
-            itens:         itensPayload,
-            valor_total:   total,
-            comprovante_url: publicUrl,
-            obs:           pagObs || null,
+            joiner_cog:      user.cog,
+            itens:           itensPayload,
+            valor_total:     total,
+            comprovante_url: comprovanteUrl,
+            obs:             obsFinal,
           }]).select().single();
           if (error) { setPagStatus("idle"); setPagErro(`Erro ao salvar demanda: ${error.message}`); return; }
           setMeusPagamentos(prev => [nova, ...prev]);
@@ -2578,22 +2592,44 @@ ${p.comprovante_url ? (() => {
 
             <div style={{ marginBottom:12 }}>
               <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Comprovante de pagamento</div>
-              <label style={{ display:"flex", alignItems:"center", gap:10, background: pagComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${pagComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
-                <input type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => setPagComprovante(e.target.files[0] || null)} />
-                <span style={{ fontSize:16 }}>{pagComprovante ? "✓" : "↑"}</span>
-                <div>
-                  <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: pagComprovante ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{pagComprovante ? pagComprovante.name : "Clique para anexar (jpg, png, pdf)"}</div>
-                  <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Obrigatório</div>
-                </div>
-              </label>
+              {!pagUsarCodigo ? (
+                <>
+                  <label style={{ display:"flex", alignItems:"center", gap:10, background: pagComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${pagComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
+                    <input type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => setPagComprovante(e.target.files[0] || null)} />
+                    <span style={{ fontSize:16 }}>{pagComprovante ? "✓" : "↑"}</span>
+                    <div>
+                      <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: pagComprovante ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{pagComprovante ? pagComprovante.name : "Clique para anexar (jpg, png, pdf)"}</div>
+                      <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Obrigatório</div>
+                    </div>
+                  </label>
+                  <button onClick={() => { setPagUsarCodigo(true); setPagComprovante(null); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
+                    Não consigo enviar o comprovante
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"12px 14px" }}>
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Código da transação (Ex: E00038166...)</div>
+                    <input
+                      value={pagCodigoTx}
+                      onChange={e => setPagCodigoTx(e.target.value)}
+                      placeholder="Cole o código da transação aqui"
+                      style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }}
+                    />
+                  </div>
+                  <button onClick={() => { setPagUsarCodigo(false); setPagCodigoTx(""); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
+                    ← Voltar para anexar arquivo
+                  </button>
+                </>
+              )}
             </div>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Observações (opcional)</div>
               <textarea value={pagObs} onChange={e => setPagObs(e.target.value)} rows={2} placeholder="Ex: paguei os 3 itens juntos" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", resize:"none", boxSizing:"border-box" }} />
             </div>
             {pagErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>{pagErro}</div>}
-            <button onClick={handleSubmit} disabled={!temItens || !pagComprovante || pagStatus === "enviando"}
-              style={{ width:"100%", padding:"14px 0", background: temItens && pagComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: temItens && pagComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: temItens && pagComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
+            <button onClick={handleSubmit} disabled={!temItens || !temComprovante || pagStatus === "enviando"}
+              style={{ width:"100%", padding:"14px 0", background: temItens && temComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: temItens && temComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: temItens && temComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
               {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${total.toFixed(2).replace(".",",")}`}
             </button>
 
