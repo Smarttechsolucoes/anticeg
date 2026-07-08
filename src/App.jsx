@@ -8365,12 +8365,12 @@ export default function App() {
       </div>
       <div className="tabs-bar">
         <button className={`tab-btn ${tab === "masterlist" ? "active" : ""}`} onClick={() => changeTab("masterlist")}>☰ Masterlist</button>
+        <a href="/ceg/this-and-that" className="tab-btn" style={{ textDecoration: "none" }}>◈ T&amp;T COMEBACK</a>
         <button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => changeTab("cegs")}>◈ CEGs</button>
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => changeTab("calendario")}>◫ Calendário</button>
         {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
         {!user.guest && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
-        <a href="/ceg/this-and-that" className="tab-btn" style={{ textDecoration: "none" }}>◈ T&amp;T</a>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
             if (adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
