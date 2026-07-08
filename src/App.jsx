@@ -668,7 +668,7 @@ function CegTab({ user, itens }) {
                     </span>
                   ))}
                 </div>
-                <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
+                <button className="ceg-saiba-btn" onClick={() => ceg === "THIS & THAT" ? window.location.href = "/ceg/this-and-that" : setDetalhe(ceg)}>
                   saiba mais →
                 </button>
               </div>
@@ -7977,7 +7977,7 @@ export default function App() {
     setPage("portal");
   }
 
-  if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
+  if (window.location.pathname === "/this-and-that" || window.location.pathname === "/ceg/this-and-that") return <ThisAndThatGallery />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
   const isAdmin = isAdminUser(user);
