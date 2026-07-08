@@ -6757,11 +6757,12 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 
 // ── Página /ceg/this-and-that ─────────────────────────────────────────────────
 function ThisAndThatCegPage({ isOwner }) {
-  const [itens,     setItens]     = useState(null);
-  const [categorias, setCategorias] = useState(null); // fotos = categorias
-  const [uploading, setUploading] = useState(null);
-  const [ampliada,  setAmpliada]  = useState(null);
-  const [msg,       setMsg]       = useState("");
+  const [itens,      setItens]      = useState(null);
+  const [categorias, setCategorias] = useState(null);
+  const [uploading,  setUploading]  = useState(null);
+  const [ampliada,   setAmpliada]   = useState(null);
+  const [msg,        setMsg]        = useState("");
+  const [viewMode,   setViewMode]   = useState("tabela"); // "tabela" | "galeria"
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("ceg", "THIS & THAT").neq("nome", "Disponivel")
@@ -6840,6 +6841,13 @@ function ThisAndThatCegPage({ isOwner }) {
             <div style={{ textAlign: "right" }}>
               <div className="greeting-sub" style={{ marginTop: 8 }}>{itens.length} itens · {joiners} joiners</div>
               {msg && <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#BAFF39", marginTop: 6 }}>{msg}</div>}
+              <div style={{ display: "flex", gap: 4, marginTop: 10, justifyContent: "flex-end" }}>
+                {[["tabela", "⊞"], ["galeria", "⊟"]].map(([mode, icon]) => (
+                  <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", padding: "4px 10px", borderRadius: 5, cursor: "pointer", border: `1px solid ${viewMode === mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background: viewMode === mode ? "rgba(201,168,240,.12)" : "transparent", color: viewMode === mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
+                    {icon} {mode}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -6882,7 +6890,47 @@ function ThisAndThatCegPage({ isOwner }) {
 
         {loading && <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.52)", fontSize: "var(--fs-xs)" }}>carregando...</div>}
 
-        {!loading && (
+        {!loading && viewMode === "galeria" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            {grupos.map(({ cat, itens: gItens }) => (
+              <div key={cat ? cat.nome_do_item : "__sem__"}>
+                {/* Header do grupo */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                  {cat && (
+                    <img src={cat.foto_url} alt={cat.nome_do_item} onClick={() => setAmpliada(cat)}
+                      style={{ width: 56, height: 72, borderRadius: 8, objectFit: "cover", flexShrink: 0, cursor: "pointer" }} />
+                  )}
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono',monospace", color: cat ? "#F5F0E8" : "rgba(245,240,232,.3)", letterSpacing: "0.5px" }}>
+                      {cat ? cat.nome_do_item.toUpperCase() : "SEM CATEGORIA"}
+                    </div>
+                    <div style={{ fontSize: 10, color: "rgba(245,240,232,.35)", fontFamily: "'DM Mono',monospace", marginTop: 3 }}>{gItens.length} item(s)</div>
+                  </div>
+                </div>
+                {/* Grid de joiners desse grupo */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+                  {gItens.map(item => {
+                    const ai = getStepIdx(item.status);
+                    return (
+                      <div key={item.id} style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 10, overflow: "hidden" }}>
+                        {cat && <div style={{ height: 90, overflow: "hidden" }}>
+                          <img src={cat.foto_url} alt={item.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        </div>}
+                        <div style={{ padding: "8px 10px 10px" }}>
+                          <div style={{ fontSize: 9, color: "#C9A8F0", fontFamily: "'DM Mono',monospace", marginBottom: 2 }}>{item.nome || item.cog || "—"}</div>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: "#F5F0E8", fontFamily: "'DM Mono',monospace", lineHeight: 1.3, marginBottom: 6 }}>{item.nome_do_item}</div>
+                          <StatusChip status={item.status} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && viewMode === "tabela" && (
           <div className="table-wrap">
             <table>
               <thead>
