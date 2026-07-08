@@ -6773,9 +6773,10 @@ function AdminGaleria() {
       const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
-      const { data: nova } = await supabase.from("item_fotos")
+      const { data: nova, error: insErr } = await supabase.from("item_fotos")
         .insert([{ ceg: "THIS & THAT", nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: (fotos || []).length + novas.length }])
         .select().single();
+      if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (nova) novas.push(nova);
     }
     setFotos(prev => [...(prev || []), ...novas]);
