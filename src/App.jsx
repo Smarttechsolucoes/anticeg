@@ -6758,44 +6758,73 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
 // ── Página /ceg/this-and-that ─────────────────────────────────────────────────
 function ThisAndThatCegPage({ isOwner }) {
   const [itens,     setItens]     = useState(null);
-  const [fotos,     setFotos]     = useState(null);
+  const [categorias, setCategorias] = useState(null); // fotos = categorias
   const [uploading, setUploading] = useState(null);
   const [ampliada,  setAmpliada]  = useState(null);
   const [msg,       setMsg]       = useState("");
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", "THIS & THAT").neq("nome", "Disponivel").order("nome_do_item")
+    supabase.from("masterlist").select("*").eq("ceg", "THIS & THAT").neq("nome", "Disponivel")
       .then(({ data }) => setItens(data || []));
     supabase.from("item_fotos").select("*").order("ordem").order("id")
-      .then(({ data }) => setFotos(data || []));
+      .then(({ data }) => setCategorias(data || []));
   }, []);
 
-  const fotoMap = Object.fromEntries((fotos || []).map(f => [f.nome_do_item, f]));
+  // Encontra categoria cujo nome está contido no nome do item (case-insensitive)
+  function categoriaDoItem(nomeItem) {
+    if (!categorias) return null;
+    return categorias.find(c => nomeItem.toLowerCase().includes(c.nome_do_item.toLowerCase())) || null;
+  }
 
-  async function uploadFoto(nomeItem, file) {
-    setUploading(nomeItem);
+  async function uploadCategoria(catNome, file) {
+    setUploading(catNome);
     const ext  = file.name.split(".").pop().toLowerCase();
-    const path = `this-and-that/${Date.now()}_${nomeItem.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.${ext}`;
+    const path = `this-and-that/${Date.now()}_${catNome.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.${ext}`;
     const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
     if (upErr) { alert("Erro upload: " + upErr.message); setUploading(null); return; }
     const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
-    const existente = fotoMap[nomeItem];
+    const existente = (categorias || []).find(c => c.nome_do_item === catNome);
     if (existente) {
       await supabase.from("item_fotos").update({ foto_url: publicUrl }).eq("id", existente.id);
-      setFotos(prev => prev.map(f => f.id === existente.id ? { ...f, foto_url: publicUrl } : f));
+      setCategorias(prev => prev.map(c => c.id === existente.id ? { ...c, foto_url: publicUrl } : c));
     } else {
       const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg: "THIS & THAT", nome_do_item: nomeItem, foto_url: publicUrl, ordem: (fotos || []).length }])
+        .insert([{ ceg: "THIS & THAT", nome_do_item: catNome, foto_url: publicUrl, ordem: (categorias || []).length }])
         .select().single();
       if (insErr) { alert("Erro: " + insErr.message); setUploading(null); return; }
-      if (nova) setFotos(prev => [...(prev || []), nova]);
+      if (nova) setCategorias(prev => [...(prev || []), nova]);
     }
-    setMsg(nomeItem + " ✓"); setTimeout(() => setMsg(""), 2500);
+    setMsg(catNome + " ✓"); setTimeout(() => setMsg(""), 2500);
     setUploading(null);
   }
 
-  const loading = itens === null || fotos === null;
+  async function removerCategoria(id) {
+    if (!window.confirm("Remover categoria?")) return;
+    await supabase.from("item_fotos").delete().eq("id", id);
+    setCategorias(prev => prev.filter(c => c.id !== id));
+  }
+
+  const loading = itens === null || categorias === null;
   const joiners = itens ? new Set(itens.map(i => i.cog)).size : 0;
+
+  // Agrupa itens por categoria (ou "Sem categoria")
+  const grupos = (() => {
+    if (!itens || !categorias) return [];
+    const mapa = {};
+    for (const item of itens) {
+      const cat = categoriaDoItem(item.nome_do_item);
+      const key = cat ? cat.nome_do_item : "__sem__";
+      if (!mapa[key]) mapa[key] = { cat, itens: [] };
+      mapa[key].itens.push(item);
+    }
+    // ordenar: categorias com foto primeiro (na ordem do array categorias), depois sem categoria
+    const result = [];
+    for (const cat of (categorias || [])) {
+      if (mapa[cat.nome_do_item]) result.push(mapa[cat.nome_do_item]);
+    }
+    if (mapa["__sem__"]) result.push(mapa["__sem__"]);
+    return result;
+  })();
 
   return (
     <div style={{ minHeight: "100vh", background: "#0D0C0B", color: "#F5F0E8", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
@@ -6814,6 +6843,42 @@ function ThisAndThatCegPage({ isOwner }) {
             </div>
           )}
         </div>
+
+        {/* Painel de categorias (owner only) */}
+        {isOwner && !loading && (
+          <div style={{ marginBottom: 24, padding: "16px 20px", background: "rgba(201,168,240,.05)", border: "1px solid rgba(201,168,240,.15)", borderRadius: 10 }}>
+            <div style={{ fontSize: 9, letterSpacing: "1.5px", textTransform: "uppercase", color: "#C9A8F0", fontFamily: "'DM Mono',monospace", marginBottom: 12 }}>Categorias · fotos</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              {(categorias || []).map(cat => (
+                <div key={cat.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 56, height: 72, borderRadius: 8, overflow: "hidden", position: "relative", cursor: "pointer" }}>
+                    <img src={cat.foto_url} alt={cat.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <label style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity .15s", cursor: "pointer", fontSize: 14 }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                      onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                      ✎
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files[0] && uploadCategoria(cat.nome_do_item, e.target.files[0])} />
+                    </label>
+                  </div>
+                  <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.6)", maxWidth: 60, textAlign: "center", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.nome_do_item}</span>
+                  <button onClick={() => removerCategoria(cat.id)} style={{ fontSize: 8, fontFamily: "'DM Mono',monospace", background: "transparent", color: "rgba(255,107,107,.5)", border: "none", cursor: "pointer", padding: 0 }}>✕</button>
+                </div>
+              ))}
+              {/* Adicionar nova categoria */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <label style={{ display: "flex", width: 56, height: 72, borderRadius: 8, border: "2px dashed rgba(201,168,240,.3)", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#C9A8F0", fontSize: 22, flexDirection: "column", gap: 2 }}>
+                  {uploading && !categorias?.find(c => c.nome_do_item === uploading) ? <span style={{ fontSize: 9 }}>...</span> : "+"}
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                    if (!e.target.files[0]) return;
+                    const nome = window.prompt("Nome da categoria (ex: Bang Chan, Changbin...)");
+                    if (nome?.trim()) uploadCategoria(nome.trim(), e.target.files[0]);
+                  }} />
+                </label>
+                <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.3)" }}>nova</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.52)", fontSize: "var(--fs-xs)" }}>carregando...</div>}
 
@@ -6839,49 +6904,51 @@ function ThisAndThatCegPage({ isOwner }) {
               </thead>
               <tbody>
                 {itens.length === 0 && <tr><td colSpan={8} className="empty-cell">nenhum item</td></tr>}
-                {itens.map(item => {
-                  const foto = fotoMap[item.nome_do_item];
-                  const ai   = getStepIdx(item.status);
-                  return (
-                    <tr key={item.id}>
-                      <td style={{ width: 56, padding: "6px 8px" }}>
-                        {foto ? (
-                          <div style={{ width: 44, height: 56, borderRadius: 6, overflow: "hidden", cursor: "pointer", position: "relative" }}
-                            onClick={() => !isOwner && setAmpliada(foto)}>
-                            <img src={foto.foto_url} alt={item.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            {isOwner && (
-                              <label style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.5)", opacity: 0, transition: "opacity .15s", cursor: "pointer", fontSize: 16 }}
-                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                                onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-                                ✎
-                                <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files[0] && uploadFoto(item.nome_do_item, e.target.files[0])} />
-                              </label>
-                            )}
-                          </div>
-                        ) : isOwner ? (
-                          <label style={{ display: "flex", width: 44, height: 56, borderRadius: 6, border: "1px dashed rgba(201,168,240,.3)", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#C9A8F0", fontSize: 18 }}>
-                            {uploading === item.nome_do_item ? <span style={{ fontSize: 9 }}>...</span> : "+"}
-                            <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files[0] && uploadFoto(item.nome_do_item, e.target.files[0])} />
-                          </label>
-                        ) : (
-                          <div style={{ width: 44, height: 56, borderRadius: 6, background: "rgba(245,240,232,.04)" }} />
-                        )}
-                      </td>
-                      <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
-                      <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                      <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
-                      <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
-                      <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
-                      <td>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                          <StatusChip status={item.status} />
-                          <ProgressMini activeIdx={ai} />
+                {grupos.map(({ cat, itens: gItens }) => (
+                  <Fragment key={cat ? cat.nome_do_item : "__sem__"}>
+                    {/* Linha separadora de grupo */}
+                    <tr>
+                      <td colSpan={8} style={{ background: "rgba(245,240,232,.03)", borderTop: "1px solid rgba(245,240,232,.08)", padding: "10px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          {cat && <img src={cat.foto_url} alt={cat.nome_do_item} style={{ width: 32, height: 40, borderRadius: 5, objectFit: "cover", flexShrink: 0 }} />}
+                          <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono',monospace", color: cat ? "#F5F0E8" : "rgba(245,240,232,.3)", letterSpacing: "0.5px" }}>
+                            {cat ? cat.nome_do_item.toUpperCase() : "SEM CATEGORIA"}
+                          </span>
+                          <span style={{ fontSize: 9, color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace" }}>{gItens.length} item(s)</span>
                         </div>
                       </td>
-                      <td>{item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}</td>
                     </tr>
-                  );
-                })}
+                    {gItens.map(item => {
+                      const ai = getStepIdx(item.status);
+                      return (
+                        <tr key={item.id}>
+                          <td style={{ width: 56, padding: "6px 8px" }}>
+                            {cat ? (
+                              <div style={{ width: 44, height: 56, borderRadius: 6, overflow: "hidden", cursor: "pointer" }}
+                                onClick={() => setAmpliada(cat)}>
+                                <img src={cat.foto_url} alt={cat.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              </div>
+                            ) : (
+                              <div style={{ width: 44, height: 56, borderRadius: 6, background: "rgba(245,240,232,.04)" }} />
+                            )}
+                          </td>
+                          <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
+                          <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
+                          <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
+                          <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
+                          <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
+                          <td>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                              <StatusChip status={item.status} />
+                              <ProgressMini activeIdx={ai} />
+                            </div>
+                          </td>
+                          <td>{item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}</td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>
