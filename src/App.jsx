@@ -6755,6 +6755,147 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
+// ── Página /ceg/this-and-that ─────────────────────────────────────────────────
+function ThisAndThatCegPage({ isOwner }) {
+  const [itens,      setItens]      = useState(null);
+  const [fotos,      setFotos]      = useState(null);
+  const [uploading,  setUploading]  = useState(null);
+  const [ampliada,   setAmpliada]   = useState(null);
+  const [msg,        setMsg]        = useState("");
+
+  useEffect(() => {
+    supabase.from("masterlist").select("nome_do_item").eq("ceg", "THIS & THAT").neq("nome", "Disponivel")
+      .then(({ data }) => {
+        if (!data) return;
+        const uniq = [...new Set(data.map(d => d.nome_do_item).filter(Boolean))].sort();
+        setItens(uniq);
+      });
+    supabase.from("item_fotos").select("*").order("ordem").order("id")
+      .then(({ data }) => setFotos(data || []));
+  }, []);
+
+  const fotoMap = Object.fromEntries((fotos || []).map(f => [f.nome_do_item, f]));
+
+  async function uploadFoto(nomeItem, file) {
+    setUploading(nomeItem);
+    const ext  = file.name.split(".").pop().toLowerCase();
+    const path = `this-and-that/${Date.now()}_${nomeItem.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
+    if (upErr) { alert("Erro upload: " + upErr.message); setUploading(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+    const existente = fotoMap[nomeItem];
+    if (existente) {
+      await supabase.from("item_fotos").update({ foto_url: publicUrl }).eq("id", existente.id);
+      setFotos(prev => prev.map(f => f.id === existente.id ? { ...f, foto_url: publicUrl } : f));
+    } else {
+      const { data: nova, error: insErr } = await supabase.from("item_fotos")
+        .insert([{ ceg: "THIS & THAT", nome_do_item: nomeItem, foto_url: publicUrl, ordem: (fotos || []).length }])
+        .select().single();
+      if (insErr) { alert("Erro: " + insErr.message); setUploading(null); return; }
+      if (nova) setFotos(prev => [...(prev || []), nova]);
+    }
+    setMsg(nomeItem + " ✓"); setTimeout(() => setMsg(""), 2500);
+    setUploading(null);
+  }
+
+  async function removerFoto(nomeItem) {
+    const foto = fotoMap[nomeItem];
+    if (!foto || !window.confirm("Remover foto?")) return;
+    await supabase.from("item_fotos").delete().eq("id", foto.id);
+    setFotos(prev => prev.filter(f => f.id !== foto.id));
+  }
+
+  const loading = itens === null || fotos === null;
+  const itensComFoto = (itens || []).filter(n => fotoMap[n]);
+  const itensSemFoto = (itens || []).filter(n => !fotoMap[n]);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0D0C0B", color: "#F5F0E8", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid rgba(245,240,232,.07)", padding: "28px 24px 24px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12, maxWidth: 1080, margin: "0 auto" }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "3px", textTransform: "uppercase", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", marginBottom: 6 }}>ANTICEG · CEG</div>
+          <h1 style={{ fontSize: "clamp(26px,5vw,44px)", fontWeight: 900, letterSpacing: "-1px", margin: 0, lineHeight: 1 }}>THIS &amp; THAT</h1>
+        </div>
+        <a href="/" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.3)", textDecoration: "none", letterSpacing: "1px" }}>← portal</a>
+      </div>
+
+      <div style={{ padding: "24px 24px 80px", maxWidth: 1080, margin: "0 auto" }}>
+        {msg && <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#BAFF39", marginBottom: 16 }}>{msg}</div>}
+        {loading && <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "80px 0" }}>carregando...</div>}
+
+        {!loading && (
+          <>
+            {/* Grid de itens com foto */}
+            {itensComFoto.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14, marginBottom: itensSemFoto.length > 0 ? 32 : 0 }}>
+                {itensComFoto.map(nome => {
+                  const foto = fotoMap[nome];
+                  return (
+                    <div key={nome} style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 12, overflow: "hidden", cursor: isOwner ? "default" : "pointer" }}
+                      onClick={() => !isOwner && setAmpliada(foto)}>
+                      <div style={{ aspectRatio: "1/1", overflow: "hidden", background: "rgba(245,240,232,.04)", position: "relative" }}>
+                        <img src={foto.foto_url} alt={nome} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        {isOwner && (
+                          <div style={{ position: "absolute", top: 6, right: 6, display: "flex", gap: 4 }}>
+                            <label style={{ fontSize: 8, fontFamily: "'DM Mono',monospace", background: "rgba(0,0,0,.75)", color: "rgba(245,240,232,.7)", border: "1px solid rgba(245,240,232,.2)", borderRadius: 4, padding: "3px 7px", cursor: "pointer" }}>
+                              {uploading === nome ? "..." : "trocar"}
+                              <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files[0] && uploadFoto(nome, e.target.files[0])} />
+                            </label>
+                            <button onClick={() => removerFoto(nome)} style={{ fontSize: 8, fontFamily: "'DM Mono',monospace", background: "rgba(255,107,107,.15)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "3px 7px", cursor: "pointer" }}>✕</button>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding: "10px 12px 12px" }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "#F5F0E8", fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{nome}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Itens sem foto — só visível pro owner */}
+            {isOwner && itensSemFoto.length > 0 && (
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(245,240,232,.25)", fontFamily: "'DM Mono',monospace", marginBottom: 12 }}>Sem foto ainda ({itensSemFoto.length})</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {itensSemFoto.map(nome => (
+                    <div key={nome} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(245,240,232,.03)", borderRadius: 8, border: "1px solid rgba(245,240,232,.06)" }}>
+                      <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.55)" }}>{nome}</span>
+                      <label style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", background: "rgba(201,168,240,.1)", color: "#C9A8F0", border: "1px solid rgba(201,168,240,.3)", borderRadius: 5, padding: "4px 12px", cursor: "pointer" }}>
+                        {uploading === nome ? "..." : "+ foto"}
+                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => e.target.files[0] && uploadFoto(nome, e.target.files[0])} />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!isOwner && itensComFoto.length === 0 && (
+              <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "80px 0" }}>Fotos em breve.</div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Modal ampliado */}
+      {ampliada && (
+        <div onClick={() => setAmpliada(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#181614", border: "1px solid rgba(245,240,232,.1)", borderRadius: 16, overflow: "hidden", maxWidth: 520, width: "100%" }}>
+            <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ width: "100%", display: "block", maxHeight: "60vh", objectFit: "contain", background: "#0d0c0b" }} />
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#F5F0E8", fontFamily: "'DM Mono',monospace" }}>{ampliada.nome_do_item}</div>
+              <button onClick={() => setAmpliada(null)} style={{ marginTop: 14, background: "transparent", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 16px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 10, cursor: "pointer" }}>fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Admin: gerenciar galeria This & That ─────────────────────────────────────
 function AdminGaleria() {
   const [fotos,      setFotos]      = useState(null);
@@ -7977,8 +8118,9 @@ export default function App() {
     setPage("portal");
   }
 
-  if (window.location.pathname === "/this-and-that" || window.location.pathname === "/ceg/this-and-that") return <ThisAndThatGallery />;
+  if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+  if (window.location.pathname === "/ceg/this-and-that") return <ThisAndThatCegPage isOwner={isOwner(user)} />;
 
   const isAdmin = isAdminUser(user);
 
