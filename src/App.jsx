@@ -4901,8 +4901,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               {owner && (
                 <div className="admin-sidebar-group">
                   <div className="admin-sidebar-group-label">Config</div>
-                  {nav("geral",  "Geral",  "⚙", 0)}
-                  {nav("agenda", "Agenda", "📅", 0)}
+                  {nav("geral",    "Geral",       "⚙",  0)}
+                  {nav("agenda",   "Agenda",      "📅", 0)}
+                  {nav("galeria",  "This & That", "◈",  0)}
                 </div>
               )}
             </nav>
@@ -5524,6 +5525,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           })}
         </div>
       )}
+
+      {adminMainTab === "galeria" && owner && <AdminGaleria />}
 
       {adminMainTab === "envios" && (
         <div>
@@ -6749,6 +6752,169 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
+// ── Admin: gerenciar galeria This & That ─────────────────────────────────────
+function AdminGaleria() {
+  const [fotos,      setFotos]      = useState(null);
+  const [uploading,  setUploading]  = useState(false);
+  const [editando,   setEditando]   = useState(null); // id sendo editado
+  const [msg,        setMsg]        = useState("");
+
+  useEffect(() => {
+    supabase.from("item_fotos").select("*").order("ordem").order("id")
+      .then(({ data }) => setFotos(data || []));
+  }, []);
+
+  async function uploadFotos(files) {
+    setUploading(true);
+    const novas = [];
+    for (const file of files) {
+      const ext  = file.name.split(".").pop().toLowerCase();
+      const path = `this-and-that/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
+      if (upErr) { alert("Erro: " + upErr.message); continue; }
+      const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+      const { data: nova } = await supabase.from("item_fotos")
+        .insert([{ ceg: "THIS & THAT", nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: (fotos || []).length + novas.length }])
+        .select().single();
+      if (nova) novas.push(nova);
+    }
+    setFotos(prev => [...(prev || []), ...novas]);
+    setMsg(`${novas.length} foto(s) adicionada(s) ✓`);
+    setTimeout(() => setMsg(""), 3000);
+    setUploading(false);
+  }
+
+  async function salvarLabel(id, label) {
+    await supabase.from("item_fotos").update({ nome_do_item: label, descricao: label }).eq("id", id);
+    setFotos(prev => prev.map(f => f.id === id ? { ...f, nome_do_item: label, descricao: label } : f));
+    setEditando(null);
+  }
+
+  async function removerFoto(id) {
+    if (!window.confirm("Remover foto?")) return;
+    await supabase.from("item_fotos").delete().eq("id", id);
+    setFotos(prev => prev.filter(f => f.id !== id));
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
+        <h3 className="admin-title" style={{ fontSize: 16, margin: 0 }}>Galeria · This &amp; That</h3>
+        <a href="/this-and-that" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "4px 10px" }}>↗ ver galeria</a>
+      </div>
+
+      {/* Zona de upload */}
+      <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, border: "2px dashed rgba(201,168,240,.3)", borderRadius: 10, padding: "28px 20px", cursor: "pointer", marginBottom: 20, background: "rgba(201,168,240,.04)" }}>
+        <span style={{ fontSize: 22 }}>+</span>
+        <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#C9A8F0" }}>{uploading ? "enviando..." : "adicionar fotos"}</span>
+        <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)" }}>pode selecionar várias de uma vez</span>
+        <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files))} />
+      </label>
+
+      {msg && <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#BAFF39", marginBottom: 14 }}>{msg}</div>}
+
+      {fotos === null && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace" }}>carregando...</div>}
+
+      {/* Grid de fotos existentes */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10 }}>
+        {(fotos || []).map(foto => (
+          <div key={foto.id} style={{ position: "relative", borderRadius: 8, overflow: "hidden", background: "rgba(245,240,232,.05)", aspectRatio: "1" }}>
+            <img src={foto.foto_url} alt={foto.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            {/* overlay de ações */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 50%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 6, gap: 4, opacity: 0, transition: "opacity .15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = 1}
+              onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+              {editando === foto.id ? (
+                <input
+                  autoFocus
+                  defaultValue={foto.nome_do_item || ""}
+                  onKeyDown={e => { if (e.key === "Enter") salvarLabel(foto.id, e.target.value); if (e.key === "Escape") setEditando(null); }}
+                  onBlur={e => salvarLabel(foto.id, e.target.value)}
+                  style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", background: "rgba(0,0,0,.7)", border: "1px solid rgba(245,240,232,.3)", borderRadius: 4, padding: "3px 6px", color: "#F5F0E8", outline: "none", width: "100%" }}
+                />
+              ) : (
+                <span onClick={() => setEditando(foto.id)} style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.7)", cursor: "text", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foto.nome_do_item || "sem título"}</span>
+              )}
+              <button onClick={() => removerFoto(foto.id)} style={{ fontSize: 8, fontFamily: "'DM Mono',monospace", background: "rgba(255,107,107,.15)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "2px 6px", cursor: "pointer", alignSelf: "flex-start" }}>✕ remover</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Galeria pública This & That ──────────────────────────────────────────────
+function ThisAndThatGallery() {
+  const [fotos, setFotos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState("");
+  const [ampliada, setAmpliada] = useState(null);
+
+  useEffect(() => {
+    supabase.from("item_fotos").select("*").order("ordem", { ascending: true }).order("id", { ascending: true })
+      .then(({ data }) => { if (data) setFotos(data); setLoading(false); });
+  }, []);
+
+  const filtradas = busca.trim()
+    ? fotos.filter(f => f.nome_do_item.toLowerCase().includes(busca.toLowerCase()) || (f.descricao||"").toLowerCase().includes(busca.toLowerCase()))
+    : fotos;
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0D0C0B", color:"#F5F0E8", fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ borderBottom:"1px solid rgba(245,240,232,.07)", padding:"28px 24px 24px", display:"flex", alignItems:"flex-end", justifyContent:"space-between", flexWrap:"wrap", gap:12, maxWidth:1080, margin:"0 auto" }}>
+        <div>
+          <div style={{ fontSize:9, letterSpacing:"3px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>ANTICEG · GALERIA</div>
+          <h1 style={{ fontSize:"clamp(26px,5vw,44px)", fontWeight:900, letterSpacing:"-1px", margin:0, lineHeight:1 }}>THIS &amp; THAT</h1>
+        </div>
+        <a href="/" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px" }}>← portal</a>
+      </div>
+
+      {/* Busca */}
+      <div style={{ padding:"20px 24px 0", maxWidth:1080, margin:"0 auto" }}>
+        <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar item..." style={{ width:"100%", maxWidth:340, background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"10px 16px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }} />
+        {busca && <span style={{ marginLeft:10, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{filtradas.length} resultado(s)</span>}
+      </div>
+
+      {/* Grid */}
+      <div style={{ padding:"20px 24px 80px", maxWidth:1080, margin:"0 auto" }}>
+        {loading && <div style={{ textAlign:"center", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"80px 0" }}>carregando...</div>}
+        {!loading && filtradas.length === 0 && <div style={{ textAlign:"center", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, padding:"80px 0" }}>Nenhum item ainda.</div>}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:14 }}>
+          {filtradas.map(f => (
+            <div key={f.id} onClick={() => setAmpliada(f)} style={{ background:"#181614", border:"1px solid rgba(245,240,232,.07)", borderRadius:12, overflow:"hidden", cursor:"pointer", transition:"border-color .15s, transform .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(245,240,232,.22)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(245,240,232,.07)"; e.currentTarget.style.transform="translateY(0)"; }}>
+              <div style={{ aspectRatio:"1/1", overflow:"hidden", background:"rgba(245,240,232,.04)" }}>
+                <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              </div>
+              <div style={{ padding:"10px 12px 12px" }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{f.nome_do_item}</div>
+                {f.descricao && <div style={{ fontSize:10, color:"rgba(245,240,232,.38)", marginTop:3, fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{f.descricao}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal ampliado */}
+      {ampliada && (
+        <div onClick={() => setAmpliada(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#181614", border:"1px solid rgba(245,240,232,.1)", borderRadius:16, overflow:"hidden", maxWidth:520, width:"100%" }}>
+            <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ width:"100%", display:"block", maxHeight:"60vh", objectFit:"contain", background:"#0d0c0b" }} />
+            <div style={{ padding:"16px 20px 20px" }}>
+              <div style={{ fontSize:14, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{ampliada.nome_do_item}</div>
+              {ampliada.descricao && <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", marginTop:6, fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>{ampliada.descricao}</div>}
+              <button onClick={() => setAmpliada(null)} style={{ marginTop:14, background:"transparent", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"6px 16px", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
   const WA_GOM = "5524992782023";
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
@@ -7807,6 +7973,7 @@ export default function App() {
     setPage("portal");
   }
 
+  if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
   const isAdmin = isAdminUser(user);

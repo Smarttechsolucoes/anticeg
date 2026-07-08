@@ -8,6 +8,7 @@
     { "source": "/regras",               "destination": "/index.html" },
     { "source": "/envio",                "destination": "/index.html" },
     { "source": "/admin",                "destination": "/index.html" },
-    { "source": "/admin/:sub",           "destination": "/index.html" }
+    { "source": "/admin/:sub",           "destination": "/index.html" },
+    { "source": "/this-and-that",         "destination": "/index.html" }
   ]
 }
