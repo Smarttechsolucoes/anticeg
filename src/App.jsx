@@ -6340,6 +6340,7 @@ function AdminCadastros({ confirmacoes, onUpdate }) {
 
 function AdminPagamentos({ data, joiners, subtab }) {
   const [open, setOpen] = useState(null);
+  const [filtroTipo, setFiltroTipo] = useState("todos");
 
   const cogValidos = new Set((joiners || []).map(j => j.cog));
 
@@ -6360,10 +6361,50 @@ function AdminPagamentos({ data, joiners, subtab }) {
 
   const atrasados = todos.filter(j => j.itens.some(i => i.multa > 0));
   const emAberto  = todos.filter(j => j.itens.every(i => i.multa === 0));
-  const lista = subtab === "atrasados" ? atrasados : emAberto;
+  const baseList  = subtab === "atrasados" ? atrasados : emAberto;
+
+  // helpers de atraso por tipo
+  const temItemAtr  = j => j.itens.some(i => isPendente(i.pago_item)  && diasAtraso(i.venc_item)  > 0);
+  const temFreteAtr = j => j.itens.some(i => isPendente(i.pago_frete) && diasAtraso(i.venc_frete) > 0);
+  const temRfAtr    = j => j.itens.some(i => isPendente(i.pago_rf)    && diasAtraso(i.venc_rf)    > 0);
+  const temMultaAtr = j => j.itens.some(i => i.multa > 0);
+
+  const lista = subtab !== "atrasados" ? baseList : (() => {
+    if (filtroTipo === "item")  return baseList.filter(temItemAtr);
+    if (filtroTipo === "frete") return baseList.filter(temFreteAtr);
+    if (filtroTipo === "rf")    return baseList.filter(temRfAtr);
+    if (filtroTipo === "multa") return baseList.filter(temMultaAtr);
+    return baseList;
+  })();
+
+  // totais por tipo para os pills
+  const totItem  = atrasados.filter(temItemAtr) .reduce((s,j) => s + j.itens.reduce((a,i) => a + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0), 0), 0);
+  const totFrete = atrasados.filter(temFreteAtr).reduce((s,j) => s + j.itens.reduce((a,i) => a + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0), 0), 0);
+  const totRf    = atrasados.filter(temRfAtr)   .reduce((s,j) => s + j.itens.reduce((a,i) => a + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0), 0), 0);
+  const totMulta = atrasados.filter(temMultaAtr).reduce((s,j) => s + j.itens.reduce((a,i) => a + (i.multa || 0), 0), 0);
 
   return (
     <div>
+      {subtab === "atrasados" && atrasados.length > 0 && (
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
+          {[
+            { id:"todos",  label:"Todos",  valor: null,     count: atrasados.length },
+            { id:"item",   label:"Item",   valor: totItem,  count: atrasados.filter(temItemAtr).length  },
+            { id:"frete",  label:"Frete",  valor: totFrete, count: atrasados.filter(temFreteAtr).length },
+            { id:"rf",     label:"RF",     valor: totRf,    count: atrasados.filter(temRfAtr).length    },
+            { id:"multa",  label:"Multa",  valor: totMulta, count: atrasados.filter(temMultaAtr).length },
+          ].map(({ id, label, valor, count }) => {
+            const ativo = filtroTipo === id;
+            return (
+              <button key={id} onClick={() => setFiltroTipo(id)} style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:1, padding:"7px 12px", borderRadius:7, border:`1px solid ${ativo ? "rgba(255,92,26,.5)" : "rgba(245,240,232,.1)"}`, background: ativo ? "rgba(255,92,26,.1)" : "rgba(245,240,232,.03)", cursor:"pointer", minWidth:64, transition:"all .15s" }}>
+                <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.35)", fontWeight: ativo ? 700 : 400 }}>{label}</span>
+                {valor !== null && <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)" }}>R${fmtBRL(valor)}</span>}
+                <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.28)" }}>{count} joiner{count !== 1 ? "s" : ""}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum aqui.</div>}
       {lista.map(j => {
         const total = j.itens.reduce((s,i) => s+i.pend, 0);
