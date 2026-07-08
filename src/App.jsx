@@ -450,6 +450,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
         {itens && (
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
+            {ceg === "THIS & THAT" && (
+              <a href="/this-and-that" target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:8, fontSize:10, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", textDecoration:"none", border:"1px solid rgba(201,168,240,.3)", borderRadius:6, padding:"4px 12px", letterSpacing:"0.5px" }}>ver fotos →</a>
+            )}
           </div>
         )}
       </div>
