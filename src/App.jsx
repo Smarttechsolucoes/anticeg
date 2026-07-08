@@ -6474,6 +6474,26 @@ function AdminPagamentos({ data, joiners, subtab }) {
                           );
                         })}
                       </tbody>
+                      {j.itens.length > 1 && (() => {
+                        const sItem  = j.itens.reduce((s,i) => s + (isPendente(i.pago_item)  ? Number(i.valor_item  ||0) : 0), 0);
+                        const sFrete = j.itens.reduce((s,i) => s + (isPendente(i.pago_frete) ? Number(i.frete_inter ||0) : 0), 0);
+                        const sRf    = j.itens.reduce((s,i) => s + (isPendente(i.pago_rf)    ? Number(i.taxa_rf     ||0) : 0), 0);
+                        const sMulta = j.itens.reduce((s,i) => s + (i.multa || 0), 0);
+                        const sTotal = sItem + sFrete + sRf + sMulta;
+                        const ftS = { fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", fontWeight:700, padding:"8px 0 4px", color:"rgba(245,240,232,.9)" };
+                        return (
+                          <tfoot>
+                            <tr style={{ borderTop:"1px solid rgba(245,240,232,.15)" }}>
+                              <td style={{ ...ftS, textAlign:"left", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontWeight:400 }}>Total</td>
+                              <td style={ftS}>{sItem  > 0 ? fmt(sItem)  : dash}</td>
+                              <td style={ftS}>{sFrete > 0 ? fmt(sFrete) : dash}</td>
+                              <td style={ftS}>{sRf    > 0 ? fmt(sRf)    : dash}</td>
+                              {temMulta && <td style={{ ...ftS, color:"rgba(255,107,107,.9)" }}>{sMulta > 0 ? fmt(sMulta) : dash}</td>}
+                              <td style={{ ...ftS, color: sMulta > 0 ? "#ff6b6b" : "#BAFF39", fontSize:12 }}>{fmt(sTotal)}</td>
+                            </tr>
+                          </tfoot>
+                        );
+                      })()}
                     </table>
                   );
                 })()}
