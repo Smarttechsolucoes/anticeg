@@ -6427,68 +6427,83 @@ function AdminPagamentos({ data, joiners, subtab }) {
             {isOpen && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"8px 16px 12px" }}>
                 {(() => {
-                  const temMulta = j.itens.some(i => i.multa > 0);
                   const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", padding:"6px 0 6px", fontWeight:400 };
                   const tdS = { fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.55)", padding:"7px 0", verticalAlign:"middle" };
                   const dash = <span style={{ color:"rgba(245,240,232,.18)" }}>—</span>;
                   const fmt = v => `R$${fmtBRL(v)}`;
+
+                  // filtra linhas e colunas conforme filtroTipo ativo
+                  const mostraItem  = filtroTipo === "todos" || filtroTipo === "item"  || filtroTipo === "multa";
+                  const mostraFrete = filtroTipo === "todos" || filtroTipo === "frete" || filtroTipo === "multa";
+                  const mostraRf    = filtroTipo === "todos" || filtroTipo === "rf"    || filtroTipo === "multa";
+
+                  const itensFiltrados = filtroTipo === "item"  ? j.itens.filter(i => isPendente(i.pago_item)  && Number(i.valor_item  ||0) > 0)
+                                       : filtroTipo === "frete" ? j.itens.filter(i => isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0)
+                                       : filtroTipo === "rf"    ? j.itens.filter(i => isPendente(i.pago_rf)    && Number(i.taxa_rf    ||0) > 0)
+                                       : j.itens;
+
+                  const temMulta = itensFiltrados.some(i => i.multa > 0);
+
                   return (
                     <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
                       <colgroup>
                         <col />
-                        <col style={{ width:66 }} />
-                        <col style={{ width:66 }} />
-                        <col style={{ width:46 }} />
-                        {temMulta && <col style={{ width:62 }} />}
+                        {mostraItem  && <col style={{ width:66 }} />}
+                        {mostraFrete && <col style={{ width:66 }} />}
+                        {mostraRf    && <col style={{ width:46 }} />}
+                        {temMulta    && <col style={{ width:62 }} />}
                         <col style={{ width:72 }} />
                       </colgroup>
                       <thead>
                         <tr>
                           <th style={{ ...thS, textAlign:"left" }}>Item</th>
-                          <th style={thS}>Item R$</th>
-                          <th style={thS}>Frete</th>
-                          <th style={thS}>RF</th>
-                          {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.45)" }}>Multa</th>}
+                          {mostraItem  && <th style={thS}>Item R$</th>}
+                          {mostraFrete && <th style={thS}>Frete</th>}
+                          {mostraRf    && <th style={thS}>RF</th>}
+                          {temMulta    && <th style={{ ...thS, color:"rgba(255,107,107,.45)" }}>Multa</th>}
                           <th style={thS}>Total</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {j.itens.map((item, idx) => {
+                        {itensFiltrados.map((item, idx) => {
                           const vItem  = isPendente(item.pago_item)  ? Number(item.valor_item  || 0) : 0;
                           const vFrete = isPendente(item.pago_frete) ? Number(item.frete_inter || 0) : 0;
                           const vRf    = isPendente(item.pago_rf)    ? Number(item.taxa_rf     || 0) : 0;
                           const vMulta = item.multa || 0;
-                          const total  = vItem + vFrete + vRf + vMulta;
+                          const vFiltItem  = mostraItem  ? vItem  : 0;
+                          const vFiltFrete = mostraFrete ? vFrete : 0;
+                          const vFiltRf    = mostraRf    ? vRf    : 0;
+                          const total = vFiltItem + vFiltFrete + vFiltRf + vMulta;
                           return (
                             <tr key={idx} style={{ borderTop:"1px solid rgba(245,240,232,.05)" }}>
                               <td style={{ padding:"7px 8px 7px 0", verticalAlign:"middle" }}>
                                 <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.8)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}><InfoContent info={item.nome_do_item} /></div>
                                 <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>{item.ceg}</div>
                               </td>
-                              <td style={tdS}>{vItem  > 0 ? fmt(vItem)  : dash}</td>
-                              <td style={tdS}>{vFrete > 0 ? fmt(vFrete) : dash}</td>
-                              <td style={tdS}>{vRf    > 0 ? fmt(vRf)    : dash}</td>
-                              {temMulta && <td style={{ ...tdS, color: vMulta > 0 ? "rgba(255,107,107,.8)" : undefined }}>{vMulta > 0 ? fmt(vMulta) : dash}</td>}
+                              {mostraItem  && <td style={tdS}>{vItem  > 0 ? fmt(vItem)  : dash}</td>}
+                              {mostraFrete && <td style={tdS}>{vFrete > 0 ? fmt(vFrete) : dash}</td>}
+                              {mostraRf    && <td style={tdS}>{vRf    > 0 ? fmt(vRf)    : dash}</td>}
+                              {temMulta    && <td style={{ ...tdS, color: vMulta > 0 ? "rgba(255,107,107,.8)" : undefined }}>{vMulta > 0 ? fmt(vMulta) : dash}</td>}
                               <td style={{ ...tdS, color: vMulta > 0 ? "#ff6b6b" : "#BAFF39", fontWeight:700 }}>{fmt(total)}</td>
                             </tr>
                           );
                         })}
                       </tbody>
-                      {j.itens.length > 1 && (() => {
-                        const sItem  = j.itens.reduce((s,i) => s + (isPendente(i.pago_item)  ? Number(i.valor_item  ||0) : 0), 0);
-                        const sFrete = j.itens.reduce((s,i) => s + (isPendente(i.pago_frete) ? Number(i.frete_inter ||0) : 0), 0);
-                        const sRf    = j.itens.reduce((s,i) => s + (isPendente(i.pago_rf)    ? Number(i.taxa_rf     ||0) : 0), 0);
-                        const sMulta = j.itens.reduce((s,i) => s + (i.multa || 0), 0);
+                      {itensFiltrados.length > 1 && (() => {
+                        const sItem  = itensFiltrados.reduce((s,i) => s + (mostraItem  && isPendente(i.pago_item)  ? Number(i.valor_item  ||0) : 0), 0);
+                        const sFrete = itensFiltrados.reduce((s,i) => s + (mostraFrete && isPendente(i.pago_frete) ? Number(i.frete_inter ||0) : 0), 0);
+                        const sRf    = itensFiltrados.reduce((s,i) => s + (mostraRf    && isPendente(i.pago_rf)    ? Number(i.taxa_rf     ||0) : 0), 0);
+                        const sMulta = itensFiltrados.reduce((s,i) => s + (i.multa || 0), 0);
                         const sTotal = sItem + sFrete + sRf + sMulta;
                         const ftS = { fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", fontWeight:700, padding:"8px 0 4px", color:"rgba(245,240,232,.9)" };
                         return (
                           <tfoot>
                             <tr style={{ borderTop:"1px solid rgba(245,240,232,.15)" }}>
                               <td style={{ ...ftS, textAlign:"left", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontWeight:400 }}>Total</td>
-                              <td style={ftS}>{sItem  > 0 ? fmt(sItem)  : dash}</td>
-                              <td style={ftS}>{sFrete > 0 ? fmt(sFrete) : dash}</td>
-                              <td style={ftS}>{sRf    > 0 ? fmt(sRf)    : dash}</td>
-                              {temMulta && <td style={{ ...ftS, color:"rgba(255,107,107,.9)" }}>{sMulta > 0 ? fmt(sMulta) : dash}</td>}
+                              {mostraItem  && <td style={ftS}>{sItem  > 0 ? fmt(sItem)  : dash}</td>}
+                              {mostraFrete && <td style={ftS}>{sFrete > 0 ? fmt(sFrete) : dash}</td>}
+                              {mostraRf    && <td style={ftS}>{sRf    > 0 ? fmt(sRf)    : dash}</td>}
+                              {temMulta    && <td style={{ ...ftS, color:"rgba(255,107,107,.9)" }}>{sMulta > 0 ? fmt(sMulta) : dash}</td>}
                               <td style={{ ...ftS, color: sMulta > 0 ? "#ff6b6b" : "#BAFF39", fontSize:12 }}>{fmt(sTotal)}</td>
                             </tr>
                           </tfoot>
