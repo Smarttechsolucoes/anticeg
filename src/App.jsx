@@ -6835,7 +6835,7 @@ function ThisAndThatCegPage({ isOwner }) {
             <div className="page-eyebrow">
               <a href="/" style={{ background: "none", border: "none", color: "rgba(245,240,232,.62)", fontFamily: "'DM Mono',monospace", fontSize: "var(--fs-xs)", cursor: "pointer", padding: 0, letterSpacing: 1, textDecoration: "none" }}>← voltar</a>
             </div>
-            <div className="page-title">THIS &amp; THAT</div>
+            <img src="https://straykidsshop.com/cdn/shop/files/STRAY-00009---PreDESKTOP.png?v=1783458642&width=1600" alt="THIS & THAT" style={{ height: 64, maxWidth: 320, objectFit: "contain", objectPosition: "left", marginTop: 8 }} />
           </div>
           {itens && (
             <div style={{ textAlign: "right" }}>
