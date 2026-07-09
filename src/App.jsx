@@ -4614,6 +4614,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [novoEvTipo,        setNovoEvTipo]        = useState("envio");
   const [savingEv,          setSavingEv]          = useState(false);
   const [filtroEnvio,       setFiltroEnvio]       = useState("todos");
+  const [buscaEnvio,        setBuscaEnvio]        = useState("");
   const [verGrupos,         setVerGrupos]         = useState(false);
   const [expandedEnvio,     setExpandedEnvio]     = useState(new Set());
   const [rastreioAberto,    setRastreioAberto]    = useState(null);
@@ -5591,9 +5592,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               { key:"enviado",                  label:"Enviado",      color:"rgba(245,240,232,.4)",  border:"rgba(245,240,232,.12)" },
             ];
             return (
-              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+              <div style={{ marginBottom:16 }}>
+              <input
+                value={buscaEnvio}
+                onChange={e => setBuscaEnvio(e.target.value)}
+                placeholder="buscar por nome ou @cog..."
+                style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"8px 12px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", marginBottom:10 }}
+              />
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {statusConfig.map(({ key, label, color, border }) => {
-                  const count = key === "todos" ? envioSolic.length : envioSolic.filter(e => e.status === key).length;
+                  const base = buscaEnvio.trim() ? envioSolic.filter(e => { const q = buscaEnvio.toLowerCase(); return (e.joiner_nome||"").toLowerCase().includes(q) || (e.joiner_cog||"").toLowerCase().includes(q); }) : envioSolic;
+                  const count = key === "todos" ? base.length : base.filter(e => e.status === key).length;
                   if (key !== "todos" && count === 0) return null;
                   const ativo = filtroEnvio === key;
                   return (
@@ -5612,6 +5621,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   ))}
                 </div>
               </div>
+              </div>
             );
           })()}
 
@@ -5620,8 +5630,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             const STATUS_LABEL = { "solicitação de envio":"Solicitação de Envio", "cotação em andamento":"Cotação em Andamento", "pagamento em aberto":"Pagamento em Aberto", "pagamento confirmado":"Pagamento Confirmado", embalando:"Embalando", enviado:"Enviado", cancelado:"Cancelado" };
             const STATUS_COLOR = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" };
 
-            const listaBase = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
-            if (listaBase.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}.</div>;
+            const buscaQ = buscaEnvio.trim().toLowerCase();
+            const filtradosBusca = buscaQ
+              ? envioSolic.filter(e => (e.joiner_nome||"").toLowerCase().includes(buscaQ) || (e.joiner_cog||"").toLowerCase().includes(buscaQ))
+              : envioSolic;
+            const listaBase = filtroEnvio === "todos" ? filtradosBusca : filtradosBusca.filter(e => e.status === filtroEnvio);
+            if (listaBase.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}{buscaQ ? ` para "${buscaEnvio}"` : ""}.</div>;
 
             const lista = listaBase;
             const displayLista = verGrupos
