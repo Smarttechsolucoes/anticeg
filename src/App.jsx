@@ -1245,9 +1245,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           const mItem  = vItem  > 0 ? diasAtraso(i.venc_item)  : 0;
           const mFrete = vFrete > 0 ? diasAtraso(i.venc_frete) : 0;
           const mRf    = vRf    > 0 ? diasAtraso(i.venc_rf)    : 0;
+          const diasMax = Math.max(mItem > 0 ? diasAtraso(i.venc_item) : 0, mFrete > 0 ? diasAtraso(i.venc_frete) : 0, mRf > 0 ? diasAtraso(i.venc_rf) : 0);
           const total  = vItem + vFrete + vRf + mItem + mFrete + mRf;
-          return total > 0 ? { i, vItem, vFrete, vRf, mItem, mFrete, mRf, total } : null;
+          return total > 0 ? { i, vItem, vFrete, vRf, mItem, mFrete, mRf, diasMax, total } : null;
         }).filter(Boolean);
+        const atrasados = linhas.filter(r => r.diasMax > 0).sort((a, b) => b.diasMax - a.diasMax);
+        const noPrazo   = linhas.filter(r => r.diasMax === 0);
         const temMulta = linhas.some(r => r.mItem + r.mFrete + r.mRf > 0);
         const cols = `1fr 68px 68px 52px${temMulta ? " 62px" : ""} 76px`;
         const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:8 };
@@ -1269,45 +1272,79 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 {linhas.length === 0 ? (
                   <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
                 ) : (
-                  <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
-                    <colgroup>
-                      <col style={{ width:"auto" }} />
-                      <col style={{ width:72 }} />
-                      <col style={{ width:72 }} />
-                      <col style={{ width:52 }} />
-                      {temMulta && <col style={{ width:66 }} />}
-                      <col style={{ width:76 }} />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th style={{ ...thS, textAlign:"left", padding:"16px 0 8px" }}>Item</th>
-                        <th style={{ ...thS, padding:"16px 0 8px" }}>Item R$</th>
-                        <th style={{ ...thS, padding:"16px 0 8px" }}>Frete</th>
-                        <th style={{ ...thS, padding:"16px 0 8px" }}>RF</th>
-                        {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.5)", padding:"16px 0 8px" }}>Multa</th>}
-                        <th style={{ ...thS, padding:"16px 0 8px" }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {linhas.map((row, idx) => {
-                        const multa = row.mItem + row.mFrete + row.mRf;
-                        const hasMulta = multa > 0;
-                        return (
-                          <tr key={idx} style={{ borderTop:"1px solid rgba(245,240,232,.06)" }}>
-                            <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
-                              <div style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.i.nome_do_item}</div>
-                              <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{row.i.ceg}</div>
-                            </td>
-                            <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vItem > 0 ? `R$${fmtBRL(row.vItem)}` : dash}</td>
-                            <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</td>
-                            <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</td>
-                            {temMulta && <td style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, padding:"10px 0", verticalAlign:"middle" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</td>}
-                            <td style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, padding:"10px 0", verticalAlign:"middle" }}>R${fmtBRL(row.total)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {(() => {
+                    const renderLinha = (row, idx) => {
+                      const multa = row.mItem + row.mFrete + row.mRf;
+                      const hasMulta = multa > 0;
+                      return (
+                        <tr key={idx} style={{ borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                          <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
+                            <div style={{ fontSize:12, color: hasMulta ? "#ff6b6b" : "var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.i.nome_do_item}</div>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{row.i.ceg}</span>
+                              {hasMulta && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", borderRadius:4, padding:"1px 6px" }}>{row.diasMax}d em atraso</span>}
+                            </div>
+                          </td>
+                          <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vItem > 0 ? `R$${fmtBRL(row.vItem)}` : dash}</td>
+                          <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</td>
+                          <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</td>
+                          {temMulta && <td style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, padding:"10px 0", verticalAlign:"middle" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</td>}
+                          <td style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, padding:"10px 0", verticalAlign:"middle" }}>R${fmtBRL(row.total)}</td>
+                        </tr>
+                      );
+                    };
+                    const thead = (
+                      <thead>
+                        <tr>
+                          <th style={{ ...thS, textAlign:"left", padding:"16px 0 8px" }}>Item</th>
+                          <th style={{ ...thS, padding:"16px 0 8px" }}>Item R$</th>
+                          <th style={{ ...thS, padding:"16px 0 8px" }}>Frete</th>
+                          <th style={{ ...thS, padding:"16px 0 8px" }}>RF</th>
+                          {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.5)", padding:"16px 0 8px" }}>Multa</th>}
+                          <th style={{ ...thS, padding:"16px 0 8px" }}>Total</th>
+                        </tr>
+                      </thead>
+                    );
+                    const colgroup = (
+                      <colgroup>
+                        <col style={{ width:"auto" }} />
+                        <col style={{ width:72 }} /><col style={{ width:72 }} /><col style={{ width:52 }} />
+                        {temMulta && <col style={{ width:66 }} />}
+                        <col style={{ width:76 }} />
+                      </colgroup>
+                    );
+                    return (
+                      <>
+                        {atrasados.length > 0 && (
+                          <>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"14px 0 6px" }}>
+                              <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#ff6b6b", letterSpacing:"1.5px", textTransform:"uppercase" }}>Em atraso</span>
+                              <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(255,107,107,.4)", background:"rgba(255,107,107,.08)", borderRadius:10, padding:"1px 8px" }}>{atrasados.length}</span>
+                              <div style={{ flex:1, height:"1px", background:"rgba(255,107,107,.15)" }} />
+                            </div>
+                            <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
+                              {colgroup}{thead}
+                              <tbody>{atrasados.map(renderLinha)}</tbody>
+                            </table>
+                          </>
+                        )}
+                        {noPrazo.length > 0 && (
+                          <>
+                            {atrasados.length > 0 && (
+                              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"14px 0 6px" }}>
+                                <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase" }}>No prazo</span>
+                                <div style={{ flex:1, height:"1px", background:"rgba(245,240,232,.06)" }} />
+                              </div>
+                            )}
+                            <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
+                              {colgroup}{atrasados.length === 0 && thead}
+                              <tbody>{noPrazo.map(renderLinha)}</tbody>
+                            </table>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 )}
               </div>
             </div>
