@@ -5584,9 +5584,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           })()}
 
           {(() => {
-            const lista = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
-            if (lista.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}.</div>;
+            const ORDEM_STATUS = ["solicitação de envio","cotação em andamento","pagamento em aberto","pagamento confirmado","embalando","enviado","cancelado"];
+            const STATUS_LABEL = { "solicitação de envio":"Solicitação de Envio", "cotação em andamento":"Cotação em Andamento", "pagamento em aberto":"Pagamento em Aberto", "pagamento confirmado":"Pagamento Confirmado", embalando:"Embalando", enviado:"Enviado", cancelado:"Cancelado" };
+            const STATUS_COLOR = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" };
 
+            const listaBase = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
+            if (listaBase.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}.</div>;
+
+            const lista = listaBase;
             const displayLista = verGrupos
               ? [...lista].sort((a, b) => {
                   const ga = a.grupo_envio_codigo || "￿";
@@ -5602,10 +5607,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               }
             }
 
+            // No modo "todos" sem grupo: ordenar por status priority
+            const sortedLista = (filtroEnvio === "todos" && !verGrupos)
+              ? [...displayLista].sort((a, b) => {
+                  const ia = ORDEM_STATUS.indexOf(a.status); const ib = ORDEM_STATUS.indexOf(b.status);
+                  return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+                })
+              : displayLista;
+
             const seenGrupos = new Set();
             let showedIndiv = false;
+            let lastStatus = null;
 
-            return displayLista.map(s => {
+            return sortedLista.map(s => {
             const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.25)", "cotação em andamento":"rgba(255,92,26,.3)", "pagamento em aberto":"rgba(201,168,240,.3)", "pagamento confirmado":"rgba(255,209,102,.3)", embalando:"rgba(100,181,246,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             const expanded = expandedEnvio.has(s.id);
@@ -5617,8 +5631,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             const showIndivSep = verGrupos && !isGrupo && !showedIndiv && seenGrupos.size > 0;
             if (showIndivSep) showedIndiv = true;
 
+            const showStatusHeader = filtroEnvio === "todos" && !verGrupos && s.status !== lastStatus;
+            lastStatus = s.status;
+
             return (
               <Fragment key={s.id}>
+                {showStatusHeader && (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop: lastStatus !== s.status ? 20 : 0, marginBottom:10 }}>
+                    <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color: statusColor, letterSpacing:"1.5px", textTransform:"uppercase" }}>{STATUS_LABEL[s.status]}</span>
+                    <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.25)", background:"rgba(245,240,232,.05)", borderRadius:10, padding:"1px 8px" }}>{sortedLista.filter(x => x.status === s.status).length}</span>
+                    <div style={{ flex:1, height:"1px", background:"rgba(245,240,232,.06)" }} />
+                  </div>
+                )}
                 {isFirstGrupo && (
                   <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.22)", borderRadius:8, padding:"10px 14px", marginBottom:6, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
                     <span style={{ fontFamily:"'DM Mono',monospace", fontWeight:900, color:"#C9A8F0", fontSize:14, letterSpacing:3 }}>{s.grupo_envio_codigo}</span>
