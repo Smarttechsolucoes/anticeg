@@ -4662,7 +4662,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const minPreco = Math.min(...preenchidas.map(o => pf(o.valor)));
     const bestOp   = preenchidas.find(o => pf(o.valor) === minPreco);
     const totalFmt = (minPreco + emb).toFixed(2).replace(".", ",");
-    const { error: errCot } = await supabase.from("envio_solicitacoes").update({
+    const payload  = {
       cotacao_opcoes:    preenchidas,
       cotacao_frete:     bestOp.valor,
       cotacao_forma:     bestOp.forma,
@@ -4673,14 +4673,23 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       cotacao_obs:       cotacaoObs || null,
       cotacao_at:        new Date().toISOString(),
       status:            "pagamento em aberto",
-    }).eq("id", s.id);
+    };
+    const isGrupo = !!s.grupo_envio_codigo;
+    const q = isGrupo
+      ? supabase.from("envio_solicitacoes").update(payload).eq("grupo_envio_codigo", s.grupo_envio_codigo)
+      : supabase.from("envio_solicitacoes").update(payload).eq("id", s.id);
+    const { error: errCot } = await q;
     if (errCot) { alert("Erro ao enviar cotação: " + errCot.message); return; }
-    await supabase.from("pushes").insert([{
-      message: `Sua cotação de envio está disponível! A partir de R$ ${totalFmt} via ${bestOp.forma}. Acesse Meu Perfil → Envios para ver as opções.`,
-      active: true,
-      joiner_cog: s.joiner_cog,
-    }]);
-    setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"pagamento em aberto", cotacao_opcoes:preenchidas, cotacao_frete:bestOp.valor, cotacao_forma:bestOp.forma, cotacao_seguro:valorDeclarado||null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:bestOp.prazo, cotacao_obs:cotacaoObs } : x));
+    const pushMsg = `Sua cotação de envio está disponível! A partir de R$ ${totalFmt} via ${bestOp.forma}. Acesse Meu Perfil → Envios para ver as opções.`;
+    const membros = isGrupo
+      ? envioSolic.filter(e => e.grupo_envio_codigo === s.grupo_envio_codigo)
+      : [s];
+    await supabase.from("pushes").insert(membros.map(m => ({ message: pushMsg, active: true, joiner_cog: m.joiner_cog })));
+    const updFields = { status:"pagamento em aberto", cotacao_opcoes:preenchidas, cotacao_frete:bestOp.valor, cotacao_forma:bestOp.forma, cotacao_seguro:valorDeclarado||null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:bestOp.prazo, cotacao_obs:cotacaoObs };
+    setEnvioSolic(prev => prev.map(x =>
+      isGrupo ? (x.grupo_envio_codigo === s.grupo_envio_codigo ? { ...x, ...updFields } : x)
+              : (x.id === s.id ? { ...x, ...updFields } : x)
+    ));
     setCotacaoAberta(null); setCotacaoOpcoes([{ forma:"", valor:"", prazo:"" }]); setCotacaoEmbalagem(""); setCotacaoObs("");
   }
 
