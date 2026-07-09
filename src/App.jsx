@@ -5547,26 +5547,41 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             );
           })()}
-          {/* Controles: filtro ativo + toggle de visualização */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:14 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>Exibindo:</span>
-              <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", fontWeight:700 }}>
-                {filtroEnvio === "todos" ? "todas" : filtroEnvio}
-              </span>
-              {filtroEnvio !== "todos" && (
-                <button onClick={() => setFiltroEnvio("todos")} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:12, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
-              )}
-            </div>
-            <div style={{ display:"flex", gap:4 }}>
-              {[["individual", false], ["por grupo", true]].map(([label, val]) => (
-                <button key={label} onClick={() => setVerGrupos(val)}
-                  style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", padding:"4px 10px", borderRadius:4, cursor:"pointer", border:`1px solid ${verGrupos === val ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background: verGrupos === val ? "rgba(201,168,240,.12)" : "transparent", color: verGrupos === val ? "#C9A8F0" : "rgba(245,240,232,.3)", transition:"all .15s" }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Pills de status */}
+          {(() => {
+            const statusConfig = [
+              { key:"todos",                   label:"Todos",        color:"rgba(245,240,232,.5)",  border:"rgba(245,240,232,.15)" },
+              { key:"solicitação de envio",     label:"Solicitação",  color:"#BAFF39",               border:"rgba(186,255,57,.3)"   },
+              { key:"cotação em andamento",     label:"Cotação",      color:"#FF5C1A",               border:"rgba(255,92,26,.3)"    },
+              { key:"pagamento em aberto",      label:"Pgto. aberto", color:"#C9A8F0",               border:"rgba(201,168,240,.3)"  },
+              { key:"pagamento confirmado",     label:"Pgto. conf.",  color:"#FFD166",               border:"rgba(255,209,102,.3)"  },
+              { key:"embalando",                label:"Embalando",    color:"#64B5F6",               border:"rgba(100,181,246,.3)"  },
+              { key:"enviado",                  label:"Enviado",      color:"rgba(245,240,232,.4)",  border:"rgba(245,240,232,.12)" },
+            ];
+            return (
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+                {statusConfig.map(({ key, label, color, border }) => {
+                  const count = key === "todos" ? envioSolic.length : envioSolic.filter(e => e.status === key).length;
+                  if (key !== "todos" && count === 0) return null;
+                  const ativo = filtroEnvio === key;
+                  return (
+                    <button key={key} onClick={() => setFiltroEnvio(key)} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, cursor:"pointer", border:`1px solid ${ativo ? border : "rgba(245,240,232,.08)"}`, background: ativo ? `${border.replace(".3)", ".08)")}` : "transparent", transition:"all .15s" }}>
+                      <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: ativo ? color : "rgba(245,240,232,.35)", fontWeight: ativo ? 700 : 400 }}>{label}</span>
+                      <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color: ativo ? color : "rgba(245,240,232,.25)", background:"rgba(245,240,232,.06)", borderRadius:10, padding:"1px 7px" }}>{count}</span>
+                    </button>
+                  );
+                })}
+                <div style={{ marginLeft:"auto", display:"flex", gap:4, alignItems:"center" }}>
+                  {[["individual", false], ["por grupo", true]].map(([label, val]) => (
+                    <button key={label} onClick={() => setVerGrupos(val)}
+                      style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", padding:"4px 10px", borderRadius:4, cursor:"pointer", border:`1px solid ${verGrupos === val ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background: verGrupos === val ? "rgba(201,168,240,.12)" : "transparent", color: verGrupos === val ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {(() => {
             const lista = filtroEnvio === "todos" ? envioSolic : envioSolic.filter(e => e.status === filtroEnvio);
