@@ -5840,7 +5840,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       Cancelar cotação
                     </button>
                   )}
-                  {!["enviado","embalando","pagamento confirmado","cancelado"].includes(s.status) && (
+                  {s.status !== "cancelado" && (
                     <button onClick={() => cancelarSolicitacaoAdmin(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.2)", border:"1px solid rgba(245,240,232,.08)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Cancelar solicitação
                     </button>
