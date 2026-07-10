@@ -8335,7 +8335,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (user && !user.guest) {
+    if (user && !user.guest && !user.pre_cadastro) {
       updateLastSeen(user);
       fetchOnlineUsers();
       const iv = setInterval(() => { updateLastSeen(user); fetchOnlineUsers(); }, 5 * 60 * 1000);
@@ -8568,8 +8568,8 @@ export default function App() {
         <a href="/ceg/this-and-that" className="tab-btn" style={{ textDecoration: "none" }}>◈ T&amp;T COMEBACK</a>
         <button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => changeTab("cegs")}>◈ CEGs</button>
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => changeTab("calendario")}>◫ Calendário</button>
-        {!user.guest && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
-        {!user.guest && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
+        {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
+        {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
@@ -8581,12 +8581,12 @@ export default function App() {
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && <CegTab user={user} itens={itens} />}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
-      {!user.guest && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
-      {!user.guest && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
+      {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
+      {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
-      <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest} isAdmin={isAdmin} />
+      <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
 
       {/* Modal PIN Admin */}
       {adminPinModal && (
