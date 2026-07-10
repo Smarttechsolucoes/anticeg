@@ -137,8 +137,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const { error: err } = await supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null }]);
     if (err) { setCadError("Erro ao enviar. Tente novamente."); setCadLoading(false); return; }
 
-    setCadOk(true);
     setCadLoading(false);
+    onLogin({ pre_cadastro: true, nome, cog, email: eml, whatsapp: whats || null }, []);
   }
 
   function resetPrimeiroAcesso() {

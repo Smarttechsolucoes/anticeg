@@ -1156,6 +1156,28 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   );
   const nEnvioLiberado = !guest ? itens.filter(i => i.status === "Envio Liberado").length : 0;
 
+  if (user.pre_cadastro) return (
+    <div className="main">
+      <div className="page-header">
+        <div>
+          <div className="page-eyebrow">anticeg · visão completa</div>
+          <div className="page-title">MASTER<span>LIST</span></div>
+        </div>
+        <div className="page-header-right">
+          <div className="greeting">{user.nome || user.cog}</div>
+          <div className="greeting-sub">perfil em aprovação</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 32, textAlign: "center", fontFamily: "'DM Mono',monospace" }}>
+        <div style={{ fontSize: 32, marginBottom: 16 }}>⏳</div>
+        <div style={{ fontSize: 14, color: "var(--lilas)", marginBottom: 8 }}>Claims indisponíveis</div>
+        <div style={{ fontSize: 12, color: "rgba(245,240,232,.4)", lineHeight: 1.7, maxWidth: 280, margin: "0 auto" }}>
+          Seu perfil está aguardando aprovação da admin. Assim que aprovado, seus itens aparecerão aqui.
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
@@ -8332,7 +8354,7 @@ export default function App() {
     setUser(u);
     setItens(itensData);
     setPage("portal");
-    if (!u.guest) {
+    if (!u.guest && !u.pre_cadastro) {
       if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
       if (!u.confirmado) setShowPerfilModal(true);
       const { data: notifs } = await supabase.from("notifications")
