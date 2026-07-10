@@ -3370,11 +3370,21 @@ ${compHTML}
                   <div style={{ marginTop:8, fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>Solicitação cancelada</div>
                 )}
                 {s.status === "enviado" && s.rastreio_codigo && (
-                  <div style={{ marginTop:10, background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px", fontFamily:"'DM Mono',monospace" }}>
-                    <div style={{ fontSize:10, color:"#BAFF39", letterSpacing:"1px", marginBottom:6 }}>RASTREIO</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", letterSpacing:".05em" }}>{s.rastreio_codigo}</div>
+                  <div style={{ marginTop:12, background:"rgba(186,255,57,.08)", border:"2px solid rgba(186,255,57,.35)", borderRadius:12, padding:"16px", fontFamily:"'DM Mono',monospace" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                      <span style={{ fontSize:18 }}>📦</span>
+                      <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Pedido Enviado · Rastreio</span>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                      <div style={{ flex:1, background:"rgba(0,0,0,.4)", border:"1px solid rgba(186,255,57,.25)", borderRadius:7, padding:"10px 12px", fontSize:15, fontWeight:900, color:"#F5F0E8", letterSpacing:".1em", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {s.rastreio_codigo}
+                      </div>
+                      <button onClick={() => navigator.clipboard.writeText(s.rastreio_codigo)} style={{ flexShrink:0, padding:"10px 14px", background:"rgba(186,255,57,.15)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.35)", borderRadius:7, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                        Copiar
+                      </button>
+                    </div>
                     {s.rastreio_link && (
-                      <a href={s.rastreio_link} target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:6, fontSize:10, color:"#BAFF39", textDecoration:"underline", fontFamily:"'DM Mono',monospace" }}>
+                      <a href={s.rastreio_link} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"12px", background:"rgba(186,255,57,.18)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.4)", borderRadius:8, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:".05em" }}>
                         Rastrear encomenda →
                       </a>
                     )}
