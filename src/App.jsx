@@ -4603,6 +4603,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [disponiveisData, setDisponiveisData] = useState(null);
   const [joinersData, setJoinersData] = useState(null);
   const [confirmacoes, setConfirmacoes] = useState([]);
+  const [preCadastros, setPreCadastros] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
   const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
@@ -4776,6 +4777,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setReports(data); });
     supabase.from("confirmacoes").select("*").eq("visto", false).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setConfirmacoes(data); });
+    supabase.from("pre_cadastros").select("*").eq("status", "pendente").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setPreCadastros(data); });
     supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
     supabase.from("joiner_updates").select("*").order("created_at", { ascending: false })
@@ -4955,7 +4958,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 <div className="admin-sidebar-group-label">Operacional</div>
                 {temAcesso("envios")       && nav("envios",       "Envios",       "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
                 {temAcesso("reports")      && nav("reports",      "Reports",      "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
-                {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "👤", confirmacoes.length || 0)}
+                {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "👤", confirmacoes.length + preCadastros.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
@@ -5328,7 +5331,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         })()}
       </div>}
 
-      {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} />}
+      {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} preCadastros={preCadastros} onUpdatePre={setPreCadastros} />}
       {adminMainTab === "pagamentos" && (() => {
         const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
         const PixBar = () => (
@@ -6427,35 +6430,94 @@ function AdminLinks() {
   );
 }
 
-function AdminCadastros({ confirmacoes, onUpdate }) {
-  if (confirmacoes.length === 0) return (
-    <div style={{ fontSize:12, color:"rgba(245,240,232,.52)", padding:"20px 0" }}>Nenhuma atualização de cadastro pendente.</div>
+function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre }) {
+  const [aprovando, setAprovando] = useState(null);
+
+  async function aprovarCadastro(p) {
+    setAprovando(p.id);
+    const { error } = await supabase.from("joiners").insert([{
+      cog: p.cog, nome: p.nome, email: p.email,
+      twitter: "@" + p.cog, whatsapp: p.whatsapp || null, confirmado: false,
+    }]);
+    if (error) { alert("Erro ao criar conta: " + error.message); setAprovando(null); return; }
+    await supabase.from("pre_cadastros").update({ status: "aprovado" }).eq("id", p.id);
+    onUpdatePre(prev => prev.filter(x => x.id !== p.id));
+    setAprovando(null);
+  }
+
+  async function recusarCadastro(p) {
+    await supabase.from("pre_cadastros").update({ status: "recusado" }).eq("id", p.id);
+    onUpdatePre(prev => prev.filter(x => x.id !== p.id));
+  }
+
+  if (preCadastros.length === 0 && confirmacoes.length === 0) return (
+    <div style={{ fontSize:12, color:"rgba(245,240,232,.52)", padding:"20px 0" }}>Nenhuma pendência de cadastro.</div>
   );
+
   return (
     <div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.52)", marginBottom:16, lineHeight:1.6 }}>
-        Joiners que alteraram @ ou e-mail. Atualize na planilha e marque como visto.
-      </div>
-      {confirmacoes.map(c => (
-        <div key={c.id} style={{ padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(255,90,31,.2)", borderRadius:10, marginBottom:8 }}>
-          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginBottom:6 }}>
-                {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.52)", fontWeight:400 }}>@{c.joiner_cog}</span>
-              </div>
-              {c.twitter_novo && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)" }}>@ novo: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.twitter_novo}</span></div>}
-              {c.email_novo   && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)", marginTop:3 }}>e-mail: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.email_novo}</span></div>}
-              <div style={{ fontSize:10, color:"rgba(245,240,232,.42)", marginTop:6 }}>{new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
-            </div>
-            <button onClick={async () => {
-              await supabase.from("confirmacoes").update({ visto: true }).eq("id", c.id);
-              onUpdate(prev => prev.filter(x => x.id !== c.id));
-            }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.58)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
-              marcar visto
-            </button>
+      {preCadastros.length > 0 && (
+        <>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Novos cadastros</span>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{preCadastros.length}</span>
+            <div style={{ flex:1, height:"1px", background:"rgba(186,255,57,.12)" }} />
           </div>
-        </div>
-      ))}
+          {preCadastros.map(p => (
+            <div key={p.id} style={{ padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:10, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>
+                    {p.nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontWeight:400 }}>@{p.cog}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>{p.email}</div>
+                  {p.whatsapp && <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{p.whatsapp}</div>}
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.28)", marginTop:6 }}>{new Date(p.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
+                </div>
+                <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                  <button onClick={() => aprovarCadastro(p)} disabled={aprovando === p.id}
+                    style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
+                    {aprovando === p.id ? "..." : "✓ Aprovar"}
+                  </button>
+                  <button onClick={() => recusarCadastro(p)}
+                    style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                    ✗ Recusar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {confirmacoes.length > 0 && <div style={{ height:1, background:"rgba(245,240,232,.06)", margin:"16px 0" }} />}
+        </>
+      )}
+
+      {confirmacoes.length > 0 && (
+        <>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.52)", marginBottom:12, lineHeight:1.6 }}>
+            Joiners que alteraram @ ou e-mail. Atualize na planilha e marque como visto.
+          </div>
+          {confirmacoes.map(c => (
+            <div key={c.id} style={{ padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(255,90,31,.2)", borderRadius:10, marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginBottom:6 }}>
+                    {c.joiner_nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.52)", fontWeight:400 }}>@{c.joiner_cog}</span>
+                  </div>
+                  {c.twitter_novo && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)" }}>@ novo: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.twitter_novo}</span></div>}
+                  {c.email_novo   && <div style={{ fontSize:12, color:"rgba(245,240,232,.6)", marginTop:3 }}>e-mail: <span style={{ color:"var(--laranja)", fontWeight:600 }}>{c.email_novo}</span></div>}
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.42)", marginTop:6 }}>{new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
+                </div>
+                <button onClick={async () => {
+                  await supabase.from("confirmacoes").update({ visto: true }).eq("id", c.id);
+                  onUpdate(prev => prev.filter(x => x.id !== c.id));
+                }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.58)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                  marcar visto
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

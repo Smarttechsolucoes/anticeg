@@ -25,6 +25,15 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [paError, setPaError]   = useState("");
   const [paLoading, setPaLoading] = useState(false);
 
+  const [cadastro,    setCadastro]    = useState(false);
+  const [cadNome,     setCadNome]     = useState("");
+  const [cadCog,      setCadCog]      = useState("");
+  const [cadEmail,    setCadEmail]    = useState("");
+  const [cadWhats,    setCadWhats]    = useState("");
+  const [cadError,    setCadError]    = useState("");
+  const [cadLoading,  setCadLoading]  = useState(false);
+  const [cadOk,       setCadOk]       = useState(false);
+
   useEffect(() => {
     const cursor = cursorRef.current;
     const ring = ringRef.current;
@@ -136,12 +145,70 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     setPrimeiroAcesso(false); setPaEmail(""); setPaHandle(""); setPaClaim(""); setPaError("");
   }
 
+  async function handleCadastro() {
+    setCadLoading(true); setCadError("");
+    const nome  = cadNome.trim();
+    const cog   = cadCog.trim().replace(/^@/, "");
+    const email = cadEmail.trim().toLowerCase();
+    const whats = cadWhats.trim();
+    if (!nome || !cog || !email) { setCadError("Nome, @ e e-mail são obrigatórios."); setCadLoading(false); return; }
+    // verifica se já tem conta
+    const { data: existing } = await supabase.from("joiners").select("id")
+      .or(`twitter.ilike.@${cog},twitter.ilike.${cog},email.eq.${email}`).maybeSingle();
+    if (existing) { setCadError("Esse @ ou e-mail já tem acesso. Use 'Entrar' ou 'Primeiro acesso'."); setCadLoading(false); return; }
+    // verifica duplicata pendente
+    const { data: dup } = await supabase.from("pre_cadastros").select("id")
+      .eq("status","pendente").or(`cog.ilike.${cog},email.eq.${email}`).maybeSingle();
+    if (dup) { setCadError("Já existe um cadastro pendente com esses dados. Aguarde a aprovação."); setCadLoading(false); return; }
+    const { error } = await supabase.from("pre_cadastros").insert([{ nome, cog, email, whatsapp: whats || null }]);
+    if (error) { setCadError("Erro ao enviar. Tente novamente."); setCadLoading(false); return; }
+    setCadOk(true); setCadLoading(false);
+  }
+
+  function resetCadastro() {
+    setCadastro(false); setCadNome(""); setCadCog(""); setCadEmail(""); setCadWhats(""); setCadError(""); setCadOk(false);
+  }
+
   const voltarStyle = {
     background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace",
     fontSize:11, cursor:"pointer", marginTop:4, textAlign:"center", width:"100%"
   };
 
   function renderCard() {
+    if (cadastro) return (
+      <>
+        <div className="lp-card-label">// quero me cadastrar</div>
+        {cadOk ? (
+          <>
+            <div style={{ fontSize:12, color:"#BAFF39", fontFamily:"'DM Mono',monospace", lineHeight:1.7, marginBottom:16 }}>
+              Cadastro enviado! Aguarde a aprovação da admin. Você receberá acesso em breve.
+            </div>
+            <button className="lp-card-btn" onClick={resetCadastro}>← voltar</button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:14, lineHeight:1.6 }}>
+              Preencha seus dados para solicitar acesso ao portal.
+            </div>
+            <input className="lp-card-input" type="text" placeholder="nome para a claim" value={cadNome}
+              onChange={e => { setCadNome(e.target.value); setCadError(""); }} autoFocus />
+            <input className="lp-card-input" type="text" placeholder="@ da rede social (sem @)" value={cadCog}
+              onChange={e => { setCadCog(e.target.value); setCadError(""); }} />
+            <input className="lp-card-input" type="email" placeholder="e-mail" value={cadEmail}
+              onChange={e => { setCadEmail(e.target.value); setCadError(""); }} />
+            <input className="lp-card-input" type="text" placeholder="whatsapp (opcional)" value={cadWhats}
+              onChange={e => { setCadWhats(e.target.value); setCadError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleCadastro()} />
+            {cadError && <div className="lp-card-error">{cadError}</div>}
+            <button className="lp-card-btn" onClick={handleCadastro} disabled={cadLoading}>
+              {cadLoading ? "..." : "ENVIAR CADASTRO →"}
+            </button>
+            <button onClick={resetCadastro} style={voltarStyle}>← voltar</button>
+          </>
+        )}
+      </>
+    );
+
     if (pendingJoiner) return (
       <>
         <div className="lp-card-label">// senha de acesso</div>
@@ -210,6 +277,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         <button className="lp-card-btn" onClick={handleEntrar} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
         <div className="lp-card-divider" />
         <button className="lp-card-secondary" onClick={() => setPrimeiroAcesso(true)}>Primeiro acesso →</button>
+        <button className="lp-card-secondary" onClick={() => setCadastro(true)} style={{ marginTop:6, color:"rgba(245,240,232,.35)" }}>Quero me cadastrar →</button>
       </>
     );
   }
