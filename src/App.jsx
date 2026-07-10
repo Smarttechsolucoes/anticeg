@@ -7601,9 +7601,20 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         O prazo de cotação é de <strong style={{ color:"#F5F0E8" }}>5 dias úteis</strong> a partir do preenchimento deste formulário.<br /><br />
         A cotação estará disponível dentro do seu acesso com os valores e taxas.
       </div>
-      <button onClick={() => { setEnvioSubTab("solicitacoes"); }} style={{ marginTop:16, padding:"9px 24px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
-        Ver minhas solicitações →
-      </button>
+      <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap", marginTop:16 }}>
+        <button onClick={() => { setEnvioSubTab("solicitacoes"); }} style={{ padding:"9px 24px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
+          Ver minhas solicitações →
+        </button>
+        <button onClick={() => {
+          setEnviado(false);
+          setSelecionados([]);
+          setMetodo(""); setSeguro(""); setValorSeguro("");
+          setConfirmou(false); setCiente1(false); setCiente2(false);
+          setErro(""); setGrupoMode(null); setGrupoCodigo(""); setGrupoInput(""); setGrupoOk(false);
+        }} style={{ padding:"9px 24px", background:"transparent", color:"rgba(245,240,232,.55)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
+          + Fazer outra solicitação
+        </button>
+      </div>
     </div>
   );
 
