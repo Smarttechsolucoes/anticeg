@@ -195,7 +195,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
               onChange={e => { setCadCog(e.target.value); setCadError(""); }} />
             <input className="lp-card-input" type="email" placeholder="e-mail" value={cadEmail}
               onChange={e => { setCadEmail(e.target.value); setCadError(""); }} />
-            <input className="lp-card-input" type="text" placeholder="whatsapp (opcional)" value={cadWhats}
+            <input className="lp-card-input" type="text" placeholder="whatsapp (pra te localizar nas claims)" value={cadWhats}
               onChange={e => { setCadWhats(e.target.value); setCadError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()} />
             {cadError && <div className="lp-card-error">{cadError}</div>}
