@@ -6481,7 +6481,7 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
       {preCadastros.length > 0 && (
         <>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Novos cadastros</span>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Novos Joiners</span>
             <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{preCadastros.length}</span>
             <div style={{ flex:1, height:"1px", background:"rgba(186,255,57,.12)" }} />
           </div>
