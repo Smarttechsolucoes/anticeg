@@ -368,7 +368,7 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
   </div>
 </main>
 
-<footer>Caixinha Mercari · ANTICEG · por @anticegs</footer>
+<footer id="site-footer">Caixinha Mercari · ANTICEG · por @anticegs</footer>
 
 <script>
 const SUPA = 'https://ghjfsmwwcfpfvrouyrka.supabase.co';
@@ -700,6 +700,14 @@ function novoPedido() {
 
 runCalc();
 addItem();
+
+// modo embed: esconde header/nav/footer quando carregado dentro do app
+if(new URLSearchParams(location.search).has('embed')) {
+  document.querySelector('header').style.display='none';
+  document.querySelector('nav.tab-bar').style.display='none';
+  document.getElementById('site-footer').style.display='none';
+  document.querySelector('main').style.paddingTop='16px';
+}
 </script>
 </body>
 </html>
