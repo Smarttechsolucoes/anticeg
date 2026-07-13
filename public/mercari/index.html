@@ -707,6 +707,11 @@ if(new URLSearchParams(location.search).has('embed')) {
   document.querySelector('nav.tab-bar').style.display='none';
   document.getElementById('site-footer').style.display='none';
   document.querySelector('main').style.paddingTop='16px';
+
+  // envia altura real do conteúdo para o pai (remove scroll do iframe)
+  const sendH = () => window.parent.postMessage({ mercariH: document.documentElement.scrollHeight }, '*');
+  new ResizeObserver(sendH).observe(document.documentElement);
+  sendH();
 }
 </script>
 </body>

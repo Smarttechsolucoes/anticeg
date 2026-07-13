@@ -6471,6 +6471,23 @@ function AdminLinks() {
   );
 }
 
+function MercariEmbed() {
+  const [h, setH] = useState(700);
+  useEffect(() => {
+    const fn = e => { if (e.data?.mercariH) setH(e.data.mercariH + 24); };
+    window.addEventListener("message", fn);
+    return () => window.removeEventListener("message", fn);
+  }, []);
+  return (
+    <iframe
+      src="/mercari?embed"
+      title="Caixinha Mercari"
+      scrolling="no"
+      style={{ width:"100%", height:h, border:"none", display:"block" }}
+    />
+  );
+}
+
 function AdminMercari({ pedidos = [], onUpdate }) {
   const STATUS_COLOR = { pendente:"#BAFF39", aguardando_link:"#f0c040", aprovado:"#64B5F6", recusado:"#ff6b6b", pago:"#C9A8F0" };
   const STATUS_BG    = { pendente:"rgba(186,255,57,.08)", aguardando_link:"rgba(240,192,64,.08)", aprovado:"rgba(100,181,246,.08)", recusado:"rgba(255,107,107,.06)", pago:"rgba(201,168,240,.08)" };
@@ -8741,13 +8758,7 @@ export default function App() {
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
       {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
-      {tab === "mercari" && (
-        <iframe
-          src="/mercari?embed"
-          title="Caixinha Mercari"
-          style={{ width:"100%", height:"calc(100vh - 88px)", border:"none", display:"block" }}
-        />
-      )}
+      {tab === "mercari" && <MercariEmbed />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
