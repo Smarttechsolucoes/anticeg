@@ -147,22 +147,13 @@ main { max-width:820px; margin:0 auto; padding:36px 24px 72px; }
 .file-name { font-size:11px; color:var(--green); font-family:'Barlow Condensed',sans-serif; font-weight:700; margin-top:2px; }
 input[type=file] { display:none; }
 
-/* MÉTODO */
-.metodo-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
-.metodo-btn { background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; letter-spacing:.06em; padding:12px; cursor:pointer; text-transform:uppercase; transition:.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
-.metodo-btn:hover { border-color:var(--orange); color:var(--orange); }
-.metodo-btn.active { border-color:var(--orange); background:rgba(232,92,26,.1); color:var(--orange); }
-.metodo-icon { font-size:13px; }
-
-/* CARTÃO INFO */
-.cartao-info { display:flex; gap:14px; background:var(--bg2); border:1px solid rgba(240,192,64,.2); border-radius:10px; padding:16px 18px; margin-bottom:4px; }
-.cartao-icon { font-size:28px; flex-shrink:0; }
-.cartao-title { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; color:var(--yellow); margin-bottom:6px; }
-.cartao-sub { font-size:12px; color:rgba(245,240,232,.55); line-height:1.65; }
-
 /* SEM COMPROVANTE */
 .btn-sem-comp { background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer; text-decoration:underline; padding:6px 0; margin-bottom:6px; display:block; }
 .btn-sem-comp:hover { color:var(--text); }
+
+/* CARTÃO WA */
+.btn-cartao-wa { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; padding:12px; background:transparent; border:1.5px dashed var(--border); border-radius:8px; color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:.05em; text-decoration:none; text-transform:uppercase; transition:.15s; }
+.btn-cartao-wa:hover { border-color:var(--yellow); color:var(--yellow); }
 
 .btn-primary { width:100%; background:var(--orange); border:none; border-radius:8px; color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; letter-spacing:.08em; padding:14px; cursor:pointer; text-transform:uppercase; transition:.15s; margin-top:6px; }
 .btn-primary:hover:not(:disabled) { background:var(--orange-l); }
@@ -320,66 +311,44 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
       <div class="divider"></div>
       <div class="sec-label">Pagamento</div>
 
-      <!-- MÉTODO -->
-      <div class="metodo-row">
-        <button class="metodo-btn active" id="btn-pix" onclick="setMetodo('pix')">
-          <span class="metodo-icon">◈</span> PIX
-        </button>
-        <button class="metodo-btn" id="btn-cartao" onclick="setMetodo('cartao')">
-          <span class="metodo-icon">⬡</span> Cartão de crédito
-        </button>
+      <!-- PIX -->
+      <div class="pix-card">
+        <div class="pix-title">✦ Chave PIX — Mercado Pago</div>
+        <div class="pix-name">Fernanda Gomes Medeiros</div>
+        <div class="pix-key-row">
+          <div class="pix-key">de1a489d-db81-4864-a8cf-74cdd79d9cdc</div>
+          <button class="btn-copy" onclick="copiarPix(this)">Copiar</button>
+        </div>
       </div>
 
-      <!-- PIX -->
-      <div id="bloco-pix">
-        <div class="pix-card">
-          <div class="pix-title">✦ Chave PIX — Mercado Pago</div>
-          <div class="pix-name">Fernanda Gomes Medeiros</div>
-          <div class="pix-key-row">
-            <div class="pix-key">de1a489d-db81-4864-a8cf-74cdd79d9cdc</div>
-            <button class="btn-copy" onclick="copiarPix(this)">Copiar</button>
+      <div class="field" style="margin-bottom:6px">
+        <label>Comprovante de pagamento *</label>
+        <label class="file-label" for="f-comp">
+          <span class="file-icon">📎</span>
+          <div>
+            <div class="file-text">Clique para adicionar o arquivo</div>
+            <div class="file-name" id="f-comp-name" style="display:none"></div>
           </div>
-        </div>
+        </label>
+        <input type="file" id="f-comp" accept="image/*,.pdf" onchange="onFile()">
+      </div>
 
-        <div class="field" style="margin-bottom:6px">
-          <label>Comprovante de pagamento *</label>
-          <label class="file-label" for="f-comp">
-            <span class="file-icon">📎</span>
-            <div>
-              <div class="file-text">Clique para adicionar o arquivo</div>
-              <div class="file-name" id="f-comp-name" style="display:none"></div>
-            </div>
-          </label>
-          <input type="file" id="f-comp" accept="image/*,.pdf" onchange="onFile()">
-        </div>
+      <button class="btn-sem-comp" id="btn-sem-comp" onclick="toggleSemComp()">
+        Não consigo anexar o comprovante →
+      </button>
 
-        <button class="btn-sem-comp" id="btn-sem-comp" onclick="toggleSemComp()">
-          Não consigo anexar o comprovante →
-        </button>
-
-        <div id="bloco-id-pix" style="display:none; margin-bottom:18px">
-          <div class="field">
-            <label>ID da transação PIX *</label>
-            <input type="text" id="f-id-pix" placeholder="ex: E00000000202407..." oninput="checkForm()">
-            <span style="font-size:11px;color:var(--muted);margin-top:3px">Disponível no comprovante do app do banco, em "Detalhes da transação".</span>
-          </div>
+      <div id="bloco-id-pix" style="display:none; margin-bottom:18px">
+        <div class="field">
+          <label>ID da transação PIX *</label>
+          <input type="text" id="f-id-pix" placeholder="ex: E00000000202407..." oninput="checkForm()">
+          <span style="font-size:11px;color:var(--muted);margin-top:3px">Disponível no comprovante do app do banco, em "Detalhes da transação".</span>
         </div>
       </div>
 
       <!-- CARTÃO -->
-      <div id="bloco-cartao" style="display:none">
-        <div class="cartao-info">
-          <div class="cartao-icon">💳</div>
-          <div>
-            <div class="cartao-title">Pagamento por cartão de crédito</div>
-            <div class="cartao-sub">A GOM vai te enviar o link de pagamento pelo WhatsApp após receber o seu pedido. Após pagar, volte aqui e informe o ID da transação, ou envie o comprovante diretamente pelo WhatsApp.</div>
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:18px; margin-top:14px">
-          <label>ID da transação (opcional — preencha após pagar)</label>
-          <input type="text" id="f-id-cartao" placeholder="ex: MP-123456789" oninput="checkForm()">
-        </div>
-      </div>
+      <a id="btn-cartao-wa" href="#" target="_blank" rel="noopener noreferrer" class="btn-cartao-wa">
+        💳 Prefiro pagar no cartão de crédito →
+      </a>
 
       <div id="form-err" class="err" style="display:none"></div>
       <button class="btn-primary" id="btn-enviar" onclick="enviar()" disabled>Enviar pedido →</button>
@@ -483,6 +452,7 @@ async function buscarJoiner() {
       status.textContent='✓';
       info.className='id-info';
       info.textContent=`✦ ${joiner.nome||joiner.cog} · @${joiner.cog}`;
+      atualizarLinkCartao();
     } else {
       joiner = null;
       inp.classList.add('notfound'); inp.classList.remove('found');
@@ -569,16 +539,14 @@ function toggleCk(wrap,n) {
 }
 function allChecked() { return [1,2,3,4].every(n=>document.getElementById('ck'+n).checked); }
 
-let metodo = 'pix';
 let semComp = false;
 
-function setMetodo(m) {
-  metodo = m;
-  document.getElementById('btn-pix').classList.toggle('active', m==='pix');
-  document.getElementById('btn-cartao').classList.toggle('active', m==='cartao');
-  document.getElementById('bloco-pix').style.display = m==='pix' ? 'block' : 'none';
-  document.getElementById('bloco-cartao').style.display = m==='cartao' ? 'block' : 'none';
-  checkForm();
+function atualizarLinkCartao() {
+  const nome = joiner ? (joiner.nome||joiner.cog) : '';
+  const msg = encodeURIComponent(
+    `Olá! Gostaria de pagar por cartão de crédito o meu pedido da Caixinha Mercari.${nome?' Sou '+nome+' (@'+joiner.cog+').':''} Pode me enviar o link de pagamento?`
+  );
+  document.getElementById('btn-cartao-wa').href = `https://wa.me/${WA}?text=${msg}`;
 }
 
 function toggleSemComp() {
@@ -610,14 +578,9 @@ function checkForm() {
     const jpy=parseFloat(document.getElementById('jpy-'+id)?.value)||0;
     if(!link||jpy<=0) itemsOk=false;
   });
-  let pagOk = false;
-  if(metodo==='pix') {
-    const file=document.getElementById('f-comp').files[0];
-    const idPix=(document.getElementById('f-id-pix')?.value||'').trim();
-    pagOk = semComp ? idPix.length>0 : !!file;
-  } else {
-    pagOk = true; // cartão: sem comprovante obrigatório
-  }
+  const file=document.getElementById('f-comp').files[0];
+  const idPix=(document.getElementById('f-id-pix')?.value||'').trim();
+  const pagOk = semComp ? idPix.length>0 : !!file;
   document.getElementById('btn-enviar').disabled=!(joiner&&itemsOk&&allChecked()&&pagOk);
 }
 
@@ -641,7 +604,7 @@ async function enviar() {
 
   let comprovante_url=null;
   const file=document.getElementById('f-comp').files[0];
-  if(file && metodo==='pix' && !semComp) {
+  if(file && !semComp) {
     try {
       const ext=file.name.split('.').pop()||'jpg';
       const path=`${joiner.cog}_${Date.now()}.${ext}`;
@@ -652,9 +615,7 @@ async function enviar() {
     } catch {}
   }
 
-  const idTransacao = metodo==='pix'
-    ? (document.getElementById('f-id-pix')?.value||'').trim()
-    : (document.getElementById('f-id-cartao')?.value||'').trim();
+  const idTransacao=(document.getElementById('f-id-pix')?.value||'').trim();
 
   try {
     const res=await fetch(`${SUPA}/rest/v1/mercari_pedidos`,{
@@ -665,9 +626,9 @@ async function enviar() {
         itens,valor_jpy_total:Math.round(totJ),
         valor_brl_total:parseFloat(totB.toFixed(2)),
         taxa_cambio:fx(),comprovante_url,
-        metodo_pagamento:metodo,
+        metodo_pagamento:'pix',
         id_transacao:idTransacao||null,
-        status: metodo==='cartao' ? 'aguardando_link' : 'pendente'
+        status:'pendente'
       })
     });
     if(!res.ok) throw new Error(await res.text());
@@ -695,7 +656,7 @@ function copiarPix(btn) {
 
 function novoPedido() {
   document.getElementById('items-list').innerHTML='';
-  itemIdx=0; joiner=null; metodo='pix'; semComp=false;
+  itemIdx=0; joiner=null; semComp=false;
   document.getElementById('id-in').value='';
   document.getElementById('id-in').className='id-input';
   document.getElementById('id-status').textContent='';
@@ -705,10 +666,6 @@ function novoPedido() {
   document.getElementById('f-comp-name').style.display='none';
   document.getElementById('total-bar').style.display='none';
   document.getElementById('bloco-id-pix').style.display='none';
-  document.getElementById('bloco-pix').style.display='block';
-  document.getElementById('bloco-cartao').style.display='none';
-  document.getElementById('btn-pix').classList.add('active');
-  document.getElementById('btn-cartao').classList.remove('active');
   document.getElementById('btn-sem-comp').textContent='Não consigo anexar o comprovante →';
   document.querySelector('.file-label').style.opacity='1';
   [1,2,3,4].forEach(n=>{ document.getElementById('ck'+n).checked=false; document.getElementById('ck'+n).closest('.check-item').classList.remove('on'); });
