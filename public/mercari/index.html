@@ -514,7 +514,7 @@ function calcItem(id) {
   const jpy=parseFloat(document.getElementById('jpy-'+id)?.value)||0;
   const brlEl=document.getElementById('brl-'+id);
   if(brlEl) brlEl.value=jpy>0?'R$ '+fmtBRL(calcBRL(jpy)):'';
-  updateTotal(); checkForm();
+  updateTotal(); checkForm(); atualizarLinkCartao();
 }
 
 function recalcAll() {
@@ -543,8 +543,31 @@ let semComp = false;
 
 function atualizarLinkCartao() {
   const nome = joiner ? (joiner.nome||joiner.cog) : '';
+
+  // calcula totais dos itens preenchidos
+  let totJ=0, totB=0, linhasItens='';
+  document.querySelectorAll('.item-card').forEach((c,i)=>{
+    const id=c.id.replace('item-','');
+    const nomeItem=(document.getElementById('nome-'+id)?.value||'').trim();
+    const link=(document.getElementById('link-'+id)?.value||'').trim();
+    const jpy=parseFloat(document.getElementById('jpy-'+id)?.value)||0;
+    const brl=calcBRL(jpy);
+    if(link||jpy>0){
+      totJ+=jpy; totB+=brl;
+      linhasItens+=`\nItem ${i+1}${nomeItem?' — '+nomeItem:''}: ¥${jpy.toLocaleString('pt-BR')} → R$ ${fmtBRL(brl)}${link?'\n'+link:''}`;
+    }
+  });
+
+  const valorTexto = totJ>0
+    ? `\n\nValor total: ¥${Math.round(totJ).toLocaleString('pt-BR')} · R$ ${fmtBRL(totB)}`
+    : '';
+
   const msg = encodeURIComponent(
-    `Olá! Gostaria de pagar por cartão de crédito o meu pedido da Caixinha Mercari.${nome?' Sou '+nome+' (@'+joiner.cog+').':''} Pode me enviar o link de pagamento?`
+    `Olá! Gostaria de pagar por cartão de crédito o meu pedido da Caixinha Mercari.`+
+    (nome ? ` Sou ${nome} (@${joiner.cog}).` : '')+
+    (linhasItens ? `\n${linhasItens}` : '')+
+    valorTexto+
+    `\n\nPode me enviar o link de pagamento?`
   );
   document.getElementById('btn-cartao-wa').href = `https://wa.me/${WA}?text=${msg}`;
 }
