@@ -6515,24 +6515,43 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                   {p.status}
                 </span>
               </div>
-              {p.nome_item && <div style={{ fontSize:12, color:"var(--offwhite)", marginBottom:3 }}>{p.nome_item}</div>}
-              <a href={p.link_item} target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"rgba(100,181,246,.8)", fontFamily:"'DM Mono',monospace", wordBreak:"break-all" }}>
-                {p.link_item}
-              </a>
-              <div style={{ display:"flex", gap:14, marginTop:6, flexWrap:"wrap" }}>
-                <span style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>
-                  ¥{(p.valor_jpy||0).toLocaleString("pt-BR")} · Qtd {p.quantidade||1}
-                </span>
-                {p.valor_brl_estimado > 0 && (
-                  <span style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>
-                    ≈ R$ {pf(p.valor_brl_estimado).toLocaleString("pt-BR", { minimumFractionDigits:2 })}
+              {Array.isArray(p.itens) && p.itens.map((it, i) => (
+                <div key={i} style={{ background:"rgba(0,0,0,.2)", border:"1px solid rgba(245,240,232,.06)", borderRadius:7, padding:"8px 12px", marginTop:i===0?6:4 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>item {i+1}</span>
+                    {it.nome && <span style={{ fontSize:12, color:"var(--offwhite)", fontWeight:600 }}>{it.nome}</span>}
+                    <span style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", fontWeight:700, marginLeft:"auto" }}>
+                      ¥{(it.valor_jpy||0).toLocaleString("pt-BR")} → R$ {pf(it.valor_brl).toLocaleString("pt-BR",{minimumFractionDigits:2})}
+                    </span>
+                  </div>
+                  {it.link && (
+                    <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(100,181,246,.7)", fontFamily:"'DM Mono',monospace", wordBreak:"break-all", display:"block", marginTop:3 }}>
+                      {it.link}
+                    </a>
+                  )}
+                </div>
+              ))}
+              <div style={{ display:"flex", gap:14, marginTop:8, flexWrap:"wrap", alignItems:"center" }}>
+                {p.valor_jpy_total > 0 && (
+                  <span style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>
+                    Total ¥{(p.valor_jpy_total||0).toLocaleString("pt-BR")}
                   </span>
                 )}
-                <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+                {p.valor_brl_total > 0 && (
+                  <span style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>
+                    R$ {pf(p.valor_brl_total).toLocaleString("pt-BR", { minimumFractionDigits:2 })}
+                  </span>
+                )}
+                {p.comprovante_url && (
+                  <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize:10, color:"#4ecb71", fontFamily:"'DM Mono',monospace", fontWeight:700, textDecoration:"none", background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.25)", borderRadius:4, padding:"2px 8px" }}>
+                    📎 comprovante
+                  </a>
+                )}
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>
                   {new Date(p.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
                 </span>
               </div>
-              {p.obs && <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:5, lineHeight:1.5 }}>Obs: {p.obs}</div>}
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
               {p.status === "pendente" && (
