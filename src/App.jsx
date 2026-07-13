@@ -1051,6 +1051,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [avisosModal, setAvisosModal] = useState(false);
   const [avisosHistorico, setAvisosHistorico] = useState(null);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [acoes, setAcoes] = useState(null);
+  const [loadingAcoes, setLoadingAcoes] = useState(false);
   const [envioByItem,      setEnvioByItem]      = useState({});
   const [showFinalizados,  setShowFinalizados]  = useState(false);
 
@@ -1438,6 +1440,61 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   </div>
                 </>
               )}
+            </div>
+
+            {/* Histórico de ações */}
+            {!user.guest && !user.pre_cadastro && (
+              <div style={{ marginTop:16, paddingTop:16, borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                {acoes === null ? (
+                  <button onClick={async () => {
+                    setLoadingAcoes(true);
+                    const fmtDt = s => new Date(s).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+                    const ev = [];
+                    const [reps, envios, mercs, fbs] = await Promise.all([
+                      supabase.from("reports").select("id,created_at,nome_item,ceg").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
+                      supabase.from("envio_solicitacoes").select("id,created_at,status,itens").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
+                      supabase.from("mercari_pedidos").select("id,created_at,valor_jpy_total,valor_brl_total,itens,status").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
+                      supabase.from("feedbacks").select("id,created_at,mensagem").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
+                    ]);
+                    (reps.data||[]).forEach(r => ev.push({ id:"r"+r.id, at:r.created_at, icon:"🐛", cor:"rgba(255,107,107,.7)", label:"Report enviado", sub: r.nome_item ? `${r.nome_item}${r.ceg ? " · "+r.ceg : ""}` : null }));
+                    (envios.data||[]).forEach(e => {
+                      const nIt = Array.isArray(e.itens) ? e.itens.length : 0;
+                      ev.push({ id:"e"+e.id, at:e.created_at, icon:"📦", cor:"rgba(100,181,246,.7)", label:"Solicitação de envio", sub: [nIt>0?`${nIt} item${nIt!==1?"s":""}`:null, e.status?e.status.charAt(0).toUpperCase()+e.status.slice(1):null].filter(Boolean).join(" · ")||null });
+                    });
+                    (mercs.data||[]).forEach(m => {
+                      const nItens = Array.isArray(m.itens) ? m.itens.length : 0;
+                      ev.push({ id:"m"+m.id, at:m.created_at, icon:"🎌", cor:"rgba(240,192,64,.7)", label:"Pedido Mercari", sub: `${nItens} item${nItens!==1?"s":""} · ¥${(m.valor_jpy_total||0).toLocaleString("pt-BR")}${m.valor_brl_total?" · R$ "+parseFloat(m.valor_brl_total).toLocaleString("pt-BR",{minimumFractionDigits:2}):""}` });
+                    });
+                    (fbs.data||[]).forEach(f => ev.push({ id:"f"+f.id, at:f.created_at, icon:"💬", cor:"rgba(186,255,57,.6)", label:"Feedback enviado", sub: f.mensagem ? f.mensagem.slice(0,60)+(f.mensagem.length>60?"…":"") : null }));
+                    ev.sort((a,b) => new Date(b.at)-new Date(a.at));
+                    setAcoes(ev);
+                    setLoadingAcoes(false);
+                  }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, letterSpacing:".03em" }}>
+                    {loadingAcoes ? "carregando..." : "↓ ver histórico de ações"}
+                  </button>
+                ) : acoes.length === 0 ? (
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhuma ação registrada ainda.</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:10 }}>Histórico de ações</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {acoes.map(a => (
+                        <div key={a.id} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"10px 12px", background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.05)", borderRadius:8 }}>
+                          <span style={{ fontSize:15, flexShrink:0, marginTop:1 }}>{a.icon}</span>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:12, color:a.cor, fontFamily:"'DM Mono',monospace", fontWeight:700 }}>{a.label}</div>
+                            {a.sub && <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.sub}</div>}
+                          </div>
+                          <div style={{ fontSize:9, color:"rgba(245,240,232,.22)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginTop:2, whiteSpace:"nowrap" }}>
+                            {new Date(a.at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             </div>
             </div> {/* fim conteúdo rolável */}
           </div>
