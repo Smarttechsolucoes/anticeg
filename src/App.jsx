@@ -4637,6 +4637,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [joinersData, setJoinersData] = useState(null);
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [preCadastros, setPreCadastros] = useState([]);
+  const [mercariPedidos, setMercariPedidos] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
   const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
@@ -4820,6 +4821,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setPagDemandas(data); });
     supabase.from("repassos").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setAdminRepassos(data || []); });
+    supabase.from("mercari_pedidos").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setMercariPedidos(data); });
   }, []);
 
   // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
@@ -4995,6 +4998,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
+                {nav("mercari", "Mercari", "🎌", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -5568,6 +5572,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             </div>
           )}
         </div>
+      )}
+
+      {adminMainTab === "mercari" && (
+        <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
       {adminMainTab === "agenda" && owner && (
@@ -6457,6 +6465,96 @@ function AdminLinks() {
           </div>
           <button onClick={() => toggleAtivo(l)} style={{ background: "none", border: `1px solid ${l.ativo ? "rgba(74,222,128,.3)" : "rgba(245,240,232,.12)"}`, color: l.ativo ? "#4ade80" : "rgba(245,240,232,.3)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>{l.ativo ? "ON" : "OFF"}</button>
           <button onClick={() => handleDelete(l.id)} style={{ background: "none", border: "1px solid rgba(255,90,31,.2)", color: "rgba(255,90,31,.6)", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontFamily: "'DM Mono',monospace", cursor: "pointer" }}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminMercari({ pedidos = [], onUpdate }) {
+  const STATUS_COLOR = { pendente:"#BAFF39", aprovado:"#64B5F6", recusado:"#ff6b6b", pago:"#C9A8F0" };
+  const STATUS_BG    = { pendente:"rgba(186,255,57,.08)", aprovado:"rgba(100,181,246,.08)", recusado:"rgba(255,107,107,.06)", pago:"rgba(201,168,240,.08)" };
+  const STATUS_BORDER= { pendente:"rgba(186,255,57,.2)", aprovado:"rgba(100,181,246,.2)", recusado:"rgba(255,107,107,.15)", pago:"rgba(201,168,240,.2)" };
+  const [filtro, setFiltro] = useState("pendente");
+  const [carregando, setCarregando] = useState(null);
+
+  const lista = filtro === "todos" ? pedidos : pedidos.filter(p => p.status === filtro);
+
+  async function mudarStatus(p, novoStatus) {
+    setCarregando(p.id);
+    await supabase.from("mercari_pedidos").update({ status: novoStatus }).eq("id", p.id);
+    onUpdate(prev => prev.map(x => x.id === p.id ? { ...x, status: novoStatus } : x));
+    setCarregando(null);
+  }
+
+  const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+        {["pendente","aprovado","pago","recusado","todos"].map(s => (
+          <button key={s} onClick={() => setFiltro(s)}
+            style={{ padding:"5px 14px", borderRadius:20, border:`1px solid ${filtro===s ? STATUS_COLOR[s]||"rgba(245,240,232,.4)" : "rgba(245,240,232,.12)"}`, background: filtro===s ? (STATUS_BG[s]||"rgba(245,240,232,.06)") : "transparent", color: filtro===s ? (STATUS_COLOR[s]||"var(--offwhite)") : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", textTransform:"uppercase", letterSpacing:".08em" }}>
+            {s} {s !== "todos" && <span>({pedidos.filter(p => p.status === s).length})</span>}
+          </button>
+        ))}
+      </div>
+
+      {lista.length === 0 ? (
+        <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", padding:"20px 0" }}>
+          Nenhum pedido {filtro !== "todos" ? filtro : ""}.
+        </div>
+      ) : lista.map(p => (
+        <div key={p.id} style={{ background:"var(--card-bg)", border:`1px solid ${STATUS_BORDER[p.status]||"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px", marginBottom:8 }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10, flexWrap:"wrap" }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{p.joiner_nome}</span>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>@{p.joiner_cog}</span>
+                <span style={{ fontSize:9, color: STATUS_COLOR[p.status]||"rgba(245,240,232,.4)", background: STATUS_BG[p.status]||"rgba(245,240,232,.06)", border:`1px solid ${STATUS_BORDER[p.status]||"rgba(245,240,232,.1)"}`, borderRadius:4, padding:"1px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, textTransform:"uppercase" }}>
+                  {p.status}
+                </span>
+              </div>
+              {p.nome_item && <div style={{ fontSize:12, color:"var(--offwhite)", marginBottom:3 }}>{p.nome_item}</div>}
+              <a href={p.link_item} target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"rgba(100,181,246,.8)", fontFamily:"'DM Mono',monospace", wordBreak:"break-all" }}>
+                {p.link_item}
+              </a>
+              <div style={{ display:"flex", gap:14, marginTop:6, flexWrap:"wrap" }}>
+                <span style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>
+                  ¥{(p.valor_jpy||0).toLocaleString("pt-BR")} · Qtd {p.quantidade||1}
+                </span>
+                {p.valor_brl_estimado > 0 && (
+                  <span style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>
+                    ≈ R$ {pf(p.valor_brl_estimado).toLocaleString("pt-BR", { minimumFractionDigits:2 })}
+                  </span>
+                )}
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
+                  {new Date(p.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
+                </span>
+              </div>
+              {p.obs && <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:5, lineHeight:1.5 }}>Obs: {p.obs}</div>}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
+              {p.status === "pendente" && (
+                <>
+                  <button onClick={() => mudarStatus(p, "aprovado")} disabled={carregando === p.id}
+                    style={{ background:"rgba(100,181,246,.1)", border:"1px solid rgba(100,181,246,.3)", color:"#64B5F6", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
+                    {carregando === p.id ? "..." : "✓ Aprovar"}
+                  </button>
+                  <button onClick={() => mudarStatus(p, "recusado")} disabled={carregando === p.id}
+                    style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                    ✗ Recusar
+                  </button>
+                </>
+              )}
+              {p.status === "aprovado" && (
+                <button onClick={() => mudarStatus(p, "pago")} disabled={carregando === p.id}
+                  style={{ background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
+                  {carregando === p.id ? "..." : "✓ Marcar pago"}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       ))}
     </div>

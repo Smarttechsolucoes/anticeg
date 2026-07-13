@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mercari — Calculadora</title>
+<title>Mercari — ANTICEG</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,12 +24,7 @@
     --accent-line: #e85c1a;
   }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Barlow', sans-serif;
-    min-height: 100vh;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; min-height: 100vh; }
 
   /* HEADER */
   header {
@@ -39,310 +34,179 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
   }
-
   .header-title h1 {
     font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    font-size: 42px;
-    letter-spacing: .02em;
-    line-height: 1;
-    text-transform: uppercase;
-    color: var(--text);
+    font-weight: 800; font-size: 42px; letter-spacing: .02em; line-height: 1;
+    text-transform: uppercase; color: var(--text);
   }
-
   .header-title p {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
-    letter-spacing: .18em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-top: 3px;
+    font-size: 12px; letter-spacing: .18em; color: var(--muted);
+    text-transform: uppercase; margin-top: 3px;
   }
-
   .btn-edit {
-    background: transparent;
-    border: 1.5px solid var(--text);
-    border-radius: 999px;
-    color: var(--text);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: .06em;
-    padding: 8px 20px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: background .15s, color .15s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    background: transparent; border: 1.5px solid var(--text); border-radius: 999px;
+    color: var(--text); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: .06em; padding: 8px 20px;
+    cursor: pointer; text-transform: uppercase; transition: background .15s, color .15s;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
   }
   .btn-edit:hover { background: var(--text); color: var(--bg); }
 
+  /* TABS */
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 40px;
+  }
+  .tab-btn {
+    background: none; border: none; border-bottom: 3px solid transparent;
+    color: var(--muted); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    padding: 14px 20px; cursor: pointer; transition: color .15s, border-color .15s;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+
   /* MODAL */
   .modal-backdrop {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.7);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 100;
+    align-items: center; justify-content: center;
   }
   .modal-backdrop.open { display: flex; }
-  .modal {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 28px 32px;
-    width: 320px;
-  }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; width: 320px; }
   .modal h3 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-    color: var(--yellow);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; margin-bottom: 20px; color: var(--yellow);
   }
-  .modal label {
-    display: block;
-    font-size: 11px;
-    letter-spacing: .1em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 5px;
-    margin-top: 14px;
-  }
-  .modal input {
-    width: 100%;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 20px;
-    padding: 8px 12px;
-  }
+  .modal label { display: block; font-size: 11px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; margin-top: 14px; }
+  .modal input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 20px; padding: 8px 12px; }
   .modal input:focus { outline: none; border-color: var(--orange); }
   .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-  .btn-save {
-    flex: 1; background: var(--orange); border: none; border-radius: 6px;
-    color: #fff; font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px; font-weight: 700; letter-spacing: .06em;
-    padding: 10px; cursor: pointer; text-transform: uppercase;
-    transition: background .15s;
-  }
+  .btn-save { flex: 1; background: var(--orange); border: none; border-radius: 6px; color: #fff; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: .06em; padding: 10px; cursor: pointer; text-transform: uppercase; transition: background .15s; }
   .btn-save:hover { background: var(--orange-light); }
-  .btn-cancel {
-    flex: 1; background: transparent; border: 1px solid var(--border); border-radius: 6px;
-    color: var(--muted); font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px; font-weight: 600; letter-spacing: .06em;
-    padding: 10px; cursor: pointer; text-transform: uppercase;
-    transition: border-color .15s;
-  }
+  .btn-cancel { flex: 1; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: .06em; padding: 10px; cursor: pointer; text-transform: uppercase; transition: border-color .15s; }
   .btn-cancel:hover { border-color: var(--text); color: var(--text); }
 
   /* MAIN */
   main { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
   /* SECTION LABEL */
   .section-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: .18em;
-    color: var(--muted);
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .18em; color: var(--muted); text-transform: uppercase;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
   }
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
   /* INPUTS */
-  .input-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-
-  .input-group { display: flex; flex-direction: column; gap: 6px; }
-
-  .input-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .input-wrapper {
-    position: relative;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    transition: border-color .15s;
-  }
+  .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+  .input-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .input-wrapper { position: relative; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; transition: border-color .15s; }
   .input-wrapper:focus-within { border-color: var(--orange); }
+  .input-wrapper input { background: transparent; border: none; color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 700; padding: 14px 16px; width: 100%; outline: none; }
+  .input-wrapper .unit { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 600; color: var(--orange); padding-right: 16px; }
+  .input-hint { font-size: 12px; color: var(--muted); }
 
-  .input-wrapper input {
-    background: transparent;
-    border: none;
-    color: var(--text);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    font-weight: 700;
-    padding: 14px 16px;
-    width: 100%;
-    outline: none;
+  /* FORM FIELDS */
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .field input, .field textarea, .field select {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'Barlow', sans-serif; font-size: 14px;
+    padding: 12px 14px; outline: none; transition: border-color .15s; width: 100%;
   }
-  .input-wrapper .unit {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--orange);
-    padding-right: 16px;
-  }
-  .input-hint {
-    font-size: 12px;
-    color: var(--muted);
-  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--orange); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field .hint { font-size: 11px; color: var(--muted); }
 
   /* RESULT CARD */
-  .result-card {
-    background: var(--orange);
-    border-radius: 12px;
-    padding: 24px 28px;
-  }
-
-  .card-tag {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.7);
-    margin-bottom: 6px;
-  }
-
-  .cost-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.7);
-    margin-bottom: 2px;
-  }
-
-  .big-price {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    line-height: 1;
-    color: #fff;
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    margin-bottom: 20px;
-  }
+  .result-card { background: var(--orange); border-radius: 12px; padding: 24px 28px; }
+  .card-tag { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.7); margin-bottom: 6px; }
+  .cost-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.7); margin-bottom: 2px; }
+  .big-price { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; line-height: 1; color: #fff; display: flex; align-items: baseline; gap: 4px; margin-bottom: 20px; }
   .big-price .currency { font-size: 18px; opacity: .8; }
   .big-price .amount { font-size: 56px; }
-
   .detail-rows { margin-bottom: 20px; }
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,.12);
-    font-size: 14px;
-  }
+  .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.12); font-size: 14px; }
   .detail-row:last-child { border-bottom: none; }
   .detail-row .dl { color: rgba(255,255,255,.75); }
   .detail-row .dv { font-weight: 600; color: #fff; }
-  .detail-row .dv.pos { color: #fff; }
-
-  .sell-block {
-    background: rgba(0,0,0,.25);
-    border-radius: 8px;
-    padding: 16px 20px;
-    margin-top: 4px;
-  }
-
-  .sell-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.6);
-    margin-bottom: 2px;
-  }
-
-  .sell-price {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    line-height: 1;
-    color: #fff;
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    margin-bottom: 14px;
-  }
+  .sell-block { background: rgba(0,0,0,.25); border-radius: 8px; padding: 16px 20px; margin-top: 4px; }
+  .sell-label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.6); margin-bottom: 2px; }
+  .sell-price { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; line-height: 1; color: #fff; display: flex; align-items: baseline; gap: 4px; margin-bottom: 14px; }
   .sell-price .currency { font-size: 14px; opacity: .7; }
   .sell-price .amount { font-size: 40px; }
 
-  .sell-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 5px 0;
-    border-bottom: 1px solid rgba(255,255,255,.1);
-    font-size: 13px;
+  /* PIX CARD */
+  .pix-card {
+    background: var(--bg2); border: 1.5px solid var(--green); border-radius: 12px;
+    padding: 20px 24px; margin-top: 20px;
   }
-  .sell-row:last-child { border-bottom: none; }
-  .sell-row .sl { color: rgba(255,255,255,.65); }
-  .sell-row .sv { font-weight: 600; }
-  .sell-row .sv.green { color: #a8ffbe; }
-  .sell-row .sv.white { color: #fff; }
+  .pix-card .pix-title { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+  .pix-card .pix-name { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .pix-key-row { display: flex; gap: 8px; align-items: center; }
+  .pix-key { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-copy { background: rgba(78,203,113,.15); border: 1px solid rgba(78,203,113,.4); border-radius: 6px; color: var(--green); font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .06em; padding: 10px 16px; cursor: pointer; white-space: nowrap; transition: background .15s; }
+  .btn-copy:hover { background: rgba(78,203,113,.25); }
+  .btn-wa { display: block; text-align: center; margin-top: 12px; padding: 12px; background: rgba(78,203,113,.12); border: 1px solid rgba(78,203,113,.3); border-radius: 8px; color: var(--green); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-decoration: none; text-transform: uppercase; transition: background .15s; }
+  .btn-wa:hover { background: rgba(78,203,113,.22); }
+
+  /* BUTTONS */
+  .btn-primary { width: 100%; background: var(--orange); border: none; border-radius: 8px; color: #fff; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: .08em; padding: 14px; cursor: pointer; text-transform: uppercase; transition: background .15s; margin-top: 8px; }
+  .btn-primary:hover { background: var(--orange-light); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .btn-secondary { width: 100%; background: transparent; border: 1.5px solid var(--border); border-radius: 8px; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: .06em; padding: 11px; cursor: pointer; text-transform: uppercase; transition: border-color .15s, color .15s; margin-top: 8px; }
+  .btn-secondary:hover { border-color: var(--text); color: var(--text); }
+
+  /* CARDS */
+  .step-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .step-tag { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--orange); margin-bottom: 8px; }
+  .step-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .step-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+
+  /* ESTIMATE MINI */
+  .estimate-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+  .estimate-label { font-size: 12px; color: var(--muted); }
+  .estimate-value { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--orange); }
+
+  /* SUCCESS */
+  .success-card { background: var(--bg2); border: 2px solid var(--green); border-radius: 14px; padding: 32px 28px; text-align: center; }
+  .success-icon { font-size: 48px; margin-bottom: 16px; }
+  .success-title { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .success-sub { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+
+  /* ERROR / INFO */
+  .error-msg { background: rgba(232,80,80,.1); border: 1px solid rgba(232,80,80,.3); border-radius: 8px; color: #ff8080; font-size: 12px; padding: 10px 14px; margin-top: 8px; }
+  .info-msg { background: rgba(240,192,64,.08); border: 1px solid rgba(240,192,64,.25); border-radius: 8px; color: var(--yellow); font-size: 12px; padding: 10px 14px; margin-top: 8px; }
+
+  /* JOINER TAG */
+  .joiner-tag { display: flex; align-items: center; gap: 12px; background: var(--bg3); border: 1px solid rgba(78,203,113,.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
+  .joiner-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .joiner-name { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
+  .joiner-cog { font-size: 11px; color: var(--muted); }
+  .btn-trocar { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; margin-left: auto; text-decoration: underline; }
+  .btn-trocar:hover { color: var(--text); }
 
   /* DISCLAIMER */
-  .disclaimer {
-    margin-top: 20px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
+  .disclaimer { margin-top: 20px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.6; }
 
   /* FOOTER */
-  footer {
-    text-align: center;
-    padding: 24px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
-    letter-spacing: .12em;
-    color: var(--muted);
-    text-transform: uppercase;
-    border-top: 1px solid var(--border);
-  }
+  footer { text-align: center; padding: 24px; font-family: 'Barlow Condensed', sans-serif; font-size: 12px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; border-top: 1px solid var(--border); }
 
   @media (max-width: 600px) {
     header { padding: 14px 20px; }
     .header-title h1 { font-size: 30px; }
+    .tab-bar { padding: 0 16px; }
     main { padding: 24px 16px 48px; }
-    .input-grid { grid-template-columns: 1fr; }
     .big-price .amount { font-size: 44px; }
   }
 </style>
@@ -352,14 +216,14 @@
 <header>
   <div class="header-title">
     <h1>Mercari</h1>
-    <p>Calculadora de compra</p>
+    <p>Compras no Japão · ANTICEG</p>
   </div>
   <button class="btn-edit" onclick="document.getElementById('modal').classList.add('open')">
     ✎ Editar Câmbio
   </button>
 </header>
 
-<!-- MODAL -->
+<!-- MODAL CÂMBIO -->
 <div class="modal-backdrop" id="modal">
   <div class="modal">
     <h3>Editar Câmbio</h3>
@@ -372,12 +236,18 @@
   </div>
 </div>
 
+<!-- TABS -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('calc')">⬡ Calculadora</button>
+  <button class="tab-btn" onclick="switchTab('pedido')">◈ Fazer Pedido</button>
+</nav>
+
 <main>
-
-  <div class="section-label">Entrada</div>
-
   <input type="hidden" id="fxInput" value="0.03141">
-  <div class="input-grid" style="grid-template-columns:1fr">
+
+  <!-- ── ABA CALCULADORA ── -->
+  <div class="tab-content active" id="tab-calc">
+    <div class="section-label">Entrada</div>
     <div class="input-group">
       <span class="input-label">Valor do item — JPY ¥</span>
       <div class="input-wrapper">
@@ -386,69 +256,167 @@
       </div>
       <span class="input-hint" id="fx-hint">¥ 1 = R$ 0,03141</span>
     </div>
-  </div>
 
-  <div class="section-label">Resultado</div>
-
-  <div class="result-card">
-    <div class="card-tag">Mercari JP</div>
-
-    <div class="detail-rows">
-      <div class="detail-row">
-        <span class="dl">valor do item (¥)</span>
-        <span class="dv" id="r-item-jpy">—</span>
+    <div class="section-label">Resultado</div>
+    <div class="result-card">
+      <div class="card-tag">Mercari JP</div>
+      <div class="detail-rows">
+        <div class="detail-row"><span class="dl">valor do item (¥)</span><span class="dv" id="r-item-jpy">—</span></div>
+        <div class="detail-row"><span class="dl">taxa de serviço (¥)</span><span class="dv" id="r-fee-jpy">—</span></div>
+        <div class="detail-row"><span class="dl">total em iene</span><span class="dv" id="r-total-jpy">—</span></div>
+        <div class="detail-row"><span class="dl">câmbio aplicado</span><span class="dv" id="r-fx">—</span></div>
       </div>
-      <div class="detail-row">
-        <span class="dl">taxa de serviço (¥)</span>
-        <span class="dv" id="r-fee-jpy">—</span>
-      </div>
-      <div class="detail-row">
-        <span class="dl">total em iene</span>
-        <span class="dv" id="r-total-jpy">—</span>
-      </div>
-      <div class="detail-row">
-        <span class="dl">câmbio aplicado</span>
-        <span class="dv" id="r-fx">—</span>
+      <div class="sell-block">
+        <div class="sell-label">Preço ao joiner</div>
+        <div class="sell-price">
+          <span class="currency">R$</span>
+          <span class="amount" id="r-sell-brl">—</span>
+        </div>
       </div>
     </div>
 
-    <div class="sell-block">
-      <div class="sell-label">Preço ao joiner</div>
-      <div class="sell-price">
-        <span class="currency">R$</span>
-        <span class="amount" id="r-sell-brl">—</span>
-      </div>
-    </div>
+    <p class="disclaimer">A calculadora é uma projeção de pagamento e pode não refletir no valor final a ser pago.</p>
   </div>
 
-  <p class="disclaimer">
-    A calculadora é uma projeção de pagamento e pode não refletir no valor final a ser pago.
-  </p>
+  <!-- ── ABA FAZER PEDIDO ── -->
+  <div class="tab-content" id="tab-pedido">
+
+    <!-- STEP 1: LOGIN -->
+    <div id="step-login">
+      <div class="step-card">
+        <div class="step-tag">Passo 1 de 2</div>
+        <div class="step-title">Identificação</div>
+        <div class="step-sub">Informe seu @ da rede social ou e-mail cadastrado na ANTICEG.</div>
+        <div class="field">
+          <label>@ ou e-mail</label>
+          <input type="text" id="login-input" placeholder="ex: @seuhandle ou email@..." onkeydown="if(event.key==='Enter')buscarJoiner()">
+        </div>
+        <div id="login-error" class="error-msg" style="display:none"></div>
+        <button class="btn-primary" onclick="buscarJoiner()" id="login-btn">Verificar →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: FORM (hidden initially) -->
+    <div id="step-form" style="display:none">
+
+      <!-- Tag joiner logada -->
+      <div class="joiner-tag">
+        <div class="joiner-dot"></div>
+        <div>
+          <div class="joiner-name" id="joiner-nome-tag">—</div>
+          <div class="joiner-cog" id="joiner-cog-tag">—</div>
+        </div>
+        <button class="btn-trocar" onclick="trocarJoiner()">trocar →</button>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag">Passo 2 de 2</div>
+        <div class="step-title">Dados do pedido</div>
+        <div class="step-sub">Cole o link do item que você quer do Mercari e preencha os dados abaixo.</div>
+
+        <div class="field">
+          <label>Link do item no Mercari *</label>
+          <input type="url" id="f-link" placeholder="https://jp.mercari.com/item/..." oninput="checkForm()">
+        </div>
+
+        <div class="field">
+          <label>Nome / descrição do item</label>
+          <input type="text" id="f-nome" placeholder="ex: BTS Butter PC Jungkook" oninput="checkForm()">
+        </div>
+
+        <div class="field">
+          <label>Valor do item em ienes (¥) *</label>
+          <input type="number" id="f-jpy" min="1" step="1" placeholder="ex: 3500" oninput="calcPedido(); checkForm()">
+          <span class="hint">Use a aba Calculadora para conferir o valor antes</span>
+        </div>
+
+        <!-- Estimativa em tempo real -->
+        <div class="estimate-row" id="estimate-row" style="display:none">
+          <span class="estimate-label">Estimativa em reais</span>
+          <span class="estimate-value" id="estimate-brl">—</span>
+        </div>
+
+        <div class="field">
+          <label>Quantidade</label>
+          <input type="number" id="f-qty" value="1" min="1" max="99" step="1">
+        </div>
+
+        <div class="field">
+          <label>Observações</label>
+          <textarea id="f-obs" placeholder="variação, cor, tamanho, urgência, etc."></textarea>
+        </div>
+
+        <div id="form-error" class="error-msg" style="display:none"></div>
+        <button class="btn-primary" id="submit-btn" onclick="enviarPedido()" disabled>Enviar pedido →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: SUCESSO (hidden initially) -->
+    <div id="step-sucesso" style="display:none">
+      <div class="success-card">
+        <div class="success-icon">🎌</div>
+        <div class="success-title">Pedido enviado!</div>
+        <div class="success-sub">
+          Sua solicitação foi recebida.<br>
+          A GOM vai verificar o item e te avisar sobre aprovação e valor final.
+        </div>
+
+        <!-- PIX -->
+        <div class="pix-card" style="text-align:left">
+          <div class="pix-title">✦ Pagamento via PIX</div>
+          <div class="pix-name">Fernanda Gomes Medeiros · Mercado Pago</div>
+          <div class="pix-key-row">
+            <div class="pix-key">de1a489d-db81-4864-a8cf-74cdd79d9cdc</div>
+            <button class="btn-copy" onclick="copiarPix()">Copiar</button>
+          </div>
+          <div class="info-msg" style="margin-top:12px">⏳ Aguarde a confirmação da GOM antes de pagar — o valor final pode variar.</div>
+        </div>
+
+        <!-- WhatsApp comprovante -->
+        <a id="wa-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-wa" style="margin-top:16px">
+          📎 Enviar comprovante no WhatsApp →
+        </a>
+
+        <button class="btn-secondary" onclick="novoPedido()" style="margin-top:12px">+ Fazer outro pedido</button>
+      </div>
+    </div>
+
+  </div>
+  <!-- fim tab-pedido -->
 
 </main>
 
-<footer>Calculadora Mercari</footer>
+<footer>Mercari · ANTICEG · compras no Japão</footer>
 
 <script>
-  function jpy(v) {
-    return '¥ ' + Math.round(v).toLocaleString('pt-BR');
+  const SUPA_URL = 'https://ghjfsmwwcfpfvrouyrka.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM';
+  const PIX_KEY  = 'de1a489d-db81-4864-a8cf-74cdd79d9cdc';
+  const WA       = '5524992782023';
+
+  let joiner = null;
+
+  /* ── TABS ── */
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='calc'&&i===0)||(tab==='pedido'&&i===1)));
+    document.getElementById('tab-calc').classList.toggle('active', tab === 'calc');
+    document.getElementById('tab-pedido').classList.toggle('active', tab === 'pedido');
   }
-  function brl(v) {
-    return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+
+  /* ── CALCULADORA ── */
+  function jpy(v) { return '¥ ' + Math.round(v).toLocaleString('pt-BR'); }
+  function brl(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
   function calc() {
     const item = parseFloat(document.getElementById('itemPrice').value) || 0;
     const fx   = parseFloat(document.getElementById('fxInput').value)   || 0;
-
     const subWithBuy = item + 100;
-    const payFee     = Math.round(subWithBuy * 0.08);
-    const cost       = subWithBuy + payFee;
-    const profit     = Math.round(cost * 0.08);
-    const total      = cost + profit;
-    const fee        = total - item;
-    const totalBRL   = total * fx;
-
+    const payFee = Math.round(subWithBuy * 0.08);
+    const cost   = subWithBuy + payFee;
+    const profit = Math.round(cost * 0.08);
+    const total  = cost + profit;
+    const fee    = total - item;
+    const totalBRL = total * fx;
     document.getElementById('r-item-jpy').textContent  = jpy(item);
     document.getElementById('r-fee-jpy').textContent   = jpy(fee);
     document.getElementById('r-total-jpy').textContent = jpy(total);
@@ -457,18 +425,159 @@
     document.getElementById('fx-hint').textContent     = '¥ 1 = R$ ' + fx.toFixed(5);
   }
 
+  function calcPedido() {
+    const item = parseFloat(document.getElementById('f-jpy').value) || 0;
+    const fx   = parseFloat(document.getElementById('fxInput').value) || 0;
+    if (item <= 0) { document.getElementById('estimate-row').style.display = 'none'; return; }
+    const subWithBuy = item + 100;
+    const payFee = Math.round(subWithBuy * 0.08);
+    const cost   = subWithBuy + payFee;
+    const profit = Math.round(cost * 0.08);
+    const total  = cost + profit;
+    const totalBRL = total * fx;
+    document.getElementById('estimate-brl').textContent = 'R$ ' + brl(totalBRL);
+    document.getElementById('estimate-row').style.display = 'flex';
+  }
+
   function saveFx() {
     const v = parseFloat(document.getElementById('modal-fx').value);
-    if (v > 0) {
-      document.getElementById('fxInput').value = v;
-      calc();
-    }
+    if (v > 0) { document.getElementById('fxInput').value = v; calc(); calcPedido(); }
     document.getElementById('modal').classList.remove('open');
   }
 
-  document.getElementById('modal').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('open');
-  });
+  document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+
+  /* ── LOGIN ── */
+  async function buscarJoiner() {
+    const input = document.getElementById('login-input').value.trim();
+    const errEl = document.getElementById('login-error');
+    const btn   = document.getElementById('login-btn');
+    if (!input) { errEl.textContent = 'Informe seu @ ou e-mail.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = '...';
+
+    const isEmail = input.includes('@') && input.indexOf('@') > 0;
+    let url;
+    if (isEmail) {
+      url = `${SUPA_URL}/rest/v1/joiners?select=cog,nome,email,whatsapp&email=eq.${encodeURIComponent(input.toLowerCase())}&limit=1`;
+    } else {
+      const handle = input.startsWith('@') ? input.slice(1) : input;
+      url = `${SUPA_URL}/rest/v1/joiners?select=cog,nome,email,whatsapp&twitter=ilike.%40${encodeURIComponent(handle)}&limit=1`;
+    }
+
+    try {
+      const res  = await fetch(url, { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` } });
+      const data = await res.json();
+      if (!data?.length) {
+        errEl.textContent = 'Cadastro não encontrado. Fale com a GOM pelo WhatsApp.';
+        errEl.style.display = 'block';
+      } else {
+        joiner = data[0];
+        document.getElementById('joiner-nome-tag').textContent = joiner.nome || joiner.cog;
+        document.getElementById('joiner-cog-tag').textContent  = '@' + joiner.cog;
+        document.getElementById('step-login').style.display = 'none';
+        document.getElementById('step-form').style.display  = 'block';
+      }
+    } catch(e) {
+      errEl.textContent = 'Erro de conexão. Tente novamente.';
+      errEl.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Verificar →';
+  }
+
+  function trocarJoiner() {
+    joiner = null;
+    document.getElementById('login-input').value = '';
+    document.getElementById('step-login').style.display = 'block';
+    document.getElementById('step-form').style.display  = 'none';
+    document.getElementById('login-error').style.display = 'none';
+  }
+
+  /* ── FORM VALIDATION ── */
+  function checkForm() {
+    const link = document.getElementById('f-link').value.trim();
+    const jpy  = parseFloat(document.getElementById('f-jpy').value) || 0;
+    document.getElementById('submit-btn').disabled = !(link && jpy > 0);
+  }
+
+  /* ── SUBMIT ── */
+  async function enviarPedido() {
+    const btn    = document.getElementById('submit-btn');
+    const errEl  = document.getElementById('form-error');
+    const link   = document.getElementById('f-link').value.trim();
+    const nome   = document.getElementById('f-nome').value.trim();
+    const jpyVal = parseFloat(document.getElementById('f-jpy').value) || 0;
+    const qty    = parseInt(document.getElementById('f-qty').value) || 1;
+    const obs    = document.getElementById('f-obs').value.trim();
+    const fx     = parseFloat(document.getElementById('fxInput').value) || 0;
+
+    const subWithBuy = jpyVal + 100;
+    const payFee = Math.round(subWithBuy * 0.08);
+    const cost   = subWithBuy + payFee;
+    const profit = Math.round(cost * 0.08);
+    const total  = cost + profit;
+    const brlEst = parseFloat((total * fx).toFixed(2));
+
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = '...';
+
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/mercari_pedidos`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`,
+          'Content-Type': 'application/json', Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({
+          joiner_cog: joiner.cog, joiner_nome: joiner.nome || joiner.cog,
+          link_item: link, nome_item: nome || null,
+          valor_jpy: jpyVal, valor_brl_estimado: brlEst,
+          taxa_cambio: fx, quantidade: qty,
+          obs: obs || null, status: 'pendente'
+        })
+      });
+      if (!res.ok) throw new Error(await res.text());
+
+      // Monta link WhatsApp com dados do pedido
+      const msg = encodeURIComponent(
+        `Olá! Meu pedido Mercari foi enviado pelo site.\n\n` +
+        `Nome: ${joiner.nome || joiner.cog} (@${joiner.cog})\n` +
+        `Item: ${nome || '—'}\n` +
+        `Link: ${link}\n` +
+        `Valor: ¥${jpyVal.toLocaleString('pt-BR')} ≈ R$ ${brlEst.toLocaleString('pt-BR', {minimumFractionDigits:2})}\n` +
+        `Qtd: ${qty}\n` +
+        (obs ? `Obs: ${obs}\n` : '') +
+        `\nSegue o comprovante de pagamento:`
+      );
+      document.getElementById('wa-link').href = `https://wa.me/${WA}?text=${msg}`;
+
+      document.getElementById('step-form').style.display   = 'none';
+      document.getElementById('step-sucesso').style.display = 'block';
+    } catch(e) {
+      errEl.textContent = 'Erro ao enviar. Tente novamente.';
+      errEl.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Enviar pedido →';
+    checkForm();
+  }
+
+  /* ── PIX ── */
+  function copiarPix() {
+    navigator.clipboard.writeText(PIX_KEY);
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = 'Copiado ✓'; setTimeout(() => btn.textContent = 'Copiar', 2000);
+  }
+
+  /* ── NOVO PEDIDO ── */
+  function novoPedido() {
+    ['f-link','f-nome','f-jpy','f-obs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-qty').value = '1';
+    document.getElementById('estimate-row').style.display  = 'none';
+    document.getElementById('form-error').style.display    = 'none';
+    document.getElementById('step-sucesso').style.display  = 'none';
+    document.getElementById('step-form').style.display     = 'block';
+    checkForm();
+  }
 
   calc();
 </script>
