@@ -6472,10 +6472,11 @@ function AdminLinks() {
 }
 
 function AdminMercari({ pedidos = [], onUpdate }) {
-  const STATUS_COLOR = { pendente:"#BAFF39", aprovado:"#64B5F6", recusado:"#ff6b6b", pago:"#C9A8F0" };
-  const STATUS_BG    = { pendente:"rgba(186,255,57,.08)", aprovado:"rgba(100,181,246,.08)", recusado:"rgba(255,107,107,.06)", pago:"rgba(201,168,240,.08)" };
-  const STATUS_BORDER= { pendente:"rgba(186,255,57,.2)", aprovado:"rgba(100,181,246,.2)", recusado:"rgba(255,107,107,.15)", pago:"rgba(201,168,240,.2)" };
+  const STATUS_COLOR = { pendente:"#BAFF39", aguardando_link:"#f0c040", aprovado:"#64B5F6", recusado:"#ff6b6b", pago:"#C9A8F0" };
+  const STATUS_BG    = { pendente:"rgba(186,255,57,.08)", aguardando_link:"rgba(240,192,64,.08)", aprovado:"rgba(100,181,246,.08)", recusado:"rgba(255,107,107,.06)", pago:"rgba(201,168,240,.08)" };
+  const STATUS_BORDER= { pendente:"rgba(186,255,57,.2)", aguardando_link:"rgba(240,192,64,.2)", aprovado:"rgba(100,181,246,.2)", recusado:"rgba(255,107,107,.15)", pago:"rgba(201,168,240,.2)" };
   const [filtro, setFiltro] = useState("pendente");
+  const STATUS_LABEL = { pendente:"pendente", aguardando_link:"aguard. link", aprovado:"aprovado", recusado:"recusado", pago:"pago", todos:"todos" };
   const [carregando, setCarregando] = useState(null);
 
   const lista = filtro === "todos" ? pedidos : pedidos.filter(p => p.status === filtro);
@@ -6492,10 +6493,10 @@ function AdminMercari({ pedidos = [], onUpdate }) {
   return (
     <div>
       <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
-        {["pendente","aprovado","pago","recusado","todos"].map(s => (
+        {["pendente","aguardando_link","aprovado","pago","recusado","todos"].map(s => (
           <button key={s} onClick={() => setFiltro(s)}
             style={{ padding:"5px 14px", borderRadius:20, border:`1px solid ${filtro===s ? STATUS_COLOR[s]||"rgba(245,240,232,.4)" : "rgba(245,240,232,.12)"}`, background: filtro===s ? (STATUS_BG[s]||"rgba(245,240,232,.06)") : "transparent", color: filtro===s ? (STATUS_COLOR[s]||"var(--offwhite)") : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", textTransform:"uppercase", letterSpacing:".08em" }}>
-            {s} {s !== "todos" && <span>({pedidos.filter(p => p.status === s).length})</span>}
+            {STATUS_LABEL[s]||s} {s !== "todos" && <span>({pedidos.filter(p => p.status === s).length})</span>}
           </button>
         ))}
       </div>
@@ -6542,6 +6543,16 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                     R$ {pf(p.valor_brl_total).toLocaleString("pt-BR", { minimumFractionDigits:2 })}
                   </span>
                 )}
+                {p.metodo_pagamento === "cartao" && (
+                  <span style={{ fontSize:10, color:"#f0c040", fontFamily:"'DM Mono',monospace", fontWeight:700, background:"rgba(240,192,64,.1)", border:"1px solid rgba(240,192,64,.25)", borderRadius:4, padding:"2px 8px" }}>
+                    💳 cartão
+                  </span>
+                )}
+                {p.id_transacao && (
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>
+                    ID: {p.id_transacao}
+                  </span>
+                )}
                 {p.comprovante_url && (
                   <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize:10, color:"#4ecb71", fontFamily:"'DM Mono',monospace", fontWeight:700, textDecoration:"none", background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.25)", borderRadius:4, padding:"2px 8px" }}>
@@ -6554,8 +6565,15 @@ function AdminMercari({ pedidos = [], onUpdate }) {
               </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
-              {p.status === "pendente" && (
+              {(p.status === "pendente" || p.status === "aguardando_link") && (
                 <>
+                  {p.status === "aguardando_link" && (
+                    <a href={`https://wa.me/55${(p.joiner_whatsapp||"").replace(/\D/g,"")}?text=${encodeURIComponent("Olá "+p.joiner_nome+"! Aqui está o link para pagamento por cartão do seu pedido Mercari: ")}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ display:"block", textAlign:"center", background:"rgba(240,192,64,.1)", border:"1px solid rgba(240,192,64,.3)", color:"#f0c040", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, textDecoration:"none", marginBottom:4 }}>
+                      💬 Enviar link
+                    </a>
+                  )}
                   <button onClick={() => mudarStatus(p, "aprovado")} disabled={carregando === p.id}
                     style={{ background:"rgba(100,181,246,.1)", border:"1px solid rgba(100,181,246,.3)", color:"#64B5F6", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
                     {carregando === p.id ? "..." : "✓ Aprovar"}
