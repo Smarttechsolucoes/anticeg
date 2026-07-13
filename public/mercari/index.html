@@ -208,15 +208,15 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
 </div>
 
 <nav class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('calc')">⬡ Calculadora</button>
-  <button class="tab-btn" onclick="switchTab('pedido')">◈ Fazer Pedido</button>
+  <button class="tab-btn active" onclick="switchTab('pedido')">◈ Fazer Pedido</button>
+  <button class="tab-btn" onclick="switchTab('calc')">⬡ Calculadora</button>
 </nav>
 
 <main>
   <input type="hidden" id="fxVal" value="0.03141">
 
   <!-- CALCULADORA -->
-  <div class="tab-pane active" id="tab-calc">
+  <div class="tab-pane" id="tab-calc">
     <div class="sec-label">Entrada</div>
     <div class="input-group">
       <span class="input-label">Valor do item — JPY ¥</span>
@@ -244,7 +244,7 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
   </div>
 
   <!-- FAZER PEDIDO -->
-  <div class="tab-pane" id="tab-pedido">
+  <div class="tab-pane active" id="tab-pedido">
 
     <!-- FORM ÚNICO -->
     <div id="s-form">
@@ -382,7 +382,7 @@ let searchTimeout = null;
 
 // ── TABS ──
 function switchTab(t) {
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='calc'&&i===0)||(t==='pedido'&&i===1)));
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='pedido'&&i===0)||(t==='calc'&&i===1)));
   document.getElementById('tab-calc').classList.toggle('active',t==='calc');
   document.getElementById('tab-pedido').classList.toggle('active',t==='pedido');
 }
