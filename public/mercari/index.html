@@ -162,6 +162,39 @@ input[type=file] { display:none; }
 .btn-secondary:hover { border-color:var(--text); color:var(--text); }
 
 .err { background:rgba(232,80,80,.08); border:1px solid rgba(232,80,80,.3); border-radius:8px; color:#ff8080; font-size:12px; padding:10px 14px; margin-top:8px; line-height:1.5; }
+
+/* MEUS PEDIDOS */
+.pedidos-empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:14px; }
+.pedido-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:12px; }
+.pedido-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.pedido-date { font-family:'Barlow Condensed',sans-serif; font-size:12px; color:var(--muted); letter-spacing:.05em; margin-left:auto; }
+.status-badge { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; border-radius:4px; padding:3px 10px; }
+.status-pendente   { background:rgba(240,192,64,.12);  color:#f0c040; border:1px solid rgba(240,192,64,.3); }
+.status-aprovado   { background:rgba(100,181,246,.1);  color:#64b5f6; border:1px solid rgba(100,181,246,.25); }
+.status-pago       { background:rgba(201,168,240,.1);  color:#c9a8f0; border:1px solid rgba(201,168,240,.25); }
+.status-finalizado { background:rgba(78,203,113,.1);   color:#4ecb71; border:1px solid rgba(78,203,113,.25); }
+.status-recusado   { background:rgba(255,107,107,.08); color:#ff6b6b; border:1px solid rgba(255,107,107,.2); }
+.pedido-itens { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.pedido-item { background:rgba(0,0,0,.2); border:1px solid rgba(245,240,232,.05); border-radius:7px; padding:8px 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+.pedido-item-nome { font-size:13px; color:var(--text); font-weight:600; }
+.pedido-item-link { font-size:11px; color:rgba(100,181,246,.7); word-break:break-all; display:block; margin-top:2px; }
+.pedido-item-val  { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; color:var(--orange); white-space:nowrap; }
+.pedido-total { display:flex; gap:10px; align-items:center; justify-content:flex-end; padding-top:10px; border-top:1px solid rgba(245,240,232,.06); font-family:'Barlow Condensed',sans-serif; }
+.pedido-total-jpy { font-size:14px; color:var(--muted); }
+.pedido-total-brl { font-size:17px; font-weight:800; color:var(--orange); }
+.pedido-steps { display:flex; align-items:center; gap:0; margin-bottom:14px; }
+.step { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+.step-dot { width:10px; height:10px; border-radius:50%; background:var(--border); border:2px solid var(--border); transition:.2s; }
+.step-dot.done { background:var(--green); border-color:var(--green); }
+.step-dot.active { background:var(--orange); border-color:var(--orange); }
+.step-dot.fail { background:#ff6b6b; border-color:#ff6b6b; }
+.step-line { flex:1; height:2px; background:var(--border); }
+.step-line.done { background:var(--green); }
+.step-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.step-label.done, .step-label.active { color:var(--text); }
+.pedidos-login { text-align:center; padding:48px 20px; }
+.pedidos-login p { color:var(--muted); font-size:14px; margin-bottom:16px; }
+.pedidos-loading { text-align:center; padding:40px; color:var(--muted); font-size:13px; }
 .divider { height:1px; background:var(--border); margin:24px 0; }
 
 .success-card { background:var(--bg2); border:2px solid var(--green); border-radius:14px; padding:32px 28px; text-align:center; }
@@ -209,11 +242,22 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
 
 <nav class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('pedido')">◈ Fazer Pedido</button>
+  <button class="tab-btn" onclick="switchTab('meus')">☰ Meus Pedidos</button>
   <button class="tab-btn" onclick="switchTab('calc')">⬡ Calculadora</button>
 </nav>
 
 <main>
   <input type="hidden" id="fxVal" value="0.03141">
+
+  <!-- MEUS PEDIDOS -->
+  <div class="tab-pane" id="tab-meus">
+    <div id="meus-login" class="pedidos-login" style="display:none">
+      <p>Identifique-se na aba <strong>Fazer Pedido</strong> para ver seus pedidos.</p>
+      <button class="btn-secondary" style="max-width:260px;margin:0 auto" onclick="switchTab('pedido')">← Ir para Fazer Pedido</button>
+    </div>
+    <div id="meus-loading" class="pedidos-loading" style="display:none">Carregando pedidos...</div>
+    <div id="meus-lista"></div>
+  </div>
 
   <!-- CALCULADORA -->
   <div class="tab-pane" id="tab-calc">
@@ -382,9 +426,11 @@ let searchTimeout = null;
 
 // ── TABS ──
 function switchTab(t) {
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='pedido'&&i===0)||(t==='calc'&&i===1)));
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='pedido'&&i===0)||(t==='meus'&&i===1)||(t==='calc'&&i===2)));
   document.getElementById('tab-calc').classList.toggle('active',t==='calc');
   document.getElementById('tab-pedido').classList.toggle('active',t==='pedido');
+  document.getElementById('tab-meus').classList.toggle('active',t==='meus');
+  if(t==='meus') renderMeusPedidos();
 }
 
 // ── FX / CALC ──
@@ -419,7 +465,7 @@ function onIdInput() {
   document.getElementById('id-status').textContent='';
   document.getElementById('id-info').textContent='';
   document.getElementById('id-info').className='id-info';
-  joiner = null;
+  joiner = null; pedidosCache = null;
   checkForm();
 
   // debounce: busca automática após 600ms sem digitar
@@ -453,6 +499,7 @@ async function buscarJoiner() {
       info.className='id-info';
       info.textContent=`✦ ${joiner.nome||joiner.cog} · @${joiner.cog}`;
       atualizarLinkCartao();
+      carregarPedidos(); // pré-carrega pedidos em background
     } else {
       joiner = null;
       inp.classList.add('notfound'); inp.classList.remove('found');
@@ -696,6 +743,92 @@ function novoPedido() {
   document.getElementById('s-ok').style.display='none';
   document.getElementById('s-form').style.display='block';
   addItem(); checkForm();
+}
+
+// ── MEUS PEDIDOS ──
+const STEPS = [
+  { key:'pendente',   label:'Solicitado' },
+  { key:'aprovado',   label:'Aprovado'   },
+  { key:'pago',       label:'Pago'       },
+  { key:'finalizado', label:'Finalizado' },
+];
+const STEP_IDX = { pendente:0, aprovado:1, pago:2, finalizado:3, recusado:-1 };
+
+let pedidosCache = null;
+
+async function carregarPedidos() {
+  if(!joiner) return;
+  pedidosCache = null;
+  const url = `${SUPA}/rest/v1/mercari_pedidos?joiner_cog=eq.${encodeURIComponent(joiner.cog)}&order=created_at.desc&select=*`;
+  try {
+    const data = await (await fetch(url,{headers:{apikey:KEY,Authorization:`Bearer ${KEY}`}})).json();
+    pedidosCache = Array.isArray(data) ? data : [];
+  } catch { pedidosCache = []; }
+}
+
+function renderMeusPedidos() {
+  const login   = document.getElementById('meus-login');
+  const loading = document.getElementById('meus-loading');
+  const lista   = document.getElementById('meus-lista');
+
+  if(!joiner) {
+    login.style.display='block'; loading.style.display='none'; lista.innerHTML=''; return;
+  }
+  login.style.display='none';
+
+  if(pedidosCache === null) {
+    loading.style.display='block'; lista.innerHTML='';
+    carregarPedidos().then(()=>{ loading.style.display='none'; buildLista(); });
+    return;
+  }
+  loading.style.display='none';
+  buildLista();
+}
+
+function buildLista() {
+  const lista = document.getElementById('meus-lista');
+  if(!pedidosCache || pedidosCache.length===0){
+    lista.innerHTML='<div class="pedidos-empty">Nenhum pedido encontrado.</div>'; return;
+  }
+  lista.innerHTML = pedidosCache.map(p => {
+    const si = STEP_IDX[p.status] ?? 0;
+    const recusado = p.status === 'recusado';
+    const stepsHtml = STEPS.map((s,i) => {
+      const isDone   = !recusado && si > i;
+      const isActive = !recusado && si === i;
+      const dotCls   = isDone ? 'done' : isActive ? 'active' : '';
+      const lblCls   = isDone||isActive ? (isDone?'done':'active') : '';
+      const lineDone = !recusado && si > i ? 'done' : '';
+      return `<div class="step">
+        <div class="step-dot ${dotCls}"></div>
+        <span class="step-label ${lblCls}">${s.label}</span>
+      </div>${i<STEPS.length-1?`<div class="step-line ${lineDone}"></div>`:''}`;
+    }).join('');
+
+    const itensHtml = (p.itens||[]).map(it=>`
+      <div class="pedido-item">
+        <div>
+          ${it.nome?`<div class="pedido-item-nome">${it.nome}</div>`:''}
+          ${it.link?`<a class="pedido-item-link" href="${it.link}" target="_blank" rel="noopener">${it.link}</a>`:''}
+        </div>
+        ${it.valor_jpy>0?`<div class="pedido-item-val">¥${Number(it.valor_jpy).toLocaleString('pt-BR')} → R$ ${fmtBRL(it.valor_brl||0)}</div>`:''}
+      </div>`).join('');
+
+    const dt = new Date(p.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+    return `<div class="pedido-card">
+      <div class="pedido-header">
+        <span class="status-badge status-${p.status}">${p.status}</span>
+        <span class="pedido-date">${dt}</span>
+      </div>
+      <div class="pedido-steps">${stepsHtml}</div>
+      ${itensHtml?`<div class="pedido-itens">${itensHtml}</div>`:''}
+      ${(p.valor_jpy_total||p.valor_brl_total)?`<div class="pedido-total">
+        ${p.valor_jpy_total?`<span class="pedido-total-jpy">¥${Number(p.valor_jpy_total).toLocaleString('pt-BR')}</span>`:''}
+        ${p.valor_brl_total?`<span class="pedido-total-brl">R$ ${fmtBRL(p.valor_brl_total)}</span>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
 runCalc();
