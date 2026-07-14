@@ -430,10 +430,15 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   const [itens, setItens] = useState(null);
   const [openDrawer, setOpenDrawer] = useState(null);
   const [reportItem, setReportItem] = useState(null);
+  const [fotos, setFotos] = useState([]);
+  const [viewMode, setViewMode] = useState("tabela");
+  const [ampliada, setAmpliada] = useState(null);
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
       .then(({ data }) => setItens(data || []));
+    supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
+      .then(({ data }) => setFotos(data || []));
   }, [ceg]);
 
   const joiners = itens ? [...new Set(itens.map(i => i.cog))].length : 0;
@@ -450,12 +455,38 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
         {itens && (
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
-            {ceg === "THIS & THAT" && (
-              <a href="/this-and-that" target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:8, fontSize:10, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", textDecoration:"none", border:"1px solid rgba(201,168,240,.3)", borderRadius:6, padding:"4px 12px", letterSpacing:"0.5px" }}>ver fotos →</a>
+            {fotos.length > 0 && (
+              <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end" }}>
+                {[["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
+                  <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
+                    {icon} {mode}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Galeria de fotos */}
+      {viewMode === "galeria" && fotos.length > 0 && (
+        <div style={{ marginBottom:28 }}>
+          <div style={{ fontSize:9, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>fotos · {fotos.length}</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10 }}>
+            {fotos.map(f => (
+              <div key={f.id} onClick={() => setAmpliada(f)} style={{ borderRadius:8, overflow:"hidden", background:"rgba(245,240,232,.05)", aspectRatio:"3/4", cursor:"pointer" }}>
+                <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              </div>
+            ))}
+          </div>
+          {ampliada && (
+            <div onClick={() => setAmpliada(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+              <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:10, objectFit:"contain" }} />
+              {ampliada.nome_do_item && <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center", fontSize:12, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)" }}>{ampliada.nome_do_item}</div>}
+            </div>
+          )}
+        </div>
+      )}
 
       {itens === null ? (
         <div style={{ padding:40, textAlign:"center", color:"rgba(245,240,232,.52)", fontSize:"var(--fs-xs)" }}>carregando...</div>
@@ -7187,7 +7218,7 @@ function ThisAndThatCegPage({ isOwner }) {
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("ceg", "THIS & THAT").neq("nome", "Disponivel")
       .then(({ data }) => setItens(data || []));
-    supabase.from("item_fotos").select("*").order("ordem").order("id")
+    supabase.from("item_fotos").select("*").eq("ceg", "THIS & THAT").order("ordem").order("id")
       .then(({ data }) => setCategorias(data || []));
   }, []);
 
@@ -7438,29 +7469,42 @@ function ThisAndThatCegPage({ isOwner }) {
   );
 }
 
-// ── Admin: gerenciar galeria This & That ─────────────────────────────────────
+// ── Admin: gerenciar galeria de qualquer CEG ──────────────────────────────────
 function AdminGaleria() {
-  const [fotos,      setFotos]      = useState(null);
-  const [uploading,  setUploading]  = useState(false);
-  const [editando,   setEditando]   = useState(null); // id sendo editado
-  const [msg,        setMsg]        = useState("");
+  const [cegSelecionada, setCegSelecionada] = useState("THIS & THAT");
+  const [cegInput,       setCegInput]       = useState("THIS & THAT");
+  const [cegsDisponiveis,setCegsDisponiveis] = useState([]);
+  const [fotos,          setFotos]          = useState(null);
+  const [uploading,      setUploading]      = useState(false);
+  const [editando,       setEditando]       = useState(null);
+  const [msg,            setMsg]            = useState("");
 
   useEffect(() => {
-    supabase.from("item_fotos").select("*").order("ordem").order("id")
-      .then(({ data }) => setFotos(data || []));
+    supabase.from("masterlist").select("ceg").neq("nome","Disponivel")
+      .then(({ data }) => {
+        const uniq = [...new Set((data||[]).map(r => r.ceg).filter(Boolean))].sort();
+        setCegsDisponiveis(uniq);
+      });
   }, []);
+
+  useEffect(() => {
+    setFotos(null);
+    supabase.from("item_fotos").select("*").eq("ceg", cegSelecionada).order("ordem").order("id")
+      .then(({ data }) => setFotos(data || []));
+  }, [cegSelecionada]);
 
   async function uploadFotos(files) {
     setUploading(true);
+    const slug = cegSelecionada.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
     const novas = [];
     for (const file of files) {
       const ext  = file.name.split(".").pop().toLowerCase();
-      const path = `this-and-that/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const path = `${slug}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
       const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg: "THIS & THAT", nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: (fotos || []).length + novas.length }])
+        .insert([{ ceg: cegSelecionada, nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: (fotos || []).length + novas.length }])
         .select().single();
       if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (nova) novas.push(nova);
@@ -7486,14 +7530,40 @@ function AdminGaleria() {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
-        <h3 className="admin-title" style={{ fontSize: 16, margin: 0 }}>Galeria · This &amp; That</h3>
-        <a href="/this-and-that" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "4px 10px" }}>↗ ver galeria</a>
+        <h3 className="admin-title" style={{ fontSize: 16, margin: 0 }}>Galeria · fotos por CEG</h3>
+        {cegSelecionada === "THIS & THAT" && (
+          <a href="/this-and-that" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "4px 10px" }}>↗ ver galeria</a>
+        )}
+      </div>
+
+      {/* Seletor de CEG */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 9, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", marginBottom: 8 }}>CEG</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            list="cegs-list"
+            value={cegInput}
+            onChange={e => setCegInput(e.target.value)}
+            onBlur={() => { if (cegInput.trim()) { setCegSelecionada(cegInput.trim()); } }}
+            onKeyDown={e => { if (e.key === "Enter" && cegInput.trim()) { setCegSelecionada(cegInput.trim()); e.target.blur(); } }}
+            placeholder="nome da CEG..."
+            style={{ flex: 1, background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.15)", borderRadius: 7, padding: "8px 12px", color: "#F5F0E8", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }}
+          />
+          <datalist id="cegs-list">
+            {cegsDisponiveis.map(c => <option key={c} value={c} />)}
+          </datalist>
+          <button onClick={() => { if (cegInput.trim()) setCegSelecionada(cegInput.trim()); }}
+            style={{ padding: "8px 16px", background: "rgba(201,168,240,.15)", border: "1px solid rgba(201,168,240,.3)", borderRadius: 7, color: "#C9A8F0", fontFamily: "'DM Mono',monospace", fontSize: 11, cursor: "pointer" }}>
+            carregar
+          </button>
+        </div>
+        <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)", marginTop: 5 }}>exibindo: {cegSelecionada} · {fotos ? fotos.length : "…"} foto(s)</div>
       </div>
 
       {/* Zona de upload */}
       <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, border: "2px dashed rgba(201,168,240,.3)", borderRadius: 10, padding: "28px 20px", cursor: "pointer", marginBottom: 20, background: "rgba(201,168,240,.04)" }}>
         <span style={{ fontSize: 22 }}>+</span>
-        <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#C9A8F0" }}>{uploading ? "enviando..." : "adicionar fotos"}</span>
+        <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#C9A8F0" }}>{uploading ? "enviando..." : `adicionar fotos · ${cegSelecionada}`}</span>
         <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)" }}>pode selecionar várias de uma vez</span>
         <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files))} />
       </label>
@@ -7502,12 +7572,13 @@ function AdminGaleria() {
 
       {fotos === null && <div style={{ fontSize: 12, color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace" }}>carregando...</div>}
 
+      {fotos && fotos.length === 0 && <div style={{ fontSize: 12, color: "rgba(245,240,232,.25)", fontFamily: "'DM Mono',monospace" }}>nenhuma foto para {cegSelecionada}</div>}
+
       {/* Grid de fotos existentes */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10 }}>
         {(fotos || []).map(foto => (
           <div key={foto.id} style={{ position: "relative", borderRadius: 8, overflow: "hidden", background: "rgba(245,240,232,.05)", aspectRatio: "1" }}>
             <img src={foto.foto_url} alt={foto.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            {/* overlay de ações */}
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 50%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 6, gap: 4, opacity: 0, transition: "opacity .15s" }}
               onMouseEnter={e => e.currentTarget.style.opacity = 1}
               onMouseLeave={e => e.currentTarget.style.opacity = 0}>
@@ -7539,7 +7610,7 @@ function ThisAndThatGallery() {
   const [ampliada, setAmpliada] = useState(null);
 
   useEffect(() => {
-    supabase.from("item_fotos").select("*").order("ordem", { ascending: true }).order("id", { ascending: true })
+    supabase.from("item_fotos").select("*").eq("ceg", "THIS & THAT").order("ordem", { ascending: true }).order("id", { ascending: true })
       .then(({ data }) => { if (data) setFotos(data); setLoading(false); });
   }, []);
 
