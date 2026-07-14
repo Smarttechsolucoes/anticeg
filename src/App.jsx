@@ -1527,7 +1527,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               </div>
             )}
             </div>
-            </div> {/* fim conteúdo rolável */}
           </div>
         </div>
       )}
