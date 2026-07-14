@@ -699,7 +699,7 @@ function CegTab({ user, itens }) {
                     </span>
                   ))}
                 </div>
-                <button className="ceg-saiba-btn" onClick={() => ceg === "THIS & THAT" ? window.location.href = "/ceg/this-and-that" : setDetalhe(ceg)}>
+                <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
                   saiba mais →
                 </button>
               </div>
