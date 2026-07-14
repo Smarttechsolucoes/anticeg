@@ -6590,7 +6590,7 @@ function AdminMercari({ pedidos = [], onUpdate }) {
     setCarregando(p.id);
     await supabase.from("mercari_pedidos").update({ status: novoStatus }).eq("id", p.id);
     const msgs = {
-      aprovado: `🎌 Seu pedido Mercari foi aprovado! Em breve entraremos em contato para combinar o pagamento.`,
+      aprovado: `🎌 Seu pedido Mercari foi aprovado! Seu item estará finalizado assim que a proxy realizar a compra no Mercari.`,
       recusado: `🎌 Seu pedido Mercari não pôde ser realizado. Entre em contato com a admin para mais informações.`,
       pago:     `🎌 Pagamento do seu pedido Mercari confirmado! Acompanhe o status por aqui.`,
     };
