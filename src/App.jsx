@@ -6558,20 +6558,429 @@ function AdminLinks() {
   );
 }
 
-function MercariEmbed() {
-  const [h, setH] = useState(700);
+function MercariTab() {
+  const PIX  = 'de1a489d-db81-4864-a8cf-74cdd79d9cdc';
+  const WA   = '5524992782023';
+  const SUPA_URL = 'https://ghjfsmwwcfpfvrouyrka.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM';
+  const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
+  const STEP_IDX = {pendente:0,aprovado:1,pago:2,finalizado:3,recusado:-1};
+
+  const [fxVal, setFxVal]     = useState(0.03141);
+  const [fxInp, setFxInp]     = useState('');
+  const [modal, setModal]     = useState(false);
+  const [itab, setItab]       = useState('pedido');
+  const [joiner, setJoiner]   = useState(null);
+  const [idInp, setIdInp]     = useState('');
+  const [idSt, setIdSt]       = useState('');
+  const [idMsg, setIdMsg]     = useState('');
+  const [items, setItems]     = useState([{id:1,nome:'',link:'',jpy:0}]);
+  const [checks, setChecks]   = useState([false,false,false,false]);
+  const [semComp, setSemComp] = useState(false);
+  const [fileComp, setFileComp] = useState(null);
+  const [idPix, setIdPix]     = useState('');
+  const [sending, setSending] = useState(false);
+  const [formErr, setFormErr] = useState('');
+  const [done, setDone]       = useState(false);
+  const [waLink, setWaLink]   = useState('');
+  const [calcInp, setCalcInp] = useState(5000);
+  const [pedidos, setPedidos] = useState(null);
+  const [pedLoad, setPedLoad] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
+
+  const tmrRef  = useRef(null);
+  const idRef   = useRef('');
+  const jRef    = useRef(null);
+  const fxRef   = useRef(0.03141);
+  const cntRef  = useRef(1);
+  const fileRef = useRef(null);
+
+  useEffect(() => { jRef.current = joiner; }, [joiner]);
+  useEffect(() => { fxRef.current = fxVal; }, [fxVal]);
+
+  const calcBRL = (jpy) => { const s=jpy+100,f=Math.round(s*.08),c=s+f,p=Math.round(c*.08); return (c+p)*fxVal; };
+  const fBRL = (v) => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fJPY = (v) => '¥ '+Math.round(v).toLocaleString('pt-BR');
+
+  const calcR = useMemo(() => {
+    const n=parseFloat(calcInp)||0,s=n+100,f=Math.round(s*.08),c=s+f,p=Math.round(c*.08),t=c+p;
+    return {n,f,t,b:t*fxVal};
+  }, [calcInp,fxVal]);
+
+  const tots = useMemo(() => {
+    let j=0,b=0; items.forEach(it=>{if(it.jpy>0){j+=it.jpy;b+=calcBRL(it.jpy);}});
+    return {j,b};
+  }, [items,fxVal]);
+
+  const formOk = useMemo(() => {
+    const io=items.length>0&&items.every(it=>it.link&&it.jpy>0);
+    const po=semComp?idPix.trim().length>0:!!fileComp;
+    return !!(joiner&&io&&checks.every(c=>c)&&po);
+  }, [joiner,items,checks,semComp,idPix,fileComp]);
+
+  const waHref = useMemo(() => {
+    if(!joiner) return '#';
+    let j=0,b=0,lines='';
+    items.forEach((it,i)=>{
+      const v=calcBRL(it.jpy||0);
+      if(it.link||it.jpy>0){j+=it.jpy||0;b+=v;lines+=`\nItem ${i+1}${it.nome?' — '+it.nome:''}: ¥${(it.jpy||0).toLocaleString('pt-BR')} → R$ ${fBRL(v)}${it.link?'\n'+it.link:''}`;}
+    });
+    const vt=j>0?`\n\nValor total: ¥${Math.round(j).toLocaleString('pt-BR')} · R$ ${fBRL(b)}`:'';
+    return `https://wa.me/${WA}?text=${encodeURIComponent(`Olá! Gostaria de pagar por cartão o meu pedido da Caixinha Mercari. Sou ${joiner.nome||joiner.cog} (@${joiner.cog}).`+(lines?`\n${lines}`:'')+vt+`\n\nPode me enviar o link de pagamento?`)}`;
+  }, [joiner,items,fxVal]);
+
+  const buscar = async () => {
+    clearTimeout(tmrRef.current);
+    const v=idRef.current.trim();
+    if(!v) return;
+    setIdSt('loading'); setIdMsg('Buscando...');
+    const isEml=v.includes('@')&&v.indexOf('@')>0;
+    let q=supabase.from('joiners').select('cog,nome,email').limit(1);
+    q=isEml?q.eq('email',v.toLowerCase()):q.ilike('twitter',`@${v.replace(/^@/,'')}`);
+    try {
+      const {data}=await q;
+      if(data?.length){
+        const j=data[0]; setJoiner(j); jRef.current=j;
+        setIdSt('found'); setIdMsg(`✦ ${j.nome||j.cog} · @${j.cog}`);
+        setItems(p=>p.length?p:[{id:++cntRef.current,nome:'',link:'',jpy:0}]);
+        loadPedidos(j);
+      } else {
+        setJoiner(null); jRef.current=null;
+        setIdSt('notfound'); setIdMsg('Cadastro não encontrado. Fale com a GOM pelo WhatsApp.');
+      }
+    } catch {
+      setJoiner(null); jRef.current=null;
+      setIdSt('notfound'); setIdMsg('Erro de conexão. Tente novamente.');
+    }
+  };
+
+  const onId = (v) => {
+    idRef.current=v; setIdInp(v);
+    setIdSt(''); setIdMsg(''); setJoiner(null); jRef.current=null; setPedidos(null);
+    clearTimeout(tmrRef.current);
+    if(v.trim().length>=3) tmrRef.current=setTimeout(buscar,600);
+  };
+
+  const loadPedidos = async (j) => {
+    const jj=j||jRef.current; if(!jj) return;
+    setPedLoad(true);
+    try {
+      const {data}=await supabase.from('mercari_pedidos').select('*').eq('joiner_cog',jj.cog).order('created_at',{ascending:false});
+      setPedidos(Array.isArray(data)?data:[]);
+    } catch { setPedidos([]); }
+    setPedLoad(false);
+  };
+
   useEffect(() => {
-    const fn = e => { if (e.data?.mercariH) setH(e.data.mercariH + 24); };
-    window.addEventListener("message", fn);
-    return () => window.removeEventListener("message", fn);
-  }, []);
+    if(itab==='meus'&&jRef.current&&pedidos===null&&!pedLoad) loadPedidos();
+  }, [itab]);
+
+  const addIt = () => { const id=++cntRef.current; setItems(p=>[...p,{id,nome:'',link:'',jpy:0}]); };
+  const rmIt  = (id) => setItems(p=>p.filter(x=>x.id!==id));
+  const upIt  = (id,f,v) => setItems(p=>p.map(x=>x.id===id?{...x,[f]:v}:x));
+
+  const enviar = async () => {
+    setSending(true); setFormErr('');
+    const itens=items.map(it=>({nome:it.nome.trim(),link:it.link.trim(),valor_jpy:it.jpy,valor_brl:parseFloat((it.jpy>0?(()=>{const s=it.jpy+100,f=Math.round(s*.08),c=s+f,p=Math.round(c*.08);return(c+p)*fxRef.current;})():0).toFixed(2))}));
+    let totJ=0,totB=0; itens.forEach(it=>{totJ+=it.valor_jpy;totB+=it.valor_brl;});
+    let comp=null;
+    if(fileComp&&!semComp){
+      try{
+        const ext=fileComp.name.split('.').pop()||'jpg';
+        const path=`${jRef.current.cog}_${Date.now()}.${ext}`;
+        const up=await fetch(`${SUPA_URL}/storage/v1/object/mercari-comprovantes/${path}`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':fileComp.type||'application/octet-stream'},body:fileComp});
+        if(up.ok) comp=`${SUPA_URL}/storage/v1/object/public/mercari-comprovantes/${path}`;
+      }catch{}
+    }
+    const j=jRef.current;
+    const {error}=await supabase.from('mercari_pedidos').insert([{joiner_cog:j.cog,joiner_nome:j.nome||j.cog,itens,valor_jpy_total:Math.round(totJ),valor_brl_total:parseFloat(totB.toFixed(2)),taxa_cambio:fxRef.current,comprovante_url:comp,metodo_pagamento:'pix',id_transacao:idPix||null,status:'pendente'}]);
+    if(error){setFormErr('Erro ao enviar. Tente novamente.');setSending(false);return;}
+    const msg=encodeURIComponent(`Olá! Fiz meu pedido da Caixinha Mercari.\n\n${j.nome||j.cog} (@${j.cog})\n\n`+itens.map((it,i)=>`Item ${i+1}: ${it.nome||'—'}\n${it.link}\n¥${it.valor_jpy.toLocaleString('pt-BR')} → R$ ${fBRL(it.valor_brl)}`).join('\n\n')+`\n\nTotal: ¥${Math.round(totJ).toLocaleString('pt-BR')} · R$ ${fBRL(totB)}`+(comp?`\n\nComprovante: ${comp}`:'\n\nComprovante segue em anexo.'));
+    setWaLink(`https://wa.me/${WA}?text=${msg}`);
+    setDone(true); setSending(false);
+  };
+
+  const reset = () => {
+    cntRef.current=1;
+    setItems([{id:1,nome:'',link:'',jpy:0}]);
+    setJoiner(null); jRef.current=null;
+    setIdInp(''); idRef.current=''; setIdSt(''); setIdMsg('');
+    setSemComp(false); setFileComp(null); setIdPix('');
+    setChecks([false,false,false,false]);
+    setFormErr(''); setDone(false); setPedidos(null);
+    if(fileRef.current) fileRef.current.value='';
+  };
+
+  const RULES = [
+    'Feedbacks e retornos das compras serão repassados assim que a seller responder.',
+    <span key="r1">É necessário realizar o pagamento do <strong>valor integral</strong> no momento em que a GOM chamar para validação dos valores convertidos.</span>,
+    <span key="r2"><strong>Não me responsabilizo</strong> por calotes de vendedores, itens falsificados ou danos no trajeto Mercari → proxy.</span>,
+    'O frete internacional e a taxa da Receita Federal serão cobrados no momento do envio da caixa.',
+    <span key="r3">Cancelamentos por parte do joiner e/ou repasse dos itens <strong>não serão autorizados</strong>.</span>,
+    <span key="r4">Itens com bateria <strong>NÃO</strong> serão comprados.</span>,
+    <span key="r5">Itens em grupo <strong>não serão permitidos</strong> — apenas uma pessoa responsável por item até o fim da CEG.</span>,
+    'Não há troca, devolução ou escolha posterior.',
+  ];
+  const CTXT = [
+    'Estou ciente que ao adicionar o link do Mercari, estou realizando meu pedido.',
+    <span key="c1">Estou ciente que <strong>não posso</strong> realizar repasse de itens da caixinha em nenhuma hipótese.</span>,
+    <span key="c2">Estou ciente que o prazo de pagamento é <strong>imediato</strong> e existe risco de esgotar sem aviso prévio.</span>,
+    <span key="c3">Estou ciente que a GOM é responsável por <strong>intermediar</strong> o processo de compra.</span>,
+  ];
+
   return (
-    <iframe
-      src="/mercari-embed?embed"
-      title="Caixinha Mercari"
-      scrolling="no"
-      style={{ width:"100%", height:h, border:"none", display:"block" }}
-    />
+    <div className="mc-wrap">
+      <div className="mc-top">
+        <div>
+          <div className="mc-title">⋆ Caixinha Mercari</div>
+          <div className="mc-sub">por @anticegs · compras no Japão</div>
+        </div>
+        <div className="mc-fx-row">
+          <span className="mc-fx-val">¥1 = R$ {fBRL(fxVal)}</span>
+          <button className="mc-btn-fx" onClick={()=>{setFxInp('');setModal(true);}}>✎ Câmbio</button>
+        </div>
+      </div>
+
+      {modal && (
+        <div className="mc-modal-bg" onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>
+          <div className="mc-modal">
+            <div className="mc-modal-title">Editar Câmbio</div>
+            <label className="mc-modal-label">JPY / BRL</label>
+            <input className="mc-modal-inp" type="number" step="0.00001" placeholder="0.03141" value={fxInp} onChange={e=>setFxInp(e.target.value)} autoFocus />
+            <div className="mc-modal-btns">
+              <button className="mc-btn-save" onClick={()=>{const v=parseFloat(fxInp);if(v>0){setFxVal(v);fxRef.current=v;}setModal(false);}}>Salvar</button>
+              <button className="mc-btn-cancel" onClick={()=>setModal(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mc-tab-bar">
+        {[['pedido','◈ Fazer Pedido'],['meus','☰ Meus Pedidos'],['calc','⬡ Calculadora']].map(([k,l])=>(
+          <button key={k} className={`mc-tab-btn${itab===k?' active':''}`} onClick={()=>setItab(k)}>{l}</button>
+        ))}
+      </div>
+
+      <div className="mc-main">
+
+        {itab==='calc' && (
+          <div>
+            <div className="mc-sec">Entrada</div>
+            <div className="mc-input-group">
+              <span className="mc-input-label">Valor do item — JPY ¥</span>
+              <div className="mc-input-wrap">
+                <input type="number" value={calcInp} min="0" step="1" onChange={e=>setCalcInp(e.target.value)} />
+                <span className="mc-unit">¥</span>
+              </div>
+              <span className="mc-hint">¥ 1 = R$ {fxVal.toFixed(5)}</span>
+            </div>
+            <div className="mc-sec">Resultado</div>
+            <div className="mc-result-card">
+              <div className="mc-card-tag">Mercari JP</div>
+              <div className="mc-detail-rows">
+                <div className="mc-detail-row"><span className="mc-dl">valor do item (¥)</span><span className="mc-dv">{fJPY(calcR.n)}</span></div>
+                <div className="mc-detail-row"><span className="mc-dl">taxa por link (¥)</span><span className="mc-dv">¥ 100</span></div>
+                <div className="mc-detail-row"><span className="mc-dl">taxa de serviço 8% (¥)</span><span className="mc-dv">{fJPY(calcR.f)}</span></div>
+                <div className="mc-detail-row"><span className="mc-dl">total em iene</span><span className="mc-dv">{fJPY(calcR.t)}</span></div>
+                <div className="mc-detail-row"><span className="mc-dl">câmbio aplicado</span><span className="mc-dv">R$ {fxVal.toFixed(5)}</span></div>
+              </div>
+              <div className="mc-sell-block">
+                <div className="mc-sell-label">Preço ao joiner</div>
+                <div className="mc-sell-price"><span className="mc-cur">R$</span><span className="mc-amt">{fBRL(calcR.b)}</span></div>
+              </div>
+            </div>
+            <p className="mc-disclaimer">A calculadora é uma projeção e pode não refletir no valor final.</p>
+          </div>
+        )}
+
+        {itab==='meus' && (
+          <div>
+            {!joiner && (
+              <div className="mc-pedidos-login">
+                <p>Identifique-se na aba <strong>Fazer Pedido</strong> para ver seus pedidos.</p>
+                <button className="mc-btn-sec" style={{maxWidth:260,margin:'0 auto',display:'block'}} onClick={()=>setItab('pedido')}>← Ir para Fazer Pedido</button>
+              </div>
+            )}
+            {joiner && pedLoad && <div className="mc-pedidos-loading">Carregando pedidos...</div>}
+            {joiner && !pedLoad && pedidos!==null && (
+              pedidos.length===0
+                ? <div className="mc-pedidos-empty">Nenhum pedido encontrado.</div>
+                : pedidos.map(p=>{
+                    const si=STEP_IDX[p.status]??0, rec=p.status==='recusado';
+                    return (
+                      <div key={p.id} className="mc-pedido-card">
+                        <div className="mc-pedido-header">
+                          <span className={`mc-status-badge mc-s-${p.status}`}>{p.status}</span>
+                          <span className="mc-pedido-date">{new Date(p.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+                        </div>
+                        <div className="mc-pedido-steps">
+                          {STEPS.map((s,i)=>(
+                            <div key={s.key} style={{display:'contents'}}>
+                              <div className="mc-step">
+                                <div className={`mc-step-dot${!rec&&si>i?' done':!rec&&si===i?' active':rec&&i===0?' fail':''}`}/>
+                                <span className={`mc-step-label${(!rec&&(si>i||si===i))?' lit':''}`}>{s.label}</span>
+                              </div>
+                              {i<STEPS.length-1&&<div className={`mc-step-line${!rec&&si>i?' done':''}`}/>}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mc-pedido-itens">
+                          {(p.itens||[]).map((it,i)=>(
+                            <div key={i} className="mc-pedido-item">
+                              <div>
+                                {it.nome&&<div className="mc-pi-nome">{it.nome}</div>}
+                                {it.link&&<a className="mc-pi-link" href={it.link} target="_blank" rel="noopener noreferrer">{it.link}</a>}
+                              </div>
+                              {it.valor_jpy>0&&<div className="mc-pi-val">¥{Number(it.valor_jpy).toLocaleString('pt-BR')} → R$ {fBRL(it.valor_brl||0)}</div>}
+                            </div>
+                          ))}
+                        </div>
+                        {(p.valor_jpy_total||p.valor_brl_total)&&(
+                          <div className="mc-pedido-total">
+                            {p.valor_jpy_total&&<span className="mc-pt-jpy">¥{Number(p.valor_jpy_total).toLocaleString('pt-BR')}</span>}
+                            {p.valor_brl_total&&<span className="mc-pt-brl">R$ {fBRL(p.valor_brl_total)}</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+            )}
+          </div>
+        )}
+
+        {itab==='pedido' && !done && (
+          <div>
+            <div className="mc-rules-box">
+              <div className="mc-rules-title">⋆.˚✮ CAIXINHA MERCARI ⋆.˚✮</div>
+              {RULES.map((r,i)=><div key={i} className="mc-rule-item">{r}</div>)}
+            </div>
+
+            <div className="mc-sec">Identificação</div>
+            <div className="mc-id-field">
+              <input
+                className={`mc-id-input${idSt==='found'?' found':idSt==='notfound'?' notfound':''}`}
+                type="text" placeholder="@ da rede social ou e-mail"
+                value={idInp} onChange={e=>onId(e.target.value)}
+                onBlur={buscar} onKeyDown={e=>e.key==='Enter'&&buscar()}
+              />
+              <span className="mc-id-status">{idSt==='loading'?'⏳':idSt==='found'?'✓':''}</span>
+            </div>
+            <div className={`mc-id-info${idSt==='notfound'?' err':''}`}>{idMsg}</div>
+
+            <div style={{height:22}}/>
+
+            <div className="mc-sec">Itens do pedido</div>
+            <div className="mc-items-list">
+              {items.map((it,idx)=>(
+                <div key={it.id} className="mc-item-card">
+                  <div className="mc-item-num">
+                    <span>Item {idx+1}</span>
+                    <button className="mc-btn-rm" onClick={()=>rmIt(it.id)}>×</button>
+                  </div>
+                  <div className="mc-item-row2">
+                    <div className="mc-field">
+                      <label>Nome do item</label>
+                      <input type="text" placeholder="ex: Photocard Felix" value={it.nome} onChange={e=>upIt(it.id,'nome',e.target.value)}/>
+                    </div>
+                    <div className="mc-field">
+                      <label>Link do Mercari *</label>
+                      <input type="url" placeholder="https://jp.mercari.com/item/..." value={it.link} onChange={e=>upIt(it.id,'link',e.target.value)}/>
+                    </div>
+                  </div>
+                  <div className="mc-price-row">
+                    <div className="mc-field">
+                      <label>Preço Mercari (¥) *</label>
+                      <input type="number" placeholder="ex: 3500" min="1" step="1" value={it.jpy||''} onChange={e=>upIt(it.id,'jpy',parseFloat(e.target.value)||0)}/>
+                    </div>
+                    <div className="mc-field">
+                      <label>Calculadora (R$) <span style={{fontWeight:400,opacity:.5}}>incl. ¥100/link</span></label>
+                      <input type="text" readOnly value={it.jpy>0?'R$ '+fBRL(calcBRL(it.jpy)):''} tabIndex={-1}/>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {items.length>1&&tots.j>0&&(
+              <div className="mc-total-bar">
+                <span className="mc-total-label">Total do pedido</span>
+                <span className="mc-total-jpy">{fJPY(tots.j)}</span>
+                <span className="mc-total-sep">·</span>
+                <span className="mc-total-brl">R$ {fBRL(tots.b)}</span>
+              </div>
+            )}
+
+            <button className="mc-btn-add" onClick={addIt}>＋ Adicionar outro item</button>
+
+            <div className="mc-sec">Confirmações</div>
+            {CTXT.map((txt,i)=>(
+              <div key={i} className={`mc-check-item${checks[i]?' on':''}`} onClick={()=>setChecks(p=>p.map((c,j)=>j===i?!c:c))}>
+                <div className="mc-cb-box"/>
+                <span className="mc-cb-text">{txt}</span>
+              </div>
+            ))}
+
+            <div className="mc-divider"/>
+            <div className="mc-sec">Pagamento</div>
+
+            <div className="mc-pix-card">
+              <div className="mc-pix-title">✦ Chave PIX — Mercado Pago</div>
+              <div className="mc-pix-name">Fernanda Gomes Medeiros</div>
+              <div className="mc-pix-key-row">
+                <div className="mc-pix-key">{PIX}</div>
+                <button className="mc-btn-copy" onClick={()=>{navigator.clipboard.writeText(PIX);setPixCopied(true);setTimeout(()=>setPixCopied(false),2000);}}>
+                  {pixCopied?'Copiado ✓':'Copiar'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mc-field" style={{marginBottom:6}}>
+              <label>Comprovante de pagamento *</label>
+              <label className={`mc-file-label${semComp?' disabled':''}`} htmlFor="mc-f-comp">
+                <span className="mc-file-icon">📎</span>
+                <div>
+                  <div className="mc-file-text">Clique para adicionar o arquivo</div>
+                  {fileComp&&<div className="mc-file-name">{fileComp.name}</div>}
+                </div>
+              </label>
+              <input ref={fileRef} type="file" id="mc-f-comp" accept="image/*,.pdf" style={{display:'none'}} onChange={e=>{setFileComp(e.target.files[0]||null);}}/>
+            </div>
+
+            <button className="mc-btn-sem-comp" onClick={()=>{const ns=!semComp;setSemComp(ns);if(ns){setFileComp(null);if(fileRef.current)fileRef.current.value='';}}}>
+              {semComp?'← Voltar a anexar arquivo':'Não consigo anexar o comprovante →'}
+            </button>
+
+            {semComp&&(
+              <div className="mc-field" style={{marginBottom:18}}>
+                <label>ID da transação PIX *</label>
+                <input type="text" value={idPix} placeholder="ex: E00000000202407..." onChange={e=>setIdPix(e.target.value)}/>
+                <span style={{fontSize:11,color:'#9a9888',marginTop:3,display:'block'}}>Disponível no comprovante do app do banco, em "Detalhes da transação".</span>
+              </div>
+            )}
+
+            <a href={waHref} target="_blank" rel="noopener noreferrer" className="mc-btn-cartao-wa">
+              💳 Prefiro pagar no cartão de crédito →
+            </a>
+
+            {formErr&&<div className="mc-err">{formErr}</div>}
+            <button className="mc-btn-primary" onClick={enviar} disabled={!formOk||sending}>
+              {sending?'Enviando...':'Enviar pedido →'}
+            </button>
+          </div>
+        )}
+
+        {itab==='pedido' && done && (
+          <div className="mc-success-card">
+            <div className="mc-success-icon">🎌</div>
+            <div className="mc-success-title">Pedido enviado!</div>
+            <div className="mc-success-sub">Sua solicitação foi recebida.<br/>A GOM vai verificar e entrar em contato para confirmar os valores.</div>
+            <a href={waLink} target="_blank" rel="noopener noreferrer" className="mc-btn-wa">📲 Enviar comprovante pelo WhatsApp →</a>
+            <button className="mc-btn-sec" style={{marginTop:10}} onClick={reset}>+ Fazer outro pedido</button>
+          </div>
+        )}
+
+      </div>
+    </div>
   );
 }
 
@@ -8902,7 +9311,7 @@ export default function App() {
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
       {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
-      {tab === "mercari" && <MercariEmbed />}
+      {tab === "mercari" && <MercariTab />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
