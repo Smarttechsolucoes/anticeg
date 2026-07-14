@@ -275,7 +275,8 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
       <div class="card-tag">Mercari JP</div>
       <div class="detail-rows">
         <div class="detail-row"><span class="dl">valor do item (¥)</span><span class="dv" id="r-item">—</span></div>
-        <div class="detail-row"><span class="dl">taxa de serviço (¥)</span><span class="dv" id="r-fee">—</span></div>
+        <div class="detail-row"><span class="dl">taxa por link (¥)</span><span class="dv" id="r-proxy">¥ 100</span></div>
+        <div class="detail-row"><span class="dl">taxa de serviço 8% (¥)</span><span class="dv" id="r-fee">—</span></div>
         <div class="detail-row"><span class="dl">total em iene</span><span class="dv" id="r-total">—</span></div>
         <div class="detail-row"><span class="dl">câmbio aplicado</span><span class="dv" id="r-fx">—</span></div>
       </div>
@@ -544,7 +545,7 @@ function addItem() {
         <input type="number" id="jpy-${id}" placeholder="ex: 3500" min="1" step="1" oninput="calcItem(${id})">
       </div>
       <div class="field">
-        <label>Calculadora (R$)</label>
+        <label>Calculadora (R$) <span style="font-weight:400;opacity:.5">incl. ¥100/link</span></label>
         <input type="text" id="brl-${id}" readonly placeholder="—" tabindex="-1">
       </div>
     </div>`;
