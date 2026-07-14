@@ -6589,6 +6589,14 @@ function AdminMercari({ pedidos = [], onUpdate }) {
   async function mudarStatus(p, novoStatus) {
     setCarregando(p.id);
     await supabase.from("mercari_pedidos").update({ status: novoStatus }).eq("id", p.id);
+    const msgs = {
+      aprovado: `🎌 Seu pedido Mercari foi aprovado! Em breve entraremos em contato para combinar o pagamento.`,
+      recusado: `🎌 Seu pedido Mercari não pôde ser realizado. Entre em contato com a admin para mais informações.`,
+      pago:     `🎌 Pagamento do seu pedido Mercari confirmado! Acompanhe o status por aqui.`,
+    };
+    if (msgs[novoStatus]) {
+      await supabase.from("pushes").insert([{ message: msgs[novoStatus], active: true, joiner_cog: p.joiner_cog }]);
+    }
     onUpdate(prev => prev.map(x => x.id === p.id ? { ...x, status: novoStatus } : x));
     setCarregando(null);
   }
