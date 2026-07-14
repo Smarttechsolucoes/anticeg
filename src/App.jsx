@@ -6567,7 +6567,7 @@ function MercariEmbed() {
   }, []);
   return (
     <iframe
-      src="/mercari?embed"
+      src="/mercari-embed?embed"
       title="Caixinha Mercari"
       scrolling="no"
       style={{ width:"100%", height:h, border:"none", display:"block" }}
@@ -8536,12 +8536,14 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
-    const tab = parts[0] || "masterlist";
+    const pathTab = parts[0] || "";
     const sub = parts[1] || null;
-    return { tab: TAB_SLUGS.includes(tab) ? tab : "masterlist", sub };
+    const qTab = new URLSearchParams(window.location.search).get("tab") || "";
+    const tab = TAB_SLUGS.includes(pathTab) ? pathTab : TAB_SLUGS.includes(qTab) ? qTab : "masterlist";
+    return { tab, sub };
   };
   const [tab, setTab] = useState(() => parseUrlParts().tab);
   const [initAdminSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "admin"  ? p.sub : null; });
