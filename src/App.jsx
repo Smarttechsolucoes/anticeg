@@ -6577,11 +6577,11 @@ function MercariEmbed() {
 }
 
 function AdminMercari({ pedidos = [], onUpdate }) {
-  const STATUS_COLOR = { pendente:"#BAFF39", aguardando_link:"#f0c040", aprovado:"#64B5F6", recusado:"#ff6b6b", pago:"#C9A8F0" };
-  const STATUS_BG    = { pendente:"rgba(186,255,57,.08)", aguardando_link:"rgba(240,192,64,.08)", aprovado:"rgba(100,181,246,.08)", recusado:"rgba(255,107,107,.06)", pago:"rgba(201,168,240,.08)" };
-  const STATUS_BORDER= { pendente:"rgba(186,255,57,.2)", aguardando_link:"rgba(240,192,64,.2)", aprovado:"rgba(100,181,246,.2)", recusado:"rgba(255,107,107,.15)", pago:"rgba(201,168,240,.2)" };
+  const STATUS_COLOR = { pendente:"#BAFF39", aguardando_link:"#f0c040", aprovado:"#64B5F6", recusado:"#ff6b6b", pago:"#C9A8F0", finalizado:"#4ecb71" };
+  const STATUS_BG    = { pendente:"rgba(186,255,57,.08)", aguardando_link:"rgba(240,192,64,.08)", aprovado:"rgba(100,181,246,.08)", recusado:"rgba(255,107,107,.06)", pago:"rgba(201,168,240,.08)", finalizado:"rgba(78,203,113,.08)" };
+  const STATUS_BORDER= { pendente:"rgba(186,255,57,.2)", aguardando_link:"rgba(240,192,64,.2)", aprovado:"rgba(100,181,246,.2)", recusado:"rgba(255,107,107,.15)", pago:"rgba(201,168,240,.2)", finalizado:"rgba(78,203,113,.2)" };
   const [filtro, setFiltro] = useState("pendente");
-  const STATUS_LABEL = { pendente:"pendente", aguardando_link:"aguard. link", aprovado:"aprovado", recusado:"recusado", pago:"pago", todos:"todos" };
+  const STATUS_LABEL = { pendente:"pendente", aguardando_link:"aguard. link", aprovado:"aprovado", recusado:"recusado", pago:"pago", finalizado:"finalizado", todos:"todos" };
   const [carregando, setCarregando] = useState(null);
 
   const lista = filtro === "todos" ? pedidos : pedidos.filter(p => p.status === filtro);
@@ -6592,7 +6592,8 @@ function AdminMercari({ pedidos = [], onUpdate }) {
     const msgs = {
       aprovado: `🎌 Seu pedido Mercari foi aprovado! Seu item estará finalizado assim que a proxy realizar a compra no Mercari.`,
       recusado: `🎌 Seu pedido Mercari não pôde ser realizado. Entre em contato com a admin para mais informações.`,
-      pago:     `🎌 Pagamento do seu pedido Mercari confirmado! Acompanhe o status por aqui.`,
+      pago:       `🎌 Pagamento do seu pedido Mercari confirmado! Acompanhe o status por aqui.`,
+      finalizado: `🎌 Seu pedido Mercari foi finalizado! A compra no Mercari foi realizada. Em breve você receberá mais informações sobre o envio.`,
     };
     if (msgs[novoStatus]) {
       await supabase.from("pushes").insert([{ message: msgs[novoStatus], active: true, joiner_cog: p.joiner_cog }]);
@@ -6606,7 +6607,7 @@ function AdminMercari({ pedidos = [], onUpdate }) {
   return (
     <div>
       <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
-        {["pendente","aguardando_link","aprovado","pago","recusado","todos"].map(s => (
+        {["pendente","aguardando_link","aprovado","pago","finalizado","recusado","todos"].map(s => (
           <button key={s} onClick={() => setFiltro(s)}
             style={{ padding:"5px 14px", borderRadius:20, border:`1px solid ${filtro===s ? STATUS_COLOR[s]||"rgba(245,240,232,.4)" : "rgba(245,240,232,.12)"}`, background: filtro===s ? (STATUS_BG[s]||"rgba(245,240,232,.06)") : "transparent", color: filtro===s ? (STATUS_COLOR[s]||"var(--offwhite)") : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", textTransform:"uppercase", letterSpacing:".08em" }}>
             {STATUS_LABEL[s]||s} {s !== "todos" && <span>({pedidos.filter(p => p.status === s).length})</span>}
@@ -6701,6 +6702,12 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                 <button onClick={() => mudarStatus(p, "pago")} disabled={carregando === p.id}
                   style={{ background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
                   {carregando === p.id ? "..." : "✓ Marcar pago"}
+                </button>
+              )}
+              {p.status === "pago" && (
+                <button onClick={() => mudarStatus(p, "finalizado")} disabled={carregando === p.id}
+                  style={{ background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.3)", color:"#4ecb71", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
+                  {carregando === p.id ? "..." : "✓ Finalizar"}
                 </button>
               )}
             </div>
