@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
 
 :root {
   --laranja: #FF5C1A;
@@ -923,9 +923,9 @@ td { padding:10px; vertical-align:middle; }
 }
 
 /* ── Mercari Tab (native React) ── */
-.mc-wrap { max-width:820px; margin:0 auto; padding-bottom:40px; }
-.mc-top { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:20px 24px 16px; border-bottom:2px solid #e85c1a; margin-bottom:0; }
-.mc-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:32px; letter-spacing:.02em; line-height:1; text-transform:uppercase; }
+.mc-wrap { max-width:820px; margin:0 auto; padding-bottom:40px; background:#131310; min-height:60vh; }
+.mc-top { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:20px 24px 16px; border-bottom:2px solid #e85c1a; margin-bottom:0; background:#1a1a16; }
+.mc-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:32px; letter-spacing:.02em; line-height:1; text-transform:uppercase; color:#f5f0e8; }
 .mc-sub { font-family:'Barlow Condensed',sans-serif; font-size:11px; letter-spacing:.18em; color:#9a9888; text-transform:uppercase; margin-top:3px; }
 .mc-fx-row { display:flex; align-items:center; gap:10px; }
 .mc-fx-val { font-family:'Barlow Condensed',sans-serif; font-size:14px; color:#e85c1a; font-weight:700; }

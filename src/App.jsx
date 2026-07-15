@@ -9197,7 +9197,18 @@ export default function App() {
   }
 
   if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
-  if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+  if ((page === "landing" || !user) && parseUrlParts().tab !== "mercari") return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+  if ((page === "landing" || !user) && parseUrlParts().tab === "mercari") {
+    return (
+      <div style={{ background:"#131310", minHeight:"100vh" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", background:"#0D0D0D", borderBottom:"1px solid #2a2a26" }}>
+          <a href="/" style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", textDecoration:"none", letterSpacing:2 }}>ANTI<span style={{color:"var(--laranja)"}}>CEG</span></a>
+          <a href="/" style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)", textDecoration:"none" }}>← voltar</a>
+        </div>
+        <MercariTab />
+      </div>
+    );
+  }
   if (window.location.pathname === "/ceg/this-and-that") return <ThisAndThatCegPage isOwner={isOwner(user)} />;
 
   const isAdmin = isAdminUser(user);
