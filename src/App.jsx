@@ -652,6 +652,7 @@ function CegTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
   const [filtro, setFiltro] = useState("todas");
+  const [cegCapas, setCegCapas] = useState({});
 
   const guest = !user || user.guest;
   const meuCog = user?.cog;
@@ -671,6 +672,13 @@ function CegTab({ user, itens }) {
       }
       setAllItens(all);
     })();
+    supabase.from("item_fotos").select("ceg, foto_url").order("ordem").order("id")
+      .then(({ data }) => {
+        if (!data) return;
+        const capas = {};
+        data.forEach(f => { if (!capas[f.ceg]) capas[f.ceg] = f.foto_url; });
+        setCegCapas(capas);
+      });
   }, []);
 
   if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} guest={guest} user={user} />;
@@ -740,7 +748,13 @@ function CegTab({ user, itens }) {
             const statuses = Object.entries(data.statusCount).sort((a, b) => b[1] - a[1]);
             const euEstou = meuCog && data.joiners.has(meuCog);
             return (
-              <div key={ceg} className="ceg-summary-card" style={{ borderColor: euEstou ? "rgba(183,156,255,.25)" : "" }}>
+              <div key={ceg} className="ceg-summary-card" style={{ borderColor: euEstou ? "rgba(183,156,255,.25)" : "", padding: cegCapas[ceg] ? 0 : undefined, overflow: "hidden" }}>
+                {cegCapas[ceg] && (
+                  <div style={{ width: "100%", aspectRatio: "16/7", overflow: "hidden", borderRadius: "8px 8px 0 0" }}>
+                    <img src={cegCapas[ceg]} alt={ceg} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  </div>
+                )}
+                <div style={{ padding: cegCapas[ceg] ? "12px 14px 14px" : undefined }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div className="ceg-summary-name">{ceg}</div>
                   {euEstou && <span style={{ fontSize: 9, background: "var(--lilas)", color: "#111", borderRadius: 4, padding: "1px 6px", fontWeight: 700, letterSpacing: 0.5 }}>EU</span>}
@@ -760,6 +774,7 @@ function CegTab({ user, itens }) {
                 <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
                   saiba mais →
                 </button>
+                </div>
               </div>
             );
           })}
