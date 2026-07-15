@@ -8190,17 +8190,53 @@ function ThisAndThatGallery() {
   );
 }
 
+function slugifyItem(nome) {
+  return (nome || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 function CegGalleryPage({ ceg }) {
   const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [ampliada, setAmpliada] = useState(null);
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     supabase.from("item_fotos").select("*").eq("ceg", ceg)
       .order("ordem", { ascending: true }).order("id", { ascending: true })
-      .then(({ data }) => { if (data) setFotos(data); setLoading(false); });
+      .then(({ data }) => {
+        if (data) {
+          setFotos(data);
+          const hash = window.location.hash.replace("#", "");
+          if (hash) {
+            const alvo = data.find(f => slugifyItem(f.nome_do_item) === hash);
+            if (alvo) {
+              setAmpliada(alvo);
+              setTimeout(() => {
+                const el = document.getElementById("item-" + hash);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 100);
+            }
+          }
+        }
+        setLoading(false);
+      });
   }, [ceg]);
+
+  function abrirModal(f) {
+    setAmpliada(f);
+    window.history.replaceState(null, "", "#" + slugifyItem(f.nome_do_item));
+  }
+
+  function fecharModal() {
+    setAmpliada(null);
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+
+  function copiarLink(f) {
+    const url = window.location.origin + "/galeria/" + encodeURIComponent(ceg) + "#" + slugifyItem(f.nome_do_item);
+    navigator.clipboard.writeText(url).then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); });
+  }
 
   const filtradas = busca.trim()
     ? fotos.filter(f => (f.nome_do_item || "").toLowerCase().includes(busca.toLowerCase()) || (f.descricao || "").toLowerCase().includes(busca.toLowerCase()))
@@ -8225,31 +8261,39 @@ function CegGalleryPage({ ceg }) {
         {loading && <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "80px 0" }}>carregando...</div>}
         {!loading && filtradas.length === 0 && <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "80px 0" }}>Nenhum item ainda.</div>}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
-          {filtradas.map(f => (
-            <div key={f.id} onClick={() => setAmpliada(f)}
-              style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "border-color .15s, transform .15s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.22)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.07)"; e.currentTarget.style.transform = "translateY(0)"; }}>
-              <div style={{ aspectRatio: "1/1", overflow: "hidden", background: "rgba(245,240,232,.04)" }}>
-                <img src={f.foto_url} alt={f.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          {filtradas.map(f => {
+            const slug = slugifyItem(f.nome_do_item);
+            return (
+              <div key={f.id} id={"item-" + slug} onClick={() => abrirModal(f)}
+                style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "border-color .15s, transform .15s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.22)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.07)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                <div style={{ aspectRatio: "1/1", overflow: "hidden", background: "rgba(245,240,232,.04)" }}>
+                  <img src={f.foto_url} alt={f.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+                <div style={{ padding: "10px 12px 12px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#F5F0E8", fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{f.nome_do_item}</div>
+                  {f.descricao && <div style={{ fontSize: 10, color: "rgba(245,240,232,.38)", marginTop: 3, fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{f.descricao}</div>}
+                </div>
               </div>
-              <div style={{ padding: "10px 12px 12px" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#F5F0E8", fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{f.nome_do_item}</div>
-                {f.descricao && <div style={{ fontSize: 10, color: "rgba(245,240,232,.38)", marginTop: 3, fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{f.descricao}</div>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {ampliada && (
-        <div onClick={() => setAmpliada(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+        <div onClick={fecharModal} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#181614", border: "1px solid rgba(245,240,232,.1)", borderRadius: 16, overflow: "hidden", maxWidth: 520, width: "100%" }}>
             <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ width: "100%", display: "block", maxHeight: "60vh", objectFit: "contain", background: "#0d0c0b" }} />
             <div style={{ padding: "16px 20px 20px" }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#F5F0E8", fontFamily: "'DM Mono',monospace" }}>{ampliada.nome_do_item}</div>
               {ampliada.descricao && <div style={{ fontSize: 12, color: "rgba(245,240,232,.45)", marginTop: 6, fontFamily: "'DM Mono',monospace", lineHeight: 1.5 }}>{ampliada.descricao}</div>}
-              <button onClick={() => setAmpliada(null)} style={{ marginTop: 14, background: "transparent", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 16px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 10, cursor: "pointer" }}>fechar</button>
+              <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                <button onClick={() => copiarLink(ampliada)} style={{ background: "transparent", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 14px", color: copiado ? "#7ecba0" : "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 10, cursor: "pointer" }}>
+                  {copiado ? "link copiado ✓" : "⎘ copiar link"}
+                </button>
+                <button onClick={fecharModal} style={{ background: "transparent", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 14px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 10, cursor: "pointer" }}>fechar</button>
+              </div>
             </div>
           </div>
         </div>
