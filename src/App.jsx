@@ -9153,7 +9153,9 @@ export default function App() {
       } else {
         const novos = computed.filter(b => b.earned && !prevSeen.includes(b.id));
         if (novos.length) setBadgePopupQueue(q => [...q, ...novos]);
-        localStorage.setItem(storeKey, JSON.stringify(earnedIds));
+        // acumula: nunca remove badge já visto (evita popup repetido após reset do Supabase)
+        const allSeen = [...new Set([...prevSeen, ...earnedIds])];
+        localStorage.setItem(storeKey, JSON.stringify(allSeen));
       }
     })();
     return () => { cancelled = true; };
