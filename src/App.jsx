@@ -8846,6 +8846,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     { id:"calendario", icon:"◫", label:"Datas" },
     ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
     ...(!isGuest ? [{ id:"envio",  icon:"▢", label:"Envio" }] : []),
+    { id:"mercari",    icon:"🎌", label:"Mercari" },
     { id:"regras",     icon:"☆", label:"Links" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
@@ -9197,8 +9198,7 @@ export default function App() {
   }
 
   if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
-  if ((page === "landing" || !user) && parseUrlParts().tab !== "mercari") return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
-  if ((page === "landing" || !user) && parseUrlParts().tab === "mercari") {
+  if (!user && parseUrlParts().tab === "mercari") {
     return (
       <div style={{ background:"#131310", minHeight:"100vh" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", background:"#0D0D0D", borderBottom:"1px solid #2a2a26" }}>
@@ -9209,6 +9209,7 @@ export default function App() {
       </div>
     );
   }
+  if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
   if (window.location.pathname === "/ceg/this-and-that") return <ThisAndThatCegPage isOwner={isOwner(user)} />;
 
   const isAdmin = isAdminUser(user);
