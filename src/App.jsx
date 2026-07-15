@@ -174,6 +174,11 @@ function Timeline({ activeIdx }) {
   );
 }
 
+function fmtVenc(v) {
+  if (!v) return null;
+  return new Date(v + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
 function diasAtraso(vencimento) {
   if (!vencimento) return 0;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -327,6 +332,11 @@ function ValCell({ val, status, vencimento, emAnalise, confirmado }) {
       {confirmado && isPendente(status) && <span style={{ fontSize: 9, color: "#4ade80", fontFamily: "'DM Mono',monospace", letterSpacing: ".05em" }}>✓ confirmado</span>}
       {!emAnalise && !confirmado && <PayBadge status={status} />}
       {emAnalise && pendente && <span style={{ fontSize: 9, color: "#A78BFA", fontFamily: "'DM Mono',monospace", letterSpacing: ".05em" }}>em análise</span>}
+      {pendente && !emAnalise && !confirmado && vencimento && dias === 0 && (
+        <span style={{ fontSize: 9, color: "rgba(240,192,64,.8)", fontFamily: "'DM Mono',monospace", letterSpacing: ".03em", whiteSpace: "nowrap" }}>
+          venc {fmtVenc(vencimento)}
+        </span>
+      )}
       {dias > 0 && (
         <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
           ⚠ multa R${fmtBRL(multa)} ({dias}d)
@@ -1321,6 +1331,23 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{row.i.ceg}</span>
                   {hasMulta && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", borderRadius:4, padding:"1px 6px" }}>{row.diasMax}d em atraso</span>}
                 </div>
+                {(() => {
+                  const tags = [
+                    row.vItem  > 0 && row.i.venc_item  && diasAtraso(row.i.venc_item)  === 0 && ["item",  row.i.venc_item],
+                    row.vFrete > 0 && row.i.venc_frete && diasAtraso(row.i.venc_frete) === 0 && ["frete", row.i.venc_frete],
+                    row.vRf    > 0 && row.i.venc_rf    && diasAtraso(row.i.venc_rf)    === 0 && ["RF",    row.i.venc_rf],
+                  ].filter(Boolean);
+                  if (!tags.length) return null;
+                  return (
+                    <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" }}>
+                      {tags.map(([label, v]) => (
+                        <span key={label} style={{ fontSize:9, color:"rgba(240,192,64,.85)", fontFamily:"'DM Mono',monospace", background:"rgba(240,192,64,.07)", border:"1px solid rgba(240,192,64,.2)", borderRadius:3, padding:"1px 6px", whiteSpace:"nowrap" }}>
+                          {label} {fmtVenc(v)}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </td>
               <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vItem > 0 ? `R$${fmtBRL(row.vItem)}` : dash}</td>
               <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</td>
