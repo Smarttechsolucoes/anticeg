@@ -503,11 +503,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                     {icon} {mode}
                   </button>
                 ))}
-                {fotos.length > 0 && (
-                  <a href={`/galeria/${encodeURIComponent(ceg)}`} target="_blank" rel="noreferrer" style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", textDecoration:"none" }}>
-                    ↗ pública
-                  </a>
-                )}
+                <a href={`/ceg/${encodeURIComponent(ceg)}`} target="_blank" rel="noreferrer" style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", textDecoration:"none" }}>
+                  ↗ ver página
+                </a>
               </div>
             )}
           </div>
@@ -780,11 +778,9 @@ function CegTab({ user, itens }) {
                   <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
                     saiba mais →
                   </button>
-                  {cegCapas[ceg] && (
-                    <a href={`/galeria/${encodeURIComponent(ceg)}`} style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", letterSpacing: "0.5px", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "5px 10px", whiteSpace: "nowrap" }}>
-                      ↗ galeria
-                    </a>
-                  )}
+                  <a href={`/ceg/${encodeURIComponent(ceg)}`} style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", letterSpacing: "0.5px", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "5px 10px", whiteSpace: "nowrap" }}>
+                    ↗ ver página
+                  </a>
                 </div>
                 </div>
               </div>
@@ -7731,32 +7727,33 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   );
 }
 
-// ── Página /ceg/this-and-that ─────────────────────────────────────────────────
-function ThisAndThatCegPage({ isOwner }) {
+// ── Página genérica /ceg/:nome ────────────────────────────────────────────────
+function CegPage({ ceg, isOwner = false, logoUrl = null }) {
   const [itens,      setItens]      = useState(null);
   const [categorias, setCategorias] = useState(null);
   const [uploading,  setUploading]  = useState(null);
   const [ampliada,   setAmpliada]   = useState(null);
   const [msg,        setMsg]        = useState("");
-  const [viewMode,   setViewMode]   = useState("tabela"); // "tabela" | "galeria"
+  const [viewMode,   setViewMode]   = useState("tabela");
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", "THIS & THAT").neq("nome", "Disponivel")
+    supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
       .then(({ data }) => setItens(data || []));
-    supabase.from("item_fotos").select("*").eq("ceg", "THIS & THAT").order("ordem").order("id")
+    supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setCategorias(data || []));
-  }, []);
+  }, [ceg]);
 
-  // Encontra categoria cujo nome está contido no nome do item (case-insensitive)
   function categoriaDoItem(nomeItem) {
     if (!categorias) return null;
     return categorias.find(c => nomeItem.toLowerCase().includes(c.nome_do_item.toLowerCase())) || null;
   }
 
+  const uploadSlug = ceg.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
+
   async function uploadCategoria(catNome, file) {
     setUploading(catNome);
     const ext  = file.name.split(".").pop().toLowerCase();
-    const path = `this-and-that/${Date.now()}_${catNome.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.${ext}`;
+    const path = `${uploadSlug}/${Date.now()}_${catNome.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.${ext}`;
     const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
     if (upErr) { alert("Erro upload: " + upErr.message); setUploading(null); return; }
     const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
@@ -7766,7 +7763,7 @@ function ThisAndThatCegPage({ isOwner }) {
       setCategorias(prev => prev.map(c => c.id === existente.id ? { ...c, foto_url: publicUrl } : c));
     } else {
       const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg: "THIS & THAT", nome_do_item: catNome, foto_url: publicUrl, ordem: (categorias || []).length }])
+        .insert([{ ceg, nome_do_item: catNome, foto_url: publicUrl, ordem: (categorias || []).length }])
         .select().single();
       if (insErr) { alert("Erro: " + insErr.message); setUploading(null); return; }
       if (nova) setCategorias(prev => [...(prev || []), nova]);
@@ -7811,7 +7808,10 @@ function ThisAndThatCegPage({ isOwner }) {
             <div className="page-eyebrow">
               <a href="/" style={{ background: "none", border: "none", color: "rgba(245,240,232,.62)", fontFamily: "'DM Mono',monospace", fontSize: "var(--fs-xs)", cursor: "pointer", padding: 0, letterSpacing: 1, textDecoration: "none" }}>← voltar</a>
             </div>
-            <img src="https://straykidsshop.com/cdn/shop/files/STRAY-00009---PreDESKTOP.png?v=1783458642&width=1600" alt="THIS & THAT" style={{ height: 64, maxWidth: 320, objectFit: "contain", objectPosition: "left", marginTop: 8, filter: "invert(1)" }} />
+            {logoUrl
+              ? <img src={logoUrl} alt={ceg} style={{ height: 64, maxWidth: 320, objectFit: "contain", objectPosition: "left", marginTop: 8, filter: "invert(1)" }} />
+              : <h1 style={{ fontSize: "clamp(22px,4vw,38px)", fontWeight: 900, margin: "8px 0 0", letterSpacing: "-0.5px" }}>{ceg}</h1>
+            }
           </div>
           {itens && (
             <div style={{ textAlign: "right" }}>
@@ -9393,7 +9393,11 @@ export default function App() {
     );
   }
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
-  if (window.location.pathname === "/ceg/this-and-that") return <ThisAndThatCegPage isOwner={isOwner(user)} />;
+  if (window.location.pathname === "/ceg/this-and-that") return <CegPage ceg="THIS & THAT" isOwner={isOwner(user)} logoUrl="https://straykidsshop.com/cdn/shop/files/STRAY-00009---PreDESKTOP.png?v=1783458642&width=1600" />;
+  if (window.location.pathname.startsWith("/ceg/")) {
+    const cegName = decodeURIComponent(window.location.pathname.replace(/^\/ceg\//, ""));
+    return <CegPage ceg={cegName} isOwner={isOwner(user)} />;
+  }
 
   const isAdmin = isAdminUser(user);
 
