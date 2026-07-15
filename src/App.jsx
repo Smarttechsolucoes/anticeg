@@ -7969,8 +7969,7 @@ function ThisAndThatCegPage({ isOwner }) {
 
 // ── Admin: gerenciar galeria de qualquer CEG ──────────────────────────────────
 function AdminGaleria() {
-  const [cegSelecionada, setCegSelecionada] = useState("THIS & THAT");
-  const [cegInput,       setCegInput]       = useState("THIS & THAT");
+  const [cegSelecionada, setCegSelecionada] = useState("");
   const [cegsDisponiveis,setCegsDisponiveis] = useState([]);
   const [fotos,          setFotos]          = useState(null);
   const [uploading,      setUploading]      = useState(false);
@@ -7982,6 +7981,7 @@ function AdminGaleria() {
       .then(({ data }) => {
         const uniq = [...new Set((data||[]).map(r => r.ceg).filter(Boolean))].sort();
         setCegsDisponiveis(uniq);
+        if (uniq.length > 0) setCegSelecionada(uniq[0]);
       });
   }, []);
 
@@ -8038,24 +8038,16 @@ function AdminGaleria() {
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 9, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", marginBottom: 8 }}>CEG</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input
-            list="cegs-list"
-            value={cegInput}
-            onChange={e => setCegInput(e.target.value)}
-            onBlur={() => { if (cegInput.trim()) { setCegSelecionada(cegInput.trim()); } }}
-            onKeyDown={e => { if (e.key === "Enter" && cegInput.trim()) { setCegSelecionada(cegInput.trim()); e.target.blur(); } }}
-            placeholder="nome da CEG..."
-            style={{ flex: 1, background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.15)", borderRadius: 7, padding: "8px 12px", color: "#F5F0E8", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none" }}
-          />
-          <datalist id="cegs-list">
-            {cegsDisponiveis.map(c => <option key={c} value={c} />)}
-          </datalist>
-          <button onClick={() => { if (cegInput.trim()) setCegSelecionada(cegInput.trim()); }}
-            style={{ padding: "8px 16px", background: "rgba(201,168,240,.15)", border: "1px solid rgba(201,168,240,.3)", borderRadius: 7, color: "#C9A8F0", fontFamily: "'DM Mono',monospace", fontSize: 11, cursor: "pointer" }}>
-            carregar
-          </button>
+          <select
+            value={cegSelecionada}
+            onChange={e => setCegSelecionada(e.target.value)}
+            style={{ flex: 1, background: "#1a1a18", border: "1px solid rgba(245,240,232,.15)", borderRadius: 7, padding: "8px 12px", color: cegSelecionada ? "#F5F0E8" : "rgba(245,240,232,.35)", fontFamily: "'DM Mono',monospace", fontSize: 12, outline: "none", cursor: "pointer" }}
+          >
+            {cegsDisponiveis.length === 0 && <option value="">carregando CEGs…</option>}
+            {cegsDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
-        <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)", marginTop: 5 }}>exibindo: {cegSelecionada} · {fotos ? fotos.length : "…"} foto(s)</div>
+        <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)", marginTop: 5 }}>{cegSelecionada ? `exibindo: ${cegSelecionada} · ${fotos ? fotos.length : "…"} foto(s)` : "selecione uma CEG acima"}</div>
       </div>
 
       {/* Zona de upload */}
