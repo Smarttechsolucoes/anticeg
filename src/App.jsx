@@ -443,6 +443,37 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   const [fotos, setFotos] = useState([]);
   const [viewMode, setViewMode] = useState("tabela");
   const [ampliada, setAmpliada] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
+
+  const owner = isOwner(user);
+
+  async function uploadFotos(files) {
+    setUploading(true);
+    const slug = ceg.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
+    const novas = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      const path = `${slug}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
+      if (upErr) { alert("Erro: " + upErr.message); continue; }
+      const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+      const { data: nova } = await supabase.from("item_fotos")
+        .insert([{ ceg, nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: fotos.length + novas.length }])
+        .select().single();
+      if (nova) novas.push(nova);
+    }
+    setFotos(prev => [...prev, ...novas]);
+    setUploadMsg(`${novas.length} foto(s) adicionada(s) ✓`);
+    setTimeout(() => setUploadMsg(""), 3000);
+    setUploading(false);
+  }
+
+  async function removerFoto(id) {
+    if (!window.confirm("Remover foto?")) return;
+    await supabase.from("item_fotos").delete().eq("id", id);
+    setFotos(prev => prev.filter(f => f.id !== id));
+  }
 
   useEffect(() => {
     supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
@@ -465,8 +496,8 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
         {itens && (
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
-            {fotos.length > 0 && (
-              <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end" }}>
+            {(fotos.length > 0 || owner) && (
+              <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end", alignItems:"center" }}>
                 {[["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
                   <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
                     {icon} {mode}
@@ -479,16 +510,33 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       </div>
 
       {/* Galeria de fotos */}
-      {viewMode === "galeria" && fotos.length > 0 && (
+      {viewMode === "galeria" && (fotos.length > 0 || owner) && (
         <div style={{ marginBottom:28 }}>
-          <div style={{ fontSize:9, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>fotos · {fotos.length}</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10 }}>
-            {fotos.map(f => (
-              <div key={f.id} onClick={() => setAmpliada(f)} style={{ borderRadius:8, overflow:"hidden", background:"rgba(245,240,232,.05)", aspectRatio:"3/4", cursor:"pointer" }}>
-                <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          {fotos.length > 0 && (
+            <>
+              <div style={{ fontSize:9, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>fotos · {fotos.length}</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10, marginBottom:16 }}>
+                {fotos.map(f => (
+                  <div key={f.id} style={{ position:"relative", borderRadius:8, overflow:"hidden", background:"rgba(245,240,232,.05)", aspectRatio:"3/4" }}>
+                    <img src={f.foto_url} alt={f.nome_do_item} onClick={() => setAmpliada(f)} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", cursor:"pointer" }} />
+                    {owner && (
+                      <button onClick={() => removerFoto(f.id)} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,.7)", border:"none", borderRadius:4, color:"rgba(255,107,107,.8)", fontSize:14, width:24, height:24, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>×</button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
+
+          {owner && (
+            <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6, border:"2px dashed rgba(201,168,240,.25)", borderRadius:10, padding:"20px", cursor:"pointer", background:"rgba(201,168,240,.03)" }}>
+              <span style={{ fontSize:18 }}>+</span>
+              <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0" }}>{uploading ? "enviando..." : "adicionar fotos"}</span>
+              <input type="file" accept="image/*" multiple style={{ display:"none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files))} />
+            </label>
+          )}
+          {uploadMsg && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#BAFF39", marginTop:10 }}>{uploadMsg}</div>}
+
           {ampliada && (
             <div onClick={() => setAmpliada(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
               <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:10, objectFit:"contain" }} />
@@ -5124,7 +5172,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   <div className="admin-sidebar-group-label">Config</div>
                   {nav("geral",    "Geral",       "⚙",  0)}
                   {nav("agenda",   "Agenda",      "📅", 0)}
-                  {nav("galeria",  "This & That", "◈",  0)}
+                  {nav("galeria",  "GALERIA", "◈",  0)}
                 </div>
               )}
             </nav>
