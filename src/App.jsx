@@ -497,12 +497,17 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
             {(fotos.length > 0 || owner) && (
-              <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end", alignItems:"center" }}>
+              <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
                 {[["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
                   <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
                     {icon} {mode}
                   </button>
                 ))}
+                {fotos.length > 0 && (
+                  <a href={`/galeria/${encodeURIComponent(ceg)}`} target="_blank" rel="noreferrer" style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", textDecoration:"none" }}>
+                    ↗ pública
+                  </a>
+                )}
               </div>
             )}
           </div>
@@ -771,9 +776,16 @@ function CegTab({ user, itens }) {
                     </span>
                   ))}
                 </div>
-                <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
-                  saiba mais →
-                </button>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
+                    saiba mais →
+                  </button>
+                  {cegCapas[ceg] && (
+                    <a href={`/galeria/${encodeURIComponent(ceg)}`} style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", letterSpacing: "0.5px", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "5px 10px", whiteSpace: "nowrap" }}>
+                      ↗ galeria
+                    </a>
+                  )}
+                </div>
                 </div>
               </div>
             );
@@ -8178,6 +8190,74 @@ function ThisAndThatGallery() {
   );
 }
 
+function CegGalleryPage({ ceg }) {
+  const [fotos, setFotos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState("");
+  const [ampliada, setAmpliada] = useState(null);
+
+  useEffect(() => {
+    supabase.from("item_fotos").select("*").eq("ceg", ceg)
+      .order("ordem", { ascending: true }).order("id", { ascending: true })
+      .then(({ data }) => { if (data) setFotos(data); setLoading(false); });
+  }, [ceg]);
+
+  const filtradas = busca.trim()
+    ? fotos.filter(f => (f.nome_do_item || "").toLowerCase().includes(busca.toLowerCase()) || (f.descricao || "").toLowerCase().includes(busca.toLowerCase()))
+    : fotos;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0D0C0B", color: "#F5F0E8", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+      <div style={{ borderBottom: "1px solid rgba(245,240,232,.07)", padding: "28px 24px 24px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12, maxWidth: 1080, margin: "0 auto" }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "3px", textTransform: "uppercase", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", marginBottom: 6 }}>ANTICEG · GALERIA</div>
+          <h1 style={{ fontSize: "clamp(26px,5vw,44px)", fontWeight: 900, letterSpacing: "-1px", margin: 0, lineHeight: 1 }}>{ceg}</h1>
+        </div>
+        <a href="/" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.3)", textDecoration: "none", letterSpacing: "1px" }}>← portal</a>
+      </div>
+
+      <div style={{ padding: "20px 24px 0", maxWidth: 1080, margin: "0 auto" }}>
+        <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar item..." style={{ width: "100%", maxWidth: 340, background: "rgba(245,240,232,.05)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 8, padding: "10px 16px", color: "#F5F0E8", fontSize: 12, fontFamily: "'DM Mono',monospace", outline: "none", boxSizing: "border-box" }} />
+        {busca && <span style={{ marginLeft: 10, fontSize: 11, color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace" }}>{filtradas.length} resultado(s)</span>}
+      </div>
+
+      <div style={{ padding: "20px 24px 80px", maxWidth: 1080, margin: "0 auto" }}>
+        {loading && <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "80px 0" }}>carregando...</div>}
+        {!loading && filtradas.length === 0 && <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "80px 0" }}>Nenhum item ainda.</div>}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+          {filtradas.map(f => (
+            <div key={f.id} onClick={() => setAmpliada(f)}
+              style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "border-color .15s, transform .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.22)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.07)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+              <div style={{ aspectRatio: "1/1", overflow: "hidden", background: "rgba(245,240,232,.04)" }}>
+                <img src={f.foto_url} alt={f.nome_do_item} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
+              <div style={{ padding: "10px 12px 12px" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#F5F0E8", fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{f.nome_do_item}</div>
+                {f.descricao && <div style={{ fontSize: 10, color: "rgba(245,240,232,.38)", marginTop: 3, fontFamily: "'DM Mono',monospace", lineHeight: 1.4 }}>{f.descricao}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {ampliada && (
+        <div onClick={() => setAmpliada(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#181614", border: "1px solid rgba(245,240,232,.1)", borderRadius: 16, overflow: "hidden", maxWidth: 520, width: "100%" }}>
+            <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ width: "100%", display: "block", maxHeight: "60vh", objectFit: "contain", background: "#0d0c0b" }} />
+            <div style={{ padding: "16px 20px 20px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#F5F0E8", fontFamily: "'DM Mono',monospace" }}>{ampliada.nome_do_item}</div>
+              {ampliada.descricao && <div style={{ fontSize: 12, color: "rgba(245,240,232,.45)", marginTop: 6, fontFamily: "'DM Mono',monospace", lineHeight: 1.5 }}>{ampliada.descricao}</div>}
+              <button onClick={() => setAmpliada(null)} style={{ marginTop: 14, background: "transparent", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 16px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 10, cursor: "pointer" }}>fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
   const WA_GOM = "5524992782023";
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
@@ -9253,6 +9333,10 @@ export default function App() {
   }
 
   if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
+  if (window.location.pathname.startsWith("/galeria/")) {
+    const cegSlug = decodeURIComponent(window.location.pathname.replace("/galeria/", "").replace(/^\//, ""));
+    return <CegGalleryPage ceg={cegSlug} />;
+  }
   if (!user && parseUrlParts().tab === "mercari") {
     return (
       <div style={{ background:"#131310", minHeight:"100vh" }}>
