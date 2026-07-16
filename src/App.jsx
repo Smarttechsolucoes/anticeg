@@ -2139,7 +2139,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           .eq("cog", user.cog)
           .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)"),
         supabase.from("pagamento_demandas").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
-        supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
+        supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf, created_at")
           .eq("cog", user.cog).order("ceg").order("nome_do_item"),
         supabase.from("repassos").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
@@ -2313,6 +2313,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           </div>
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conteúdo</div>
+            {navPerfil("historico", "◷", "Histórico", 0)}
             {navPerfil("tutorial", "☆", "Tutorial",  0)}
             {navPerfil("feedback", "✉", "Feedbacks", 0)}
           </div>
@@ -3604,6 +3605,125 @@ ${compHTML}
                       </span>
                     </div>
                     <div style={{ fontSize: 12, color: "rgba(245,240,232,.55)", lineHeight: 1.5 }}>{b.detalhe}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {perfilSubTab === "historico" && (() => {
+        function fmtDataHora(iso) {
+          if (!iso) return "—";
+          const d = new Date(iso);
+          return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        }
+        function fmtData(iso) {
+          if (!iso) return "—";
+          return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+        }
+
+        // Monta lista unificada de eventos com timestamp
+        const eventos = [];
+
+        // CEG entries (masterlist)
+        const cegsPorNome = {};
+        meusItens.forEach(item => {
+          if (!item.created_at) return;
+          if (!cegsPorNome[item.ceg] || item.created_at < cegsPorNome[item.ceg]) {
+            cegsPorNome[item.ceg] = item.created_at;
+          }
+        });
+        Object.entries(cegsPorNome).forEach(([ceg, ts]) => {
+          eventos.push({ tipo: "ceg", ts, ceg });
+        });
+
+        // Reports
+        (meuReports || []).forEach(r => {
+          if (r.created_at) eventos.push({ tipo: "report", ts: r.created_at, item: r.item_nome, ceg: r.ceg, status: r.status });
+        });
+
+        // Pagamentos enviados
+        meusPagamentos.forEach(p => {
+          if (p.created_at) {
+            const total = (p.itens || []).reduce((s, it) => s + Number(it.valor_item || 0) + Number(it.frete_inter || 0) + Number(it.taxa_rf || 0), 0);
+            eventos.push({ tipo: "pagamento", ts: p.created_at, status: p.status, total, itens: p.itens || [] });
+          }
+        });
+
+        // Envios
+        meuEnvios.forEach(e => {
+          if (e.created_at) eventos.push({ tipo: "envio", ts: e.created_at, status: e.status, opcao: e.opcao_escolhida });
+        });
+
+        // Repassos
+        meusRepassos.forEach(r => {
+          if (r.created_at) eventos.push({ tipo: "repasse", ts: r.created_at, item: r.nome_do_item, ceg: r.ceg, status: r.status });
+        });
+
+        // Feedbacks
+        (meusFeedbacks || []).forEach(f => {
+          if (f.created_at) eventos.push({ tipo: "feedback", ts: f.created_at, tipo_fb: f.tipo, msg: f.message });
+        });
+
+        eventos.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+        const ICONS = { ceg: "◈", report: "⚑", pagamento: "◎", envio: "◫", repasse: "⇄", feedback: "✉" };
+        const COLORS = { ceg: "#C9A8F0", report: "#e85c1a", pagamento: "#BAFF39", envio: "#60a5fa", repasse: "#fb923c", feedback: "#a3e635" };
+        const LABELS = { ceg: "CEG", report: "Report", pagamento: "Pagamento", envio: "Envio", repasse: "Repasse", feedback: "Feedback" };
+
+        function descEvento(ev) {
+          if (ev.tipo === "ceg") return `Entrou na CEG ${ev.ceg}`;
+          if (ev.tipo === "report") return `Report: ${ev.item || "item"} (${ev.ceg || ""})`;
+          if (ev.tipo === "pagamento") {
+            const n = ev.itens.length;
+            return `Pagamento enviado — ${n} item(s)${ev.total > 0 ? ` · R$${fmtBRL(ev.total)}` : ""}`;
+          }
+          if (ev.tipo === "envio") return `Solicitação de envio · ${ev.opcao || ev.status || ""}`;
+          if (ev.tipo === "repasse") return `Repasse: ${ev.item || "item"} (${ev.ceg || ""})`;
+          if (ev.tipo === "feedback") return `Feedback (${ev.tipo_fb || "sugestão"})`;
+          return "";
+        }
+
+        function badgeStatus(ev) {
+          if (!ev.status) return null;
+          const statusMap = {
+            pago: { label: "pago", color: "#BAFF39" },
+            em_analise: { label: "em análise", color: "#fbbf24" },
+            rejeitado: { label: "rejeitado", color: "#f87171" },
+            pendente: { label: "pendente", color: "#94a3b8" },
+            enviado: { label: "enviado", color: "#60a5fa" },
+            embalando: { label: "embalando", color: "#a78bfa" },
+            cancelado: { label: "cancelado", color: "#f87171" },
+            resolvido: { label: "resolvido", color: "#BAFF39" },
+          };
+          const s = statusMap[ev.status];
+          return s ? <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: s.color, border: `1px solid ${s.color}44`, borderRadius: 4, padding: "1px 7px", marginLeft: 6, letterSpacing: "0.5px" }}>{s.label}</span> : null;
+        }
+
+        return (
+          <div>
+            <h3 className="admin-title" style={{ fontSize: 15, marginBottom: 20 }}>Histórico de atividades</h3>
+            {eventos.length === 0 && (
+              <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "60px 0" }}>Nenhuma atividade registrada ainda.</div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
+              {/* linha vertical */}
+              {eventos.length > 0 && <div style={{ position: "absolute", left: 17, top: 10, bottom: 10, width: 1, background: "rgba(245,240,232,.07)", zIndex: 0 }} />}
+              {eventos.map((ev, i) => (
+                <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", position: "relative", zIndex: 1 }}>
+                  {/* dot + icon */}
+                  <div style={{ width: 35, height: 35, borderRadius: "50%", background: "#181614", border: `1px solid ${COLORS[ev.tipo]}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, color: COLORS[ev.tipo] }}>
+                    {ICONS[ev.tipo]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, paddingTop: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 2 }}>
+                      <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: COLORS[ev.tipo], letterSpacing: "1px", textTransform: "uppercase" }}>{LABELS[ev.tipo]}</span>
+                      {badgeStatus(ev)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#F5F0E8", fontFamily: "'DM Mono',monospace", lineHeight: 1.4, wordBreak: "break-word" }}>{descEvento(ev)}</div>
+                    <div style={{ fontSize: 10, color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", marginTop: 3 }}>{fmtDataHora(ev.ts)}</div>
                   </div>
                 </div>
               ))}
