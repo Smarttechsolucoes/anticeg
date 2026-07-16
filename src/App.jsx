@@ -3621,10 +3621,6 @@ ${compHTML}
           const d = new Date(iso);
           return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
         }
-        function fmtData(iso) {
-          if (!iso) return "—";
-          return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
-        }
 
         // CEGs (sem timestamp — painel separado)
         const cegsParticipando = [...new Set(meusItens.map(i => i.ceg))].sort();
