@@ -2139,7 +2139,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           .eq("cog", user.cog)
           .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)"),
         supabase.from("pagamento_demandas").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
-        supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf, created_at")
+        supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
           .eq("cog", user.cog).order("ceg").order("nome_do_item"),
         supabase.from("repassos").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
@@ -3624,20 +3624,11 @@ ${compHTML}
           return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
         }
 
+        // CEGs (sem timestamp — painel separado)
+        const cegsParticipando = [...new Set(meusItens.map(i => i.ceg))].sort();
+
         // Monta lista unificada de eventos com timestamp
         const eventos = [];
-
-        // CEG entries (masterlist)
-        const cegsPorNome = {};
-        meusItens.forEach(item => {
-          if (!item.created_at) return;
-          if (!cegsPorNome[item.ceg] || item.created_at < cegsPorNome[item.ceg]) {
-            cegsPorNome[item.ceg] = item.created_at;
-          }
-        });
-        Object.entries(cegsPorNome).forEach(([ceg, ts]) => {
-          eventos.push({ tipo: "ceg", ts, ceg });
-        });
 
         // Reports
         (meuReports || []).forEach(r => {
@@ -3669,19 +3660,18 @@ ${compHTML}
 
         eventos.sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
-        const ICONS = { ceg: "◈", report: "⚑", pagamento: "◎", envio: "◫", repasse: "⇄", feedback: "✉" };
-        const COLORS = { ceg: "#C9A8F0", report: "#e85c1a", pagamento: "#BAFF39", envio: "#60a5fa", repasse: "#fb923c", feedback: "#a3e635" };
-        const LABELS = { ceg: "CEG", report: "Report", pagamento: "Pagamento", envio: "Envio", repasse: "Repasse", feedback: "Feedback" };
+        const ICONS  = { report: "⚑", pagamento: "◎", envio: "◫", repasse: "⇄", feedback: "✉" };
+        const COLORS = { report: "#e85c1a", pagamento: "#BAFF39", envio: "#60a5fa", repasse: "#fb923c", feedback: "#a3e635" };
+        const LABELS = { report: "Report", pagamento: "Pagamento", envio: "Envio", repasse: "Repasse", feedback: "Feedback" };
 
         function descEvento(ev) {
-          if (ev.tipo === "ceg") return `Entrou na CEG ${ev.ceg}`;
-          if (ev.tipo === "report") return `Report: ${ev.item || "item"} (${ev.ceg || ""})`;
+          if (ev.tipo === "report") return `Report: ${ev.item || "item"}${ev.ceg ? ` · ${ev.ceg}` : ""}`;
           if (ev.tipo === "pagamento") {
             const n = ev.itens.length;
             return `Pagamento enviado — ${n} item(s)${ev.total > 0 ? ` · R$${fmtBRL(ev.total)}` : ""}`;
           }
-          if (ev.tipo === "envio") return `Solicitação de envio · ${ev.opcao || ev.status || ""}`;
-          if (ev.tipo === "repasse") return `Repasse: ${ev.item || "item"} (${ev.ceg || ""})`;
+          if (ev.tipo === "envio") return `Solicitação de envio${ev.opcao ? ` · ${ev.opcao}` : ""}`;
+          if (ev.tipo === "repasse") return `Repasse: ${ev.item || "item"}${ev.ceg ? ` · ${ev.ceg}` : ""}`;
           if (ev.tipo === "feedback") return `Feedback (${ev.tipo_fb || "sugestão"})`;
           return "";
         }
@@ -3704,7 +3694,20 @@ ${compHTML}
 
         return (
           <div>
-            <h3 className="admin-title" style={{ fontSize: 15, marginBottom: 20 }}>Histórico de atividades</h3>
+            <h3 className="admin-title" style={{ fontSize: 15, marginBottom: 16 }}>Histórico de atividades</h3>
+
+            {/* Painel de CEGs (sem timestamp disponível na tabela) */}
+            {cegsParticipando.length > 0 && (
+              <div style={{ marginBottom: 28, padding: "14px 16px", background: "rgba(201,168,240,.05)", border: "1px solid rgba(201,168,240,.12)", borderRadius: 10 }}>
+                <div style={{ fontSize: 9, letterSpacing: "1.5px", textTransform: "uppercase", color: "#C9A8F0", fontFamily: "'DM Mono',monospace", marginBottom: 10 }}>◈ CEGs participando ({cegsParticipando.length})</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {cegsParticipando.map(c => (
+                    <span key={c} style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "#F5F0E8", background: "rgba(201,168,240,.1)", border: "1px solid rgba(201,168,240,.2)", borderRadius: 5, padding: "3px 10px" }}>{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {eventos.length === 0 && (
               <div style={{ textAlign: "center", color: "rgba(245,240,232,.3)", fontFamily: "'DM Mono',monospace", fontSize: 12, padding: "60px 0" }}>Nenhuma atividade registrada ainda.</div>
             )}
