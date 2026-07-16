@@ -458,20 +458,24 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
-      const { data: nova } = await supabase.from("item_fotos")
+      const { data: nova, error: insErr } = await supabase.from("item_fotos")
         .insert([{ ceg, nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: fotos.length + novas.length }])
         .select().single();
+      if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (nova) novas.push(nova);
     }
     setFotos(prev => [...prev, ...novas]);
-    setUploadMsg(`${novas.length} foto(s) adicionada(s) ✓`);
-    setTimeout(() => setUploadMsg(""), 3000);
+    if (novas.length > 0) {
+      setUploadMsg(`${novas.length} foto(s) adicionada(s) ✓`);
+      setTimeout(() => setUploadMsg(""), 3000);
+    }
     setUploading(false);
   }
 
   async function removerFoto(id) {
     if (!window.confirm("Remover foto?")) return;
-    await supabase.from("item_fotos").delete().eq("id", id);
+    const { error } = await supabase.from("item_fotos").delete().eq("id", id);
+    if (error) { alert("Erro ao remover foto: " + error.message); return; }
     setFotos(prev => prev.filter(f => f.id !== id));
   }
 
@@ -1128,6 +1132,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [totalModal, setTotalModal] = useState(false);
   const [pagDemandaMap,  setPagDemandaMap]  = useState({});
   const [pagConfirmMap,  setPagConfirmMap]  = useState({});
+  const [pagConfirmLoaded, setPagConfirmLoaded] = useState(false);
   const [repasseMap,    setRepasseMap]    = useState({});
   useEffect(() => {
     if (user.guest) return;
@@ -1150,6 +1155,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         });
         setPagDemandaMap(map);
         setPagConfirmMap(confirm);
+        setPagConfirmLoaded(true);
       });
     supabase.from("repassos").select("item_id, status").eq("joiner_cog", user.cog)
       .then(({ data }) => {
@@ -1631,7 +1637,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         </div>
       )}
 
-      {!guest && qtdAtrasados >= 3 && (
+      {!guest && pagConfirmLoaded && qtdAtrasados >= 3 && (
         <div className="blocklist-banner">
           <span className="blocklist-icon">⚠</span>
           <div>
@@ -3712,8 +3718,8 @@ ${compHTML}
             <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
               {/* linha vertical */}
               {eventos.length > 0 && <div style={{ position: "absolute", left: 17, top: 10, bottom: 10, width: 1, background: "rgba(245,240,232,.07)", zIndex: 0 }} />}
-              {eventos.map((ev, i) => (
-                <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", position: "relative", zIndex: 1 }}>
+              {eventos.map((ev) => (
+                <div key={`${ev.tipo}-${ev.ts}`} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 0", position: "relative", zIndex: 1 }}>
                   {/* dot + icon */}
                   <div style={{ width: 35, height: 35, borderRadius: "50%", background: "#181614", border: `1px solid ${COLORS[ev.tipo]}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, color: COLORS[ev.tipo] }}>
                     {ICONS[ev.tipo]}
@@ -8134,12 +8140,14 @@ function AdminGaleria() {
   }, []);
 
   useEffect(() => {
+    if (!cegSelecionada) { setFotos(null); return; }
     setFotos(null);
     supabase.from("item_fotos").select("*").eq("ceg", cegSelecionada).order("ordem").order("id")
       .then(({ data }) => setFotos(data || []));
   }, [cegSelecionada]);
 
   async function uploadFotos(files) {
+    if (!cegSelecionada) return;
     setUploading(true);
     const slug = cegSelecionada.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
     const novas = [];
@@ -8169,7 +8177,8 @@ function AdminGaleria() {
 
   async function removerFoto(id) {
     if (!window.confirm("Remover foto?")) return;
-    await supabase.from("item_fotos").delete().eq("id", id);
+    const { error } = await supabase.from("item_fotos").delete().eq("id", id);
+    if (error) { alert("Erro ao remover foto: " + error.message); return; }
     setFotos(prev => prev.filter(f => f.id !== id));
   }
 
@@ -8177,8 +8186,8 @@ function AdminGaleria() {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
         <h3 className="admin-title" style={{ fontSize: 16, margin: 0 }}>Galeria · fotos por CEG</h3>
-        {cegSelecionada === "THIS & THAT" && (
-          <a href="/this-and-that" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "4px 10px" }}>↗ ver galeria</a>
+        {cegSelecionada && (
+          <a href={`/ceg/${encodeURIComponent(cegSelecionada)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "4px 10px" }}>↗ ver página</a>
         )}
       </div>
 
@@ -8203,7 +8212,7 @@ function AdminGaleria() {
         <span style={{ fontSize: 22 }}>+</span>
         <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#C9A8F0" }}>{uploading ? "enviando..." : `adicionar fotos · ${cegSelecionada}`}</span>
         <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.25)" }}>pode selecionar várias de uma vez</span>
-        <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files))} />
+        <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={uploading || !cegSelecionada} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files))} />
       </label>
 
       {msg && <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "#BAFF39", marginBottom: 14 }}>{msg}</div>}
@@ -8334,7 +8343,7 @@ function CegGalleryPage({ ceg }) {
             if (alvo) {
               setAmpliada(alvo);
               setTimeout(() => {
-                const el = document.getElementById("item-" + hash);
+                const el = document.getElementById("item-" + alvo.id);
                 if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
               }, 100);
             }
@@ -8385,7 +8394,7 @@ function CegGalleryPage({ ceg }) {
           {filtradas.map(f => {
             const slug = slugifyItem(f.nome_do_item);
             return (
-              <div key={f.id} id={"item-" + slug} onClick={() => abrirModal(f)}
+              <div key={f.id} id={"item-" + f.id} onClick={() => abrirModal(f)}
                 style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "border-color .15s, transform .15s" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.22)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(245,240,232,.07)"; e.currentTarget.style.transform = "translateY(0)"; }}>
