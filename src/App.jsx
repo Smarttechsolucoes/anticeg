@@ -9935,7 +9935,6 @@ export default function App() {
     );
   }
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
-  if (window.location.pathname === "/ceg/this-and-that") return <CegPage ceg="THIS & THAT" isOwner={isOwner(user)} logoUrl="https://straykidsshop.com/cdn/shop/files/STRAY-00009---PreDESKTOP.png?v=1783458642&width=1600" />;
 
 
   const isAdmin = isAdminUser(user);
@@ -10059,8 +10058,7 @@ export default function App() {
       </div>
       <div className="tabs-bar">
         <button className={`tab-btn ${tab === "masterlist" ? "active" : ""}`} onClick={() => changeTab("masterlist")}>☰ Masterlist</button>
-        <a href="/ceg/this-and-that" className="tab-btn" style={{ textDecoration: "none" }}>◈ T&amp;T COMEBACK</a>
-        <button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => changeTab("cegs")}>◈ CEGs</button>
+<button className={`tab-btn ${tab === "cegs" ? "active" : ""}`} onClick={() => changeTab("cegs")}>◈ CEGs</button>
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => changeTab("calendario")}>◫ Calendário</button>
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
