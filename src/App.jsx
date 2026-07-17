@@ -1074,7 +1074,7 @@ function CegTab({ user, itens }) {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} guest={guest} user={user} />;
+  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => { window.history.pushState(null, "", "/cegs"); setDetalhe(null); }} guest={guest} user={user} />;
 
   const cegMap = {};
   (allItens || []).forEach(item => {
@@ -1194,10 +1194,9 @@ function CegTab({ user, itens }) {
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
+                  <button className="ceg-saiba-btn" onClick={() => { window.history.pushState(null, "", `/cegs/${slugify(ceg)}`); setDetalhe(ceg); }}>
                     saiba mais →
                   </button>
-                  <a href={`/cegs/${slugify(ceg)}`} title="Link direto para essa CEG" style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.3)", textDecoration: "none", border: "1px solid rgba(245,240,232,.1)", borderRadius: 4, padding: "3px 7px", lineHeight: 1 }}>↗</a>
                 </div>
                 </div>
               </div>
