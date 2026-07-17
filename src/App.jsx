@@ -9752,6 +9752,7 @@ export default function App() {
   const [tab, setTab] = useState(() => parseUrlParts().tab);
   const [initAdminSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "admin"  ? p.sub : null; });
   const [initPerfilSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "perfil" ? p.sub : null; });
+  const [initCegSlug] = useState(() => { const parts = window.location.pathname.split("/").filter(Boolean); return parts[0] === "cegs" && parts[1] ? parts[1] : null; });
   const [adminReset, setAdminReset] = useState(0);
   const [openPagamentosSignal, setOpenPagamentosSignal] = useState(0);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -9979,8 +9980,6 @@ export default function App() {
   }
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
-  const pathParts = window.location.pathname.split("/").filter(Boolean);
-  const initCegSlug = pathParts[0] === "cegs" && pathParts[1] ? pathParts[1] : null;
 
 
   const isAdmin = isAdminUser(user);
