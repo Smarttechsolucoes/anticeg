@@ -9029,9 +9029,9 @@ function AdminGaleria() {
 
       {/* Pills de itens */}
       {itensDaCeg.length > 0 && (
-        <div style={{ display:"flex", gap:6, marginBottom:14, overflowX:"auto", paddingBottom:4 }}>
+        <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
           <button onClick={() => setItemSelecionado("")}
-            style={{ ...pillBase, border:`1px solid ${!itemSelecionado?"rgba(245,240,232,.4)":"rgba(245,240,232,.1)"}`, background:!itemSelecionado?"rgba(245,240,232,.08)":"transparent", color:!itemSelecionado?"var(--offwhite)":"rgba(245,240,232,.38)" }}>
+            style={{ ...pillBase, border:`1px solid ${!itemSelecionado?"rgba(245,240,232,.5)":"rgba(245,240,232,.15)"}`, background:!itemSelecionado?"rgba(245,240,232,.1)":"rgba(245,240,232,.03)", color:!itemSelecionado?"var(--offwhite)":"rgba(245,240,232,.5)" }}>
             Todos {fotos !== null ? `(${fotos.length})` : ""}
           </button>
           {itensDaCeg.map(item => {
@@ -9039,7 +9039,7 @@ function AdminGaleria() {
             const count = fotos ? fotos.filter(f => f.nome_do_item === item).length : null;
             return (
               <button key={item} onClick={() => setItemSelecionado(sel ? "" : item)}
-                style={{ ...pillBase, border:`1px solid ${sel?"var(--lilas)":"rgba(245,240,232,.1)"}`, background:sel?"rgba(201,168,240,.12)":"transparent", color:sel?"#C9A8F0":"rgba(245,240,232,.38)" }}>
+                style={{ ...pillBase, border:`1px solid ${sel?"var(--lilas)":"rgba(245,240,232,.15)"}`, background:sel?"rgba(201,168,240,.15)":"rgba(245,240,232,.03)", color:sel?"#C9A8F0":"rgba(245,240,232,.5)" }}>
                 {item}{count !== null ? ` (${count})` : ""}
               </button>
             );
