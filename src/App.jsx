@@ -92,9 +92,11 @@ const OWNER_COGS   = ["nandaverseo_c"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd"];
 const SESSION_VERSION = "3";
+let _extraStaffCogs = [];
 function isAdminUser(user) {
   return OWNER_EMAILS.includes(user?.email) || OWNER_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c"
-      || STAFF_EMAILS.includes(user?.email) || STAFF_COGS.includes(user?.cog);
+      || STAFF_EMAILS.includes(user?.email) || STAFF_COGS.includes(user?.cog)
+      || _extraStaffCogs.includes(user?.cog);
 }
 function isOwner(user) {
   return OWNER_EMAILS.includes(user?.email) || OWNER_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c";
@@ -2561,11 +2563,15 @@ const ALL_ACESSOS = [
 const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports","envios","demandas","badges"];
 
 function StaffPanel() {
-  const [acessos, setAcessos] = useState(null); // { nathy_mrnd: [...] }
-  const [saving, setSaving] = useState(false);
+  const [acessos,     setAcessos]     = useState(null);
+  const [extraStaff,  setExtraStaff]  = useState([]);
+  const [saving,      setSaving]      = useState(false);
+  const [addMode,     setAddMode]     = useState(false);
+  const [addSearch,   setAddSearch]   = useState("");
+  const [addResults,  setAddResults]  = useState(null);
 
   useEffect(() => {
-    supabase.from("config").select("value").eq("key","staff_acessos").single()
+    supabase.from("config").select("value").eq("key", "staff_acessos").single()
       .then(async ({ data }) => {
         if (data?.value) {
           try { setAcessos(JSON.parse(data.value)); } catch { setAcessos({}); }
@@ -2573,10 +2579,29 @@ function StaffPanel() {
           const defaults = {};
           STAFF_MEMBERS.forEach(s => { defaults[s.cog] = [...DEFAULT_STAFF_ACESSOS]; });
           setAcessos(defaults);
-          await supabase.from("config").insert({ key:"staff_acessos", value: JSON.stringify(defaults) });
+          await supabase.from("config").insert({ key: "staff_acessos", value: JSON.stringify(defaults) });
         }
       });
+    supabase.from("config").select("value").eq("key", "staff_members_extra").single()
+      .then(({ data }) => { if (data?.value) { try { setExtraStaff(JSON.parse(data.value)); } catch {} } });
   }, []);
+
+  useEffect(() => {
+    if (!addSearch.trim()) { setAddResults(null); return; }
+    const t = setTimeout(async () => {
+      const termo = addSearch.trim().replace(/^@/, "");
+      const { data } = await supabase.from("joiners").select("cog, nome, email")
+        .or(`cog.ilike.%${termo}%,nome.ilike.%${termo}%`).limit(6);
+      setAddResults(data || []);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [addSearch]);
+
+  async function salvarExtraStaff(novaLista) {
+    const { data: ex } = await supabase.from("config").select("id").eq("key", "staff_members_extra").single();
+    if (ex) await supabase.from("config").update({ value: JSON.stringify(novaLista) }).eq("key", "staff_members_extra");
+    else     await supabase.from("config").insert({ key: "staff_members_extra", value: JSON.stringify(novaLista) });
+  }
 
   async function toggle(cog, acessoId) {
     setSaving(true);
@@ -2584,9 +2609,37 @@ function StaffPanel() {
     const novo  = atual.includes(acessoId) ? atual.filter(a => a !== acessoId) : [...atual, acessoId];
     const novoAcessos = { ...acessos, [cog]: novo };
     setAcessos(novoAcessos);
-    await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key","staff_acessos");
+    await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
     setSaving(false);
   }
+
+  async function adicionarStaff(joiner) {
+    const novo = { cog: joiner.cog, nome: joiner.nome || joiner.cog, email: joiner.email || "" };
+    const novaLista = [...extraStaff, novo];
+    setExtraStaff(novaLista);
+    _extraStaffCogs = novaLista.map(m => m.cog);
+    await salvarExtraStaff(novaLista);
+    if (!acessos?.[joiner.cog]) {
+      const novoAcessos = { ...acessos, [joiner.cog]: [...DEFAULT_STAFF_ACESSOS] };
+      setAcessos(novoAcessos);
+      await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
+    }
+    setAddMode(false); setAddSearch(""); setAddResults(null);
+  }
+
+  async function removerStaff(cog) {
+    if (!window.confirm("Remover esta pessoa do staff?")) return;
+    const novaLista = extraStaff.filter(s => s.cog !== cog);
+    setExtraStaff(novaLista);
+    _extraStaffCogs = novaLista.map(m => m.cog);
+    await salvarExtraStaff(novaLista);
+    const novoAcessos = { ...acessos };
+    delete novoAcessos[cog];
+    setAcessos(novoAcessos);
+    await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
+  }
+
+  const todosStaff = [...STAFF_MEMBERS, ...extraStaff];
 
   if (!acessos) return <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Carregando...</div>;
 
@@ -2594,10 +2647,51 @@ function StaffPanel() {
     <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", letterSpacing:".08em", textTransform:"uppercase" }}>Acesso da equipe</div>
-        {saving && <div style={{ fontSize:10, color:"rgba(245,240,232,.52)" }}>salvando...</div>}
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {saving && <div style={{ fontSize:10, color:"rgba(245,240,232,.52)" }}>salvando...</div>}
+          <button
+            onClick={() => { setAddMode(m => !m); setAddSearch(""); setAddResults(null); }}
+            style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:7, border:"1px solid rgba(186,255,57,.25)", background:"rgba(186,255,57,.06)", color:"var(--verde)", cursor:"pointer", letterSpacing:".04em" }}>
+            {addMode ? "cancelar" : "+ adicionar"}
+          </button>
+        </div>
       </div>
-      {STAFF_MEMBERS.map(s => {
+
+      {addMode && (
+        <div style={{ background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.15)", borderRadius:12, padding:"16px 18px" }}>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:10, fontFamily:"'DM Mono',monospace" }}>buscar joiner por @ ou nome</div>
+          <div style={{ position:"relative" }}>
+            <input
+              autoFocus
+              value={addSearch}
+              onChange={e => setAddSearch(e.target.value)}
+              placeholder="@cog ou nome..."
+              style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"9px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
+            />
+            {addResults && (
+              <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#141414", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, maxHeight:220, overflowY:"auto", zIndex:10 }}>
+                {addResults.filter(j => !todosStaff.find(s => s.cog === j.cog)).map(j => (
+                  <div key={j.cog}
+                    onClick={() => adicionarStaff(j)}
+                    style={{ padding:"10px 14px", fontSize:12, color:"var(--offwhite)", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"space-between" }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(186,255,57,.05)"}
+                    onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    <span>{j.nome} <span style={{ color:"rgba(245,240,232,.35)", fontSize:11 }}>@{j.cog}</span></span>
+                    <span style={{ fontSize:10, color:"var(--verde)", fontFamily:"'DM Mono',monospace" }}>+ adicionar</span>
+                  </div>
+                ))}
+                {addResults.filter(j => !todosStaff.find(s => s.cog === j.cog)).length === 0 && (
+                  <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>nenhum resultado</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {todosStaff.map(s => {
         const staffAcessos = acessos[s.cog] || DEFAULT_STAFF_ACESSOS;
+        const isExtra = !STAFF_MEMBERS.find(m => m.cog === s.cog);
         return (
           <div key={s.cog} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"18px 20px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
@@ -2606,9 +2700,15 @@ function StaffPanel() {
               </div>
               <div>
                 <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{s.nome}</div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.58)" }}>@{s.cog} · {s.email}</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.58)" }}>@{s.cog}{s.email ? ` · ${s.email}` : ""}</div>
               </div>
               <span style={{ marginLeft:"auto", fontSize:10, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", color:"#C9A8F0", borderRadius:99, padding:"2px 10px" }}>staff</span>
+              {isExtra && (
+                <button onClick={() => removerStaff(s.cog)}
+                  style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(239,68,68,.25)", color:"rgba(239,68,68,.7)", borderRadius:6, padding:"3px 8px", cursor:"pointer" }}>
+                  remover
+                </button>
+              )}
             </div>
             <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginBottom:10, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -9868,6 +9968,8 @@ export default function App() {
       .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
     supabase.from("config").select("value").eq("key", "admin_pin").single()
       .then(({ data }) => { if (data?.value) setAdminPinStored(data.value); });
+    supabase.from("config").select("value").eq("key", "staff_members_extra").single()
+      .then(({ data }) => { if (data?.value) { try { _extraStaffCogs = JSON.parse(data.value).map(m => m.cog); } catch {} } });
     supabase.from("cal_eventos").select("*").order("data")
       .then(({ data }) => { if (data) setCalEventos(data); });
     // Atualiza dados do joiner em cache (foto, nome, etc.)
