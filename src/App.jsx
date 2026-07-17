@@ -6957,7 +6957,7 @@ function MercariTab() {
     <div className="mc-wrap">
       <div className="mc-top">
         <div>
-          <div className="mc-title">⋆ Caixinha Mercari</div>
+          <div className="mc-title">Caixinha <span>Mercari</span></div>
           <div className="mc-sub">por @anticegs · compras no Japão</div>
         </div>
         <div className="mc-fx-row">
