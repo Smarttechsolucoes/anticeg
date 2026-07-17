@@ -9182,8 +9182,30 @@ function AdminGaleria() {
     return [...new Set(fotos.map(f => f.nome_do_item).filter(Boolean))].sort();
   }, [fotos]);
 
+  const tiposDoSet = useMemo(() => {
+    if (!itensDaCeg.length) return [];
+    const tipos = new Set();
+    itensDaCeg.forEach(item => {
+      const words = item.split(" ");
+      for (let s = 1; s < words.length; s++) {
+        const suffix = words.slice(s).join(" ");
+        if (itensDaCeg.some(i => i !== item && i.endsWith(suffix))) {
+          tipos.add(suffix); break;
+        }
+      }
+    });
+    return [...tipos].sort();
+  }, [itensDaCeg]);
+
   async function uploadFotos(files) {
     if (!cegSelecionada || !itemUpload) return;
+    const isType   = itemUpload.startsWith("type:");
+    const alvo     = itemUpload.slice(5);
+    const itensAlvo = isType
+      ? itensDaCeg.filter(i => i.endsWith(alvo))
+      : [alvo];
+    if (!itensAlvo.length) return;
+
     setUploading(true); setUploadPct(0);
     const slug = cegSelecionada.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
     const novas = [];
@@ -9195,18 +9217,20 @@ function AdminGaleria() {
       const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
-      const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg: cegSelecionada, nome_do_item: itemUpload, foto_url: publicUrl, ordem: (fotos||[]).length + novas.length }])
-        .select().single();
+      const registros = itensAlvo.map((item, idx) => ({
+        ceg: cegSelecionada, nome_do_item: item, foto_url: publicUrl,
+        ordem: (fotos||[]).length + novas.length + idx,
+      }));
+      const { data: inseridos, error: insErr } = await supabase.from("item_fotos").insert(registros).select();
       if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
-      if (nova) novas.push(nova);
+      if (inseridos) novas.push(...inseridos);
     }
     setFotos(prev => [...(prev||[]), ...novas]);
     setUploading(false); setUploadPct(0);
     if (fileRef.current) fileRef.current.value = "";
     if (novas.length > 0) {
-      setItemSelecionado(itemUpload);
-      setAjustando(novas[novas.length - 1].id);
+      setItemSelecionado(itensAlvo[0]);
+      if (!isType) setAjustando(novas[novas.length - 1].id);
     }
   }
 
@@ -9300,7 +9324,17 @@ function AdminGaleria() {
         <select value={itemUpload} onChange={e => setItemUpload(e.target.value)}
           style={{ flex:1, background:"#1a1a18", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"8px 14px", color: itemUpload ? "#F5F0E8" : "rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", cursor:"pointer" }}>
           <option value="">vincular foto a um item…</option>
-          {itensDaCeg.map(i => <option key={i} value={i}>{i}</option>)}
+          {tiposDoSet.length > 0 && (
+            <optgroup label="── Tipo de card (todos os membros)">
+              {tiposDoSet.map(tipo => {
+                const count = itensDaCeg.filter(i => i.endsWith(tipo)).length;
+                return <option key={`type:${tipo}`} value={`type:${tipo}`}>{tipo} · {count} membros</option>;
+              })}
+            </optgroup>
+          )}
+          <optgroup label="── Item específico">
+            {itensDaCeg.map(i => <option key={`item:${i}`} value={`item:${i}`}>{i}</option>)}
+          </optgroup>
         </select>
         {uploading
           ? <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", whiteSpace:"nowrap" }}>enviando {uploadPct}%</span>
