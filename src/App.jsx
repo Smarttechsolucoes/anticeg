@@ -662,7 +662,7 @@ function CegTab({ user, itens }) {
   const meuCog = user?.cog;
 
   useEffect(() => {
-    (async () => {
+    async function fetchItens() {
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
@@ -675,7 +675,15 @@ function CegTab({ user, itens }) {
         from += 1000;
       }
       setAllItens(all);
-    })();
+    }
+
+    fetchItens();
+
+    const channel = supabase
+      .channel("ceg-status-watch")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "masterlist" }, fetchItens)
+      .subscribe();
+
     supabase.from("item_fotos").select("ceg, foto_url").order("ordem").order("id")
       .then(({ data }) => {
         if (!data) return;
@@ -683,6 +691,8 @@ function CegTab({ user, itens }) {
         data.forEach(f => { if (!capas[f.ceg]) capas[f.ceg] = f.foto_url; });
         setCegCapas(capas);
       });
+
+    return () => supabase.removeChannel(channel);
   }, []);
 
   if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => setDetalhe(null)} guest={guest} user={user} />;
