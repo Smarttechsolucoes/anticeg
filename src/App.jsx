@@ -701,17 +701,43 @@ function CegTab({ user, itens }) {
 
   const minhasCegs = meuCog ? todasCegs.filter(([, d]) => d.joiners.has(meuCog)) : [];
 
-  const finalizadas = todasCegs.filter(([, d]) => {
-    const statuses = Object.keys(d.statusCount);
-    return statuses.length > 0 && statuses.every(s => STATUS_FINAIS.includes(s));
-  });
+  // Monta mapa de statuses apenas dos itens do joiner logado, por CEG
+  const meuStatusPorCeg = {};
+  if (meuCog) {
+    (allItens || []).forEach(item => {
+      if (item.cog === meuCog) {
+        if (!meuStatusPorCeg[item.ceg]) meuStatusPorCeg[item.ceg] = [];
+        meuStatusPorCeg[item.ceg].push(item.status || "Pré-venda");
+      }
+    });
+  }
 
-  const cegsMap = { todas: todasCegs, minhas: minhasCegs, finalizadas };
+  // Finalizada para o joiner = todos os itens DELE nessa CEG são STATUS_FINAIS
+  // Para guest = CEGs onde todos os itens (de todos) são STATUS_FINAIS
+  const finalizadas = meuCog
+    ? minhasCegs.filter(([ceg]) => {
+        const meus = meuStatusPorCeg[ceg] || [];
+        return meus.length > 0 && meus.every(s => STATUS_FINAIS.includes(s));
+      })
+    : todasCegs.filter(([, d]) => {
+        const statuses = Object.keys(d.statusCount);
+        return statuses.length > 0 && statuses.every(s => STATUS_FINAIS.includes(s));
+      });
+
+  // "Minhas" mostra só as que ainda não foram finalizadas para o joiner
+  const minhasAtivas = meuCog
+    ? minhasCegs.filter(([ceg]) => {
+        const meus = meuStatusPorCeg[ceg] || [];
+        return meus.length === 0 || !meus.every(s => STATUS_FINAIS.includes(s));
+      })
+    : [];
+
+  const cegsMap = { todas: todasCegs, minhas: minhasAtivas, finalizadas };
   const cegs = cegsMap[filtro] || todasCegs;
 
   const filtrosBtns = [
     { id: "todas", label: `Todas (${todasCegs.length})` },
-    ...(!guest ? [{ id: "minhas", label: `Minhas (${minhasCegs.length})` }] : []),
+    ...(!guest ? [{ id: "minhas", label: `Minhas (${minhasAtivas.length})` }] : []),
     { id: "finalizadas", label: `Finalizadas (${finalizadas.length})` },
   ];
 
