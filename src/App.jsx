@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase from "./supabase.js";
 import emailjs from "@emailjs/browser";
 import "./App.css";
