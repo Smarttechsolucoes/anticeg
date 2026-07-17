@@ -9980,7 +9980,7 @@ export default function App() {
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
   const pathParts = window.location.pathname.split("/").filter(Boolean);
-  if (pathParts[0] === "cegs" && pathParts[1]) return <CegSlugPage slug={pathParts[1]} user={user} />;
+  const initCegSlug = pathParts[0] === "cegs" && pathParts[1] ? pathParts[1] : null;
 
 
   const isAdmin = isAdminUser(user);
@@ -10118,7 +10118,7 @@ export default function App() {
         )}
       </div>
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
-      {tab === "cegs" && <CegTab user={user} itens={itens} />}
+      {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
       {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
