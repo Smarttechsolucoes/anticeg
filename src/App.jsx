@@ -9028,6 +9028,99 @@ function CropModal({ foto, onSave, onClose }) {
   );
 }
 
+// ── Modal de replicação de foto para múltiplos itens ─────────────────────────
+function ReplicaModal({ foto, itensDaCeg, fotos, onReplica, onClose }) {
+  const [busca,      setBusca]      = useState("");
+  const [selecionados, setSelecionados] = useState(() => {
+    // pré-seleciona itens com o mesmo sufixo de set
+    const words = (foto.nome_do_item || "").split(" ");
+    for (let s = 1; s < words.length; s++) {
+      const suffix = words.slice(s).join(" ");
+      const matched = itensDaCeg.filter(i => i !== foto.nome_do_item && i.endsWith(suffix));
+      if (matched.length > 0) return matched;
+    }
+    return [];
+  });
+  const [salvando, setSalvando] = useState(false);
+
+  const jaTemFoto = new Set(
+    fotos.filter(f => f.foto_url === foto.foto_url && f.nome_do_item !== foto.nome_do_item).map(f => f.nome_do_item)
+  );
+
+  const itensVisiveis = itensDaCeg
+    .filter(i => i !== foto.nome_do_item)
+    .filter(i => !busca || i.toLowerCase().includes(busca.toLowerCase()));
+
+  function toggle(item) {
+    setSelecionados(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  }
+
+  async function handleSalvar() {
+    const novos = selecionados.filter(i => !jaTemFoto.has(i));
+    if (novos.length === 0) { onClose(); return; }
+    setSalvando(true);
+    const registros = novos.map((item, idx) => ({
+      ceg: foto.ceg,
+      nome_do_item: item,
+      foto_url: foto.foto_url,
+      ordem: fotos.filter(f => f.nome_do_item === item).length + idx,
+    }));
+    const { data, error } = await supabase.from("item_fotos").insert(registros).select();
+    if (error) { alert("Erro: " + error.message); setSalvando(false); return; }
+    onReplica(data || []);
+  }
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.93)", zIndex:3000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:"#141412", border:"1px solid rgba(201,168,240,.2)", borderRadius:14, padding:"20px 22px", width:"100%", maxWidth:480, maxHeight:"80vh", display:"flex", flexDirection:"column", gap:14 }}>
+        <div>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"2px", color:"rgba(245,240,232,.28)", marginBottom:4 }}>REPLICAR FOTO</div>
+          <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"var(--offwhite)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{foto.nome_do_item}</div>
+          <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:3 }}>
+            {selecionados.length} item{selecionados.length!==1?"s":""} selecionado{selecionados.length!==1?"s":""}
+          </div>
+        </div>
+
+        <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="buscar item..."
+          style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"7px 12px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none" }} />
+
+        <div style={{ overflowY:"auto", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+          <button onClick={() => setSelecionados(itensVisiveis.filter(i => !jaTemFoto.has(i)))}
+            style={{ textAlign:"left", fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(201,168,240,.5)", background:"none", border:"none", cursor:"pointer", padding:"2px 0", marginBottom:4 }}>
+            selecionar todos visíveis
+          </button>
+          {itensVisiveis.map(item => {
+            const temFoto = jaTemFoto.has(item);
+            const sel = selecionados.includes(item);
+            return (
+              <label key={item} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 10px", borderRadius:7, cursor:temFoto?"default":"pointer", background:sel?"rgba(201,168,240,.1)":"transparent", border:`1px solid ${sel?"rgba(201,168,240,.25)":"transparent"}`, transition:"all .1s", opacity:temFoto?0.4:1 }}>
+                <input type="checkbox" checked={sel || temFoto} disabled={temFoto} onChange={() => !temFoto && toggle(item)}
+                  style={{ accentColor:"#C9A8F0", cursor:temFoto?"default":"pointer" }} />
+                <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: sel?"#C9A8F0":"rgba(245,240,232,.7)", flex:1 }}>{item}</span>
+                {temFoto && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>já tem</span>}
+              </label>
+            );
+          })}
+          {itensVisiveis.length === 0 && (
+            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.25)", textAlign:"center", padding:"20px 0" }}>nenhum item encontrado</div>
+          )}
+        </div>
+
+        <div style={{ display:"flex", gap:10, paddingTop:4, borderTop:"1px solid rgba(245,240,232,.07)" }}>
+          <button onClick={handleSalvar} disabled={salvando || selecionados.filter(i => !jaTemFoto.has(i)).length === 0}
+            style={{ flex:1, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"9px 0", borderRadius:8, border:"1px solid rgba(186,255,57,.35)", background:"rgba(186,255,57,.1)", color:"var(--verde)", cursor:"pointer", opacity:selecionados.filter(i => !jaTemFoto.has(i)).length===0||salvando?0.45:1 }}>
+            {salvando ? "salvando..." : `replicar para ${selecionados.filter(i=>!jaTemFoto.has(i)).length} item(s)`}
+          </button>
+          <button onClick={onClose}
+            style={{ fontFamily:"'DM Mono',monospace", fontSize:11, padding:"9px 18px", borderRadius:8, border:"1px solid rgba(245,240,232,.12)", background:"transparent", color:"rgba(245,240,232,.38)", cursor:"pointer" }}>
+            cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Admin: gerenciar galeria de qualquer CEG ──────────────────────────────────
 function AdminGaleria() {
   const [cegSelecionada,  setCegSelecionada]  = useState("");
@@ -9042,6 +9135,7 @@ function AdminGaleria() {
   const [hoveredId,       setHoveredId]       = useState(null);
   const [msg,             setMsg]             = useState("");
   const [ajustando,       setAjustando]       = useState(null);
+  const [replicando,      setReplicando]      = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -9159,6 +9253,7 @@ function AdminGaleria() {
                   <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                     <button onClick={() => setEditando(foto.id)} title="renomear" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✎</button>
                     <button onClick={() => setAjustando(foto.id)} title="recortar imagem" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.2)", border:"1px solid rgba(201,168,240,.45)", color:"#C9A8F0", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⊡</button>
+                    <button onClick={() => setReplicando(foto.id)} title="replicar para outros itens" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.3)", color:"var(--verde)", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⇉</button>
                     <button onClick={() => removerFoto(foto.id)} title="remover" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✕</button>
                   </div>
                 )}
@@ -9288,6 +9383,26 @@ function AdminGaleria() {
           ))}
         </div>
       )}
+
+      {/* Modal de replicação */}
+      {replicando && fotos && (() => {
+        const foto = fotos.find(f => f.id === replicando);
+        if (!foto) return null;
+        return (
+          <ReplicaModal
+            foto={foto}
+            itensDaCeg={itensDaCeg}
+            fotos={fotos}
+            onReplica={novas => {
+              setFotos(prev => [...prev, ...novas]);
+              setReplicando(null);
+              setMsg(`Replicado para ${novas.length} item(s) ✓`);
+              setTimeout(() => setMsg(""), 3000);
+            }}
+            onClose={() => setReplicando(null)}
+          />
+        );
+      })()}
 
       {/* Modal de crop real (canvas) */}
       {ajustando && fotos && (() => {
