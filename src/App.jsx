@@ -8867,6 +8867,8 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
 function AdminGaleria() {
   const [cegSelecionada,  setCegSelecionada]  = useState("");
   const [cegsDisponiveis, setCegsDisponiveis] = useState([]);
+  const [itensDaCeg,      setItensDaCeg]      = useState([]);
+  const [itemSelecionado, setItemSelecionado] = useState("");
   const [fotos,           setFotos]           = useState(null);
   const [uploading,       setUploading]       = useState(false);
   const [uploadPct,       setUploadPct]       = useState(0);
@@ -8885,14 +8887,37 @@ function AdminGaleria() {
   }, []);
 
   useEffect(() => {
-    if (!cegSelecionada) { setFotos(null); return; }
+    if (!cegSelecionada) { setItensDaCeg([]); setItemSelecionado(""); setFotos(null); return; }
     setFotos(null);
+    setItemSelecionado("");
+    supabase.from("masterlist").select("nome_do_item").eq("ceg", cegSelecionada).neq("nome", "Disponivel")
+      .then(({ data }) => {
+        const uniq = [...new Set((data||[]).map(r => r.nome_do_item).filter(Boolean))].sort();
+        setItensDaCeg(uniq);
+      });
     supabase.from("item_fotos").select("*").eq("ceg", cegSelecionada).order("ordem").order("id")
       .then(({ data }) => setFotos(data || []));
   }, [cegSelecionada]);
 
+  const fotosFiltradas = useMemo(() => {
+    if (!fotos) return null;
+    if (!itemSelecionado) return fotos;
+    return fotos.filter(f => f.nome_do_item === itemSelecionado);
+  }, [fotos, itemSelecionado]);
+
+  const fotosAgrupadas = useMemo(() => {
+    if (!fotos || itemSelecionado) return null;
+    const grupos = {};
+    fotos.forEach(f => {
+      const key = f.nome_do_item || "Sem item vinculado";
+      if (!grupos[key]) grupos[key] = [];
+      grupos[key].push(f);
+    });
+    return grupos;
+  }, [fotos, itemSelecionado]);
+
   async function uploadFotos(files) {
-    if (!cegSelecionada) return;
+    if (!cegSelecionada || !itemSelecionado) return;
     setUploading(true); setUploadPct(0);
     const slug = cegSelecionada.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
     const novas = [];
@@ -8905,12 +8930,12 @@ function AdminGaleria() {
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
       const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg: cegSelecionada, nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: (fotos || []).length + novas.length }])
+        .insert([{ ceg: cegSelecionada, nome_do_item: itemSelecionado, foto_url: publicUrl, ordem: (fotos||[]).length + novas.length }])
         .select().single();
       if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (nova) novas.push(nova);
     }
-    setFotos(prev => [...(prev || []), ...novas]);
+    setFotos(prev => [...(prev||[]), ...novas]);
     setMsg(`${novas.length} foto(s) adicionada(s) ✓`);
     setTimeout(() => setMsg(""), 3000);
     setUploading(false); setUploadPct(0);
@@ -8930,31 +8955,65 @@ function AdminGaleria() {
     setFotos(prev => prev.filter(f => f.id !== id));
   }
 
-  const fotoCount = fotos?.length ?? null;
+  function renderGrid(lista) {
+    return (
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:10 }}>
+        {lista.map(foto => {
+          const hovered = hoveredId === foto.id;
+          return (
+            <div key={foto.id}
+              style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${hovered?"rgba(245,240,232,.18)":"rgba(245,240,232,.07)"}`, borderRadius:10, overflow:"hidden", transition:"border-color .15s" }}
+              onMouseEnter={() => setHoveredId(foto.id)}
+              onMouseLeave={() => setHoveredId(null)}>
+              <div style={{ position:"relative", aspectRatio:"1", overflow:"hidden", background:"rgba(245,240,232,.03)" }}>
+                <img src={foto.foto_url} alt={foto.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform .2s", transform:hovered?"scale(1.04)":"scale(1)" }} />
+                {hovered && (
+                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                    <button onClick={() => setEditando(foto.id)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✎</button>
+                    <button onClick={() => removerFoto(foto.id)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✕</button>
+                  </div>
+                )}
+              </div>
+              <div style={{ padding:"7px 9px" }}>
+                {editando === foto.id ? (
+                  <input autoFocus defaultValue={foto.nome_do_item || ""}
+                    onKeyDown={e => { if (e.key === "Enter") salvarLabel(foto.id, e.target.value); if (e.key === "Escape") setEditando(null); }}
+                    onBlur={e => salvarLabel(foto.id, e.target.value)}
+                    style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.08)", border:"1px solid rgba(245,240,232,.2)", borderRadius:4, padding:"4px 7px", color:"#F5F0E8", outline:"none", width:"100%", boxSizing:"border-box" }}
+                  />
+                ) : (
+                  <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:foto.nome_do_item?"rgba(245,240,232,.5)":"rgba(245,240,232,.2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {foto.nome_do_item || "sem item"}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const pillBase = { fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:20, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .12s" };
 
   return (
     <div>
-      {/* Barra de controles */}
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, flexWrap:"wrap" }}>
-        <select
-          value={cegSelecionada}
-          onChange={e => setCegSelecionada(e.target.value)}
-          style={{ flex:1, minWidth:160, background:"#1a1a18", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"9px 14px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, outline:"none", cursor:"pointer", letterSpacing:".04em" }}>
+      {/* Linha 1: CEG + ações */}
+      <div style={{ display:"flex", gap:10, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
+        <select value={cegSelecionada} onChange={e => setCegSelecionada(e.target.value)}
+          style={{ flex:1, minWidth:140, background:"#1a1a18", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"9px 14px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, outline:"none", cursor:"pointer" }}>
           {cegsDisponiveis.length === 0 && <option value="">carregando…</option>}
           {cegsDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        {fotoCount !== null && (
-          <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", whiteSpace:"nowrap" }}>
-            {fotoCount} foto{fotoCount !== 1 ? "s" : ""}
-          </span>
+        {fotos !== null && (
+          <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", whiteSpace:"nowrap" }}>{fotos.length} foto{fotos.length!==1?"s":""}</span>
         )}
-        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
+        <div style={{ marginLeft:"auto", display:"flex", gap:8, alignItems:"center" }}>
           {msg && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39" }}>{msg}</span>}
           {uploading && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--lilas)" }}>enviando {uploadPct}%</span>}
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading || !cegSelecionada}
-            style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"8px 16px", borderRadius:8, border:"1px solid rgba(201,168,240,.3)", background:"rgba(201,168,240,.08)", color:"#C9A8F0", cursor:"pointer", fontWeight:700, whiteSpace:"nowrap", opacity:uploading?0.5:1 }}>
+          <button onClick={() => fileRef.current?.click()} disabled={uploading || !itemSelecionado}
+            title={!itemSelecionado ? "Selecione um item para adicionar fotos" : ""}
+            style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"8px 16px", borderRadius:8, border:"1px solid rgba(201,168,240,.3)", background:"rgba(201,168,240,.08)", color:"#C9A8F0", cursor:itemSelecionado?"pointer":"not-allowed", fontWeight:700, whiteSpace:"nowrap", opacity:(!itemSelecionado||uploading)?0.4:1 }}>
             + adicionar fotos
           </button>
           <input ref={fileRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={e => e.target.files?.length && uploadFotos(Array.from(e.target.files))} />
@@ -8963,70 +9022,74 @@ function AdminGaleria() {
 
       {/* Barra de progresso */}
       {uploading && (
-        <div style={{ height:3, background:"rgba(245,240,232,.08)", borderRadius:99, marginBottom:14, overflow:"hidden" }}>
+        <div style={{ height:3, background:"rgba(245,240,232,.08)", borderRadius:99, marginBottom:12, overflow:"hidden" }}>
           <div style={{ height:"100%", width:`${uploadPct}%`, background:"var(--lilas)", borderRadius:99, transition:"width .25s" }} />
         </div>
       )}
 
-      {/* Estados vazios */}
-      {fotos === null && (
-        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", padding:"48px 0", textAlign:"center" }}>carregando...</div>
-      )}
-      {fotos?.length === 0 && (
-        <div style={{ border:"2px dashed rgba(245,240,232,.08)", borderRadius:12, padding:"48px 20px", textAlign:"center" }}>
-          <div style={{ fontSize:24, marginBottom:10, opacity:.3 }}>◈</div>
-          <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>nenhuma foto para {cegSelecionada}</div>
-          <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.15)", marginTop:6 }}>use o botão "+ adicionar fotos" acima</div>
+      {/* Pills de itens */}
+      {itensDaCeg.length > 0 && (
+        <div style={{ display:"flex", gap:6, marginBottom:14, overflowX:"auto", paddingBottom:4 }}>
+          <button onClick={() => setItemSelecionado("")}
+            style={{ ...pillBase, border:`1px solid ${!itemSelecionado?"rgba(245,240,232,.4)":"rgba(245,240,232,.1)"}`, background:!itemSelecionado?"rgba(245,240,232,.08)":"transparent", color:!itemSelecionado?"var(--offwhite)":"rgba(245,240,232,.38)" }}>
+            Todos {fotos !== null ? `(${fotos.length})` : ""}
+          </button>
+          {itensDaCeg.map(item => {
+            const sel = itemSelecionado === item;
+            const count = fotos ? fotos.filter(f => f.nome_do_item === item).length : null;
+            return (
+              <button key={item} onClick={() => setItemSelecionado(sel ? "" : item)}
+                style={{ ...pillBase, border:`1px solid ${sel?"var(--lilas)":"rgba(245,240,232,.1)"}`, background:sel?"rgba(201,168,240,.12)":"transparent", color:sel?"#C9A8F0":"rgba(245,240,232,.38)" }}>
+                {item}{count !== null ? ` (${count})` : ""}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Grid */}
-      {fotos && fotos.length > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(160px, 1fr))", gap:12 }}>
-          {fotos.map(foto => {
-            const hovered = hoveredId === foto.id;
-            return (
-              <div key={foto.id}
-                style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${hovered ? "rgba(245,240,232,.18)" : "rgba(245,240,232,.07)"}`, borderRadius:10, overflow:"hidden", transition:"border-color .15s" }}
-                onMouseEnter={() => setHoveredId(foto.id)}
-                onMouseLeave={() => { setHoveredId(null); }}>
-                {/* Imagem */}
-                <div style={{ position:"relative", aspectRatio:"1", overflow:"hidden", background:"rgba(245,240,232,.03)" }}>
-                  <img src={foto.foto_url} alt={foto.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform .2s", transform:hovered?"scale(1.04)":"scale(1)" }} />
-                  {hovered && (
-                    <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-                      <button
-                        onClick={() => setEditando(foto.id)}
-                        style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>
-                        ✎ editar
-                      </button>
-                      <button
-                        onClick={() => removerFoto(foto.id)}
-                        style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {/* Label */}
-                <div style={{ padding:"8px 10px", minHeight:34 }}>
-                  {editando === foto.id ? (
-                    <input
-                      autoFocus
-                      defaultValue={foto.nome_do_item || ""}
-                      onKeyDown={e => { if (e.key === "Enter") salvarLabel(foto.id, e.target.value); if (e.key === "Escape") setEditando(null); }}
-                      onBlur={e => salvarLabel(foto.id, e.target.value)}
-                      style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.08)", border:"1px solid rgba(245,240,232,.2)", borderRadius:4, padding:"4px 7px", color:"#F5F0E8", outline:"none", width:"100%", boxSizing:"border-box" }}
-                    />
-                  ) : (
-                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: foto.nome_do_item ? "rgba(245,240,232,.55)" : "rgba(245,240,232,.2)", lineHeight:1.4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                      {foto.nome_do_item || "sem título"}
-                    </div>
-                  )}
-                </div>
+      {!itemSelecionado && fotos && fotos.length > 0 && (
+        <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.2)", marginBottom:14, letterSpacing:".06em" }}>
+          selecione um item acima para adicionar fotos a ele
+        </div>
+      )}
+
+      {/* Loading */}
+      {fotos === null && (
+        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", padding:"48px 0", textAlign:"center" }}>carregando...</div>
+      )}
+
+      {/* Vazio geral */}
+      {fotos?.length === 0 && (
+        <div style={{ border:"2px dashed rgba(245,240,232,.08)", borderRadius:12, padding:"48px 20px", textAlign:"center" }}>
+          <div style={{ fontSize:22, marginBottom:8, opacity:.25 }}>◈</div>
+          <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>nenhuma foto para {cegSelecionada}</div>
+        </div>
+      )}
+
+      {/* Grid filtrado por item */}
+      {fotosFiltradas && itemSelecionado && (
+        fotosFiltradas.length > 0 ? renderGrid(fotosFiltradas) : (
+          <div style={{ border:"2px dashed rgba(201,168,240,.12)", borderRadius:12, padding:"36px 20px", textAlign:"center" }}>
+            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginBottom:6 }}>nenhuma foto para "{itemSelecionado}"</div>
+            <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(201,168,240,.4)" }}>clique em "+ adicionar fotos" para começar</div>
+          </div>
+        )
+      )}
+
+      {/* Vista agrupada (todos) */}
+      {fotosAgrupadas && !itemSelecionado && fotos && fotos.length > 0 && (
+        <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
+          {Object.entries(fotosAgrupadas).sort(([a],[b]) => a.localeCompare(b)).map(([item, lista]) => (
+            <div key={item}>
+              <div onClick={() => setItemSelecionado(item)}
+                style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, paddingBottom:8, borderBottom:"1px solid rgba(245,240,232,.07)", cursor:"pointer" }}>
+                <span style={{ fontSize:11, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{item}</span>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>· {lista.length} foto{lista.length!==1?"s":""}</span>
+                <span style={{ fontSize:9, color:"rgba(201,168,240,.45)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>adicionar fotos →</span>
               </div>
-            );
-          })}
+              {renderGrid(lista)}
+            </div>
+          ))}
         </div>
       )}
     </div>
