@@ -8863,6 +8863,171 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
   );
 }
 
+// ── Crop modal com canvas real ────────────────────────────────────────────────
+function CropModal({ foto, onSave, onClose }) {
+  const canvasRef = useRef(null);
+  const [imgNat,  setImgNat]  = useState(null);
+  const [crop,    setCrop]    = useState(null);
+  const [drag,    setDrag]    = useState(null);
+  const [saving,  setSaving]  = useState(false);
+
+  const CS = typeof window !== "undefined"
+    ? Math.min(440, window.innerWidth - 40, window.innerHeight - 220)
+    : 380;
+
+  useEffect(() => {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const scale = Math.min(CS / img.naturalWidth, CS / img.naturalHeight);
+      const dw = img.naturalWidth  * scale;
+      const dh = img.naturalHeight * scale;
+      const dx = (CS - dw) / 2;
+      const dy = (CS - dh) / 2;
+      setImgNat({ el:img, nw:img.naturalWidth, nh:img.naturalHeight, dx, dy, dw, dh, scale });
+      setCrop({ x:dx, y:dy, w:dw, h:dh });
+    };
+    img.src = foto.foto_url;
+  }, [foto.foto_url]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !imgNat) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, CS, CS);
+    ctx.drawImage(imgNat.el, imgNat.dx, imgNat.dy, imgNat.dw, imgNat.dh);
+    if (!crop || crop.w < 2 || crop.h < 2) return;
+
+    ctx.fillStyle = "rgba(0,0,0,.62)";
+    ctx.fillRect(0, 0, CS, crop.y);
+    ctx.fillRect(0, crop.y + crop.h, CS, CS - crop.y - crop.h);
+    ctx.fillRect(0, crop.y, crop.x, crop.h);
+    ctx.fillRect(crop.x + crop.w, crop.y, CS - crop.x - crop.w, crop.h);
+
+    ctx.strokeStyle = "#C9A8F0"; ctx.lineWidth = 2;
+    ctx.strokeRect(crop.x, crop.y, crop.w, crop.h);
+
+    ctx.strokeStyle = "rgba(255,255,255,.2)"; ctx.lineWidth = .5;
+    for (let i = 1; i <= 2; i++) {
+      ctx.beginPath(); ctx.moveTo(crop.x + crop.w*i/3, crop.y); ctx.lineTo(crop.x + crop.w*i/3, crop.y+crop.h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(crop.x, crop.y + crop.h*i/3); ctx.lineTo(crop.x+crop.w, crop.y+crop.h*i/3); ctx.stroke();
+    }
+
+    const H = 7; ctx.fillStyle = "#C9A8F0";
+    [[crop.x,crop.y],[crop.x+crop.w,crop.y],[crop.x,crop.y+crop.h],[crop.x+crop.w,crop.y+crop.h]].forEach(([hx,hy]) => {
+      ctx.fillRect(hx-H/2, hy-H/2, H, H);
+    });
+  }, [imgNat, crop]);
+
+  function canvasXY(e) {
+    const r = canvasRef.current.getBoundingClientRect();
+    return { x:(e.clientX-r.left)*(CS/r.width), y:(e.clientY-r.top)*(CS/r.height) };
+  }
+
+  function hitTest(x, y) {
+    if (!crop) return "new";
+    const H = 16;
+    const corners = [["tl",crop.x,crop.y],["tr",crop.x+crop.w,crop.y],["bl",crop.x,crop.y+crop.h],["br",crop.x+crop.w,crop.y+crop.h]];
+    for (const [id,cx,cy] of corners) if (Math.abs(x-cx)<H && Math.abs(y-cy)<H) return id;
+    if (x>=crop.x && x<=crop.x+crop.w && y>=crop.y && y<=crop.y+crop.h) return "move";
+    return "new";
+  }
+
+  function onDown(e) {
+    const {x,y} = canvasXY(e);
+    const h = hitTest(x,y);
+    setDrag({ h, sx:x, sy:y, sc:crop ? {...crop} : null });
+    if (h === "new") setCrop({ x, y, w:0, h:0 });
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!drag) return;
+    const {x,y} = canvasXY(e);
+    const dx=x-drag.sx, dy=y-drag.sy;
+    const sc = drag.sc || { x:drag.sx, y:drag.sy, w:0, h:0 };
+    const M = 8;
+    if (drag.h==="new")  { setCrop({ x:Math.min(drag.sx,x), y:Math.min(drag.sy,y), w:Math.abs(x-drag.sx), h:Math.abs(y-drag.sy) }); return; }
+    if (drag.h==="move") { setCrop({ ...sc, x:sc.x+dx, y:sc.y+dy }); return; }
+    if (drag.h==="br")   { setCrop({ ...sc, w:Math.max(M,sc.w+dx), h:Math.max(M,sc.h+dy) }); return; }
+    if (drag.h==="tr")   { setCrop({ ...sc, y:sc.y+dy, w:Math.max(M,sc.w+dx), h:Math.max(M,sc.h-dy) }); return; }
+    if (drag.h==="bl")   { setCrop({ ...sc, x:sc.x+dx, w:Math.max(M,sc.w-dx), h:Math.max(M,sc.h+dy) }); return; }
+    if (drag.h==="tl")   { setCrop({ x:sc.x+dx, y:sc.y+dy, w:Math.max(M,sc.w-dx), h:Math.max(M,sc.h-dy) }); return; }
+  }
+
+  function onCursor(e) {
+    if (!canvasRef.current) return;
+    const {x,y} = canvasXY(e);
+    const map = { tl:"nwse-resize", br:"nwse-resize", tr:"nesw-resize", bl:"nesw-resize", move:"move", new:"crosshair" };
+    canvasRef.current.style.cursor = map[hitTest(x,y)] || "crosshair";
+  }
+
+  async function doSave() {
+    if (!imgNat || !crop || crop.w < 8 || crop.h < 8) return;
+    setSaving(true);
+    const { el, dx:imgDx, dy:imgDy, scale } = imgNat;
+    const natX = Math.max(0, (crop.x - imgDx) / scale);
+    const natY = Math.max(0, (crop.y - imgDy) / scale);
+    const natW = Math.min(el.naturalWidth  - natX, crop.w / scale);
+    const natH = Math.min(el.naturalHeight - natY, crop.h / scale);
+    if (natW < 1 || natH < 1) { setSaving(false); return; }
+
+    const out = document.createElement("canvas");
+    out.width = Math.round(natW); out.height = Math.round(natH);
+    out.getContext("2d").drawImage(el, natX, natY, natW, natH, 0, 0, natW, natH);
+
+    out.toBlob(async blob => {
+      const slug = (foto.ceg||"fotos").replace(/[^a-zA-Z0-9]/g,"-").toLowerCase().slice(0,30);
+      const path = `${slug}/crop_${Date.now()}.jpg`;
+      const { error } = await supabase.storage.from("fotos-itens").upload(path, blob, { upsert:true, contentType:"image/jpeg" });
+      if (error) { alert("Erro ao salvar: " + error.message); setSaving(false); return; }
+      const { data:{ publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+      await supabase.from("item_fotos").update({ foto_url:publicUrl, config:null }).eq("id", foto.id);
+      onSave(foto.id, publicUrl);
+    }, "image/jpeg", 0.92);
+  }
+
+  const cropInfo = crop && crop.w > 2 && crop.h > 2
+    ? `${Math.round(crop.w / (imgNat?.dw||CS) * (imgNat?.nw||100))} × ${Math.round(crop.h / (imgNat?.dh||CS) * (imgNat?.nh||100))} px · arraste os cantos para ajustar`
+    : "clique e arraste para selecionar a área de recorte";
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.96)", zIndex:3000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ marginBottom:14, textAlign:"center" }}>
+        <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"2px", color:"rgba(245,240,232,.28)", marginBottom:5 }}>RECORTAR IMAGEM</div>
+        <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"var(--offwhite)" }}>{foto.nome_do_item || "foto"}</div>
+      </div>
+      <div style={{ position:"relative" }}>
+        <canvas ref={canvasRef} width={CS} height={CS}
+          style={{ borderRadius:10, display:"block", maxWidth:"calc(100vw - 40px)", background:"#111" }}
+          onMouseDown={onDown}
+          onMouseMove={e => { onMove(e); onCursor(e); }}
+          onMouseUp={() => setDrag(null)}
+          onMouseLeave={() => setDrag(null)}
+        />
+        {!imgNat && (
+          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>
+            carregando imagem...
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.2)", marginTop:10, textAlign:"center", maxWidth:CS }}>
+        {cropInfo}
+      </div>
+      <div style={{ display:"flex", gap:10, marginTop:16 }}>
+        <button onClick={doSave} disabled={saving || !crop || crop.w < 8 || crop.h < 8}
+          style={{ fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"9px 28px", borderRadius:8, border:"1px solid rgba(186,255,57,.35)", background:"rgba(186,255,57,.1)", color:"var(--verde)", cursor:"pointer", opacity:(!crop||crop.w<8||saving)?0.45:1 }}>
+          {saving ? "salvando..." : "salvar recorte"}
+        </button>
+        <button onClick={onClose}
+          style={{ fontFamily:"'DM Mono',monospace", fontSize:11, padding:"9px 20px", borderRadius:8, border:"1px solid rgba(245,240,232,.12)", background:"transparent", color:"rgba(245,240,232,.38)", cursor:"pointer" }}>
+          cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Admin: gerenciar galeria de qualquer CEG ──────────────────────────────────
 function AdminGaleria() {
   const [cegSelecionada,  setCegSelecionada]  = useState("");
@@ -8876,10 +9041,6 @@ function AdminGaleria() {
   const [hoveredId,       setHoveredId]       = useState(null);
   const [msg,             setMsg]             = useState("");
   const [ajustando,       setAjustando]       = useState(null);
-  const [ajusteZoom,      setAjusteZoom]      = useState(1);
-  const [ajustePosX,      setAjustePosX]      = useState(50);
-  const [ajustePosY,      setAjustePosY]      = useState(50);
-  const [cropDrag,        setCropDrag]        = useState({ active:false, lastX:0, lastY:0 });
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -8943,11 +9104,7 @@ function AdminGaleria() {
     setFotos(prev => [...(prev||[]), ...novas]);
     setUploading(false); setUploadPct(0);
     if (fileRef.current) fileRef.current.value = "";
-    if (novas.length > 0) {
-      const ultima = novas[novas.length - 1];
-      setAjusteZoom(1); setAjustePosX(50); setAjustePosY(50);
-      setAjustando(ultima.id);
-    }
+    if (novas.length > 0) setAjustando(novas[novas.length - 1].id);
   }
 
   async function salvarLabel(id, label) {
@@ -8968,15 +9125,6 @@ function AdminGaleria() {
     if (typeof cfg === "object") return { zoom: cfg.zoom ?? 1, posX: cfg.posX ?? 50, posY: cfg.posY ?? 50 };
     try { const p = JSON.parse(cfg); return { zoom: p.zoom ?? 1, posX: p.posX ?? 50, posY: p.posY ?? 50 }; } catch {}
     return { zoom: 1, posX: 50, posY: 50 };
-  }
-
-  async function salvarConfig(id, zoom, posX, posY) {
-    const { error } = await supabase.from("item_fotos").update({ config: { zoom, posX, posY } }).eq("id", id);
-    if (error) { alert("Erro ao salvar: " + error.message); return; }
-    setFotos(prev => prev.map(f => f.id === id ? { ...f, config: { zoom, posX, posY } } : f));
-    setAjustando(null);
-    setMsg("Ajuste salvo ✓");
-    setTimeout(() => setMsg(""), 2500);
   }
 
   function renderGrid(lista) {
@@ -9001,7 +9149,7 @@ function AdminGaleria() {
                 {hovered && (
                   <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                     <button onClick={() => setEditando(foto.id)} title="renomear" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✎</button>
-                    <button onClick={() => { const c = parseConfig(foto.config); setAjusteZoom(c.zoom); setAjustePosX(c.posX); setAjustePosY(c.posY); setAjustando(foto.id); }} title="ajustar recorte" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.2)", border:"1px solid rgba(201,168,240,.45)", color:"#C9A8F0", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⊡</button>
+                    <button onClick={() => setAjustando(foto.id)} title="recortar imagem" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.2)", border:"1px solid rgba(201,168,240,.45)", color:"#C9A8F0", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⊡</button>
                     <button onClick={() => removerFoto(foto.id)} title="remover" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✕</button>
                   </div>
                 )}
@@ -9126,83 +9274,21 @@ function AdminGaleria() {
         </div>
       )}
 
-      {/* Modal de crop */}
-      {ajustando && (() => {
-        const foto = fotos?.find(f => f.id === ajustando);
+      {/* Modal de crop real (canvas) */}
+      {ajustando && fotos && (() => {
+        const foto = fotos.find(f => f.id === ajustando);
         if (!foto) return null;
-        const frameSize = Math.min(340, typeof window !== "undefined" ? window.innerWidth - 48 : 340);
         return (
-          <div
-            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.95)", zIndex:3000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0 }}
-            onMouseMove={e => {
-              if (!cropDrag.active) return;
-              const dx = e.clientX - cropDrag.lastX;
-              const dy = e.clientY - cropDrag.lastY;
-              setCropDrag(d => ({ ...d, lastX:e.clientX, lastY:e.clientY }));
-              const factor = 60 / (frameSize * ajusteZoom);
-              setAjustePosX(prev => Math.max(0, Math.min(100, prev - dx * factor)));
-              setAjustePosY(prev => Math.max(0, Math.min(100, prev - dy * factor)));
+          <CropModal
+            foto={foto}
+            onSave={(id, url) => {
+              setFotos(prev => prev.map(f => f.id === id ? { ...f, foto_url:url, config:null } : f));
+              setAjustando(null);
+              setMsg("Recorte salvo ✓");
+              setTimeout(() => setMsg(""), 2500);
             }}
-            onMouseUp={() => setCropDrag(d => ({ ...d, active:false }))}
-            onMouseLeave={() => setCropDrag(d => ({ ...d, active:false }))}
-            onTouchMove={e => {
-              if (!cropDrag.active) return;
-              const t = e.touches[0];
-              const dx = t.clientX - cropDrag.lastX;
-              const dy = t.clientY - cropDrag.lastY;
-              setCropDrag(d => ({ ...d, lastX:t.clientX, lastY:t.clientY }));
-              const factor = 60 / (frameSize * ajusteZoom);
-              setAjustePosX(prev => Math.max(0, Math.min(100, prev - dx * factor)));
-              setAjustePosY(prev => Math.max(0, Math.min(100, prev - dy * factor)));
-            }}
-            onTouchEnd={() => setCropDrag(d => ({ ...d, active:false }))}>
-
-            {/* Topo */}
-            <div style={{ marginBottom:18, textAlign:"center" }}>
-              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"2px", color:"rgba(245,240,232,.28)", marginBottom:5 }}>RECORTAR IMAGEM</div>
-              <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"var(--offwhite)" }}>{foto.nome_do_item || "foto"}</div>
-            </div>
-
-            {/* Frame de crop — o usuário arrasta para posicionar */}
-            <div
-              style={{ width:frameSize, height:frameSize, overflow:"hidden", borderRadius:12, cursor:cropDrag.active?"grabbing":"grab", flexShrink:0, border:"2px solid rgba(201,168,240,.35)", boxShadow:"0 0 40px rgba(0,0,0,.8)" }}
-              onMouseDown={e => { setCropDrag({ active:true, lastX:e.clientX, lastY:e.clientY }); e.preventDefault(); }}
-              onTouchStart={e => { const t = e.touches[0]; setCropDrag({ active:true, lastX:t.clientX, lastY:t.clientY }); }}
-              onWheel={e => { e.preventDefault(); setAjusteZoom(prev => Math.max(1, Math.min(3, prev - e.deltaY * 0.004))); }}
-              >
-              <img src={foto.foto_url} alt="" style={{
-                width:"100%", height:"100%", objectFit:"cover", display:"block",
-                pointerEvents:"none", userSelect:"none",
-                objectPosition:`${ajustePosX}% ${ajustePosY}%`,
-                transform:`scale(${ajusteZoom})`,
-                transformOrigin:`${ajustePosX}% ${ajustePosY}%`
-              }} />
-            </div>
-
-            {/* Zoom */}
-            <div style={{ width:frameSize, marginTop:16, boxSizing:"border-box" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:5 }}>
-                <span>zoom</span><span>{ajusteZoom.toFixed(2)}x</span>
-              </div>
-              <input type="range" min={1} max={3} step={0.05} value={ajusteZoom}
-                onChange={e => setAjusteZoom(Number(e.target.value))}
-                style={{ width:"100%", accentColor:"#C9A8F0", cursor:"pointer" }} />
-            </div>
-
-            <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.18)", marginTop:10 }}>arraste para posicionar · scroll para zoom</div>
-
-            {/* Botões */}
-            <div style={{ display:"flex", gap:10, marginTop:20 }}>
-              <button onClick={() => salvarConfig(ajustando, ajusteZoom, ajustePosX, ajustePosY)}
-                style={{ fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"9px 28px", borderRadius:8, border:"1px solid rgba(186,255,57,.35)", background:"rgba(186,255,57,.1)", color:"var(--verde)", cursor:"pointer" }}>
-                salvar
-              </button>
-              <button onClick={() => setAjustando(null)}
-                style={{ fontFamily:"'DM Mono',monospace", fontSize:11, padding:"9px 20px", borderRadius:8, border:"1px solid rgba(245,240,232,.12)", background:"transparent", color:"rgba(245,240,232,.38)", cursor:"pointer" }}>
-                cancelar
-              </button>
-            </div>
-          </div>
+            onClose={() => setAjustando(null)}
+          />
         );
       })()}
     </div>
