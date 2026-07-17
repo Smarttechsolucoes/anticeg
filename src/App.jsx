@@ -2898,12 +2898,6 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
             {navPerfil("tutorial", "☆", "Tutorial",  0)}
             {navPerfil("feedback", "✉", "Feedbacks", 0)}
           </div>
-          {owner && (
-            <div className="admin-sidebar-group">
-              <div className="admin-sidebar-group-label">Config</div>
-              {navPerfil("staff", "⚙", "Staff", 0)}
-            </div>
-          )}
         </nav>
 
         <div className="admin-content">
@@ -4472,7 +4466,6 @@ ${compHTML}
         );
       })()}
 
-      {perfilSubTab === "staff" && owner && <StaffPanel />}
 
         </div>{/* admin-content */}
       </div>{/* admin-layout */}
@@ -5895,9 +5888,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               {owner && (
                 <div className="admin-sidebar-group">
                   <div className="admin-sidebar-group-label">Config</div>
-                  {nav("geral",    "Geral",       "⚙",  0)}
-                  {nav("agenda",   "Agenda",      "📅", 0)}
-                  {nav("galeria",  "Galeria",  "◈",  0)}
+                  {nav("geral",    "Geral",   "⚙",  0)}
+                  {nav("agenda",   "Agenda",  "📅", 0)}
+                  {nav("galeria",  "Galeria", "◈",  0)}
+                  {nav("staff",    "Staff",   "👥", 0)}
                 </div>
               )}
             </nav>
@@ -6596,6 +6590,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {adminMainTab === "galeria" && owner && <AdminGaleria />}
+      {adminMainTab === "staff"   && owner && <StaffPanel />}
 
       {adminMainTab === "envios" && (
         <div>
