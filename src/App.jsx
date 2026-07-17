@@ -507,9 +507,6 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                     {icon} {mode}
                   </button>
                 ))}
-                <a href={`/ceg/${encodeURIComponent(ceg)}`} target="_blank" rel="noreferrer" style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", textDecoration:"none" }}>
-                  ↗ ver página
-                </a>
               </div>
             )}
           </div>
@@ -782,9 +779,6 @@ function CegTab({ user, itens }) {
                   <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
                     saiba mais →
                   </button>
-                  <a href={`/ceg/${encodeURIComponent(ceg)}`} style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", letterSpacing: "0.5px", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "5px 10px", whiteSpace: "nowrap" }}>
-                    ↗ ver página
-                  </a>
                 </div>
                 </div>
               </div>
@@ -8186,9 +8180,6 @@ function AdminGaleria() {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
         <h3 className="admin-title" style={{ fontSize: 16, margin: 0 }}>Galeria · fotos por CEG</h3>
-        {cegSelecionada && (
-          <a href={`/ceg/${encodeURIComponent(cegSelecionada)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", textDecoration: "none", border: "1px solid rgba(245,240,232,.12)", borderRadius: 5, padding: "4px 10px" }}>↗ ver página</a>
-        )}
       </div>
 
       {/* Seletor de CEG */}
