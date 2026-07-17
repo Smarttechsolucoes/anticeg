@@ -5874,24 +5874,24 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 <div className="admin-sidebar-group-label">Operacional</div>
                 {temAcesso("envios")       && nav("envios",       "Envios",       "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
                 {temAcesso("reports")      && nav("reports",      "Reports",      "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
-                {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "👤", confirmacoes.length + preCadastros.length || 0)}
+                {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "◉", confirmacoes.length + preCadastros.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
-                {nav("mercari", "Mercari", "🎌", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
+                {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
-                {(temAcesso("pagamentos") || temAcesso("demandas") || temAcesso("blocklist")) && nav("pagamentos", "Pagamentos", "💸", pagDemandas.filter(d => d.status === "em_analise").length || 0)}
-                {temAcesso("disponiveis") && nav("disponiveis", "Disponíveis", "🛒", 0)}
+                {(temAcesso("pagamentos") || temAcesso("demandas") || temAcesso("blocklist")) && nav("pagamentos", "Pagamentos", "◎", pagDemandas.filter(d => d.status === "em_analise").length || 0)}
+                {temAcesso("disponiveis") && nav("disponiveis", "Disponíveis", "◱", 0)}
               </div>
               {owner && (
                 <div className="admin-sidebar-group">
                   <div className="admin-sidebar-group-label">Config</div>
                   {nav("geral",    "Geral",   "⚙",  0)}
-                  {nav("agenda",   "Agenda",  "📅", 0)}
+                  {nav("agenda",   "Agenda",  "▣", 0)}
                   {nav("galeria",  "Galeria", "◈",  0)}
-                  {nav("staff",    "Staff",   "👥", 0)}
+                  {nav("staff",    "Staff",   "◌", 0)}
                 </div>
               )}
             </nav>
