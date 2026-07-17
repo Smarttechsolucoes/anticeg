@@ -2557,6 +2557,7 @@ const ALL_ACESSOS = [
   { id:"pagamentos",   label:"Pagamentos" },
   { id:"disponiveis",  label:"Disponíveis" },
   { id:"blocklist",    label:"Blocklist" },
+  { id:"galeria",      label:"Galeria" },
   { id:"geral",        label:"Config / Geral" },
 ];
 
@@ -5985,13 +5986,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {(temAcesso("pagamentos") || temAcesso("demandas") || temAcesso("blocklist")) && nav("pagamentos", "Pagamentos", "◎", pagDemandas.filter(d => d.status === "em_analise").length || 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Disponíveis", "◱", 0)}
               </div>
-              {owner && (
+              {(owner || temAcesso("galeria")) && (
                 <div className="admin-sidebar-group">
                   <div className="admin-sidebar-group-label">Config</div>
-                  {nav("geral",    "Geral",   "⚙",  0)}
-                  {nav("agenda",   "Agenda",  "▣", 0)}
-                  {nav("galeria",  "Galeria", "◈",  0)}
-                  {nav("staff",    "Staff",   "◌", 0)}
+                  {owner && nav("geral",   "Geral",   "⚙", 0)}
+                  {owner && nav("agenda",  "Agenda",  "▣", 0)}
+                  {temAcesso("galeria") && nav("galeria", "Galeria", "◈", 0)}
+                  {owner && nav("staff",   "Staff",   "◌", 0)}
                 </div>
               )}
             </nav>
@@ -6689,7 +6690,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         </div>
       )}
 
-      {adminMainTab === "galeria" && owner && <AdminGaleria />}
+      {adminMainTab === "galeria" && (owner || temAcesso("galeria")) && <AdminGaleria />}
       {adminMainTab === "staff"   && owner && <StaffPanel />}
 
       {adminMainTab === "envios" && (
