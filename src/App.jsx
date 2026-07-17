@@ -634,7 +634,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
             <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.62)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", cursor:"pointer", padding:0, letterSpacing:1 }}>← voltar</button>
           </div>
           {ceg === "THIS & THAT"
-            ? <img src="https://straykidsshop.com/cdn/shop/files/STRAY-00009---PreDESKTOP.png?v=1783458642&width=1600" alt="THIS & THAT" style={{ height:60, width:"auto", display:"block", mixBlendMode:"screen", filter:"invert(1)", marginTop:4 }} />
+            ? <img src="/this-and-that-logo.png" alt="THIS & THAT" style={{ height:60, width:"auto", display:"block", mixBlendMode:"screen", filter:"invert(1)", marginTop:4 }} />
             : <div className="page-title">{ceg}</div>
           }
         </div>
