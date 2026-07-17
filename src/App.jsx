@@ -8875,6 +8875,11 @@ function AdminGaleria() {
   const [editando,        setEditando]        = useState(null);
   const [hoveredId,       setHoveredId]       = useState(null);
   const [msg,             setMsg]             = useState("");
+  const [ajustando,       setAjustando]       = useState(null);
+  const [ajusteZoom,      setAjusteZoom]      = useState(1);
+  const [ajustePosX,      setAjustePosX]      = useState(50);
+  const [ajustePosY,      setAjustePosY]      = useState(50);
+  const [cropDrag,        setCropDrag]        = useState({ active:false, lastX:0, lastY:0 });
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -8936,10 +8941,13 @@ function AdminGaleria() {
       if (nova) novas.push(nova);
     }
     setFotos(prev => [...(prev||[]), ...novas]);
-    setMsg(`${novas.length} foto(s) adicionada(s) ✓`);
-    setTimeout(() => setMsg(""), 3000);
     setUploading(false); setUploadPct(0);
     if (fileRef.current) fileRef.current.value = "";
+    if (novas.length > 0) {
+      const ultima = novas[novas.length - 1];
+      setAjusteZoom(1); setAjustePosX(50); setAjustePosY(50);
+      setAjustando(ultima.id);
+    }
   }
 
   async function salvarLabel(id, label) {
@@ -8955,22 +8963,46 @@ function AdminGaleria() {
     setFotos(prev => prev.filter(f => f.id !== id));
   }
 
+  function parseConfig(cfg) {
+    if (!cfg) return { zoom: 1, posX: 50, posY: 50 };
+    if (typeof cfg === "object") return { zoom: cfg.zoom ?? 1, posX: cfg.posX ?? 50, posY: cfg.posY ?? 50 };
+    try { const p = JSON.parse(cfg); return { zoom: p.zoom ?? 1, posX: p.posX ?? 50, posY: p.posY ?? 50 }; } catch {}
+    return { zoom: 1, posX: 50, posY: 50 };
+  }
+
+  async function salvarConfig(id, zoom, posX, posY) {
+    const { error } = await supabase.from("item_fotos").update({ config: { zoom, posX, posY } }).eq("id", id);
+    if (error) { alert("Erro ao salvar: " + error.message); return; }
+    setFotos(prev => prev.map(f => f.id === id ? { ...f, config: { zoom, posX, posY } } : f));
+    setAjustando(null);
+    setMsg("Ajuste salvo ✓");
+    setTimeout(() => setMsg(""), 2500);
+  }
+
   function renderGrid(lista) {
     return (
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:10 }}>
         {lista.map(foto => {
           const hovered = hoveredId === foto.id;
+          const cfg = parseConfig(foto.config);
           return (
             <div key={foto.id}
               style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${hovered?"rgba(245,240,232,.18)":"rgba(245,240,232,.07)"}`, borderRadius:10, overflow:"hidden", transition:"border-color .15s" }}
               onMouseEnter={() => setHoveredId(foto.id)}
               onMouseLeave={() => setHoveredId(null)}>
               <div style={{ position:"relative", aspectRatio:"1", overflow:"hidden", background:"rgba(245,240,232,.03)" }}>
-                <img src={foto.foto_url} alt={foto.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform .2s", transform:hovered?"scale(1.04)":"scale(1)" }} />
+                <img src={foto.foto_url} alt={foto.nome_do_item} style={{
+                  width:"100%", height:"100%", objectFit:"cover", display:"block",
+                  transition:"transform .2s",
+                  objectPosition:`${cfg.posX}% ${cfg.posY}%`,
+                  transform:`scale(${hovered ? cfg.zoom * 1.04 : cfg.zoom})`,
+                  transformOrigin:`${cfg.posX}% ${cfg.posY}%`
+                }} />
                 {hovered && (
-                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-                    <button onClick={() => setEditando(foto.id)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✎</button>
-                    <button onClick={() => removerFoto(foto.id)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✕</button>
+                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                    <button onClick={() => setEditando(foto.id)} title="renomear" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✎</button>
+                    <button onClick={() => { const c = parseConfig(foto.config); setAjusteZoom(c.zoom); setAjustePosX(c.posX); setAjustePosY(c.posY); setAjustando(foto.id); }} title="ajustar recorte" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.2)", border:"1px solid rgba(201,168,240,.45)", color:"#C9A8F0", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⊡</button>
+                    <button onClick={() => removerFoto(foto.id)} title="remover" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✕</button>
                   </div>
                 )}
               </div>
@@ -9053,6 +9085,7 @@ function AdminGaleria() {
         </div>
       )}
 
+
       {/* Loading */}
       {fotos === null && (
         <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", padding:"48px 0", textAlign:"center" }}>carregando...</div>
@@ -9092,6 +9125,86 @@ function AdminGaleria() {
           ))}
         </div>
       )}
+
+      {/* Modal de crop */}
+      {ajustando && (() => {
+        const foto = fotos?.find(f => f.id === ajustando);
+        if (!foto) return null;
+        const frameSize = Math.min(340, typeof window !== "undefined" ? window.innerWidth - 48 : 340);
+        return (
+          <div
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.95)", zIndex:3000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0 }}
+            onMouseMove={e => {
+              if (!cropDrag.active) return;
+              const dx = e.clientX - cropDrag.lastX;
+              const dy = e.clientY - cropDrag.lastY;
+              setCropDrag(d => ({ ...d, lastX:e.clientX, lastY:e.clientY }));
+              const factor = 60 / (frameSize * ajusteZoom);
+              setAjustePosX(prev => Math.max(0, Math.min(100, prev - dx * factor)));
+              setAjustePosY(prev => Math.max(0, Math.min(100, prev - dy * factor)));
+            }}
+            onMouseUp={() => setCropDrag(d => ({ ...d, active:false }))}
+            onMouseLeave={() => setCropDrag(d => ({ ...d, active:false }))}
+            onTouchMove={e => {
+              if (!cropDrag.active) return;
+              const t = e.touches[0];
+              const dx = t.clientX - cropDrag.lastX;
+              const dy = t.clientY - cropDrag.lastY;
+              setCropDrag(d => ({ ...d, lastX:t.clientX, lastY:t.clientY }));
+              const factor = 60 / (frameSize * ajusteZoom);
+              setAjustePosX(prev => Math.max(0, Math.min(100, prev - dx * factor)));
+              setAjustePosY(prev => Math.max(0, Math.min(100, prev - dy * factor)));
+            }}
+            onTouchEnd={() => setCropDrag(d => ({ ...d, active:false }))}>
+
+            {/* Topo */}
+            <div style={{ marginBottom:18, textAlign:"center" }}>
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"2px", color:"rgba(245,240,232,.28)", marginBottom:5 }}>RECORTAR IMAGEM</div>
+              <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"var(--offwhite)" }}>{foto.nome_do_item || "foto"}</div>
+            </div>
+
+            {/* Frame de crop — o usuário arrasta para posicionar */}
+            <div
+              style={{ width:frameSize, height:frameSize, overflow:"hidden", borderRadius:12, cursor:cropDrag.active?"grabbing":"grab", flexShrink:0, border:"2px solid rgba(201,168,240,.35)", boxShadow:"0 0 40px rgba(0,0,0,.8)" }}
+              onMouseDown={e => { setCropDrag({ active:true, lastX:e.clientX, lastY:e.clientY }); e.preventDefault(); }}
+              onTouchStart={e => { const t = e.touches[0]; setCropDrag({ active:true, lastX:t.clientX, lastY:t.clientY }); }}
+              onWheel={e => { e.preventDefault(); setAjusteZoom(prev => Math.max(1, Math.min(3, prev - e.deltaY * 0.004))); }}
+              >
+              <img src={foto.foto_url} alt="" style={{
+                width:"100%", height:"100%", objectFit:"cover", display:"block",
+                pointerEvents:"none", userSelect:"none",
+                objectPosition:`${ajustePosX}% ${ajustePosY}%`,
+                transform:`scale(${ajusteZoom})`,
+                transformOrigin:`${ajustePosX}% ${ajustePosY}%`
+              }} />
+            </div>
+
+            {/* Zoom */}
+            <div style={{ width:frameSize, marginTop:16, boxSizing:"border-box" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:5 }}>
+                <span>zoom</span><span>{ajusteZoom.toFixed(2)}x</span>
+              </div>
+              <input type="range" min={1} max={3} step={0.05} value={ajusteZoom}
+                onChange={e => setAjusteZoom(Number(e.target.value))}
+                style={{ width:"100%", accentColor:"#C9A8F0", cursor:"pointer" }} />
+            </div>
+
+            <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.18)", marginTop:10 }}>arraste para posicionar · scroll para zoom</div>
+
+            {/* Botões */}
+            <div style={{ display:"flex", gap:10, marginTop:20 }}>
+              <button onClick={() => salvarConfig(ajustando, ajusteZoom, ajustePosX, ajustePosY)}
+                style={{ fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"9px 28px", borderRadius:8, border:"1px solid rgba(186,255,57,.35)", background:"rgba(186,255,57,.1)", color:"var(--verde)", cursor:"pointer" }}>
+                salvar
+              </button>
+              <button onClick={() => setAjustando(null)}
+                style={{ fontFamily:"'DM Mono',monospace", fontSize:11, padding:"9px 20px", borderRadius:8, border:"1px solid rgba(245,240,232,.12)", background:"transparent", color:"rgba(245,240,232,.38)", cursor:"pointer" }}>
+                cancelar
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
