@@ -436,37 +436,137 @@ function CegModal({ ceg, onClose }) {
   );
 }
 
+const NOMES_MEMBROS = [
+  "BANG CHAN", "LEE KNOW", "HAN QUOKKA", "WOLF CHAN", "FOX I.NY",
+  "CHANGBIN", "HYUNJIN", "SEUNGMIN", "LEEBIT", "DWAEKKI",
+  "JINIRET", "BBOKARI", "PUPPYM", "FELIX", "FOXINY", "FOXI.NY",
+  "HAN", "I.N", "IN",
+];
+
+function parseMembro(nomeItem) {
+  const s = (nomeItem || "").trim();
+  const up = s.toUpperCase();
+  const membrosEncontrados = [];
+  let pos = 0;
+
+  while (pos <= s.length) {
+    // se já achamos ao menos um membro, tenta consumir " + " antes do próximo
+    if (membrosEncontrados.length > 0) {
+      const plusMatch = up.slice(pos).match(/^\s*\+\s*/);
+      if (!plusMatch) break;
+      const tentativa = pos + plusMatch[0].length;
+      let achouProximo = false;
+      for (const m of NOMES_MEMBROS) {
+        const up2 = up.slice(tentativa);
+        const depois = tentativa + m.length;
+        if (up2.startsWith(m) && (depois >= s.length || /[\s|+]/.test(s[depois]))) {
+          membrosEncontrados.push(s.slice(tentativa, depois));
+          pos = depois;
+          achouProximo = true;
+          break;
+        }
+      }
+      if (!achouProximo) break;
+    } else {
+      // tenta achar o primeiro membro
+      let achou = false;
+      for (const m of NOMES_MEMBROS) {
+        const depois = pos + m.length;
+        if (up.startsWith(m) && (depois >= s.length || /[\s|+]/.test(s[depois]))) {
+          membrosEncontrados.push(s.slice(pos, depois));
+          pos = depois;
+          achou = true;
+          break;
+        }
+      }
+      if (!achou) break;
+    }
+  }
+
+  if (membrosEncontrados.length === 0) {
+    const partes = s.split("|");
+    return { membro: "", tipo: partes[0].trim(), versao: partes.slice(1).join("|").trim() };
+  }
+
+  const resto = s.slice(pos).trim();
+  const partes = resto.split("|");
+  return {
+    membro: membrosEncontrados.join(" + "),
+    tipo: partes[0].trim() || s,
+    versao: partes.slice(1).join("|").trim(),
+  };
+}
+
+function parseCapaCfg(nomeDoItem) {
+  if (!nomeDoItem) return { zoom: 1, posY: 50 };
+  try {
+    const cfg = JSON.parse(nomeDoItem);
+    if (cfg && typeof cfg.zoom === "number") return { zoom: cfg.zoom, posY: cfg.posY ?? 50 };
+  } catch {}
+  return { zoom: 1, posY: 50 };
+}
+
 function CegDetailView({ ceg, onVoltar, guest, user }) {
   const [itens, setItens] = useState(null);
   const [openDrawer, setOpenDrawer] = useState(null);
   const [reportItem, setReportItem] = useState(null);
   const [fotos, setFotos] = useState([]);
   const [viewMode, setViewMode] = useState("tabela");
+  const [ordemAlfa, setOrdemAlfa] = useState(false);
   const [ampliada, setAmpliada] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [capaZoom, setCapaZoom] = useState(1);
+  const [capaPosY, setCapaPosY] = useState(50);
+
+  const capaFotoAtual = fotos.find(f => f.ordem < 0);
+  useEffect(() => {
+    const cfg = parseCapaCfg(capaFotoAtual?.nome_do_item);
+    setCapaZoom(cfg.zoom);
+    setCapaPosY(cfg.posY);
+  }, [capaFotoAtual?.id]);
 
   const owner = isOwner(user);
 
-  async function uploadFotos(files) {
+  async function salvarCapaCfg(id, zoom, posY) {
+    await supabase.from("item_fotos").update({ nome_do_item: JSON.stringify({ zoom, posY }) }).eq("id", id);
+    setUploadMsg("Capa salva ✓");
+    setTimeout(() => setUploadMsg(""), 2000);
+  }
+
+  async function uploadFotos(files, comoCapa = false) {
     setUploading(true);
     const slug = ceg.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
     const novas = [];
+    const galeriaAtual = fotos.filter(f => f.ordem >= 0);
     for (const file of files) {
       const ext = file.name.split(".").pop().toLowerCase();
       const path = `${slug}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
       const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+      const ordemVal = comoCapa ? -1 : (galeriaAtual.length + novas.length);
       const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg, nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: fotos.length + novas.length }])
+        .insert([{ ceg, nome_do_item: file.name.replace(/\.[^.]+$/, ""), foto_url: publicUrl, ordem: ordemVal }])
         .select().single();
       if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (nova) novas.push(nova);
     }
-    setFotos(prev => [...prev, ...novas]);
+    if (comoCapa && novas.length > 0) {
+      // remove capa anterior se existir
+      const capaAnterior = fotos.find(f => f.ordem < 0);
+      if (capaAnterior) {
+        await supabase.from("item_fotos").delete().eq("id", capaAnterior.id);
+        setFotos(prev => prev.filter(f => f.id !== capaAnterior.id));
+      }
+    }
+    setFotos(prev => {
+      const combined = [...prev, ...novas];
+      combined.sort((a, b) => a.ordem - b.ordem || a.id - b.id);
+      return combined;
+    });
     if (novas.length > 0) {
-      setUploadMsg(`${novas.length} foto(s) adicionada(s) ✓`);
+      setUploadMsg(comoCapa ? "Capa atualizada ✓" : `${novas.length} foto(s) adicionada(s) ✓`);
       setTimeout(() => setUploadMsg(""), 3000);
     }
     setUploading(false);
@@ -477,6 +577,39 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
     const { error } = await supabase.from("item_fotos").delete().eq("id", id);
     if (error) { alert("Erro ao remover foto: " + error.message); return; }
     setFotos(prev => prev.filter(f => f.id !== id));
+  }
+
+  async function usarComoCapa(id) {
+    // Reset capa anterior (ordem < 0) para 0, define nova capa com ordem = -1
+    const capaAnterior = fotos.find(f => f.ordem < 0 && f.id !== id);
+    if (capaAnterior) {
+      await supabase.from("item_fotos").update({ ordem: 0 }).eq("id", capaAnterior.id);
+    }
+    const jaCapa = fotos.find(f => f.id === id)?.ordem < 0;
+    if (jaCapa) {
+      // toggle: remove da capa, volta pra galeria
+      await supabase.from("item_fotos").update({ ordem: 0 }).eq("id", id);
+      setFotos(prev => {
+        const updated = prev.map(f => {
+          if (f.id === id) return { ...f, ordem: 0 };
+          if (capaAnterior && f.id === capaAnterior.id) return { ...f, ordem: 0 };
+          return f;
+        });
+        updated.sort((a, b) => a.ordem - b.ordem || a.id - b.id);
+        return updated;
+      });
+    } else {
+      await supabase.from("item_fotos").update({ ordem: -1 }).eq("id", id);
+      setFotos(prev => {
+        const updated = prev.map(f => {
+          if (f.id === id) return { ...f, ordem: -1 };
+          if (capaAnterior && f.id === capaAnterior.id) return { ...f, ordem: 0 };
+          return f;
+        });
+        updated.sort((a, b) => a.ordem - b.ordem || a.id - b.id);
+        return updated;
+      });
+    }
   }
 
   useEffect(() => {
@@ -500,15 +633,20 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
         {itens && (
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
-            {(fotos.length > 0 || owner) && (
-              <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
-                {[["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
-                  <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
-                    {icon} {mode}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
+              {(fotos.length > 0 || owner) && [["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
+                <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
+                  {icon} {mode}
+                </button>
+              ))}
+              {viewMode === "tabela" && (
+                <button onClick={() => setOrdemAlfa(v => !v)} title={ordemAlfa ? "Ordenação A–Z ativa — clique para desativar" : "Ordenar joiners de A a Z"} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${ordemAlfa ? "rgba(186,255,57,.4)" : "rgba(245,240,232,.1)"}`, background:ordemAlfa ? "rgba(186,255,57,.1)" : "transparent", color:ordemAlfa ? "var(--verde)" : "rgba(245,240,232,.3)", display:"flex", alignItems:"center", gap:5 }}>
+                  <span style={{ fontSize:11, lineHeight:1 }}>{ordemAlfa ? "↑" : "↕"}</span>
+                  <span>joiner</span>
+                  {ordemAlfa && <span style={{ fontSize:8, opacity:.7 }}>A–Z</span>}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -516,134 +654,330 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       {/* Galeria de fotos */}
       {viewMode === "galeria" && (fotos.length > 0 || owner) && (
         <div style={{ marginBottom:28 }}>
-          {fotos.length > 0 && (
-            <>
-              <div style={{ fontSize:9, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>fotos · {fotos.length}</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10, marginBottom:16 }}>
-                {fotos.map(f => (
-                  <div key={f.id} style={{ position:"relative", borderRadius:8, overflow:"hidden", background:"rgba(245,240,232,.05)", aspectRatio:"3/4" }}>
-                    <img src={f.foto_url} alt={f.nome_do_item} onClick={() => setAmpliada(f)} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", cursor:"pointer" }} />
-                    {owner && (
-                      <button onClick={() => removerFoto(f.id)} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,.7)", border:"none", borderRadius:4, color:"rgba(255,107,107,.8)", fontSize:14, width:24, height:24, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>×</button>
-                    )}
+          {/* Seção de capa (só visível pro owner) */}
+          {owner && (() => {
+            const capaFoto = fotos.find(f => f.ordem < 0);
+            return (
+              <div style={{ marginBottom:24, padding:"16px 20px", borderRadius:10, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)" }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1.5px", color:"rgba(255,92,26,.7)", textTransform:"uppercase", marginBottom:12 }}>foto de capa do card</div>
+                {capaFoto ? (
+                  <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
+                    {/* Preview menor */}
+                    <div style={{ width:180, flexShrink:0, aspectRatio:"16/7", overflow:"hidden", borderRadius:6, border:"1px solid rgba(255,92,26,.25)" }}>
+                      <img src={capaFoto.foto_url} alt="capa" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`50% ${capaPosY}%`, transform:`scale(${capaZoom})`, transformOrigin:`50% ${capaPosY}%`, display:"block" }} />
+                    </div>
+                    {/* Sliders + ações */}
+                    <div style={{ flex:1, display:"flex", flexDirection:"column", gap:10 }}>
+                      <div>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.4)" }}>zoom</span>
+                          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(255,92,26,.7)" }}>{capaZoom.toFixed(1)}×</span>
+                        </div>
+                        <input type="range" min="1" max="3" step="0.05" value={capaZoom}
+                          onChange={e => setCapaZoom(parseFloat(e.target.value))}
+                          style={{ width:"100%", accentColor:"var(--laranja)", cursor:"pointer" }} />
+                      </div>
+                      <div>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.4)" }}>posição vertical</span>
+                          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(255,92,26,.7)" }}>{capaPosY}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" step="1" value={capaPosY}
+                          onChange={e => setCapaPosY(parseInt(e.target.value, 10))}
+                          style={{ width:"100%", accentColor:"var(--laranja)", cursor:"pointer" }} />
+                      </div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:2 }}>
+                        <button onClick={() => salvarCapaCfg(capaFoto.id, capaZoom, capaPosY)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:5, cursor:"pointer", border:"1px solid rgba(255,92,26,.4)", background:"rgba(255,92,26,.1)", color:"var(--laranja)" }}>
+                          salvar
+                        </button>
+                        <label style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:5, cursor:"pointer", border:"1px solid rgba(245,240,232,.1)", background:"transparent", color:"rgba(245,240,232,.4)" }}>
+                          trocar capa
+                          <input type="file" accept="image/*" style={{ display:"none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files), true)} />
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                    <div style={{ width:60, height:80, borderRadius:7, border:"2px dashed rgba(255,92,26,.3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      <span style={{ fontSize:20, color:"rgba(255,92,26,.4)" }}>+</span>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"var(--laranja)" }}>{uploading ? "enviando..." : "adicionar foto de capa"}</div>
+                      <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginTop:3 }}>aparece no card do resumo — separada da galeria</div>
+                    </div>
+                    <input type="file" accept="image/*" style={{ display:"none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files), true)} />
+                  </label>
+                )}
               </div>
-            </>
-          )}
+            );
+          })()}
+
+          {/* Fotos da galeria de itens (ordem >= 0) */}
+          {(() => {
+            const galeriaFotos = fotos.filter(f => f.ordem >= 0);
+            return galeriaFotos.length > 0 ? (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12, marginBottom:16 }}>
+                {galeriaFotos.map(f => {
+                  const fTipo = parseMembro(f.nome_do_item).tipo || f.nome_do_item || "";
+                  const joinersDoItem = (itens || []).filter(i => {
+                    const { tipo } = parseMembro(i.nome_do_item);
+                    return tipo.toLowerCase() === fTipo.toLowerCase();
+                  });
+                  return (
+                    <div key={f.id} style={{ position:"relative", borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", cursor:"pointer" }}
+                      onClick={() => setAmpliada(f)}>
+                      <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                      <div style={{ padding:"8px 10px 10px" }}>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", letterSpacing:"0.5px", lineHeight:1.4 }}>{f.nome_do_item || "—"}</div>
+                        {joinersDoItem.length > 0 && (
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", marginTop:4 }}>{joinersDoItem.length} joiner{joinersDoItem.length > 1 ? "s" : ""}</div>
+                        )}
+                      </div>
+                      {owner && (
+                        <>
+                          <button onClick={e => { e.stopPropagation(); removerFoto(f.id); }} style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.7)", border:"none", borderRadius:4, color:"rgba(255,107,107,.8)", fontSize:14, width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                          <button onClick={e => { e.stopPropagation(); usarComoCapa(f.id); }} title="Usar como capa" style={{ position:"absolute", top:6, left:6, background:"rgba(0,0,0,.7)", border:"1px solid transparent", borderRadius:4, color:"rgba(245,240,232,.5)", fontSize:12, width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>★</button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : owner ? (
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.25)", marginBottom:12 }}>nenhuma foto na galeria ainda</div>
+            ) : null;
+          })()}
 
           {owner && (
             <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6, border:"2px dashed rgba(201,168,240,.25)", borderRadius:10, padding:"20px", cursor:"pointer", background:"rgba(201,168,240,.03)" }}>
               <span style={{ fontSize:18 }}>+</span>
-              <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0" }}>{uploading ? "enviando..." : "adicionar fotos"}</span>
+              <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0" }}>{uploading ? "enviando..." : "adicionar fotos à galeria"}</span>
               <input type="file" accept="image/*" multiple style={{ display:"none" }} disabled={uploading} onChange={e => e.target.files.length && uploadFotos(Array.from(e.target.files))} />
             </label>
           )}
           {uploadMsg && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#BAFF39", marginTop:10 }}>{uploadMsg}</div>}
 
+          {/* Modal de joiners ao clicar na foto */}
           {ampliada && (
-            <div onClick={() => setAmpliada(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
-              <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:10, objectFit:"contain" }} />
-              {ampliada.nome_do_item && <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center", fontSize:12, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)" }}>{ampliada.nome_do_item}</div>}
+            <div style={{ position:"fixed", inset:0, zIndex:9999, display:"flex" }} onClick={() => setAmpliada(null)}>
+              <div style={{ flex:1, background:"rgba(0,0,0,.7)" }} />
+              <div style={{ width:"min(380px, 100vw)", background:"#111", borderLeft:"1px solid rgba(245,240,232,.1)", display:"flex", flexDirection:"column", overflowY:"auto" }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ padding:"20px 20px 0" }}>
+                  <button onClick={() => setAmpliada(null)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, marginBottom:14 }}>← fechar</button>
+                  <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ width:"100%", borderRadius:8, display:"block", marginBottom:12 }} />
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--offwhite)", letterSpacing:"1px", marginBottom:4 }}>{ampliada.nome_do_item || "—"}</div>
+                </div>
+                <div style={{ padding:"12px 20px 24px", borderTop:"1px solid rgba(245,240,232,.08)", marginTop:8 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", textTransform:"uppercase", marginBottom:12 }}>joiners</div>
+                  {(() => {
+                    const fTipo = parseMembro(ampliada.nome_do_item).tipo || ampliada.nome_do_item || "";
+                    const joinersDoItem = (itens || []).filter(i => {
+                      const { tipo } = parseMembro(i.nome_do_item);
+                      return tipo.toLowerCase() === fTipo.toLowerCase();
+                    });
+                    return joinersDoItem.length === 0
+                      ? <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)" }}>nenhum joiner com esse item</div>
+                      : joinersDoItem.map(i => {
+                          const { membro, versao } = parseMembro(i.nome_do_item);
+                          return (
+                            <div key={i.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid rgba(245,240,232,.06)", gap:8 }}>
+                              <div>
+                                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)" }}>{i.nome || i.cog || "—"}</div>
+                                {(membro || versao) && (
+                                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>
+                                    {versao ? `${membro} · ${versao}` : membro}
+                                  </div>
+                                )}
+                              </div>
+                              <StatusChip status={i.status} />
+                            </div>
+                          );
+                        });
+                  })()}
+                </div>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {itens === null ? (
+      {viewMode !== "galeria" && (itens === null ? (
         <div style={{ padding:40, textAlign:"center", color:"rgba(245,240,232,.52)", fontSize:"var(--fs-xs)" }}>carregando...</div>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr className="col-group-header">
-                <th colSpan={2}></th>
-                {!guest && <th colSpan={3}>VALORES A PAGAR</th>}
-                <th className="status-group" colSpan={2}>STATUS</th>
-              </tr>
-              <tr className="thead-cols">
-                <th>JOINER</th>
-                <th>NOME DO ITEM</th>
-                {!guest && <><th>ITEM</th><th>FRETE INTER</th><th>TAXA RF</th></>}
-                <th>STATUS</th>
-                <th>INFO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itens.length === 0 && (
-                <tr><td colSpan={7} className="empty-cell">nenhum item</td></tr>
-              )}
-              {itens.map(item => {
-                const ai = getStepIdx(item.status);
-                const isOpen = openDrawer === item.id;
-                return (
-                  <Fragment key={item.id}>
-                    <tr>
-                      <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
-                      <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                      {!guest && <>
-                        <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
-                        <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
-                        <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
-                      </>}
-                      <td>
-                        <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                          <StatusChip status={item.status} />
-                          <ProgressMini activeIdx={ai} />
-                        </div>
-                      </td>
-                      <td>
-                        {item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}
-                        <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
-                          <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                          <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
-                        </div>
-                      </td>
-                    </tr>
-                    {isOpen && (
-                      <tr className="drawer-row">
-                        <td colSpan={7}><Timeline activeIdx={ai} /></td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Mobile cards */}
-      {itens && itens.length > 0 && (
-        <div className="ml-cards">
-          {itens.map(item => {
-            const ai = getStepIdx(item.status);
-            const isOpen = openDrawer === item.id;
-            const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
-            return (
-              <div key={item.id} className="ml-card">
-                <div className="ml-card-top">
-                  <span className="ml-val-label" style={{ color:"rgba(245,240,232,.5)", fontSize:11 }}>{item.nome || item.cog || "—"}</span>
-                  <StatusChip status={item.status} />
-                </div>
-                <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
-                <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
-                  {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
-                </div>
-                {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
-                <div className="ml-card-footer">
-                  <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
-                  {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>}
-                </div>
-                {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
-              </div>
+      ) : (() => {
+        const fotoMap = {};
+        fotos.filter(f => f.ordem >= 0).forEach(f => {
+          const k = (f.nome_do_item || "").trim().toLowerCase();
+          if (k && !fotoMap[k]) fotoMap[k] = f.foto_url;
+        });
+        const fotoDoGrupo = (tipo) => {
+          const k = tipo.trim().toLowerCase();
+          if (fotoMap[k]) return fotoMap[k];
+          for (const [fk, url] of Object.entries(fotoMap)) {
+            if (fk.includes(k) || k.includes(fk)) return url;
+          }
+          return null;
+        };
+        const itensOrdenados = ordemAlfa
+          ? [...itens].sort((a, b) => (a.nome || a.cog || "").localeCompare(b.nome || b.cog || ""))
+          : itens;
+        const grupos = ordemAlfa
+          ? [["", itensOrdenados]]
+          : Object.entries(
+              itens.reduce((acc, item) => {
+                const { tipo } = parseMembro(item.nome_do_item);
+                const chave = tipo || item.nome_do_item || "—";
+                if (!acc[chave]) acc[chave] = [];
+                acc[chave].push(item);
+                return acc;
+              }, {})
             );
-          })}
-        </div>
-      )}
+        const cols = !guest ? 7 : 4;
+        return (
+          <>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr className="col-group-header">
+                    <th colSpan={2}></th>
+                    {!guest && <th colSpan={3}>VALORES A PAGAR</th>}
+                    <th className="status-group" colSpan={2}>STATUS</th>
+                  </tr>
+                  <tr className="thead-cols">
+                    <th>JOINER</th>
+                    <th>MEMBRO</th>
+                    {!guest && <><th>ITEM</th><th>FRETE INTER</th><th>TAXA RF</th></>}
+                    <th>STATUS</th>
+                    <th>INFO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itens.length === 0 && (
+                    <tr><td colSpan={cols} className="empty-cell">nenhum item</td></tr>
+                  )}
+                  {grupos.map(([nome, grupoItens]) => {
+                    const foto = fotoDoGrupo(nome);
+                    return (
+                      <Fragment key={nome}>
+                        {nome && (
+                          <tr>
+                            <td colSpan={cols} style={{ padding:0, borderTop:"2px solid rgba(245,240,232,.12)" }}>
+                              {foto && (
+                                <img src={foto} alt={nome} style={{ maxWidth:"100%", width:"auto", height:"auto", display:"block", margin:"0 auto", maxHeight:300 }} />
+                              )}
+                              <div style={{ background:"rgba(245,240,232,.06)", borderBottom:"1px solid rgba(245,240,232,.08)", padding:"9px 14px" }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:"1.5px", color:"var(--offwhite)" }}>{nome}</span>
+                                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", marginLeft:10 }}>× {grupoItens.length}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        {grupoItens.map(item => {
+                          const ai = getStepIdx(item.status);
+                          const isOpen = openDrawer === item.id;
+                          const { membro, versao } = parseMembro(item.nome_do_item);
+                          return (
+                            <Fragment key={item.id}>
+                              <tr>
+                                <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
+                                <td style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>
+                                  {versao ? `${membro} · ${versao}` : membro}
+                                </td>
+                                {!guest && <>
+                                  <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
+                                  <td><span className="td-val">{Number(item.frete_inter) > 0 ? `R$${fmtBRL(item.frete_inter)}` : <span className="zero-val">—</span>}</span></td>
+                                  <td>{Number(item.taxa_rf) > 0 ? <span className="td-val">R${fmtBRL(item.taxa_rf)}</span> : <span className="zero-val">—</span>}</td>
+                                </>}
+                                <td>
+                                  <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                                    <StatusChip status={item.status} />
+                                    <ProgressMini activeIdx={ai} />
+                                  </div>
+                                </td>
+                                <td>
+                                  {item.info_adicionais && <div className="item-detail"><InfoContent info={item.info_adicionais} /></div>}
+                                  <div style={{ display:"flex", gap:6, alignItems:"center", marginTop: item.info_adicionais ? 4 : 0 }}>
+                                    <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                                    <button onClick={() => setReportItem(item)} className="report-row-btn">⚑ Reportar erro</button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {isOpen && (
+                                <tr className="drawer-row">
+                                  <td colSpan={cols}><Timeline activeIdx={ai} /></td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            {itens.length > 0 && (
+              <div className="ml-cards">
+                {grupos.map(([nome, grupoItens]) => {
+                  const foto = fotoDoGrupo(nome);
+                  return (
+                    <Fragment key={nome}>
+                      {nome && (
+                        <div style={{ borderTop:"2px solid rgba(245,240,232,.12)", marginTop:14 }}>
+                          {foto && (
+                            <img src={foto} alt={nome} style={{ maxWidth:"100%", width:"auto", height:"auto", display:"block", margin:"0 auto", maxHeight:280, borderRadius:"6px 6px 0 0" }} />
+                          )}
+                          <div style={{ padding:"9px 0 8px", borderBottom:"2px solid rgba(245,240,232,.1)", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:"1.5px", color:"var(--offwhite)" }}>{nome}</span>
+                            <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", marginLeft:10 }}>× {grupoItens.length}</span>
+                          </div>
+                        </div>
+                      )}
+                      {grupoItens.map(item => {
+                        const ai = getStepIdx(item.status);
+                        const isOpen = openDrawer === item.id;
+                        const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
+                        const { membro, versao } = parseMembro(item.nome_do_item);
+                        return (
+                          <div key={item.id} className="ml-card">
+                            <div className="ml-card-top">
+                              <span className="ml-val-label" style={{ color:"rgba(245,240,232,.5)", fontSize:11 }}>{item.nome || item.cog || "—"}</span>
+                              <StatusChip status={item.status} />
+                            </div>
+                            {ordemAlfa && item.nome_do_item && (
+                              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.55)", marginBottom:4 }}>{item.nome_do_item}</div>
+                            )}
+                            {!ordemAlfa && (membro || versao) && (
+                              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)", marginBottom:6 }}>
+                                {versao ? `${membro} · ${versao}` : membro}
+                              </div>
+                            )}
+                            <div className="ml-card-vals">
+                              {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} /></div>}
+                              {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} /></div>}
+                              {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} /></div>}
+                              {total > 0 && <div className={`ml-val-total${isPendente(item.pago_item) || isPendente(item.pago_frete) || isPendente(item.pago_rf) ? "" : " ml-val-total-pago"}`}>total R${fmtBRL(total)}</div>}
+                            </div>
+                            {item.info_adicionais && <div className="ml-card-info"><InfoContent info={item.info_adicionais} /></div>}
+                            <div className="ml-card-footer">
+                              <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+                              {!guest && <button className="report-row-btn" onClick={() => setReportItem(item)}>⚑ Reportar</button>}
+                            </div>
+                            {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
+                          </div>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        );
+      })())}
 
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} />}
     </div>
@@ -655,7 +989,7 @@ const STATUS_FINAIS = ["Enviado Nacional", "Vendido"];
 function CegTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
-  const [filtro, setFiltro] = useState("todas");
+  const [filtro, setFiltro] = useState(!user || user.guest ? "todas" : "minhas");
   const [cegCapas, setCegCapas] = useState({});
 
   const guest = !user || user.guest;
@@ -684,11 +1018,16 @@ function CegTab({ user, itens }) {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "masterlist" }, fetchItens)
       .subscribe();
 
-    supabase.from("item_fotos").select("ceg, foto_url").order("ordem").order("id")
+    supabase.from("item_fotos").select("ceg, foto_url, nome_do_item, ordem").order("ordem").order("id")
       .then(({ data }) => {
         if (!data) return;
         const capas = {};
-        data.forEach(f => { if (!capas[f.ceg]) capas[f.ceg] = f.foto_url; });
+        data.forEach(f => {
+          if (!capas[f.ceg]) {
+            const cfg = parseCapaCfg(f.nome_do_item);
+            capas[f.ceg] = { url: f.foto_url, zoom: cfg.zoom, posY: cfg.posY };
+          }
+        });
         setCegCapas(capas);
       });
 
@@ -789,11 +1128,14 @@ function CegTab({ user, itens }) {
             const euEstou = meuCog && data.joiners.has(meuCog);
             return (
               <div key={ceg} className="ceg-summary-card" style={{ borderColor: euEstou ? "rgba(183,156,255,.25)" : "", padding: cegCapas[ceg] ? 0 : undefined, overflow: "hidden" }}>
-                {cegCapas[ceg] && (
-                  <div style={{ width: "100%", aspectRatio: "16/7", overflow: "hidden", borderRadius: "8px 8px 0 0" }}>
-                    <img src={cegCapas[ceg]} alt={ceg} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </div>
-                )}
+                {cegCapas[ceg] && (() => {
+                  const { url, zoom = 1, posY = 50 } = cegCapas[ceg];
+                  return (
+                    <div style={{ width: "100%", aspectRatio: "16/7", overflow: "hidden", borderRadius: "8px 8px 0 0" }}>
+                      <img src={url} alt={ceg} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `50% ${posY}%`, transform: `scale(${zoom})`, transformOrigin: `50% ${posY}%`, display: "block" }} />
+                    </div>
+                  );
+                })()}
                 <div style={{ padding: cegCapas[ceg] ? "12px 14px 14px" : undefined }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div className="ceg-summary-name">{ceg}</div>
@@ -1160,6 +1502,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [reportItem, setReportItem] = useState(null);
 
   const [totalModal, setTotalModal] = useState(false);
+  const [vencModal,  setVencModal]  = useState(false);
   const [pagDemandaMap,  setPagDemandaMap]  = useState({});
   const [pagConfirmMap,  setPagConfirmMap]  = useState({});
   const [pagConfirmLoaded, setPagConfirmLoaded] = useState(false);
@@ -1247,9 +1590,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   itens.forEach(i => {
     const ck = `${i.ceg}::${i.nome_do_item}`;
     const cfm = pagConfirmMap[ck] || {};
-    if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item)  vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg });
-    if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg });
-    if (i.venc_rf    && isPendente(i.pago_rf)    && !cfm.rf)    vencDates.push({ d: parseLocalDate(i.venc_rf),    label: "Taxa: "  + i.ceg });
+    if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item)  vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg, val: Number(i.valor_item  || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "item" });
+    if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg, val: Number(i.frete_inter || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "frete" });
+    if (i.venc_rf    && isPendente(i.pago_rf)    && !cfm.rf)    vencDates.push({ d: parseLocalDate(i.venc_rf),    label: "Taxa: "  + i.ceg, val: Number(i.taxa_rf     || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "taxa RF" });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
@@ -1366,10 +1709,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       </div>
 
       <div className="summary-row">
-        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer" }}>
-          <div className="sum-label">Forms de Pagamento</div>
-          <div className="sum-value orange">CLIQUE AQUI</div>
-          <div className="sum-sub">pague o que está em aberto</div>
+        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer", display:"flex", flexDirection:"column", justifyContent:"center" }}>
+          <div className="sum-value orange">FORMS DE PAGAMENTO</div>
+          <div className="sum-sub" style={{ marginTop:4 }}>clique aqui →</div>
         </div>
         {!guest && (
           <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : undefined, cursor:"pointer" }}>
@@ -1383,29 +1725,26 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             }
           </div>
         )}
-        <div className="sum-card">
+        <div className="sum-card" onClick={() => !guest && nextVenc && setVencModal(true)} style={{ cursor: !guest && nextVenc ? "pointer" : undefined }}>
           <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
+          {!guest && nextVenc && <div className="sum-sub" style={{ marginTop:4, color:"rgba(245,240,232,.35)" }}>ver calendário →</div>}
         </div>
         <button onClick={() => setAvisosModal(true)} className="sum-card" style={{
-          border:`1px solid ${avisos.length > 0 ? "rgba(201,168,240,.3)" : "rgba(245,240,232,.08)"}`, textAlign:"left", cursor:"pointer"
+          border:`1px solid ${avisos.length > 0 ? "rgba(201,168,240,.3)" : "rgba(245,240,232,.08)"}`, textAlign:"left", cursor:"pointer",
+          display:"flex", flexDirection:"column", justifyContent:"center"
         }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <div className="sum-label">Mural de avisos</div>
-            {avisos.length > 0 && <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5 }}>{avisos.length}</span>}
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div className="sum-value" style={{ color:"#C9A8F0" }}>MURAL DE AVISOS</div>
+            {avisos.length > 0 && <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px", lineHeight:1.5, flexShrink:0 }}>{avisos.length}</span>}
           </div>
           {avisos.length > 0 ? (
-            <>
-              <div style={{ fontSize:12, color:"#C9A8F0", marginTop:6, lineHeight:1.5, fontFamily:"'DM Mono',monospace", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
-                {avisos[0].message}
-              </div>
-              <div className="sum-sub" style={{ marginTop:4 }}>
-                {avisos.length > 1 ? `${avisos.length} avisos não lidos` : "1 aviso não lido"}
-              </div>
-            </>
+            <div className="sum-sub" style={{ marginTop:4 }}>
+              {avisos.length > 1 ? `${avisos.length} avisos não lidos` : "1 aviso não lido"}
+            </div>
           ) : (
-            <div className="sum-sub" style={{ marginTop:6 }}>Você não tem nenhum aviso.</div>
+            <div className="sum-sub" style={{ marginTop:4 }}>sem avisos no momento</div>
           )}
         </button>
       </div>
@@ -1532,6 +1871,96 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                     )}
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {vencModal && (() => {
+        const futuros = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d);
+        const atrasados = vencDates.filter(v => v.d < today).sort((a,b) => a.d - b.d);
+        const fmtDia = d => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+        const fmtDiaSemana = d => d.toLocaleDateString("pt-BR", { weekday:"long" });
+        const agruparPorDia = lista => {
+          const grupos = {};
+          lista.forEach(v => {
+            const k = v.d.toISOString().slice(0,10);
+            if (!grupos[k]) grupos[k] = { d: v.d, itens: [] };
+            grupos[k].itens.push(v);
+          });
+          return Object.values(grupos);
+        };
+        const gruposFuturos = agruparPorDia(futuros);
+        const gruposAtrasados = agruparPorDia(atrasados);
+        return (
+          <div className="modal-overlay" onClick={() => setVencModal(false)}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:480, display:"flex", flexDirection:"column", maxHeight:"85vh", overflow:"hidden", padding:0 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 16px", borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
+                <div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
+                    CALENDÁRIO <span style={{ color:"#F0C040" }}>DE PAGAMENTOS</span>
+                  </div>
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2 }}>
+                    {futuros.length} pagamento{futuros.length !== 1 ? "s" : ""} por vir
+                    {atrasados.length > 0 && <span style={{ color:"rgba(255,107,107,.7)", marginLeft:8 }}>· {atrasados.length} atrasado{atrasados.length !== 1 ? "s" : ""}</span>}
+                  </div>
+                </div>
+                <button onClick={() => setVencModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
+              </div>
+              <div style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px", display:"flex", flexDirection:"column", gap:0 }}>
+                {atrasados.length > 0 && (
+                  <div style={{ marginBottom:20 }}>
+                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1.5px", color:"rgba(255,107,107,.6)", textTransform:"uppercase", marginBottom:10 }}>atrasados</div>
+                    {gruposAtrasados.map(g => (
+                      <div key={g.d.toISOString()} style={{ marginBottom:12, background:"rgba(255,107,107,.04)", border:"1px solid rgba(255,107,107,.15)", borderRadius:8, overflow:"hidden" }}>
+                        <div style={{ padding:"8px 14px", borderBottom:"1px solid rgba(255,107,107,.1)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:1, color:"#ff6b6b" }}>{fmtDia(g.d)}</span>
+                          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(255,107,107,.5)", textTransform:"capitalize" }}>{fmtDiaSemana(g.d)}</span>
+                        </div>
+                        {g.itens.map((v,i) => (
+                          <div key={i} style={{ padding:"8px 14px", borderBottom:"1px solid rgba(255,107,107,.07)", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                            <div>
+                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--offwhite)", lineHeight:1.4 }}>{v.nome}</div>
+                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(255,107,107,.5)", marginTop:1 }}>{v.tipo} · {v.ceg}</div>
+                            </div>
+                            {v.val > 0 && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#ff6b6b", whiteSpace:"nowrap" }}>R${fmtBRL(v.val)}</div>}
+                          </div>
+                        ))}
+                        {g.itens.reduce((a,v) => a+v.val, 0) > 0 && (
+                          <div style={{ padding:"7px 14px", background:"rgba(255,107,107,.06)", display:"flex", justifyContent:"flex-end" }}>
+                            <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(255,107,107,.7)" }}>total R${fmtBRL(g.itens.reduce((a,v) => a+v.val, 0))}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {gruposFuturos.length === 0 && atrasados.length === 0 && (
+                  <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhum vencimento em aberto.</div>
+                )}
+                {gruposFuturos.map(g => (
+                  <div key={g.d.toISOString()} style={{ marginBottom:12, border:"1px solid rgba(245,240,232,.08)", borderRadius:8, overflow:"hidden" }}>
+                    <div style={{ padding:"8px 14px", background:"rgba(240,192,64,.06)", borderBottom:"1px solid rgba(245,240,232,.07)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:1, color:"#F0C040" }}>{fmtDia(g.d)}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(240,192,64,.5)", textTransform:"capitalize" }}>{fmtDiaSemana(g.d)}</span>
+                    </div>
+                    {g.itens.map((v,i) => (
+                      <div key={i} style={{ padding:"8px 14px", borderBottom:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                        <div>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--offwhite)", lineHeight:1.4 }}>{v.nome}</div>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.35)", marginTop:1 }}>{v.tipo} · {v.ceg}</div>
+                        </div>
+                        {v.val > 0 && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(240,192,64,.85)", whiteSpace:"nowrap" }}>R${fmtBRL(v.val)}</div>}
+                      </div>
+                    ))}
+                    {g.itens.reduce((a,v) => a+v.val, 0) > 0 && (
+                      <div style={{ padding:"7px 14px", background:"rgba(240,192,64,.04)", display:"flex", justifyContent:"flex-end" }}>
+                        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(240,192,64,.6)" }}>total R${fmtBRL(g.itens.reduce((a,v) => a+v.val, 0))}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
