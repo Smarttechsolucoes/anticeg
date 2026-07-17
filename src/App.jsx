@@ -9156,7 +9156,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
     ...(!isGuest ? [{ id:"envio",  icon:"▢", label:"Envio" }] : []),
     { id:"mercari",    icon:"🎌", label:"Mercari" },
-    { id:"regras",     icon:"☆", label:"Links" },
+    { id:"regras",     icon:"☆", label:"Regras" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
   return (
@@ -9656,7 +9656,7 @@ export default function App() {
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
         <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button>
-        <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Links</button>
+        <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
             if (adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
