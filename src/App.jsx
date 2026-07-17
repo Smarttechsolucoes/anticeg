@@ -5859,7 +5859,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         </a>
       </div>
 
-      <div className="admin-greeting">
+      <div className="admin-greeting"
+        onClick={adminMainTab !== "home" ? () => setAdminMainTab("home") : undefined}
+        style={adminMainTab !== "home" ? { cursor:"pointer" } : {}}>
         <span className="admin-greeting-prompt">// </span>
         <span className="admin-greeting-msg">{greetMsg}</span>
       </div>
@@ -5895,7 +5897,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   <div className="admin-sidebar-group-label">Config</div>
                   {nav("geral",    "Geral",       "⚙",  0)}
                   {nav("agenda",   "Agenda",      "📅", 0)}
-                  {nav("galeria",  "GALERIA", "◈",  0)}
+                  {nav("galeria",  "Galeria",  "◈",  0)}
                 </div>
               )}
             </nav>
@@ -5906,53 +5908,124 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <div className="admin-content">
 
       {adminMainTab === "home" && (() => {
-        const ENVIO_CARDS = [
-          { key:"solicitação de envio",  label:"Nova",             icon:"✦", cor:"#BAFF39",              bg:"rgba(186,255,57,.06)",  border:"rgba(186,255,57,.2)"  },
-          { key:"cotação em andamento",  label:"Cotação",          icon:"◎", cor:"#FF5C1A",              bg:"rgba(255,92,26,.06)",   border:"rgba(255,92,26,.2)"   },
-          { key:"pagamento em aberto",   label:"Pgto. aberto",     icon:"◷", cor:"#C9A8F0",              bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.2)" },
-          { key:"pagamento confirmado",  label:"Pgto. confirmado", icon:"✓", cor:"#FFD166",              bg:"rgba(255,209,102,.06)", border:"rgba(255,209,102,.2)" },
-          { key:"embalando",             label:"Embalando",        icon:"□", cor:"#64B5F6",              bg:"rgba(100,181,246,.06)", border:"rgba(100,181,246,.2)" },
-          { key:"enviado",              label:"Enviado",           icon:"→", cor:"rgba(245,240,232,.6)", bg:"rgba(245,240,232,.03)", border:"rgba(245,240,232,.1)" },
-          { key:"cancelado",            label:"Cancelado",         icon:"✕", cor:"rgba(245,240,232,.3)", bg:"rgba(245,240,232,.02)", border:"rgba(245,240,232,.08)"},
+        const lbl = { fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" };
+        const PIPELINE = [
+          { key:"solicitação de envio",  label:"Nova",         icon:"✦", cor:"#BAFF39",              bg:"rgba(186,255,57,.08)",  border:"rgba(186,255,57,.25)"  },
+          { key:"cotação em andamento",  label:"Cotação",      icon:"◎", cor:"#FF5C1A",              bg:"rgba(255,92,26,.08)",   border:"rgba(255,92,26,.25)"   },
+          { key:"pagamento em aberto",   label:"Pgto. aberto", icon:"◷", cor:"#ef4444",              bg:"rgba(239,68,68,.08)",   border:"rgba(239,68,68,.25)"   },
+          { key:"pagamento confirmado",  label:"Confirmado",   icon:"✓", cor:"#FFD166",              bg:"rgba(255,209,102,.08)", border:"rgba(255,209,102,.25)" },
+          { key:"embalando",             label:"Embalando",    icon:"□", cor:"#64B5F6",              bg:"rgba(100,181,246,.08)", border:"rgba(100,181,246,.25)" },
+          { key:"enviado",               label:"Enviado",      icon:"→", cor:"rgba(245,240,232,.55)", bg:"rgba(245,240,232,.03)", border:"rgba(245,240,232,.1)" },
         ];
-        const otherCards = [
-          { id:"reports",   icon:"⚑", label:"Reports",   count: (reports||[]).filter(r => r.status !== "resolvido").length, sub:"pendente", color:"var(--laranja)", bg:"rgba(255,92,26,.06)", border:"rgba(255,92,26,.2)" },
-          { id:"cadastros", icon:"👤", label:"Cadastros", count: (confirmacoes||[]).length, sub:"aguardando", color:"var(--lilas)", bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.18)" },
+        const cnt = {};
+        PIPELINE.forEach(s => { cnt[s.key] = envioSolic.filter(e => e.status === s.key).length; });
+        const canceladoCnt = envioSolic.filter(e => e.status === "cancelado").length;
+        const totalAtivos = PIPELINE.reduce((s, f) => s + cnt[f.key], 0);
+
+        const quickCards = [
+          { id:"pagamentos", icon:"💸", label:"Pagamentos", count: pagDemandas.filter(d => d.status === "em_analise").length, sub:"em análise", color:"#FFD166",        bg:"rgba(255,209,102,.06)", border:"rgba(255,209,102,.2)"  },
+          { id:"reports",    icon:"⚑",  label:"Reports",    count: (reports||[]).filter(r => r.status !== "resolvido").length, sub:"pendente",  color:"var(--laranja)", bg:"rgba(255,92,26,.06)",   border:"rgba(255,92,26,.2)"    },
+          { id:"cadastros",  icon:"👤", label:"Cadastros",  count: (confirmacoes||[]).length,                                  sub:"aguardando", color:"var(--lilas)",  bg:"rgba(201,168,240,.06)", border:"rgba(201,168,240,.18)" },
         ].filter(c => c.count > 0);
+
+        const urgentLines = [
+          { count: cnt["solicitação de envio"],  singular:"nova solicitação de envio",   plural:"novas solicitações de envio",   tab:"envios",     cor:"#BAFF39",          filtro:"solicitação de envio"  },
+          { count: cnt["pagamento em aberto"],   singular:"pagamento em aberto",          plural:"pagamentos em aberto",          tab:"envios",     cor:"#ef4444",          filtro:"pagamento em aberto"   },
+          { count: cnt["cotação em andamento"],  singular:"cotação pendente",             plural:"cotações pendentes",            tab:"envios",     cor:"#FF5C1A",          filtro:"cotação em andamento"  },
+          { count: (reports||[]).filter(r => r.status !== "resolvido").length, singular:"report pendente", plural:"reports pendentes", tab:"reports", cor:"var(--laranja)", filtro:null },
+          { count: pagDemandas.filter(d => d.status === "em_analise").length, singular:"formulário em análise", plural:"formulários em análise", tab:"pagamentos", cor:"#FFD166", filtro:null },
+          { count: confirmacoes.length, singular:"cadastro aguardando", plural:"cadastros aguardando", tab:"cadastros", cor:"var(--lilas)", filtro:null },
+        ].filter(l => l.count > 0);
+
         return (
           <div>
-            {/* Envios por status */}
-            <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:8 }}>Envios</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px, 1fr))", gap:8, marginBottom:20 }}>
-              {ENVIO_CARDS.map(f => {
-                const count = envioSolic.filter(e => e.status === f.key).length;
-                return (
-                  <div key={f.key} onClick={() => { setFiltroEnvio(f.key); setAdminMainTab("envios"); }}
-                    style={{ background: count > 0 ? f.bg : "var(--card-bg)", border:`1px solid ${count > 0 ? f.border : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"14px 14px", cursor:"pointer", transition:"all .15s" }}>
-                    <div style={{ fontSize:16, color: count > 0 ? f.cor : "rgba(245,240,232,.2)", marginBottom:4, lineHeight:1 }}>{f.icon}</div>
-                    <div style={{ fontSize:24, fontWeight:900, color: count > 0 ? f.cor : "rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginBottom:4 }}>{count}</div>
-                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color: count > 0 ? f.cor : "rgba(245,240,232,.25)", fontWeight: count > 0 ? 700 : 400 }}>{f.label}</div>
-                  </div>
-                );
-              })}
+            {/* Pipeline de envios */}
+            <div style={{ ...lbl, marginBottom:10 }}>
+              Pipeline de envios
+              {totalAtivos > 0 && <span style={{ marginLeft:8, color:"rgba(245,240,232,.18)", fontWeight:400 }}>· {totalAtivos} ativo{totalAtivos!==1?"s":""}</span>}
             </div>
-            {/* Outros pendentes */}
-            {otherCards.length > 0 && <>
-              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:8 }}>Outros</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:10, marginBottom:24 }}>
-                {otherCards.map(c => (
-                  <div key={c.id} onClick={() => setAdminMainTab(c.id)} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:10, padding:"18px 16px", cursor:"pointer", transition:"all .15s" }}>
-                    <div style={{ fontSize:20, marginBottom:8 }}>{c.icon}</div>
-                    <div style={{ fontSize:28, fontWeight:900, color:c.color, fontFamily:"'DM Mono',monospace", lineHeight:1 }}>{c.count}</div>
-                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", marginTop:4, textTransform:"uppercase", letterSpacing:"1px" }}>{c.label}</div>
-                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:2 }}>{c.sub}</div>
+            <div style={{ overflowX:"auto", marginBottom:20, paddingBottom:2 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:0, minWidth:"fit-content" }}>
+                {PIPELINE.map((f, i) => {
+                  const count = cnt[f.key];
+                  const ativo = count > 0;
+                  return (
+                    <Fragment key={f.key}>
+                      <div
+                        onClick={() => { setFiltroEnvio(f.key); setAdminMainTab("envios"); }}
+                        style={{
+                          background: ativo ? f.bg : "rgba(245,240,232,.02)",
+                          border:`1px solid ${ativo ? f.border : "rgba(245,240,232,.07)"}`,
+                          borderLeft: i > 0 ? "none" : undefined,
+                          borderRadius: i===0 ? "10px 0 0 10px" : i===PIPELINE.length-1 ? "0 10px 10px 0" : "0",
+                          padding:"14px 16px", cursor:"pointer", transition:"all .15s",
+                          minWidth:84, textAlign:"center",
+                          opacity: ativo ? 1 : 0.42,
+                        }}>
+                        <div style={{ fontSize:13, color:ativo ? f.cor : "rgba(245,240,232,.18)", marginBottom:4 }}>{f.icon}</div>
+                        <div style={{ fontSize:22, fontWeight:900, color:ativo ? f.cor : "rgba(245,240,232,.22)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginBottom:4 }}>{count}</div>
+                        <div style={{ fontSize:8, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:ativo ? f.cor : "rgba(245,240,232,.2)", fontWeight:ativo?700:400 }}>{f.label}</div>
+                      </div>
+                      {i < PIPELINE.length - 1 && (
+                        <div style={{ color:"rgba(245,240,232,.12)", fontSize:10, padding:"0 1px", flexShrink:0 }}>›</div>
+                      )}
+                    </Fragment>
+                  );
+                })}
+                {/* Cancelado — fora do fluxo principal */}
+                <div style={{ width:1, background:"rgba(245,240,232,.08)", margin:"0 8px", alignSelf:"stretch" }} />
+                <div
+                  onClick={() => { setFiltroEnvio("cancelado"); setAdminMainTab("envios"); }}
+                  style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"14px 16px", cursor:"pointer", minWidth:80, textAlign:"center", opacity:canceladoCnt>0?0.55:0.28 }}>
+                  <div style={{ fontSize:13, color:"rgba(245,240,232,.18)", marginBottom:4 }}>✕</div>
+                  <div style={{ fontSize:22, fontWeight:900, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginBottom:4 }}>{canceladoCnt}</div>
+                  <div style={{ fontSize:8, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.2)" }}>Cancelado</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cards de pendência rápidos */}
+            {quickCards.length > 0 && <>
+              <div style={{ ...lbl, marginBottom:8 }}>Pendências</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))", gap:10, marginBottom:24 }}>
+                {quickCards.map(c => (
+                  <div key={c.id} onClick={() => setAdminMainTab(c.id)}
+                    style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:10, padding:"14px 16px", cursor:"pointer", transition:"all .15s" }}>
+                    <div style={{ fontSize:18, marginBottom:6 }}>{c.icon}</div>
+                    <div style={{ fontSize:26, fontWeight:900, color:c.color, fontFamily:"'DM Mono',monospace", lineHeight:1 }}>{c.count}</div>
+                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", marginTop:4, textTransform:"uppercase", letterSpacing:"1px" }}>{c.label}</div>
+                    <div style={{ fontSize:8, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:2 }}>{c.sub}</div>
                   </div>
                 ))}
               </div>
             </>}
-            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.2)", letterSpacing:".05em" }}>
-              selecione uma seção na barra lateral →
-            </div>
+
+            {/* Lista de ação agrupada */}
+            {urgentLines.length > 0 ? (
+              <div>
+                <div style={{ ...lbl, marginBottom:8 }}>Aguardando ação</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {urgentLines.map((item, i) => (
+                    <div key={i}
+                      onClick={() => { if (item.filtro) setFiltroEnvio(item.filtro); setAdminMainTab(item.tab); }}
+                      style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8, padding:"9px 14px", cursor:"pointer", transition:"background .12s" }}
+                      onMouseEnter={e => e.currentTarget.style.background="rgba(245,240,232,.04)"}
+                      onMouseLeave={e => e.currentTarget.style.background="rgba(245,240,232,.02)"}>
+                      <div style={{ width:3, height:28, borderRadius:2, background:item.cor, flexShrink:0 }} />
+                      <div style={{ flex:1, fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace" }}>
+                        <span style={{ fontWeight:700, color:item.cor }}>{item.count}</span>{" "}
+                        {item.count === 1 ? item.singular : item.plural}
+                      </div>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>→</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)", padding:"24px 0", textAlign:"center", letterSpacing:".08em" }}>
+                ✓ nenhuma pendência no momento
+              </div>
+            )}
           </div>
         );
       })()}
