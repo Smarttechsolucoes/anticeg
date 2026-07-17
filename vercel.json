@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/masterlist",           "destination": "/index.html" },
     { "source": "/cegs",                 "destination": "/index.html" },
+    { "source": "/cegs/:slug",           "destination": "/index.html" },
     { "source": "/calendario",           "destination": "/index.html" },
     { "source": "/perfil",               "destination": "/index.html" },
     { "source": "/perfil/:sub",          "destination": "/index.html" },

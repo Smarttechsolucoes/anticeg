@@ -497,6 +497,11 @@ function parseMembro(nomeItem) {
   };
 }
 
+function slugify(str) {
+  return (str || "").toLowerCase()
+    .replace(/&/g, "and").replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").trim();
+}
+
 function parseCapaCfg(nomeDoItem) {
   if (!nomeDoItem) return { zoom: 1, posY: 50 };
   try {
@@ -986,6 +991,41 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
 
 const STATUS_FINAIS = ["Enviado Nacional", "Vendido"];
 
+function CegSlugPage({ slug, user }) {
+  const [cegNome, setCegNome] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    supabase.from("masterlist").select("ceg").neq("nome", "Disponivel")
+      .then(({ data }) => {
+        if (!data) { setNotFound(true); return; }
+        const cegs = [...new Set(data.map(r => r.ceg))];
+        const match = cegs.find(c => slugify(c) === slug);
+        if (match) setCegNome(match);
+        else setNotFound(true);
+      });
+  }, [slug]);
+
+  const voltar = () => {
+    window.history.pushState(null, "", "/cegs");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  if (notFound) return (
+    <div className="main" style={{ paddingTop: 40 }}>
+      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: "rgba(245,240,232,.4)" }}>
+        CEG não encontrada. <button onClick={voltar} style={{ background: "none", border: "none", color: "var(--laranja)", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>← voltar</button>
+      </div>
+    </div>
+  );
+  if (!cegNome) return (
+    <div className="main" style={{ paddingTop: 40 }}>
+      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: "rgba(245,240,232,.4)" }}>carregando...</div>
+    </div>
+  );
+  return <CegDetailView ceg={cegNome} onVoltar={voltar} guest={!user || user.guest} user={user} />;
+}
+
 function CegTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
@@ -1157,6 +1197,7 @@ function CegTab({ user, itens }) {
                   <button className="ceg-saiba-btn" onClick={() => setDetalhe(ceg)}>
                     saiba mais →
                   </button>
+                  <a href={`/cegs/${slugify(ceg)}`} title="Link direto para essa CEG" style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.3)", textDecoration: "none", border: "1px solid rgba(245,240,232,.1)", borderRadius: 4, padding: "3px 7px", lineHeight: 1 }}>↗</a>
                 </div>
                 </div>
               </div>
@@ -9935,6 +9976,9 @@ export default function App() {
     );
   }
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  if (pathParts[0] === "cegs" && pathParts[1]) return <CegSlugPage slug={pathParts[1]} user={user} />;
 
 
   const isAdmin = isAdminUser(user);
