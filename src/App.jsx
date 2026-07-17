@@ -9034,6 +9034,7 @@ function AdminGaleria() {
   const [cegsDisponiveis, setCegsDisponiveis] = useState([]);
   const [itensDaCeg,      setItensDaCeg]      = useState([]);
   const [itemSelecionado, setItemSelecionado] = useState("");
+  const [itemUpload,      setItemUpload]      = useState("");
   const [fotos,           setFotos]           = useState(null);
   const [uploading,       setUploading]       = useState(false);
   const [uploadPct,       setUploadPct]       = useState(0);
@@ -9053,9 +9054,9 @@ function AdminGaleria() {
   }, []);
 
   useEffect(() => {
-    if (!cegSelecionada) { setItensDaCeg([]); setItemSelecionado(""); setFotos(null); return; }
+    if (!cegSelecionada) { setItensDaCeg([]); setItemSelecionado(""); setItemUpload(""); setFotos(null); return; }
     setFotos(null);
-    setItemSelecionado("");
+    setItemSelecionado(""); setItemUpload("");
     supabase.from("masterlist").select("nome_do_item").eq("ceg", cegSelecionada).neq("nome", "Disponivel")
       .then(({ data }) => {
         const uniq = [...new Set((data||[]).map(r => r.nome_do_item).filter(Boolean))].sort();
@@ -9082,8 +9083,13 @@ function AdminGaleria() {
     return grupos;
   }, [fotos, itemSelecionado]);
 
+  const itensComFoto = useMemo(() => {
+    if (!fotos) return [];
+    return [...new Set(fotos.map(f => f.nome_do_item).filter(Boolean))].sort();
+  }, [fotos]);
+
   async function uploadFotos(files) {
-    if (!cegSelecionada || !itemSelecionado) return;
+    if (!cegSelecionada || !itemUpload) return;
     setUploading(true); setUploadPct(0);
     const slug = cegSelecionada.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
     const novas = [];
@@ -9096,7 +9102,7 @@ function AdminGaleria() {
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
       const { data: nova, error: insErr } = await supabase.from("item_fotos")
-        .insert([{ ceg: cegSelecionada, nome_do_item: itemSelecionado, foto_url: publicUrl, ordem: (fotos||[]).length + novas.length }])
+        .insert([{ ceg: cegSelecionada, nome_do_item: itemUpload, foto_url: publicUrl, ordem: (fotos||[]).length + novas.length }])
         .select().single();
       if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (nova) novas.push(nova);
@@ -9104,7 +9110,10 @@ function AdminGaleria() {
     setFotos(prev => [...(prev||[]), ...novas]);
     setUploading(false); setUploadPct(0);
     if (fileRef.current) fileRef.current.value = "";
-    if (novas.length > 0) setAjustando(novas[novas.length - 1].id);
+    if (novas.length > 0) {
+      setItemSelecionado(itemUpload);
+      setAjustando(novas[novas.length - 1].id);
+    }
   }
 
   async function salvarLabel(id, label) {
@@ -9178,26 +9187,35 @@ function AdminGaleria() {
 
   return (
     <div>
-      {/* Linha 1: CEG + ações */}
-      <div style={{ display:"flex", gap:10, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
+      {/* Linha 1: CEG select */}
+      <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center" }}>
         <select value={cegSelecionada} onChange={e => setCegSelecionada(e.target.value)}
-          style={{ flex:1, minWidth:140, background:"#1a1a18", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"9px 14px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, outline:"none", cursor:"pointer" }}>
+          style={{ flex:1, background:"#1a1a18", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"9px 14px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, outline:"none", cursor:"pointer" }}>
           {cegsDisponiveis.length === 0 && <option value="">carregando…</option>}
           {cegsDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         {fotos !== null && (
           <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", whiteSpace:"nowrap" }}>{fotos.length} foto{fotos.length!==1?"s":""}</span>
         )}
-        <div style={{ marginLeft:"auto", display:"flex", gap:8, alignItems:"center" }}>
-          {msg && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39" }}>{msg}</span>}
-          {uploading && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--lilas)" }}>enviando {uploadPct}%</span>}
-          <button onClick={() => fileRef.current?.click()} disabled={uploading || !itemSelecionado}
-            title={!itemSelecionado ? "Selecione um item para adicionar fotos" : ""}
-            style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"8px 16px", borderRadius:8, border:"1px solid rgba(201,168,240,.3)", background:"rgba(201,168,240,.08)", color:"#C9A8F0", cursor:itemSelecionado?"pointer":"not-allowed", fontWeight:700, whiteSpace:"nowrap", opacity:(!itemSelecionado||uploading)?0.4:1 }}>
-            + adicionar fotos
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={e => e.target.files?.length && uploadFotos(Array.from(e.target.files))} />
-        </div>
+        {msg && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39", whiteSpace:"nowrap" }}>{msg}</span>}
+      </div>
+
+      {/* Linha 2: item de upload + botão */}
+      <div style={{ display:"flex", gap:8, marginBottom:12, alignItems:"center" }}>
+        <select value={itemUpload} onChange={e => setItemUpload(e.target.value)}
+          style={{ flex:1, background:"#1a1a18", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"8px 14px", color: itemUpload ? "#F5F0E8" : "rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", cursor:"pointer" }}>
+          <option value="">vincular foto a um item…</option>
+          {itensDaCeg.map(i => <option key={i} value={i}>{i}</option>)}
+        </select>
+        {uploading
+          ? <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", whiteSpace:"nowrap" }}>enviando {uploadPct}%</span>
+          : <button onClick={() => fileRef.current?.click()} disabled={!itemUpload}
+              title={!itemUpload ? "Selecione o item para vincular as fotos" : ""}
+              style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"8px 16px", borderRadius:8, border:"1px solid rgba(201,168,240,.3)", background:"rgba(201,168,240,.08)", color:"#C9A8F0", cursor:itemUpload?"pointer":"not-allowed", fontWeight:700, whiteSpace:"nowrap", opacity:itemUpload?1:0.4 }}>
+              + adicionar fotos
+            </button>
+        }
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={e => e.target.files?.length && uploadFotos(Array.from(e.target.files))} />
       </div>
 
       {/* Barra de progresso */}
@@ -9207,14 +9225,14 @@ function AdminGaleria() {
         </div>
       )}
 
-      {/* Pills de itens */}
-      {itensDaCeg.length > 0 && (
+      {/* Pills — só itens que já têm foto */}
+      {itensComFoto.length > 0 && (
         <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
           <button onClick={() => setItemSelecionado("")}
             style={{ ...pillBase, border:`1px solid ${!itemSelecionado?"rgba(245,240,232,.5)":"rgba(245,240,232,.15)"}`, background:!itemSelecionado?"rgba(245,240,232,.1)":"rgba(245,240,232,.03)", color:!itemSelecionado?"var(--offwhite)":"rgba(245,240,232,.5)" }}>
             Todos {fotos !== null ? `(${fotos.length})` : ""}
           </button>
-          {itensDaCeg.map(item => {
+          {itensComFoto.map(item => {
             const sel = itemSelecionado === item;
             const count = fotos ? fotos.filter(f => f.nome_do_item === item).length : null;
             return (
@@ -9227,11 +9245,6 @@ function AdminGaleria() {
         </div>
       )}
 
-      {!itemSelecionado && fotos && fotos.length > 0 && (
-        <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.2)", marginBottom:14, letterSpacing:".06em" }}>
-          selecione um item acima para adicionar fotos a ele
-        </div>
-      )}
 
 
       {/* Loading */}
@@ -9262,11 +9275,13 @@ function AdminGaleria() {
         <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
           {Object.entries(fotosAgrupadas).sort(([a],[b]) => a.localeCompare(b)).map(([item, lista]) => (
             <div key={item}>
-              <div onClick={() => setItemSelecionado(item)}
-                style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, paddingBottom:8, borderBottom:"1px solid rgba(245,240,232,.07)", cursor:"pointer" }}>
-                <span style={{ fontSize:11, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{item}</span>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, paddingBottom:8, borderBottom:"1px solid rgba(245,240,232,.07)" }}>
+                <span onClick={() => setItemSelecionado(item)} style={{ fontSize:11, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>{item}</span>
                 <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>· {lista.length} foto{lista.length!==1?"s":""}</span>
-                <span style={{ fontSize:9, color:"rgba(201,168,240,.45)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>adicionar fotos →</span>
+                <button onClick={() => { setItemUpload(item); window.scrollTo({top:0, behavior:"smooth"}); }}
+                  style={{ marginLeft:"auto", fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", border:"none", color:"rgba(201,168,240,.45)", cursor:"pointer", padding:0 }}>
+                  + adicionar fotos →
+                </button>
               </div>
               {renderGrid(lista)}
             </div>
