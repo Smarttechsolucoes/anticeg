@@ -856,7 +856,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                   </tr>
                   <tr className="thead-cols">
                     <th>JOINER</th>
-                    <th>MEMBRO</th>
+                    <th>{ordemAlfa ? "CARD" : "MEMBRO"}</th>
                     {!guest && <><th>ITEM</th><th>FRETE INTER</th><th>TAXA RF</th></>}
                     <th>STATUS</th>
                     <th>INFO</th>
@@ -892,7 +892,9 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                               <tr>
                                 <td className="ceg-detail-joiner">{item.nome || item.cog || "—"}</td>
                                 <td style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace" }}>
-                                  {versao ? `${membro} · ${versao}` : membro}
+                                  {ordemAlfa
+                                    ? (item.nome_do_item || "—")
+                                    : (versao ? `${membro} · ${versao}` : membro)}
                                 </td>
                                 {!guest && <>
                                   <td><span className="td-val">{Number(item.valor_item) > 0 ? `R$${fmtBRL(item.valor_item)}` : <span className="zero-val">—</span>}</span></td>
@@ -1216,18 +1218,27 @@ function CegTab({ user, itens }) {
 const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.12)", borderRadius: 6, padding: "10px 14px", color: "var(--offwhite)", fontFamily: "'DM Mono',monospace", fontSize: 12 };
 const labelStyle = { fontSize: 11, color: "rgba(245,240,232,.45)", display: "block", marginBottom: 5 };
 
+function ReportCheckRow({ checked, onChange, label }) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", cursor: "pointer" }}>
+      <input type="checkbox" checked={checked} onChange={onChange}
+        style={{ accentColor: "var(--laranja)", width: 14, height: 14 }} />
+      <span style={{ fontSize: 12, color: "rgba(245,240,232,.75)" }}>{label}</span>
+    </label>
+  );
+}
+
 function ReportModal({ user, item, onClose, onReported }) {
   const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
   const [motivoItem, setMotivoItem] = useState(null);
-  const [preencheuForms, setPreencheuForms] = useState(null);
-  const [dataHora, setDataHora] = useState("");
   const [pagInfo, setPagInfo] = useState({ dataPag: "", dataForms: "", valorPago: "", metodo: null });
   const [obs, setObs] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
   function toggleErro(k) { setErros(e => ({ ...e, [k]: !e[k] })); }
+  const checkRow = (k, label) => <ReportCheckRow key={k} checked={erros[k]} onChange={() => toggleErro(k)} label={label} />;
 
   async function handleEnviar() {
     setLoading(true);
@@ -1261,14 +1272,6 @@ function ReportModal({ user, item, onClose, onReported }) {
     setSent(true);
   }
 
-  const CheckRow = ({ k, label }) => (
-    <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", cursor: "pointer" }}>
-      <input type="checkbox" checked={erros[k]} onChange={() => toggleErro(k)}
-        style={{ accentColor: "var(--laranja)", width: 14, height: 14 }} />
-      <span style={{ fontSize: 12, color: "rgba(245,240,232,.75)" }}>{label}</span>
-    </label>
-  );
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
@@ -1289,7 +1292,7 @@ function ReportModal({ user, item, onClose, onReported }) {
               {!Object.values(erros).some(Boolean) && <span style={{ color: "rgba(245,240,232,.25)", fontSize: 10 }}>selecione ao menos uma opção</span>}
             </div>
             <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
-              <CheckRow k="item" label="Item incorreto" />
+              {checkRow("item", "Item incorreto")}
               {erros.item && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4 }}>
                   {[
@@ -1304,7 +1307,7 @@ function ReportModal({ user, item, onClose, onReported }) {
                   ))}
                 </div>
               )}
-              <CheckRow k="valor" label="Valor do item incorreto" />
+              {checkRow("valor", "Valor do item incorreto")}
               {erros.valor && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>Registrado: R${fmtBRL(item.valor_item)}</span>
@@ -1312,7 +1315,7 @@ function ReportModal({ user, item, onClose, onReported }) {
                     style={{ ...inputStyle, width: 140, padding: "5px 10px" }} />
                 </div>
               )}
-              <CheckRow k="frete" label="Frete incorreto" />
+              {checkRow("frete", "Frete incorreto")}
               {erros.frete && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>Registrado: R${fmtBRL(item.frete_inter)}</span>
@@ -1320,7 +1323,7 @@ function ReportModal({ user, item, onClose, onReported }) {
                     style={{ ...inputStyle, width: 140, padding: "5px 10px" }} />
                 </div>
               )}
-              <CheckRow k="taxa" label="Taxa RF incorreta" />
+              {checkRow("taxa", "Taxa RF incorreta")}
               {erros.taxa && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 11, color: "rgba(245,240,232,.35)" }}>Registrado: R${fmtBRL(item.taxa_rf)}</span>
@@ -1328,7 +1331,7 @@ function ReportModal({ user, item, onClose, onReported }) {
                     style={{ ...inputStyle, width: 140, padding: "5px 10px" }} />
                 </div>
               )}
-              <CheckRow k="pagamento" label="Já paguei e continua pendente" />
+              {checkRow("pagamento", "Já paguei e continua pendente")}
               {erros.pagamento && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", flexDirection: "column", gap: 10, padding: "8px 0" }}>
                   <div>
@@ -1359,8 +1362,8 @@ function ReportModal({ user, item, onClose, onReported }) {
                   </div>
                 </div>
               )}
-              <CheckRow k="recebido" label="Já recebi esse item" />
-              <CheckRow k="outro" label="Outro problema" />
+              {checkRow("recebido", "Já recebi esse item")}
+              {checkRow("outro", "Outro problema")}
             </div>
 
             <label style={labelStyle}>Obs (opcional)</label>
@@ -1936,9 +1939,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         const tColgroup = (
           <colgroup>
             <col style={{ width:"auto" }} />
-            <col style={{ width:72 }} /><col style={{ width:72 }} /><col style={{ width:52 }} />
-            {temMulta && <col style={{ width:66 }} />}
-            <col style={{ width:76 }} />
+            <col style={{ width:60 }} /><col style={{ width:52 }} /><col style={{ width:40 }} />
+            {temMulta && <col style={{ width:58 }} />}
+            <col style={{ width:64 }} />
           </colgroup>
         );
         return (
@@ -1953,7 +1956,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 </div>
                 <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
-              <div style={{ overflowY:"auto", flex:1, padding:"0 24px 24px" }}>
+              <div style={{ overflowY:"auto", flex:1, padding:"0 clamp(12px,4vw,24px) 24px" }}>
                 {linhas.length === 0 ? (
                   <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
                 ) : (
@@ -9217,11 +9220,9 @@ function AdminGaleria() {
       const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
       if (upErr) { alert("Erro: " + upErr.message); continue; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
-      const registros = itensAlvo.map((item, idx) => ({
-        ceg: cegSelecionada, nome_do_item: item, foto_url: publicUrl,
-        ordem: (fotos||[]).length + novas.length + idx,
-      }));
-      const { data: inseridos, error: insErr } = await supabase.from("item_fotos").insert(registros).select();
+      const nomeSalvo = isType ? alvo : itensAlvo[0];
+      const registro = { ceg: cegSelecionada, nome_do_item: nomeSalvo, foto_url: publicUrl, ordem: (fotos||[]).length + novas.length };
+      const { data: inseridos, error: insErr } = await supabase.from("item_fotos").insert([registro]).select();
       if (insErr) { alert("Erro ao salvar foto: " + insErr.message); continue; }
       if (inseridos) novas.push(...inseridos);
     }
@@ -9229,7 +9230,7 @@ function AdminGaleria() {
     setUploading(false); setUploadPct(0);
     if (fileRef.current) fileRef.current.value = "";
     if (novas.length > 0) {
-      setItemSelecionado(itensAlvo[0]);
+      setItemSelecionado(alvo);
       if (!isType) setAjustando(novas[novas.length - 1].id);
     }
   }

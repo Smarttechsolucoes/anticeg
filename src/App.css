@@ -178,7 +178,7 @@ body.font-xl #root { zoom: 1.35; }
 
 /* ── Widget acessibilidade ───────────────────────────────── */
 .a11y-btn {
-  position: fixed; bottom: 80px; left: 16px; z-index: 999;
+  position: fixed; bottom: 80px; left: 16px; z-index: 490;
   width: 44px; height: 44px; border-radius: 50%;
   background: #1a1a1a; border: 1.5px solid rgba(245,240,232,.2);
   color: rgba(245,240,232,.7); font-size: 13px; font-family:'DM Mono',monospace; font-weight:700; letter-spacing:-.5px;
@@ -188,7 +188,7 @@ body.font-xl #root { zoom: 1.35; }
 }
 .a11y-btn:hover { border-color: var(--lilas); color: var(--lilas); }
 .a11y-panel {
-  position: fixed; bottom: 134px; left: 16px; z-index: 999;
+  position: fixed; bottom: 134px; left: 16px; z-index: 490;
   background: #1a1a1a; border: 1px solid rgba(245,240,232,.15);
   border-radius: 12px; padding: 14px; width: 200px;
   box-shadow: 0 4px 24px rgba(0,0,0,.5);
@@ -732,7 +732,7 @@ td { padding:10px; vertical-align:middle; }
 
   /* Modais genéricos */
   .modal-overlay, .ceg-modal-overlay { padding:0; align-items:flex-end; }
-  .modal-box { padding:20px 16px 36px !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; border-radius:16px 16px 0 0 !important; max-height:88vh; overflow-y:auto; overflow:hidden !important; }
+  .modal-box { padding:20px 16px 36px !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; border-radius:16px 16px 0 0 !important; max-height:88vh; overflow-x:hidden !important; overflow-y:auto !important; }
 
   /* Perfil */
   .login-box { gap:12px; }
