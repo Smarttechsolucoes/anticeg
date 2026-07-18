@@ -176,6 +176,11 @@ body.font-xl {
 }
 body.font-xl #root { zoom: 1.35; }
 
+/* ── VLibras — forçar abaixo dos modais ─────────────────── */
+[vw] { z-index: 400 !important; }
+[vw-access-button] { z-index: 400 !important; }
+[vw-plugin-wrapper] { z-index: 400 !important; }
+
 /* ── Widget acessibilidade ───────────────────────────────── */
 .a11y-btn {
   position: fixed; bottom: 80px; left: 16px; z-index: 490;
@@ -731,8 +736,8 @@ td { padding:10px; vertical-align:middle; }
   .perfil-subtabs button { flex-shrink:0; white-space:nowrap; }
 
   /* Modais genéricos */
-  .modal-overlay, .ceg-modal-overlay { padding:0; align-items:flex-end; }
-  .modal-box { padding:20px 16px 36px !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; border-radius:16px 16px 0 0 !important; max-height:88vh; overflow-x:hidden !important; overflow-y:auto !important; }
+  .modal-overlay, .ceg-modal-overlay { padding:0; align-items:flex-end; justify-content:center; }
+  .modal-box { padding:24px 20px calc(20px + env(safe-area-inset-bottom, 16px)) !important; width:100% !important; max-width:100% !important; box-sizing:border-box !important; border-radius:20px 20px 0 0 !important; max-height:90vh; overflow-x:hidden !important; overflow-y:auto !important; }
 
   /* Perfil */
   .login-box { gap:12px; }
