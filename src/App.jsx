@@ -441,7 +441,7 @@ function CegModal({ ceg, onClose }) {
 const NOMES_MEMBROS = [
   "BANG CHAN", "LEE KNOW", "HAN QUOKKA", "WOLF CHAN", "FOX I.NY",
   "CHANGBIN", "HYUNJIN", "SEUNGMIN", "LEEBIT", "DWAEKKI",
-  "JINIRET", "BBOKARI", "PUPPYM", "FELIX", "FOXINY", "FOXI.NY",
+  "JINIRET", "BBOKARI", "PUPPYM", "FELIX", "FÈLIX", "FÉLIX", "FOXINY", "FOXI.NY",
   "HAN", "I.N", "IN",
 ];
 
