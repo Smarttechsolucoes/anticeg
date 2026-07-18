@@ -1081,36 +1081,31 @@ function CegTab({ user, itens }) {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => { window.history.pushState(null, "", "/cegs"); setDetalhe(null); }} guest={guest} user={user} />;
-
-  const cegMap = {};
-  (allItens || []).forEach(item => {
-    const ceg = item.ceg || "—";
-    if (!cegMap[ceg]) cegMap[ceg] = { itens: 0, joiners: new Set(), statusCount: {} };
-    cegMap[ceg].itens++;
-    if (item.cog) cegMap[ceg].joiners.add(item.cog);
-    const s = item.status || "Pré-venda";
-    cegMap[ceg].statusCount[s] = (cegMap[ceg].statusCount[s] || 0) + 1;
-  });
-
-  const todasCegs = Object.entries(cegMap).sort((a, b) => a[0].localeCompare(b[0]));
-
-  const minhasCegs = meuCog ? todasCegs.filter(([, d]) => d.joiners.has(meuCog)) : [];
-
-  // Monta mapa de statuses apenas dos itens do joiner logado, por CEG
-  const meuStatusPorCeg = {};
-  if (meuCog) {
+  const { todasCegs, minhasCegs, meuStatusPorCeg } = useMemo(() => {
+    const cegMap = {};
     (allItens || []).forEach(item => {
-      if (item.cog === meuCog) {
-        if (!meuStatusPorCeg[item.ceg]) meuStatusPorCeg[item.ceg] = [];
-        meuStatusPorCeg[item.ceg].push(item.status || "Pré-venda");
-      }
+      const ceg = item.ceg || "—";
+      if (!cegMap[ceg]) cegMap[ceg] = { itens: 0, joiners: new Set(), statusCount: {} };
+      cegMap[ceg].itens++;
+      if (item.cog) cegMap[ceg].joiners.add(item.cog);
+      const s = item.status || "Pré-venda";
+      cegMap[ceg].statusCount[s] = (cegMap[ceg].statusCount[s] || 0) + 1;
     });
-  }
+    const todas = Object.entries(cegMap).sort((a, b) => a[0].localeCompare(b[0]));
+    const minhas = meuCog ? todas.filter(([, d]) => d.joiners.has(meuCog)) : [];
+    const statusPorCeg = {};
+    if (meuCog) {
+      (allItens || []).forEach(item => {
+        if (item.cog === meuCog) {
+          if (!statusPorCeg[item.ceg]) statusPorCeg[item.ceg] = [];
+          statusPorCeg[item.ceg].push(item.status || "Pré-venda");
+        }
+      });
+    }
+    return { todasCegs: todas, minhasCegs: minhas, meuStatusPorCeg: statusPorCeg };
+  }, [allItens, meuCog]);
 
-  // Finalizada para o joiner = todos os itens DELE nessa CEG são STATUS_FINAIS
-  // Para guest = CEGs onde todos os itens (de todos) são STATUS_FINAIS
-  const finalizadas = meuCog
+  const finalizadas = useMemo(() => meuCog
     ? minhasCegs.filter(([ceg]) => {
         const meus = meuStatusPorCeg[ceg] || [];
         return meus.length > 0 && meus.every(s => STATUS_FINAIS.includes(s));
@@ -1118,24 +1113,24 @@ function CegTab({ user, itens }) {
     : todasCegs.filter(([, d]) => {
         const statuses = Object.keys(d.statusCount);
         return statuses.length > 0 && statuses.every(s => STATUS_FINAIS.includes(s));
-      });
+      }), [meuCog, minhasCegs, meuStatusPorCeg, todasCegs]);
 
-  // "Minhas" mostra só as que ainda não foram finalizadas para o joiner
-  const minhasAtivas = meuCog
+  const minhasAtivas = useMemo(() => meuCog
     ? minhasCegs.filter(([ceg]) => {
         const meus = meuStatusPorCeg[ceg] || [];
         return meus.length === 0 || !meus.every(s => STATUS_FINAIS.includes(s));
       })
-    : [];
+    : [], [meuCog, minhasCegs, meuStatusPorCeg]);
 
-  const cegsMap = { todas: todasCegs, minhas: minhasAtivas, finalizadas };
-  const cegs = cegsMap[filtro] || todasCegs;
+  const cegs = (filtro === "minhas" ? minhasAtivas : filtro === "finalizadas" ? finalizadas : todasCegs);
 
   const filtrosBtns = [
     { id: "todas", label: `Todas (${todasCegs.length})` },
     ...(!guest ? [{ id: "minhas", label: `Minhas (${minhasAtivas.length})` }] : []),
     { id: "finalizadas", label: `Finalizadas (${finalizadas.length})` },
   ];
+
+  if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => { window.history.pushState(null, "", "/cegs"); setDetalhe(null); }} guest={guest} user={user} />;
 
   return (
     <div className="main">
