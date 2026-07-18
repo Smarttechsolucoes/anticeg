@@ -1763,9 +1763,14 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               const { data } = await supabase.from("item_fotos").select("*").in("ceg", meusCegs).gte("ordem", 0).order("ceg").order("ordem").order("id");
               if (!data) { setMinhasFotos([]); return; }
               const meusTipos = itens.map(i => ({ ceg: i.ceg, tipo: parseMembro(i.nome_do_item).tipo.toLowerCase() }));
+              const vistos = new Set();
               const filtradas = data.filter(f => {
                 const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
-                return meusTipos.some(m => m.ceg === f.ceg && (m.tipo === fTipo || m.tipo.includes(fTipo) || fTipo.includes(m.tipo)));
+                if (!meusTipos.some(m => m.ceg === f.ceg && (m.tipo === fTipo || m.tipo.includes(fTipo) || fTipo.includes(m.tipo)))) return false;
+                const chave = `${f.ceg}::${fTipo}`;
+                if (vistos.has(chave)) return false;
+                vistos.add(chave);
+                return true;
               });
               setMinhasFotos(filtradas);
             }} style={{ marginTop:8, background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)", color:"#C9A8F0", borderRadius:6, padding:"6px 14px", fontSize:"var(--fs-xs)", fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
