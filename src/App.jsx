@@ -9408,7 +9408,11 @@ function AdminGaleria() {
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, paddingBottom:8, borderBottom:"1px solid rgba(245,240,232,.07)" }}>
                 <span onClick={() => setItemSelecionado(item)} style={{ fontSize:11, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>{item}</span>
                 <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>· {lista.length} foto{lista.length!==1?"s":""}</span>
-                <button onClick={() => { setItemUpload(item); window.scrollTo({top:0, behavior:"smooth"}); }}
+                <button onClick={() => {
+                    const prefixado = tiposDoSet.includes(item) ? `type:${item}` : `item:${item}`;
+                    setItemUpload(prefixado);
+                    window.scrollTo({top:0, behavior:"smooth"});
+                  }}
                   style={{ marginLeft:"auto", fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", border:"none", color:"rgba(201,168,240,.45)", cursor:"pointer", padding:0 }}>
                   + adicionar fotos →
                 </button>
