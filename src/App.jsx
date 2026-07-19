@@ -5585,6 +5585,7 @@ function AdminPinBlock() {
 }
 
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
+  const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
   const [adminWinW, setAdminWinW] = useState(window.innerWidth);
   useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const adminIsMobile = adminWinW <= 680;
@@ -5777,6 +5778,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   // Core: dados leves necessários para sidebar + home dashboard
   useEffect(() => {
+    if (isDemo) return;
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "staff_acessos").single()
@@ -5812,6 +5814,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
   useEffect(() => {
+    if (isDemo) return;
     const loaded = loadedTabsRef.current;
 
     if (adminMainTab === "geral" && !loaded.has("geral")) {
@@ -5946,6 +5949,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   return (
     <div className="admin-wrap">
+      {isDemo && (
+        <div style={{ background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.35)", borderRadius:8, padding:"10px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", letterSpacing:".04em" }}>
+          ⚠ MODO DEMO — estrutura visível, dados reais não carregados
+        </div>
+      )}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
         <h2 className="admin-title" style={{ margin:0 }}>⚙ Admin</h2>
         <a href="https://docs.google.com/spreadsheets/d/1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
