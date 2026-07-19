@@ -88,10 +88,13 @@ const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
 const WHATSAPP_NUM = "5524992782023";
 const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
-const OWNER_COGS   = ["nandaverseo_c"];
+const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd"];
 const SESSION_VERSION = "3";
+// Cogs de demonstração: mapeiam para o cog real cujos dados serão exibidos
+const DEMO_COG_MAP = { "ADMMODE": "nandaverseo_c" };
+function dataCog(cog) { return DEMO_COG_MAP[cog] || cog; }
 let _extraStaffCogs = [];
 function isAdminUser(user) {
   return OWNER_EMAILS.includes(user?.email) || OWNER_COGS.includes(user?.cog) || user?.twitter === "@nandaverseo_c"
@@ -1040,7 +1043,7 @@ function CegTab({ user, itens }) {
   const [cegCapas, setCegCapas] = useState({});
 
   const guest = !user || user.guest;
-  const meuCog = user?.cog;
+  const meuCog = dataCog(user?.cog);
 
   useEffect(() => {
     async function fetchItens() {
@@ -2816,18 +2819,18 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: repassosData },
         { count: multasCount },
       ] = await Promise.all([
-        supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
-        supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
-        supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
-          .eq("cog", user.cog)
+          .eq("cog", dataCog(user.cog))
           .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)"),
-        supabase.from("pagamento_demandas").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
+        supabase.from("pagamento_demandas").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
-          .eq("cog", user.cog).order("ceg").order("nome_do_item"),
-        supabase.from("repassos").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }),
-        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
+          .eq("cog", dataCog(user.cog)).order("ceg").order("nome_do_item"),
+        supabase.from("repassos").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)),
       ]);
       if (cancelled) return;
       if (envios) setMeuEnvios(envios);
