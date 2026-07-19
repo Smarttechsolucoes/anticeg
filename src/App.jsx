@@ -1555,6 +1555,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [pagConfirmMap,  setPagConfirmMap]  = useState({});
   const [pagConfirmLoaded, setPagConfirmLoaded] = useState(false);
   const [repasseMap,    setRepasseMap]    = useState({});
+  const [saldoCashback, setSaldoCashback] = useState(0);
+  useEffect(() => {
+    if (user.guest || !user.cog) return;
+    supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single()
+      .then(({ data }) => { if (data) setSaldoCashback(Number(data.saldo_cashback || 0)); });
+  }, [user.cog]);
   useEffect(() => {
     if (user.guest) return;
     supabase.from("pagamento_demandas").select("itens, status").eq("joiner_cog", user.cog)
@@ -1784,7 +1790,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="sum-sub" style={{ marginTop:4 }}>clique aqui →</div>
         </div>
         {!guest && (
-          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: saldoCashback > 0 ? "rgba(186,255,57,.2)" : tMulta > 0 ? "rgba(255,107,107,.25)" : undefined, cursor:"pointer" }}>
+          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : saldoCashback > 0 ? "rgba(186,255,57,.25)" : undefined, cursor:"pointer" }}>
             <div className="sum-label">Total a pagar</div>
             <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>
               R${fmtBRL(tPend + tMulta)}
