@@ -1811,7 +1811,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             }
             {totalSaldoCashback > 0 && (
               <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid rgba(186,255,57,.15)" }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 R${fmtBRL(totalSaldoCashback)} de cashback</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 R${fmtBRL(totalSaldoCashback)} de reembolso</div>
                 <div style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.4 }}>use para abater o valor em aberto ou solicite seu reembolso</div>
               </div>
             )}
@@ -2307,7 +2307,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
                     <td colSpan={3}>
-                      <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 cashback · R${fmtBRL(Math.abs(Number(item.valor_item||0)))}</span>
+                      <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 reembolso · R${fmtBRL(Math.abs(Number(item.valor_item||0)))}</span>
                     </td>
                     <td><StatusChip status={item.status} /></td>
                     <td>
@@ -2437,7 +2437,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               </div>
               <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0 4px" }}>
-                <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 cashback disponível</span>
+                <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 reembolso disponível</span>
                 <span style={{ fontSize:14, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>R${fmtBRL(Math.abs(Number(item.valor_item||0)))}</span>
               </div>
               {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
@@ -3304,7 +3304,7 @@ ${p.comprovante_url ? (() => {
               {/* Total */}
               {Number(pagRecibo.cashback_aplicado || 0) > 0 && (
                 <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".5px" }}>🎁 Cashback aplicado</span>
+                  <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".5px" }}>🎁 Reembolso aplicado</span>
                   <span style={{ fontSize:13, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>- R$ {Number(pagRecibo.cashback_aplicado).toFixed(2).replace(".",",")}</span>
                 </div>
               )}
@@ -3368,7 +3368,7 @@ ${p.comprovante_url ? (() => {
                 <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"10px 14px", marginBottom:16 }}>
                   <span style={{ fontSize:16 }}>🎁</span>
                   <div>
-                    <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>Saldo de cashback disponível: R$ {saldoCashback.toFixed(2).replace(".",",")}</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>Saldo de reembolso disponível: R$ {saldoCashback.toFixed(2).replace(".",",")}</div>
                     <div style={{ fontSize:9, color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>Aplique na hora de enviar o comprovante</div>
                   </div>
                   <button onClick={() => setPagSubTab("enviar")} style={{ marginLeft:"auto", fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.25)", color:"#BAFF39", borderRadius:5, padding:"5px 12px", cursor:"pointer", whiteSpace:"nowrap" }}>
@@ -3570,7 +3570,7 @@ ${p.comprovante_url ? (() => {
             {/* Cashback */}
             {saldoCashback > 0 && (
               <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
-                <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🎁 Saldo de cashback</div>
+                <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🎁 Saldo de reembolso</div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                   <span style={{ fontSize:15, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginRight:"auto" }}>R$ {saldoCashback.toFixed(2).replace(".",",")}</span>
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>Aplicar:</span>
@@ -6665,7 +6665,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           temAcesso("pagamentos") && { id:"em_aberto",  label:"Em aberto",  badge: 0 },
           temAcesso("pagamentos") && { id:"atrasados",  label:"Atrasados",  badge: 0 },
           (temAcesso("blocklist") || owner) && { id:"blocklist",  label:"Blocklist",  badge: 0 },
-          owner && { id:"cashback", label:"Cashback", badge: 0 },
+          owner && { id:"cashback", label:"Reembolso", badge: 0 },
         ].filter(Boolean);
 
         const tabSt = active => ({
@@ -6768,7 +6768,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     {/* cashback aplicado */}
                     {Number(d.cashback_aplicado || 0) > 0 && (
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderTop:"1px solid rgba(186,255,57,.1)", marginTop:4 }}>
-                        <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace" }}>🎁 cashback aplicado</span>
+                        <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace" }}>🎁 reembolso aplicado</span>
                         <span style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>- R${Number(d.cashback_aplicado).toFixed(2).replace(".",",")}</span>
                       </div>
                     )}
