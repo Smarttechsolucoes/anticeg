@@ -3210,7 +3210,12 @@ ${p.comprovante_url ? (() => {
                                 + multaItem(i);
         const outrosValTotal = pagOutros ? (Number(pagOutrosItem.replace(",",".")||0) + Number(pagOutrosFrete.replace(",",".")||0) + Number(pagOutrosRF.replace(",",".")||0)) : 0;
         const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0) + outrosValTotal;
-        const cashbackVal  = saldoCashback > 0 ? Math.min(Math.max(0, parseFloat(pagCashback || "0") || 0), saldoCashback, total) : 0;
+        const cashbackMasterlist = meusItens.reduce((a,b) => {
+          const v = Number(b.valor_item||0);
+          return v < 0 ? a + Math.abs(v) : a;
+        }, 0);
+        const totalReembolso = saldoCashback + cashbackMasterlist;
+        const cashbackVal  = totalReembolso > 0 ? Math.min(Math.max(0, parseFloat(pagCashback || "0") || 0), totalReembolso, total) : 0;
         const totalLiquido = Math.max(0, total - cashbackVal);
         const temItens = itensSel.length > 0 || (pagOutros && pagOutrosNome.trim() && outrosValTotal > 0);
 
@@ -3247,8 +3252,9 @@ ${p.comprovante_url ? (() => {
             obs:               obsFinal,
           }]).select().single();
           if (error) { setPagStatus("idle"); setPagErro(`Erro ao salvar demanda: ${error.message}`); return; }
-          if (cashbackVal > 0) {
-            const novoSaldo = Math.max(0, saldoCashback - cashbackVal);
+          if (cashbackVal > 0 && saldoCashback > 0) {
+            const fromDB = Math.min(cashbackVal, saldoCashback);
+            const novoSaldo = Math.max(0, saldoCashback - fromDB);
             await supabase.from("joiners").update({ saldo_cashback: novoSaldo }).eq("cog", user.cog);
             setSaldoCashback(novoSaldo);
           }
@@ -3364,11 +3370,11 @@ ${p.comprovante_url ? (() => {
           return (
             <div style={{ paddingBottom:40 }}>
               {tabBar}
-              {saldoCashback > 0 && (
+              {totalReembolso > 0 && (
                 <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"10px 14px", marginBottom:16 }}>
                   <span style={{ fontSize:16 }}>🎁</span>
                   <div>
-                    <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>Saldo de reembolso disponível: R$ {saldoCashback.toFixed(2).replace(".",",")}</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>Saldo de reembolso disponível: R$ {totalReembolso.toFixed(2).replace(".",",")}</div>
                     <div style={{ fontSize:9, color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>Aplique na hora de enviar o comprovante</div>
                   </div>
                   <button onClick={() => setPagSubTab("enviar")} style={{ marginLeft:"auto", fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.25)", color:"#BAFF39", borderRadius:5, padding:"5px 12px", cursor:"pointer", whiteSpace:"nowrap" }}>
@@ -3567,18 +3573,18 @@ ${p.comprovante_url ? (() => {
               <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", textTransform:"uppercase" }}>Total selecionado</span>
               <span style={{ fontSize:18, fontWeight:900, color: temItens ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
             </div>
-            {/* Cashback */}
-            {saldoCashback > 0 && (
+            {/* Reembolso */}
+            {totalReembolso > 0 && (
               <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
                 <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🎁 Saldo de reembolso</div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-                  <span style={{ fontSize:15, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginRight:"auto" }}>R$ {saldoCashback.toFixed(2).replace(".",",")}</span>
+                  <span style={{ fontSize:15, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginRight:"auto" }}>R$ {totalReembolso.toFixed(2).replace(".",",")}</span>
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>Aplicar:</span>
-                  <input type="number" inputMode="decimal" min={0} max={Math.min(saldoCashback, total)} value={pagCashback}
+                  <input type="number" inputMode="decimal" min={0} max={Math.min(totalReembolso, total)} value={pagCashback}
                     onChange={e => setPagCashback(e.target.value)}
                     placeholder="0.00"
                     style={{ width:80, background:"rgba(0,0,0,.4)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, padding:"6px 10px", color:"#BAFF39", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"right" }} />
-                  <button onClick={() => setPagCashback(String(Math.min(saldoCashback, total).toFixed(2)))}
+                  <button onClick={() => setPagCashback(String(Math.min(totalReembolso, total).toFixed(2)))}
                     style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.2)", color:"#BAFF39", borderRadius:5, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
                     Usar tudo
                   </button>
