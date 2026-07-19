@@ -5584,6 +5584,69 @@ function AdminPinBlock() {
   );
 }
 
+const DEMO_ADMIN_DATA = {
+  reports: [
+    { id: 101, joiner_nome: "Camila Lima", joiner_cog: "demo_camila", item_nome: "HYUNJIN POSTCARD DO IT CARDS", ceg: "DO IT CARDS", status: "pendente", created_at: "2025-07-12T14:32:00Z", erro_item: true, erro_valor: false, erro_frete: false, erro_taxa: false, erro_pagamento: false, erro_recebido: false, erro_outro: false, motivo_item: "Recebi o postcard errado — era Hyunjin mas veio Felix", correcao_valor: null, correcao_frete: null, correcao_taxa: null, pag_data: null, pag_valor: null, pag_metodo: null, observacao: null },
+    { id: 102, joiner_nome: "Larissa Teste", joiner_cog: "demo_lari", item_nome: "BANG CHAN UNIT CARD 6TH FAN MEETING CARD", ceg: "6TH FAN MEETING CARD", status: "em_analise", created_at: "2025-07-08T09:15:00Z", erro_item: false, erro_valor: true, erro_frete: false, erro_taxa: false, erro_pagamento: false, erro_recebido: false, erro_outro: false, motivo_item: null, correcao_valor: "85.90", correcao_frete: null, correcao_taxa: null, pag_data: null, pag_valor: null, pag_metodo: null, observacao: "Valor cobrado foi R$95,00 mas o combinado era R$85,90" },
+    { id: 103, joiner_nome: "Beatriz Santos", joiner_cog: "demo_bia", item_nome: "SEUNGMIN PHOTOCARD SKZOO", ceg: "SKZOO", status: "resolvido", created_at: "2025-07-02T17:45:00Z", erro_item: false, erro_valor: false, erro_frete: false, erro_taxa: false, erro_pagamento: false, erro_recebido: true, erro_outro: false, motivo_item: null, correcao_valor: null, correcao_frete: null, correcao_taxa: null, pag_data: null, pag_valor: null, pag_metodo: null, observacao: "Item não chegou ao endereço informado" },
+  ],
+  confirmacoes: [
+    { id: 201, joiner_nome: "Ana Costa", joiner_cog: "demo_ana", twitter_novo: "@anacostaaa", email_novo: "ana@demo.com", created_at: "2025-07-15T10:00:00Z" },
+    { id: 202, joiner_nome: "Milena Ferreira", joiner_cog: "demo_mile", twitter_novo: "@mile.stays", email_novo: "milena@demo.com", created_at: "2025-07-13T16:20:00Z" },
+  ],
+  preCadastros: [
+    { id: 301, nome: "Juliana Ribeiro", cog: "demo_ju", email: "juliana@demo.com", whatsapp: "11999887766", created_at: "2025-07-16T09:00:00Z" },
+    { id: 302, nome: "Fernanda Alves", cog: "demo_feh", email: "fernanda@demo.com", whatsapp: "21988776655", created_at: "2025-07-14T14:00:00Z" },
+  ],
+  envioSolic: [
+    { id: 401, joiner_nome: "Camila Lima", joiner_cog: "demo_camila", joiner_handle: "@camilalima_skz", status: "solicitação de envio", created_at: "2025-07-15T10:00:00Z", metodo: "SEDEX", grupo_envio_codigo: null, itens: [{ id: 1001, nome: "HYUNJIN POSTCARD DO IT CARDS", nome_do_item: "HYUNJIN POSTCARD DO IT CARDS", ceg: "DO IT CARDS", valor: "89.90", taxa: "15.00", frete: "0" }, { id: 1002, nome: "FELIX PHOTOCARD DO IT CARDS", nome_do_item: "FELIX PHOTOCARD DO IT CARDS", ceg: "DO IT CARDS", valor: "89.90", taxa: "15.00", frete: "0" }], rastreio_codigo: null, rastreio_link: null, cotacao_valor: null, cotacao_prazo: null, cotacao_obs: null, cotacao_frete: null, cotacao_forma: null, cotacao_embalagem: null, cotacao_opcoes: null, modalidade_escolhida: null, destinatario: "Camila Lima", cpf: "xxx.xxx.xxx-xx", endereco: "Rua das Flores", numero: "123", complemento: "Apto 45", bairro: "Jardim América", cidade: "São Paulo", estado: "SP", cep: "01310-100", seguro: "nao", valor_seguro: null },
+    { id: 402, joiner_nome: "Larissa Teste", joiner_cog: "demo_lari", joiner_handle: "@lari.stays", status: "pagamento em aberto", created_at: "2025-07-10T16:30:00Z", metodo: "PAC", grupo_envio_codigo: null, itens: [{ id: 1003, nome: "BANG CHAN UNIT CARD 6TH FAN MEETING CARD", nome_do_item: "BANG CHAN UNIT CARD 6TH FAN MEETING CARD", ceg: "6TH FAN MEETING CARD", valor: "120.00", taxa: "20.00", frete: "0" }], rastreio_codigo: null, rastreio_link: null, cotacao_valor: "28,50", cotacao_prazo: "10 dias úteis", cotacao_obs: "Embalagem com plástico bolha", cotacao_frete: "22.00", cotacao_forma: "PAC", cotacao_embalagem: "6.50", cotacao_opcoes: [{ forma: "PAC", valor: "22.00", valor_original: "22.00", prazo: "10 dias úteis" }, { forma: "SEDEX", valor: "45.00", valor_original: "45.00", prazo: "3 dias úteis" }], modalidade_escolhida: null, destinatario: "Larissa Santos", cpf: "xxx.xxx.xxx-xx", endereco: "Av. Paulista", numero: "900", complemento: null, bairro: "Bela Vista", cidade: "São Paulo", estado: "SP", cep: "01310-200", seguro: "nao", valor_seguro: null },
+    { id: 403, joiner_nome: "Ana Costa", joiner_cog: "demo_ana", joiner_handle: "@ana_stays", status: "enviado", created_at: "2025-07-05T11:00:00Z", metodo: "SEDEX", grupo_envio_codigo: null, itens: [{ id: 1004, nome: "HAN POSTCARD DOMINATE JAPAN", nome_do_item: "HAN POSTCARD DOMINATE JAPAN", ceg: "DOMINATE JAPAN", valor: "95.00", taxa: "18.00", frete: "0" }], rastreio_codigo: "SN123456789BR", rastreio_link: null, cotacao_valor: "38,90", cotacao_prazo: "3 dias úteis", cotacao_obs: null, cotacao_frete: "35.00", cotacao_forma: "SEDEX", cotacao_embalagem: "3.90", cotacao_opcoes: [{ forma: "SEDEX", valor: "35.00", valor_original: "35.00", prazo: "3 dias úteis" }], modalidade_escolhida: "SEDEX", destinatario: "Ana Costa", cpf: "xxx.xxx.xxx-xx", endereco: "Rua das Palmeiras", numero: "55", complemento: null, bairro: "Centro", cidade: "Rio de Janeiro", estado: "RJ", cep: "20040-020", seguro: "nao", valor_seguro: null },
+  ],
+  joinerUpdates: [
+    { id: 501, joiner_cog: "demo_camila", created_at: "2025-07-16T08:00:00Z", lido: false, campos: { nome: { de: "Camila", para: "Camila Lima" }, twitter: { de: "@cami_stays", para: "@camilalima_skz" } } },
+    { id: 502, joiner_cog: "demo_lari", created_at: "2025-07-12T15:30:00Z", lido: true, campos: { whatsapp: { de: "11999991111", para: "11988882222" } } },
+  ],
+  pagDemandas: [
+    { id: 601, joiner_cog: "demo_camila", status: "em_analise", created_at: "2025-07-15T12:00:00Z", valor_total: "209.80", comprovante_url: null, obs: "Pix enviado pela manhã", itens: [{ id: 1001, nome_do_item: "HYUNJIN POSTCARD DO IT CARDS", ceg: "DO IT CARDS", valor_item: "89.90", frete_inter: "0", taxa_rf: "15.00", multa: "0" }, { id: 1002, nome_do_item: "FELIX PHOTOCARD DO IT CARDS", ceg: "DO IT CARDS", valor_item: "89.90", frete_inter: "0", taxa_rf: "15.00", multa: "0" }] },
+    { id: 602, joiner_cog: "demo_ana", status: "pago", created_at: "2025-07-06T10:00:00Z", valor_total: "113.00", comprovante_url: null, obs: null, itens: [{ id: 1004, nome_do_item: "HAN POSTCARD DOMINATE JAPAN", ceg: "DOMINATE JAPAN", valor_item: "95.00", frete_inter: "0", taxa_rf: "18.00", multa: "0" }] },
+  ],
+  adminRepassos: [
+    { id: 701, joiner_cog: "demo_lari", joiner_nome: "Larissa Teste", status: "pendente", created_at: "2025-07-14T10:00:00Z", nome_do_item: "LEE KNOW UNIT CARD 6TH FAN MEETING CARD", ceg: "6TH FAN MEETING CARD", novo_dono_nome: "Ana Costa", novo_dono_cog: "demo_ana", valor_acordado: 95, item_quitado: false, custos_pagos: ["frete_inter"], valor_pendente_descricao: "Taxa RF ainda pendente", obs: "Combinado por direct no Twitter", comprovacao_url: null },
+    { id: 702, joiner_cog: "demo_bia", joiner_nome: "Beatriz Santos", status: "aprovado", created_at: "2025-07-08T15:00:00Z", nome_do_item: "HYUNJIN POSTCARD SKZOO", ceg: "SKZOO", novo_dono_nome: "Milena Ferreira", novo_dono_cog: "demo_mile", valor_acordado: 80, item_quitado: true, custos_pagos: ["frete_inter", "taxa_rf"], valor_pendente_descricao: null, obs: null, comprovacao_url: null },
+  ],
+  mercariPedidos: [
+    { id: 801, joiner_nome: "Camila Lima", joiner_cog: "demo_camila", joiner_whatsapp: "11999887766", status: "pendente", created_at: "2025-07-16T09:00:00Z", itens: [{ nome: "Stray Kids Hyunjin Photocard", link: "https://jp.mercari.com/item/m00000000001", valor_jpy: 3500, valor_brl: 122.50 }, { nome: "SKZ Felix Acrylic Stand", link: "https://jp.mercari.com/item/m00000000002", valor_jpy: 2000, valor_brl: 70.00 }], valor_jpy_total: 5500, valor_brl_total: 192.50, metodo_pagamento: "pix", id_transacao: null, comprovante_url: null },
+    { id: 802, joiner_nome: "Ana Costa", joiner_cog: "demo_ana", joiner_whatsapp: "21988776655", status: "concluido", created_at: "2025-07-10T14:00:00Z", itens: [{ nome: "Stray Kids Official Photocard Set", link: "https://jp.mercari.com/item/m00000000003", valor_jpy: 8000, valor_brl: 280.00 }], valor_jpy_total: 8000, valor_brl_total: 280.00, metodo_pagamento: "pix", id_transacao: "PIX20250710", comprovante_url: null },
+  ],
+  joiners: [
+    { cog: "demo_camila", nome: "Camila Lima",     email: "camila@demo.com",   bloqueado: false },
+    { cog: "demo_lari",   nome: "Larissa Teste",   email: "larissa@demo.com",  bloqueado: false },
+    { cog: "demo_bia",    nome: "Beatriz Santos",  email: "beatriz@demo.com",  bloqueado: false },
+    { cog: "demo_ana",    nome: "Ana Costa",       email: "ana@demo.com",      bloqueado: false },
+    { cog: "demo_mile",   nome: "Milena Ferreira", email: "milena@demo.com",   bloqueado: false },
+    { cog: "demo_ju",     nome: "Juliana Ribeiro", email: "juliana@demo.com",  bloqueado: false },
+    { cog: "demo_feh",    nome: "Fernanda Alves",  email: "fernanda@demo.com", bloqueado: false },
+  ],
+  masterlist: [
+    { id: 1001, cog: "demo_camila", nome: "Camila Lima",    ceg: "DO IT CARDS",         nome_do_item: "HYUNJIN POSTCARD DO IT CARDS",              status: "Aguardando GOM",    valor_item: "89.90",  frete_inter: "0",    taxa_rf: "15.00", pago_item: false, pago_frete: true,  pago_rf: false, venc_item: "2025-07-20", venc_frete: null, venc_rf: "2025-07-25", info_adicionais: null },
+    { id: 1002, cog: "demo_camila", nome: "Camila Lima",    ceg: "DO IT CARDS",         nome_do_item: "FELIX PHOTOCARD DO IT CARDS",               status: "Aguardando GOM",    valor_item: "89.90",  frete_inter: "0",    taxa_rf: "15.00", pago_item: false, pago_frete: true,  pago_rf: false, venc_item: "2025-07-20", venc_frete: null, venc_rf: "2025-07-25", info_adicionais: null },
+    { id: 1003, cog: "demo_lari",   nome: "Larissa Teste",  ceg: "6TH FAN MEETING CARD", nome_do_item: "BANG CHAN UNIT CARD 6TH FAN MEETING CARD", status: "Aguardando Envio",  valor_item: "120.00", frete_inter: "0",    taxa_rf: "20.00", pago_item: true,  pago_frete: true,  pago_rf: true,  venc_item: null,          venc_frete: null, venc_rf: null,          info_adicionais: null },
+    { id: 1004, cog: "demo_ana",    nome: "Ana Costa",      ceg: "DOMINATE JAPAN",      nome_do_item: "HAN POSTCARD DOMINATE JAPAN",               status: "Enviado Nacional",  valor_item: "95.00",  frete_inter: "0",    taxa_rf: "18.00", pago_item: true,  pago_frete: true,  pago_rf: true,  venc_item: null,          venc_frete: null, venc_rf: null,          info_adicionais: null },
+    { id: 1005, cog: "demo_bia",    nome: "Beatriz Santos", ceg: "SKZOO",               nome_do_item: "SEUNGMIN PHOTOCARD SKZOO",                  status: "Aguardando GOM",    valor_item: "75.00",  frete_inter: "0",    taxa_rf: "12.00", pago_item: false, pago_frete: false, pago_rf: false, venc_item: "2025-07-18", venc_frete: "2025-07-18", venc_rf: "2025-07-18", info_adicionais: null },
+  ],
+  pushes: [
+    { id: 901, message: "Atenção! Prazo de pagamento da CEG DO IT CARDS é amanhã (21/07). Confirme seu pagamento para não perder o pedido.", active: true, joiner_cog: null, created_at: "2025-07-19T10:00:00Z", push_reads: [] },
+    { id: 902, message: "Envios da CEG DOMINATE JAPAN foram confirmados! Código de rastreio enviado por DM.", active: true, joiner_cog: null, created_at: "2025-07-15T14:00:00Z", push_reads: [] },
+    { id: 903, message: "Novo drop disponível: 6TH GEN. Acesse o site para conferir os itens disponíveis.", active: false, joiner_cog: null, created_at: "2025-07-10T09:00:00Z", push_reads: [] },
+  ],
+  feedbacks: [
+    { id: 911, joiner_cog: "demo_camila", joiner_nome: "Camila Lima", tipo: "elogio", texto: "O site ficou incrível! Muito fácil de acompanhar meus itens. Obrigada pelo trabalho!", resposta: "Que fofo! Fico muito feliz que esteja gostando 🥹 Qualquer dúvida é só chamar!", created_at: "2025-07-14T11:00:00Z" },
+    { id: 912, joiner_cog: "demo_lari",   joiner_nome: "Larissa Teste", tipo: "sugestão", texto: "Seria incrível poder filtrar os itens por CEG na aba de perfil!", resposta: null, created_at: "2025-07-12T16:30:00Z" },
+    { id: 913, joiner_cog: "demo_bia",    joiner_nome: "Beatriz Santos", tipo: "bug", texto: "Quando clico em 'minha galeria' o app fica carregando por muito tempo.", resposta: null, created_at: "2025-07-11T08:45:00Z" },
+  ],
+};
+
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
   const [adminWinW, setAdminWinW] = useState(window.innerWidth);
@@ -5778,7 +5841,20 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   // Core: dados leves necessários para sidebar + home dashboard
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo) {
+      setReports(DEMO_ADMIN_DATA.reports);
+      setConfirmacoes(DEMO_ADMIN_DATA.confirmacoes);
+      setPreCadastros(DEMO_ADMIN_DATA.preCadastros);
+      setEnvioSolic(DEMO_ADMIN_DATA.envioSolic);
+      setJoinerUpdates(DEMO_ADMIN_DATA.joinerUpdates);
+      setPagDemandas(DEMO_ADMIN_DATA.pagDemandas);
+      setAdminRepassos(DEMO_ADMIN_DATA.adminRepassos);
+      setMercariPedidos(DEMO_ADMIN_DATA.mercariPedidos);
+      setJoinersData(DEMO_ADMIN_DATA.joiners);
+      setPendentesData(DEMO_ADMIN_DATA.masterlist);
+      setStaffAcessos({});
+      return;
+    }
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "staff_acessos").single()
@@ -5814,7 +5890,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo) {
+      if (adminMainTab === "geral" && pushes === null) {
+        setPushes(DEMO_ADMIN_DATA.pushes);
+        setFeedbacks(DEMO_ADMIN_DATA.feedbacks);
+      }
+      return;
+    }
     const loaded = loadedTabsRef.current;
 
     if (adminMainTab === "geral" && !loaded.has("geral")) {
@@ -5951,7 +6033,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     <div className="admin-wrap">
       {isDemo && (
         <div style={{ background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.35)", borderRadius:8, padding:"10px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", letterSpacing:".04em" }}>
-          ⚠ MODO DEMO — estrutura visível, dados reais não carregados
+          ⚠ MODO DEMO — dados fictícios para demonstração · nenhum dado real é exibido
         </div>
       )}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
@@ -6140,6 +6222,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       })()}
 
       {adminMainTab === "geral" && owner && <>
+      {isDemo && (
+        <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"10px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", letterSpacing:".04em" }}>
+          👁 MODO DEMO — visualização apenas · interações desativadas
+        </div>
+      )}
+      <div style={{ pointerEvents: isDemo ? "none" : undefined, opacity: isDemo ? 0.72 : 1 }}>
       <AdminLinks />
       <AdminPinBlock />
 
@@ -6302,6 +6390,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             );
           });
         })()}
+      </div>
       </div>
 
       </>}
