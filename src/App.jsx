@@ -1638,6 +1638,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const pendV = totalV - pagoV;
   const cegs  = [...new Set(itens.map(i => i.ceg))].length;
 
+  const cashbackMasterlist = itens.reduce((a,b) => {
+    const v = Number(b.valor_item||0);
+    return v < 0 ? a + Math.abs(v) : a;
+  }, 0);
+  const totalSaldoCashback = saldoCashback + cashbackMasterlist;
+
   const today = new Date(); today.setHours(0,0,0,0);
   const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
   const vencDates = [];
@@ -1680,8 +1686,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const filteredAtivos      = statusFiltro === "tudo" ? filtered.filter(i => i.status !== "Enviado Nacional") : filtered;
   const filteredFinalizados = statusFiltro === "tudo" ? filtered.filter(i => i.status === "Enviado Nacional") : [];
 
-  const tTotal = filtered.reduce((a,b) => a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0), 0);
+  const tTotal = filtered.reduce((a,b) => {
+    if (Number(b.valor_item||0) < 0) return a;
+    return a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0);
+  }, 0);
   const tPend  = filtered.reduce((a,b) => {
+    if (Number(b.valor_item||0) < 0) return a;
     const ck = `${b.ceg}::${b.nome_do_item}`;
     return a + (isPendente(b.pago_item)  && !pagConfirmMap[ck]?.item  ? Number(b.valor_item||0)  : 0)
              + (isPendente(b.pago_frete) && !pagConfirmMap[ck]?.frete ? Number(b.frete_inter||0) : 0)
@@ -1790,7 +1800,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="sum-sub" style={{ marginTop:4 }}>clique aqui →</div>
         </div>
         {!guest && (
-          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : saldoCashback > 0 ? "rgba(186,255,57,.25)" : undefined, cursor:"pointer" }}>
+          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : totalSaldoCashback > 0 ? "rgba(186,255,57,.25)" : undefined, cursor:"pointer" }}>
             <div className="sum-label">Total a pagar</div>
             <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>
               R${fmtBRL(tPend + tMulta)}
@@ -1799,9 +1809,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               ? <div className="sum-sub" style={{ color:"rgba(255,107,107,.7)" }}>R${fmtBRL(tPend)} + R${fmtBRL(tMulta)} multa</div>
               : <div className="sum-sub">ver detalhes →</div>
             }
-            {saldoCashback > 0 && (
+            {totalSaldoCashback > 0 && (
               <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid rgba(186,255,57,.15)" }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 R${fmtBRL(saldoCashback)} de cashback</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 R${fmtBRL(totalSaldoCashback)} de cashback</div>
                 <div style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.4 }}>use para abater o valor em aberto ou solicite seu reembolso</div>
               </div>
             )}
@@ -2290,6 +2300,23 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             {filteredAtivos.map(item => {
               const ai = getStepIdx(item.status);
               const isOpen = openDrawer === item.id;
+              const isCashbackItem = Number(item.valor_item||0) < 0;
+              if (isCashbackItem) return (
+                <Fragment key={item.id}>
+                  <tr style={{ outline:"1px solid rgba(186,255,57,.2)", outlineOffset:"-1px", background:"rgba(186,255,57,.03)" }}>
+                    <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
+                    <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
+                    <td colSpan={3}>
+                      <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 cashback · R${fmtBRL(Math.abs(Number(item.valor_item||0)))}</span>
+                    </td>
+                    <td><StatusChip status={item.status} /></td>
+                    <td>
+                      <InfoCell info={item.info_adicionais} isOpen={isOpen} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} />
+                    </td>
+                  </tr>
+                  {isOpen && (<tr className="drawer-row"><td colSpan={7}><Timeline activeIdx={ai} /></td></tr>)}
+                </Fragment>
+              );
               const envioSolic = envioByItem[item.id];
               const envioStatus = envioSolic?.status;
               const showEnvio = envioStatus && envioStatus !== "cancelado" && item.status !== "Enviado Nacional";
@@ -2402,6 +2429,24 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         {filteredAtivos.map(item => {
           const ai = getStepIdx(item.status);
           const isOpen = openDrawer === item.id;
+          if (Number(item.valor_item||0) < 0) return (
+            <div key={item.id} className="ml-card" style={{ border:"1.5px solid rgba(186,255,57,.3)", background:"rgba(186,255,57,.03)" }}>
+              <div className="ml-card-top">
+                <button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button>
+                <StatusChip status={item.status} />
+              </div>
+              <div className="ml-card-name"><InfoContent info={item.nome_do_item} /></div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0 4px" }}>
+                <span style={{ fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 cashback disponível</span>
+                <span style={{ fontSize:14, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>R${fmtBRL(Math.abs(Number(item.valor_item||0)))}</span>
+              </div>
+              {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
+              <div className="ml-card-footer">
+                <button className={`expand-btn ${isOpen ? "open" : ""}`} onClick={() => setOpenDrawer(isOpen ? null : item.id)}>▾</button>
+              </div>
+              {isOpen && <div className="ml-card-timeline"><Timeline activeIdx={ai} /></div>}
+            </div>
+          );
           const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
           const cfm       = pagConfirmMap[`${item.ceg}::${item.nome_do_item}`] || {};
           const pendItem  = !guest && isPendente(item.pago_item)  && Number(item.valor_item) > 0  && !cfm.item;
