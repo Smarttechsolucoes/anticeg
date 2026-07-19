@@ -2779,6 +2779,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [pagOutrosItem,     setPagOutrosItem]   = useState("");
   const [pagOutrosFrete,    setPagOutrosFrete]  = useState("");
   const [pagOutrosRF,       setPagOutrosRF]     = useState("");
+  const [saldoCashback,     setSaldoCashback]   = useState(0);
+  const [pagCashback,       setPagCashback]     = useState("");
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
   const [meusFeedbacks,  setMeusFeedbacks]  = useState(null);
@@ -2818,6 +2820,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: itensData },
         { data: repassosData },
         { count: multasCount },
+        { data: cashbackData },
       ] = await Promise.all([
         supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
@@ -2831,11 +2834,13 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           .eq("cog", dataCog(user.cog)).order("ceg").order("nome_do_item"),
         supabase.from("repassos").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)),
+        supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single(),
       ]);
       if (cancelled) return;
       if (envios) setMeuEnvios(envios);
       setMeuReports(reports || []);
       setMeusFeedbacks(feedbacksData || []);
+      setSaldoCashback(Number(cashbackData?.saldo_cashback || 0));
       if (pendentes && pagamentos) {
         const cfm = {};
         pagamentos.filter(d => d.status === "pago").forEach(d => {
@@ -3148,6 +3153,8 @@ ${p.comprovante_url ? (() => {
                                 + multaItem(i);
         const outrosValTotal = pagOutros ? (Number(pagOutrosItem.replace(",",".")||0) + Number(pagOutrosFrete.replace(",",".")||0) + Number(pagOutrosRF.replace(",",".")||0)) : 0;
         const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0) + outrosValTotal;
+        const cashbackVal  = saldoCashback > 0 ? Math.min(Math.max(0, parseFloat(pagCashback || "0") || 0), saldoCashback, total) : 0;
+        const totalLiquido = Math.max(0, total - cashbackVal);
         const temItens = itensSel.length > 0 || (pagOutros && pagOutrosNome.trim() && outrosValTotal > 0);
 
         const temComprovante = pagUsarCodigo ? pagCodigoTx.trim().length > 0 : !!pagComprovante;
@@ -3175,13 +3182,19 @@ ${p.comprovante_url ? (() => {
             ...(pagOutros && pagOutrosNome.trim() ? [{ id:null, ceg:"—", nome_do_item:pagOutrosNome.trim(), valor_item:Number(pagOutrosItem.replace(",",".")||0), frete_inter:Number(pagOutrosFrete.replace(",",".")||0), taxa_rf:Number(pagOutrosRF.replace(",",".")||0), multa:0 }] : []),
           ];
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
-            joiner_cog:      user.cog,
-            itens:           itensPayload,
-            valor_total:     total,
-            comprovante_url: comprovanteUrl,
-            obs:             obsFinal,
+            joiner_cog:        user.cog,
+            itens:             itensPayload,
+            valor_total:       totalLiquido,
+            cashback_aplicado: cashbackVal || null,
+            comprovante_url:   comprovanteUrl,
+            obs:               obsFinal,
           }]).select().single();
           if (error) { setPagStatus("idle"); setPagErro(`Erro ao salvar demanda: ${error.message}`); return; }
+          if (cashbackVal > 0) {
+            const novoSaldo = Math.max(0, saldoCashback - cashbackVal);
+            await supabase.from("joiners").update({ saldo_cashback: novoSaldo }).eq("cog", user.cog);
+            setSaldoCashback(novoSaldo);
+          }
           setMeusPagamentos(prev => [nova, ...prev]);
           setPagRecibo(nova);
           setPagStatus("enviado");
@@ -3232,6 +3245,12 @@ ${p.comprovante_url ? (() => {
               </div>
 
               {/* Total */}
+              {Number(pagRecibo.cashback_aplicado || 0) > 0 && (
+                <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".5px" }}>🎁 Cashback aplicado</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>- R$ {Number(pagRecibo.cashback_aplicado).toFixed(2).replace(".",",")}</span>
+                </div>
+              )}
               <div style={{ padding:"12px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".5px" }}>Total pago</span>
                 <span style={{ fontSize:17, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {Number(pagRecibo.valor_total).toFixed(2).replace(".",",")}</span>
@@ -3251,7 +3270,7 @@ ${p.comprovante_url ? (() => {
             </div>
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagSubTab("enviar"); }}
+              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); }}
                 style={{ width:"100%", padding:"13px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:13, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
                 + Enviar novo comprovante
               </button>
@@ -3288,6 +3307,18 @@ ${p.comprovante_url ? (() => {
           return (
             <div style={{ paddingBottom:40 }}>
               {tabBar}
+              {saldoCashback > 0 && (
+                <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"10px 14px", marginBottom:16 }}>
+                  <span style={{ fontSize:16 }}>🎁</span>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>Saldo de cashback disponível: R$ {saldoCashback.toFixed(2).replace(".",",")}</div>
+                    <div style={{ fontSize:9, color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>Aplique na hora de enviar o comprovante</div>
+                  </div>
+                  <button onClick={() => setPagSubTab("enviar")} style={{ marginLeft:"auto", fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.25)", color:"#BAFF39", borderRadius:5, padding:"5px 12px", cursor:"pointer", whiteSpace:"nowrap" }}>
+                    Usar →
+                  </button>
+                </div>
+              )}
               {itensPendentes.length === 0 ? (
                 <div style={{ padding:"16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
                   Nenhum item com pagamento pendente no momento.
@@ -3479,6 +3510,30 @@ ${p.comprovante_url ? (() => {
               <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", textTransform:"uppercase" }}>Total selecionado</span>
               <span style={{ fontSize:18, fontWeight:900, color: temItens ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
             </div>
+            {/* Cashback */}
+            {saldoCashback > 0 && (
+              <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+                <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🎁 Saldo de cashback</div>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:15, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginRight:"auto" }}>R$ {saldoCashback.toFixed(2).replace(".",",")}</span>
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>Aplicar:</span>
+                  <input type="number" inputMode="decimal" min={0} max={Math.min(saldoCashback, total)} value={pagCashback}
+                    onChange={e => setPagCashback(e.target.value)}
+                    placeholder="0.00"
+                    style={{ width:80, background:"rgba(0,0,0,.4)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, padding:"6px 10px", color:"#BAFF39", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"right" }} />
+                  <button onClick={() => setPagCashback(String(Math.min(saldoCashback, total).toFixed(2)))}
+                    style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.2)", color:"#BAFF39", borderRadius:5, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
+                    Usar tudo
+                  </button>
+                </div>
+                {cashbackVal > 0 && (
+                  <div style={{ borderTop:"1px solid rgba(186,255,57,.12)", marginTop:10, paddingTop:10, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>Total a pagar via PIX:</span>
+                    <span style={{ fontSize:16, fontWeight:900, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {totalLiquido.toFixed(2).replace(".",",")}</span>
+                  </div>
+                )}
+              </div>
+            )}
             {/* Dados PIX */}
             {(() => {
               const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
@@ -3507,7 +3562,7 @@ ${p.comprovante_url ? (() => {
                       </div>
                       <div>
                         <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px", marginBottom:2 }}>Valor</div>
-                        <div style={{ fontSize:13, fontFamily:"'DM Mono',monospace", color:"#BAFF39", fontWeight:900 }}>R$ {total.toFixed(2).replace(".",",")}</div>
+                        <div style={{ fontSize:13, fontFamily:"'DM Mono',monospace", color:"#BAFF39", fontWeight:900 }}>R$ {totalLiquido.toFixed(2).replace(".",",")}</div>
                       </div>
                     </div>
                   </div>
@@ -3555,7 +3610,7 @@ ${p.comprovante_url ? (() => {
             {pagErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>{pagErro}</div>}
             <button onClick={handleSubmit} disabled={!temItens || !temComprovante || pagStatus === "enviando"}
               style={{ width:"100%", padding:"14px 0", background: temItens && temComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: temItens && temComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: temItens && temComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
-              {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${total.toFixed(2).replace(".",",")}`}
+              {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${totalLiquido.toFixed(2).replace(".",",")}`}
             </button>
 
             {/* Reportar problema */}
@@ -5670,6 +5725,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [badgesJoiner,  setBadgesJoiner]  = useState(null);
   const [badgesLoading, setBadgesLoading] = useState(false);
   const [badgesErro,    setBadgesErro]    = useState("");
+  const [cashbackList,   setCashbackList]   = useState(null);
+  const [cashbackEdit,   setCashbackEdit]   = useState(null);
+  const [cashbackSaving, setCashbackSaving] = useState(false);
+  const [cashbackSearch, setCashbackSearch] = useState("");
   const [adminMainTab, setAdminMainTab] = useState(initialSubTab || "home");
   useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
   useEffect(() => { onSubTabChange?.(adminMainTab); }, [adminMainTab]);
@@ -6549,6 +6608,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           temAcesso("pagamentos") && { id:"em_aberto",  label:"Em aberto",  badge: 0 },
           temAcesso("pagamentos") && { id:"atrasados",  label:"Atrasados",  badge: 0 },
           (temAcesso("blocklist") || owner) && { id:"blocklist",  label:"Blocklist",  badge: 0 },
+          owner && { id:"cashback", label:"Cashback", badge: 0 },
         ].filter(Boolean);
 
         const tabSt = active => ({
@@ -6648,6 +6708,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       })}
                     </div>
 
+                    {/* cashback aplicado */}
+                    {Number(d.cashback_aplicado || 0) > 0 && (
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderTop:"1px solid rgba(186,255,57,.1)", marginTop:4 }}>
+                        <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace" }}>🎁 cashback aplicado</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>- R${Number(d.cashback_aplicado).toFixed(2).replace(".",",")}</span>
+                      </div>
+                    )}
+
                     {/* comprovante + obs */}
                     {(d.comprovante_url || d.obs) && (
                       <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
@@ -6704,6 +6772,90 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
                 : <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />
             )}
+
+            {adminPagSubTab === "cashback" && (() => {
+              if (cashbackList === null) {
+                supabase.from("joiners").select("cog, nome, saldo_cashback").order("nome")
+                  .then(({ data }) => setCashbackList((data || []).filter(j => Number(j.saldo_cashback || 0) !== 0)));
+                return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>;
+              }
+              async function salvarCashback(cog) {
+                const novoVal = Math.max(0, parseFloat(String(cashbackEdit.val).replace(",",".")) || 0);
+                setCashbackSaving(true);
+                await supabase.from("joiners").update({ saldo_cashback: novoVal }).eq("cog", cog);
+                setCashbackList(prev => {
+                  const atualizado = prev.map(j => j.cog === cog ? { ...j, saldo_cashback: novoVal } : j);
+                  return novoVal === 0 ? atualizado.filter(j => j.cog !== cog) : atualizado;
+                });
+                setCashbackEdit(null); setCashbackSaving(false);
+              }
+              async function buscarEAdicionar() {
+                const q = cashbackSearch.trim();
+                if (!q) return;
+                const { data } = await supabase.from("joiners").select("cog, nome, saldo_cashback")
+                  .or(`cog.ilike.%${q}%,nome.ilike.%${q}%`).limit(1).single();
+                if (!data) return;
+                setCashbackList(prev => prev.some(j => j.cog === data.cog) ? prev : [...prev, data]);
+                setCashbackEdit({ cog: data.cog, val: String(data.saldo_cashback || "0") });
+                setCashbackSearch("");
+              }
+              return (
+                <div>
+                  <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>
+                    Saldos de cashback · defina o valor abaixo (negativo na planilha → positivo aqui)
+                  </div>
+                  {/* Busca para adicionar joiner */}
+                  <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+                    <input value={cashbackSearch} onChange={e => setCashbackSearch(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && buscarEAdicionar()}
+                      placeholder="Buscar joiner por @ ou nome para adicionar..."
+                      style={{ flex:1, background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"9px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }} />
+                    <button onClick={buscarEAdicionar}
+                      style={{ flexShrink:0, background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.25)", color:"#BAFF39", borderRadius:8, padding:"9px 18px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      + Buscar
+                    </button>
+                  </div>
+                  {/* Lista */}
+                  {cashbackList.length === 0 ? (
+                    <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0", textAlign:"center" }}>Nenhuma joiner com saldo de cashback no momento.</div>
+                  ) : cashbackList.map(j => {
+                    const editing = cashbackEdit?.cog === j.cog;
+                    return (
+                      <div key={j.cog} style={{ background:"var(--card-bg)", border:`1px solid ${editing ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 16px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8" }}>{j.nome || j.cog}</div>
+                          <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>@{j.cog}</div>
+                        </div>
+                        {editing ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <input type="number" value={cashbackEdit.val} onChange={e => setCashbackEdit(prev => ({ ...prev, val: e.target.value }))}
+                              style={{ width:90, background:"rgba(0,0,0,.4)", border:"1px solid rgba(186,255,57,.35)", borderRadius:6, padding:"6px 10px", color:"#BAFF39", fontSize:13, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"right" }} />
+                            <button onClick={() => salvarCashback(j.cog)} disabled={cashbackSaving}
+                              style={{ background:"rgba(186,255,57,.15)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:6, padding:"6px 12px", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                              {cashbackSaving ? "..." : "✓"}
+                            </button>
+                            <button onClick={() => setCashbackEdit(null)}
+                              style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"6px 10px", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer" }}>
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <span style={{ fontSize:15, fontWeight:900, color: Number(j.saldo_cashback) > 0 ? "#BAFF39" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>
+                              R$ {Number(j.saldo_cashback || 0).toFixed(2).replace(".",",")}
+                            </span>
+                            <button onClick={() => setCashbackEdit({ cog: j.cog, val: String(j.saldo_cashback || "0") })}
+                              style={{ background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>
+                              Editar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
