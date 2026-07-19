@@ -1784,7 +1784,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="sum-sub" style={{ marginTop:4 }}>clique aqui →</div>
         </div>
         {!guest && (
-          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : undefined, cursor:"pointer" }}>
+          <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: saldoCashback > 0 ? "rgba(186,255,57,.2)" : tMulta > 0 ? "rgba(255,107,107,.25)" : undefined, cursor:"pointer" }}>
             <div className="sum-label">Total a pagar</div>
             <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>
               R${fmtBRL(tPend + tMulta)}
@@ -1793,6 +1793,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               ? <div className="sum-sub" style={{ color:"rgba(255,107,107,.7)" }}>R${fmtBRL(tPend)} + R${fmtBRL(tMulta)} multa</div>
               : <div className="sum-sub">ver detalhes →</div>
             }
+            {saldoCashback > 0 && (
+              <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid rgba(186,255,57,.15)" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>🎁 R${fmtBRL(saldoCashback)} de cashback</div>
+                <div style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.4 }}>use para abater o valor em aberto ou solicite seu reembolso</div>
+              </div>
+            )}
           </div>
         )}
         <div className="sum-card" onClick={() => !guest && nextVenc && setVencModal(true)} style={{ cursor: !guest && nextVenc ? "pointer" : undefined }}>
