@@ -1908,6 +1908,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         }).filter(Boolean);
         const atrasados = linhas.filter(r => r.diasMax > 0).sort((a, b) => b.diasMax - a.diasMax);
         const noPrazo   = linhas.filter(r => r.diasMax === 0);
+        const reembolsoLinhas = itens.filter(i => Number(i.valor_item||0) < 0);
         const temMulta = linhas.some(r => r.mItem + r.mFrete + r.mRf > 0);
         const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:8 };
         const tdS = { fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.6)" };
@@ -2010,6 +2011,38 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                         <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
                           {tColgroup}{atrasados.length === 0 && tHead}
                           <tbody>{noPrazo.map(renderLinha)}</tbody>
+                        </table>
+                      </>
+                    )}
+                    {reembolsoLinhas.length > 0 && (
+                      <>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"14px 0 6px" }}>
+                          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>🎁 Reembolso disponível</span>
+                          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{reembolsoLinhas.length}</span>
+                          <div style={{ flex:1, height:"1px", background:"rgba(186,255,57,.15)" }} />
+                        </div>
+                        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                          <tbody>
+                            {reembolsoLinhas.map((item, idx) => (
+                              <tr key={idx} style={{ borderTop:"1px solid rgba(186,255,57,.08)" }}>
+                                <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
+                                  <div style={{ fontSize:12, color:"#BAFF39", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
+                                  <div style={{ fontSize:10, color:"rgba(186,255,57,.45)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
+                                </td>
+                                <td style={{ fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"#BAFF39", fontWeight:700, padding:"10px 0", whiteSpace:"nowrap" }}>
+                                  R${fmtBRL(Math.abs(Number(item.valor_item||0)))}
+                                </td>
+                              </tr>
+                            ))}
+                            {reembolsoLinhas.length > 1 && (
+                              <tr style={{ borderTop:"1px solid rgba(186,255,57,.2)" }}>
+                                <td style={{ padding:"8px 0", fontSize:10, color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace" }}>Total</td>
+                                <td style={{ padding:"8px 0", fontSize:13, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"#BAFF39", fontWeight:900 }}>
+                                  R${fmtBRL(reembolsoLinhas.reduce((a,b) => a + Math.abs(Number(b.valor_item||0)), 0))}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
                         </table>
                       </>
                     )}
