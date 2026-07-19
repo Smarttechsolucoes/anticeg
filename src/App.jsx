@@ -5851,7 +5851,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       setAdminRepassos(DEMO_ADMIN_DATA.adminRepassos);
       setMercariPedidos(DEMO_ADMIN_DATA.mercariPedidos);
       setJoinersData(DEMO_ADMIN_DATA.joiners);
-      setPendentesData(DEMO_ADMIN_DATA.masterlist);
       setStaffAcessos({});
       return;
     }
@@ -5894,6 +5893,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       if (adminMainTab === "geral" && pushes === null) {
         setPushes(DEMO_ADMIN_DATA.pushes);
         setFeedbacks(DEMO_ADMIN_DATA.feedbacks);
+      }
+      if (["pagamentos", "blocklist"].includes(adminMainTab) && pendentesData === null) {
+        const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+        supabase.from("masterlist").select(sel).eq("cog", "nandaverseo_c").order("ceg")
+          .then(({ data }) => { if (data) setPendentesData(data); });
+        supabase.from("joiners").select("cog, nome, email, bloqueado").eq("cog", "nandaverseo_c")
+          .then(({ data }) => { if (data?.[0]) setJoinersData(prev => { const already = (prev || []).some(j => j.cog === "nandaverseo_c"); return already ? prev : [...(prev || []), data[0]]; }); });
       }
       return;
     }
