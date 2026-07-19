@@ -6088,7 +6088,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {owner && nav("geral",   "Geral",   "⚙", 0)}
                   {owner && nav("agenda",  "Agenda",  "▣", 0)}
                   {temAcesso("galeria") && nav("galeria", "Galeria", "◈", 0)}
-                  {owner && nav("staff",   "Staff",   "◌", 0)}
+                  {owner && !isDemo && nav("staff",   "Staff",   "◌", 0)}
                 </div>
               )}
             </nav>
@@ -6794,7 +6794,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {adminMainTab === "galeria" && (owner || temAcesso("galeria")) && <AdminGaleria />}
-      {adminMainTab === "staff"   && owner && <StaffPanel />}
+      {adminMainTab === "staff"   && owner && !isDemo && <StaffPanel />}
 
       {adminMainTab === "envios" && (
         <div>
