@@ -528,6 +528,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   const [uploadMsg, setUploadMsg] = useState("");
   const [capaZoom, setCapaZoom] = useState(1);
   const [capaPosY, setCapaPosY] = useState(50);
+  const [whatsappLink, setWhatsappLink] = useState(null);
 
   const capaFotoAtual = fotos.find(f => f.ordem < 0);
   useEffect(() => {
@@ -627,6 +628,8 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       .then(({ data }) => setItens(data || []));
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setFotos(data || []));
+    supabase.from("ceg_config").select("whatsapp_link").eq("ceg", ceg).single()
+      .then(({ data }) => { if (data?.whatsapp_link) setWhatsappLink(data.whatsapp_link); });
   }, [ceg]);
 
   const joiners = itens ? [...new Set(itens.map(i => i.cog))].length : 0;
@@ -642,11 +645,18 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
             ? <img src="/this-and-that-logo.png" alt="THIS & THAT" style={{ height:60, width:"auto", display:"block", mixBlendMode:"screen", filter:"invert(1)", marginTop:4 }} />
             : <div className="page-title">{ceg}</div>
           }
+          {whatsappLink && (
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:6, marginTop:10, padding:"6px 14px", borderRadius:8, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25D366", textDecoration:"none", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:".03em" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              entrar no grupo
+            </a>
+          )}
         </div>
         {itens && (
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
-            <div style={{ display:"flex", gap:4, marginTop:10, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
+            <div style={{ display:"flex", gap:4, marginTop:8, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
               {(fotos.length > 0 || owner) && [["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
                 <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
                   {icon} {mode}
@@ -6270,6 +6280,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 <div className="admin-sidebar-group">
                   <div className="admin-sidebar-group-label">Config</div>
                   {owner && nav("geral",   "Geral",   "⚙", 0)}
+                  {owner && nav("links",   "Links",   "⛓", 0)}
                   {owner && nav("agenda",  "Agenda",  "▣", 0)}
                   {temAcesso("galeria") && nav("galeria", "Galeria", "◈", 0)}
                   {owner && !isDemo && nav("staff",   "Staff",   "◌", 0)}
@@ -7009,6 +7020,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "mercari" && (
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
+      )}
+
+      {adminMainTab === "links" && owner && (
+        <div>
+          <WhatsappCegsBlock />
+        </div>
       )}
 
       {adminMainTab === "agenda" && owner && (
@@ -7841,6 +7858,86 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
         </div> {/* admin-content */}
       </div> {/* admin-layout */}
+    </div>
+  );
+}
+
+function WhatsappCegsBlock() {
+  const [cegs, setCegs] = useState([]);
+  const [configs, setConfigs] = useState({});
+  const [editando, setEditando] = useState({});
+  const [saving, setSaving] = useState({});
+  const [msg, setMsg] = useState({});
+
+  useEffect(() => {
+    supabase.from("masterlist").select("ceg").neq("nome", "Disponivel")
+      .then(({ data }) => {
+        if (!data) return;
+        const uniq = [...new Set(data.map(r => r.ceg))].sort((a, b) => a.localeCompare(b));
+        setCegs(uniq);
+      });
+    supabase.from("ceg_config").select("ceg,whatsapp_link")
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        data.forEach(r => { map[r.ceg] = r.whatsapp_link || ""; });
+        setConfigs(map);
+        const edit = {};
+        data.forEach(r => { edit[r.ceg] = r.whatsapp_link || ""; });
+        setEditando(edit);
+      });
+  }, []);
+
+  async function salvar(ceg) {
+    const link = (editando[ceg] || "").trim();
+    setSaving(prev => ({ ...prev, [ceg]: true }));
+    if (link) {
+      const { error } = await supabase.from("ceg_config").upsert({ ceg, whatsapp_link: link }, { onConflict: "ceg" });
+      if (error) { alert("Erro: " + error.message); setSaving(prev => ({ ...prev, [ceg]: false })); return; }
+    } else {
+      const { error } = await supabase.from("ceg_config").delete().eq("ceg", ceg);
+      if (error) { alert("Erro: " + error.message); setSaving(prev => ({ ...prev, [ceg]: false })); return; }
+    }
+    setConfigs(prev => ({ ...prev, [ceg]: link }));
+    setSaving(prev => ({ ...prev, [ceg]: false }));
+    setMsg(prev => ({ ...prev, [ceg]: "salvo ✓" }));
+    setTimeout(() => setMsg(prev => ({ ...prev, [ceg]: "" })), 2000);
+  }
+
+  return (
+    <div style={{ marginBottom:32 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Links WhatsApp por CEG</div>
+      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>cole o link de convite do grupo (https://chat.whatsapp.com/...) — aparece como botão na página da CEG</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {cegs.map(ceg => {
+          const atual = configs[ceg] || "";
+          const draft = editando[ceg] !== undefined ? editando[ceg] : atual;
+          const alterado = draft !== atual;
+          return (
+            <div key={ceg} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:"var(--card-bg)", border:`1px solid ${atual ? "rgba(37,211,102,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:8 }}>
+              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: atual ? "#25D366" : "rgba(245,240,232,.55)", minWidth:160, flexShrink:0 }}>
+                {atual ? "●" : "○"} {ceg}
+              </div>
+              <input
+                value={draft}
+                onChange={e => setEditando(prev => ({ ...prev, [ceg]: e.target.value }))}
+                onKeyDown={e => e.key === "Enter" && salvar(ceg)}
+                placeholder="https://chat.whatsapp.com/..."
+                style={{ flex:1, background:"#0d0d0d", border:`1px solid ${alterado ? "rgba(37,211,102,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:6, padding:"6px 10px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none" }}
+              />
+              {msg[ceg] ? (
+                <span style={{ fontSize:10, color:"#25D366", fontFamily:"'DM Mono',monospace", minWidth:50 }}>{msg[ceg]}</span>
+              ) : (
+                <button onClick={() => salvar(ceg)} disabled={saving[ceg] || !alterado}
+                  style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:6, cursor: alterado ? "pointer" : "default", border:"1px solid rgba(37,211,102,.3)", background:alterado ? "rgba(37,211,102,.1)" : "transparent", color: alterado ? "#25D366" : "rgba(245,240,232,.2)", flexShrink:0, opacity: saving[ceg] ? 0.5 : 1 }}>
+                  {saving[ceg] ? "..." : "salvar"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {cegs.length === 0 && <div style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>carregando CEGs...</div>}
+      </div>
     </div>
   );
 }
