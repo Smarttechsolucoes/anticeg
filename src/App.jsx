@@ -1551,6 +1551,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [vencModal,     setVencModal]     = useState(false);
   const [galeriaModal,  setGaleriaModal]  = useState(false);
   const [minhasFotos,   setMinhasFotos]   = useState(null);
+  const [fotoAmpliada,  setFotoAmpliada]  = useState(null);
   const [pagDemandaMap,  setPagDemandaMap]  = useState({});
   const [pagConfirmMap,  setPagConfirmMap]  = useState({});
   const [pagConfirmLoaded, setPagConfirmLoaded] = useState(false);
@@ -1875,7 +1876,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                     });
                     const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
                     return (
-                      <div key={f.id} style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)" }}>
+                      <div key={f.id} onClick={() => setFotoAmpliada({ foto: f, membro })}
+                        style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", cursor:"pointer", transition:"border-color .15s" }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor="rgba(201,168,240,.35)"}
+                        onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
                         <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
                         <div style={{ padding:"8px 10px 10px" }}>
                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", letterSpacing:"0.5px", marginBottom:2 }}>{f.ceg}</div>
@@ -1889,6 +1893,25 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {fotoAmpliada && (
+        <div onClick={() => setFotoAmpliada(null)}
+          style={{ position:"fixed", inset:0, zIndex:10000, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:420, width:"100%", display:"flex", flexDirection:"column", gap:0 }}>
+            <img src={fotoAmpliada.foto.foto_url} alt={fotoAmpliada.foto.nome_do_item}
+              style={{ width:"100%", borderRadius:10, display:"block", objectFit:"contain", maxHeight:"70vh" }} />
+            <div style={{ background:"#111", borderRadius:"0 0 10px 10px", padding:"12px 16px" }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", letterSpacing:"0.5px", marginBottom:4 }}>{fotoAmpliada.foto.ceg}</div>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.4 }}>{fotoAmpliada.foto.nome_do_item}</div>
+              {fotoAmpliada.membro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"#C9A8F0", marginTop:4 }}>{fotoAmpliada.membro}</div>}
+            </div>
+            <button onClick={() => setFotoAmpliada(null)}
+              style={{ marginTop:14, background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", fontSize:11, borderRadius:6, padding:"8px 0", cursor:"pointer" }}>
+              fechar
+            </button>
           </div>
         </div>
       )}
