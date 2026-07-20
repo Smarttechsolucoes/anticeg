@@ -9493,7 +9493,16 @@ function AdminGaleria() {
   const [msg,             setMsg]             = useState("");
   const [ajustando,       setAjustando]       = useState(null);
   const [replicando,      setReplicando]      = useState(null);
+  const [capaZoom,        setCapaZoom]        = useState(1);
+  const [capaPosY,        setCapaPosY]        = useState(50);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    const capa = (fotos || []).find(f => f.ordem < 0);
+    const cfg = parseCapaCfg(capa?.nome_do_item);
+    setCapaZoom(cfg.zoom);
+    setCapaPosY(cfg.posY);
+  }, [fotos]);
 
   useEffect(() => {
     supabase.from("masterlist").select("ceg").neq("nome", "Disponivel")
@@ -9602,6 +9611,27 @@ function AdminGaleria() {
     setFotos(prev => prev.filter(f => f.id !== id));
   }
 
+  async function definirComoCapa(fotoId) {
+    const capaAnterior = (fotos || []).find(f => f.ordem < 0 && f.id !== fotoId);
+    if (capaAnterior) await supabase.from("item_fotos").update({ ordem: 0 }).eq("id", capaAnterior.id);
+    await supabase.from("item_fotos").update({ ordem: -1 }).eq("id", fotoId);
+    setFotos(prev => prev.map(f => {
+      if (f.id === fotoId) return { ...f, ordem: -1 };
+      if (capaAnterior && f.id === capaAnterior.id) return { ...f, ordem: 0 };
+      return f;
+    }));
+    setMsg("Capa definida ✓");
+    setTimeout(() => setMsg(""), 2500);
+  }
+
+  async function salvarCapaCfgAdmin() {
+    const capa = (fotos || []).find(f => f.ordem < 0);
+    if (!capa) return;
+    await supabase.from("item_fotos").update({ nome_do_item: JSON.stringify({ zoom: capaZoom, posY: capaPosY }) }).eq("id", capa.id);
+    setMsg("Capa salva ✓");
+    setTimeout(() => setMsg(""), 2500);
+  }
+
   function parseConfig(cfg) {
     if (!cfg) return { zoom: 1, posX: 50, posY: 50 };
     if (typeof cfg === "object") return { zoom: cfg.zoom ?? 1, posX: cfg.posX ?? 50, posY: cfg.posY ?? 50 };
@@ -9628,11 +9658,15 @@ function AdminGaleria() {
                   transform:`scale(${hovered ? cfg.zoom * 1.04 : cfg.zoom})`,
                   transformOrigin:`${cfg.posX}% ${cfg.posY}%`
                 }} />
+                {foto.ordem < 0 && (
+                  <div style={{ position:"absolute", top:5, left:5, fontSize:8, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.9)", color:"#fff", borderRadius:3, padding:"2px 7px", letterSpacing:".04em", pointerEvents:"none" }}>★ CAPA</div>
+                )}
                 {hovered && (
-                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", gap:6, flexWrap:"wrap" }}>
                     <button onClick={() => setEditando(foto.id)} title="renomear" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✎</button>
                     <button onClick={() => setAjustando(foto.id)} title="recortar imagem" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.2)", border:"1px solid rgba(201,168,240,.45)", color:"#C9A8F0", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⊡</button>
                     <button onClick={() => setReplicando(foto.id)} title="replicar para outros itens" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.12)", border:"1px solid rgba(186,255,57,.3)", color:"var(--verde)", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>⇉</button>
+                    {foto.ordem >= 0 && <button onClick={() => definirComoCapa(foto.id)} title="definir como capa" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.15)", border:"1px solid rgba(255,92,26,.45)", color:"var(--laranja)", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>★</button>}
                     <button onClick={() => removerFoto(foto.id)} title="remover" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(239,68,68,.2)", border:"1px solid rgba(239,68,68,.4)", color:"#fca5a5", borderRadius:6, padding:"5px 10px", cursor:"pointer" }}>✕</button>
                   </div>
                 )}
@@ -9753,6 +9787,40 @@ function AdminGaleria() {
           </div>
         )
       )}
+
+      {/* Seção de capa */}
+      {fotos && fotos.some(f => f.ordem < 0) && (() => {
+        const capaFoto = fotos.find(f => f.ordem < 0);
+        return (
+          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+            <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(255,92,26,.7)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:12 }}>★ foto de capa do card</div>
+            <div style={{ display:"flex", gap:16, alignItems:"flex-start", flexWrap:"wrap" }}>
+              <div style={{ width:160, flexShrink:0, aspectRatio:"16/7", overflow:"hidden", borderRadius:6, border:"1px solid rgba(255,92,26,.25)" }}>
+                <img src={capaFoto.foto_url} alt="capa" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`50% ${capaPosY}%`, transform:`scale(${capaZoom})`, transformOrigin:`50% ${capaPosY}%`, display:"block" }} />
+              </div>
+              <div style={{ flex:1, minWidth:180, display:"flex", flexDirection:"column", gap:10 }}>
+                <div>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.4)" }}>zoom</span>
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(255,92,26,.7)" }}>{capaZoom.toFixed(1)}×</span>
+                  </div>
+                  <input type="range" min="1" max="3" step="0.05" value={capaZoom} onChange={e => setCapaZoom(parseFloat(e.target.value))} style={{ width:"100%", accentColor:"var(--laranja)", cursor:"pointer" }} />
+                </div>
+                <div>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.4)" }}>posição vertical</span>
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(255,92,26,.7)" }}>{capaPosY}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" step="1" value={capaPosY} onChange={e => setCapaPosY(parseInt(e.target.value, 10))} style={{ width:"100%", accentColor:"var(--laranja)", cursor:"pointer" }} />
+                </div>
+                <button onClick={salvarCapaCfgAdmin} style={{ alignSelf:"flex-start", fontSize:9, fontFamily:"'DM Mono',monospace", padding:"5px 14px", borderRadius:5, cursor:"pointer", border:"1px solid rgba(255,92,26,.4)", background:"rgba(255,92,26,.12)", color:"var(--laranja)", fontWeight:700 }}>
+                  salvar ajuste
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Vista agrupada (todos) */}
       {fotosAgrupadas && !itemSelecionado && fotos && fotos.length > 0 && (
