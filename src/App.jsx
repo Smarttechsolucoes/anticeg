@@ -12,27 +12,12 @@ import badgeDwaekki  from "./assets/badges/dwaekki.jpg";
 import badgeQuokka   from "./assets/badges/quokka.jpg";
 import badgeLeebit   from "./assets/badges/leebit.png";
 
-// ── EmailJS config ──
-const EJS_SERVICE  = "service_wguc7si";
-const EJS_TEMPLATE = "template_3x4zqua";
-const EJS_KEY      = "FoEjO0bZC4mn9ebeN";
-
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
   if (!toEmail) throw new Error("sem_email");
-  const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      service_id:      EJS_SERVICE,
-      template_id:     EJS_TEMPLATE,
-      user_id:         EJS_KEY,
-      template_params: { to_email: toEmail, to_name: toNome || "joiner", assunto, corpo },
-    }),
+  const { error } = await supabase.functions.invoke("send-email", {
+    body: { to_email: toEmail, to_name: toNome || "joiner", assunto, corpo },
   });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => res.status);
-    throw new Error(`EmailJS ${res.status}: ${txt}`);
-  }
+  if (error) throw new Error(error.message ?? String(error));
 }
 
 function buildEmailHTML(_toNome, contentRows) {
