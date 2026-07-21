@@ -3313,7 +3313,7 @@ ${p.comprovante_url ? (() => {
             {meusPagamentos.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum envio de comprovante ainda.</div>
             ) : meusPagamentos.map(p => (
-              <div key={p.id} style={{ background:"var(--card-bg)", border:`1px solid ${p.status==="pago" ? "rgba(186,255,57,.12)" : "rgba(201,168,240,.1)"}`, borderRadius:12, marginBottom:10, overflow:"hidden" }}>
+              <div key={p.id} style={{ background:"var(--card-bg)", border:`1px solid ${p.status==="pago" ? "rgba(186,255,57,.12)" : p.status==="rejeitado" ? "rgba(255,107,107,.2)" : "rgba(201,168,240,.1)"}`, borderRadius:12, marginBottom:10, overflow:"hidden" }}>
                 {/* Cabeçalho */}
                 <div style={{ padding:"12px 16px", borderBottom:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div>
@@ -3321,8 +3321,8 @@ ${p.comprovante_url ? (() => {
                       #{String(p.id).slice(-6).toUpperCase()} · {new Date(p.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
                     </div>
                   </div>
-                  <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 10px", borderRadius:4, border: p.status==="pago" ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(201,168,240,.3)", color: p.status==="pago" ? "#BAFF39" : "#C9A8F0", textTransform:"uppercase", letterSpacing:".5px" }}>
-                    {p.status==="pago" ? "✓ Pago" : "◉ Em análise"}
+                  <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 10px", borderRadius:4, border: p.status==="pago" ? "1px solid rgba(186,255,57,.3)" : p.status==="rejeitado" ? "1px solid rgba(255,107,107,.35)" : "1px solid rgba(201,168,240,.3)", color: p.status==="pago" ? "#BAFF39" : p.status==="rejeitado" ? "#ff6b6b" : "#C9A8F0", textTransform:"uppercase", letterSpacing:".5px" }}>
+                    {p.status==="pago" ? "✓ Pago" : p.status==="rejeitado" ? "✕ Recusado" : "◉ Em análise"}
                   </span>
                 </div>
                 {/* Itens */}
@@ -3422,10 +3422,12 @@ ${p.comprovante_url ? (() => {
             comprovante_url:   comprovanteUrl,
             obs:               obsFinal,
           }]).select().single();
-          if (error) { setPagStatus("idle"); setPagErro(`Erro ao salvar demanda: ${error.message}`); return; }
-          if (user.email) {
+          if (error || !nova) { setPagStatus("idle"); setPagErro(error?.message || "Erro ao salvar demanda."); return; }
+          try {
             const corpoEmail = buildEmailConfirmacaoPagamento(user.nome || user.cog, nova);
-            sendEmailJoiner(user.email, user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+            await sendEmailJoiner(user.email, user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+          } catch (emailErr) {
+            console.warn("[email confirmação] falhou:", emailErr);
           }
           if (cashbackVal > 0 && saldoCashback > 0) {
             const fromDB = Math.min(cashbackVal, saldoCashback);
@@ -3503,9 +3505,17 @@ ${p.comprovante_url ? (() => {
               )}
             </div>
 
-            <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.8, marginBottom:16 }}>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.8, marginBottom:10 }}>
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
+            {user.email
+              ? <div style={{ fontSize:10, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em" }}>
+                  📧 Confirmação enviada para {user.email}
+                </div>
+              : <div style={{ fontSize:10, color:"rgba(255,92,26,.6)", fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em" }}>
+                  ⚠ Sem e-mail cadastrado — adicione no perfil para receber confirmações
+                </div>
+            }
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); }}
