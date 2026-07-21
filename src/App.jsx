@@ -13,10 +13,11 @@ import badgeDwaekki  from "./assets/badges/dwaekki.jpg";
 import badgeQuokka   from "./assets/badges/quokka.jpg";
 import badgeLeebit   from "./assets/badges/leebit.png";
 
-// ── EmailJS config ── preencha após criar conta em emailjs.com
+// ── EmailJS config ──
 const EJS_SERVICE  = "service_wguc7si";
 const EJS_TEMPLATE = "template_3x4zqua";
 const EJS_KEY      = "FoEjO0bZC4mn9ebeN";
+emailjs.init({ publicKey: EJS_KEY });
 
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
   if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return;
@@ -26,9 +27,10 @@ async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
       to_name:  toNome  || "joiner",
       assunto,
       corpo,
-    }, EJS_KEY);
+    });
   } catch (e) {
     console.error("[EmailJS]", e);
+    throw e;
   }
 }
 
