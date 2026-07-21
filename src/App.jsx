@@ -6901,7 +6901,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
-                await supabase.from("pagamento_demandas").update({ status:"rejeitado" }).eq("id", id);
+                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado" });
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const msg = motivo.trim()
