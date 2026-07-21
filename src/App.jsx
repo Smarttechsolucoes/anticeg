@@ -19,8 +19,7 @@ const EJS_TEMPLATE = "template_3x4zqua";
 const EJS_KEY      = "FoEjO0bZC4mn9ebeN";
 
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
-  return; // emails temporariamente desativados
-  if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return; // eslint-disable-line no-unreachable
+  if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return;
   try {
     await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
       to_email: toEmail,
@@ -81,6 +80,59 @@ function buildEmailHTML(_toNome, contentRows) {
 </td></tr>
 </table>
 </body></html>`;
+}
+
+function buildEmailConfirmacaoPagamento(toNome, recibo) {
+  const fmt = v => Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const dataHora = new Date(recibo.created_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  const refId = "#" + String(recibo.id).slice(-6).toUpperCase();
+
+  const itensRows = (recibo.itens || []).map(it => {
+    const sub = Number(it.valor_item||0) + Number(it.frete_inter||0) + Number(it.taxa_rf||0) + Number(it.multa||0);
+    const detalhes = [
+      Number(it.valor_item) > 0 ? `item R$${fmt(it.valor_item)}` : "",
+      Number(it.frete_inter) > 0 ? `frete R$${fmt(it.frete_inter)}` : "",
+      Number(it.taxa_rf) > 0 ? `taxa RF R$${fmt(it.taxa_rf)}` : "",
+      Number(it.multa) > 0 ? `multa R$${fmt(it.multa)}` : "",
+    ].filter(Boolean).join(" · ");
+    return `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid rgba(245,240,232,0.06);vertical-align:top">
+        <div style="font-size:12px;font-weight:700;color:#F5F0E8;font-family:'Courier New',monospace">${it.nome_do_item}</div>
+        <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;margin-top:2px">${it.ceg}${detalhes ? " · " + detalhes : ""}</div>
+      </td>
+      <td style="padding:10px 0 10px 16px;border-bottom:1px solid rgba(245,240,232,0.06);text-align:right;font-size:12px;font-weight:700;color:#F5F0E8;font-family:'Courier New',monospace;white-space:nowrap;vertical-align:top">R$${fmt(sub)}</td>
+    </tr>`;
+  }).join("");
+
+  const contentRows = `
+  <tr><td style="background:#111111;padding:8px 40px 28px">
+    <p style="margin:0 0 24px;font-size:13px;color:rgba(245,240,232,0.7);line-height:1.75">
+      Recebemos seu comprovante de pagamento! Vamos confirmar e atualizar seu status em breve.
+    </p>
+    <div style="background:#0d0d0d;border:1px solid rgba(245,240,232,0.08);border-radius:8px;overflow:hidden;margin-bottom:20px">
+      <div style="background:rgba(201,168,240,0.07);border-bottom:1px solid rgba(245,240,232,0.06);padding:10px 16px">
+        <span style="font-size:10px;color:#C9A8F0;font-family:'Courier New',monospace;font-weight:700">${refId} · ${dataHora}</span>
+      </div>
+      <div style="padding:4px 16px 8px">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">${itensRows}</table>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid rgba(245,240,232,0.1)">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase">Total enviado</td>
+          <td style="text-align:right;font-size:16px;font-weight:900;color:#F5F0E8;font-family:'Courier New',monospace">R$${fmt(recibo.valor_total)}</td>
+        </tr></table>
+      </div>
+      ${Number(recibo.cashback_aplicado) > 0 ? `<div style="padding:8px 16px 12px;border-top:1px solid rgba(186,255,57,0.1)"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:10px;color:#BAFF39;font-family:'Courier New',monospace">🎁 reembolso aplicado</td><td style="text-align:right;font-size:12px;font-weight:700;color:#BAFF39;font-family:'Courier New',monospace">−R$${fmt(recibo.cashback_aplicado)}</td></tr></table></div>` : ""}
+      <div style="padding:10px 16px 14px;text-align:right">
+        <span style="font-size:10px;font-family:'Courier New',monospace;padding:3px 10px;border-radius:4px;border:1px solid rgba(201,168,240,0.35);color:#C9A8F0;text-transform:uppercase;letter-spacing:.5px">◉ Em análise</span>
+      </div>
+    </div>
+    <p style="margin:0;font-size:11px;color:rgba(245,240,232,0.35);line-height:1.75">
+      Assim que confirmarmos, você receberá uma notificação no portal. Em caso de dúvida, entre em contato pelo WhatsApp.
+    </p>
+  </td></tr>`;
+
+  return buildEmailHTML(toNome, contentRows);
 }
 
 const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
@@ -3321,6 +3373,10 @@ ${p.comprovante_url ? (() => {
             obs:               obsFinal,
           }]).select().single();
           if (error) { setPagStatus("idle"); setPagErro(`Erro ao salvar demanda: ${error.message}`); return; }
+          if (user.email) {
+            const corpoEmail = buildEmailConfirmacaoPagamento(user.nome || user.cog, nova);
+            sendEmailJoiner(user.email, user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+          }
           if (cashbackVal > 0 && saldoCashback > 0) {
             const fromDB = Math.min(cashbackVal, saldoCashback);
             const novoSaldo = Math.max(0, saldoCashback - fromDB);
