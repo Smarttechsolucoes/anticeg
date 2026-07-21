@@ -145,6 +145,46 @@ function buildEmailConfirmacaoPagamento(toNome, recibo) {
   return buildEmailHTML(toNome, contentRows);
 }
 
+function buildEmailRejeicaoPagamento(toNome, recibo, motivo) {
+  const fmt = v => Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const refId = "#" + String(recibo.id).slice(-6).toUpperCase();
+
+  const itensRows = (recibo.itens || []).map(it => {
+    const sub = Number(it.valor_item||0) + Number(it.frete_inter||0) + Number(it.taxa_rf||0) + Number(it.multa||0);
+    return `<tr>
+      <td style="padding:8px 0;border-bottom:1px solid rgba(245,240,232,0.06);vertical-align:top">
+        <div style="font-size:12px;font-weight:700;color:#F5F0E8;font-family:'Courier New',monospace">${it.nome_do_item}</div>
+        <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace">${it.ceg}</div>
+      </td>
+      <td style="padding:8px 0 8px 16px;border-bottom:1px solid rgba(245,240,232,0.06);text-align:right;font-size:12px;font-weight:700;color:#F5F0E8;font-family:'Courier New',monospace;white-space:nowrap;vertical-align:top">R$${fmt(sub)}</td>
+    </tr>`;
+  }).join("");
+
+  const contentRows = `
+  <tr><td style="background:#111111;padding:8px 40px 28px">
+    <p style="margin:0 0 20px;font-size:13px;color:rgba(245,240,232,0.7);line-height:1.75">
+      Infelizmente seu comprovante de pagamento foi <strong style="color:#ff6b6b">recusado</strong> e precisamos que você envie novamente pelo portal.
+    </p>
+    ${motivo ? `<div style="background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.2);border-radius:8px;padding:12px 16px;margin-bottom:20px">
+      <div style="font-size:10px;color:rgba(255,107,107,0.6);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Motivo</div>
+      <div style="font-size:12px;color:#F5F0E8;font-family:'Courier New',monospace;line-height:1.6">${motivo}</div>
+    </div>` : ""}
+    <div style="background:#0d0d0d;border:1px solid rgba(245,240,232,0.08);border-radius:8px;overflow:hidden;margin-bottom:20px">
+      <div style="background:rgba(255,107,107,0.06);border-bottom:1px solid rgba(245,240,232,0.06);padding:10px 16px">
+        <span style="font-size:10px;color:#ff6b6b;font-family:'Courier New',monospace;font-weight:700">${refId} · R$${fmt(recibo.valor_total)}</span>
+      </div>
+      <div style="padding:4px 16px 8px">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">${itensRows}</table>
+      </div>
+    </div>
+    <p style="margin:0;font-size:11px;color:rgba(245,240,232,0.35);line-height:1.75">
+      Acesse o portal, vá em <strong>Perfil → Pagamentos</strong> e envie um novo comprovante. Em caso de dúvida, entre em contato pelo WhatsApp.
+    </p>
+  </td></tr>`;
+
+  return buildEmailHTML(toNome, contentRows);
+}
+
 const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
 
@@ -6868,6 +6908,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     ? `Seu comprovante foi recusado: "${motivo.trim()}". Envie novamente pelo portal.`
                     : "Seu comprovante foi recusado. Por favor, envie novamente pelo portal.";
                   await supabase.from("pushes").insert([{ message: msg, active: true, joiner_cog: d.joiner_cog }]);
+                  const joiner = (joinersData || []).find(j => j.cog === d.joiner_cog);
+                  if (joiner?.email) {
+                    const corpo = buildEmailRejeicaoPagamento(joiner.nome || joiner.cog, d, motivo.trim());
+                    sendEmailJoiner(joiner.email, joiner.nome || joiner.cog, "✕ Comprovante recusado — ANTICEG", corpo);
+                  }
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado" } : x));
                 setRejeitarId(null); setRejeitarMotivo("");
