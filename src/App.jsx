@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase from "./supabase.js";
-import emailjs from "@emailjs/browser";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import bonequinha from "./assets/bonequinha.png";
@@ -17,20 +16,22 @@ import badgeLeebit   from "./assets/badges/leebit.png";
 const EJS_SERVICE  = "service_wguc7si";
 const EJS_TEMPLATE = "template_3x4zqua";
 const EJS_KEY      = "FoEjO0bZC4mn9ebeN";
-emailjs.init({ publicKey: EJS_KEY });
 
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
-  if (!toEmail || EJS_SERVICE.startsWith("YOUR")) return;
-  try {
-    await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
-      to_email: toEmail,
-      to_name:  toNome  || "joiner",
-      assunto,
-      corpo,
-    });
-  } catch (e) {
-    console.error("[EmailJS]", e);
-    throw e;
+  if (!toEmail) throw new Error("sem_email");
+  const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      service_id:      EJS_SERVICE,
+      template_id:     EJS_TEMPLATE,
+      user_id:         EJS_KEY,
+      template_params: { to_email: toEmail, to_name: toNome || "joiner", assunto, corpo },
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => res.status);
+    throw new Error(`EmailJS ${res.status}: ${txt}`);
   }
 }
 
@@ -2995,6 +2996,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [pixCopiado,      setPixCopiado]      = useState(false);
   const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
   const [pagErro,         setPagErro]         = useState("");
+  const [pagEmailMsg,     setPagEmailMsg]     = useState(null); // null | {ok,txt}
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
@@ -3434,8 +3436,12 @@ ${p.comprovante_url ? (() => {
           try {
             const corpoEmail = buildEmailConfirmacaoPagamento(user.nome || user.cog, nova);
             await sendEmailJoiner(user.email, user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+            setPagEmailMsg({ ok: true, txt: `📧 Confirmação enviada para ${user.email}` });
           } catch (emailErr) {
-            console.warn("[email confirmação] falhou:", emailErr);
+            const motivo = emailErr.message === "sem_email"
+              ? "⚠ Adicione seu e-mail no perfil para receber confirmações"
+              : `⚠ Erro ao enviar e-mail: ${emailErr.message}`;
+            setPagEmailMsg({ ok: false, txt: motivo });
           }
           if (cashbackVal > 0 && saldoCashback > 0) {
             const fromDB = Math.min(cashbackVal, saldoCashback);
@@ -3516,17 +3522,14 @@ ${p.comprovante_url ? (() => {
             <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.8, marginBottom:10 }}>
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
-            {user.email
-              ? <div style={{ fontSize:10, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em" }}>
-                  📧 Confirmação enviada para {user.email}
-                </div>
-              : <div style={{ fontSize:10, color:"rgba(255,92,26,.6)", fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em" }}>
-                  ⚠ Sem e-mail cadastrado — adicione no perfil para receber confirmações
-                </div>
-            }
+            {pagEmailMsg && (
+              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em", color: pagEmailMsg.ok ? "rgba(186,255,57,.7)" : "rgba(255,92,26,.8)", padding:"8px 14px", background: pagEmailMsg.ok ? "rgba(186,255,57,.06)" : "rgba(255,92,26,.06)", borderRadius:6, border:`1px solid ${pagEmailMsg.ok ? "rgba(186,255,57,.15)" : "rgba(255,92,26,.15)"}` }}>
+                {pagEmailMsg.txt}
+              </div>
+            )}
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); }}
+              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); }}
                 style={{ width:"100%", padding:"13px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:13, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
                 + Enviar novo comprovante
               </button>
