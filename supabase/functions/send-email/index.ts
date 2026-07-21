@@ -18,40 +18,41 @@ serve(async (req) => {
       });
     }
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    const RESEND_FROM    = Deno.env.get("RESEND_FROM") ?? "ANTICEG <noreply@anticeg.com>";
+    const BREVO_API_KEY     = Deno.env.get("BREVO_API_KEY");
+    const BREVO_SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") ?? "";
+    const BREVO_SENDER_NAME  = Deno.env.get("BREVO_SENDER_NAME")  ?? "ANTICEG";
 
-    if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: "RESEND_API_KEY não configurado" }), {
+    if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
+      return new Response(JSON.stringify({ error: "BREVO_API_KEY ou BREVO_SENDER_EMAIL não configurado" }), {
         status: 500,
         headers: { ...CORS, "Content-Type": "application/json" },
       });
     }
 
-    const r = await fetch("https://api.resend.com/emails", {
+    const r = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "api-key":      BREVO_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from:    RESEND_FROM,
-        to:      [to_email],
-        subject: assunto,
-        html:    corpo,
+        sender:      { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+        to:          [{ email: to_email, name: to_name || "joiner" }],
+        subject:     assunto,
+        htmlContent: corpo,
       }),
     });
 
-    const data = await r.json();
+    const data = await r.json().catch(() => ({}));
 
     if (!r.ok) {
-      return new Response(JSON.stringify({ error: data?.message ?? JSON.stringify(data) }), {
+      return new Response(JSON.stringify({ error: data?.message ?? `Brevo ${r.status}` }), {
         status: r.status,
         headers: { ...CORS, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, id: data.id }), {
+    return new Response(JSON.stringify({ ok: true, messageId: data.messageId }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
 
