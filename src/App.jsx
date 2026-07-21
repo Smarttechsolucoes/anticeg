@@ -6847,6 +6847,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             {adminPagSubTab === "formulario" && (() => {
               const pendentes  = pagDemandas.filter(d => d.status === "em_analise");
               const resolvidas = pagDemandas.filter(d => d.status === "pago");
+              const rejeitados = pagDemandas.filter(d => d.status === "rejeitado");
 
               async function confirmar(id) {
                 const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago" });
@@ -6990,11 +6991,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 );
               };
 
-              const listaAtiva = formularioFiltro === "analise" ? pendentes : resolvidas;
+              const listaAtiva = formularioFiltro === "analise" ? pendentes : formularioFiltro === "confirmados" ? resolvidas : rejeitados;
               return (
                 <div>
                   {/* mini filtro */}
-                  <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+                  <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
                     <button onClick={() => setFormularioFiltro("analise")}
                       style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", border: formularioFiltro === "analise" ? "1px solid rgba(167,139,250,.4)" : "1px solid rgba(245,240,232,.08)", background: formularioFiltro === "analise" ? "rgba(167,139,250,.12)" : "transparent", color: formularioFiltro === "analise" ? "#A78BFA" : "rgba(245,240,232,.35)" }}>
                       Em análise
@@ -7005,11 +7006,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       Confirmados
                       {resolvidas.length > 0 && <span style={{ background:"rgba(186,255,57,.15)", color:"#BAFF39", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px" }}>{resolvidas.length}</span>}
                     </button>
+                    <button onClick={() => setFormularioFiltro("rejeitados")}
+                      style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", border: formularioFiltro === "rejeitados" ? "1px solid rgba(255,107,107,.4)" : "1px solid rgba(245,240,232,.08)", background: formularioFiltro === "rejeitados" ? "rgba(255,107,107,.08)" : "transparent", color: formularioFiltro === "rejeitados" ? "#ff6b6b" : "rgba(245,240,232,.35)" }}>
+                      Rejeitados
+                      {rejeitados.length > 0 && <span style={{ background:"rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px" }}>{rejeitados.length}</span>}
+                    </button>
                   </div>
 
                   {listaAtiva.length === 0
                     ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
-                        {formularioFiltro === "analise" ? "Nenhum formulário em análise." : "Nenhum pagamento confirmado ainda."}
+                        {formularioFiltro === "analise" ? "Nenhum formulário em análise." : formularioFiltro === "confirmados" ? "Nenhum pagamento confirmado ainda." : "Nenhum pagamento rejeitado."}
                       </div>
                     : listaAtiva.map(d => <CardDemanda key={d.id} d={d} />)
                   }
