@@ -5958,6 +5958,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
   const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
   const [fbAdminFiltro,    setFbAdminFiltro]    = useState("pendentes");
+  const [rejeitarId,       setRejeitarId]       = useState(null);
+  const [rejeitarMotivo,   setRejeitarMotivo]   = useState("");
   const [adminPixCopiado,  setAdminPixCopiado]  = useState(false);
   const [badgesSearch,  setBadgesSearch]  = useState("");
   const [badgesJoiner,  setBadgesJoiner]  = useState(null);
@@ -6857,6 +6859,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise" });
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
+              async function rejeitar(id, motivo) {
+                await supabase.from("pagamento_demandas").update({ status:"rejeitado" }).eq("id", id);
+                const d = pagDemandas.find(x => x.id === id);
+                if (d) {
+                  const msg = motivo.trim()
+                    ? `Seu comprovante foi recusado: "${motivo.trim()}". Envie novamente pelo portal.`
+                    : "Seu comprovante foi recusado. Por favor, envie novamente pelo portal.";
+                  await supabase.from("pushes").insert([{ message: msg, active: true, joiner_cog: d.joiner_cog }]);
+                }
+                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado" } : x));
+                setRejeitarId(null); setRejeitarMotivo("");
+              }
               const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
 
               const CardDemanda = ({ d }) => {
@@ -6933,10 +6947,44 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     )}
 
                     <div style={{ marginTop:12 }}>
-                      {isPend
-                        ? <button onClick={() => confirmar(d.id)} style={{ width:"100%", padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
-                        : <button onClick={() => reabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
-                      }
+                      {isPend ? (
+                        rejeitarId === d.id ? (
+                          <div style={{ border:"1px solid rgba(255,107,107,.2)", borderRadius:7, padding:"12px", background:"rgba(255,107,107,.04)" }}>
+                            <div style={{ fontSize:10, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>Motivo da rejeição (opcional)</div>
+                            <input
+                              value={rejeitarMotivo}
+                              onChange={e => setRejeitarMotivo(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && rejeitar(d.id, rejeitarMotivo)}
+                              placeholder="Ex: comprovante ilegível, valor incorreto..."
+                              autoFocus
+                              style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(255,107,107,.25)", borderRadius:6, padding:"8px 12px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", marginBottom:10 }}
+                            />
+                            <div style={{ display:"flex", gap:8 }}>
+                              <button onClick={() => rejeitar(d.id, rejeitarMotivo)}
+                                style={{ flex:1, padding:"8px", background:"rgba(255,107,107,.15)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                                ✕ confirmar rejeição
+                              </button>
+                              <button onClick={() => { setRejeitarId(null); setRejeitarMotivo(""); }}
+                                style={{ padding:"8px 14px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>
+                                cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display:"flex", gap:8 }}>
+                            <button onClick={() => confirmar(d.id)} style={{ flex:1, padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
+                            <button onClick={() => { setRejeitarId(d.id); setRejeitarMotivo(""); }}
+                              style={{ padding:"10px 16px", background:"rgba(255,107,107,.08)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>✕ Rejeitar</button>
+                          </div>
+                        )
+                      ) : d.status === "rejeitado" ? (
+                        <div style={{ display:"flex", gap:8 }}>
+                          <span style={{ flex:1, padding:"8px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, background:"rgba(255,107,107,.06)", textAlign:"center" }}>✕ Rejeitado</span>
+                          <button onClick={() => reabrir(d.id)} style={{ padding:"8px 14px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => reabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
+                      )}
                     </div>
                   </div>
                 );
