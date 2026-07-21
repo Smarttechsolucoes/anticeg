@@ -2906,7 +2906,10 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [pagCashback,       setPagCashback]     = useState("");
   const [expandedEnvio,  setExpandedEnvio]  = useState(new Set());
   const [meuReports,     setMeuReports]     = useState(null);
-  const [meusFeedbacks,  setMeusFeedbacks]  = useState(null);
+  const [meusFeedbacks,       setMeusFeedbacks]       = useState(null);
+  const [fbReplicaAberta,     setFbReplicaAberta]     = useState(null);
+  const [fbReplicaTexto,      setFbReplicaTexto]      = useState("");
+  const [fbReplicaEnv,        setFbReplicaEnv]        = useState(false);
   const [expandedReports, setExpandedReports] = useState(new Set());
   // ── repasse ──
   const [meusItens,           setMeusItens]           = useState([]);
@@ -2947,7 +2950,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       ] = await Promise.all([
         supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
-        supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
           .eq("cog", dataCog(user.cog))
@@ -4667,6 +4670,16 @@ ${compHTML}
                 ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhum feedback enviado ainda.</div>
                 : meusFeedbacks.map(fb => {
                     const tipoColor = { bug:"var(--laranja)", sugestão:"#64B5F6", elogio:"#4ade80" }[fb.tipo] || "rgba(245,240,232,.4)";
+                    const replicando = fbReplicaAberta === fb.id;
+                    async function enviarReplica() {
+                      if (!fbReplicaTexto.trim()) return;
+                      setFbReplicaEnv(true);
+                      await supabase.from("feedbacks").update({ resposta_joiner: fbReplicaTexto.trim(), resposta_joiner_at: new Date().toISOString() }).eq("id", fb.id);
+                      setMeusFeedbacks(prev => prev.map(x => x.id === fb.id ? { ...x, resposta_joiner: fbReplicaTexto.trim() } : x));
+                      setFbReplicaAberta(null);
+                      setFbReplicaTexto("");
+                      setFbReplicaEnv(false);
+                    }
                     return (
                       <div key={fb.id} style={{ background:"var(--card-bg)", border:`1px solid ${fb.resposta ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"14px 16px", marginBottom:10 }}>
                         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
@@ -4676,9 +4689,38 @@ ${compHTML}
                         </div>
                         <div style={{ fontSize:12, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom: fb.resposta ? 12 : 0 }}>{fb.message}</div>
                         {fb.resposta && (
-                          <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:7, padding:"10px 14px" }}>
-                            <div style={{ fontSize:9, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>↩ Resposta da Nanda</div>
-                            <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>{fb.resposta}</div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:7, padding:"10px 14px" }}>
+                              <div style={{ fontSize:9, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>↩ Resposta da Nanda</div>
+                              <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>{fb.resposta}</div>
+                            </div>
+                            {fb.resposta_joiner ? (
+                              <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"10px 14px" }}>
+                                <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>↩ Sua resposta</div>
+                                <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>{fb.resposta_joiner}</div>
+                              </div>
+                            ) : replicando ? (
+                              <div>
+                                <textarea value={fbReplicaTexto} onChange={e => setFbReplicaTexto(e.target.value)}
+                                  placeholder="Escreva sua resposta..." rows={3} autoFocus
+                                  style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", resize:"vertical", marginBottom:8 }} />
+                                <div style={{ display:"flex", gap:8 }}>
+                                  <button onClick={enviarReplica} disabled={fbReplicaEnv || !fbReplicaTexto.trim()}
+                                    style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.08)", border:"1px solid rgba(245,240,232,.2)", color:"var(--offwhite)", borderRadius:6, padding:"7px 16px", cursor:"pointer", fontWeight:700, opacity: fbReplicaTexto.trim() ? 1 : 0.4 }}>
+                                    {fbReplicaEnv ? "enviando..." : "↩ enviar"}
+                                  </button>
+                                  <button onClick={() => { setFbReplicaAberta(null); setFbReplicaTexto(""); }}
+                                    style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"7px 12px", cursor:"pointer" }}>
+                                    cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button onClick={() => { setFbReplicaAberta(fb.id); setFbReplicaTexto(""); }}
+                                style={{ alignSelf:"flex-start", fontSize:10, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:5, padding:"5px 12px", cursor:"pointer" }}>
+                                ↩ responder
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -5849,6 +5891,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [fbRespostaAberta, setFbRespostaAberta] = useState(null);
   const [fbRespostaTexto,  setFbRespostaTexto]  = useState("");
   const [fbRespostaEnv,    setFbRespostaEnv]    = useState(false);
+  const [fbAdminFiltro,    setFbAdminFiltro]    = useState("pendentes");
   const [adminPixCopiado,  setAdminPixCopiado]  = useState(false);
   const [badgesSearch,  setBadgesSearch]  = useState("");
   const [badgesJoiner,  setBadgesJoiner]  = useState(null);
@@ -6468,58 +6511,91 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             setFbRespostaEnv(false);
           }
 
-          return feedbacks.map(fb => {
-            const tipoColor  = { bug:"var(--laranja)", sugestão:"#64B5F6", elogio:"#4ade80" }[fb.tipo] || "rgba(245,240,232,.4)";
-            const respondendo = fbRespostaAberta === fb.id;
-            return (
-              <div key={fb.id} style={{ background:"var(--card-bg)", border:`1px solid ${fb.resposta ? "rgba(167,139,250,.15)" : "rgba(245,240,232,.07)"}`, borderRadius:8, marginBottom:8, overflow:"hidden" }}>
-                <div style={{ padding:"12px 16px" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-                    <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{fb.tipo}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{fb.joiner_nome}</span>
-                    {fb.resposta && <span style={{ fontSize:9, color:"#A78BFA", fontFamily:"'DM Mono',monospace", border:"1px solid rgba(167,139,250,.25)", borderRadius:4, padding:"2px 7px" }}>✓ respondido</span>}
-                    <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>
-                      {new Date(fb.created_at).toLocaleDateString("pt-BR")}
-                    </span>
-                  </div>
-                  <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", lineHeight:1.6, marginBottom:10 }}>{fb.message}</div>
+          const pendentes   = feedbacks.filter(fb => !fb.resposta);
+          const respondidos = feedbacks.filter(fb => fb.resposta);
+          const listaAtual  = fbAdminFiltro === "pendentes" ? pendentes : respondidos;
+          const replicasNovas = respondidos.filter(fb => fb.resposta_joiner).length;
 
-                  {/* Resposta existente */}
-                  {fb.resposta && !respondendo && (
-                    <div style={{ background:"rgba(167,139,250,.06)", border:"1px solid rgba(167,139,250,.15)", borderRadius:6, padding:"8px 12px", marginBottom:8 }}>
-                      <div style={{ fontSize:9, color:"rgba(167,139,250,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Sua resposta</div>
-                      <div style={{ fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{fb.resposta}</div>
-                    </div>
-                  )}
-
-                  {/* Botão / form de resposta */}
-                  {!respondendo ? (
-                    <button onClick={() => { setFbRespostaAberta(fb.id); setFbRespostaTexto(fb.resposta || ""); }}
-                      style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(167,139,250,.2)", color:"rgba(167,139,250,.6)", borderRadius:5, padding:"5px 12px", cursor:"pointer", letterSpacing:".05em" }}>
-                      {fb.resposta ? "✎ editar resposta" : "↩ responder"}
-                    </button>
-                  ) : (
-                    <div style={{ marginTop:4 }}>
-                      <textarea value={fbRespostaTexto} onChange={e => setFbRespostaTexto(e.target.value)}
-                        placeholder="Escreva sua resposta para o joiner..."
-                        rows={3} autoFocus
-                        style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.04)", border:"1px solid rgba(167,139,250,.25)", borderRadius:7, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", resize:"vertical", marginBottom:8 }} />
-                      <div style={{ display:"flex", gap:8 }}>
-                        <button onClick={() => enviarResposta(fb)} disabled={fbRespostaEnv || !fbRespostaTexto.trim()}
-                          style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"rgba(167,139,250,.15)", border:"1px solid rgba(167,139,250,.3)", color:"#A78BFA", borderRadius:6, padding:"7px 16px", cursor:"pointer", fontWeight:700, opacity: fbRespostaTexto.trim() ? 1 : 0.4 }}>
-                          {fbRespostaEnv ? "enviando..." : "↩ enviar resposta"}
-                        </button>
-                        <button onClick={() => { setFbRespostaAberta(null); setFbRespostaTexto(""); }}
-                          style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"7px 12px", cursor:"pointer" }}>
-                          cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+          return (
+            <>
+              <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+                {[["pendentes", `pendentes (${pendentes.length})`], ["respondidos", `respondidos (${respondidos.length})`]].map(([val, label]) => (
+                  <button key={val} onClick={() => setFbAdminFiltro(val)}
+                    style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"5px 14px", borderRadius:20, cursor:"pointer", border: fbAdminFiltro === val ? "1px solid rgba(167,139,250,.5)" : "1px solid rgba(245,240,232,.12)", background: fbAdminFiltro === val ? "rgba(167,139,250,.12)" : "transparent", color: fbAdminFiltro === val ? "#A78BFA" : "rgba(245,240,232,.4)", fontWeight: fbAdminFiltro === val ? 700 : 400, position:"relative" }}>
+                    {label}
+                    {val === "respondidos" && replicasNovas > 0 && (
+                      <span style={{ marginLeft:6, fontSize:9, background:"var(--laranja)", color:"#000", borderRadius:10, padding:"1px 6px", fontWeight:700 }}>{replicasNovas} nova{replicasNovas > 1 ? "s" : ""}</span>
+                    )}
+                  </button>
+                ))}
               </div>
-            );
-          });
+
+              {listaAtual.length === 0 && (
+                <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"16px 0" }}>
+                  {fbAdminFiltro === "pendentes" ? "Nenhum feedback sem resposta." : "Nenhum feedback respondido ainda."}
+                </div>
+              )}
+
+              {listaAtual.map(fb => {
+                const tipoColor  = { bug:"var(--laranja)", sugestão:"#64B5F6", elogio:"#4ade80" }[fb.tipo] || "rgba(245,240,232,.4)";
+                const respondendo = fbRespostaAberta === fb.id;
+                return (
+                  <div key={fb.id} style={{ background:"var(--card-bg)", border:`1px solid ${fb.resposta_joiner ? "rgba(255,92,26,.2)" : fb.resposta ? "rgba(167,139,250,.15)" : "rgba(245,240,232,.07)"}`, borderRadius:8, marginBottom:8, overflow:"hidden" }}>
+                    <div style={{ padding:"12px 16px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{fb.tipo}</span>
+                        <span style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{fb.joiner_nome}</span>
+                        {fb.resposta_joiner && <span style={{ fontSize:9, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", border:"1px solid rgba(255,92,26,.3)", borderRadius:4, padding:"2px 7px" }}>↩ joiner respondeu</span>}
+                        <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>{new Date(fb.created_at).toLocaleDateString("pt-BR")}</span>
+                      </div>
+                      <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", lineHeight:1.6, marginBottom:10 }}>{fb.message}</div>
+
+                      {fb.resposta && !respondendo && (
+                        <div style={{ background:"rgba(167,139,250,.06)", border:"1px solid rgba(167,139,250,.15)", borderRadius:6, padding:"8px 12px", marginBottom: fb.resposta_joiner ? 8 : 8 }}>
+                          <div style={{ fontSize:9, color:"rgba(167,139,250,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Sua resposta</div>
+                          <div style={{ fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{fb.resposta}</div>
+                        </div>
+                      )}
+
+                      {fb.resposta_joiner && (
+                        <div style={{ background:"rgba(255,92,26,.05)", border:"1px solid rgba(255,92,26,.18)", borderRadius:6, padding:"8px 12px", marginBottom:8 }}>
+                          <div style={{ fontSize:9, color:"rgba(255,92,26,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>
+                            ↩ {fb.joiner_nome} respondeu
+                            {fb.resposta_joiner_at && <span style={{ marginLeft:8, opacity:.6 }}>{new Date(fb.resposta_joiner_at).toLocaleDateString("pt-BR")}</span>}
+                          </div>
+                          <div style={{ fontSize:11, color:"rgba(245,240,232,.75)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{fb.resposta_joiner}</div>
+                        </div>
+                      )}
+
+                      {!respondendo ? (
+                        <button onClick={() => { setFbRespostaAberta(fb.id); setFbRespostaTexto(fb.resposta || ""); }}
+                          style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(167,139,250,.2)", color:"rgba(167,139,250,.6)", borderRadius:5, padding:"5px 12px", cursor:"pointer", letterSpacing:".05em" }}>
+                          {fb.resposta ? "✎ editar resposta" : "↩ responder"}
+                        </button>
+                      ) : (
+                        <div style={{ marginTop:4 }}>
+                          <textarea value={fbRespostaTexto} onChange={e => setFbRespostaTexto(e.target.value)}
+                            placeholder="Escreva sua resposta para o joiner..."
+                            rows={3} autoFocus
+                            style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.04)", border:"1px solid rgba(167,139,250,.25)", borderRadius:7, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", resize:"vertical", marginBottom:8 }} />
+                          <div style={{ display:"flex", gap:8 }}>
+                            <button onClick={() => enviarResposta(fb)} disabled={fbRespostaEnv || !fbRespostaTexto.trim()}
+                              style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"rgba(167,139,250,.15)", border:"1px solid rgba(167,139,250,.3)", color:"#A78BFA", borderRadius:6, padding:"7px 16px", cursor:"pointer", fontWeight:700, opacity: fbRespostaTexto.trim() ? 1 : 0.4 }}>
+                              {fbRespostaEnv ? "enviando..." : "↩ enviar resposta"}
+                            </button>
+                            <button onClick={() => { setFbRespostaAberta(null); setFbRespostaTexto(""); }}
+                              style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"7px 12px", cursor:"pointer" }}>
+                              cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          );
         })()}
       </div>
       </div>
