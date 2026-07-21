@@ -3327,6 +3327,12 @@ ${p.comprovante_url ? (() => {
                     {p.status==="pago" ? "✓ Pago" : p.status==="rejeitado" ? "✕ Recusado" : "◉ Em análise"}
                   </span>
                 </div>
+                {p.status === "rejeitado" && p.motivo_rejeicao && (
+                  <div style={{ padding:"8px 16px", background:"rgba(255,107,107,.06)", borderBottom:"1px solid rgba(255,107,107,.12)", display:"flex", alignItems:"flex-start", gap:6 }}>
+                    <span style={{ fontSize:9, color:"#ff6b6b", fontFamily:"'DM Mono',monospace", letterSpacing:".5px", flexShrink:0, marginTop:1 }}>MOTIVO</span>
+                    <span style={{ fontSize:10, color:"rgba(255,150,150,.8)", fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>{p.motivo_rejeicao}</span>
+                  </div>
+                )}
                 {/* Itens */}
                 <div style={{ padding:"12px 16px 0" }}>
                   {p.itens.map((it, idx) => {
@@ -6913,7 +6919,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
-                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado" });
+                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado", motivo_rejeicao: motivo.trim() || null });
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const msg = motivo.trim()
@@ -6926,7 +6932,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     sendEmailJoiner(joiner.email, joiner.nome || joiner.cog, "✕ Comprovante recusado — ANTICEG", corpo);
                   }
                 }
-                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado" } : x));
+                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));
                 setRejeitarId(null); setRejeitarMotivo("");
               }
               const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
