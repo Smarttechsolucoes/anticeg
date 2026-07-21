@@ -127,6 +127,16 @@ function buildEmailConfirmacaoPagamento(toNome, recibo) {
         <span style="font-size:10px;font-family:'Courier New',monospace;padding:3px 10px;border-radius:4px;border:1px solid rgba(201,168,240,0.35);color:#C9A8F0;text-transform:uppercase;letter-spacing:.5px">◉ Em análise</span>
       </div>
     </div>
+    ${recibo.comprovante_url ? `
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Comprovante enviado</div>
+      <img src="${recibo.comprovante_url}" alt="comprovante" style="max-width:100%;border-radius:6px;border:1px solid rgba(245,240,232,0.1);display:block" />
+    </div>` : ""}
+    ${recibo.obs && recibo.obs.startsWith("Código da transação:") ? `
+    <div style="background:#0d0d0d;border:1px solid rgba(245,240,232,0.08);border-radius:6px;padding:12px 16px;margin-bottom:20px">
+      <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Código da transação</div>
+      <div style="font-size:13px;font-weight:700;color:#F5F0E8;font-family:'Courier New',monospace">${recibo.obs.replace("Código da transação: ", "").split("\n")[0]}</div>
+    </div>` : ""}
     <p style="margin:0;font-size:11px;color:rgba(245,240,232,0.35);line-height:1.75">
       Assim que confirmarmos, você receberá uma notificação no portal. Em caso de dúvida, entre em contato pelo WhatsApp.
     </p>
