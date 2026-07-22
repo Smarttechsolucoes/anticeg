@@ -9664,15 +9664,14 @@ function DisponiveisTab({ user }) {
         const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
         return (
           <div key={item.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden", marginBottom:10 }}>
-            <div style={{ width:"100%", aspectRatio:"16/7", overflow:"hidden", position:"relative" }}>
-              {foto
-                ? <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-                : <div style={{ width:"100%", height:"100%", background:"rgba(245,240,232,.03)", border:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.18)", letterSpacing:"1px" }}>sem foto ainda</span>
-                  </div>
-              }
-            </div>
-            <div style={{ padding:16, display:"flex", alignItems:"flex-start", gap:12 }}>
+            <div style={{ padding:14, display:"flex", alignItems:"flex-start", gap:12 }}>
+              {/* Thumbnail */}
+              <div style={{ width:64, height:64, borderRadius:8, overflow:"hidden", flexShrink:0, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.07)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {foto
+                  ? <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                  : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.2)", letterSpacing:".5px", textAlign:"center", lineHeight:1.4 }}>sem{"\n"}foto</span>
+                }
+              </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"var(--lilas)", letterSpacing:"1px", marginBottom:4 }}>{item.ceg}</div>
                 <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", lineHeight:1.35, marginBottom:4 }}>{item.nome_do_item}</div>
