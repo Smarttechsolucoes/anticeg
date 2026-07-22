@@ -9456,6 +9456,7 @@ function AdminDisponivel({ data }) {
 function DisponiveisTab({ user }) {
   const [itens, setItens] = useState(null);
   const [fotos, setFotos] = useState({});
+  const [filtroCeg, setFiltroCeg] = useState(null);
   const [claiming, setClaiming] = useState(null);
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
@@ -9500,15 +9501,30 @@ function DisponiveisTab({ user }) {
   }
 
   const total = (item) => Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
+  const cegs = itens ? [...new Set(itens.map(i => i.ceg))].sort() : [];
+  const itensFiltrados = itens ? (filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens) : null;
 
   return (
     <div className="main" style={{ paddingBottom: 100 }}>
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 16 }}>
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>Disponíveis</h2>
         <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
           Itens disponíveis para claim — transferidos direto para sua lista
         </div>
       </div>
+
+      {cegs.length > 1 && (
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+          <button onClick={() => setFiltroCeg(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(255,92,26,.12)" : "transparent", color: !filtroCeg ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: !filtroCeg ? 700 : 400 }}>
+            Todas
+          </button>
+          {cegs.map(ceg => (
+            <button key={ceg} onClick={() => setFiltroCeg(ceg === filtroCeg ? null : ceg)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: filtroCeg === ceg ? "1px solid var(--lilas)" : "1px solid rgba(245,240,232,.12)", background: filtroCeg === ceg ? "rgba(201,168,240,.12)" : "transparent", color: filtroCeg === ceg ? "var(--lilas)" : "rgba(245,240,232,.4)", fontWeight: filtroCeg === ceg ? 700 : 400 }}>
+              {ceg}
+            </button>
+          ))}
+        </div>
+      )}
 
       {claimOk && (
         <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--verde)" }}>
@@ -9524,13 +9540,13 @@ function DisponiveisTab({ user }) {
       {itens === null && (
         <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"32px 0", textAlign:"center" }}>carregando...</div>
       )}
-      {itens !== null && itens.length === 0 && (
+      {itensFiltrados !== null && itensFiltrados.length === 0 && (
         <div style={{ textAlign:"center", padding:"48px 0" }}>
           <div style={{ fontSize:32, marginBottom:12 }}>◱</div>
           <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum item disponível no momento.</div>
         </div>
       )}
-      {itens !== null && itens.map(item => {
+      {itensFiltrados !== null && itensFiltrados.map(item => {
         const val = total(item);
         const isConfirming = confirmando === item.id;
         const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
