@@ -6342,6 +6342,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         setPushes(DEMO_ADMIN_DATA.pushes);
         setFeedbacks(DEMO_ADMIN_DATA.feedbacks);
       }
+      if (adminMainTab === "push_mobile" && pmHistorico.length === 0) {
+        setPmHistorico([
+          { titulo: "ANTICEG — Pagamentos", corpo: "Atenção! O prazo de pagamento da CEG DO IT CARDS encerra amanhã. Confirme seu pix pelo portal.", dest: "Todas inscritas", ok: true, txt: "12 enviado(s)", ts: new Date(Date.now() - 1000 * 60 * 47) },
+          { titulo: "Envio confirmado ✓", corpo: "Seu pedido da CEG DOMINATE JAPAN foi enviado! Código de rastreio disponível no portal.", dest: "@demo_camila", ok: true, txt: "1 enviado(s)", ts: new Date(Date.now() - 1000 * 60 * 60 * 3) },
+          { titulo: "ANTICEG — Novo drop", corpo: "Novo drop disponível: 6TH GEN. Acesse o portal para conferir os itens e garantir o seu!", dest: "Todas inscritas", ok: true, txt: "12 enviado(s)", ts: new Date(Date.now() - 1000 * 60 * 60 * 24) },
+        ]);
+      }
       if (["pagamentos", "blocklist"].includes(adminMainTab) && pendentesData === null) {
         const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
         supabase.from("masterlist").select(sel).eq("cog", "nandaverseo_c").order("ceg")
