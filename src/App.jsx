@@ -9364,58 +9364,77 @@ function AdminPagamentos({ data, joiners, subtab }) {
 function AdminDisponivel({ data }) {
   const [itens, setItens] = useState(data);
 
-  async function marcarVendido(id) {
-    await supabase.from("masterlist").update({ status: "Vendido" }).eq("id", id);
-    setItens(prev => prev.map(i => i.id === id ? { ...i, status: "Vendido" } : i));
-  }
-  async function marcarDisponivel(id) {
+  async function publicar(id) {
     await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", id);
     setItens(prev => prev.map(i => i.id === id ? { ...i, status: "Disponível" } : i));
   }
+  async function retirar(id, statusAnterior) {
+    const novoStatus = statusAnterior && statusAnterior !== "Disponível" ? statusAnterior : "Retirado";
+    await supabase.from("masterlist").update({ status: novoStatus }).eq("id", id);
+    setItens(prev => prev.map(i => i.id === id ? { ...i, status: novoStatus } : i));
+  }
+
+  const publicados = itens.filter(i => i.status === "Disponível");
+  const naoPublicados = itens.filter(i => i.status !== "Disponível");
+
+  const renderItem = (item) => (
+    <div key={item.id} style={{
+      background:"var(--card-bg)",
+      border:`1px solid ${item.status === "Disponível" ? "rgba(255,180,0,.25)" : "rgba(245,240,232,.07)"}`,
+      borderRadius:10, padding:"14px 16px", marginBottom:8,
+      display:"flex", alignItems:"center", gap:12
+    }}>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
+          {item.status === "Disponível"
+            ? <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ffb400", background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.3)", borderRadius:4, padding:"2px 7px", letterSpacing:"1px" }}>VISÍVEL</span>
+            : <StatusChip status={item.status} />}
+        </div>
+        <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginTop:4 }}><InfoContent info={item.nome_do_item} /></div>
+        {Number(item.valor_item) > 0 && (
+          <div style={{ fontSize:12, color:"var(--laranja)", marginTop:3, fontWeight:600 }}>R${fmtBRL(item.valor_item)}</div>
+        )}
+        {item.info_adicionais && (
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginTop:4 }}>{item.info_adicionais}</div>
+        )}
+      </div>
+      <div style={{ flexShrink:0 }}>
+        {item.status === "Disponível" ? (
+          <button onClick={() => retirar(item.id, item.status)} style={{
+            background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)",
+            color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px",
+            fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
+          }}>Retirar da loja ✕</button>
+        ) : (
+          <button onClick={() => publicar(item.id)} style={{
+            background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.35)",
+            color:"#ffb400", borderRadius:6, padding:"5px 12px",
+            fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
+          }}>Publicar na loja →</button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div>
-      <div style={{ fontSize:12, color:"rgba(245,240,232,.58)", marginBottom:16 }}>
-        {itens.length} item{itens.length !== 1 ? "s" : ""} disponível{itens.length !== 1 ? "is" : ""} para venda
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", marginBottom:16 }}>
+        {publicados.length} publicado{publicados.length !== 1 ? "s" : ""} · {naoPublicados.length} oculto{naoPublicados.length !== 1 ? "s" : ""}
       </div>
-      {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item disponível.</div>}
-      {itens.map(item => (
-        <div key={item.id} style={{
-          background:"var(--card-bg)",
-          border:`1px solid ${item.status === "Disponível" ? "rgba(255,180,0,.2)" : "rgba(245,240,232,.07)"}`,
-          borderRadius:10, padding:"14px 16px", marginBottom:8,
-          display:"flex", alignItems:"center", gap:12
-        }}>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
-              <StatusChip status={item.status} />
-            </div>
-            <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginTop:4 }}><InfoContent info={item.nome_do_item} /></div>
-            {Number(item.valor_item) > 0 && (
-              <div style={{ fontSize:12, color:"var(--laranja)", marginTop:3, fontWeight:600 }}>R${fmtBRL(item.valor_item)}</div>
-            )}
-            {item.info_adicionais && (
-              <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginTop:4 }}>{item.info_adicionais}</div>
-            )}
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:6, flexShrink:0 }}>
-            {item.status === "Disponível" ? (
-              <button onClick={() => marcarVendido(item.id)} style={{
-                background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)",
-                color:"var(--verde)", borderRadius:6, padding:"5px 12px",
-                fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
-              }}>Marcar vendido ✓</button>
-            ) : (
-              <button onClick={() => marcarDisponivel(item.id)} style={{
-                background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.25)",
-                color:"#ffb400", borderRadius:6, padding:"5px 12px",
-                fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
-              }}>Reabrir →</button>
-            )}
-          </div>
-        </div>
-      ))}
+      {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item com nome "disponivel" na masterlist.</div>}
+      {publicados.length > 0 && (
+        <>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ffb400", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Visíveis para joiners</div>
+          {publicados.map(renderItem)}
+        </>
+      )}
+      {naoPublicados.length > 0 && (
+        <>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", margin:"16px 0 8px" }}>Ocultos</div>
+          {naoPublicados.map(renderItem)}
+        </>
+      )}
     </div>
   );
 }
@@ -9431,7 +9450,7 @@ function DisponiveisTab({ user }) {
   useEffect(() => {
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
-      .ilike("nome", "disponivel")
+      .ilike("nome", "disponivel").eq("status", "Disponível")
       .order("ceg").order("nome_do_item")
       .then(async ({ data }) => {
         const lista = data || [];
