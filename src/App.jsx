@@ -6147,6 +6147,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [preCadastros, setPreCadastros] = useState([]);
   const [mercariPedidos, setMercariPedidos] = useState([]);
+  const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
   const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
@@ -6345,6 +6346,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setAdminRepassos(data || []); });
     supabase.from("mercari_pedidos").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMercariPedidos(data); });
+    supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
 
   // Lazy: carrega dados apenas quando a aba é visitada pela primeira vez
@@ -6570,11 +6573,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
+                {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
                 {(temAcesso("pagamentos") || temAcesso("demandas") || temAcesso("blocklist")) && nav("pagamentos", "Pagamentos", "◎", pagDemandas.filter(d => d.status === "em_analise").length || 0)}
-                {temAcesso("disponiveis") && nav("disponiveis", "Disponíveis", "◱", 0)}
               </div>
               {(owner || temAcesso("galeria")) && (
                 <div className="admin-sidebar-group">
@@ -7325,7 +7328,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "disponiveis" && (
         disponiveisData === null
           ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
-          : <AdminDisponivel data={disponiveisData} />
+          : <AdminDisponivel data={disponiveisData} claimsInit={claimsPendentes} onClaimsChange={setClaimsPendentes} />
       )}
 
       {adminMainTab === "badges" && (
@@ -9361,26 +9364,27 @@ function AdminPagamentos({ data, joiners, subtab }) {
   );
 }
 
-function AdminDisponivel({ data }) {
+function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
   const [itens, setItens] = useState(data);
   const [filtroCeg, setFiltroCeg] = useState(null);
-  const [claims, setClaims] = useState([]);
+  const [claims, setClaims] = useState(claimsInit || []);
 
-  useEffect(() => {
-    supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
-      .then(({ data }) => setClaims(data || []));
-  }, []);
+  useEffect(() => { setClaims(claimsInit || []); }, [claimsInit]);
+
+  function updateClaims(fn) {
+    setClaims(prev => { const next = fn(prev); onClaimsChange?.(next); return next; });
+  }
 
   async function aprovarClaim(claim) {
     await supabase.from("masterlist").update({ cog: claim.joiner_cog, nome: claim.joiner_nome }).eq("id", claim.masterlist_id);
     await supabase.from("claims").update({ status: "aprovado" }).eq("id", claim.id);
-    setClaims(prev => prev.filter(c => c.id !== claim.id));
+    updateClaims(prev => prev.filter(c => c.id !== claim.id));
     setItens(prev => prev.filter(i => i.id !== claim.masterlist_id));
   }
 
   async function rejeitarClaim(claim) {
     await supabase.from("claims").update({ status: "rejeitado" }).eq("id", claim.id);
-    setClaims(prev => prev.filter(c => c.id !== claim.id));
+    updateClaims(prev => prev.filter(c => c.id !== claim.id));
   }
 
   async function publicar(id) {
