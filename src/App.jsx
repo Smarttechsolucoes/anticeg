@@ -9721,21 +9721,21 @@ function DisponiveisTab({ user }) {
               <div style={{ margin:"16px 24px", height:1, background:"rgba(245,240,232,.07)" }} />
 
               {/* Joiner */}
-              <div style={{ padding:"0 24px", display:"flex", flexDirection:"column", gap:10 }}>
+              <div style={{ padding:"0 24px", display:"flex", flexDirection:"column", gap:8 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
-                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>conta</span>
-                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)" }}>@{user.cog}</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.22)", minWidth:44 }}>conta</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)" }}>@{user.cog}</span>
                 </div>
                 <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
-                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:56 }}>claim</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.22)", minWidth:44 }}>claim</span>
                   {user.nome
-                    ? <span style={{ fontSize:13, color:"var(--offwhite)" }}>{user.nome}</span>
+                    ? <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)" }}>{user.nome}</span>
                     : <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"var(--laranja)" }}>sem nome cadastrado</span>
                   }
                 </div>
                 <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
-                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>email</span>
-                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>{user.email || "—"}</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.22)", minWidth:44 }}>email</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)" }}>{user.email || "—"}</span>
                 </div>
               </div>
 
