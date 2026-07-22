@@ -6905,14 +6905,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const rejeitados = pagDemandas.filter(d => d.status === "rejeitado");
 
               async function confirmar(id) {
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago" });
+                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago", motivo_rejeicao: null });
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
               async function reabrir(id) {
-                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise" });
+                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise", motivo_rejeicao: null });
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
