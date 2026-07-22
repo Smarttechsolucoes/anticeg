@@ -9703,18 +9703,13 @@ function DisponiveisTab({ user }) {
         const maxD = new Date(); maxD.setDate(maxD.getDate() + 20);
         const maxVenc = maxD.toISOString().split("T")[0];
         return (
-          <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"flex-end" }}
+          <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" }}
             onClick={() => setConfirmando(null)}>
-            <div style={{ background:"#111", borderRadius:"20px 20px 0 0", width:"100%", maxHeight:"92vh", overflowY:"auto", boxShadow:"0 -8px 40px rgba(0,0,0,.6)" }}
+            <div style={{ background:"#111", borderRadius:20, width:"100%", maxWidth:440, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 60px rgba(0,0,0,.7)" }}
               onClick={e => e.stopPropagation()}>
 
-              {/* Handle */}
-              <div style={{ padding:"16px 20px 0", display:"flex", justifyContent:"center" }}>
-                <div style={{ width:40, height:4, background:"rgba(245,240,232,.12)", borderRadius:2 }} />
-              </div>
-
               {/* Item destaque */}
-              <div style={{ padding:"20px 20px 0" }}>
+              <div style={{ padding:"28px 24px 0" }}>
                 <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>{item.ceg}</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:.5, lineHeight:1.2, marginBottom:8 }}>{item.nome_do_item}</div>
                 {val > 0
@@ -9723,10 +9718,10 @@ function DisponiveisTab({ user }) {
                 }
               </div>
 
-              <div style={{ margin:"16px 20px", height:1, background:"rgba(245,240,232,.07)" }} />
+              <div style={{ margin:"16px 24px", height:1, background:"rgba(245,240,232,.07)" }} />
 
               {/* Joiner */}
-              <div style={{ padding:"0 20px", display:"flex", flexDirection:"column", gap:10 }}>
+              <div style={{ padding:"0 24px", display:"flex", flexDirection:"column", gap:10 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
                   <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>conta</span>
                   <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)" }}>@{user.cog}</span>
@@ -9742,7 +9737,7 @@ function DisponiveisTab({ user }) {
               </div>
 
               {/* Avisos */}
-              <div style={{ padding:"0 20px", marginTop:16, display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ padding:"0 24px", marginTop:16, display:"flex", flexDirection:"column", gap:8 }}>
                 {(semFrete || semTaxa) && (
                   <div style={{ background:"rgba(255,180,0,.05)", border:"1px solid rgba(255,180,0,.2)", borderRadius:10, padding:"10px 14px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.8)", lineHeight:1.6 }}>
                     ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores serão cobrados" : "esse valor será cobrado"} à parte depois.
@@ -9760,10 +9755,10 @@ function DisponiveisTab({ user }) {
                 )}
               </div>
 
-              <div style={{ margin:"16px 20px 0", height:1, background:"rgba(245,240,232,.07)" }} />
+              <div style={{ margin:"16px 24px 0", height:1, background:"rgba(245,240,232,.07)" }} />
 
               {/* Vencimento */}
-              <div style={{ padding:"16px 20px 0" }}>
+              <div style={{ padding:"16px 24px 0" }}>
                 <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:10 }}>Vencimento do pagamento</div>
                 <input type="date" value={claimVenc} min={hoje} max={maxVenc}
                   onChange={e => setClaimVenc(e.target.value)}
@@ -9772,7 +9767,7 @@ function DisponiveisTab({ user }) {
               </div>
 
               {/* Erro + botões */}
-              <div style={{ padding:"16px 20px 36px" }}>
+              <div style={{ padding:"16px 24px 28px" }}>
                 {claimErro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", marginBottom:12 }}>{claimErro}</div>}
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:10 }}>
                   <button onClick={() => setConfirmando(null)}
