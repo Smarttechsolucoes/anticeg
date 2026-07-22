@@ -11359,6 +11359,7 @@ export default function App() {
   const [adminPinError, setAdminPinError] = useState(false);
   const [adminPinStored, setAdminPinStored] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showPushBanner, setShowPushBanner] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
   const [pendingReportIds, setPendingReportIds] = useState(new Set());
@@ -11480,7 +11481,11 @@ export default function App() {
     if (!u.guest && !u.pre_cadastro) {
       localStorage.setItem("anticeg_tutorial_v1", "1");
       if (!u.confirmado) setShowPerfilModal(true);
-      registrarPush(u.cog);
+      if ("serviceWorker" in navigator && "PushManager" in window && Notification.permission === "default" && !localStorage.getItem("anticeg_push_asked")) {
+        setShowPushBanner(true);
+      } else if (Notification.permission === "granted" && !localStorage.getItem("anticeg_push_asked")) {
+        registrarPush(u.cog);
+      }
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
       if (notifs?.length > 0) setNotificacoes(notifs);
@@ -11588,6 +11593,24 @@ export default function App() {
   return (
     <div>
       <AccessibilityWidget />
+      {showPushBanner && (
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:9000, padding:"16px 20px", background:"#1a1a1a", borderTop:"1px solid rgba(255,92,26,.35)", display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+          <div style={{ flex:1, minWidth:200 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:3 }}>🔔 Ativar notificações?</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.5 }}>Receba avisos de pagamento confirmado, comprovante recusado e novidades — mesmo com o app fechado.</div>
+          </div>
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <button onClick={() => { localStorage.setItem("anticeg_push_asked","1"); setShowPushBanner(false); }}
+              style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"9px 16px", fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              Agora não
+            </button>
+            <button onClick={() => { localStorage.setItem("anticeg_push_asked","1"); setShowPushBanner(false); registrarPush(user.cog); }}
+              style={{ background:"var(--laranja)", border:"none", borderRadius:8, padding:"9px 18px", fontSize:12, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              Ativar →
+            </button>
+          </div>
+        </div>
+      )}
       {badgePopupQueue.length > 0 && (
         <NovoBadgePopup badge={badgePopupQueue[0]} onClose={() => setBadgePopupQueue(q => q.slice(1))} />
       )}
