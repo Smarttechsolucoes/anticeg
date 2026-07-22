@@ -6128,6 +6128,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [pmJoinerSearch, setPmJoinerSearch] = useState("");
   const [pmSending,      setPmSending]      = useState(false);
   const [pmStatus,       setPmStatus]       = useState(null);
+  const [pmHistorico,    setPmHistorico]    = useState([]);
   const [pendentesData, setPendentesData] = useState(null);
   const [disponiveisData, setDisponiveisData] = useState(null);
   const [joinersData, setJoinersData] = useState(null);
@@ -6434,7 +6435,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       const ok = results.filter(r => r.status === "fulfilled").length;
       const fail = results.length - ok;
       const firstErr = results.find(r => r.status === "rejected")?.reason?.message;
-      setPmStatus({ ok: fail === 0, txt: `${ok} enviado(s)${fail > 0 ? `, ${fail} falhou(aram)${firstErr ? `: ${firstErr}` : ""}` : ""}` });
+      const statusTxt = `${ok} enviado(s)${fail > 0 ? `, ${fail} falhou(aram)${firstErr ? `: ${firstErr}` : ""}` : ""}`;
+      setPmStatus({ ok: fail === 0, txt: statusTxt });
+      setPmHistorico(h => [{ titulo: pmTitulo.trim() || "ANTICEG", corpo: pmCorpo.trim(), dest: pmDest === "todos" ? "Todas inscritas" : `@${pmJoinerSel?.cog}`, ok: fail === 0, txt: statusTxt, ts: new Date() }, ...h]);
       if (fail === 0) { setPmTitulo(""); setPmCorpo(""); setPmJoinerSel(null); setPmJoinerSearch(""); }
     } catch (e) { setPmStatus({ ok: false, txt: String(e) }); }
     setPmSending(false);
@@ -7479,6 +7482,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             <div style={{ marginTop:24, padding:"12px 16px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
               Envia notificação nativa ao celular/navegador da joiner — mesmo com o site fechado. A joiner precisa ter aceitado a permissão ao fazer login.
             </div>
+
+            {pmHistorico.length > 0 && (
+              <div style={{ marginTop:28 }}>
+                <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.2px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:10 }}>Histórico desta sessão</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {pmHistorico.map((h, i) => (
+                    <div key={i} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${h.ok ? "rgba(186,255,57,.12)" : "rgba(239,68,68,.12)"}`, borderRadius:8, padding:"10px 14px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:4 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)" }}>{h.titulo}</div>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>
+                          {h.ts.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
+                        </div>
+                      </div>
+                      {h.corpo && <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:4 }}>{h.corpo}</div>}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                        <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>→ {h.dest}</div>
+                        <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: h.ok ? "#BAFF39" : "#ef4444" }}>{h.ok ? "✓" : "⚠"} {h.txt}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
