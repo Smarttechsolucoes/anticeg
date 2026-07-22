@@ -9703,79 +9703,87 @@ function DisponiveisTab({ user }) {
         const maxD = new Date(); maxD.setDate(maxD.getDate() + 20);
         const maxVenc = maxD.toISOString().split("T")[0];
         return (
-          <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.72)", backdropFilter:"blur(3px)", display:"flex", alignItems:"flex-end" }}
+          <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"flex-end" }}
             onClick={() => setConfirmando(null)}>
-            <div style={{ background:"var(--bg)", borderRadius:"18px 18px 0 0", padding:"28px 20px 44px", width:"100%", maxHeight:"88vh", overflowY:"auto" }}
+            <div style={{ background:"#111", borderRadius:"20px 20px 0 0", width:"100%", maxHeight:"92vh", overflowY:"auto", boxShadow:"0 -8px 40px rgba(0,0,0,.6)" }}
               onClick={e => e.stopPropagation()}>
-              <div style={{ width:36, height:4, background:"rgba(245,240,232,.15)", borderRadius:2, margin:"0 auto 24px" }} />
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:20 }}>Confirmar claim</div>
 
-              {/* Dados do perfil */}
-              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Seus dados</div>
-              <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", marginBottom:16, display:"flex", flexDirection:"column", gap:6 }}>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", width:44 }}>@</span>
-                  <span style={{ fontSize:13, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{user.cog}</span>
+              {/* Handle */}
+              <div style={{ padding:"16px 20px 0", display:"flex", justifyContent:"center" }}>
+                <div style={{ width:40, height:4, background:"rgba(245,240,232,.12)", borderRadius:2 }} />
+              </div>
+
+              {/* Item destaque */}
+              <div style={{ padding:"20px 20px 0" }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>{item.ceg}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:.5, lineHeight:1.2, marginBottom:8 }}>{item.nome_do_item}</div>
+                {val > 0
+                  ? <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(val)}</div>
+                  : <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)" }}>valor a definir</div>
+                }
+              </div>
+
+              <div style={{ margin:"16px 20px", height:1, background:"rgba(245,240,232,.07)" }} />
+
+              {/* Joiner */}
+              <div style={{ padding:"0 20px", display:"flex", flexDirection:"column", gap:10 }}>
+                <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>conta</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)" }}>@{user.cog}</span>
                 </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", width:44 }}>nome</span>
+                <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>nome</span>
                   <span style={{ fontSize:13, color:"var(--offwhite)" }}>{user.nome_site || user.nome || "—"}</span>
                 </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", width:44 }}>email</span>
-                  <span style={{ fontSize:13, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{user.email || "—"}</span>
+                <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>email</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.6)" }}>{user.email || "—"}</span>
                 </div>
               </div>
 
-              {/* Dados do item */}
-              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Item</div>
-              <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", marginBottom:16 }}>
-                <div style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", color:"var(--lilas)", letterSpacing:1, marginBottom:4 }}>{item.ceg}</div>
-                <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", marginBottom:6 }}>{item.nome_do_item}</div>
-                {val > 0 && (
-                  <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>R${fmtBRL(val)}</div>
+              {/* Avisos */}
+              <div style={{ padding:"0 20px", marginTop:16, display:"flex", flexDirection:"column", gap:8 }}>
+                {(semFrete || semTaxa) && (
+                  <div style={{ background:"rgba(255,180,0,.05)", border:"1px solid rgba(255,180,0,.2)", borderRadius:10, padding:"10px 14px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.8)", lineHeight:1.6 }}>
+                    ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores serão cobrados" : "esse valor será cobrado"} à parte depois.
+                  </div>
+                )}
+                {claimWaLink && (
+                  <a href={claimWaLink} target="_blank" rel="noopener noreferrer"
+                    style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(37,211,102,.05)", border:"1px solid rgba(37,211,102,.2)", borderRadius:10, padding:"10px 14px", textDecoration:"none" }}>
+                    <span style={{ fontSize:18 }}>💬</span>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#25d366" }}>Entrar no grupo da CEG</div>
+                      <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)" }}>toque para abrir o WhatsApp</div>
+                    </div>
+                  </a>
                 )}
               </div>
 
-              {/* Aviso frete/taxa não definidos */}
-              {(semFrete || semTaxa) && (
-                <div style={{ background:"rgba(255,180,0,.06)", border:"1px solid rgba(255,180,0,.25)", borderRadius:10, padding:"12px 14px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.85)", lineHeight:1.6 }}>
-                  ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores serão cobrados" : "esse valor será cobrado"} à parte quando disponível.
-                </div>
-              )}
-
-              {/* Link WhatsApp do grupo */}
-              {claimWaLink && (
-                <a href={claimWaLink} target="_blank" rel="noopener noreferrer"
-                  style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(37,211,102,.07)", border:"1px solid rgba(37,211,102,.25)", borderRadius:10, padding:"12px 14px", marginBottom:16, textDecoration:"none" }}>
-                  <span style={{ fontSize:20 }}>💬</span>
-                  <div>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#25d366", marginBottom:2 }}>Entrar no grupo da CEG</div>
-                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>Toque para abrir o WhatsApp</div>
-                  </div>
-                </a>
-              )}
+              <div style={{ margin:"16px 20px 0", height:1, background:"rgba(245,240,232,.07)" }} />
 
               {/* Vencimento */}
-              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Vencimento do pagamento</div>
-              <div style={{ marginBottom:8 }}>
+              <div style={{ padding:"16px 20px 0" }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:10 }}>Vencimento do pagamento</div>
                 <input type="date" value={claimVenc} min={hoje} max={maxVenc}
                   onChange={e => setClaimVenc(e.target.value)}
-                  style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:13, outline:"none" }} />
+                  style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:10, padding:"12px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:14, outline:"none" }} />
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.25)", marginTop:6 }}>máximo: hoje + 20 dias corridos</div>
               </div>
-              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginBottom:20 }}>máximo: hoje + 20 dias corridos</div>
 
-              {claimErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>{claimErro}</div>}
-
-              <div style={{ display:"flex", gap:10 }}>
-                <button onClick={() => setConfirmando(null)}
-                  style={{ flex:1, background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:10, padding:"13px", fontFamily:"'DM Mono',monospace", fontSize:12, cursor:"pointer" }}>
-                  Cancelar
-                </button>
-                <button onClick={() => darClaim(item)} disabled={claiming === item.id || !claimVenc}
-                  style={{ flex:2, background:"rgba(255,180,0,.12)", border:"1px solid rgba(255,180,0,.4)", color:"#ffb400", borderRadius:10, padding:"13px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor:"pointer", opacity: !claimVenc ? .5 : 1 }}>
-                  {claiming === item.id ? "enviando..." : "✓ Confirmar claim"}
-                </button>
+              {/* Erro + botões */}
+              <div style={{ padding:"16px 20px 36px" }}>
+                {claimErro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", marginBottom:12 }}>{claimErro}</div>}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:10 }}>
+                  <button onClick={() => setConfirmando(null)}
+                    style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:12, padding:"14px", fontFamily:"'DM Mono',monospace", fontSize:12, cursor:"pointer" }}>
+                    Cancelar
+                  </button>
+                  <button onClick={() => darClaim(item)} disabled={claiming === item.id || !claimVenc}
+                    style={{ background: !claimVenc ? "rgba(255,180,0,.05)" : "rgba(255,180,0,.13)", border:`1px solid ${!claimVenc ? "rgba(255,180,0,.15)" : "rgba(255,180,0,.4)"}`, color: !claimVenc ? "rgba(255,180,0,.4)" : "#ffb400", borderRadius:12, padding:"14px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor: !claimVenc ? "default" : "pointer", letterSpacing:.5, transition:"all .15s" }}>
+                    {claiming === item.id ? "enviando..." : "✓ Confirmar claim"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
