@@ -9422,6 +9422,7 @@ function AdminDisponivel({ data }) {
 
 function DisponiveisTab({ user }) {
   const [itens, setItens] = useState(null);
+  const [fotos, setFotos] = useState({});
   const [claiming, setClaiming] = useState(null);
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
@@ -9432,7 +9433,21 @@ function DisponiveisTab({ user }) {
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
       .ilike("nome", "disponivel")
       .order("ceg").order("nome_do_item")
-      .then(({ data }) => setItens(data || []));
+      .then(async ({ data }) => {
+        const lista = data || [];
+        setItens(lista);
+        if (!lista.length) return;
+        const cegs = [...new Set(lista.map(i => i.ceg))];
+        const { data: fotoData } = await supabase.from("item_fotos")
+          .select("ceg, nome_do_item, foto_url, ordem")
+          .in("ceg", cegs).lte("ordem", 0);
+        const mapa = {};
+        (fotoData || []).forEach(f => {
+          const key = `${f.ceg}||${f.nome_do_item}`;
+          if (!mapa[key] || f.ordem < mapa[key].ordem) mapa[key] = f;
+        });
+        setFotos(mapa);
+      });
   }, []);
 
   async function darClaim(item) {
@@ -9485,14 +9500,20 @@ function DisponiveisTab({ user }) {
       {itens !== null && itens.map(item => {
         const val = total(item);
         const isConfirming = confirmando === item.id;
+        const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
         return (
           <div key={item.id} style={{
             background:"var(--card-bg)",
             border:`1px solid ${isConfirming ? "rgba(255,180,0,.4)" : "rgba(245,240,232,.08)"}`,
-            borderRadius:12, padding:"16px", marginBottom:10,
+            borderRadius:12, overflow:"hidden", marginBottom:10,
             transition:"border-color .15s"
           }}>
-            <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            {foto && (
+              <div style={{ width:"100%", aspectRatio:"16/7", overflow:"hidden" }}>
+                <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              </div>
+            )}
+            <div style={{ padding:16, display:"flex", alignItems:"flex-start", gap:12 }}>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"var(--lilas)", letterSpacing:"1px", marginBottom:4 }}>{item.ceg}</div>
                 <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", lineHeight:1.35, marginBottom:4 }}>{item.nome_do_item}</div>
@@ -9527,6 +9548,7 @@ function DisponiveisTab({ user }) {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           </div>
         );
