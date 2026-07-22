@@ -9727,7 +9727,7 @@ function DisponiveisTab({ user }) {
                   <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)" }}>@{user.cog}</span>
                 </div>
                 <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
-                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:40 }}>nome</span>
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", minWidth:56 }}>claim</span>
                   {user.nome_site
                     ? <span style={{ fontSize:13, color:"var(--offwhite)" }}>{user.nome_site}</span>
                     : <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"var(--laranja)" }}>sem nome de claim — configure no perfil</span>
