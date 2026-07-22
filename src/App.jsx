@@ -9520,7 +9520,9 @@ function DisponiveisTab({ user }) {
   const [claiming, setClaiming] = useState(null);
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
-  const [confirmando, setConfirmando] = useState(null);
+  const [confirmando, setConfirmando] = useState(null); // item object
+  const [claimVenc, setClaimVenc] = useState("");
+  const [claimWaLink, setClaimWaLink] = useState(null);
   const [senha, setSenha] = useState("");
   const [liberado, setLiberado] = useState(false);
   const [senhaErro, setSenhaErro] = useState(false);
@@ -9552,10 +9554,12 @@ function DisponiveisTab({ user }) {
     const { error } = await supabase.from("claims").insert([{
       joiner_cog: user.cog,
       joiner_nome: user.nome_site || user.nome || user.cog,
+      joiner_email: user.email || null,
       masterlist_id: item.id,
       ceg: item.ceg,
       nome_do_item: item.nome_do_item,
       valor: Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0),
+      vencimento: claimVenc || null,
       status: "pendente",
     }]);
     if (error) {
@@ -9567,6 +9571,17 @@ function DisponiveisTab({ user }) {
     }
     setClaiming(null);
     setConfirmando(null);
+  }
+
+  function abrirConfirmacao(item) {
+    const hoje = new Date();
+    const max = new Date(hoje);
+    max.setDate(max.getDate() + 20);
+    setClaimVenc(max.toISOString().split("T")[0]);
+    setClaimWaLink(null);
+    setConfirmando(item);
+    supabase.from("ceg_config").select("whatsapp_link").eq("ceg", item.ceg).maybeSingle()
+      .then(({ data }) => { if (data?.whatsapp_link) setClaimWaLink(data.whatsapp_link); });
   }
 
   const total = (item) => Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
@@ -9646,15 +9661,9 @@ function DisponiveisTab({ user }) {
       )}
       {itensFiltrados !== null && itensFiltrados.map(item => {
         const val = total(item);
-        const isConfirming = confirmando === item.id;
         const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
         return (
-          <div key={item.id} style={{
-            background:"var(--card-bg)",
-            border:`1px solid ${isConfirming ? "rgba(255,180,0,.4)" : "rgba(245,240,232,.08)"}`,
-            borderRadius:12, overflow:"hidden", marginBottom:10,
-            transition:"border-color .15s"
-          }}>
+          <div key={item.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden", marginBottom:10 }}>
             {foto && (
               <div style={{ width:"100%", aspectRatio:"16/7", overflow:"hidden" }}>
                 <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
@@ -9674,31 +9683,104 @@ function DisponiveisTab({ user }) {
                 )}
               </div>
               <div style={{ flexShrink:0 }}>
-                {!isConfirming ? (
-                  <button onClick={() => setConfirmando(item.id)}
-                    style={{ background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.35)", color:"#ffb400", borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
-                    Dar claim →
-                  </button>
-                ) : (
-                  <div style={{ display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
-                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)", textAlign:"right" }}>Confirma o claim?</div>
-                    <div style={{ display:"flex", gap:6 }}>
-                      <button onClick={() => setConfirmando(null)}
-                        style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                        ✕
-                      </button>
-                      <button onClick={() => darClaim(item)} disabled={claiming === item.id}
-                        style={{ background:"rgba(255,180,0,.15)", border:"1px solid rgba(255,180,0,.5)", color:"#ffb400", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
-                        {claiming === item.id ? "..." : "✓ Sim"}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <button onClick={() => abrirConfirmacao(item)}
+                  style={{ background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.35)", color:"#ffb400", borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+                  Dar claim →
+                </button>
               </div>
             </div>
           </div>
         );
       })}
+
+      {/* Modal de confirmação de claim */}
+      {confirmando && (() => {
+        const item = confirmando;
+        const val = total(item);
+        const semFrete = !Number(item.frete_inter);
+        const semTaxa  = !Number(item.taxa_rf);
+        const hoje = new Date().toISOString().split("T")[0];
+        const maxD = new Date(); maxD.setDate(maxD.getDate() + 20);
+        const maxVenc = maxD.toISOString().split("T")[0];
+        return (
+          <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.72)", backdropFilter:"blur(3px)", display:"flex", alignItems:"flex-end" }}
+            onClick={() => setConfirmando(null)}>
+            <div style={{ background:"var(--bg)", borderRadius:"18px 18px 0 0", padding:"28px 20px 44px", width:"100%", maxHeight:"88vh", overflowY:"auto" }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ width:36, height:4, background:"rgba(245,240,232,.15)", borderRadius:2, margin:"0 auto 24px" }} />
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:20 }}>Confirmar claim</div>
+
+              {/* Dados do perfil */}
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Seus dados</div>
+              <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", marginBottom:16, display:"flex", flexDirection:"column", gap:6 }}>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", width:44 }}>@</span>
+                  <span style={{ fontSize:13, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{user.cog}</span>
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", width:44 }}>nome</span>
+                  <span style={{ fontSize:13, color:"var(--offwhite)" }}>{user.nome_site || user.nome || "—"}</span>
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", width:44 }}>email</span>
+                  <span style={{ fontSize:13, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{user.email || "—"}</span>
+                </div>
+              </div>
+
+              {/* Dados do item */}
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Item</div>
+              <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", marginBottom:16 }}>
+                <div style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", color:"var(--lilas)", letterSpacing:1, marginBottom:4 }}>{item.ceg}</div>
+                <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", marginBottom:6 }}>{item.nome_do_item}</div>
+                {val > 0 && (
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>R${fmtBRL(val)}</div>
+                )}
+              </div>
+
+              {/* Aviso frete/taxa não definidos */}
+              {(semFrete || semTaxa) && (
+                <div style={{ background:"rgba(255,180,0,.06)", border:"1px solid rgba(255,180,0,.25)", borderRadius:10, padding:"12px 14px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.85)", lineHeight:1.6 }}>
+                  ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores" : "esse valor"} será cobrado à parte quando disponível.
+                </div>
+              )}
+
+              {/* Link WhatsApp do grupo */}
+              {claimWaLink && (
+                <a href={claimWaLink} target="_blank" rel="noopener noreferrer"
+                  style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(37,211,102,.07)", border:"1px solid rgba(37,211,102,.25)", borderRadius:10, padding:"12px 14px", marginBottom:16, textDecoration:"none" }}>
+                  <span style={{ fontSize:20 }}>💬</span>
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#25d366", marginBottom:2 }}>Entrar no grupo da CEG</div>
+                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>Toque para abrir o WhatsApp</div>
+                  </div>
+                </a>
+              )}
+
+              {/* Vencimento */}
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Vencimento do pagamento</div>
+              <div style={{ marginBottom:8 }}>
+                <input type="date" value={claimVenc} min={hoje} max={maxVenc}
+                  onChange={e => setClaimVenc(e.target.value)}
+                  style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:13, outline:"none" }} />
+              </div>
+              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginBottom:20 }}>máximo: hoje + 20 dias corridos</div>
+
+              {claimErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>{claimErro}</div>}
+
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={() => setConfirmando(null)}
+                  style={{ flex:1, background:"none", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:10, padding:"13px", fontFamily:"'DM Mono',monospace", fontSize:12, cursor:"pointer" }}>
+                  Cancelar
+                </button>
+                <button onClick={() => darClaim(item)} disabled={claiming === item.id || !claimVenc}
+                  style={{ flex:2, background:"rgba(255,180,0,.12)", border:"1px solid rgba(255,180,0,.4)", color:"#ffb400", borderRadius:10, padding:"13px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor:"pointer", opacity: !claimVenc ? .5 : 1 }}>
+                  {claiming === item.id ? "enviando..." : "✓ Confirmar claim"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
