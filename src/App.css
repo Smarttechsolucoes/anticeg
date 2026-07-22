@@ -232,6 +232,19 @@ button, a { touch-action: manipulation; }
 html, body { height: 100%; overflow-x: hidden; }
 #root { min-height: 100%; display: flex; flex-direction: column; overflow-x: hidden; }
 
+/* ── Android / mobile global ────────────────────────────── */
+/* Remove flash azul/cinza ao tocar em elementos no Android */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Impede pull-to-refresh acidental no Android Chrome */
+body { overscroll-behavior-y: contain; }
+
+/* Impede Android de aumentar fonte em orientação landscape */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Usa dvh em vez de vh para compensar a barra de endereço do Android Chrome */
+.lp { min-height: 100dvh; }
+
 body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono', monospace; }
 
 .topbar { display:flex; align-items:center; justify-content:space-between; padding:0 32px; height:52px; background:#080808; border-bottom:1px solid #1a1a1a; position:sticky; top:0; z-index:100; }
