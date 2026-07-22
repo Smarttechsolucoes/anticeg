@@ -6400,7 +6400,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     if (adminMainTab === "disponiveis" && !loaded.has("disponiveis")) {
       loaded.add("disponiveis");
       const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
-      supabase.from("masterlist").select(sel).eq("cog", "disponivel")
+      supabase.from("masterlist").select(sel).ilike("nome", "disponivel")
         .then(({ data }) => { if (data) setDisponiveisData(data); });
     }
   }, [adminMainTab]);
@@ -9430,7 +9430,7 @@ function DisponiveisTab({ user }) {
   useEffect(() => {
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
-      .eq("cog", "disponivel").neq("status", "Vendido")
+      .ilike("nome", "disponivel")
       .order("ceg").order("nome_do_item")
       .then(({ data }) => setItens(data || []));
   }, []);
@@ -9438,8 +9438,8 @@ function DisponiveisTab({ user }) {
   async function darClaim(item) {
     setClaiming(item.id); setClaimErro(null);
     const { error } = await supabase.from("masterlist")
-      .update({ cog: user.cog, status: null })
-      .eq("id", item.id).eq("cog", "disponivel");
+      .update({ cog: user.cog, nome: user.nome || user.cog })
+      .eq("id", item.id).ilike("nome", "disponivel");
     if (error) {
       setClaimErro("Erro ao dar claim. Tente novamente.");
     } else {
