@@ -267,7 +267,7 @@ const chipMap = {
   "Chegou Aqui":     ["chip-aqui",      "ANTIGOM"],
   "Envio Liberado":  ["chip-nacional",  "Envio Liberado"],
   "Enviado Nacional":["chip-enviado",   "Finalizado"],
-  "Disponível":      ["chip-loja-disp", "Disponível"],
+  "Disponível":      ["chip-loja-disp", "ANTI-LOJA"],
   "Vendido":         ["chip-loja-vend", "Vendido"],
 };
 
