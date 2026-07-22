@@ -9363,6 +9363,7 @@ function AdminPagamentos({ data, joiners, subtab }) {
 
 function AdminDisponivel({ data }) {
   const [itens, setItens] = useState(data);
+  const [filtroCeg, setFiltroCeg] = useState(null);
 
   async function publicar(id) {
     await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", id);
@@ -9374,8 +9375,10 @@ function AdminDisponivel({ data }) {
     setItens(prev => prev.map(i => i.id === id ? { ...i, status: novoStatus } : i));
   }
 
-  const publicados = itens.filter(i => i.status === "Disponível");
-  const naoPublicados = itens.filter(i => i.status !== "Disponível");
+  const cegs = [...new Set(itens.map(i => i.ceg))].sort();
+  const itensFiltrados = filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens;
+  const publicados = itensFiltrados.filter(i => i.status === "Disponível");
+  const naoPublicados = itensFiltrados.filter(i => i.status !== "Disponível");
 
   const renderItem = (item) => (
     <div key={item.id} style={{
@@ -9426,7 +9429,7 @@ function AdminDisponivel({ data }) {
 
   return (
     <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:cegs.length > 1 ? 10 : 16 }}>
         <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
           {publicados.length} publicado{publicados.length !== 1 ? "s" : ""} · {naoPublicados.length} oculto{naoPublicados.length !== 1 ? "s" : ""}
         </div>
@@ -9436,6 +9439,18 @@ function AdminDisponivel({ data }) {
           </button>
         )}
       </div>
+      {cegs.length > 1 && (
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+          <button onClick={() => setFiltroCeg(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(255,92,26,.12)" : "transparent", color: !filtroCeg ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: !filtroCeg ? 700 : 400 }}>
+            Todas
+          </button>
+          {cegs.map(ceg => (
+            <button key={ceg} onClick={() => setFiltroCeg(ceg === filtroCeg ? null : ceg)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: filtroCeg === ceg ? "1px solid var(--lilas)" : "1px solid rgba(245,240,232,.12)", background: filtroCeg === ceg ? "rgba(201,168,240,.12)" : "transparent", color: filtroCeg === ceg ? "var(--lilas)" : "rgba(245,240,232,.4)", fontWeight: filtroCeg === ceg ? 700 : 400 }}>
+              {ceg}
+            </button>
+          ))}
+        </div>
+      )}
       {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item com nome "disponivel" na masterlist.</div>}
       {publicados.length > 0 && (
         <>
