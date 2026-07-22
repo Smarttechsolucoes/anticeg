@@ -57,7 +57,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     }
     const handle = input.startsWith("@") ? input.slice(1) : input;
     const { data } = await supabase.from("joiners").select("*")
-      .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`)
+      .or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`)
       .single();
     return data;
   }
