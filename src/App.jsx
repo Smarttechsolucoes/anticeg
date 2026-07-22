@@ -12,7 +12,7 @@ import badgeDwaekki  from "./assets/badges/dwaekki.jpg";
 import badgeQuokka   from "./assets/badges/quokka.jpg";
 import badgeLeebit   from "./assets/badges/leebit.png";
 
-const VAPID_PUBLIC_KEY = "BIDAu0P6XhcmaceDluZbCfVpeow-0Wia3wNLQ4fuCl7RJg4qLUXvTvHKXnyIcS6MzVlEZw_CYbHCCelGD11n4RE";
+const VAPID_PUBLIC_KEY = "BMjVVcd389vauJzDpbAR5obTCX2UZtmRnVnsDJoE9T0Bc4Biyb7AGWSyNxyvxTySrr6HpXBf5yLCPWHGCOQx4lY";
 
 async function registrarPush(joinerCog) {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -32,7 +32,7 @@ async function registrarPush(joinerCog) {
       p256dh: subJson.keys.p256dh,
       auth: subJson.keys.auth,
     }, { onConflict: "endpoint" });
-  } catch (_) {}
+  } catch (e) { console.error("[push] registrarPush erro:", e); }
 }
 
 async function enviarPushJoiner(joinerCog, title, body, url) {
