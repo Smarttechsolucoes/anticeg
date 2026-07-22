@@ -9420,6 +9420,121 @@ function AdminDisponivel({ data }) {
   );
 }
 
+function DisponiveisTab({ user }) {
+  const [itens, setItens] = useState(null);
+  const [claiming, setClaiming] = useState(null);
+  const [claimOk, setClaimOk] = useState(null);
+  const [claimErro, setClaimErro] = useState(null);
+  const [confirmando, setConfirmando] = useState(null);
+
+  useEffect(() => {
+    supabase.from("masterlist")
+      .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
+      .eq("cog", "disponivel").eq("status", "Disponível")
+      .order("ceg").order("nome_do_item")
+      .then(({ data }) => setItens(data || []));
+  }, []);
+
+  async function darClaim(item) {
+    setClaiming(item.id); setClaimErro(null);
+    const { error } = await supabase.from("masterlist")
+      .update({ cog: user.cog, nome: user.nome_site || user.nome || user.cog, status: null })
+      .eq("id", item.id).eq("cog", "disponivel");
+    if (error) {
+      setClaimErro("Erro ao dar claim. Tente novamente.");
+    } else {
+      setItens(prev => prev.filter(i => i.id !== item.id));
+      setClaimOk(item);
+      setTimeout(() => setClaimOk(null), 4000);
+    }
+    setClaiming(null);
+    setConfirmando(null);
+  }
+
+  const total = (item) => Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
+
+  return (
+    <div className="tab-content" style={{ paddingBottom: 100 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>Disponíveis</h2>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
+          Itens disponíveis para claim — transferidos direto para sua lista
+        </div>
+      </div>
+
+      {claimOk && (
+        <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--verde)" }}>
+          ✓ Claim dado! <strong>{claimOk.nome_do_item}</strong> agora está na sua lista.
+        </div>
+      )}
+      {claimErro && (
+        <div style={{ background:"rgba(255,90,31,.08)", border:"1px solid rgba(255,90,31,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--laranja)" }}>
+          {claimErro}
+        </div>
+      )}
+
+      {itens === null && (
+        <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"32px 0", textAlign:"center" }}>carregando...</div>
+      )}
+      {itens !== null && itens.length === 0 && (
+        <div style={{ textAlign:"center", padding:"48px 0" }}>
+          <div style={{ fontSize:32, marginBottom:12 }}>◱</div>
+          <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum item disponível no momento.</div>
+        </div>
+      )}
+      {itens !== null && itens.map(item => {
+        const val = total(item);
+        const isConfirming = confirmando === item.id;
+        return (
+          <div key={item.id} style={{
+            background:"var(--card-bg)",
+            border:`1px solid ${isConfirming ? "rgba(255,180,0,.4)" : "rgba(245,240,232,.08)"}`,
+            borderRadius:12, padding:"16px", marginBottom:10,
+            transition:"border-color .15s"
+          }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"var(--lilas)", letterSpacing:"1px", marginBottom:4 }}>{item.ceg}</div>
+                <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", lineHeight:1.35, marginBottom:4 }}>{item.nome_do_item}</div>
+                {item.info_adicionais && (
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:6, lineHeight:1.5 }}>{item.info_adicionais}</div>
+                )}
+                {val > 0 && (
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>
+                    R${fmtBRL(val)}
+                  </div>
+                )}
+              </div>
+              <div style={{ flexShrink:0 }}>
+                {!isConfirming ? (
+                  <button onClick={() => setConfirmando(item.id)}
+                    style={{ background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.35)", color:"#ffb400", borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+                    Dar claim →
+                  </button>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
+                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)", textAlign:"right" }}>Confirma o claim?</div>
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={() => setConfirmando(null)}
+                        style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                        ✕
+                      </button>
+                      <button onClick={() => darClaim(item)} disabled={claiming === item.id}
+                        style={{ background:"rgba(255,180,0,.15)", border:"1px solid rgba(255,180,0,.5)", color:"#ffb400", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
+                        {claiming === item.id ? "..." : "✓ Sim"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdminBlocklist({ data, joiners, onUpdate }) {
   const pendByJoiner = {};
   data.filter(item => (item.nome || "").toLowerCase() !== "disponivel" && item.cog !== "disponivel").forEach(item => {
@@ -11300,6 +11415,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     { id:"calendario", icon:"◫", label:"Datas" },
     ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
     ...(!isGuest ? [{ id:"envio",  icon:"▢", label:"Envio" }] : []),
+    ...(!isGuest ? [{ id:"disponiveis", icon:"◱", label:"Loja" }] : []),
     { id:"mercari",    icon:"🎌", label:"Mercari" },
     { id:"regras",     icon:"☆", label:"Regras" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
@@ -11427,7 +11543,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -11882,6 +11998,7 @@ export default function App() {
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
       {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
+      {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
       {tab === "mercari" && <MercariTab />}
       {tab === "regras" && <RegrasTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
