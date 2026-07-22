@@ -6514,8 +6514,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   return (
     <div className="admin-wrap">
       {isDemo && (
-        <div style={{ background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.35)", borderRadius:8, padding:"10px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", letterSpacing:".04em" }}>
-          ⚠ MODO DEMO — dados fictícios para demonstração · nenhum dado real é exibido
+        <div style={{ background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.35)", borderRadius:8, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--laranja)", letterSpacing:".04em", lineHeight:1.7 }}>
+          👁 MODO DEMONSTRAÇÃO — painel completo com dados fictícios · masterlist exibe itens reais de exemplo · nenhum dado de joiner real é exposto · interações desativadas
         </div>
       )}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
@@ -7407,7 +7407,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "push_mobile" && owner && (() => {
         const inp = { width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" };
         const pill = (val, label) => (
-          <button key={val} onClick={() => { setPmDest(val); setPmJoinerSel(null); setPmJoinerSearch(""); if (val === "especifico" && !pushJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setPushJoiners(data || [])); }}
+          <button key={val} onClick={() => { if (isDemo) return; setPmDest(val); setPmJoinerSel(null); setPmJoinerSearch(""); if (val === "especifico" && !pushJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setPushJoiners(data || [])); }}
             style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"5px 14px", borderRadius:20, cursor:"pointer", border: pmDest === val ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: pmDest === val ? "rgba(255,92,26,.12)" : "transparent", color: pmDest === val ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: pmDest === val ? 700 : 400 }}>
             {label}
           </button>
