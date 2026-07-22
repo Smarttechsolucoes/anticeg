@@ -9364,6 +9364,24 @@ function AdminPagamentos({ data, joiners, subtab }) {
 function AdminDisponivel({ data }) {
   const [itens, setItens] = useState(data);
   const [filtroCeg, setFiltroCeg] = useState(null);
+  const [claims, setClaims] = useState([]);
+
+  useEffect(() => {
+    supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
+      .then(({ data }) => setClaims(data || []));
+  }, []);
+
+  async function aprovarClaim(claim) {
+    await supabase.from("masterlist").update({ cog: claim.joiner_cog, nome: claim.joiner_nome }).eq("id", claim.masterlist_id);
+    await supabase.from("claims").update({ status: "aprovado" }).eq("id", claim.id);
+    setClaims(prev => prev.filter(c => c.id !== claim.id));
+    setItens(prev => prev.filter(i => i.id !== claim.masterlist_id));
+  }
+
+  async function rejeitarClaim(claim) {
+    await supabase.from("claims").update({ status: "rejeitado" }).eq("id", claim.id);
+    setClaims(prev => prev.filter(c => c.id !== claim.id));
+  }
 
   async function publicar(id) {
     await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", id);
@@ -9451,7 +9469,30 @@ function AdminDisponivel({ data }) {
           ))}
         </div>
       )}
-      {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item com nome "disponivel" na masterlist.</div>}
+      {claims.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>
+            Claims pendentes ({claims.length})
+          </div>
+          {claims.map(c => (
+            <div key={c.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:10, padding:"14px 16px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", color:"var(--lilas)", letterSpacing:1 }}>{c.ceg}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>{c.nome_do_item}</div>
+                <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)" }}>
+                  @{c.joiner_cog} · {c.joiner_nome}
+                  {c.valor > 0 && <span style={{ color:"var(--laranja)", marginLeft:8 }}>R${fmtBRL(c.valor)}</span>}
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                <button onClick={() => rejeitarClaim(c)} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✕</button>
+                <button onClick={() => aprovarClaim(c)} style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"var(--verde)", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>✓ Aprovar</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {itens.length === 0 && claims.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item com nome "disponivel" na masterlist.</div>}
       {publicados.length > 0 && (
         <>
           <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ffb400", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Visíveis para joiners</div>
@@ -9476,6 +9517,9 @@ function DisponiveisTab({ user }) {
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
   const [confirmando, setConfirmando] = useState(null);
+  const [senha, setSenha] = useState("");
+  const [liberado, setLiberado] = useState(false);
+  const [senhaErro, setSenhaErro] = useState(false);
 
   useEffect(() => {
     supabase.from("masterlist")
@@ -9501,11 +9545,17 @@ function DisponiveisTab({ user }) {
 
   async function darClaim(item) {
     setClaiming(item.id); setClaimErro(null);
-    const { error } = await supabase.from("masterlist")
-      .update({ cog: user.cog, nome: user.nome || user.cog })
-      .eq("id", item.id).ilike("nome", "disponivel");
+    const { error } = await supabase.from("claims").insert([{
+      joiner_cog: user.cog,
+      joiner_nome: user.nome_site || user.nome || user.cog,
+      masterlist_id: item.id,
+      ceg: item.ceg,
+      nome_do_item: item.nome_do_item,
+      valor: Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0),
+      status: "pendente",
+    }]);
     if (error) {
-      setClaimErro("Erro ao dar claim. Tente novamente.");
+      setClaimErro("Erro ao enviar claim. Tente novamente.");
     } else {
       setItens(prev => prev.filter(i => i.id !== item.id));
       setClaimOk(item);
@@ -9518,6 +9568,32 @@ function DisponiveisTab({ user }) {
   const total = (item) => Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
   const cegs = itens ? [...new Set(itens.map(i => i.ceg))].sort() : [];
   const itensFiltrados = itens ? (filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens) : null;
+
+  if (!liberado) return (
+    <div className="main" style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:320 }}>
+      <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:14, padding:"32px 28px", maxWidth:320, width:"100%", textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>🔒</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:6 }}>Loja</div>
+        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.38)", marginBottom:20 }}>Digite a senha para acessar</div>
+        <input
+          type="password"
+          value={senha}
+          onChange={e => { setSenha(e.target.value); setSenhaErro(false); }}
+          onKeyDown={e => { if (e.key === "Enter") { if (senha === "2mins2") setLiberado(true); else setSenhaErro(true); } }}
+          placeholder="senha"
+          style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border: senhaErro ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:13, outline:"none", marginBottom:10 }}
+          autoFocus
+        />
+        {senhaErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>senha incorreta</div>}
+        <button
+          onClick={() => { if (senha === "2mins2") setLiberado(true); else setSenhaErro(true); }}
+          style={{ width:"100%", background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", color:"var(--lilas)", borderRadius:8, padding:"10px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 }}
+        >
+          ENTRAR →
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="main" style={{ paddingBottom: 100 }}>
@@ -9546,7 +9622,7 @@ function DisponiveisTab({ user }) {
 
       {claimOk && (
         <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--verde)" }}>
-          ✓ Claim dado! <strong>{claimOk.nome_do_item}</strong> agora está na sua lista.
+          ✓ Pedido enviado! <strong>{claimOk.nome_do_item}</strong> aguarda aprovação da admin.
         </div>
       )}
       {claimErro && (
