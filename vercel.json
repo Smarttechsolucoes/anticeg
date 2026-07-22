@@ -11,6 +11,7 @@
     { "source": "/admin",                "destination": "/index.html" },
     { "source": "/admin/:sub",           "destination": "/index.html" },
     { "source": "/this-and-that",         "destination": "/index.html" },
-    { "source": "/mercari",              "destination": "/index.html" }
+    { "source": "/mercari",              "destination": "/index.html" },
+    { "source": "/disponiveis",          "destination": "/index.html" }
   ]
 }
