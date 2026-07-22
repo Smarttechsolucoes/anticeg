@@ -7025,6 +7025,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         return (
           <div>
             <PixBar />
+            <AvisoMasterlistBlock />
             <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:2 }}>
               {subTabs.map(t => (
                 <button key={t.id} style={tabSt(adminPagSubTab === t.id)} onClick={() => setAdminPagSubTab(t.id)}>
