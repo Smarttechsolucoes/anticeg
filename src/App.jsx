@@ -11321,7 +11321,7 @@ export default function App() {
     setItens(itensData);
     setPage("portal");
     if (!u.guest && !u.pre_cadastro) {
-      if (!localStorage.getItem("anticeg_tutorial_v1")) setShowTutorial(true);
+      localStorage.setItem("anticeg_tutorial_v1", "1");
       if (!u.confirmado) setShowPerfilModal(true);
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
