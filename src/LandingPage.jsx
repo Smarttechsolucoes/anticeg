@@ -77,13 +77,20 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       return;
     }
 
+    if (joiner.cog === "ADMMODE") {
+      setPendingJoiner({ ...joiner, _senha_demo: "anticeg@demo" });
+      setLoading(false);
+      return;
+    }
+
     await entrarCom(joiner);
     setLoading(false);
   }
 
   async function handleSenha() {
     setLoading(true); setError("");
-    if (senha.trim() !== pendingJoiner.senha) {
+    const senhaCorreta = pendingJoiner._senha_demo || pendingJoiner.senha;
+    if (senha.trim() !== senhaCorreta) {
       setError("Senha incorreta."); setLoading(false); return;
     }
     await entrarCom(pendingJoiner);
