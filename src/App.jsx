@@ -17,7 +17,14 @@ async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
   const { error } = await supabase.functions.invoke("send-email", {
     body: { to_email: toEmail, to_name: toNome || "joiner", assunto, corpo },
   });
-  if (error) throw new Error(error.message ?? String(error));
+  if (error) {
+    let detail = error.message ?? String(error);
+    try {
+      const ctx = await error.context?.json();
+      if (ctx?.error) detail = ctx.error;
+    } catch (_) {}
+    throw new Error(detail);
+  }
 }
 
 function buildEmailHTML(_toNome, contentRows) {
@@ -118,7 +125,8 @@ function buildEmailConfirmacaoPagamento(toNome, recibo) {
     ${recibo.comprovante_url ? `
     <div style="margin-bottom:20px">
       <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Comprovante enviado</div>
-      <img src="${recibo.comprovante_url}" alt="comprovante" style="max-width:100%;border-radius:6px;border:1px solid rgba(245,240,232,0.1);display:block" />
+      <img src="${recibo.comprovante_url}" alt="comprovante" style="max-width:100%;border-radius:6px;border:1px solid rgba(245,240,232,0.1);display:block;margin-bottom:8px" />
+      <a href="${recibo.comprovante_url}" target="_blank" style="display:inline-block;font-size:10px;font-family:'Courier New',monospace;color:#C9A8F0;text-decoration:none;letter-spacing:1px">↗ abrir comprovante</a>
     </div>` : ""}
     ${recibo.obs && recibo.obs.startsWith("Código da transação:") ? `
     <div style="background:#0d0d0d;border:1px solid rgba(245,240,232,0.08);border-radius:6px;padding:12px 16px;margin-bottom:20px">
@@ -628,6 +636,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   }, [capaFotoAtual?.id]);
 
   const owner = isOwner(user);
+  const adminUser = isAdminUser(user);
 
   async function salvarCapaCfg(id, zoom, posY) {
     await supabase.from("item_fotos").update({ nome_do_item: JSON.stringify({ zoom, posY }) }).eq("id", id);
@@ -765,10 +774,10 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       </div>
 
       {/* Galeria de fotos */}
-      {viewMode === "galeria" && (fotos.length > 0 || owner) && (
+      {viewMode === "galeria" && (fotos.length > 0 || adminUser) && (
         <div style={{ marginBottom:28 }}>
-          {/* Seção de capa (só visível pro owner) */}
-          {owner && (() => {
+          {/* Seção de capa (visível pro owner e staffs) */}
+          {adminUser && (() => {
             const capaFoto = fotos.find(f => f.ordem < 0);
             return (
               <div style={{ marginBottom:24, padding:"16px 20px", borderRadius:10, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)" }}>
@@ -847,7 +856,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", marginTop:4 }}>{joinersDoItem.length} joiner{joinersDoItem.length > 1 ? "s" : ""}</div>
                         )}
                       </div>
-                      {owner && (
+                      {adminUser && (
                         <>
                           <button onClick={e => { e.stopPropagation(); removerFoto(f.id); }} style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.7)", border:"none", borderRadius:4, color:"rgba(255,107,107,.8)", fontSize:14, width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
                           <button onClick={e => { e.stopPropagation(); usarComoCapa(f.id); }} title="Usar como capa" style={{ position:"absolute", top:6, left:6, background:"rgba(0,0,0,.7)", border:"1px solid transparent", borderRadius:4, color:"rgba(245,240,232,.5)", fontSize:12, width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>★</button>
@@ -857,12 +866,12 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
                   );
                 })}
               </div>
-            ) : owner ? (
+            ) : adminUser ? (
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.25)", marginBottom:12 }}>nenhuma foto na galeria ainda</div>
             ) : null;
           })()}
 
-          {owner && (
+          {adminUser && (
             <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6, border:"2px dashed rgba(201,168,240,.25)", borderRadius:10, padding:"20px", cursor:"pointer", background:"rgba(201,168,240,.03)" }}>
               <span style={{ fontSize:18 }}>+</span>
               <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0" }}>{uploading ? "enviando..." : "adicionar fotos à galeria"}</span>

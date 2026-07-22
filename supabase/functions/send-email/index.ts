@@ -18,41 +18,41 @@ serve(async (req) => {
       });
     }
 
-    const BREVO_API_KEY     = Deno.env.get("BREVO_API_KEY");
-    const BREVO_SENDER_EMAIL = Deno.env.get("BREVO_SENDER_EMAIL") ?? "";
-    const BREVO_SENDER_NAME  = Deno.env.get("BREVO_SENDER_NAME")  ?? "ANTICEG";
+    const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
+    const SENDER_EMAIL     = Deno.env.get("SENDER_EMAIL") ?? "";
+    const SENDER_NAME      = Deno.env.get("SENDER_NAME") ?? "ANTICEG";
 
-    if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
-      return new Response(JSON.stringify({ error: "BREVO_API_KEY ou BREVO_SENDER_EMAIL não configurado" }), {
+    if (!SENDGRID_API_KEY || !SENDER_EMAIL) {
+      return new Response(JSON.stringify({ error: "SENDGRID_API_KEY ou SENDER_EMAIL não configurado" }), {
         status: 500,
         headers: { ...CORS, "Content-Type": "application/json" },
       });
     }
 
-    const r = await fetch("https://api.brevo.com/v3/smtp/email", {
+    const r = await fetch("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
       headers: {
-        "api-key":      BREVO_API_KEY,
+        "Authorization": `Bearer ${SENDGRID_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        sender:      { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
-        to:          [{ email: to_email, name: to_name || "joiner" }],
-        subject:     assunto,
-        htmlContent: corpo,
+        personalizations: [{ to: [{ email: to_email, name: to_name || "joiner" }] }],
+        from: { email: SENDER_EMAIL, name: SENDER_NAME },
+        subject: assunto,
+        content: [{ type: "text/html", value: corpo }],
       }),
     });
 
-    const data = await r.json().catch(() => ({}));
-
     if (!r.ok) {
-      return new Response(JSON.stringify({ error: data?.message ?? `Brevo ${r.status}` }), {
+      const data = await r.json().catch(() => ({}));
+      const msg = data?.errors?.[0]?.message ?? `SendGrid ${r.status}`;
+      return new Response(JSON.stringify({ error: msg }), {
         status: r.status,
         headers: { ...CORS, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, messageId: data.messageId }), {
+    return new Response(JSON.stringify({ ok: true }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
 
