@@ -3202,7 +3202,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
         await supabase.from("joiners").update({ foto_perfil: cacheBustedUrl }).eq("cog", user.cog);
         const updatedUser = { ...user, foto_perfil: cacheBustedUrl };
-        localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
+        localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
         onUpdate(updatedUser);
         setFotoUrl(cacheBustedUrl);
         setFotoLoading(false);
@@ -3232,7 +3232,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     }
 
     const updatedUser = { ...user, ...updates };
-    localStorage.setItem("anticeg_user", JSON.stringify(updatedUser));
+    localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
     onUpdate(updatedUser);
     setSuccess("Perfil atualizado com sucesso!");
     setLoading(false);
@@ -9440,7 +9440,7 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
       }]);
     }
     const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: twitterNovo, email: emailNovo, confirmado: true };
-    localStorage.setItem("anticeg_user", JSON.stringify(updated));
+    localStorage.setItem("anticeg_user_v2", JSON.stringify(updated));
     onSave(updated);
     setSaving(false);
   }
@@ -11322,19 +11322,19 @@ export default function App() {
   const [user, setUser] = useState(() => {
     try {
       if (localStorage.getItem("anticeg_session_v") !== SESSION_VERSION) {
-        localStorage.removeItem("anticeg_user");
-        localStorage.removeItem("anticeg_session_at");
+        localStorage.removeItem("anticeg_user_v2");
+        localStorage.removeItem("anticeg_session_at_v2");
         localStorage.setItem("anticeg_session_v", SESSION_VERSION);
         return null;
       }
-      const sessionAt = Number(localStorage.getItem("anticeg_session_at") || 0);
+      const sessionAt = Number(localStorage.getItem("anticeg_session_at_v2") || 0);
       const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
       if (sessionAt && Date.now() - sessionAt > SEVEN_DAYS) {
-        localStorage.removeItem("anticeg_user");
-        localStorage.removeItem("anticeg_session_at");
+        localStorage.removeItem("anticeg_user_v2");
+        localStorage.removeItem("anticeg_session_at_v2");
         return null;
       }
-      return JSON.parse(localStorage.getItem("anticeg_user"));
+      return JSON.parse(localStorage.getItem("anticeg_user_v2"));
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
@@ -11404,12 +11404,12 @@ export default function App() {
     supabase.from("cal_eventos").select("*").order("data")
       .then(({ data }) => { if (data) setCalEventos(data); });
     // Atualiza dados do joiner em cache (foto, nome, etc.)
-    const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user")); } catch { return null; } })();
+    const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2")); } catch { return null; } })();
     if (cached?.cog && !cached?.guest) {
       supabase.from("joiners").select("*").eq("cog", cached.cog).single()
         .then(({ data }) => {
           if (data) {
-            localStorage.setItem("anticeg_user", JSON.stringify(data));
+            localStorage.setItem("anticeg_user_v2", JSON.stringify(data));
             setUser(data);
           }
         });
@@ -11473,8 +11473,8 @@ export default function App() {
   }, []);
 
   async function handleLogin(u, itensData) {
-    localStorage.setItem("anticeg_user", JSON.stringify(u));
-    localStorage.setItem("anticeg_session_at", String(Date.now()));
+    localStorage.setItem("anticeg_user_v2", JSON.stringify(u));
+    localStorage.setItem("anticeg_session_at_v2", String(Date.now()));
     setUser(u);
     setItens(itensData);
     setPage("portal");
@@ -11506,7 +11506,7 @@ export default function App() {
   }
 
   function handleLogout() {
-    localStorage.removeItem("anticeg_user");
+    localStorage.removeItem("anticeg_user_v2");
     setUser(null);
     setItens([]);
     setTab("masterlist");
@@ -11680,7 +11680,7 @@ export default function App() {
       {showPerfilModal && !user.guest && (
         <ProfileConfirmModal
           user={user}
-          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_user", JSON.stringify(updated)); }}
+          onSave={updated => { setUser(updated); setShowPerfilModal(false); localStorage.setItem("anticeg_user_v2", JSON.stringify(updated)); }}
           onSkip={() => setShowPerfilModal(false)}
         />
       )}
