@@ -9549,7 +9549,6 @@ function DisponiveisTab({ user }) {
                 )}
               </div>
             </div>
-            </div>
           </div>
         );
       })}
