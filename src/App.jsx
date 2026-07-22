@@ -11360,6 +11360,8 @@ export default function App() {
   const [adminPinStored, setAdminPinStored] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showPushBanner, setShowPushBanner] = useState(false);
+  const [showA2HS, setShowA2HS] = useState(false);
+  const [a2hsPrompt, setA2hsPrompt] = useState(null);
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
   const [pendingReportIds, setPendingReportIds] = useState(new Set());
@@ -11414,6 +11416,12 @@ export default function App() {
           }
         });
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setA2hsPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   function changeTab(newTab) {
@@ -11485,6 +11493,11 @@ export default function App() {
         setShowPushBanner(true);
       } else if (Notification.permission === "granted" && !localStorage.getItem("anticeg_push_asked")) {
         registrarPush(u.cog);
+      }
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile && !isStandalone && !localStorage.getItem("anticeg_a2hs_asked")) {
+        setTimeout(() => setShowA2HS(true), 2000);
       }
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
@@ -11611,6 +11624,41 @@ export default function App() {
           </div>
         </div>
       )}
+      {showA2HS && (() => {
+        const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
+        const dismiss = () => { localStorage.setItem("anticeg_a2hs_asked","1"); setShowA2HS(false); };
+        return (
+          <div style={{ position:"fixed", inset:0, zIndex:8900, display:"flex", alignItems:"flex-end", background:"rgba(0,0,0,.6)" }} onClick={dismiss}>
+            <div style={{ width:"100%", background:"#1a1a1a", borderRadius:"20px 20px 0 0", padding:"24px 20px 32px", boxShadow:"0 -4px 40px rgba(0,0,0,.6)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ width:40, height:4, background:"rgba(245,240,232,.15)", borderRadius:2, margin:"0 auto 20px" }} />
+              <div style={{ textAlign:"center", marginBottom:20 }}>
+                <div style={{ fontSize:36, marginBottom:8 }}>📲</div>
+                <div style={{ fontSize:16, fontWeight:800, color:"var(--offwhite)", marginBottom:6 }}>Adicionar à tela inicial</div>
+                <div style={{ fontSize:12, color:"rgba(245,240,232,.5)", lineHeight:1.6 }}>
+                  Acesse o ANTICEG como um app — mais rápido, sem barra do browser.
+                </div>
+              </div>
+              {isIOS ? (
+                <div style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:12, padding:"14px 16px", marginBottom:20 }}>
+                  <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", lineHeight:1.8, textAlign:"center" }}>
+                    <span style={{ display:"block", marginBottom:4 }}>1. Toque em <strong style={{ color:"var(--laranja)" }}>⬜ Compartilhar</strong> na barra do Safari</span>
+                    <span style={{ display:"block" }}>2. Escolha <strong style={{ color:"var(--laranja)" }}>"Adicionar à Tela de Início"</strong></span>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={async () => { if (a2hsPrompt) { a2hsPrompt.prompt(); const { outcome } = await a2hsPrompt.userChoice; if (outcome === "accepted") { localStorage.setItem("anticeg_a2hs_asked","1"); setShowA2HS(false); } } }}
+                  style={{ width:"100%", background:"var(--laranja)", border:"none", borderRadius:12, padding:"14px", fontSize:14, fontWeight:800, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", marginBottom:12 }}>
+                  Instalar app
+                </button>
+              )}
+              <button onClick={dismiss}
+                style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:12, padding:"12px", fontSize:12, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                {isIOS ? "Entendi" : "Agora não"}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {badgePopupQueue.length > 0 && (
         <NovoBadgePopup badge={badgePopupQueue[0]} onClose={() => setBadgePopupQueue(q => q.slice(1))} />
       )}
