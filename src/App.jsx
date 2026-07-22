@@ -9527,6 +9527,9 @@ function DisponiveisTab({ user }) {
           Itens disponíveis para claim — transferidos direto para sua lista
         </div>
       </div>
+      <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.25)", borderRadius:10, padding:"14px 16px", marginBottom:20, fontFamily:"'DM Mono',monospace", fontSize:12, color:"rgba(255,92,26,.8)", lineHeight:1.6 }}>
+        🚧 Em construção — em breve você poderá dar claim nos itens disponíveis aqui.
+      </div>
 
       {cegs.length > 1 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
