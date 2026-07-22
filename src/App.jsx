@@ -9430,7 +9430,7 @@ function DisponiveisTab({ user }) {
   useEffect(() => {
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
-      .eq("cog", "disponivel").eq("status", "Disponível")
+      .eq("cog", "disponivel").neq("status", "Vendido")
       .order("ceg").order("nome_do_item")
       .then(({ data }) => setItens(data || []));
   }, []);
@@ -9454,7 +9454,7 @@ function DisponiveisTab({ user }) {
   const total = (item) => Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
 
   return (
-    <div className="tab-content" style={{ paddingBottom: 100 }}>
+    <div className="main" style={{ paddingBottom: 100 }}>
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>Disponíveis</h2>
         <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
