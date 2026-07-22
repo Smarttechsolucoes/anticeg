@@ -9438,7 +9438,7 @@ function DisponiveisTab({ user }) {
   async function darClaim(item) {
     setClaiming(item.id); setClaimErro(null);
     const { error } = await supabase.from("masterlist")
-      .update({ cog: user.cog, nome: user.nome_site || user.nome || user.cog, status: null })
+      .update({ cog: user.cog, status: null })
       .eq("id", item.id).eq("cog", "disponivel");
     if (error) {
       setClaimErro("Erro ao dar claim. Tente novamente.");
