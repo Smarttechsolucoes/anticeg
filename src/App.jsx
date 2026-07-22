@@ -9523,9 +9523,6 @@ function DisponiveisTab({ user }) {
   const [confirmando, setConfirmando] = useState(null); // item object
   const [claimVenc, setClaimVenc] = useState("");
   const [claimWaLink, setClaimWaLink] = useState(null);
-  const [senha, setSenha] = useState("");
-  const [liberado, setLiberado] = useState(false);
-  const [senhaErro, setSenhaErro] = useState(false);
 
   useEffect(() => {
     supabase.from("masterlist")
@@ -9588,32 +9585,6 @@ function DisponiveisTab({ user }) {
   const cegs = itens ? [...new Set(itens.map(i => i.ceg))].sort() : [];
   const itensFiltrados = itens ? (filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens) : null;
 
-  if (!liberado) return (
-    <div className="main" style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:320 }}>
-      <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:14, padding:"32px 28px", maxWidth:320, width:"100%", textAlign:"center" }}>
-        <div style={{ fontSize:28, marginBottom:12 }}>🔒</div>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:6 }}>Loja</div>
-        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.38)", marginBottom:20 }}>Digite a senha para acessar</div>
-        <input
-          type="password"
-          value={senha}
-          onChange={e => { setSenha(e.target.value); setSenhaErro(false); }}
-          onKeyDown={e => { if (e.key === "Enter") { if (senha === "2mins2") setLiberado(true); else setSenhaErro(true); } }}
-          placeholder="senha"
-          style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border: senhaErro ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:13, outline:"none", marginBottom:10 }}
-          autoFocus
-        />
-        {senhaErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>senha incorreta</div>}
-        <button
-          onClick={() => { if (senha === "2mins2") setLiberado(true); else setSenhaErro(true); }}
-          style={{ width:"100%", background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", color:"var(--lilas)", borderRadius:8, padding:"10px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 }}
-        >
-          ENTRAR →
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="main" style={{ paddingBottom: 100 }}>
       <div style={{ marginBottom: 16 }}>
@@ -9622,10 +9593,6 @@ function DisponiveisTab({ user }) {
           Itens disponíveis para claim — transferidos direto para sua lista
         </div>
       </div>
-      <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.25)", borderRadius:10, padding:"14px 16px", marginBottom:20, fontFamily:"'DM Mono',monospace", fontSize:12, color:"rgba(255,92,26,.8)", lineHeight:1.6 }}>
-        🚧 Em construção — em breve você poderá dar claim nos itens disponíveis aqui.
-      </div>
-
       {cegs.length > 1 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
           <button onClick={() => setFiltroCeg(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(255,92,26,.12)" : "transparent", color: !filtroCeg ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: !filtroCeg ? 700 : 400 }}>
