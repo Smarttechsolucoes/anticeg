@@ -9745,15 +9745,15 @@ function DisponiveisTab({ user }) {
               {/* Avisos */}
               <div style={{ padding:"0 24px", marginTop:16, display:"flex", flexDirection:"column", gap:8 }}>
                 {(semFrete || semTaxa) && (
-                  <div style={{ borderLeft:"2px solid rgba(255,180,0,.4)", paddingLeft:12, fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.75)", lineHeight:1.6 }}>
+                  <div style={{ borderLeft:"3px solid #ffb400", paddingLeft:12, fontFamily:"'DM Mono',monospace", fontSize:11, color:"#ffb400", lineHeight:1.6 }}>
                     {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "serão cobrados" : "será cobrado"} à parte depois.
                   </div>
                 )}
                 {claimWaLink && (
                   <a href={claimWaLink} target="_blank" rel="noopener noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:10, borderLeft:"2px solid rgba(37,211,102,.4)", paddingLeft:12, textDecoration:"none" }}>
+                    style={{ display:"flex", alignItems:"center", gap:10, borderLeft:"3px solid #25d366", paddingLeft:12, textDecoration:"none" }}>
                     <div>
-                      <div style={{ fontSize:12, color:"#25d366", fontWeight:600 }}>Entrar no grupo da CEG →</div>
+                      <div style={{ fontSize:12, color:"#25d366", fontWeight:700 }}>Entrar no grupo da CEG →</div>
                       <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>abre o WhatsApp</div>
                     </div>
                   </a>
