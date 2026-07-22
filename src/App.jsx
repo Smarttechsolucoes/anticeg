@@ -1390,7 +1390,7 @@ function ReportModal({ user, item, onClose, onReported }) {
     setLoading(true);
     const { error } = await supabase.from("reports").insert([{
       joiner_cog:      user.cog,
-      joiner_nome:     user.nome || user.cog,
+      joiner_nome:     user.nome_site || user.nome || user.cog,
       item_id:         item.id,
       item_nome:       item.nome_do_item,
       ceg:             item.ceg,
@@ -1872,7 +1872,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="page-title">MASTER<span>LIST</span></div>
         </div>
         <div className="page-header-right">
-          <div className="greeting">{user.nome || user.cog}</div>
+          <div className="greeting">{user.nome_site || user.nome || user.cog}</div>
           <div className="greeting-sub">perfil em aprovação</div>
         </div>
       </div>
@@ -1915,7 +1915,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="page-title">MASTER<span>LIST</span></div>
         </div>
         <div className="page-header-right">
-          <div className="greeting">{guest ? "Visitante" : (user.nome || user.cog)}</div>
+          <div className="greeting">{guest ? "Visitante" : (user.nome_site || user.nome || user.cog)}</div>
           <div className="greeting-sub">{guest ? "visualização demo" : `${itens.length} itens · ${cegs} CEG${cegs > 1 ? "s" : ""}`}</div>
           {guest && <button className="login-btn" style={{ marginTop: 8, padding: "8px 20px", fontSize: "var(--fs-xs)" }} onClick={onLogin}>FAZER LOGIN →</button>}
           {!guest && (
@@ -2764,7 +2764,7 @@ function FeedbackForm({ user, defaultTipo, onSent }) {
     setLoading(true);
     await supabase.from("feedbacks").insert([{
       joiner_cog:  user.cog,
-      joiner_nome: user.nome || user.cog,
+      joiner_nome: user.nome_site || user.nome || user.cog,
       tipo,
       message: message.trim(),
     }]);
@@ -3143,6 +3143,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     setPerfilSubTab("feedback");
   }
   const [nome, setNome] = useState(user.nome || "");
+  const [nomeSite, setNomeSite] = useState(user.nome_site || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
   const [email, setEmail] = useState(user.email || "");
@@ -3216,13 +3217,13 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   async function handleSalvar() {
     setLoading(true); setError(""); setSuccess("");
 
-    const updates = { nome, twitter, whatsapp, email };
+    const updates = { nome_site: nomeSite, twitter, whatsapp, email };
 
     const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
     if (err) { setError("Erro ao salvar."); setLoading(false); return; }
 
     const camposAlterados = {};
-    const mapa = { nome: user.nome, twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
+    const mapa = { nome_site: user.nome_site, twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
     for (const [campo, valorNovo] of Object.entries(updates)) {
       const valorAntigo = mapa[campo] || "";
       if ((valorNovo || "") !== (valorAntigo || "")) {
@@ -3233,7 +3234,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       await supabase.from("joiner_updates").insert([{ joiner_cog: user.cog, campos: camposAlterados }]);
     }
 
-    const updatedUser = { ...user, ...updates };
+    const updatedUser = { ...user, ...updates, nome_site: nomeSite };
     localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
     onUpdate(updatedUser);
     setSuccess("Perfil atualizado com sucesso!");
@@ -3257,7 +3258,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       <h2 className="admin-title" style={{ marginBottom:4 }}>Meu Perfil</h2>
       <div className="admin-greeting" style={{ marginBottom:20 }}>
         <span className="admin-greeting-prompt">// </span>
-        <span className="admin-greeting-msg">{user.nome || user.cog}</span>
+        <span className="admin-greeting-msg">{user.nome_site || user.nome || user.cog}</span>
       </div>
 
       <div className="admin-layout">
@@ -3469,8 +3470,8 @@ ${p.comprovante_url ? (() => {
           }]).select().single();
           if (error || !nova) { setPagStatus("idle"); setPagErro(error?.message || "Erro ao salvar demanda."); return; }
           try {
-            const corpoEmail = buildEmailConfirmacaoPagamento(user.nome || user.cog, nova);
-            await sendEmailJoiner(user.email, user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+            const corpoEmail = buildEmailConfirmacaoPagamento(user.nome_site || user.nome || user.cog, nova);
+            await sendEmailJoiner(user.email, user.nome_site || user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
             setPagEmailMsg({ ok: true, txt: `📧 Confirmação enviada para ${user.email}` });
           } catch (emailErr) {
             const motivo = emailErr.message === "sem_email"
@@ -3969,7 +3970,7 @@ ${p.comprovante_url ? (() => {
           const cegItem  = isOutros ? repasseOutrosCeg.trim()  : repasseItem.ceg;
           const { data: nova, error } = await supabase.from("repassos").insert([{
             joiner_cog:     user.cog,
-            joiner_nome:    user.nome || user.cog,
+            joiner_nome:    user.nome_site || user.nome || user.cog,
             joiner_twitter: user.twitter || null,
             item_id:        isOutros ? null : repasseItem.id,
             ceg:            cegItem,
@@ -3988,7 +3989,7 @@ ${p.comprovante_url ? (() => {
           if (error) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar: ${error.message}`); return; }
           // Notifica novo dono
           await supabase.from("pushes").insert([{
-            message: `${user.nome || user.cog} quer te repassar o item "${nomeItem}" (${cegItem}). Aguarde confirmação da admin!`,
+            message: `${user.nome_site || user.nome || user.cog} quer te repassar o item "${nomeItem}" (${cegItem}). Aguarde confirmação da admin!`,
             active: true,
             joiner_cog: repasseNovoDono.cog,
           }]);
@@ -4227,7 +4228,7 @@ ${compHTML}
                 {/* Dono atual (fixado) */}
                 <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"10px 14px" }}>
                   <span style={labelSt}>Dono atual</span>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{user.nome || user.cog}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{user.nome_site || user.nome || user.cog}</div>
                   {user.twitter && <div style={{ fontSize:11, color:"rgba(167,139,250,.8)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>@{user.twitter}</div>}
                   {user.email && <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:1 }}>{user.email}</div>}
                 </div>
@@ -4384,7 +4385,7 @@ ${compHTML}
                     {repasseCiente && <span style={{ fontSize:11, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
                   </div>
                   <div style={{ fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
-                    Eu, <strong style={{ color:"#F5F0E8" }}>{user.nome || user.cog}</strong>, sou responsável por repassar todas as informações e regras da CEG do item ao novo dono. Estou ciente de que o item será enviado para outra pessoa, <strong style={{ color:"#F5F0E8" }}>sem possibilidade de cancelamento</strong>.
+                    Eu, <strong style={{ color:"#F5F0E8" }}>{user.nome_site || user.nome || user.cog}</strong>, sou responsável por repassar todas as informações e regras da CEG do item ao novo dono. Estou ciente de que o item será enviado para outra pessoa, <strong style={{ color:"#F5F0E8" }}>sem possibilidade de cancelamento</strong>.
                   </div>
                 </div>
 
@@ -4775,7 +4776,14 @@ ${compHTML}
             </button>
             {fotoErro && <div style={{ fontSize:11, color:"var(--laranja)", textAlign:"center", maxWidth:280, lineHeight:1.5 }}>{fotoErro}</div>}
           </div>
-          <div><label className="login-label">Nome completo</label><input className="login-input" style={inputStyle} type="text" value={nome} onChange={e => setNome(e.target.value)} /></div>
+          <div>
+            <label className="login-label">Nome de claim <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>como está na planilha · não editável</span></label>
+            <input className="login-input" style={{ ...inputStyle, opacity:0.45, cursor:"default" }} type="text" value={nome} readOnly />
+          </div>
+          <div>
+            <label className="login-label">Nome do site <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>como você quer aparecer aqui</span></label>
+            <input className="login-input" style={inputStyle} type="text" placeholder={nome} value={nomeSite} onChange={e => setNomeSite(e.target.value)} />
+          </div>
           <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
           <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
           <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
