@@ -9740,7 +9740,7 @@ function DisponiveisTab({ user }) {
               {/* Aviso frete/taxa não definidos */}
               {(semFrete || semTaxa) && (
                 <div style={{ background:"rgba(255,180,0,.06)", border:"1px solid rgba(255,180,0,.25)", borderRadius:10, padding:"12px 14px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.85)", lineHeight:1.6 }}>
-                  ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores" : "esse valor"} será cobrado à parte quando disponível.
+                  ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores serão cobrados" : "esse valor será cobrado"} à parte quando disponível.
                 </div>
               )}
 
