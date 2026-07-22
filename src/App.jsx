@@ -3149,6 +3149,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [pushPerm, setPushPerm] = useState(() => ("Notification" in window ? Notification.permission : "unsupported"));
+  const [pushSaving, setPushSaving] = useState(false);
   // foto
   const [fotoUrl, setFotoUrl] = useState(user.foto_perfil || "");
   const [fotoLoading, setFotoLoading] = useState(false);
@@ -4783,6 +4785,51 @@ ${compHTML}
           <button onClick={reportarProblema} style={{ background:"none", border:"1px solid rgba(255,90,31,.25)", color:"rgba(255,90,31,.6)", borderRadius:6, padding:"10px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", marginTop:4, letterSpacing:".05em" }}>
             ⚑ Reportar problema (item faltando ou erro grave)
           </button>
+
+          {/* Notificações push */}
+          {"Notification" in window && (
+            <div style={{ marginTop:20, padding:"14px 16px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", letterSpacing:"1.2px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:10 }}>Notificações push</div>
+              {pushPerm === "granted" ? (
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:12, color:"#BAFF39" }}>✓ Ativas neste dispositivo</span>
+                  <button disabled={pushSaving} onClick={async () => {
+                    setPushSaving(true);
+                    try {
+                      const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+                      const sub = reg ? await reg.pushManager.getSubscription() : null;
+                      if (sub) await sub.unsubscribe();
+                      await supabase.from("push_subscriptions").delete().eq("joiner_cog", user.cog);
+                      localStorage.removeItem("anticeg_push_asked");
+                      setPushPerm("default");
+                    } catch (e) { console.error(e); }
+                    setPushSaving(false);
+                  }} style={{ background:"none", border:"1px solid rgba(239,68,68,.3)", color:"rgba(239,68,68,.7)", borderRadius:6, padding:"7px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                    {pushSaving ? "..." : "Desativar"}
+                  </button>
+                </div>
+              ) : pushPerm === "denied" ? (
+                <div style={{ fontSize:12, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>
+                  Bloqueadas pelo navegador. Para reativar: <strong style={{ color:"var(--offwhite)" }}>Configurações do browser → Notificações → anticeg.vercel.app → Permitir</strong>
+                </div>
+              ) : pushPerm === "unsupported" ? (
+                <div style={{ fontSize:12, color:"rgba(245,240,232,.3)" }}>Não suportado neste navegador.</div>
+              ) : (
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:12, color:"rgba(245,240,232,.4)" }}>Desativadas</span>
+                  <button disabled={pushSaving} onClick={async () => {
+                    setPushSaving(true);
+                    await registrarPush(user.cog);
+                    setPushPerm("Notification" in window ? Notification.permission : "unsupported");
+                    if (Notification.permission === "granted") localStorage.setItem("anticeg_push_asked", "1");
+                    setPushSaving(false);
+                  }} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                    {pushSaving ? "..." : "Ativar notificações"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
