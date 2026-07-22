@@ -9742,17 +9742,16 @@ function DisponiveisTab({ user }) {
               {/* Avisos */}
               <div style={{ padding:"0 24px", marginTop:16, display:"flex", flexDirection:"column", gap:8 }}>
                 {(semFrete || semTaxa) && (
-                  <div style={{ background:"rgba(255,180,0,.05)", border:"1px solid rgba(255,180,0,.2)", borderRadius:10, padding:"10px 14px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(255,180,0,.8)", lineHeight:1.6 }}>
-                    ⚠ {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "esses valores serão cobrados" : "esse valor será cobrado"} à parte depois.
+                  <div style={{ borderLeft:"2px solid rgba(245,240,232,.2)", paddingLeft:12, fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>
+                    {[semFrete && "frete", semTaxa && "taxa RF"].filter(Boolean).join(" e ")} ainda {semFrete && semTaxa ? "não foram definidos" : "não foi definido"} — {semFrete && semTaxa ? "serão cobrados" : "será cobrado"} à parte depois.
                   </div>
                 )}
                 {claimWaLink && (
                   <a href={claimWaLink} target="_blank" rel="noopener noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(37,211,102,.05)", border:"1px solid rgba(37,211,102,.2)", borderRadius:10, padding:"10px 14px", textDecoration:"none" }}>
-                    <span style={{ fontSize:18 }}>💬</span>
+                    style={{ display:"flex", alignItems:"center", gap:10, borderLeft:"2px solid rgba(245,240,232,.2)", paddingLeft:12, textDecoration:"none" }}>
                     <div>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#25d366" }}>Entrar no grupo da CEG</div>
-                      <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)" }}>toque para abrir o WhatsApp</div>
+                      <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", fontWeight:600 }}>Entrar no grupo da CEG →</div>
+                      <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>abre o WhatsApp</div>
                     </div>
                   </a>
                 )}
