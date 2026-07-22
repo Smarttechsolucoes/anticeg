@@ -268,6 +268,7 @@ const chipMap = {
   "Envio Liberado":  ["chip-nacional",  "Envio Liberado"],
   "Enviado Nacional":["chip-enviado",   "Finalizado"],
   "Disponível":      ["chip-loja-disp", "ANTI-LOJA"],
+  "Em análise":      ["chip-prevenda",  "Em análise"],
   "Vendido":         ["chip-loja-vend", "Vendido"],
 };
 
@@ -9384,7 +9385,9 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
 
   async function rejeitarClaim(claim) {
     await supabase.from("claims").update({ status: "rejeitado" }).eq("id", claim.id);
+    await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", claim.masterlist_id);
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
+    setItens(prev => prev.map(i => i.id === claim.masterlist_id ? { ...i, status: "Disponível" } : i));
   }
 
   async function publicar(id) {
@@ -9559,6 +9562,9 @@ function DisponiveisTab({ user }) {
       vencimento: claimVenc || null,
       status: "pendente",
     }]);
+    if (!error) {
+      await supabase.from("masterlist").update({ status: "Em análise" }).eq("id", item.id);
+    }
     if (error) {
       setClaimErro("Erro ao enviar claim. Tente novamente.");
     } else {
