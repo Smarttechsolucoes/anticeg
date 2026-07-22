@@ -6424,14 +6424,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       if (pmDest === "especifico") query = query.eq("joiner_cog", pmJoinerSel.cog);
       const { data: subs } = await query;
       if (!subs?.length) { setPmStatus({ ok: false, txt: "Nenhum dispositivo inscrito." }); setPmSending(false); return; }
-      const results = await Promise.allSettled(subs.map(s =>
-        supabase.functions.invoke("send-push", {
+      const results = await Promise.allSettled(subs.map(async s => {
+        const { data, error } = await supabase.functions.invoke("send-push", {
           body: { subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, title: pmTitulo.trim() || "ANTICEG", body: pmCorpo.trim(), url: "/" },
-        })
-      ));
+        });
+        if (error) throw new Error(error.message || JSON.stringify(error));
+        return data;
+      }));
       const ok = results.filter(r => r.status === "fulfilled").length;
       const fail = results.length - ok;
-      setPmStatus({ ok: fail === 0, txt: `${ok} enviado(s)${fail > 0 ? `, ${fail} falhou(aram)` : ""}` });
+      const firstErr = results.find(r => r.status === "rejected")?.reason?.message;
+      setPmStatus({ ok: fail === 0, txt: `${ok} enviado(s)${fail > 0 ? `, ${fail} falhou(aram)${firstErr ? `: ${firstErr}` : ""}` : ""}` });
       if (fail === 0) { setPmTitulo(""); setPmCorpo(""); setPmJoinerSel(null); setPmJoinerSearch(""); }
     } catch (e) { setPmStatus({ ok: false, txt: String(e) }); }
     setPmSending(false);
