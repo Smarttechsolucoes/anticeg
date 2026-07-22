@@ -12,6 +12,45 @@ import badgeDwaekki  from "./assets/badges/dwaekki.jpg";
 import badgeQuokka   from "./assets/badges/quokka.jpg";
 import badgeLeebit   from "./assets/badges/leebit.png";
 
+const VAPID_PUBLIC_KEY = "BIDAu0P6XhcmaceDluZbCfVpeow-0Wia3wNLQ4fuCl7RJg4qLUXvTvHKXnyIcS6MzVlEZw_CYbHCCelGD11n4RE";
+
+async function registrarPush(joinerCog) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: VAPID_PUBLIC_KEY,
+    });
+    const subJson = sub.toJSON();
+    await supabase.from("push_subscriptions").upsert({
+      joiner_cog: joinerCog,
+      endpoint: subJson.endpoint,
+      p256dh: subJson.keys.p256dh,
+      auth: subJson.keys.auth,
+    }, { onConflict: "endpoint" });
+  } catch (_) {}
+}
+
+async function enviarPushJoiner(joinerCog, title, body, url) {
+  const { data: subs } = await supabase
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .eq("joiner_cog", joinerCog);
+  if (!subs?.length) return;
+  await Promise.allSettled(subs.map(s =>
+    supabase.functions.invoke("send-push", {
+      body: {
+        subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        title, body, url,
+      },
+    })
+  ));
+}
+
 async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
   if (!toEmail) throw new Error("sem_email");
   const { error } = await supabase.functions.invoke("send-email", {
@@ -6035,6 +6074,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [pushJoinerSearch, setPushJoinerSearch] = useState("");
   const [pushJoiners, setPushJoiners] = useState(null);
   const [pushJoinerSel, setPushJoinerSel] = useState(null);
+  const [pmTitulo,       setPmTitulo]       = useState("");
+  const [pmCorpo,        setPmCorpo]        = useState("");
+  const [pmDest,         setPmDest]         = useState("todos");
+  const [pmJoinerSel,    setPmJoinerSel]    = useState(null);
+  const [pmJoinerSearch, setPmJoinerSearch] = useState("");
+  const [pmSending,      setPmSending]      = useState(false);
+  const [pmStatus,       setPmStatus]       = useState(null);
   const [pendentesData, setPendentesData] = useState(null);
   const [disponiveisData, setDisponiveisData] = useState(null);
   const [joinersData, setJoinersData] = useState(null);
@@ -6321,6 +6367,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setPushes(p => (p || []).map(x => x.id === id ? { ...x, active: true } : x));
   }
 
+  async function enviarPushMobile() {
+    if (!pmTitulo.trim() && !pmCorpo.trim()) return;
+    if (pmDest === "especifico" && !pmJoinerSel) return;
+    setPmSending(true);
+    setPmStatus(null);
+    try {
+      let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth, joiner_cog");
+      if (pmDest === "especifico") query = query.eq("joiner_cog", pmJoinerSel.cog);
+      const { data: subs } = await query;
+      if (!subs?.length) { setPmStatus({ ok: false, txt: "Nenhum dispositivo inscrito." }); setPmSending(false); return; }
+      const results = await Promise.allSettled(subs.map(s =>
+        supabase.functions.invoke("send-push", {
+          body: { subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, title: pmTitulo.trim() || "ANTICEG", body: pmCorpo.trim(), url: "/" },
+        })
+      ));
+      const ok = results.filter(r => r.status === "fulfilled").length;
+      const fail = results.length - ok;
+      setPmStatus({ ok: fail === 0, txt: `${ok} enviado(s)${fail > 0 ? `, ${fail} falhou(aram)` : ""}` });
+      if (fail === 0) { setPmTitulo(""); setPmCorpo(""); setPmJoinerSel(null); setPmJoinerSearch(""); }
+    } catch (e) { setPmStatus({ ok: false, txt: String(e) }); }
+    setPmSending(false);
+  }
+
   async function marcarResolvido(rep) {
     const { error } = await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
     if (error) { alert("Erro ao resolver report: " + error.message); return; }
@@ -6445,8 +6514,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               {(owner || temAcesso("galeria")) && (
                 <div className="admin-sidebar-group">
                   <div className="admin-sidebar-group-label">Config</div>
-                  {owner && nav("geral",   "Geral",   "⚙", 0)}
-                  {owner && nav("avisos",  "Avisos",  "◎", 0)}
+                  {owner && nav("geral",      "Geral",       "⚙", 0)}
+                  {owner && nav("avisos",     "Avisos",      "◎", 0)}
+                  {owner && nav("push_mobile","Push Mobile", "◉", 0)}
                   {owner && nav("links",   "Links",   "⛓", 0)}
                   {owner && nav("agenda",  "Agenda",  "▣", 0)}
                   {temAcesso("galeria") && nav("galeria", "Galeria", "◈", 0)}
@@ -6908,7 +6978,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago", motivo_rejeicao: null });
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
-                if (d) await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+                if (d) {
+                  const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
+                  await supabase.from("pushes").insert([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
+                  enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
+                }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
               async function reabrir(id) {
@@ -6923,6 +6997,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     ? `Seu comprovante foi recusado: "${motivo.trim()}". Envie novamente pelo portal.`
                     : "Seu comprovante foi recusado. Por favor, envie novamente pelo portal.";
                   await supabase.from("pushes").insert([{ message: msg, active: true, joiner_cog: d.joiner_cog }]);
+                  enviarPushJoiner(d.joiner_cog, "✕ Comprovante recusado", msg, "/");
                   const joiner = (joinersData || []).find(j => j.cog === d.joiner_cog);
                   if (joiner?.email) {
                     const corpo = buildEmailRejeicaoPagamento(joiner.nome || joiner.cog, d, motivo.trim());
@@ -7275,6 +7350,88 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           </div>
         </div>
       )}
+
+      {adminMainTab === "push_mobile" && owner && (() => {
+        const inp = { width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" };
+        const pill = (val, label) => (
+          <button key={val} onClick={() => { setPmDest(val); setPmJoinerSel(null); setPmJoinerSearch(""); if (val === "especifico" && !pushJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setPushJoiners(data || [])); }}
+            style={{ fontSize:11, fontFamily:"'DM Mono',monospace", padding:"5px 14px", borderRadius:20, cursor:"pointer", border: pmDest === val ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: pmDest === val ? "rgba(255,92,26,.12)" : "transparent", color: pmDest === val ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: pmDest === val ? 700 : 400 }}>
+            {label}
+          </button>
+        );
+        return (
+          <div>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:20 }}>Push Mobile — notificação nativa</div>
+
+            {/* Destinatário */}
+            <div style={{ marginBottom:12, display:"flex", gap:6 }}>
+              {pill("todos", "→ Todas inscritas")}
+              {pill("especifico", "→ Joiner específica")}
+            </div>
+
+            {pmDest === "especifico" && (
+              <div style={{ marginBottom:12, position:"relative" }}>
+                {pmJoinerSel ? (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.25)", borderRadius:8, padding:"8px 14px" }}>
+                    <span style={{ flex:1, fontSize:12, color:"var(--offwhite)" }}>{pmJoinerSel.nome} <span style={{ color:"var(--lilas)", fontSize:11 }}>@{pmJoinerSel.cog}</span></span>
+                    <button onClick={() => { setPmJoinerSel(null); setPmJoinerSearch(""); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontSize:14, cursor:"pointer", padding:0 }}>✕</button>
+                  </div>
+                ) : (
+                  <>
+                    <input value={pmJoinerSearch} onChange={e => setPmJoinerSearch(e.target.value)} placeholder="Buscar joiner por nome ou @cog..." style={inp} />
+                    {pmJoinerSearch.trim().length > 0 && pushJoiners && (
+                      <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#141414", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, maxHeight:200, overflowY:"auto", zIndex:10 }}>
+                        {pushJoiners.filter(j => j.nome?.toLowerCase().includes(pmJoinerSearch.toLowerCase()) || j.cog?.toLowerCase().includes(pmJoinerSearch.toLowerCase())).slice(0,10).map(j => (
+                          <div key={j.cog} onClick={() => { setPmJoinerSel(j); setPmJoinerSearch(""); }}
+                            style={{ padding:"9px 14px", fontSize:12, color:"var(--offwhite)", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.06)" }}
+                            onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,.04)"}
+                            onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                            {j.nome} <span style={{ color:"rgba(245,240,232,.35)", fontSize:11 }}>@{j.cog}</span>
+                          </div>
+                        ))}
+                        {pushJoiners.filter(j => j.nome?.toLowerCase().includes(pmJoinerSearch.toLowerCase()) || j.cog?.toLowerCase().includes(pmJoinerSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>nenhuma joiner encontrada</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Título */}
+            <div style={{ marginBottom:8 }}>
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.2px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>Título</div>
+              <input value={pmTitulo} onChange={e => setPmTitulo(e.target.value)} placeholder="Ex: ANTICEG — Atualização" style={inp} maxLength={60} />
+            </div>
+
+            {/* Corpo */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.2px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>Mensagem</div>
+              <textarea value={pmCorpo} onChange={e => setPmCorpo(e.target.value)} placeholder="Ex: Seu pagamento foi confirmado! Acesse o portal." rows={3}
+                style={{ ...inp, resize:"vertical", lineHeight:1.5 }} maxLength={200} />
+              <div style={{ fontSize:9, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace", textAlign:"right", marginTop:3 }}>{pmCorpo.length}/200</div>
+            </div>
+
+            {/* Botão */}
+            <button onClick={enviarPushMobile}
+              disabled={pmSending || (!pmTitulo.trim() && !pmCorpo.trim()) || (pmDest === "especifico" && !pmJoinerSel)}
+              style={{ background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, padding:"12px 24px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", opacity: (pmSending || (!pmTitulo.trim() && !pmCorpo.trim()) || (pmDest === "especifico" && !pmJoinerSel)) ? 0.4 : 1 }}>
+              {pmSending ? "Enviando..." : "◉ Enviar push"}
+            </button>
+
+            {pmStatus && (
+              <div style={{ marginTop:12, fontSize:12, fontFamily:"'DM Mono',monospace", color: pmStatus.ok ? "#BAFF39" : "#ef4444" }}>
+                {pmStatus.ok ? "✓" : "⚠"} {pmStatus.txt}
+              </div>
+            )}
+
+            <div style={{ marginTop:24, padding:"12px 16px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
+              Envia notificação nativa ao celular/navegador da joiner — mesmo com o site fechado. A joiner precisa ter aceitado a permissão ao fazer login.
+            </div>
+          </div>
+        );
+      })()}
 
       {adminMainTab === "links" && owner && (
         <div>
@@ -11323,6 +11480,7 @@ export default function App() {
     if (!u.guest && !u.pre_cadastro) {
       localStorage.setItem("anticeg_tutorial_v1", "1");
       if (!u.confirmado) setShowPerfilModal(true);
+      registrarPush(u.cog);
       const { data: notifs } = await supabase.from("notifications")
         .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
       if (notifs?.length > 0) setNotificacoes(notifs);
