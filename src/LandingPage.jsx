@@ -71,18 +71,19 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const input = email.trim();
     if (!input) { setError("Informe seu @ ou e-mail."); setLoading(false); return; }
 
+    const handle = input.startsWith("@") ? input.slice(1) : input;
+    if (handle.toUpperCase() === "ADMMODE") {
+      setPendingJoiner({ cog: "ADMMODE", nome: "Modo Demo", email: "demo@anticeg.com.br", confirmado: true, _senha_demo: "anticeg@demo" });
+      setLoading(false);
+      return;
+    }
+
     const joiner = await buscarJoiner(input);
     if (!joiner) { setError("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
 
     const isOwner = joiner.cog === "nandaverseo_c" || joiner.email === "nandag_medeiros@hotmail.com";
     if (isOwner && joiner.senha) {
       setPendingJoiner(joiner);
-      setLoading(false);
-      return;
-    }
-
-    if (joiner.cog === "ADMMODE") {
-      setPendingJoiner({ ...joiner, _senha_demo: "anticeg@demo" });
       setLoading(false);
       return;
     }
@@ -102,7 +103,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   }
 
   async function entrarCom(joiner) {
-    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
+    const cogReal = joiner.cog === "ADMMODE" ? "nandaverseo_c" : joiner.cog;
+    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", cogReal);
     onLogin(joiner, itens || []);
   }
 
