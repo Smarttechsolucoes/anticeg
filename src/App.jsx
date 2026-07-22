@@ -9417,10 +9417,24 @@ function AdminDisponivel({ data }) {
     </div>
   );
 
+  async function retirarTodos() {
+    const ids = publicados.map(i => i.id);
+    if (!ids.length) return;
+    await supabase.from("masterlist").update({ status: "Retirado" }).in("id", ids);
+    setItens(prev => prev.map(i => ids.includes(i.id) ? { ...i, status: "Retirado" } : i));
+  }
+
   return (
     <div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", marginBottom:16 }}>
-        {publicados.length} publicado{publicados.length !== 1 ? "s" : ""} · {naoPublicados.length} oculto{naoPublicados.length !== 1 ? "s" : ""}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
+          {publicados.length} publicado{publicados.length !== 1 ? "s" : ""} · {naoPublicados.length} oculto{naoPublicados.length !== 1 ? "s" : ""}
+        </div>
+        {publicados.length > 0 && (
+          <button onClick={retirarTodos} style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+            Retirar todos ✕
+          </button>
+        )}
       </div>
       {itens.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item com nome "disponivel" na masterlist.</div>}
       {publicados.length > 0 && (
