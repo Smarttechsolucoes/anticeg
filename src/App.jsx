@@ -9490,6 +9490,11 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
                   @{c.joiner_cog} · {c.joiner_nome}
                   {c.valor > 0 && <span style={{ color:"var(--laranja)", marginLeft:8 }}>R${fmtBRL(c.valor)}</span>}
                 </div>
+                {c.vencimento && (
+                  <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:3 }}>
+                    venc. {new Date(c.vencimento + "T12:00:00").toLocaleDateString("pt-BR")}
+                  </div>
+                )}
               </div>
               <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                 <button onClick={() => rejeitarClaim(c)} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✕</button>
@@ -9523,9 +9528,10 @@ function DisponiveisTab({ user }) {
   const [claiming, setClaiming] = useState(null);
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
-  const [confirmando, setConfirmando] = useState(null); // item object
+  const [confirmando, setConfirmando] = useState(null);
   const [claimVenc, setClaimVenc] = useState("");
   const [claimWaLink, setClaimWaLink] = useState(null);
+  const [meusClaims, setMeusClaims] = useState([]);
 
   useEffect(() => {
     supabase.from("masterlist")
@@ -9547,6 +9553,9 @@ function DisponiveisTab({ user }) {
         });
         setFotos(mapa);
       });
+    supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
+      .eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+      .then(({ data }) => setMeusClaims(data || []));
   }, []);
 
   async function darClaim(item) {
@@ -9615,6 +9624,32 @@ function DisponiveisTab({ user }) {
       {claimOk && (
         <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--verde)" }}>
           ✓ Pedido enviado! <strong>{claimOk.nome_do_item}</strong> aguarda aprovação da admin.
+        </div>
+      )}
+
+      {meusClaims.length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Meus claims</div>
+          {meusClaims.map(c => {
+            const isPendente = c.status === "pendente";
+            const isAprovado = c.status === "aprovado";
+            const cor = isAprovado ? "var(--verde)" : isPendente ? "var(--lilas)" : "rgba(245,240,232,.25)";
+            const label = isAprovado ? "✓ aprovado" : isPendente ? "◉ em análise" : "✕ rejeitado";
+            const venc = c.vencimento ? new Date(c.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : null;
+            return (
+              <div key={c.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginBottom:2 }}>{c.ceg}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3 }}>{c.nome_do_item}</div>
+                  {venc && <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", marginTop:4 }}>venc. {venc}</div>}
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
+                  <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:cor, letterSpacing:"1px" }}>{label}</span>
+                  {c.valor > 0 && <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", fontWeight:700 }}>R${fmtBRL(c.valor)}</span>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
       {claimErro && (
