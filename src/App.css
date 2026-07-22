@@ -226,6 +226,7 @@ body.font-xl #root { zoom: 1.35; }
 
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button, a { touch-action: manipulation; }
 
 /* BUG 1 FIX: #root precisa de display:flex para o login-screen centralizar corretamente */
 html, body { height: 100%; overflow-x: hidden; }
@@ -625,6 +626,32 @@ td { padding:10px; vertical-align:middle; }
 
 /* ── MOBILE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Impede zoom automático do iOS ao focar em inputs — font-size mínimo 16px */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Remove delay de 300ms em taps em todos os botões e links */
+  button, a, [role="button"], label[for] {
+    touch-action: manipulation;
+  }
+
+  /* Scroll containers: impede propagação do scroll para a página */
+  .tabs-bar, .side-nav-items, .ceg-modal-body, .drawer-inner,
+  .perfil-subtabs, .admin-main-tabs, .avisos-scroll {
+    overscroll-behavior: contain;
+  }
+
+  /* Touch targets mínimos de 44px para elementos interativos */
+  .side-nav-item { min-height: 44px; }
+  .bottom-nav-btn { min-height: 52px; padding: 8px 2px; }
+  .ceg-saiba-btn { min-height: 44px; }
+  .admin-sidebar-item { min-height: 40px; }
+  .report-row-btn { min-height: 36px; padding: 6px 12px; }
+  .store-claim-btn { min-height: 48px; }
+  .mc-btn-copy { min-height: 44px; }
+  .mc-btn-primary, .mc-btn-sec { min-height: 52px; font-size: 14px; }
+
   /* Topbar */
   .topbar { padding:0 14px; height:52px; }
   .topbar-logo { font-size:18px; }
