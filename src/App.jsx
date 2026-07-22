@@ -9664,11 +9664,14 @@ function DisponiveisTab({ user }) {
         const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
         return (
           <div key={item.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden", marginBottom:10 }}>
-            {foto && (
-              <div style={{ width:"100%", aspectRatio:"16/7", overflow:"hidden" }}>
-                <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-              </div>
-            )}
+            <div style={{ width:"100%", aspectRatio:"16/7", overflow:"hidden", position:"relative" }}>
+              {foto
+                ? <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                : <div style={{ width:"100%", height:"100%", background:"rgba(245,240,232,.03)", border:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.18)", letterSpacing:"1px" }}>sem foto ainda</span>
+                  </div>
+              }
+            </div>
             <div style={{ padding:16, display:"flex", alignItems:"flex-start", gap:12 }}>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"var(--lilas)", letterSpacing:"1px", marginBottom:4 }}>{item.ceg}</div>
