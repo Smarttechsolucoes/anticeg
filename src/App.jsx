@@ -3225,11 +3225,12 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     if (err) { setError("Erro ao salvar."); setLoading(false); return; }
 
     const camposAlterados = {};
-    const mapa = { nome_site: user.nome_site, twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
-    for (const [campo, valorNovo] of Object.entries(updates)) {
+    const mapa = { twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
+    for (const [campo, valorNovo] of Object.entries(mapa)) {
       const valorAntigo = mapa[campo] || "";
-      if ((valorNovo || "") !== (valorAntigo || "")) {
-        camposAlterados[campo] = { de: valorAntigo || "", para: valorNovo || "" };
+      const valorNovoCampo = updates[campo] || "";
+      if (valorNovoCampo !== (valorAntigo || "")) {
+        camposAlterados[campo] = { de: valorAntigo || "", para: valorNovoCampo };
       }
     }
     if (Object.keys(camposAlterados).length > 0) {
@@ -9529,27 +9530,46 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
           <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>
             Claims pendentes ({claims.length})
           </div>
-          {claims.map(c => (
-            <div key={c.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:10, padding:"14px 16px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", color:"var(--lilas)", letterSpacing:1 }}>{c.ceg}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>{c.nome_do_item}</div>
-                <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)" }}>
-                  @{c.joiner_cog} · {c.joiner_nome}
-                  {c.valor > 0 && <span style={{ color:"var(--laranja)", marginLeft:8 }}>R${fmtBRL(c.valor)}</span>}
-                </div>
-                {c.vencimento && (
-                  <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", marginTop:3 }}>
-                    venc. {new Date(c.vencimento + "T12:00:00").toLocaleDateString("pt-BR")}
-                  </div>
-                )}
+          {claims.map(c => {
+            const vencFmt = c.vencimento ? new Date(c.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : null;
+            function copiarClaim() {
+              const txt = [
+                `@ ${c.joiner_cog}`,
+                `Nome: ${c.joiner_nome}`,
+                c.joiner_email ? `Email: ${c.joiner_email}` : null,
+                ``,
+                `Item: ${c.nome_do_item}`,
+                `CEG: ${c.ceg}`,
+                c.valor > 0 ? `Valor: R$ ${fmtBRL(c.valor)}` : null,
+                vencFmt ? `Vencimento: ${vencFmt}` : null,
+              ].filter(l => l !== null).join("\n");
+              navigator.clipboard.writeText(txt);
+            }
+            return (
+            <div key={c.id} style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:10, padding:"14px 16px", marginBottom:8 }}>
+              {/* linha 1: CEG + botão copiar */}
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                <span style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", color:"var(--lilas)", letterSpacing:1 }}>{c.ceg}</span>
+                <button onClick={copiarClaim} title="Copiar todas as infos" style={{ background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", color:"var(--lilas)", borderRadius:6, padding:"3px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>📋 copiar</button>
               </div>
-              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                <button onClick={() => rejeitarClaim(c)} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✕</button>
+              {/* linha 2: item + valor */}
+              <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", marginBottom:6 }}>{c.nome_do_item}
+                {c.valor > 0 && <span style={{ fontSize:12, fontWeight:400, color:"var(--laranja)", marginLeft:10 }}>R${fmtBRL(c.valor)}</span>}
+              </div>
+              {/* bloco joiner */}
+              <div style={{ background:"rgba(245,240,232,.04)", borderRadius:6, padding:"8px 10px", marginBottom:8, fontFamily:"'DM Mono',monospace", fontSize:11 }}>
+                <div style={{ color:"var(--offwhite)", marginBottom:2 }}>@{c.joiner_cog} <span style={{ color:"rgba(245,240,232,.4)", marginLeft:6 }}>{c.joiner_nome}</span></div>
+                {c.joiner_email && <div style={{ color:"rgba(245,240,232,.45)" }}>{c.joiner_email}</div>}
+                {vencFmt && <div style={{ color:"rgba(245,240,232,.35)", marginTop:4 }}>venc. {vencFmt}</div>}
+              </div>
+              {/* ações */}
+              <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
+                <button onClick={() => rejeitarClaim(c)} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✕ Rejeitar</button>
                 <button onClick={() => aprovarClaim(c)} style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"var(--verde)", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>✓ Aprovar</button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {itens.length === 0 && claims.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum item com nome "disponivel" na masterlist.</div>}
