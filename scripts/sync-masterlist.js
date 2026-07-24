@@ -93,6 +93,7 @@ async function main() {
   console.log(`${rows.length} linhas válidas após filtro`);
 
   let updated = 0, inserted = 0, erros = 0, comData = 0;
+  const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
 
@@ -157,6 +158,9 @@ async function main() {
       if (existingItem) {
         const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
         if (error) throw error;
+        if (existingItem.status !== status && cog) {
+          mudancasStatus.push({ cog, nomeItem, ceg, statusNovo: status });
+        }
         updated++;
       } else {
         const { error } = await supabase.from('masterlist').insert([{ ...baseFields, status }]);
@@ -170,6 +174,52 @@ async function main() {
   }
 
   console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data`);
+
+  // Enviar push para joiners com mudança de status
+  if (mudancasStatus.length > 0) {
+    const STATUS_LABEL = {
+      'Comprado':        'Comprado ✓',
+      'A Caminho':       'A Caminho 🚛',
+      'ANTIGOM':         'Na ANTIGOM 📦',
+      'Envio Liberado':  'Envio liberado! ✅',
+      'Enviado Nacional':'Enviado Nacional 🚀',
+      'Disponível':      'Disponível para retirada',
+    };
+    const cogsMudados = [...new Set(mudancasStatus.map(m => m.cog))];
+    const { data: subs } = await supabase.from('push_subscriptions')
+      .select('joiner_cog, endpoint, p256dh, auth')
+      .in('joiner_cog', cogsMudados);
+
+    const subsByCog = {};
+    (subs || []).forEach(s => {
+      if (!subsByCog[s.joiner_cog]) subsByCog[s.joiner_cog] = [];
+      subsByCog[s.joiner_cog].push(s);
+    });
+
+    const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/send-push`;
+    let pushEnviados = 0, pushErros = 0;
+
+    for (const { cog, nomeItem, ceg, statusNovo } of mudancasStatus) {
+      const cogSubs = subsByCog[cog] || [];
+      const label = STATUS_LABEL[statusNovo] || statusNovo;
+      for (const s of cogSubs) {
+        try {
+          const res = await fetch(PUSH_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}` },
+            body: JSON.stringify({
+              subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+              title: `ANTICEG — ${ceg}`,
+              body: `${nomeItem}: ${label}`,
+              url: '/masterlist',
+            }),
+          });
+          if (res.ok) pushEnviados++; else pushErros++;
+        } catch { pushErros++; }
+      }
+    }
+    console.log(`✓ Push: ${mudancasStatus.length} mudança(s) · ${pushEnviados} notificações enviadas · ${pushErros} erros`);
+  }
 
   // Sincronizar joiners únicos da planilha
   const joinersMap = {};

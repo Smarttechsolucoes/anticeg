@@ -763,7 +763,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   }
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
+    supabase.from("masterlist").select("*").eq("ceg", ceg).not("nome", "ilike", "disponivel")
       .then(({ data }) => setItens(data || []));
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setFotos(data || []));
@@ -1149,13 +1149,14 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
 }
 
 const STATUS_FINAIS = ["Enviado Nacional", "Vendido"];
+const CEGS_OCULTAS  = ["PESSOAL RUN IT"];
 
 function CegSlugPage({ slug, user }) {
   const [cegNome, setCegNome] = useState(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    supabase.from("masterlist").select("ceg").neq("nome", "Disponivel")
+    supabase.from("masterlist").select("ceg").not("nome", "ilike", "disponivel")
       .then(({ data }) => {
         if (!data) { setNotFound(true); return; }
         const cegs = [...new Set(data.map(r => r.ceg))];
@@ -1254,7 +1255,7 @@ function CegTab({ user, itens }) {
         }
       });
     }
-    return { todasCegs: todas, minhasCegs: minhas, meuStatusPorCeg: statusPorCeg };
+    return { todasCegs: todas.filter(([ceg]) => !CEGS_OCULTAS.includes(ceg)), minhasCegs: minhas, meuStatusPorCeg: statusPorCeg };
   }, [allItens, meuCog]);
 
   const finalizadas = useMemo(() => meuCog
@@ -2531,9 +2532,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         {showEnvio ? (
@@ -2613,9 +2614,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr className="row-finalizado">
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
                     <td><InfoCell info={item.info_adicionais} isOpen={isOpen} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
@@ -2704,9 +2705,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               )}
               {!guest && (
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /></div>}
                   {total > 0 && (
                     <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>
                       total R${fmtBRL(total)}
@@ -6404,7 +6405,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     if (adminMainTab === "disponiveis" && !loaded.has("disponiveis")) {
       loaded.add("disponiveis");
       const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
-      supabase.from("masterlist").select(sel).ilike("nome", "disponivel")
+      supabase.from("masterlist").select(sel).or("nome.ilike.disponivel,nome.ilike.disponível")
         .then(({ data }) => { if (data) setDisponiveisData(data); });
     }
   }, [adminMainTab]);
@@ -8374,7 +8375,7 @@ function WhatsappCegsBlock() {
   const [msg, setMsg] = useState({});
 
   useEffect(() => {
-    supabase.from("masterlist").select("ceg").neq("nome", "Disponivel")
+    supabase.from("masterlist").select("ceg").not("nome", "ilike", "disponivel")
       .then(({ data }) => {
         if (!data) return;
         const uniq = [...new Set(data.map(r => r.ceg))].sort((a, b) => a.localeCompare(b));
@@ -9369,6 +9370,39 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
   const [itens, setItens] = useState(data);
   const [filtroCeg, setFiltroCeg] = useState(null);
   const [claims, setClaims] = useState(claimsInit || []);
+  const [fotos, setFotos] = useState({});
+  const [uploadingFoto, setUploadingFoto] = useState(null);
+
+  useEffect(() => {
+    if (!data?.length) return;
+    const cegs = [...new Set(data.map(i => i.ceg))];
+    supabase.from("item_fotos").select("ceg, nome_do_item, foto_url").in("ceg", cegs).eq("ordem", -1)
+      .then(({ data: fd }) => {
+        if (!fd) return;
+        const m = {};
+        fd.forEach(f => { m[`${f.ceg}||${f.nome_do_item}`] = f.foto_url; });
+        setFotos(m);
+      });
+  }, []);
+
+  async function uploadFoto(item, file) {
+    const key = `${item.ceg}||${item.nome_do_item}`;
+    setUploadingFoto(key);
+    const ext  = file.name.split(".").pop().toLowerCase();
+    const slug = item.ceg.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+    const path = `${slug}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
+    if (upErr) { alert("Erro: " + upErr.message); setUploadingFoto(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+    const { data: ex } = await supabase.from("item_fotos").select("id").eq("ceg", item.ceg).eq("nome_do_item", item.nome_do_item).eq("ordem", -1).maybeSingle();
+    if (ex) {
+      await supabase.from("item_fotos").update({ foto_url: publicUrl }).eq("id", ex.id);
+    } else {
+      await supabase.from("item_fotos").insert([{ ceg: item.ceg, nome_do_item: item.nome_do_item, foto_url: publicUrl, ordem: -1 }]);
+    }
+    setFotos(prev => ({ ...prev, [key]: publicUrl }));
+    setUploadingFoto(null);
+  }
 
   useEffect(() => { setClaims(claimsInit || []); }, [claimsInit]);
 
@@ -9405,13 +9439,26 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
   const publicados = itensFiltrados.filter(i => i.status === "Disponível");
   const naoPublicados = itensFiltrados.filter(i => i.status !== "Disponível");
 
-  const renderItem = (item) => (
+  const renderItem = (item) => {
+    const fotoKey = `${item.ceg}||${item.nome_do_item}`;
+    const fotoUrl = fotos[fotoKey];
+    const sending = uploadingFoto === fotoKey;
+    return (
     <div key={item.id} style={{
       background:"var(--card-bg)",
       border:`1px solid ${item.status === "Disponível" ? "rgba(255,180,0,.25)" : "rgba(245,240,232,.07)"}`,
       borderRadius:10, padding:"14px 16px", marginBottom:8,
       display:"flex", alignItems:"center", gap:12
     }}>
+      {/* thumbnail + upload */}
+      <label style={{ width:56, height:56, flexShrink:0, borderRadius:8, overflow:"hidden", cursor:"pointer", position:"relative", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        {sending
+          ? <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>...</span>
+          : fotoUrl
+            ? <img src={fotoUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            : <span style={{ fontSize:18, opacity:.35 }}>📷</span>}
+        <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => e.target.files[0] && uploadFoto(item, e.target.files[0])} />
+      </label>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
@@ -9443,7 +9490,8 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   async function retirarTodos() {
     const ids = publicados.map(i => i.id);
@@ -9536,7 +9584,7 @@ function DisponiveisTab({ user }) {
   useEffect(() => {
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
-      .ilike("nome", "disponivel").eq("status", "Disponível")
+      .or("nome.ilike.disponivel,nome.ilike.disponível").eq("status", "Disponível")
       .order("ceg").order("nome_do_item")
       .then(async ({ data }) => {
         const lista = data || [];
@@ -9963,7 +10011,7 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
   const [viewMode,   setViewMode]   = useState("tabela");
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).neq("nome", "Disponivel")
+    supabase.from("masterlist").select("*").eq("ceg", ceg).not("nome", "ilike", "disponivel")
       .then(({ data }) => setItens(data || []));
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setCategorias(data || []));
@@ -10505,7 +10553,7 @@ function AdminGaleria() {
   }, [fotos]);
 
   useEffect(() => {
-    supabase.from("masterlist").select("ceg").neq("nome", "Disponivel")
+    supabase.from("masterlist").select("ceg").not("nome", "ilike", "disponivel")
       .then(({ data }) => {
         const uniq = [...new Set((data||[]).map(r => r.ceg).filter(Boolean))].sort();
         setCegsDisponiveis(uniq);
@@ -10517,7 +10565,7 @@ function AdminGaleria() {
     if (!cegSelecionada) { setItensDaCeg([]); setItemSelecionado(""); setItemUpload(""); setFotos(null); return; }
     setFotos(null);
     setItemSelecionado(""); setItemUpload("");
-    supabase.from("masterlist").select("nome_do_item").eq("ceg", cegSelecionada).neq("nome", "Disponivel")
+    supabase.from("masterlist").select("nome_do_item").eq("ceg", cegSelecionada).not("nome", "ilike", "disponivel")
       .then(({ data }) => {
         const uniq = [...new Set((data||[]).map(r => r.nome_do_item).filter(Boolean))].sort();
         setItensDaCeg(uniq);
@@ -12003,7 +12051,7 @@ export default function App() {
         setItens(data || []);
       });
     } else if (user && user.guest) {
-      supabase.from("masterlist").select("*").neq("nome", "Disponivel").limit(30).then(({ data }) => {
+      supabase.from("masterlist").select("*").not("nome", "ilike", "disponivel").limit(30).then(({ data }) => {
         setItens(data || []);
       });
     }

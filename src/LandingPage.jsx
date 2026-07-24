@@ -147,7 +147,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       .eq("status", "pendente").or(`cog.ilike.${cog},email.eq.${eml}`).maybeSingle();
     if (dup) { setCadError("Já existe um cadastro pendente com esses dados. Aguarde a aprovação."); setCadLoading(false); return; }
 
-    const { error: err } = await supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null }]);
+    const { error: err } = await supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "pendente" }]);
     if (err) { setCadError("Erro ao enviar. Tente novamente."); setCadLoading(false); return; }
 
     setCadLoading(false);
