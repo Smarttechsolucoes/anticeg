@@ -9419,7 +9419,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
 
   async function rejeitarClaim(claim) {
     await supabase.from("claims").update({ status: "rejeitado" }).eq("id", claim.id);
-    await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", claim.masterlist_id);
+    await supabase.from("masterlist").update({ status: "Disponível", cog: "disponivel", nome: "disponivel" }).eq("id", claim.masterlist_id);
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
     setItens(prev => prev.map(i => i.id === claim.masterlist_id ? { ...i, status: "Disponível" } : i));
   }
