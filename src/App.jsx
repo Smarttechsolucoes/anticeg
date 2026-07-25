@@ -2131,9 +2131,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         const noPrazo   = linhas.filter(r => r.diasMax === 0);
         const reembolsoLinhas = itens.filter(i => Number(i.valor_item||0) < 0);
         const temMulta = linhas.some(r => r.mItem + r.mFrete + r.mRf > 0);
-        const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:8 };
-        const tdS = { fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.6)" };
-        const dash = <span style={{ color:"rgba(245,240,232,.2)" }}>—</span>;
+        const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:8, paddingLeft:12 };
+        const tdS = { fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.6)", paddingLeft:12 };
+        const dash = <span style={{ color:"rgba(245,240,232,.15)" }}>—</span>;
         const renderLinha = (row, idx) => {
           const multa = row.mItem + row.mFrete + row.mRf;
           const hasMulta = multa > 0;
@@ -2167,28 +2167,28 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vFrete > 0 ? `R$${fmtBRL(row.vFrete)}` : dash}</td>
               <td style={{ ...tdS, padding:"10px 0", verticalAlign:"middle" }}>{row.vRf > 0 ? `R$${fmtBRL(row.vRf)}` : dash}</td>
               {temMulta && <td style={{ ...tdS, color: hasMulta ? "rgba(255,107,107,.8)" : undefined, padding:"10px 0", verticalAlign:"middle" }}>{hasMulta ? `R$${fmtBRL(multa)}` : dash}</td>}
-              <td style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, padding:"10px 0", verticalAlign:"middle" }}>R${fmtBRL(row.total)}</td>
+              <td style={{ ...tdS, color: hasMulta ? "#ff6b6b" : "#BAFF39", fontWeight:700, padding:"10px 0 10px 12px", verticalAlign:"middle", borderLeft:"1px solid rgba(245,240,232,.07)" }}>R${fmtBRL(row.total)}</td>
             </tr>
           );
         };
         const tHead = (
           <thead>
             <tr>
-              <th style={{ ...thS, textAlign:"left", padding:"16px 0 8px" }}>Item</th>
+              <th style={{ ...thS, textAlign:"left", padding:"16px 0 8px", paddingLeft:0 }}>Item</th>
               <th style={{ ...thS, padding:"16px 0 8px" }}>Item R$</th>
               <th style={{ ...thS, padding:"16px 0 8px" }}>Frete</th>
               <th style={{ ...thS, padding:"16px 0 8px" }}>RF</th>
               {temMulta && <th style={{ ...thS, color:"rgba(255,107,107,.5)", padding:"16px 0 8px" }}>Multa</th>}
-              <th style={{ ...thS, padding:"16px 0 8px" }}>Total</th>
+              <th style={{ ...thS, padding:"16px 0 8px 12px", borderLeft:"1px solid rgba(245,240,232,.07)" }}>Total</th>
             </tr>
           </thead>
         );
         const tColgroup = (
           <colgroup>
-            <col style={{ width:"auto" }} />
-            <col style={{ width:60 }} /><col style={{ width:52 }} /><col style={{ width:40 }} />
-            {temMulta && <col style={{ width:58 }} />}
-            <col style={{ width:64 }} />
+            <col style={{ width:"auto", minWidth:100 }} />
+            <col style={{ width:80 }} /><col style={{ width:76 }} /><col style={{ width:76 }} />
+            {temMulta && <col style={{ width:76 }} />}
+            <col style={{ width:80 }} />
           </colgroup>
         );
         return (
@@ -2203,7 +2203,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 </div>
                 <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
-              <div style={{ overflowY:"auto", flex:1, padding:"0 clamp(12px,4vw,24px) 24px" }}>
+              <div style={{ overflowY:"auto", flex:1, padding:"0 clamp(12px,4vw,24px) 24px", overflowX:"auto" }}>
                 {linhas.length === 0 ? (
                   <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
                 ) : (
