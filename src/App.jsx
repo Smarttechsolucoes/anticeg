@@ -1688,7 +1688,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", bannerEnvioVisivel = true, onOpenPagamentos, onOpenEnvio }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", bannerEnvioVisivel = true, bannerPagamentosAtivo = false, onOpenPagamentos, onOpenEnvio }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -1914,7 +1914,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
     <>
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
     <div className="main">
-      {temAntigomEmAberto && (
+      {bannerPagamentosAtivo && temAntigomEmAberto && (
         <div className="notif-pagamento">
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
         </div>
@@ -5893,6 +5893,39 @@ function NotificarTodosBlock() {
   );
 }
 
+function BannerPagamentosBlock() {
+  const [ativo, setAtivo] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key", "banner_pagamentos_ativo").single()
+      .then(({ data }) => { if (data) setAtivo(data.value === "true"); });
+  }, []);
+
+  async function toggle() {
+    setSalvando(true);
+    const novo = !ativo;
+    setAtivo(novo);
+    await supabase.from("config").upsert({ key: "banner_pagamentos_ativo", value: novo ? "true" : "false" }, { onConflict: "key" });
+    setSalvando(false);
+  }
+
+  return (
+    <div style={{ marginBottom:16, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${ativo ? "rgba(255,92,26,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+      <div>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:3 }}>Aviso de pagamentos em aberto</div>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>
+          Quando ativo, joiners com pagamentos pendentes veem o aviso no topo da masterlist.
+        </div>
+        {ativo && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginTop:5 }}>⚠ Verifique os pagamentos em aberto para liberar seu envio nacional</div>}
+      </div>
+      <button onClick={toggle} disabled={salvando} style={{ flexShrink:0, background: ativo ? "rgba(255,92,26,.12)" : "rgba(245,240,232,.05)", border:`1px solid ${ativo ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.15)"}`, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.4)", borderRadius:8, padding:"8px 16px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+        {salvando ? "..." : ativo ? "● Ativo — desativar" : "○ Inativo — ativar"}
+      </button>
+    </div>
+  );
+}
+
 function ProximoEnvioBlock() {
   const [texto,  setTexto]  = useState("");
   const [inicio, setInicio] = useState("");
@@ -7413,6 +7446,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "avisos" && owner && (
         <div>
           <ProximoEnvioBlock />
+          <BannerPagamentosBlock />
           <AvisoMasterlistBlock />
 
           <div style={{ marginTop:28, marginBottom:28 }}>
@@ -12041,21 +12075,23 @@ export default function App() {
   const [proximoEnvio,        setProximoEnvio]        = useState("");
   const [envioAberturaInicio, setEnvioAberturaInicio] = useState("");
   const [envioAberturaFim,    setEnvioAberturaFim]    = useState("");
-  const [bannerEnvioVisivel,  setBannerEnvioVisivel]  = useState(true);
+  const [bannerEnvioVisivel,     setBannerEnvioVisivel]     = useState(true);
+  const [bannerPagamentosAtivo,  setBannerPagamentosAtivo]  = useState(false);
 
   useEffect(() => {
     supabase.from("config").select("value").eq("key", "manutencao").single()
       .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
     supabase.from("config").select("value").eq("key", "aviso_masterlist").single()
       .then(({ data }) => { if (data?.value) setAvisoMasterlist(data.value); });
-    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim","banner_envio_visivel"])
+    supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim","banner_envio_visivel","banner_pagamentos_ativo"])
       .then(({ data }) => {
         if (!data) return;
         data.forEach(r => {
-          if (r.key === "proximo_envio")        setProximoEnvio(r.value        || "");
-          if (r.key === "envio_abertura_inicio") setEnvioAberturaInicio(r.value || "");
-          if (r.key === "envio_abertura_fim")    setEnvioAberturaFim(r.value    || "");
-          if (r.key === "banner_envio_visivel")  setBannerEnvioVisivel(r.value !== "false");
+          if (r.key === "proximo_envio")          setProximoEnvio(r.value        || "");
+          if (r.key === "envio_abertura_inicio")   setEnvioAberturaInicio(r.value || "");
+          if (r.key === "envio_abertura_fim")      setEnvioAberturaFim(r.value    || "");
+          if (r.key === "banner_envio_visivel")    setBannerEnvioVisivel(r.value !== "false");
+          if (r.key === "banner_pagamentos_ativo") setBannerPagamentosAtivo(r.value === "true");
         });
       });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
@@ -12450,7 +12486,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
