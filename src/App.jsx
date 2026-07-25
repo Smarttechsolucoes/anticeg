@@ -9661,6 +9661,7 @@ function DisponiveisTab({ user }) {
   const [claimVenc, setClaimVenc] = useState("");
   const [claimWaLink, setClaimWaLink] = useState(null);
   const [meusClaims, setMeusClaims] = useState([]);
+  const [subTab, setSubTab] = useState("loja");
 
   useEffect(() => {
     supabase.from("masterlist")
@@ -9729,6 +9730,9 @@ function DisponiveisTab({ user }) {
   const cegs = itens ? [...new Set(itens.map(i => i.ceg))].sort() : [];
   const itensFiltrados = itens ? (filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens) : null;
 
+  const claimsAtivos    = meusClaims.filter(c => c.status !== "rejeitado");
+  const claimsHistorico = meusClaims;
+
   return (
     <div className="main" style={{ paddingBottom: 100 }}>
       <div style={{ marginBottom: 16 }}>
@@ -9737,7 +9741,65 @@ function DisponiveisTab({ user }) {
           Itens disponíveis para claim — transferidos direto para sua lista
         </div>
       </div>
-      {cegs.length > 1 && (
+
+      {/* sub-tabs */}
+      <div style={{ display:"flex", gap:4, marginBottom:20, borderBottom:"1px solid rgba(245,240,232,.07)", paddingBottom:12 }}>
+        {[
+          { id:"loja",      label:"◱ Disponíveis" },
+          { id:"historico", label:"◎ Histórico", count: claimsHistorico.length },
+        ].map(({ id, label, count }) => (
+          <button key={id} onClick={() => setSubTab(id)} style={{
+            background: subTab === id ? "rgba(255,92,26,.1)" : "transparent",
+            border: subTab === id ? "1px solid rgba(255,92,26,.35)" : "1px solid transparent",
+            color: subTab === id ? "var(--laranja)" : "rgba(245,240,232,.4)",
+            fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight: subTab === id ? 700 : 400,
+            borderRadius:7, padding:"6px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+          }}>
+            {label}
+            {count > 0 && <span style={{ fontSize:9, background: subTab === id ? "rgba(255,92,26,.25)" : "rgba(245,240,232,.08)", borderRadius:10, padding:"1px 6px" }}>{count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "historico" && (
+        <div>
+          {claimsHistorico.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"48px 0" }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>◎</div>
+              <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum claim realizado ainda.</div>
+            </div>
+          ) : claimsHistorico.map(c => {
+            const isPend = c.status === "pendente";
+            const isAprov = c.status === "aprovado";
+            const isRej = c.status === "rejeitado";
+            const cor = isAprov ? "var(--verde)" : isPend ? "var(--lilas)" : "rgba(245,240,232,.25)";
+            const borderCor = isAprov ? "rgba(186,255,57,.2)" : isPend ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)";
+            const label = isAprov ? "✓ aprovado" : isPend ? "◉ em análise" : "✕ rejeitado";
+            const venc = c.vencimento ? new Date(c.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : null;
+            const dataClaim = c.created_at ? new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric" }) : null;
+            return (
+              <div key={c.id} style={{ background:"var(--card-bg)", border:`1px solid ${borderCor}`, borderRadius:10, padding:"12px 14px", marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"var(--lilas)", letterSpacing:"1px" }}>{c.ceg}</div>
+                  {dataClaim && <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.22)", flexShrink:0 }}>{dataClaim}</div>}
+                </div>
+                <div style={{ fontSize:13, fontWeight:700, color: isRej ? "rgba(245,240,232,.4)" : "var(--offwhite)", marginBottom:6, textDecoration: isRej ? "line-through" : "none" }}>
+                  {c.nome_do_item}
+                </div>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:cor, letterSpacing:"1px", background: isAprov ? "rgba(186,255,57,.06)" : isPend ? "rgba(201,168,240,.06)" : "rgba(245,240,232,.04)", border:`1px solid ${borderCor}`, borderRadius:4, padding:"2px 8px" }}>{label}</span>
+                    {venc && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)" }}>venc. {venc}</span>}
+                  </div>
+                  {c.valor > 0 && <span style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, color: isRej ? "rgba(245,240,232,.2)" : "var(--laranja)" }}>R${fmtBRL(c.valor)}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {subTab === "loja" && cegs.length > 1 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
           <button onClick={() => setFiltroCeg(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(255,92,26,.12)" : "transparent", color: !filtroCeg ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: !filtroCeg ? 700 : 400 }}>
             Todas
@@ -9750,16 +9812,16 @@ function DisponiveisTab({ user }) {
         </div>
       )}
 
-      {claimOk && (
+      {subTab === "loja" && claimOk && (
         <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--verde)" }}>
           ✓ Pedido enviado! <strong>{claimOk.nome_do_item}</strong> aguarda aprovação da admin.
         </div>
       )}
 
-      {meusClaims.length > 0 && (
+      {subTab === "loja" && claimsAtivos.length > 0 && (
         <div style={{ marginBottom:20 }}>
           <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Meus claims</div>
-          {meusClaims.map(c => {
+          {claimsAtivos.map(c => {
             const isPendente = c.status === "pendente";
             const isAprovado = c.status === "aprovado";
             const cor = isAprovado ? "var(--verde)" : isPendente ? "var(--lilas)" : "rgba(245,240,232,.25)";
@@ -9781,22 +9843,22 @@ function DisponiveisTab({ user }) {
           })}
         </div>
       )}
-      {claimErro && (
+      {subTab === "loja" && claimErro && (
         <div style={{ background:"rgba(255,90,31,.08)", border:"1px solid rgba(255,90,31,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--laranja)" }}>
           {claimErro}
         </div>
       )}
 
-      {itens === null && (
+      {subTab === "loja" && itens === null && (
         <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"32px 0", textAlign:"center" }}>carregando...</div>
       )}
-      {itensFiltrados !== null && itensFiltrados.length === 0 && (
+      {subTab === "loja" && itensFiltrados !== null && itensFiltrados.length === 0 && (
         <div style={{ textAlign:"center", padding:"48px 0" }}>
           <div style={{ fontSize:32, marginBottom:12 }}>◱</div>
           <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum item disponível no momento.</div>
         </div>
       )}
-      {itensFiltrados !== null && itensFiltrados.map(item => {
+      {subTab === "loja" && itensFiltrados !== null && itensFiltrados.map(item => {
         const val = total(item);
         const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
         return (
