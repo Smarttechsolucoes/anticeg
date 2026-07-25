@@ -1866,6 +1866,28 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   );
   const nEnvioLiberado = !guest ? itens.filter(i => i.status === "Envio Liberado").length : 0;
 
+  useEffect(() => {
+    if (!fotoAmpliada || !minhasFotos?.length) return;
+    function ir(f) {
+      const itemDoJoiner = itens.find(i => {
+        if (i.ceg !== f.ceg) return false;
+        const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
+        const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
+        return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
+      });
+      const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
+      setFotoAmpliada({ foto: f, membro });
+    }
+    function handleKey(e) {
+      const idx = minhasFotos.findIndex(f => f.id === fotoAmpliada.foto.id);
+      if (e.key === "Escape") setFotoAmpliada(null);
+      else if (e.key === "ArrowLeft"  && idx > 0)                       ir(minhasFotos[idx - 1]);
+      else if (e.key === "ArrowRight" && idx < minhasFotos.length - 1)  ir(minhasFotos[idx + 1]);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [fotoAmpliada, minhasFotos, itens]);
+
   if (user.pre_cadastro) return (
     <div className="main">
       <div className="page-header">
@@ -2047,24 +2069,50 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         </div>
       )}
 
-      {fotoAmpliada && (
-        <div onClick={() => setFotoAmpliada(null)}
-          style={{ position:"fixed", inset:0, zIndex:10000, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth:420, width:"100%", display:"flex", flexDirection:"column", gap:0 }}>
-            <img src={fotoAmpliada.foto.foto_url} alt={fotoAmpliada.foto.nome_do_item}
-              style={{ width:"100%", borderRadius:10, display:"block", objectFit:"contain", maxHeight:"70vh" }} />
-            <div style={{ background:"#111", borderRadius:"0 0 10px 10px", padding:"12px 16px" }}>
-              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", letterSpacing:"0.5px", marginBottom:4 }}>{fotoAmpliada.foto.ceg}</div>
-              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.4 }}>{fotoAmpliada.foto.nome_do_item}</div>
-              {fotoAmpliada.membro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"#C9A8F0", marginTop:4 }}>{fotoAmpliada.membro}</div>}
+      {fotoAmpliada && (() => {
+        const idxAtual = minhasFotos ? minhasFotos.findIndex(f => f.id === fotoAmpliada.foto.id) : -1;
+        const temAnterior = idxAtual > 0;
+        const temProxima  = minhasFotos && idxAtual < minhasFotos.length - 1;
+        function ir(f) {
+          const itemDoJoiner = itens.find(i => {
+            if (i.ceg !== f.ceg) return false;
+            const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
+            const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
+            return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
+          });
+          const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
+          setFotoAmpliada({ foto: f, membro });
+        }
+        const btnSeta = (enabled, onClick, label) => (
+          <button onClick={e => { e.stopPropagation(); if (enabled) onClick(); }}
+            style={{ background:"rgba(0,0,0,.5)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", cursor: enabled ? "pointer" : "default", opacity: enabled ? 1 : 0.2, color:"var(--offwhite)", fontSize:20, flexShrink:0, transition:"opacity .15s" }}>
+            {label}
+          </button>
+        );
+        return (
+          <div onClick={() => setFotoAmpliada(null)}
+            style={{ position:"fixed", inset:0, zIndex:10000, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, gap:12 }}>
+            {btnSeta(temAnterior, () => ir(minhasFotos[idxAtual - 1]), "‹")}
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth:420, width:"100%", display:"flex", flexDirection:"column", gap:0 }}>
+              <img src={fotoAmpliada.foto.foto_url} alt={fotoAmpliada.foto.nome_do_item}
+                style={{ width:"100%", borderRadius:10, display:"block", objectFit:"contain", maxHeight:"70vh" }} />
+              <div style={{ background:"#111", borderRadius:"0 0 10px 10px", padding:"12px 16px" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", letterSpacing:"0.5px" }}>{fotoAmpliada.foto.ceg}</div>
+                  {minhasFotos && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.25)" }}>{idxAtual + 1} / {minhasFotos.length}</div>}
+                </div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.4 }}>{fotoAmpliada.foto.nome_do_item}</div>
+                {fotoAmpliada.membro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"#C9A8F0", marginTop:4 }}>{fotoAmpliada.membro}</div>}
+              </div>
+              <button onClick={() => setFotoAmpliada(null)}
+                style={{ marginTop:14, background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", fontSize:11, borderRadius:6, padding:"8px 0", cursor:"pointer" }}>
+                fechar
+              </button>
             </div>
-            <button onClick={() => setFotoAmpliada(null)}
-              style={{ marginTop:14, background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", fontSize:11, borderRadius:6, padding:"8px 0", cursor:"pointer" }}>
-              fechar
-            </button>
+            {btnSeta(temProxima, () => ir(minhasFotos[idxAtual + 1]), "›")}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {totalModal && (() => {
         const linhas = itens.map(i => {
@@ -9553,8 +9601,9 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
                 <button onClick={copiarClaim} title="Copiar todas as infos" style={{ background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", color:"var(--lilas)", borderRadius:6, padding:"3px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>📋 copiar</button>
               </div>
               {/* linha 2: item + valor */}
-              <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", marginBottom:6 }}>{c.nome_do_item}
-                {c.valor > 0 && <span style={{ fontSize:12, fontWeight:400, color:"var(--laranja)", marginLeft:10 }}>R${fmtBRL(c.valor)}</span>}
+              <div style={{ marginBottom:6 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)" }}>{c.nome_do_item}</div>
+                {c.valor > 0 && <div style={{ fontSize:12, fontWeight:600, color:"var(--laranja)", marginTop:3 }}>R${fmtBRL(c.valor)}</div>}
               </div>
               {/* bloco joiner */}
               <div style={{ background:"rgba(245,240,232,.04)", borderRadius:6, padding:"8px 10px", marginBottom:8, fontFamily:"'DM Mono',monospace", fontSize:11 }}>
