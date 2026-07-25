@@ -6495,15 +6495,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         const { data, error } = await supabase.functions.invoke("send-push", {
           body: { subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, title: pmTitulo.trim() || "ANTICEG", body: pmCorpo.trim(), url: "/" },
         });
-        if (error) throw new Error(error.message || JSON.stringify(error));
-        return data;
+        if (error) throw Object.assign(new Error(error.message || JSON.stringify(error)), { joiner_cog: s.joiner_cog });
+        return s.joiner_cog;
       }));
       const ok = results.filter(r => r.status === "fulfilled").length;
       const fail = results.length - ok;
+      const falhasCogs = [...new Set(results.filter(r => r.status === "rejected").map(r => r.reason?.joiner_cog).filter(Boolean))];
       const firstErr = results.find(r => r.status === "rejected")?.reason?.message;
       const statusTxt = `${ok} enviado(s)${fail > 0 ? `, ${fail} falhou(aram)${firstErr ? `: ${firstErr}` : ""}` : ""}`;
       setPmStatus({ ok: fail === 0, txt: statusTxt });
-      setPmHistorico(h => [{ titulo: pmTitulo.trim() || "ANTICEG", corpo: pmCorpo.trim(), dest: pmDest === "todos" ? "Todas inscritas" : `@${pmJoinerSel?.cog}`, ok: fail === 0, txt: statusTxt, ts: new Date() }, ...h]);
+      setPmHistorico(h => [{ titulo: pmTitulo.trim() || "ANTICEG", corpo: pmCorpo.trim(), dest: pmDest === "todos" ? "Todas inscritas" : `@${pmJoinerSel?.cog}`, ok: fail === 0, txt: statusTxt, falhasCogs, ts: new Date() }, ...h]);
       if (fail === 0) { setPmTitulo(""); setPmCorpo(""); setPmJoinerSel(null); setPmJoinerSearch(""); }
     } catch (e) { setPmStatus({ ok: false, txt: String(e) }); }
     setPmSending(false);
@@ -7567,6 +7568,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                         <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>→ {h.dest}</div>
                         <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: h.ok ? "#BAFF39" : "#ef4444" }}>{h.ok ? "✓" : "⚠"} {h.txt}</div>
                       </div>
+                      {h.falhasCogs?.length > 0 && (
+                        <div style={{ marginTop:6, background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.15)", borderRadius:5, padding:"6px 10px" }}>
+                          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(239,68,68,.6)", letterSpacing:"1px", marginBottom:4 }}>NÃO RECEBERAM</div>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                            {h.falhasCogs.map(cog => (
+                              <span key={cog} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#ef4444", background:"rgba(239,68,68,.08)", borderRadius:4, padding:"1px 7px" }}>@{cog}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
