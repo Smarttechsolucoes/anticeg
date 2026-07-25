@@ -9462,6 +9462,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
   async function aprovarClaim(claim) {
     await supabase.from("masterlist").update({ cog: claim.joiner_cog, nome: claim.joiner_nome }).eq("id", claim.masterlist_id);
     await supabase.from("claims").update({ status: "aprovado" }).eq("id", claim.id);
+    enviarPushJoiner(claim.joiner_cog, `✓ Claim aprovado — ${claim.ceg}`, `${claim.nome_do_item} foi confirmado e adicionado à sua lista!`, "/disponiveis");
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
     setItens(prev => prev.filter(i => i.id !== claim.masterlist_id));
   }
