@@ -3,14 +3,30 @@ import supabase from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import bonequinha from "./assets/bonequinha.png";
-import badgeFoxiny   from "./assets/badges/foxiny.jpg";
-import badgePuppym   from "./assets/badges/puppym.jpg";
-import badgeWolfchan from "./assets/badges/wolfchan.jpg";
-import badgeBbokari  from "./assets/badges/bbokari.jpg";
-import badgeJiniret  from "./assets/badges/jiniret.jpg";
-import badgeDwaekki  from "./assets/badges/dwaekki.jpg";
-import badgeQuokka   from "./assets/badges/quokka.jpg";
-import badgeLeebit   from "./assets/badges/leebit.png";
+import badgeFoxinyBronze  from "./assets/badges/foxiny_bronze.jpg.png";
+import badgeFoxinyPrata   from "./assets/badges/foxiny_prata.jpg.png";
+import badgeFoxinyOuro    from "./assets/badges/foxiny_ouro.jpg.png";
+import badgePuppymBronze  from "./assets/badges/puppym_bronze.jpg.png";
+import badgePuppymPrata   from "./assets/badges/puppym_prata.jpg.png";
+import badgePuppymOuro    from "./assets/badges/puppym_ouro.jpg.png";
+import badgeWolfchanBronze from "./assets/badges/wolfchan_bronze.jpg.png";
+import badgeWolfchanPrata  from "./assets/badges/wolfchan_prata.jpg.png";
+import badgeWolfchanOuro   from "./assets/badges/wolfchan_ouro.jpg.png";
+import badgeBbokari        from "./assets/badges/bbokari_bronze.jpg.png";
+import badgeBbokariPrata   from "./assets/badges/bbokari_prata.jpg.png";
+import badgeBbokariOuro    from "./assets/badges/bbokari_ouro.jpg.png";
+import badgeJiniretBronze  from "./assets/badges/jiniret_bronze.jpg.png";
+import badgeJiniretPrata   from "./assets/badges/jiniret_prata.jpg.png";
+import badgeJiniretOuro    from "./assets/badges/jiniret_ouro.jpg.png";
+import badgeDwaekkiBronze  from "./assets/badges/dwaekki_bronze.jpg.png";
+import badgeDwaekiPrata    from "./assets/badges/dwaekki_prata.jpg.png";
+import badgeDwaekiOuro     from "./assets/badges/dwaekki_ouro.jpg.png";
+import badgeQuokkaBronze   from "./assets/badges/quokka_bronze.jpg.png";
+import badgeQuokkaPrata    from "./assets/badges/quokka_prata.jpg.png";
+import badgeQuokkaOuro     from "./assets/badges/quokka_ouro.jpg.png";
+import badgeLeebit         from "./assets/badges/leebit_bronze.jpg.png";
+import badgeLeebitPrata    from "./assets/badges/leebit_prata.jpg.png";
+import badgeLeebitOuro     from "./assets/badges/leebit_ouro.jpg.png";
 
 const VAPID_PUBLIC_KEY = "BMjVVcd389vauJzDpbAR5obTCX2UZtmRnVnsDJoE9T0Bc4Biyb7AGWSyNxyvxTySrr6HpXBf5yLCPWHGCOQx4lY";
 
@@ -342,66 +358,112 @@ const CEG_GRUPO = {
   "BTS": "BTS", "ATEEZ": "ATEEZ",
 };
 
-// Concessões manuais de badges (exceções decididas pela admin, fora do cálculo automático)
+// Concessões manuais: { cog: { badgeId: "bronze"|"prata"|"ouro" } }
 const BADGES_MANUAIS = {};
 
 const BADGES_DEF = [
-  { id: "foxiny",   img: badgeFoxiny,   label: "Foxiny",   desc: "Novo membro — poucas CEGs vinculadas", color: "laranja" },
-  { id: "puppym",   img: badgePuppym,   label: "Puppym",   desc: "Joiner fiel — 20+ CEGs ativas", color: "verde" },
-  { id: "wolfchan", img: badgeWolfchan, label: "Wolfchan",  desc: "Usou envio nacional, forms de pagamento e reportar erro", color: "lilas" },
-  { id: "bbokari",  img: badgeBbokari,  label: "Bbokari",   desc: "3+ envios concluídos pelo site", color: "laranja" },
-  { id: "jiniret",  img: badgeJiniret,  label: "Jiniret",   desc: "Menos de 10 multas pagas", color: "verde" },
-  { id: "dwaekki",  img: badgeDwaekki,  label: "Dwaekki",   desc: "Comprou item(ns) 3D", color: "lilas" },
-  { id: "quokka",   img: badgeQuokka,   label: "Quokka",    desc: "Multifandom — 2+ grupos diferentes", color: "laranja" },
-  { id: "leebit",   img: badgeLeebit,   label: "Leebit",    desc: "Gastou mais de R$7.000 acumulado", color: "dourado" },
+  { id: "foxiny",   img: badgeFoxinyBronze,  imgBronze: badgeFoxinyBronze,  imgPrata: badgeFoxinyPrata,  imgOuro: badgeFoxinyOuro,   label: "Foxiny",   titulo: "Novo Membro",      desc: "Novo membro — 1ª CEG vinculada" },
+  { id: "puppym",   img: badgePuppymBronze,  imgBronze: badgePuppymBronze,  imgPrata: badgePuppymPrata,  imgOuro: badgePuppymOuro,   label: "Puppym",   titulo: "Joiner Fiel",       desc: "Joiner fiel — Bronze 5+ · Prata 15+ · Ouro 30+ CEGs" },
+  { id: "wolfchan", img: badgeWolfchanBronze, imgBronze: badgeWolfchanBronze, imgPrata: badgeWolfchanPrata, imgOuro: badgeWolfchanOuro, label: "Wolfchan", titulo: "Polivalente",        desc: "Polivalente — Bronze 1-4 · Prata 5-9 · Ouro 10+ interações" },
+  { id: "bbokari",  img: badgeBbokari,       imgBronze: badgeBbokari,       imgPrata: badgeBbokariPrata, imgOuro: badgeBbokariOuro,  label: "Bbokari",  titulo: "Veterana do Envio", desc: "Veterana do envio — Bronze 1+ · Prata 3+ · Ouro 5+ envios" },
+  { id: "jiniret",  img: badgeJiniretBronze, imgBronze: badgeJiniretBronze, imgPrata: badgeJiniretPrata, imgOuro: badgeJiniretOuro,  label: "Jiniret",  titulo: "Pagadora Exemplar", desc: "Pagadora exemplar — Ouro 0-3 multas · Prata 4-6 · Bronze 7-9" },
+  { id: "dwaekki",  img: badgeDwaekkiBronze, imgBronze: badgeDwaekkiBronze, imgPrata: badgeDwaekiPrata,  imgOuro: badgeDwaekiOuro,   label: "Dwaekki",  titulo: "Colecionadora 3D",  desc: "Colecionadora 3D — Bronze 1 · Prata 2 · Ouro 3+ itens" },
+  { id: "quokka",   img: badgeQuokkaBronze,  imgBronze: badgeQuokkaBronze,  imgPrata: badgeQuokkaPrata,  imgOuro: badgeQuokkaOuro,   label: "Quokka",   titulo: "Multifandom",        desc: "Multifandom — Prata 2 grupos · Ouro 3+ grupos" },
+  { id: "leebit",   img: badgeLeebit,        imgBronze: badgeLeebit,        imgPrata: badgeLeebitPrata,  imgOuro: badgeLeebitOuro,   label: "Leebit",   titulo: "Mega Investidora",  desc: "Mega investidora — Bronze R$2k · Prata R$5k · Ouro R$12k" },
 ];
 
+const TIER_COLORS = {
+  ouro:   { hex: "linear-gradient(160deg,#FFE9A8,#D4AF37)", text: "#D4AF37", border: "rgba(212,175,55,.35)", pill: "rgba(212,175,55,.12)", glow: "drop-shadow(0 0 8px rgba(212,175,55,.9)) drop-shadow(0 0 18px rgba(212,175,55,.55))" },
+  prata:  { hex: "linear-gradient(160deg,#E4E4E4,#9E9E9E)", text: "#C0C0C0", border: "rgba(192,192,192,.3)",  pill: "rgba(180,180,180,.1)",  glow: "drop-shadow(0 0 8px rgba(192,192,192,.8)) drop-shadow(0 0 16px rgba(192,192,192,.4))" },
+  bronze: { hex: "linear-gradient(160deg,#E8A87C,#CD7F32)", text: "#CD7F32", border: "rgba(205,127,50,.3)",  pill: "rgba(205,127,50,.12)",  glow: "drop-shadow(0 0 8px rgba(205,127,50,.85)) drop-shadow(0 0 16px rgba(205,127,50,.45))" },
+};
+const TIER_LABEL = { ouro: "Ouro", prata: "Prata", bronze: "Bronze" };
+function badgeImg(b, tier) {
+  if (tier === "ouro"  && b.imgOuro)  return b.imgOuro;
+  if (tier === "prata" && b.imgPrata) return b.imgPrata;
+  if (tier === "bronze"&& b.imgBronze)return b.imgBronze;
+  return b.img;
+}
+
 function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [], multasPagas = 0, cog = null }) {
-  const cegsDistintos = new Set(itens.map(i => i.ceg)).size;
+  const cegsDistintos  = new Set(itens.map(i => i.ceg)).size;
   const gruposDistintos = new Set(itens.map(i => CEG_GRUPO[i.ceg]).filter(Boolean)).size;
   const totalPago = itens.reduce((a, i) =>
-    a + (i.pago_item ? Number(i.valor_item || 0) : 0)
+    a + (i.pago_item  ? Number(i.valor_item  || 0) : 0)
       + (i.pago_frete ? Number(i.frete_inter || 0) : 0)
-      + (i.pago_rf ? Number(i.taxa_rf || 0) : 0), 0);
-  const enviosFeitos = envios.filter(e => e.status === "enviado").length;
-  const temItem3D = itens.some(i => /3d/i.test(i.nome_do_item || "") || (i.ceg || "").trim().toUpperCase() === "GET COOL");
-  const fmtR = v => `R$${v.toFixed(2).replace(".", ",")}`;
-  const manuais = BADGES_MANUAIS[cog] || [];
+      + (i.pago_rf   ? Number(i.taxa_rf     || 0) : 0), 0);
+  const enviosFeitos      = envios.filter(e => e.status === "enviado").length;
+  const itens3D           = itens.filter(i => /3d/i.test(i.nome_do_item || "") || (i.ceg || "").trim().toUpperCase() === "GET COOL").length;
+  const totalInteracoes   = envios.length + pagamentos.length + (reports || []).length;
+  const fmtR = v => `R$${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const manuais = BADGES_MANUAIS[cog] || {};
 
-  const earned = {
-    foxiny:   itens.length > 0,
-    puppym:   cegsDistintos >= 20,
-    wolfchan: envios.length > 0 && pagamentos.length > 0 && reports.length > 0,
-    bbokari:  enviosFeitos >= 3,
-    jiniret:  multasPagas < 10,
-    dwaekki:  temItem3D,
-    quokka:   gruposDistintos >= 2,
-    leebit:   totalPago >= 7000,
-  };
-  manuais.forEach(id => { earned[id] = true; });
+  function calcTier(id) {
+    switch (id) {
+      case "foxiny":   return itens.length > 0 ? "bronze" : null;
+      case "puppym":   return cegsDistintos >= 30 ? "ouro" : cegsDistintos >= 15 ? "prata" : cegsDistintos >= 5 ? "bronze" : null;
+      case "wolfchan": return totalInteracoes >= 10 ? "ouro" : totalInteracoes >= 5 ? "prata" : totalInteracoes >= 1 ? "bronze" : null;
+      case "bbokari":  return enviosFeitos >= 5 ? "ouro" : enviosFeitos >= 3 ? "prata" : enviosFeitos >= 1 ? "bronze" : null;
+      case "jiniret":  return multasPagas <= 3 ? "ouro" : multasPagas <= 6 ? "prata" : multasPagas <= 9 ? "bronze" : null;
+      case "dwaekki":  return itens3D >= 3 ? "ouro" : itens3D >= 2 ? "prata" : itens3D >= 1 ? "bronze" : null;
+      case "quokka":   return gruposDistintos >= 3 ? "ouro" : gruposDistintos >= 2 ? "prata" : null;
+      case "leebit":   return totalPago >= 12000 ? "ouro" : totalPago >= 5000 ? "prata" : totalPago >= 2000 ? "bronze" : null;
+      default: return null;
+    }
+  }
 
-  const wolfchanFaltam = [
-    envios.length === 0     ? "fazer um Envio Nacional" : null,
-    pagamentos.length === 0 ? "usar o forms de pagamento" : null,
-    reports.length === 0    ? "reportar um erro" : null,
-  ].filter(Boolean);
 
-  const detalhe = {
-    foxiny:   earned.foxiny   ? "Conquistado pra sempre — não some, mesmo crescendo na comunidade." : "Adicione pelo menos 1 item na sua masterlist pra conquistar.",
-    puppym:   earned.puppym   ? `Conquistado com ${cegsDistintos} CEGs — fica valendo pra sempre.` : `Você tem ${cegsDistintos}/20 CEGs vinculadas. Faltam ${20 - cegsDistintos} pra conquistar.`,
-    wolfchan: earned.wolfchan ? "Conquistado pra sempre — você já usou os 3 recursos." : `Falta: ${wolfchanFaltam.join(", ")}.`,
-    bbokari:  earned.bbokari  ? `Conquistado com ${enviosFeitos} envios concluídos — fica valendo pra sempre.` : `Você tem ${enviosFeitos}/3 envios concluídos pelo site.`,
-    jiniret:  earned.jiniret  ? `Em dia! ${multasPagas} multa(s) paga(s) até agora. Pague sempre antes do vencimento pra não perder esse badge (precisa ficar abaixo de 10).` : `Você já tem ${multasPagas} multas pagas. Fique abaixo de 10 pra reconquistar.`,
-    dwaekki:  earned.dwaekki  ? "Conquistado pra sempre — você já comprou um item 3D." : "Compre algum item com \"3D\" no nome pra conquistar.",
-    quokka:   earned.quokka   ? `Conquistado pra sempre — você já participou de ${gruposDistintos} grupos diferentes.` : `Você participou de ${gruposDistintos}/2 grupos diferentes. Participe de outro grupo pra conquistar.`,
-    leebit:   earned.leebit   ? `Conquistado pra sempre — você gastou ${fmtR(totalPago)} acumulado.` : `Você gastou ${fmtR(totalPago)} de R$7.000,00 necessários. Faltam ${fmtR(7000 - totalPago)}.`,
-  };
+  function calcDetalhe(id, tier) {
+    switch (id) {
+      case "foxiny":
+        return tier ? "Bem-vinda à comunidade! Participando de ao menos 1 CEG." : "Adicione pelo menos 1 item na masterlist.";
+      case "puppym":
+        return tier === "ouro"   ? `🥇 ${cegsDistintos} CEGs — você é joiner veterana!`
+             : tier === "prata"  ? `🥈 ${cegsDistintos} CEGs — faltam ${30 - cegsDistintos} pra Ouro (30).`
+             : tier === "bronze" ? `🥉 ${cegsDistintos} CEGs — faltam ${15 - cegsDistintos} pra Prata (15).`
+             : `${cegsDistintos}/5 CEGs vinculadas. Faltam ${5 - cegsDistintos} pra Bronze.`;
+      case "wolfchan":
+        return tier === "ouro"   ? `🥇 ${totalInteracoes} interações — experiente em tudo!`
+             : tier === "prata"  ? `🥈 ${totalInteracoes} interações — faltam ${10 - totalInteracoes} pra Ouro (10).`
+             : tier === "bronze" ? `🥉 ${totalInteracoes} interação(ões) — faltam ${5 - totalInteracoes} pra Prata (5).`
+             : "Use envios, forms de pagamento ou reporte um erro.";
+      case "bbokari":
+        return tier === "ouro"   ? `🥇 ${enviosFeitos} envios concluídos!`
+             : tier === "prata"  ? `🥈 ${enviosFeitos} envios — faltam ${5 - enviosFeitos} pra Ouro (5).`
+             : tier === "bronze" ? `🥉 ${enviosFeitos} envio(s) — faltam ${3 - enviosFeitos} pra Prata (3).`
+             : "Faça pelo menos 1 envio nacional pelo site.";
+      case "jiniret":
+        return tier === "ouro"   ? `🥇 ${multasPagas} multa(s) — dentro do Ouro (0–3). Pague sempre em dia!`
+             : tier === "prata"  ? `🥈 ${multasPagas} multas — Prata (4–6). Abaixo de 4 pra Ouro.`
+             : tier === "bronze" ? `🥉 ${multasPagas} multas — Bronze (7–9). Abaixo de 7 pra Prata.`
+             : `${multasPagas} multas pagas. Acima de 9 perde o badge.`;
+      case "dwaekki":
+        return tier === "ouro"   ? `🥇 ${itens3D} itens 3D!`
+             : tier === "prata"  ? `🥈 ${itens3D} itens 3D — mais 1 pra Ouro (3).`
+             : tier === "bronze" ? `🥉 ${itens3D} item 3D — mais 1 pra Prata (2).`
+             : "Compre algum item com \"3D\" no nome.";
+      case "quokka":
+        return tier === "ouro"   ? `🥇 ${gruposDistintos} grupos diferentes — multifandom de verdade!`
+             : tier === "prata"  ? `🥈 ${gruposDistintos} grupos — mais 1 grupo diferente pra Ouro (3+).`
+             : `${gruposDistintos}/2 grupos. Participe de CEGs de 2 grupos diferentes pra Prata.`;
+      case "leebit":
+        return tier === "ouro"   ? `🥇 ${fmtR(totalPago)} acumulado — topo do ranking!`
+             : tier === "prata"  ? `🥈 ${fmtR(totalPago)} — faltam ${fmtR(12000 - totalPago)} pra Ouro (R$12.000).`
+             : tier === "bronze" ? `🥉 ${fmtR(totalPago)} — faltam ${fmtR(5000 - totalPago)} pra Prata (R$5.000).`
+             : `${fmtR(totalPago)} de R$2.000 pra Bronze.`;
+      default: return "";
+    }
+  }
 
-  return BADGES_DEF.map(b => ({
-    ...b,
-    earned: !!earned[b.id],
-    detalhe: manuais.includes(b.id) ? "Conquistado — concedido pela equipe ANTICEG." : detalhe[b.id],
-  }));
+  return BADGES_DEF.map(b => {
+    const tier = manuais[b.id] || calcTier(b.id);
+    return {
+      ...b,
+      tier,
+      earned: tier !== null,
+      detalhe: manuais[b.id] ? "Conquistado — concedido pela equipe ANTICEG." : calcDetalhe(b.id, tier),
+    };
+  });
 }
 
 function NovoBadgePopup({ badge, onClose }) {
@@ -414,15 +476,21 @@ function NovoBadgePopup({ badge, onClose }) {
     <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.78)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }} onClick={onClose}>
       <div style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.12)", borderRadius:16, padding:"32px 28px", width:"min(320px, 100%)", display:"flex", flexDirection:"column", alignItems:"center", gap:10, textAlign:"center", animation:"badgePopIn .35s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1.5px", color:"var(--verde)", textTransform:"uppercase" }}>🎉 Novo badge conquistado!</div>
-        <div className={`badge-hex-wrap badge-earned ${badge.color === "dourado" ? "badge-hex-glow" : ""}`} style={{ margin:"10px 0" }}>
-          <div className={`badge-hex badge-hex-${badge.color}`} style={{ width:96, height:86 }}>
-            <div className="badge-hex-inner">
-              <div className="badge-hex-circle" style={{ width:66, height:66 }}>
-                <img src={badge.img} alt={badge.label} />
+        {(() => {
+          const tc = badge.tier ? TIER_COLORS[badge.tier] : null;
+          return (
+            <div style={{ margin:"10px 0", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+              <div style={{ width:96, height:86, clipPath:"polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)", background: tc ? tc.hex : "#2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", filter: tc ? tc.glow : "none", padding:4 }}>
+                <div style={{ width:"100%", height:"100%", clipPath:"polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)", background:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <div style={{ width:66, height:66, borderRadius:"50%", overflow:"hidden", background:"#fff" }}>
+                    <img src={badgeImg(badge, badge.tier)} alt={badge.label} style={{ width:"100%", height:"100%", objectFit:"cover", transform:"scale(1.65)" }} />
+                  </div>
+                </div>
               </div>
+              {badge.tier && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", color: tc.text, background: tc.pill, borderRadius:4, padding:"2px 8px" }}>{TIER_LABEL[badge.tier]}</span>}
             </div>
-          </div>
-        </div>
+          );
+        })()}
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1 }}>{badge.label}</div>
         <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>{badge.desc}</div>
         <button onClick={onClose} className="login-btn" style={{ marginTop:14, width:"100%" }}>FECHAR</button>
@@ -441,19 +509,24 @@ function BadgesRow({ badges }) {
         <div className="badge-line badge-line-top" />
         <div className="badge-line badge-line-bottom" />
         <div className="badge-line badge-line-connector" />
-        {badges.map(b => (
-          <div key={b.id} className={`badge-hex-wrap ${b.earned ? "badge-earned" : "badge-locked"} ${b.earned && b.color === "dourado" ? "badge-hex-glow" : ""}`} title={b.desc}>
-            <div className={`badge-hex badge-hex-${b.color}`}>
-              <div className="badge-hex-inner">
-                <div className="badge-hex-circle">
-                  <img src={b.img} alt={b.label} />
+        {badges.map(b => {
+          const tc = b.tier ? TIER_COLORS[b.tier] : null;
+          return (
+            <div key={b.id} className={`badge-hex-wrap ${b.tier ? "badge-earned" : "badge-locked"}`} title={b.desc}
+              style={tc ? { filter: tc.glow } : undefined}>
+              <div className="badge-hex" style={{ background: tc ? tc.hex : undefined, padding: b.tier === "ouro" ? 4 : undefined }}>
+                <div className="badge-hex-inner">
+                  <div className="badge-hex-circle">
+                    <img src={badgeImg(b, b.tier)} alt={b.label} style={{ opacity: b.tier ? 1 : .4, filter: b.tier ? "none" : "grayscale(1)" }} />
+                  </div>
                 </div>
               </div>
+              <div className="badge-hex-label" style={tc ? { color: tc.text } : undefined}>{b.label}</div>
+              {b.tier && <span style={{ fontSize:7, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", color: tc.text, background: tc.pill, borderRadius:3, padding:"1px 5px" }}>{TIER_LABEL[b.tier]}</span>}
+              <span className="badge-pill-desc">{b.titulo}</span>
             </div>
-            <div className="badge-hex-label">{b.label}</div>
-            <span className="badge-pill-desc">{b.desc}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1801,9 +1874,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   itens.forEach(i => {
     const ck = `${i.ceg}::${i.nome_do_item}`;
     const cfm = pagConfirmMap[ck] || {};
-    if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item)  vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg, val: Number(i.valor_item  || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "item" });
-    if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg, val: Number(i.frete_inter || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "frete" });
-    if (i.venc_rf    && isPendente(i.pago_rf)    && !cfm.rf)    vencDates.push({ d: parseLocalDate(i.venc_rf),    label: "Taxa: "  + i.ceg, val: Number(i.taxa_rf     || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "taxa RF" });
+    if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item  && Number(i.valor_item  || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg, val: Number(i.valor_item  || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "item" });
+    if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete && Number(i.frete_inter || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg, val: Number(i.frete_inter || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "frete" });
+    if (i.venc_rf    && isPendente(i.pago_rf)    && !cfm.rf    && Number(i.taxa_rf     || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_rf),    label: "Taxa: "  + i.ceg, val: Number(i.taxa_rf     || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "taxa RF" });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
@@ -4672,25 +4745,38 @@ ${compHTML}
         return (
           <div style={{ paddingBottom: 40 }}>
             <BadgesRow badges={badges} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {badges.map(b => (
-                <div key={b.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", background: "var(--card-bg)", border: `1px solid ${b.earned ? "rgba(186,255,57,.18)" : "rgba(245,240,232,.07)"}`, borderRadius: 10, padding: "14px 16px" }}>
-                  <div style={{ width: 44, height: 39, flexShrink: 0, clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)", background: b.earned ? (b.color === "dourado" ? "linear-gradient(160deg, #FFE9A8, #D4AF37)" : "#fff") : "#2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", background: "#fff" }}>
-                      <img src={b.img} alt={b.label} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.65)", opacity: b.earned ? 1 : .4, filter: b.earned ? "none" : "grayscale(1)" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {badges.map(b => {
+                const tc = b.tier ? TIER_COLORS[b.tier] : null;
+                const TIERS = ["bronze", "prata", "ouro"];
+                const tierIdx = TIERS.indexOf(b.tier);
+                return (
+                <div key={b.id} style={{ background: "var(--card-bg)", border: `1px solid ${tc ? tc.border : "rgba(245,240,232,.07)"}`, borderRadius: 10, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center" }}>
+                  {/* mini hex */}
+                  <div style={{ width: 38, height: 34, flexShrink: 0, clipPath: "polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)", background: tc ? tc.hex : "#222", display: "flex", alignItems: "center", justifyContent: "center", filter: tc ? tc.glow : "none" }}>
+                    <div style={{ width: "80%", height: "80%", clipPath: "polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", overflow: "hidden" }}>
+                        <img src={badgeImg(b, b.tier)} alt={b.label} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.65)", opacity: b.tier ? 1 : .3, filter: b.tier ? "none" : "grayscale(1)" }} />
+                      </div>
                     </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, color: "var(--offwhite)", letterSpacing: .5 }}>{b.label}</span>
-                      <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", fontWeight: 700, letterSpacing: ".05em", padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", color: b.earned ? "var(--verde)" : "rgba(245,240,232,.4)", background: b.earned ? "rgba(186,255,57,.1)" : "rgba(245,240,232,.06)" }}>
-                        {b.earned ? "✓ Conquistado" : "Bloqueado"}
-                      </span>
+                  {/* info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 5 }}>
+                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, color: tc ? tc.text : "rgba(245,240,232,.3)", letterSpacing: .5 }}>{b.titulo}</span>
+                      {b.tier && <span style={{ fontSize: 8, fontFamily: "'DM Mono',monospace", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: tc.text, background: tc.pill, borderRadius: 3, padding: "1px 5px", flexShrink: 0 }}>{TIER_LABEL[b.tier]}</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: "rgba(245,240,232,.55)", lineHeight: 1.5 }}>{b.detalhe}</div>
+                    {/* barra de tiers */}
+                    <div style={{ display: "flex", gap: 3, marginBottom: 5 }}>
+                      {TIERS.map((t, i) => (
+                        <div key={t} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= tierIdx ? TIER_COLORS[t].hex : "rgba(245,240,232,.08)" }} />
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.detalhe}</div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
@@ -6486,11 +6572,20 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     if (adminMainTab === "disponiveis" && !loaded.has("disponiveis")) {
       loaded.add("disponiveis");
-      const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
-      supabase.from("masterlist").select(sel).or("nome.ilike.disponivel,nome.ilike.disponível")
-        .then(({ data }) => { if (data) setDisponiveisData(data); });
+      fetchDisponiveis();
     }
   }, [adminMainTab]);
+
+  async function fetchDisponiveis() {
+    const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+    const { data } = await supabase.from("masterlist").select(sel).or("nome.ilike.disponivel,nome.ilike.disponível");
+    if (data) setDisponiveisData(data);
+  }
+
+  async function refreshDisponiveis() {
+    setDisponiveisData(null);
+    await fetchDisponiveis();
+  }
 
   async function enviarPush() {
     if (!novoPush.trim()) return;
@@ -7413,7 +7508,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "disponiveis" && (
         disponiveisData === null
           ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
-          : <AdminDisponivel data={disponiveisData} claimsInit={claimsPendentes} onClaimsChange={setClaimsPendentes} />
+          : <AdminDisponivel data={disponiveisData} claimsInit={claimsPendentes} onClaimsChange={setClaimsPendentes} onRefresh={refreshDisponiveis} />
       )}
 
       {adminMainTab === "badges" && (
@@ -9460,12 +9555,17 @@ function AdminPagamentos({ data, joiners, subtab }) {
   );
 }
 
-function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
+function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
   const [itens, setItens] = useState(data);
+  const [refreshing, setRefreshing] = useState(false);
   const [filtroCeg, setFiltroCeg] = useState(null);
   const [claims, setClaims] = useState(claimsInit || []);
   const [fotos, setFotos] = useState({});
   const [uploadingFoto, setUploadingFoto] = useState(null);
+
+  useEffect(() => {
+    if (data) setItens(data);
+  }, [data]);
 
   useEffect(() => {
     if (!data?.length) return;
@@ -9477,7 +9577,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
         fd.forEach(f => { m[`${f.ceg}||${f.nome_do_item}`] = f.foto_url; });
         setFotos(m);
       });
-  }, []);
+  }, [data]);
 
   async function uploadFoto(item, file) {
     const key = `${item.ceg}||${item.nome_do_item}`;
@@ -9569,7 +9669,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
           <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginTop:4 }}>{item.info_adicionais}</div>
         )}
       </div>
-      <div style={{ flexShrink:0 }}>
+      <div style={{ flexShrink:0, display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
         {item.status === "Disponível" ? (
           <button onClick={() => retirar(item.id, item.status)} style={{
             background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)",
@@ -9583,6 +9683,16 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
             fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
           }}>Publicar na loja →</button>
         )}
+        <button onClick={async () => {
+          if (!window.confirm(`Apagar "${item.nome_do_item}" da masterlist? Isso não pode ser desfeito.`)) return;
+          const { error } = await supabase.from("masterlist").delete().eq("id", item.id);
+          if (error) { alert("Erro: " + error.message); return; }
+          setItens(prev => prev.filter(i => i.id !== item.id));
+        }} style={{
+          background:"none", border:"none",
+          color:"rgba(255,107,107,.45)", fontSize:10,
+          fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"2px 0"
+        }}>🗑 apagar</button>
       </div>
     </div>
     );
@@ -9601,11 +9711,17 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange }) {
         <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
           {publicados.length} publicado{publicados.length !== 1 ? "s" : ""} · {naoPublicados.length} oculto{naoPublicados.length !== 1 ? "s" : ""}
         </div>
-        {publicados.length > 0 && (
-          <button onClick={retirarTodos} style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-            Retirar todos ✕
+        <div style={{ display:"flex", gap:6 }}>
+          <button onClick={async () => { setRefreshing(true); await onRefresh?.(); setRefreshing(false); }} disabled={refreshing}
+            style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: refreshing ? 0.5 : 1 }}>
+            {refreshing ? "..." : "↻ Atualizar"}
           </button>
-        )}
+          {publicados.length > 0 && (
+            <button onClick={retirarTodos} style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              Retirar todos ✕
+            </button>
+          )}
+        </div>
       </div>
       {cegs.length > 1 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
