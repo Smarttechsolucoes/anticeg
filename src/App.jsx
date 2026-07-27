@@ -1783,6 +1783,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [totalModal,    setTotalModal]    = useState(false);
   const [vencModal,     setVencModal]     = useState(false);
   const [galeriaModal,  setGaleriaModal]  = useState(false);
+  const [galeriaTab,    setGaleriaTab]    = useState("claims");
   const [minhasFotos,   setMinhasFotos]   = useState(null);
   const [fotoAmpliada,  setFotoAmpliada]  = useState(null);
   const [pagDemandaMap,  setPagDemandaMap]  = useState({});
@@ -1834,6 +1835,8 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [loadingAcoes, setLoadingAcoes] = useState(false);
   const [envioByItem,      setEnvioByItem]      = useState({});
   const [showFinalizados,  setShowFinalizados]  = useState(false);
+  const [storageGom,       setStorageGom]       = useState([]);
+  const [storageModal,     setStorageModal]     = useState(false);
 
   useEffect(() => {
     if (guest || !user.cog) return;
@@ -1844,6 +1847,13 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         data.forEach(s => (s.itens || []).forEach(it => { map[it.id] = s; }));
         setEnvioByItem(map);
       });
+  }, [user.cog, guest]);
+
+  useEffect(() => {
+    if (guest || !user.cog) return;
+    supabase.from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setStorageGom(data); });
   }, [user.cog, guest]);
 
   useEffect(() => {
@@ -1996,6 +2006,31 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   return (
     <>
       {reportItem && <ReportModal user={user} item={reportItem} onClose={() => setReportItem(null)} onReported={onReported} />}
+      {storageModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }} onClick={() => setStorageModal(false)}>
+          <div style={{ background:"#141412", border:"1px solid rgba(201,168,240,.2)", borderRadius:14, padding:"20px 22px", width:"100%", maxWidth:540, maxHeight:"80vh", overflowY:"auto", display:"flex", flexDirection:"column", gap:14 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"2px", color:"#C9A8F0", textTransform:"uppercase" }}>◧ Storage GOM</div>
+                <div style={{ fontSize:12, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", marginTop:2 }}>{storageGom.length} foto{storageGom.length !== 1 ? "s" : ""} registradas</div>
+              </div>
+              <button onClick={() => setStorageModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontSize:18, cursor:"pointer" }}>✕</button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:10 }}>
+              {storageGom.map(s => (
+                <div key={s.id} style={{ borderRadius:9, overflow:"hidden", border:"1px solid rgba(201,168,240,.15)", background:"#111" }}>
+                  <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block" }} />
+                  <div style={{ padding:"7px 10px" }}>
+                    {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
+                      <div key={i} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.7)", lineHeight:1.4 }}>{l.trim()}</div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     <div className="main">
       {bannerPagamentosAtivo && temAntigomEmAberto && (
         <div className="notif-pagamento">
@@ -2100,52 +2135,79 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       {galeriaModal && (
         <div className="modal-overlay" onClick={() => setGaleriaModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:680, width:"95vw", display:"flex", flexDirection:"column", maxHeight:"90vh", overflow:"hidden", padding:0 }}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 16px", borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
-              <div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
-                  MINHA <span style={{ color:"#C9A8F0" }}>GALERIA</span>
-                </div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2, fontFamily:"'DM Mono',monospace" }}>
-                  {minhasFotos === null ? "carregando..." : `${minhasFotos.length} foto${minhasFotos.length !== 1 ? "s" : ""} dos seus itens`}
-                </div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 14px", borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
+                MINHA <span style={{ color:"#C9A8F0" }}>GALERIA</span>
               </div>
               <button onClick={() => setGaleriaModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
+            {/* tabs */}
+            <div style={{ display:"flex", gap:0, borderBottom:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
+              {[["claims", "Claims"], ["em_maos", "Em Mãos"]].map(([id, label]) => (
+                <button key={id} onClick={() => setGaleriaTab(id)} style={{ flex:1, padding:"10px 0", background:"none", border:"none", borderBottom: galeriaTab === id ? "2px solid #C9A8F0" : "2px solid transparent", color: galeriaTab === id ? "#C9A8F0" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight: galeriaTab === id ? 700 : 400, cursor:"pointer", letterSpacing:"1px", textTransform:"uppercase", transition:"color .15s" }}>
+                  {label}
+                  {id === "em_maos" && storageGom.length > 0 && (
+                    <span style={{ marginLeft:6, fontSize:9, background:"rgba(201,168,240,.15)", color:"#C9A8F0", borderRadius:4, padding:"1px 5px" }}>{storageGom.length}</span>
+                  )}
+                </button>
+              ))}
+            </div>
             <div style={{ overflowY:"auto", flex:1, padding:"20px 24px 24px" }}>
-              {minhasFotos === null ? (
-                <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>carregando...</div>
-              ) : minhasFotos.length === 0 ? (
-                <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>nenhuma foto cadastrada para os seus itens</div>
-              ) : (
-                <>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:14, lineHeight:1.6 }}>
-                    caso algum item não apareça aqui, é porque ele ainda não tem foto cadastrada.
-                  </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:12 }}>
-                  {minhasFotos.map(f => {
-                    const itemDoJoiner = itens.find(i => {
-                      if (i.ceg !== f.ceg) return false;
-                      const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
-                      const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
-                      return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
-                    });
-                    const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
-                    return (
-                      <div key={f.id} onClick={() => setFotoAmpliada({ foto: f, membro })}
-                        style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", cursor:"pointer", transition:"border-color .15s" }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor="rgba(201,168,240,.35)"}
-                        onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
-                        <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+              {galeriaTab === "claims" && (
+                minhasFotos === null ? (
+                  <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>carregando...</div>
+                ) : minhasFotos.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>nenhuma foto cadastrada para os seus itens</div>
+                ) : (
+                  <>
+                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:14, lineHeight:1.6 }}>
+                      caso algum item não apareça aqui, é porque ele ainda não tem foto cadastrada.
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:12 }}>
+                      {minhasFotos.map(f => {
+                        const itemDoJoiner = itens.find(i => {
+                          if (i.ceg !== f.ceg) return false;
+                          const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
+                          const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
+                          return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
+                        });
+                        const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
+                        return (
+                          <div key={f.id} onClick={() => setFotoAmpliada({ foto: f, membro })}
+                            style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", cursor:"pointer", transition:"border-color .15s" }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor="rgba(201,168,240,.35)"}
+                            onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
+                            <img src={f.foto_url} alt={f.nome_do_item} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                            <div style={{ padding:"8px 10px 10px" }}>
+                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", letterSpacing:"0.5px", marginBottom:2 }}>{f.ceg}</div>
+                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", lineHeight:1.4 }}>{f.nome_do_item}</div>
+                              {membro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", marginTop:3 }}>{membro}</div>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )
+              )}
+              {galeriaTab === "em_maos" && (
+                storageGom.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>aba em construção, aguarde atualizações de fotos.</div>
+                ) : (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
+                    {storageGom.map(s => (
+                      <div key={s.id} style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(201,168,240,.15)" }}>
+                        <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block" }} />
                         <div style={{ padding:"8px 10px 10px" }}>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.35)", letterSpacing:"0.5px", marginBottom:2 }}>{f.ceg}</div>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", lineHeight:1.4 }}>{f.nome_do_item}</div>
-                          {membro && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", marginTop:3 }}>{membro}</div>}
+                          <div style={{ fontSize:8, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", letterSpacing:"0.5px", marginBottom:3 }}>◧ Storage GOM</div>
+                          {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
+                            <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.8)", lineHeight:1.4 }}>{l.trim()}</div>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-                </>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -2691,6 +2753,16 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                         {repasseMap[item.id] === "pendente" && (
                           <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"#FF5C1A", background:"rgba(255,92,26,.08)" }}>
                             ⇄ repasse em análise
+                          </span>
+                        )}
+                        {["ANTIGOM","Chegou Aqui","Envio Liberado"].includes(item.status) && storageGom.length > 0 && (
+                          <button onClick={e => { e.stopPropagation(); setStorageModal(true); }} style={{ marginTop:4, display:"inline-flex", alignItems:"center", gap:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border:"1px solid rgba(201,168,240,.4)", color:"#C9A8F0", background:"rgba(201,168,240,.08)", cursor:"pointer" }}>
+                            ◧ {storageGom.length} foto{storageGom.length !== 1 ? "s" : ""} na GOM
+                          </button>
+                        )}
+                        {["ANTIGOM","Chegou Aqui","Envio Liberado"].includes(item.status) && storageGom.length === 0 && (
+                          <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.5)", background:"transparent" }}>
+                            ◧ na GOM
                           </span>
                         )}
                       </div>
