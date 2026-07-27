@@ -11417,6 +11417,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [confirmou,   setConfirmou]   = useState(false);
   const [ciente1,     setCiente1]     = useState(false);
   const [ciente2,     setCiente2]     = useState(false);
+  const [ciente3,     setCiente3]     = useState(false);
+  const [ciente4,     setCiente4]     = useState(false);
   const [erro,        setErro]        = useState("");
   const [loading,     setLoading]     = useState(false);
   const [enviado,     setEnviado]     = useState(false);
@@ -11531,7 +11533,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     if (selecionados.length === 0) missing.push("itens selecionados");
     if (!metodo)       missing.push("método de envio");
     if (!seguro)       missing.push("seguro");
-    if (!confirmou || !ciente1 || !ciente2) missing.push("todas as confirmações");
+    if (!confirmou || !ciente1 || !ciente2 || !ciente3 || (metodo === "Jadlog" && !ciente4)) missing.push("todas as confirmações");
     if (missing.length > 0) { setErro(`Preencha: ${missing.join(", ")}.`); return; }
 
     setLoading(true);
@@ -11603,7 +11605,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           setEnviado(false);
           setSelecionados([]);
           setMetodo(""); setSeguro(""); setValorSeguro("");
-          setConfirmou(false); setCiente1(false); setCiente2(false);
+          setConfirmou(false); setCiente1(false); setCiente2(false); setCiente3(false); setCiente4(false);
           setErro(""); setGrupoMode(null); setGrupoCodigo(""); setGrupoInput(""); setGrupoOk(false);
         }} style={{ padding:"9px 24px", background:"transparent", color:"rgba(245,240,232,.55)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
           + Fazer outra solicitação
@@ -11891,6 +11893,19 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <option value="Mais econômico">Método mais econômico (a critério da GOM)</option>
           </select>
         </div>
+
+        {/* Notice 10 dias */}
+        <div style={{ marginBottom:12, background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.18)", borderRadius:7, padding:"10px 14px", fontFamily:"'DM Mono',monospace" }}>
+          <div style={{ fontSize:10, color:"#64B5F6", lineHeight:1.6 }}>ℹ Após a emissão da etiqueta, a GOM tem até <strong>10 dias</strong> para realizar o envio do seu pedido.</div>
+        </div>
+
+        {/* Aviso JADLOG pick-up (condicional) */}
+        {metodo === "Jadlog" && (
+          <div style={{ marginBottom:12, background:"rgba(230,57,70,.06)", border:"1px solid rgba(230,57,70,.2)", borderRadius:7, padding:"10px 14px", fontFamily:"'DM Mono',monospace" }}>
+            <div style={{ fontSize:10, color:"#E63946", lineHeight:1.6 }}>⚠ A caixa será entregue a um <strong>ponto PICK-UP Jadlog</strong>, que depende da retirada oficial da empresa do local. Isso pode impactar o prazo de entrega sinalizado no site.</div>
+          </div>
+        )}
+
         <div style={fld}>
           <label style={lbl}>Declaração de conteúdo</label>
           <div style={{ display:"flex", gap:8 }}>
@@ -11916,6 +11931,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           { val:confirmou, set:setConfirmou, text:"Confirmo que revisei todas as informações acima." },
           { val:ciente1,   set:setCiente1,   text:"Estou ciente de que a GOM não se responsabiliza por dados incorretos informados neste formulário." },
           { val:ciente2,   set:setCiente2,   text:"Estou ciente que serão enviados todos os itens listados e/ou disponíveis na casa da GOM." },
+          { val:ciente3,   set:setCiente3,   text:"Estou ciente de que, após o preenchimento deste formulário, não será possível incluir itens que cheguem na GOM durante o processo por questões de logística." },
         ].map(({ val, set, text }, idx) => (
           <div key={idx} onClick={() => set(v => !v)} style={{
             display:"flex", alignItems:"flex-start", gap:10, marginBottom:12, cursor:"pointer",
@@ -11931,6 +11947,23 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{text}</div>
           </div>
         ))}
+        {metodo === "Jadlog" && (
+          <div onClick={() => setCiente4(v => !v)} style={{
+            display:"flex", alignItems:"flex-start", gap:10, marginBottom:12, cursor:"pointer",
+          }}>
+            <div style={{
+              width:18, height:18, borderRadius:4, flexShrink:0, marginTop:1,
+              background: ciente4 ? "var(--laranja)" : "transparent",
+              border: `2px solid ${ciente4 ? "var(--laranja)" : "rgba(230,57,70,.4)"}`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+            }}>
+              {ciente4 && <span style={{ fontSize:11, color:"#111", fontWeight:900 }}>✓</span>}
+            </div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
+              Estou ciente de que a entrega Jadlog é realizada em um <strong style={{ color:"#F5F0E8" }}>ponto PICK-UP</strong>, sujeita à retirada oficial da empresa do local, o que pode impactar o prazo de entrega sinalizado no site.
+            </div>
+          </div>
+        )}
       </div>
 
       {erro && <div style={{ fontSize:11, color:"#FF5C1A", fontFamily:"'DM Mono',monospace", marginBottom:12, lineHeight:1.5 }}>{erro}</div>}
