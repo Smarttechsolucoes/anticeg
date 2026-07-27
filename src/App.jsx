@@ -346,6 +346,13 @@ function diasAtraso(vencimento) {
   return diff > 0 ? diff : 0;
 }
 
+function diasParaVencer(vencimento) {
+  if (!vencimento) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const venc = new Date(vencimento + "T12:00:00");
+  return Math.floor((venc - hoje) / 86400000);
+}
+
 // ── Badges de gamificação (SKZOO) ──────────────────────────────
 const CEG_GRUPO = {
   "DO IT": "Stray Kids", "DO IT CARDS": "Stray Kids", "DO IT CARDS2": "Stray Kids",
@@ -548,11 +555,14 @@ function ValCell({ val, status, vencimento, emAnalise, confirmado }) {
       {confirmado && isPendente(status) && <span style={{ fontSize: 9, color: "#4ade80", fontFamily: "'DM Mono',monospace", letterSpacing: ".05em" }}>✓ confirmado</span>}
       {!emAnalise && !confirmado && <PayBadge status={status} />}
       {emAnalise && pendente && <span style={{ fontSize: 9, color: "#A78BFA", fontFamily: "'DM Mono',monospace", letterSpacing: ".05em" }}>em análise</span>}
-      {pendente && !emAnalise && !confirmado && vencimento && dias === 0 && (
-        <span style={{ fontSize: 9, color: "rgba(240,192,64,.8)", fontFamily: "'DM Mono',monospace", letterSpacing: ".03em", whiteSpace: "nowrap" }}>
-          venc {fmtVenc(vencimento)}
-        </span>
-      )}
+      {pendente && !emAnalise && !confirmado && vencimento && dias === 0 && (() => {
+        const dpv = diasParaVencer(vencimento);
+        if (dpv === 0)  return <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>vence hoje!</span>;
+        if (dpv === 1)  return <span style={{ fontSize: 9, fontWeight: 700, color: "#FF9F40", background: "rgba(255,159,64,.12)", border: "1px solid rgba(255,159,64,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>vence amanhã</span>;
+        if (dpv <= 5)   return <span style={{ fontSize: 9, fontWeight: 700, color: "#FF9F40", background: "rgba(255,159,64,.10)", border: "1px solid rgba(255,159,64,.25)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>em {dpv}d · {fmtVenc(vencimento)}</span>;
+        if (dpv <= 14)  return <span style={{ fontSize: 9, color: "rgba(240,192,64,.85)", fontFamily: "'DM Mono',monospace", letterSpacing: ".03em", whiteSpace: "nowrap" }}>em {dpv}d · {fmtVenc(vencimento)}</span>;
+        return <span style={{ fontSize: 9, color: "rgba(240,192,64,.55)", fontFamily: "'DM Mono',monospace", letterSpacing: ".03em", whiteSpace: "nowrap" }}>venc {fmtVenc(vencimento)}</span>;
+      })()}
       {dias > 0 && (
         <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
           ⚠ multa R${fmtBRL(multa)} ({dias}d)
