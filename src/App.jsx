@@ -6427,6 +6427,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [cotacaoAberta,     setCotacaoAberta]     = useState(null);
   const [cotacaoOpcoes,     setCotacaoOpcoes]     = useState([{ forma:"", valor:"", valor_original:"", prazo:"" }]);
   const [cotacaoEmbalagem,  setCotacaoEmbalagem]  = useState("");
+  const [storageSearch,     setStorageSearch]     = useState("");
+  const [storageJoiner,     setStorageJoiner]     = useState(null);
+  const [storageItens,      setStorageItens]      = useState([]);
+  const [storageFile,       setStorageFile]       = useState(null);
+  const [storageDesc,       setStorageDesc]       = useState("");
+  const [storageUploading,  setStorageUploading]  = useState(false);
+  const [storageDeletando,  setStorageDeletando]  = useState(null);
+  const [storageMsg,        setStorageMsg]        = useState("");
   const [cotacaoObs,        setCotacaoObs]        = useState("");
   const [pushManualId,      setPushManualId]      = useState(null);
   const [pushManualMsg,     setPushManualMsg]     = useState("");
@@ -6843,6 +6851,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
+                {owner && nav("storage", "Storage", "◧", 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -7626,6 +7635,102 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "mercari" && (
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
+
+      {adminMainTab === "storage" && owner && (() => {
+        async function buscarStorageJoiner() {
+          if (!storageSearch.trim()) return;
+          const handle = storageSearch.trim().replace(/^@/, "");
+          const { data } = await supabase.from("joiners").select("cog,nome")
+            .or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`)
+            .maybeSingle();
+          if (!data) { setStorageMsg("Joiner não encontrado."); setStorageJoiner(null); setStorageItens([]); return; }
+          setStorageJoiner(data);
+          setStorageMsg("");
+          const { data: itens } = await supabase.from("joiner_storage")
+            .select("*").eq("joiner_cog", data.cog).eq("ativo", true)
+            .order("created_at", { ascending: false });
+          setStorageItens(itens || []);
+        }
+        async function uploadStorage() {
+          if (!storageFile || !storageDesc.trim() || !storageJoiner) return;
+          setStorageUploading(true); setStorageMsg("");
+          const ext  = storageFile.name.split(".").pop();
+          const path = `${storageJoiner.cog}/${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageFile, { upsert: true });
+          if (upErr) { setStorageMsg("Erro ao enviar foto: " + upErr.message); setStorageUploading(false); return; }
+          const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+          const { data: novo } = await supabase.from("joiner_storage")
+            .insert([{ joiner_cog: storageJoiner.cog, foto_url: publicUrl, descricao: storageDesc.trim() }])
+            .select().single();
+          if (novo) setStorageItens(prev => [novo, ...prev]);
+          setStorageFile(null); setStorageDesc(""); setStorageMsg("Foto adicionada ✓");
+          setStorageUploading(false);
+        }
+        async function removerStorage(id) {
+          setStorageDeletando(id);
+          await supabase.from("joiner_storage").update({ ativo: false }).eq("id", id);
+          setStorageItens(prev => prev.filter(i => i.id !== id));
+          setStorageDeletando(null);
+        }
+        const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
+        return (
+          <div>
+            <h3 className="admin-title" style={{ fontSize:16, marginBottom:14 }}>◧ Storage de joiners</h3>
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              <input style={{ ...inp2, flex:1 }} placeholder="@ do joiner" value={storageSearch}
+                onChange={e => setStorageSearch(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && buscarStorageJoiner()} />
+              <button onClick={buscarStorageJoiner}
+                style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"0 20px", whiteSpace:"nowrap" }}>
+                Buscar
+              </button>
+            </div>
+            {storageMsg && <div style={{ fontSize:11, color: storageMsg.includes("✓") ? "#BAFF39" : "var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>{storageMsg}</div>}
+
+            {storageJoiner && (
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", marginBottom:2 }}>{storageJoiner.nome || storageJoiner.cog}</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:16 }}>@{storageJoiner.cog} · {storageItens.length} item(s) no storage</div>
+
+                {/* Upload */}
+                <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"16px", marginBottom:16 }}>
+                  <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.35)", textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>Adicionar foto</div>
+                  <label style={{ display:"flex", alignItems:"center", gap:10, background: storageFile ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${storageFile ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", marginBottom:10 }}>
+                    <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => setStorageFile(e.target.files[0] || null)} />
+                    <span style={{ fontSize:16 }}>{storageFile ? "✓" : "↑"}</span>
+                    <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: storageFile ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{storageFile ? storageFile.name : "Clique para selecionar foto"}</span>
+                  </label>
+                  <input style={{ ...inp2, width:"100%", marginBottom:10 }} placeholder="O que tem nessa foto? (ex: SKZOO — Leebit PC + DO IT álbum)" value={storageDesc} onChange={e => setStorageDesc(e.target.value)} />
+                  <button onClick={uploadStorage} disabled={!storageFile || !storageDesc.trim() || storageUploading}
+                    style={{ background: storageFile && storageDesc.trim() ? "var(--laranja)" : "rgba(245,240,232,.1)", color: storageFile && storageDesc.trim() ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:7, padding:"9px 20px", fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: storageFile && storageDesc.trim() ? "pointer" : "not-allowed" }}>
+                    {storageUploading ? "Enviando..." : "Adicionar ao storage →"}
+                  </button>
+                </div>
+
+                {/* Galeria */}
+                {storageItens.length === 0 ? (
+                  <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"20px 0", textAlign:"center" }}>Nenhuma foto no storage desta joiner.</div>
+                ) : (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(160px, 1fr))", gap:10 }}>
+                    {storageItens.map(item => (
+                      <div key={item.id} style={{ background:"#111", border:"1px solid rgba(245,240,232,.08)", borderRadius:9, overflow:"hidden" }}>
+                        <img src={item.foto_url} alt={item.descricao} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", display:"block" }} />
+                        <div style={{ padding:"8px 10px" }}>
+                          <div style={{ fontSize:10, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.4, marginBottom:6 }}>{item.descricao}</div>
+                          <button onClick={() => removerStorage(item.id)} disabled={storageDeletando === item.id}
+                            style={{ fontSize:9, color:"rgba(230,57,70,.7)", background:"none", border:"1px solid rgba(230,57,70,.25)", borderRadius:4, padding:"2px 8px", cursor:"pointer", fontFamily:"'DM Mono',monospace" }}>
+                            {storageDeletando === item.id ? "..." : "Remover"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {adminMainTab === "avisos" && owner && (
         <div>
@@ -11419,6 +11524,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [ciente2,     setCiente2]     = useState(false);
   const [ciente3,     setCiente3]     = useState(false);
   const [ciente4,     setCiente4]     = useState(false);
+  const [storageDisponivel,   setStorageDisponivel]   = useState([]);
+  const [storageSelecionados, setStorageSelecionados] = useState(new Set());
+  const [storageLoadingForm,  setStorageLoadingForm]  = useState(true);
   const [erro,        setErro]        = useState("");
   const [loading,     setLoading]     = useState(false);
   const [enviado,     setEnviado]     = useState(false);
@@ -11496,6 +11604,13 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       .then(({ data }) => { if (data) setMeuEnvios(data); });
   }, [user.cog]);
 
+  useEffect(() => {
+    setStorageLoadingForm(true);
+    supabase.from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { setStorageDisponivel(data || []); setStorageLoadingForm(false); });
+  }, [user.cog]);
+
 
 
   async function buscarCep(val) {
@@ -11563,6 +11678,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       seguro,
       valor_seguro:  seguro === "sim" ? valorSeguro : null,
       status:        "solicitação de envio",
+      storage_selecionados: storageSelecionados.size > 0
+        ? storageDisponivel.filter(i => storageSelecionados.has(i.id)).map(i => ({ id: i.id, descricao: i.descricao, foto_url: i.foto_url }))
+        : null,
       ...(grupoCodigo ? { grupo_envio_codigo: grupoCodigo } : {}),
     }]);
 
@@ -11606,6 +11724,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           setSelecionados([]);
           setMetodo(""); setSeguro(""); setValorSeguro("");
           setConfirmou(false); setCiente1(false); setCiente2(false); setCiente3(false); setCiente4(false);
+          setStorageSelecionados(new Set());
           setErro(""); setGrupoMode(null); setGrupoCodigo(""); setGrupoInput(""); setGrupoOk(false);
         }} style={{ padding:"9px 24px", background:"transparent", color:"rgba(245,240,232,.55)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
           + Fazer outra solicitação
@@ -11879,6 +11998,34 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         )}
       </div>
 
+      {/* STORAGE DA GOM */}
+      {!storageLoadingForm && storageDisponivel.length > 0 && (
+        <div style={sec}>
+          <div style={{ fontSize:10, letterSpacing:"1.5px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>◧ Itens disponíveis na GOM</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:14, lineHeight:1.5 }}>Selecione os itens do seu storage que devem ser incluídos neste envio.</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:8 }}>
+            {storageDisponivel.map(item => {
+              const sel = storageSelecionados.has(item.id);
+              return (
+                <div key={item.id} onClick={() => setStorageSelecionados(prev => { const s = new Set(prev); sel ? s.delete(item.id) : s.add(item.id); return s; })}
+                  style={{ cursor:"pointer", border:`2px solid ${sel ? "#C9A8F0" : "rgba(245,240,232,.1)"}`, borderRadius:9, overflow:"hidden", background: sel ? "rgba(201,168,240,.06)" : "#111", transition:"border-color .12s" }}>
+                  <div style={{ position:"relative" }}>
+                    <img src={item.foto_url} alt={item.descricao} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", display:"block" }} />
+                    {sel && (
+                      <div style={{ position:"absolute", top:6, right:6, background:"#C9A8F0", color:"#111", borderRadius:99, width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900 }}>✓</div>
+                    )}
+                  </div>
+                  <div style={{ padding:"8px 10px", fontSize:10, color: sel ? "#C9A8F0" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{item.descricao}</div>
+                </div>
+              );
+            })}
+          </div>
+          {storageSelecionados.size > 0 && (
+            <div style={{ marginTop:12, fontSize:11, color:"#C9A8F0", fontFamily:"'DM Mono',monospace" }}>✓ {storageSelecionados.size} item(s) do storage selecionado(s)</div>
+          )}
+        </div>
+      )}
+
       <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
       {/* ENVIO */}
       <div style={sec}>
@@ -11915,6 +12062,19 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             </div>
           </div>
         )}
+
+        {/* Taxas de embalagem */}
+        <div style={{ marginBottom:12, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"12px 16px" }}>
+          <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.35)", textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>Taxa de embalagem</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 16px" }}>
+            {[["Mini envio","R$ 3,00"],["Caixa 1–3 kg","R$ 4,00"],["Caixa 3–7 kg","R$ 6,00"],["Caixa +7 kg","R$ 10,00"]].map(([label, val]) => (
+              <div key={label} style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.55)", display:"flex", justifyContent:"space-between" }}>
+                <span>{label}</span><span style={{ color:"#F5F0E8" }}>{val}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:8, lineHeight:1.5 }}>Calculada conforme o peso final do pacote — cobre materiais de proteção e preparo.</div>
+        </div>
 
         <div style={fld}>
           <label style={lbl}>Declaração de conteúdo</label>
