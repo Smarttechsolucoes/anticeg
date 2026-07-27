@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
@@ -3427,7 +3427,6 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
             {navPerfil("badges",     "✦", "Badges",     0)}
             {navPerfil("pagamentos", "◎", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
             {navPerfil("repasse",    "⇄",  "Repasse",    meusRepassos.filter(r => r.status === "pendente").length)}
-            {navPerfil("envios",     "◫",  "Envios",     meuEnvios.filter(e => e.status === "pagamento em aberto").length)}
             {navPerfil("suporte",    "⚑",  "Suporte",    (meuReports || []).filter(r => r.status === "pendente").length)}
           </div>
           <div className="admin-sidebar-group">
@@ -4619,11 +4618,7 @@ ${compHTML}
         );
       })()}
 
-      {perfilSubTab === "envios" && (
-        <div>
-          {meuEnvios.length === 0 ? (
-            <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma solicitação de envio ainda.</div>
-          ) : meuEnvios.map(s => {
+      {false && (() => { return (<div>{meuEnvios.map(s => {
             const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.2)", "cotação em andamento":"rgba(255,92,26,.25)", "pagamento em aberto":"rgba(201,168,240,.25)", "pagamento confirmado":"rgba(255,209,102,.25)", embalando:"rgba(100,181,246,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
             const expanded = expandedEnvio.has(s.id);
@@ -4825,9 +4820,7 @@ ${compHTML}
                 </div>}
               </div>
             );
-          })}
-        </div>
-      )}
+          })}</div>);})()}
 
       {perfilSubTab === "badges" && (() => {
         const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount, cog: user.cog });
@@ -6435,6 +6428,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageUploading,  setStorageUploading]  = useState(false);
   const [storageDeletando,  setStorageDeletando]  = useState(null);
   const [storageMsg,        setStorageMsg]        = useState("");
+  const [storageConferencia, setStorageConferencia] = useState(null);
+  const [storageConfIniciando, setStorageConfIniciando] = useState(false);
+  const [storageEnvioReq,   setStorageEnvioReq]   = useState(null);
+  const [storageLibLoading, setStorageLibLoading] = useState(false);
+  const [storageJoiners,    setStorageJoiners]    = useState(null);
+  const [storageComItens,   setStorageComItens]   = useState(null);
+  const [storageItemSearch, setStorageItemSearch] = useState("");
+  const [storageItensCheck, setStorageItensCheck] = useState(new Set());
+  const [storageMasterlist, setStorageMasterlist] = useState([]);
+  const [roundsList,        setRoundsList]        = useState(null);
+  const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [cotacaoObs,        setCotacaoObs]        = useState("");
   const [pushManualId,      setPushManualId]      = useState(null);
   const [pushManualMsg,     setPushManualMsg]     = useState("");
@@ -6852,6 +6856,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
                 {owner && nav("storage", "Storage", "◧", 0)}
+                {owner && nav("rounds", "Rounds", "◎", 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
@@ -7637,19 +7642,65 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {adminMainTab === "storage" && owner && (() => {
-        async function buscarStorageJoiner() {
-          if (!storageSearch.trim()) return;
-          const handle = storageSearch.trim().replace(/^@/, "");
-          const { data } = await supabase.from("joiners").select("cog,nome")
-            .or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`)
-            .maybeSingle();
-          if (!data) { setStorageMsg("Joiner não encontrado."); setStorageJoiner(null); setStorageItens([]); return; }
+        async function buscarStorageJoiner(joinerData) {
+          const data = joinerData || null;
+          if (!data) return;
           setStorageJoiner(data);
           setStorageMsg("");
-          const { data: itens } = await supabase.from("joiner_storage")
-            .select("*").eq("joiner_cog", data.cog).eq("ativo", true)
-            .order("created_at", { ascending: false });
+          setStorageItensCheck(new Set());
+          setStorageItemSearch("");
+          setStorageDesc("");
+          const [{ data: itens }, { data: conf }, { data: ml }, { data: req }] = await Promise.all([
+            supabase.from("joiner_storage").select("*").eq("joiner_cog", data.cog).eq("ativo", true).order("created_at", { ascending: false }),
+            supabase.from("joiner_conferencias").select("*").eq("joiner_cog", data.cog).order("iniciada_em", { ascending: false }).limit(1).maybeSingle(),
+            supabase.from("masterlist").select("id, ceg, nome_do_item").eq("cog", data.cog).order("ceg").order("nome_do_item"),
+            supabase.from("envio_requests").select("*, envio_rounds(*)").eq("joiner_cog", data.cog).order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
+          ]);
           setStorageItens(itens || []);
+          setStorageConferencia(conf || null);
+          setStorageMasterlist(ml || []);
+          setStorageEnvioReq(req || null);
+        }
+        async function liberarEnvio() {
+          if (!storageJoiner) return;
+          setStorageLibLoading(true);
+          let req = storageEnvioReq;
+          if (!req) {
+            const { data: openRounds } = await supabase.from("envio_rounds")
+              .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
+            let roundId, posicao, roundNum;
+            if (openRounds && openRounds.length > 0) {
+              const round = openRounds[0];
+              const { count } = await supabase.from("envio_requests").select("id", { count: "exact", head: true }).eq("round_id", round.id);
+              posicao = (count || 0) + 1; roundId = round.id; roundNum = round.numero;
+            } else {
+              const { data: allRounds } = await supabase.from("envio_rounds").select("numero").order("numero", { ascending: false }).limit(1);
+              roundNum = (allRounds?.[0]?.numero || 0) + 1;
+              const { data: newRound } = await supabase.from("envio_rounds").insert([{ numero: roundNum, status: "aberto" }]).select().single();
+              roundId = newRound.id; posicao = 1;
+            }
+            const { data: newReq } = await supabase.from("envio_requests")
+              .insert([{ joiner_cog: storageJoiner.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando" }])
+              .select("*, envio_rounds(*)").single();
+            req = newReq;
+            setStorageEnvioReq(req);
+          }
+          if (req?.round_id) {
+            await supabase.from("envio_rounds").update({ status: "em_processo" }).eq("id", req.round_id);
+            setStorageEnvioReq(prev => prev ? { ...prev, envio_rounds: { ...prev.envio_rounds, status: "em_processo" } } : prev);
+            setStorageMsg("Envio liberado ✓");
+          }
+          setStorageLibLoading(false);
+        }
+        async function iniciarConferencia() {
+          if (!storageJoiner) return;
+          setStorageConfIniciando(true);
+          const { data } = await supabase.from("joiner_conferencias")
+            .insert([{ joiner_cog: storageJoiner.cog, prazo_dias: 5 }])
+            .select().single();
+          setStorageConferencia(data);
+          setStorageConfIniciando(false);
+          setStorageMsg("Conferência iniciada ✓");
         }
         async function uploadStorage() {
           if (!storageFile || !storageDesc.trim() || !storageJoiner) return;
@@ -7676,31 +7727,210 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         return (
           <div>
             <h3 className="admin-title" style={{ fontSize:16, marginBottom:14 }}>◧ Storage de joiners</h3>
-            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-              <input style={{ ...inp2, flex:1 }} placeholder="@ do joiner" value={storageSearch}
-                onChange={e => setStorageSearch(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && buscarStorageJoiner()} />
-              <button onClick={buscarStorageJoiner}
-                style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"0 20px", whiteSpace:"nowrap" }}>
-                Buscar
-              </button>
-            </div>
+            {storageJoiner ? (
+              <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.25)", borderRadius:8, padding:"8px 14px", marginBottom:16 }}>
+                <span style={{ flex:1, fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>
+                  {storageJoiner.nome} <span style={{ color:"#C9A8F0" }}>@{storageJoiner.cog}</span>
+                </span>
+                <button onClick={() => { setStorageJoiner(null); setStorageItens([]); setStorageConferencia(null); setStorageEnvioReq(null); setStorageSearch(""); setStorageMsg(""); setStorageMasterlist([]); setStorageItensCheck(new Set()); setStorageItemSearch(""); setStorageDesc(""); }}
+                  style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontSize:16, cursor:"pointer", padding:4, lineHeight:1 }}>✕</button>
+              </div>
+            ) : (
+              <div style={{ marginBottom:16 }}>
+                {/* Busca */}
+                <div style={{ position:"relative", marginBottom:16 }}>
+                  <input style={{ ...inp2, width:"100%", boxSizing:"border-box" }}
+                    placeholder="Buscar joiner por nome ou @..."
+                    value={storageSearch}
+                    onChange={e => {
+                      setStorageSearch(e.target.value);
+                      if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
+                    }} />
+                  {storageSearch.trim().length > 0 && storageJoiners && (() => {
+                    const q = storageSearch.toLowerCase();
+                    const filtered = storageJoiners.filter(j =>
+                      j.nome?.toLowerCase().includes(q) || j.cog?.toLowerCase().includes(q)
+                    );
+                    return (
+                      <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, zIndex:20, overflow:"hidden", maxHeight:220, overflowY:"auto" }}>
+                        {filtered.length === 0
+                          ? <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma joiner encontrada</div>
+                          : filtered.map(j => (
+                            <button key={j.cog} onClick={() => { setStorageSearch(""); buscarStorageJoiner(j); }}
+                              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"9px 14px", cursor:"pointer", color:"#F5F0E8" }}>
+                              <span style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{j.nome}</span>
+                              <span style={{ fontSize:11, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", marginLeft:8 }}>@{j.cog}</span>
+                            </button>
+                          ))
+                        }
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Lista automática de joiners com storage */}
+                {(() => {
+                  if (storageComItens === null) {
+                    setStorageComItens([]);
+                    (async () => {
+                      const { data: itensRaw } = await supabase.from("joiner_storage").select("joiner_cog").eq("ativo", true);
+                      if (!itensRaw) return;
+                      const cogs = [...new Set(itensRaw.map(d => d.joiner_cog))];
+                      if (cogs.length === 0) { setStorageComItens([]); return; }
+                      const counts = {};
+                      itensRaw.forEach(d => { counts[d.joiner_cog] = (counts[d.joiner_cog] || 0) + 1; });
+                      const { data: joinersData } = await supabase.from("joiners").select("cog,nome").in("cog", cogs);
+                      const result = (joinersData || []).map(j => ({ cog: j.cog, nome: j.nome, count: counts[j.cog] || 0 }))
+                        .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+                      setStorageComItens(result);
+                    })();
+                    return <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"20px 0", textAlign:"center" }}>Carregando...</div>;
+                  }
+                  if (storageComItens.length === 0) return (
+                    <div style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", padding:"20px 0", textAlign:"center" }}>Nenhuma joiner com itens no storage.</div>
+                  );
+                  return (
+                    <div>
+                      <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>
+                        {storageComItens.length} joiner(s) com storage
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {storageComItens.map(j => (
+                          <button key={j.cog} onClick={() => buscarStorageJoiner(j)}
+                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", textAlign:"left", background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.12)", borderRadius:8, padding:"10px 14px", cursor:"pointer", gap:10 }}>
+                            <div>
+                              <span style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#F5F0E8" }}>{j.nome || j.cog}</span>
+                              <span style={{ fontSize:11, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", marginLeft:8 }}>@{j.cog}</span>
+                            </div>
+                            <span style={{ fontSize:10, color:"rgba(201,168,240,.7)", fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.2)", borderRadius:4, padding:"2px 8px", whiteSpace:"nowrap" }}>
+                              {j.count} foto{j.count !== 1 ? "s" : ""}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             {storageMsg && <div style={{ fontSize:11, color: storageMsg.includes("✓") ? "#BAFF39" : "var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>{storageMsg}</div>}
 
             {storageJoiner && (
               <div>
                 <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", marginBottom:2 }}>{storageJoiner.nome || storageJoiner.cog}</div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:16 }}>@{storageJoiner.cog} · {storageItens.length} item(s) no storage</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>@{storageJoiner.cog} · {storageItens.length} item(s) no storage</div>
+
+                {/* Painel de conferência */}
+                {(() => {
+                  if (!storageConferencia) {
+                    return (
+                      <div style={{ background:"rgba(100,181,246,.05)", border:"1px solid rgba(100,181,246,.15)", borderRadius:8, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>📋 Conferência</div>
+                          <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Nenhuma conferência iniciada</div>
+                        </div>
+                        <button onClick={iniciarConferencia} disabled={storageConfIniciando || storageItens.length === 0}
+                          style={{ padding:"7px 16px", background: storageItens.length > 0 ? "rgba(100,181,246,.15)" : "rgba(245,240,232,.05)", color: storageItens.length > 0 ? "#64B5F6" : "rgba(245,240,232,.25)", border:`1px solid ${storageItens.length > 0 ? "rgba(100,181,246,.35)" : "rgba(245,240,232,.08)"}`, borderRadius:6, fontSize:10, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: storageItens.length > 0 ? "pointer" : "not-allowed", whiteSpace:"nowrap" }}>
+                          {storageConfIniciando ? "..." : "Iniciar conferência →"}
+                        </button>
+                      </div>
+                    );
+                  }
+                  const prazoMs = (storageConferencia.prazo_dias || 5) * 24 * 60 * 60 * 1000;
+                  const iniciado = new Date(storageConferencia.iniciada_em).getTime();
+                  const diasRestantes = Math.max(0, Math.ceil((iniciado + prazoMs - Date.now()) / (24 * 60 * 60 * 1000)));
+                  const concluida = diasRestantes <= 0 || !!storageConferencia.confirmada_em;
+                  return (
+                    <div style={{ background: concluida ? "rgba(186,255,57,.05)" : "rgba(100,181,246,.05)", border:`1px solid ${concluida ? "rgba(186,255,57,.2)" : "rgba(100,181,246,.15)"}`, borderRadius:8, padding:"12px 16px", marginBottom:16 }}>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color: concluida ? "#BAFF39" : "#64B5F6", fontFamily:"'DM Mono',monospace" }}>
+                            {concluida ? "✓ Conferência concluída" : `📋 Conferência — ${diasRestantes}d restantes`}
+                          </div>
+                          <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>
+                            Iniciada em {new Date(storageConferencia.iniciada_em).toLocaleDateString("pt-BR")}
+                            {storageConferencia.confirmada_em && ` · Confirmada em ${new Date(storageConferencia.confirmada_em).toLocaleDateString("pt-BR")}`}
+                          </div>
+                        </div>
+                        {concluida && (() => {
+                          const jaLiberado = storageEnvioReq?.envio_rounds?.status === "em_processo";
+                          return (
+                            <button onClick={jaLiberado ? undefined : liberarEnvio} disabled={storageLibLoading || jaLiberado}
+                              style={{ padding:"7px 16px", background: jaLiberado ? "rgba(186,255,57,.08)" : "rgba(186,255,57,.15)", color: jaLiberado ? "rgba(186,255,57,.4)" : "#BAFF39", border:`1px solid ${jaLiberado ? "rgba(186,255,57,.15)" : "rgba(186,255,57,.4)"}`, borderRadius:6, fontSize:10, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: jaLiberado ? "default" : "pointer", whiteSpace:"nowrap" }}>
+                              {storageLibLoading ? "..." : jaLiberado ? "Envio liberado ✓" : "Liberar envio →"}
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Upload */}
                 <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"16px", marginBottom:16 }}>
                   <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.35)", textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>Adicionar foto</div>
-                  <label style={{ display:"flex", alignItems:"center", gap:10, background: storageFile ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${storageFile ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", marginBottom:10 }}>
+                  <label style={{ display:"flex", alignItems:"center", gap:10, background: storageFile ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${storageFile ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", marginBottom:12 }}>
                     <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => setStorageFile(e.target.files[0] || null)} />
                     <span style={{ fontSize:16 }}>{storageFile ? "✓" : "↑"}</span>
                     <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: storageFile ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{storageFile ? storageFile.name : "Clique para selecionar foto"}</span>
                   </label>
-                  <input style={{ ...inp2, width:"100%", marginBottom:10 }} placeholder="O que tem nessa foto? (ex: SKZOO — Leebit PC + DO IT álbum)" value={storageDesc} onChange={e => setStorageDesc(e.target.value)} />
+
+                  {/* Seletor de itens com checkbox */}
+                  {storageMasterlist.length > 0 && (() => {
+                    const q = storageItemSearch.toLowerCase();
+                    const filtered = storageMasterlist.filter(i =>
+                      !q || i.nome_do_item?.toLowerCase().includes(q) || i.ceg?.toLowerCase().includes(q)
+                    );
+                    const toggleItem = (key) => {
+                      setStorageItensCheck(prev => {
+                        const n = new Set(prev);
+                        n.has(key) ? n.delete(key) : n.add(key);
+                        const selecionados = storageMasterlist.filter(i => n.has(`${i.ceg}::${i.nome_do_item}`));
+                        const desc = selecionados.map(i => `${i.ceg} — ${i.nome_do_item}`).join("\n");
+                        setStorageDesc(desc);
+                        return n;
+                      });
+                    };
+                    return (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", marginBottom:6 }}>Itens desta joiner</div>
+                        <input style={{ ...inp2, width:"100%", boxSizing:"border-box", marginBottom:6, fontSize:11 }}
+                          placeholder="Filtrar por nome ou CEG..."
+                          value={storageItemSearch}
+                          onChange={e => setStorageItemSearch(e.target.value)} />
+                        <div style={{ maxHeight:180, overflowY:"auto", border:"1px solid rgba(245,240,232,.07)", borderRadius:7, background:"rgba(245,240,232,.02)" }}>
+                          {filtered.length === 0 ? (
+                            <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum item</div>
+                          ) : filtered.map(i => {
+                            const key = `${i.ceg}::${i.nome_do_item}`;
+                            const checked = storageItensCheck.has(key);
+                            return (
+                              <div key={i.id} onClick={() => toggleItem(key)}
+                                style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.04)", background: checked ? "rgba(186,255,57,.05)" : "transparent" }}>
+                                <div style={{ width:14, height:14, borderRadius:3, border:`1px solid ${checked ? "#BAFF39" : "rgba(245,240,232,.2)"}`, background: checked ? "#BAFF39" : "transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                  {checked && <span style={{ fontSize:9, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
+                                </div>
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <div style={{ fontSize:10, color: checked ? "#F5F0E8" : "rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.nome_do_item}</div>
+                                  <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace" }}>{i.ceg}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {storageItensCheck.size > 0 && (
+                          <div style={{ fontSize:9, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginTop:5 }}>
+                            {storageItensCheck.size} item(s) selecionado(s)
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <input style={{ ...inp2, width:"100%", marginBottom:10, boxSizing:"border-box" }}
+                    placeholder="Descrição (preenchida automaticamente ao marcar itens)"
+                    value={storageDesc}
+                    onChange={e => setStorageDesc(e.target.value)} />
                   <button onClick={uploadStorage} disabled={!storageFile || !storageDesc.trim() || storageUploading}
                     style={{ background: storageFile && storageDesc.trim() ? "var(--laranja)" : "rgba(245,240,232,.1)", color: storageFile && storageDesc.trim() ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:7, padding:"9px 20px", fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: storageFile && storageDesc.trim() ? "pointer" : "not-allowed" }}>
                     {storageUploading ? "Enviando..." : "Adicionar ao storage →"}
@@ -7728,6 +7958,102 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 )}
               </div>
             )}
+          </div>
+        );
+      })()}
+
+      {adminMainTab === "rounds" && owner && (() => {
+        async function carregarRounds() {
+          setRoundsLoading(true);
+          const { data } = await supabase.from("envio_rounds")
+            .select("*, envio_requests(joiner_cog, posicao_no_round, status, solicitado_em)")
+            .order("numero", { ascending: false });
+          setRoundsList(data || []);
+          setRoundsLoading(false);
+        }
+        if (roundsList === null && !roundsLoading) carregarRounds();
+
+        async function abrirRound(roundId) {
+          await supabase.from("envio_rounds").update({ status: "em_processo" }).eq("id", roundId);
+          setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "em_processo" } : r));
+        }
+        async function fecharRound(roundId) {
+          await supabase.from("envio_rounds").update({ status: "concluido" }).eq("id", roundId);
+          setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "concluido" } : r));
+        }
+
+        const STATUS_COLOR = { aberto:"rgba(245,240,232,.4)", fechado:"#FFD166", em_processo:"#BAFF39", concluido:"rgba(100,181,246,.6)" };
+        const STATUS_LABEL = { aberto:"aberto", fechado:"pronto", em_processo:"em processo", concluido:"concluído" };
+
+        return (
+          <div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <h3 className="admin-title" style={{ fontSize:16, margin:0 }}>◎ Rounds de envio</h3>
+              <button onClick={carregarRounds} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"5px 12px", cursor:"pointer" }}>
+                {roundsLoading ? "..." : "↺ Atualizar"}
+              </button>
+            </div>
+
+            {roundsList === null || roundsLoading ? (
+              <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"20px 0", textAlign:"center" }}>Carregando...</div>
+            ) : roundsList.length === 0 ? (
+              <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"40px 0", textAlign:"center" }}>Nenhum round criado ainda.</div>
+            ) : roundsList.map(round => {
+              const membros = round.envio_requests || [];
+              const cor = STATUS_COLOR[round.status] || "rgba(245,240,232,.4)";
+              return (
+                <div key={round.id} style={{ background:"var(--card-bg)", border:`1px solid rgba(245,240,232,.08)`, borderRadius:10, padding:"16px", marginBottom:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, gap:10 }}>
+                    <div>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>Round #{round.numero}</div>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{new Date(round.created_at).toLocaleDateString("pt-BR")}</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:9, color:cor, border:`1px solid ${cor}55`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
+                        {STATUS_LABEL[round.status] || round.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Fila visual */}
+                  <div style={{ display:"flex", gap:4, marginBottom:12 }}>
+                    {Array.from({ length: 7 }, (_, i) => (
+                      <div key={i} style={{ flex:1, height:6, borderRadius:3, background: i < membros.length ? "rgba(186,255,57,.5)" : "rgba(245,240,232,.07)" }} />
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom: membros.length > 0 ? 10 : 0 }}>
+                    {membros.length}/7 joiners
+                  </div>
+
+                  {/* Lista de membros */}
+                  {membros.length > 0 && (
+                    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, display:"flex", flexDirection:"column", gap:4 }}>
+                      {membros.sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => (
+                        <div key={m.joiner_cog} style={{ display:"flex", alignItems:"center", gap:10, fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)" }}>
+                          <span style={{ color:"rgba(245,240,232,.25)", minWidth:14 }}>{m.posicao_no_round}.</span>
+                          <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
+                          <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(m.solicitado_em).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Ações */}
+                  {(round.status === "fechado" || (round.status === "aberto" && membros.length > 0)) && round.status !== "em_processo" && round.status !== "concluido" && (
+                    <button onClick={() => abrirRound(round.id)}
+                      style={{ marginTop:12, width:"100%", padding:"9px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                      Abrir envio para este round →
+                    </button>
+                  )}
+                  {round.status === "em_processo" && (
+                    <button onClick={() => fecharRound(round.id)}
+                      style={{ marginTop:12, width:"100%", padding:"9px", background:"rgba(100,181,246,.08)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.25)", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                      Marcar como concluído ✓
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
       })()}
@@ -11530,10 +11856,19 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [erro,        setErro]        = useState("");
   const [loading,     setLoading]     = useState(false);
   const [enviado,     setEnviado]     = useState(false);
-  const [envioSubTab, setEnvioSubTab] = useState("form");
+  const [envioSubTab, setEnvioSubTab] = useState("conferencia");
   const [meuEnvios,   setMeuEnvios]   = useState([]);
   const [expandedEnvio, setExpandedEnvio] = useState(new Set());
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
+  const [envioConferencia, setEnvioConferencia] = useState(null);
+  const [envioRequest,     setEnvioRequest]     = useState(null);
+  const [envioConfirmando, setEnvioConfirmando] = useState(false);
+  const [envioSolicitando, setEnvioSolicitando] = useState(false);
+  const [itensConferidos,  setItensConferidos]  = useState(new Set());
+  const [erroSecao,        setErroSecao]        = useState(false);
+  const [errosSel,         setErrosSel]         = useState(new Set());
+  const [erroObs,          setErroObs]          = useState("");
+  const [erroEnviado,      setErroEnviado]      = useState(false);
 
   const hoje = new Date().toISOString().slice(0, 10);
   const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
@@ -11608,7 +11943,21 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     setStorageLoadingForm(true);
     supabase.from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
       .order("created_at", { ascending: false })
-      .then(({ data }) => { setStorageDisponivel(data || []); setStorageLoadingForm(false); });
+      .then(({ data }) => {
+        setStorageDisponivel(data || []);
+        setStorageSelecionados(new Set((data || []).map(i => i.id)));
+        setStorageLoadingForm(false);
+      });
+  }, [user.cog]);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("joiner_conferencias").select("*").eq("joiner_cog", user.cog).order("iniciada_em", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("envio_requests").select("*, envio_rounds(*)").eq("joiner_cog", user.cog).order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
+    ]).then(([{ data: conf }, { data: req }]) => {
+      setEnvioConferencia(conf || null);
+      setEnvioRequest(req || null);
+    });
   }, [user.cog]);
 
 
@@ -11645,15 +11994,17 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     if (!bairro)       missing.push("bairro");
     if (!cidade)       missing.push("cidade");
     if (!estado)       missing.push("estado");
-    if (selecionados.length === 0) missing.push("itens selecionados");
+    if (storageSelecionados.size === 0) missing.push("itens selecionados");
     if (!metodo)       missing.push("método de envio");
     if (!seguro)       missing.push("seguro");
     if (!confirmou || !ciente1 || !ciente2 || !ciente3 || (metodo === "Jadlog" && !ciente4)) missing.push("todas as confirmações");
     if (missing.length > 0) { setErro(`Preencha: ${missing.join(", ")}.`); return; }
 
     setLoading(true);
-    const itensSel = antigomItens.filter(i => selecionados.includes(i.id))
-      .map(i => ({ id: i.id, ceg: i.ceg, nome: i.nome_do_item, valor: Number(i.valor_item||0), taxa: Number(i.taxa_rf||0), frete: Number(i.frete_inter||0) }));
+    const itensSel = storageDisponivel.filter(i => storageSelecionados.has(i.id))
+      .flatMap(i => (i.descricao || "").split("\n").filter(Boolean).map(linha => ({
+        id: i.id, ceg: "Storage GOM", nome: linha.trim(), valor: 0, taxa: 0, frete: 0
+      })));
 
     // se é host de grupo, salva o endereço no grupo para as amigas buscarem
     if (grupoCodigo && grupoMode === "criar") {
@@ -11744,6 +12095,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         <nav className="admin-sidebar">
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Envio</div>
+            <button className={`admin-sidebar-item${envioSubTab === "conferencia" ? " active" : ""}`} onClick={() => setEnvioSubTab("conferencia")}>
+              <span>◧</span>Conferência
+            </button>
             <button className={`admin-sidebar-item${envioSubTab === "form" ? " active" : ""}`} onClick={() => setEnvioSubTab("form")}>
               <span>◫</span>Pedir Envio
             </button>
@@ -11757,6 +12111,284 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         </nav>
 
         <div className="admin-content">
+
+        {/* ── CONFERÊNCIA ── */}
+        {envioSubTab === "conferencia" && (() => {
+          const prazoMs = ((envioConferencia?.prazo_dias) || 5) * 24 * 60 * 60 * 1000;
+          const iniciado = envioConferencia ? new Date(envioConferencia.iniciada_em).getTime() : 0;
+          const msRestantes = envioConferencia ? (iniciado + prazoMs - Date.now()) : 0;
+          const diasRestantes = Math.max(0, Math.ceil(msRestantes / (24 * 60 * 60 * 1000)));
+          const conferenciaConcluida = !envioConferencia ? false : (diasRestantes <= 0 || !!envioConferencia.confirmada_em);
+
+          async function confirmarConferencia() {
+            setEnvioConfirmando(true);
+            const { data } = await supabase.from("joiner_conferencias")
+              .update({ confirmada_em: new Date().toISOString() })
+              .eq("id", envioConferencia.id).select().single();
+            setEnvioConferencia(data);
+            setEnvioConfirmando(false);
+          }
+
+          async function solicitarEnvio() {
+            setEnvioSolicitando(true);
+            const { data: openRounds } = await supabase.from("envio_rounds")
+              .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
+            let roundId, posicao, roundNum;
+            if (openRounds && openRounds.length > 0) {
+              const round = openRounds[0];
+              const { count } = await supabase.from("envio_requests")
+                .select("id", { count: "exact", head: true }).eq("round_id", round.id);
+              posicao = (count || 0) + 1;
+              roundId = round.id;
+              roundNum = round.numero;
+              if (posicao >= 7) await supabase.from("envio_rounds").update({ status: "fechado" }).eq("id", round.id);
+            } else {
+              const { data: allRounds } = await supabase.from("envio_rounds")
+                .select("numero").order("numero", { ascending: false }).limit(1);
+              roundNum = (allRounds?.[0]?.numero || 0) + 1;
+              const { data: newRound } = await supabase.from("envio_rounds")
+                .insert([{ numero: roundNum, status: "aberto" }]).select().single();
+              roundId = newRound.id;
+              posicao = 1;
+            }
+            const { data: request } = await supabase.from("envio_requests")
+              .insert([{ joiner_cog: user.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando" }])
+              .select("*, envio_rounds(*)").single();
+            setEnvioRequest(request);
+            setEnvioSolicitando(false);
+          }
+
+          const roundInfo = envioRequest?.envio_rounds;
+          const roundAberto = roundInfo?.status === "em_processo";
+
+          const ERROS_CONF = [
+            "Item repassado está na imagem",
+            "Item faltando",
+            "Foto com má qualidade / não dá para ver o item",
+            "Quantidade incorreta",
+            "Item com avaria ou dano visível",
+            "Produto diferente do pedido",
+            "Embalagem aberta ou violada",
+            "Outro motivo",
+          ];
+
+          function toggleItemConferido(id) {
+            setItensConferidos(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+          }
+          function toggleErro(e) {
+            setErrosSel(prev => { const n = new Set(prev); n.has(e) ? n.delete(e) : n.add(e); return n; });
+          }
+          function enviarErroWA() {
+            const linhas = [...errosSel].map(e => `• ${e}`).join("\n");
+            const obs = erroObs.trim() ? `\n\nObservação: ${erroObs.trim()}` : "";
+            const msg = `Olá! Tenho um erro para sinalizar na conferência dos meus itens.\n\n${linhas}${obs}`;
+            window.open(`https://wa.me/5524992782023?text=${encodeURIComponent(msg)}`, "_blank");
+            setErroEnviado(true);
+          }
+
+          const todosConferidos = storageDisponivel.length > 0 && itensConferidos.size >= storageDisponivel.length;
+
+          return (
+          <div style={{ paddingBottom: 40 }}>
+
+            {/* ── GALERIA DE ITENS ── */}
+            {storageLoadingForm ? (
+              <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Carregando...</div>
+            ) : storageDisponivel.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
+                Nenhum item armazenado na GOM ainda.
+              </div>
+            ) : (
+              <div style={{ background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"16px 18px", marginBottom:14 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                  <div style={{ fontSize:10, letterSpacing:"1.2px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>◧ Seus itens na GOM</div>
+                  {envioConferencia && !conferenciaConcluida && (
+                    <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: todosConferidos ? "#BAFF39" : "rgba(245,240,232,.35)" }}>
+                      {itensConferidos.size}/{storageDisponivel.length} conferidos
+                    </div>
+                  )}
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:10 }}>
+                  {storageDisponivel.map(item => {
+                    const conferido = itensConferidos.has(item.id);
+                    const podeConferir = !!(envioConferencia && !conferenciaConcluida);
+                    return (
+                      <div key={item.id}
+                        onClick={() => podeConferir && toggleItemConferido(item.id)}
+                        style={{ border:`2px solid ${conferido ? "rgba(186,255,57,.5)" : "rgba(201,168,240,.15)"}`, borderRadius:10, overflow:"hidden", background: conferido ? "rgba(186,255,57,.04)" : "rgba(201,168,240,.04)", cursor: podeConferir ? "pointer" : "default", position:"relative", transition:"border .2s, background .2s" }}>
+                        <div style={{ position:"relative" }}>
+                          <img src={item.foto_url} alt={item.descricao} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block" }} />
+                          {podeConferir && (
+                            <div style={{ position:"absolute", top:8, right:8, width:26, height:26, borderRadius:"50%", background: conferido ? "#BAFF39" : "rgba(0,0,0,.55)", border:`2px solid ${conferido ? "#BAFF39" : "rgba(245,240,232,.3)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color: conferido ? "#111" : "rgba(245,240,232,.5)", transition:"all .2s" }}>
+                              {conferido ? "✓" : "○"}
+                            </div>
+                          )}
+                          {conferido && (
+                            <div style={{ position:"absolute", inset:0, background:"rgba(186,255,57,.08)", display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }} />
+                          )}
+                        </div>
+                        <div style={{ padding:"8px 10px", fontSize:10, color: conferido ? "#BAFF39" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.5, transition:"color .2s" }}>
+                          {item.descricao || "Sem descrição"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {envioConferencia && !conferenciaConcluida && (
+                  <div style={{ marginTop:10, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
+                    Clique em cada foto para marcar como conferido
+                  </div>
+                )}
+                {itensConferidos.size > 0 && (
+                  <div style={{ marginTop:14, padding:"12px 14px", background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8 }}>
+                    <div style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:8 }}>
+                      As fotos selecionadas são respectivas ao item:
+                    </div>
+                    {storageDisponivel.filter(i => itensConferidos.has(i.id)).map(i => (
+                      <div key={i.id} style={{ padding:"6px 0", borderBottom:"1px solid rgba(186,255,57,.08)", fontFamily:"'DM Mono',monospace" }}>
+                        {(i.descricao || "Sem descrição").split("\n").filter(Boolean).map((linha, idx) => (
+                          <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:2 }}>
+                            <span style={{ color:"#BAFF39", fontSize:11, flexShrink:0 }}>✓</span>
+                            <span style={{ fontSize:11, color:"rgba(245,240,232,.7)", lineHeight:1.4 }}>{linha.trim()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── STATUS / FASE ── */}
+            {!storageLoadingForm && storageDisponivel.length > 0 && (
+            <>
+            {!envioConferencia ? (
+              <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", marginBottom:14 }}>
+                <div style={{ fontSize:22, marginBottom:8 }}>🕐</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", marginBottom:6 }}>Conferência pendente</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
+                  Seus itens chegaram à GOM. Em breve iniciaremos o período de 5 dias de conferência para você verificar o que foi fotografado.
+                </div>
+              </div>
+
+            ) : !conferenciaConcluida ? (
+              <>
+              {/* Card de status da conferência */}
+              <div style={{ background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.2)", borderRadius:10, padding:"20px", marginBottom:10 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".08em" }}>📋 Conferência ativa</div>
+                  <div style={{ fontSize:11, color:"#64B5F6", fontFamily:"'DM Mono',monospace" }}>
+                    {diasRestantes === 0 ? "Último dia" : `${diasRestantes} dia${diasRestantes > 1 ? "s" : ""} restante${diasRestantes > 1 ? "s" : ""}`}
+                  </div>
+                </div>
+                <div style={{ background:"rgba(100,181,246,.1)", borderRadius:4, height:4, marginBottom:14, overflow:"hidden" }}>
+                  <div style={{ background:"#64B5F6", height:"100%", width:`${Math.min(100, ((5 - diasRestantes) / 5) * 100)}%`, transition:"width .3s" }} />
+                </div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.7, marginBottom:14 }}>
+                  Confira as fotos acima e marque cada item. Quando estiver tudo certo, confirme para liberar a solicitação de envio.
+                </div>
+                <button onClick={confirmarConferencia} disabled={envioConfirmando}
+                  style={{ width:"100%", padding:"11px", background: todosConferidos ? "rgba(186,255,57,.15)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1px solid ${todosConferidos ? "rgba(186,255,57,.4)" : "rgba(100,181,246,.35)"}`, borderRadius:8, fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s" }}>
+                  {envioConfirmando ? "Confirmando..." : todosConferidos ? "✓ Tudo conferido — confirmar!" : `✓ Confirmar itens (${itensConferidos.size}/${storageDisponivel.length})`}
+                </button>
+              </div>
+
+              {/* Sinalizar erro */}
+              <div style={{ border:"1px solid rgba(255,92,26,.2)", borderRadius:10, overflow:"hidden", marginBottom:14 }}>
+                <button onClick={() => { setErroSecao(v => !v); setErroEnviado(false); }}
+                  style={{ width:"100%", padding:"12px 16px", background: erroSecao ? "rgba(255,92,26,.1)" : "transparent", color:"rgba(255,92,26,.8)", border:"none", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between", letterSpacing:".05em" }}>
+                  <span>⚠ Sinalizar erro na conferência</span>
+                  <span style={{ fontSize:10, opacity:.7 }}>{erroSecao ? "▲" : "▼"}</span>
+                </button>
+                {erroSecao && (
+                  <div style={{ padding:"0 16px 16px", borderTop:"1px solid rgba(255,92,26,.15)" }}>
+                    {erroEnviado ? (
+                      <div style={{ textAlign:"center", padding:"20px 0", fontSize:12, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>
+                        ✓ Relatório enviado! A GOM vai verificar e entrar em contato.
+                      </div>
+                    ) : (
+                      <>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:14, marginBottom:10, letterSpacing:".05em", textTransform:"uppercase" }}>
+                        Selecione o(s) problema(s):
+                      </div>
+                      {ERROS_CONF.map(e => (
+                        <label key={e} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                          <div style={{ width:18, height:18, borderRadius:4, border:`1.5px solid ${errosSel.has(e) ? "#FF5C1A" : "rgba(245,240,232,.2)"}`, background: errosSel.has(e) ? "rgba(255,92,26,.2)" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all .15s" }} onClick={() => toggleErro(e)}>
+                            {errosSel.has(e) && <span style={{ fontSize:11, color:"#FF5C1A", fontWeight:900 }}>✓</span>}
+                          </div>
+                          <span style={{ fontSize:11, color: errosSel.has(e) ? "#FF5C1A" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{e}</span>
+                        </label>
+                      ))}
+                      <textarea
+                        placeholder="Detalhes adicionais (opcional)..."
+                        value={erroObs} onChange={e => setErroObs(e.target.value)}
+                        style={{ width:"100%", marginTop:10, padding:"10px 12px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, resize:"vertical", minHeight:70, boxSizing:"border-box" }}
+                      />
+                      <button onClick={enviarErroWA} disabled={errosSel.size === 0}
+                        style={{ marginTop:10, width:"100%", padding:"10px", background: errosSel.size > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.04)", color: errosSel.size > 0 ? "#FF5C1A" : "rgba(245,240,232,.2)", border:`1px solid ${errosSel.size > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`, borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor: errosSel.size > 0 ? "pointer" : "default", letterSpacing:".05em" }}>
+                        Enviar relatório via WhatsApp →
+                      </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              </>
+
+            ) : !envioRequest ? (
+              <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, padding:"20px", marginBottom:14, textAlign:"center" }}>
+                <div style={{ fontSize:22, marginBottom:8 }}>📦</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#BAFF39", marginBottom:6 }}>
+                  {envioConferencia.confirmada_em ? "Itens confirmados ✓" : "Período de conferência encerrado"}
+                </div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom:16 }}>
+                  Assim que o envio nacional for liberado, os itens marcados serão disponibilizados para cotação.
+                </div>
+                <button onClick={solicitarEnvio} disabled={envioSolicitando}
+                  style={{ padding:"12px 28px", background:"#BAFF39", color:"#111", border:"none", borderRadius:8, fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
+                  {envioSolicitando ? "Solicitando..." : "Solicitar meu envio →"}
+                </button>
+              </div>
+
+            ) : roundAberto ? (
+              <div style={{ background:"rgba(186,255,57,.07)", border:"2px solid rgba(186,255,57,.3)", borderRadius:10, padding:"20px", marginBottom:14, textAlign:"center" }}>
+                <div style={{ fontSize:22, marginBottom:8 }}>🚀</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#BAFF39", marginBottom:6 }}>Round #{roundInfo.numero} — Envio aberto!</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom:16 }}>
+                  O envio do seu round foi aberto. Clique em <strong style={{ color:"#F5F0E8" }}>Pedir Envio</strong> para preencher o formulário.
+                </div>
+                <button onClick={() => setEnvioSubTab("form")}
+                  style={{ padding:"12px 28px", background:"#BAFF39", color:"#111", border:"none", borderRadius:8, fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  Ir para o formulário →
+                </button>
+              </div>
+
+            ) : (
+              <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", marginBottom:14 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>⏳ Round #{roundInfo?.numero || "—"}</div>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
+                    {envioRequest.status === "aguardando" ? "Aguardando" : envioRequest.status}
+                  </div>
+                </div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom:10 }}>
+                  Posição {envioRequest.posicao_no_round}/7 no round. Quando o round estiver completo, você será redirecionada ao próximo grupo de envios automaticamente. Cada round possui seu próprio prazo.
+                </div>
+                <div style={{ display:"flex", gap:4 }}>
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <div key={i} style={{ flex:1, height:6, borderRadius:3, background: i < (envioRequest.posicao_no_round || 0) ? "rgba(186,255,57,.5)" : "rgba(245,240,232,.08)" }} />
+                  ))}
+                </div>
+                <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:6 }}>
+                  {envioRequest.posicao_no_round}/7 joiners · Solicitado em {new Date(envioRequest.solicitado_em).toLocaleDateString("pt-BR")}
+                </div>
+              </div>
+            )}
+            </>
+            )}
+          </div>
+          );
+        })()}
 
         {/* ── PEDIR ENVIO ── */}
         {envioSubTab === "form" && (
@@ -11908,6 +12540,33 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         </div>
       )}
 
+      {/* ENDEREÇO ANTERIOR */}
+      {(() => {
+        const anterior = meuEnvios.find(s => s.destinatario && s.cep && s.endereco);
+        if (!anterior) return null;
+        const jaPreenchido = destinatario || cep || endereco;
+        if (jaPreenchido) return null;
+        return (
+          <button onClick={() => {
+            setDestinatario(anterior.destinatario || "");
+            setCpf(anterior.cpf || "");
+            setCep(anterior.cep || "");
+            setEndereco(anterior.endereco || "");
+            setNumero(anterior.numero || "");
+            setComplemento(anterior.complemento || "");
+            setBairro(anterior.bairro || "");
+            setCidade(anterior.cidade || "");
+            setEstado(anterior.estado || "");
+          }} style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.25)", borderRadius:9, padding:"10px 14px", cursor:"pointer", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", fontSize:11, width:"100%", textAlign:"left" }}>
+            <span style={{ fontSize:15 }}>◈</span>
+            <div>
+              <div style={{ fontWeight:700, marginBottom:2 }}>Usar endereço anterior</div>
+              <div style={{ color:"rgba(201,168,240,.6)", fontSize:10 }}>{anterior.destinatario} · {anterior.endereco}, {anterior.numero} · {anterior.cidade}/{anterior.estado}</div>
+            </div>
+          </button>
+        );
+      })()}
+
       {/* DESTINATÁRIO */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Destinatário</div>
@@ -11961,25 +12620,28 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
       </div>{/* fim wrapper bloqueado — parte 1 */}
 
-      {/* ITENS — sempre clicável */}
+      {/* ITENS DA CONFERÊNCIA — sempre clicável */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Itens disponíveis para envio</div>
-        {antigomItens.length === 0 ? (
+        {storageLoadingForm ? (
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", padding:"20px 0" }}>Carregando...</div>
+        ) : storageDisponivel.length === 0 ? (
           <div style={{ fontSize:12, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textAlign:"center", padding:"20px 0" }}>
-            Nenhum item com status ANTIGOM no momento.
+            Nenhum item no storage da GOM no momento.
           </div>
         ) : (
-          antigomItens.map(item => {
-            const sel = selecionados.includes(item.id);
+          storageDisponivel.map(item => {
+            const sel = storageSelecionados.has(item.id);
+            const linhas = (item.descricao || "").split("\n").filter(Boolean);
             return (
-              <div key={item.id} onClick={() => toggleItem(item.id)} style={{
-                display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
+              <div key={item.id} onClick={() => setStorageSelecionados(prev => { const s = new Set(prev); sel ? s.delete(item.id) : s.add(item.id); return s; })} style={{
+                display:"flex", alignItems:"flex-start", gap:12, padding:"10px 12px",
                 background: sel ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.02)",
                 border: `1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`,
                 borderRadius:7, marginBottom:6, cursor:"pointer",
               }}>
                 <div style={{
-                  width:18, height:18, borderRadius:4, flexShrink:0,
+                  width:18, height:18, borderRadius:4, flexShrink:0, marginTop:2,
                   background: sel ? "#BAFF39" : "transparent",
                   border: `2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`,
                   display:"flex", alignItems:"center", justifyContent:"center",
@@ -11987,10 +12649,12 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                   {sel && <span style={{ fontSize:11, color:"#111", fontWeight:900 }}>✓</span>}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                    {item.nome_do_item || "—"}
-                  </div>
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.ceg}</div>
+                  {linhas.length > 0 ? linhas.map((l, i) => (
+                    <div key={i} style={{ fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>{l.trim()}</div>
+                  )) : (
+                    <div style={{ fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{item.descricao || "—"}</div>
+                  )}
+                  <div style={{ fontSize:10, color:"#C9A8F0", marginTop:3, fontFamily:"'DM Mono',monospace" }}>◧ Storage GOM</div>
                 </div>
               </div>
             );
@@ -11998,33 +12662,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         )}
       </div>
 
-      {/* STORAGE DA GOM */}
-      {!storageLoadingForm && storageDisponivel.length > 0 && (
-        <div style={sec}>
-          <div style={{ fontSize:10, letterSpacing:"1.5px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>◧ Itens disponíveis na GOM</div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:14, lineHeight:1.5 }}>Selecione os itens do seu storage que devem ser incluídos neste envio.</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:8 }}>
-            {storageDisponivel.map(item => {
-              const sel = storageSelecionados.has(item.id);
-              return (
-                <div key={item.id} onClick={() => setStorageSelecionados(prev => { const s = new Set(prev); sel ? s.delete(item.id) : s.add(item.id); return s; })}
-                  style={{ cursor:"pointer", border:`2px solid ${sel ? "#C9A8F0" : "rgba(245,240,232,.1)"}`, borderRadius:9, overflow:"hidden", background: sel ? "rgba(201,168,240,.06)" : "#111", transition:"border-color .12s" }}>
-                  <div style={{ position:"relative" }}>
-                    <img src={item.foto_url} alt={item.descricao} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", display:"block" }} />
-                    {sel && (
-                      <div style={{ position:"absolute", top:6, right:6, background:"#C9A8F0", color:"#111", borderRadius:99, width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900 }}>✓</div>
-                    )}
-                  </div>
-                  <div style={{ padding:"8px 10px", fontSize:10, color: sel ? "#C9A8F0" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{item.descricao}</div>
-                </div>
-              );
-            })}
-          </div>
-          {storageSelecionados.size > 0 && (
-            <div style={{ marginTop:12, fontSize:11, color:"#C9A8F0", fontFamily:"'DM Mono',monospace" }}>✓ {storageSelecionados.size} item(s) do storage selecionado(s)</div>
-          )}
-        </div>
-      )}
 
       <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
       {/* ENVIO */}
