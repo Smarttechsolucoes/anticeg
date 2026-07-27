@@ -6972,19 +6972,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           );
           return (
             <nav className="admin-sidebar">
+              {(temAcesso("cadastros") || temAcesso("atualizacoes") || temAcesso("badges")) && (
               <div className="admin-sidebar-group">
-                <div className="admin-sidebar-group-label">Operacional</div>
-                {temAcesso("envios")       && nav("envios",       "Envios",       "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
-                {temAcesso("reports")      && nav("reports",      "Reports",      "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
+                <div className="admin-sidebar-group-label">Joiners</div>
                 {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "◉", confirmacoes.length + preCadastros.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
-                {temAcesso("demandas")     && nav("repassos",     "Repassos",     "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
+              </div>
+              )}
+              <div className="admin-sidebar-group">
+                <div className="admin-sidebar-group-label">Pedidos</div>
+                {temAcesso("reports")  && nav("reports",      "Reports",  "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
+                {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
+              </div>
+              {(temAcesso("envios") || owner) && (
+              <div className="admin-sidebar-group">
+                <div className="admin-sidebar-group-label">Envios</div>
                 {owner && nav("storage", "Storage", "◧", 0)}
+                {temAcesso("envios") && nav("envios", "Envio", "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
                 {owner && nav("rounds", "Rounds", "◎", 0)}
               </div>
+              )}
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Financeiro</div>
                 {(temAcesso("pagamentos") || temAcesso("demandas") || temAcesso("blocklist")) && nav("pagamentos", "Pagamentos", "◎", pagDemandas.filter(d => d.status === "em_analise").length || 0)}
