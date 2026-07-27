@@ -3762,6 +3762,12 @@ ${p.comprovante_url ? (() => {
                       const valRf    = !item.pago_rf    ? Number(item.taxa_rf    ||0) : 0;
                       const multa    = multaItem(item);
                       const itemTotal = valItem + valFrete + valRf + multa;
+                      const proxVenc = [
+                        !item.pago_item  && item.venc_item  ? item.venc_item  : null,
+                        !item.pago_frete && item.venc_frete ? item.venc_frete : null,
+                        !item.pago_rf    && item.venc_rf    ? item.venc_rf    : null,
+                      ].filter(Boolean).sort()[0] || null;
+                      const dpv = proxVenc !== null ? diasParaVencer(proxVenc) : null;
                       return (
                         <div key={item.id} style={{ background:"var(--card-bg)", border:`1px solid ${isAn ? "rgba(201,168,240,.15)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px" }}>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
@@ -3779,6 +3785,13 @@ ${p.comprovante_url ? (() => {
                             {valFrete > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>frete R${valFrete.toFixed(2).replace(".",",")}</span>}
                             {valRf    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>RF R${valRf.toFixed(2).replace(".",",")}</span>}
                             {multa    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b", fontWeight:700 }}>⚠ multa R${multa.toFixed(2).replace(".",",")}</span>}
+                            {proxVenc && (() => {
+                              if (dpv <= 0)  return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.12)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b" }}>vence hoje!</span>;
+                              if (dpv === 1) return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,159,64,.12)", border:"1px solid rgba(255,159,64,.3)", borderRadius:4, padding:"2px 8px", color:"#FF9F40" }}>vence amanhã</span>;
+                              if (dpv <= 5)  return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,159,64,.10)", border:"1px solid rgba(255,159,64,.25)", borderRadius:4, padding:"2px 8px", color:"#FF9F40" }}>em {dpv}d · {fmtVenc(proxVenc)}</span>;
+                              if (dpv <= 14) return <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.2)", borderRadius:4, padding:"2px 8px", color:"rgba(240,192,64,.85)" }}>em {dpv}d · {fmtVenc(proxVenc)}</span>;
+                              return <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(240,192,64,.45)" }}>venc {fmtVenc(proxVenc)}</span>;
+                            })()}
                           </div>
                         </div>
                       );
@@ -3839,6 +3852,12 @@ ${p.comprovante_url ? (() => {
                       valRf    > 0 ? { label:"RF",    v:valRf    } : null,
                       multa    > 0 ? { label:"Multa", v:multa, red:true } : null,
                     ].filter(Boolean);
+                    const proxVencM = [
+                      !item.pago_item  && item.venc_item  ? item.venc_item  : null,
+                      !item.pago_frete && item.venc_frete ? item.venc_frete : null,
+                      !item.pago_rf    && item.venc_rf    ? item.venc_rf    : null,
+                    ].filter(Boolean).sort()[0] || null;
+                    const dpvM = proxVencM !== null ? diasParaVencer(proxVencM) : null;
                     return (
                       <div key={item.id} onClick={() => toggle(item.id)}
                         style={{ background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
@@ -3848,7 +3867,16 @@ ${p.comprovante_url ? (() => {
                           </div>
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
-                            <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</div>
+                            <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</span>
+                              {proxVencM && (() => {
+                                if (dpvM <= 0)  return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>vence hoje!</span>;
+                                if (dpvM === 1) return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.15)", border:"1px solid rgba(255,159,64,.3)", borderRadius:3, padding:"1px 4px" }}>amanhã</span>;
+                                if (dpvM <= 5)  return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.10)", border:"1px solid rgba(255,159,64,.25)", borderRadius:3, padding:"1px 4px" }}>em {dpvM}d</span>;
+                                if (dpvM <= 14) return <span style={{ fontSize:7, color:"rgba(240,192,64,.8)", fontFamily:"'DM Mono',monospace" }}>em {dpvM}d · {fmtVenc(proxVencM)}</span>;
+                                return <span style={{ fontSize:7, color:"rgba(240,192,64,.4)", fontFamily:"'DM Mono',monospace" }}>venc {fmtVenc(proxVencM)}</span>;
+                              })()}
+                            </div>
                           </div>
                           <div style={{ fontSize:14, fontWeight:900, color: sel ? "#BAFF39" : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>R${sub.toFixed(2).replace(".",",")}</div>
                         </div>
@@ -3886,6 +3914,12 @@ ${p.comprovante_url ? (() => {
                     const sel = pagSelecionados.has(item.id);
                     const sub = subtotalItem(item);
                     const multa = multaItem(item);
+                    const proxVencD = [
+                      !item.pago_item  && item.venc_item  ? item.venc_item  : null,
+                      !item.pago_frete && item.venc_frete ? item.venc_frete : null,
+                      !item.pago_rf    && item.venc_rf    ? item.venc_rf    : null,
+                    ].filter(Boolean).sort()[0] || null;
+                    const dpvD = proxVencD !== null ? diasParaVencer(proxVencD) : null;
                     return (
                       <div key={item.id} onClick={() => toggle(item.id)}
                         style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", alignItems:"center", background: sel ? "rgba(186,255,57,.04)" : "transparent", borderRadius:7, padding:"9px 0", marginBottom:2, cursor:"pointer", transition:"background .12s", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
@@ -3896,7 +3930,16 @@ ${p.comprovante_url ? (() => {
                         </div>
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
-                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</div>
+                          <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                            <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</span>
+                            {proxVencD && (() => {
+                              if (dpvD <= 0)  return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>hoje!</span>;
+                              if (dpvD === 1) return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.15)", border:"1px solid rgba(255,159,64,.3)", borderRadius:3, padding:"1px 4px" }}>amanhã</span>;
+                              if (dpvD <= 5)  return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.10)", border:"1px solid rgba(255,159,64,.25)", borderRadius:3, padding:"1px 4px" }}>em {dpvD}d</span>;
+                              if (dpvD <= 14) return <span style={{ fontSize:7, color:"rgba(240,192,64,.8)", fontFamily:"'DM Mono',monospace" }}>em {dpvD}d</span>;
+                              return <span style={{ fontSize:7, color:"rgba(240,192,64,.4)", fontFamily:"'DM Mono',monospace" }}>venc {fmtVenc(proxVencD)}</span>;
+                            })()}
+                          </div>
                         </div>
                         <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_item ? Number(item.valor_item||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
                         <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_frete ? Number(item.frete_inter||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
