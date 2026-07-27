@@ -3256,10 +3256,34 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
               || (!i.pago_frete && Number(i.frete_inter||0) > 0 && !c.frete)
               || (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 && !c.rf);
         });
-        setItensPendentes(stillPending);
+        const sortPendentes = arr => [...arr].sort((a, b) => {
+          const pv = i => [
+            !i.pago_item  && i.venc_item  ? i.venc_item  : null,
+            !i.pago_frete && i.venc_frete ? i.venc_frete : null,
+            !i.pago_rf    && i.venc_rf    ? i.venc_rf    : null,
+          ].filter(Boolean).sort()[0] || null;
+          const va = pv(a), vb = pv(b);
+          if (!va && !vb) return 0;
+          if (!va) return 1;
+          if (!vb) return -1;
+          return va.localeCompare(vb);
+        });
+        setItensPendentes(sortPendentes(stillPending));
         setPagSelecionados(new Set(stillPending.map(i => i.id)));
       } else if (pendentes) {
-        setItensPendentes(pendentes);
+        const sortPendentes = arr => [...arr].sort((a, b) => {
+          const pv = i => [
+            !i.pago_item  && i.venc_item  ? i.venc_item  : null,
+            !i.pago_frete && i.venc_frete ? i.venc_frete : null,
+            !i.pago_rf    && i.venc_rf    ? i.venc_rf    : null,
+          ].filter(Boolean).sort()[0] || null;
+          const va = pv(a), vb = pv(b);
+          if (!va && !vb) return 0;
+          if (!va) return 1;
+          if (!vb) return -1;
+          return va.localeCompare(vb);
+        });
+        setItensPendentes(sortPendentes(pendentes));
         setPagSelecionados(new Set(pendentes.map(i => i.id)));
       }
       if (pagamentos) setMeusPagamentos(pagamentos);
