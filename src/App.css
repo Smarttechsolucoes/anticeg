@@ -232,12 +232,15 @@ button, a { touch-action: manipulation; }
 html, body { height: 100%; overflow-x: hidden; }
 #root { min-height: 100%; display: flex; flex-direction: column; overflow-x: hidden; }
 
+/* Garante que imagens e mídias nunca ultrapassem o container */
+img, video, iframe, svg { max-width: 100%; height: auto; }
+
 /* ── Android / mobile global ────────────────────────────── */
 /* Remove flash azul/cinza ao tocar em elementos no Android */
 * { -webkit-tap-highlight-color: transparent; }
 
 /* Impede pull-to-refresh acidental no Android Chrome */
-body { overscroll-behavior-y: contain; }
+body { overscroll-behavior-y: contain; overscroll-behavior-x: none; }
 
 /* Impede Android de aumentar fonte em orientação landscape */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -679,7 +682,8 @@ td { padding:10px; vertical-align:middle; }
   .tab-btn { white-space:nowrap; font-size:10px; padding:7px 12px; flex-shrink:0; }
 
   /* Main */
-  .main { padding:16px 12px 48px; }
+  .main { padding:16px 12px 48px; overflow-x: clip; }
+  .admin-wrap { overflow-x: clip; }
 
   /* Page header */
   .page-header { flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:14px; padding-bottom:12px; }

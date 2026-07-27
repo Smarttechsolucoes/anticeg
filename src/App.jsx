@@ -3500,7 +3500,7 @@ ${p.comprovante_url ? (() => {
         }
         if (pagSubTab === "historico") return (
           <div style={{ paddingBottom:40 }}>
-            <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
               {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
                 <button key={id} onClick={() => setPagSubTab(id)}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
@@ -3748,7 +3748,7 @@ ${p.comprovante_url ? (() => {
               + multaItem(i), 0);
           const grandMulta = itensPendentes.reduce((a, i) => a + multaItem(i), 0);
           const tabBar = (
-            <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
               {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
                 <button key={id} onClick={() => setPagSubTab(id)}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
@@ -3839,7 +3839,7 @@ ${p.comprovante_url ? (() => {
 
         return (
           <div style={{ paddingBottom:40 }}>
-            <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
               {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
                 <button key={id} onClick={() => { if (id === "enviar" && pagStatus === "enviado") { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); } setPagSubTab(id); }}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
