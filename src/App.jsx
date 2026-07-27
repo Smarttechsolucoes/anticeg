@@ -3594,7 +3594,7 @@ ${p.comprovante_url ? (() => {
         const totalLiquido = Math.max(0, total - cashbackVal);
         const temItens = itensSel.length > 0 || (pagOutros && pagOutrosNome.trim() && outrosValTotal > 0);
 
-        const temComprovante = pagUsarCodigo ? pagCodigoTx.trim().length > 0 : !!pagComprovante;
+        const temComprovante = totalLiquido <= 0 ? true : (pagUsarCodigo ? pagCodigoTx.trim().length > 0 : !!pagComprovante);
 
         async function handleSubmit() {
           if (!temItens || !temComprovante) return;
@@ -3603,7 +3603,9 @@ ${p.comprovante_url ? (() => {
           let comprovanteUrl = null;
           let obsFinal = pagObs || null;
 
-          if (pagUsarCodigo) {
+          if (totalLiquido <= 0) {
+            obsFinal = `Reembolso total aplicado (R$ ${cashbackVal.toFixed(2).replace(".",",")})${pagObs ? "\n" + pagObs : ""}`;
+          } else if (pagUsarCodigo) {
             obsFinal = `Código da transação: ${pagCodigoTx.trim()}${pagObs ? "\n" + pagObs : ""}`;
           } else {
             const ext  = pagComprovante.name.split(".").pop();
@@ -4066,39 +4068,49 @@ ${p.comprovante_url ? (() => {
               );
             })()}
 
-            <div style={{ marginBottom:12 }}>
-              <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Comprovante de pagamento</div>
-              {!pagUsarCodigo ? (
-                <>
-                  <label style={{ display:"flex", alignItems:"center", gap:10, background: pagComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${pagComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
-                    <input type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => setPagComprovante(e.target.files[0] || null)} />
-                    <span style={{ fontSize:16 }}>{pagComprovante ? "✓" : "↑"}</span>
-                    <div>
-                      <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: pagComprovante ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{pagComprovante ? pagComprovante.name : "Clique para anexar (jpg, png, pdf)"}</div>
-                      <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Obrigatório</div>
+            {totalLiquido <= 0 ? (
+              <div style={{ marginBottom:12, display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px" }}>
+                <span style={{ fontSize:16 }}>✓</span>
+                <div>
+                  <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#BAFF39" }}>Reembolso cobre o valor total</div>
+                  <div style={{ fontSize:9, color:"rgba(186,255,57,.5)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Nenhum PIX necessário — clique em confirmar para registrar</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Comprovante de pagamento</div>
+                {!pagUsarCodigo ? (
+                  <>
+                    <label style={{ display:"flex", alignItems:"center", gap:10, background: pagComprovante ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${pagComprovante ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
+                      <input type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => setPagComprovante(e.target.files[0] || null)} />
+                      <span style={{ fontSize:16 }}>{pagComprovante ? "✓" : "↑"}</span>
+                      <div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: pagComprovante ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{pagComprovante ? pagComprovante.name : "Clique para anexar (jpg, png, pdf)"}</div>
+                        <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>Obrigatório</div>
+                      </div>
+                    </label>
+                    <button onClick={() => { setPagUsarCodigo(true); setPagComprovante(null); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
+                      Não consigo enviar o comprovante
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"12px 14px" }}>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Código da transação (Ex: E00038166...)</div>
+                      <input
+                        value={pagCodigoTx}
+                        onChange={e => setPagCodigoTx(e.target.value)}
+                        placeholder="Cole o código da transação aqui"
+                        style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }}
+                      />
                     </div>
-                  </label>
-                  <button onClick={() => { setPagUsarCodigo(true); setPagComprovante(null); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
-                    Não consigo enviar o comprovante
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"12px 14px" }}>
-                    <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>Código da transação (Ex: E00038166...)</div>
-                    <input
-                      value={pagCodigoTx}
-                      onChange={e => setPagCodigoTx(e.target.value)}
-                      placeholder="Cole o código da transação aqui"
-                      style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" }}
-                    />
-                  </div>
-                  <button onClick={() => { setPagUsarCodigo(false); setPagCodigoTx(""); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
-                    ← Voltar para anexar arquivo
-                  </button>
-                </>
-              )}
-            </div>
+                    <button onClick={() => { setPagUsarCodigo(false); setPagCodigoTx(""); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
+                      ← Voltar para anexar arquivo
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize:10, letterSpacing:".8px", color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Observações (opcional)</div>
               <textarea value={pagObs} onChange={e => setPagObs(e.target.value)} rows={2} placeholder="Ex: paguei os 3 itens juntos" style={{ width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", resize:"none", boxSizing:"border-box" }} />
@@ -4106,7 +4118,7 @@ ${p.comprovante_url ? (() => {
             {pagErro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>{pagErro}</div>}
             <button onClick={handleSubmit} disabled={!temItens || !temComprovante || pagStatus === "enviando"}
               style={{ width:"100%", padding:"14px 0", background: temItens && temComprovante ? "var(--laranja)" : "rgba(245,240,232,.1)", color: temItens && temComprovante ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:8, fontSize:13, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: temItens && temComprovante ? "pointer" : "not-allowed", letterSpacing:"1px" }}>
-              {pagStatus === "enviando" ? "ENVIANDO..." : `ENVIAR COMPROVANTE — R$ ${totalLiquido.toFixed(2).replace(".",",")}`}
+              {pagStatus === "enviando" ? "ENVIANDO..." : totalLiquido <= 0 ? "CONFIRMAR REEMBOLSO TOTAL — R$ 0,00" : `ENVIAR COMPROVANTE — R$ ${totalLiquido.toFixed(2).replace(".",",")}`}
             </button>
 
             {/* Reportar problema */}
