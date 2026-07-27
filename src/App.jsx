@@ -6458,6 +6458,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const adminIsMobile = adminWinW <= 680;
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
+  const [senhaManutAdmin,     setSenhaManutAdmin]     = useState("");
+  const [senhaManutInput,     setSenhaManutInput]     = useState("");
+  const [senhaManutSaving,    setSenhaManutSaving]    = useState(false);
+  const [senhaManutMsg,       setSenhaManutMsg]       = useState("");
   const [reports, setReports] = useState([]);
   const [adminTab, setAdminTab] = useState("pendentes");
   const [searchReport, setSearchReport] = useState("");
@@ -6698,8 +6702,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       setStaffAcessos({});
       return;
     }
-    supabase.from("config").select("value").eq("key", "manutencao").single()
-      .then(({ data }) => { if (data) setManutencaoAdmin(data.value === "true"); });
+    supabase.from("config").select("key,value").in("key", ["manutencao","senha_manutencao"])
+      .then(({ data }) => {
+        if (!data) return;
+        const m = data.find(d => d.key === "manutencao");
+        const s = data.find(d => d.key === "senha_manutencao");
+        if (m) setManutencaoAdmin(m.value === "true");
+        if (s?.value) { setSenhaManutAdmin(s.value); setSenhaManutInput(s.value); }
+      });
     supabase.from("config").select("value").eq("key", "staff_acessos").single()
       .then(async ({ data }) => {
         if (data?.value) {
@@ -7140,6 +7150,31 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         }}>
           {manutencaoAdmin ? "OFF" : "ON"}
         </button>
+      </div>
+
+      {/* SENHA DE ACESSO */}
+      <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>Senha de acesso</div>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginBottom:12 }}>Quando o site está em manutenção, joiners com a senha podem entrar normalmente.</div>
+        <div style={{ display:"flex", gap:8 }}>
+          <input
+            type="text"
+            placeholder="ex: SKZOO2025"
+            value={senhaManutInput}
+            onChange={e => { setSenhaManutInput(e.target.value); setSenhaManutMsg(""); }}
+            style={{ flex:1, background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, padding:"8px 12px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none", letterSpacing:1 }}
+          />
+          <button onClick={async () => {
+            setSenhaManutSaving(true);
+            await supabase.from("config").upsert({ key:"senha_manutencao", value: senhaManutInput.trim() }, { onConflict:"key" });
+            setSenhaManutAdmin(senhaManutInput.trim());
+            setSenhaManutMsg("Salvo ✓");
+            setSenhaManutSaving(false);
+          }} disabled={senhaManutSaving || senhaManutInput.trim() === senhaManutAdmin} style={{ background:"var(--laranja)", border:"none", color:"#111", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"8px 16px", borderRadius:7, cursor: senhaManutInput.trim() === senhaManutAdmin ? "default" : "pointer", opacity: senhaManutInput.trim() === senhaManutAdmin ? 0.4 : 1 }}>
+            {senhaManutSaving ? "..." : "Salvar"}
+          </button>
+        </div>
+        {senhaManutMsg && <div style={{ marginTop:6, fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>{senhaManutMsg}</div>}
       </div>
 
       <EmailJSTestBlock />
@@ -12303,6 +12338,37 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           return (
           <div style={{ paddingBottom: 40 }}>
 
+            {/* BANNER DE SENHA — igual ao Pedir Envio */}
+            {!efetivamenteUnlocked && (
+              <div style={{ position:"sticky", top:0, zIndex:20, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(100,181,246,.3)", padding:"12px 16px", backdropFilter:"blur(12px)", marginBottom:16, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10 }}>
+                <div style={{ flex:1, minWidth:180 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:14, color:"#64B5F6" }}>
+                    {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário fechado · aguarde a abertura"}
+                  </div>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)", marginTop:3 }}>
+                    Prévia dos seus itens · para solicitar envio aguarde a abertura
+                  </div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <input type="password" placeholder="senha" value={senha}
+                      onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
+                      onKeyDown={e => { if (e.key === "Enter") { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); } }}
+                      style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
+                    />
+                    <button onClick={() => { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); }}
+                      style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
+                      ACESSAR →
+                    </button>
+                  </div>
+                  {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
+                </div>
+              </div>
+            )}
+
+            {/* conteúdo — bloqueado antes do unlock */}
+            <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
+
             {/* ── GALERIA DE ITENS ── */}
             {storageLoadingForm ? (
               <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Carregando...</div>
@@ -12498,6 +12564,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             )}
             </>
             )}
+            </div>{/* fim wrapper pointerEvents */}
           </div>
           );
         })()}
@@ -13219,10 +13286,13 @@ export default function App() {
   const [pendingReportIds, setPendingReportIds] = useState(new Set());
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [manutencao, setManutencao] = useState(false);
+  const [senhaManutencao, setSenhaManutencao] = useState("");
   const [avisoMasterlist, setAvisoMasterlist] = useState("");
   const [bypassManutencao, setBypassManutencao] = useState(
     () => localStorage.getItem("anticeg_admin_bypass") === "1"
   );
+  const [inputSenhaManut, setInputSenhaManut] = useState("");
+  const [erroSenhaManut,  setErroSenhaManut]  = useState(false);
   const [adminPortalInput, setAdminPortalInput] = useState("");
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showPerfilModal, setShowPerfilModal] = useState(false);
@@ -13236,8 +13306,17 @@ export default function App() {
   const [bannerPagamentosAtivo,  setBannerPagamentosAtivo]  = useState(false);
 
   useEffect(() => {
-    supabase.from("config").select("value").eq("key", "manutencao").single()
-      .then(({ data }) => { if (data) setManutencao(data.value === "true"); });
+    supabase.from("config").select("key,value").in("key", ["manutencao","senha_manutencao"])
+      .then(({ data }) => {
+        if (!data) return;
+        const m = data.find(d => d.key === "manutencao");
+        const s = data.find(d => d.key === "senha_manutencao");
+        if (m) setManutencao(m.value === "true");
+        if (s?.value) {
+          setSenhaManutencao(s.value);
+          if (localStorage.getItem("anticeg_senha_bypass") === s.value) setBypassManutencao(true);
+        }
+      });
     supabase.from("config").select("value").eq("key", "aviso_masterlist").single()
       .then(({ data }) => { if (data?.value) setAvisoMasterlist(data.value); });
     supabase.from("config").select("key,value").in("key", ["proximo_envio","envio_abertura_inicio","envio_abertura_fim","banner_envio_visivel","banner_pagamentos_ativo"])
@@ -13533,6 +13612,31 @@ export default function App() {
             <div style={{ fontSize: 13, color: "rgba(245,240,232,.5)", lineHeight: 1.6 }}>
               Estamos atualizando os pagamentos e a base de dados. Voltaremos às 19h!
             </div>
+
+            {senhaManutencao && (
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, width:"100%", maxWidth:260 }}>
+                <input
+                  type="password"
+                  placeholder="senha de acesso"
+                  value={inputSenhaManut}
+                  onChange={e => { setInputSenhaManut(e.target.value); setErroSenhaManut(false); }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      if (inputSenhaManut === senhaManutencao) { localStorage.setItem("anticeg_senha_bypass", senhaManutencao); setBypassManutencao(true); }
+                      else setErroSenhaManut(true);
+                    }
+                  }}
+                  style={{ width:"100%", background:"rgba(245,240,232,.05)", border:`1px solid ${erroSenhaManut ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"10px 14px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none", textAlign:"center", letterSpacing:2 }}
+                />
+                <button onClick={() => {
+                  if (inputSenhaManut === senhaManutencao) { localStorage.setItem("anticeg_senha_bypass", senhaManutencao); setBypassManutencao(true); }
+                  else setErroSenhaManut(true);
+                }} style={{ width:"100%", background:"var(--laranja)", border:"none", color:"#111", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, padding:"10px 0", borderRadius:8, cursor:"pointer", letterSpacing:1 }}>
+                  ENTRAR →
+                </button>
+                {erroSenhaManut && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
+              </div>
+            )}
 
             <div style={{ fontSize: 10, color: "rgba(245,240,232,.2)", letterSpacing: 2, textTransform: "uppercase" }}>
               anticeg · masterlist
