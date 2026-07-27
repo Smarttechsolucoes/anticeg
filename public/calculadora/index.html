@@ -449,6 +449,8 @@ footer {
   <div class="rate-field"><label>IDR / BRL</label><input type="number" id="r_IDR" value="0.000310" step="0.000001" oninput="onRateChange()"></div>
   <div class="rate-field"><label>KRW / BRL</label><input type="number" id="r_KRW" value="0.004080" step="0.000001" oninput="onRateChange()"></div>
   <div class="rate-field"><label>JPY / BRL</label><input type="number" id="r_JPY" value="0.034000" step="0.00001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>SGD / BRL</label><input type="number" id="r_SGD" value="4.0200" step="0.0001" oninput="onRateChange()"></div>
+  <div class="rate-field"><label>CNY / BRL</label><input type="number" id="r_CNY" value="0.7400" step="0.0001" oninput="onRateChange()"></div>
   <div class="rate-field"><label>Wise (+%)</label><input type="number" id="r_WISE" value="6.5" step="0.1" oninput="onRateChange()"></div>
   <div class="rate-field"><label>Spread C.C. (%)</label><input type="number" id="r_SPREAD" value="4.0" step="0.1" oninput="onRateChange()"></div>
   <div class="rate-field"><label>IOF (%)</label><input type="number" id="r_IOF" value="3.5" step="0.1" oninput="onRateChange()"></div>
@@ -464,6 +466,8 @@ footer {
     <button class="cur-tab" data-cur="IDR" onclick="selectCur(this)">IDR Rp<span class="cur-rate" id="rt_IDR">R$ 0,000310</span></button>
     <button class="cur-tab" data-cur="KRW" onclick="selectCur(this)">KRW ₩<span class="cur-rate" id="rt_KRW">R$ 0,004080</span></button>
     <button class="cur-tab" data-cur="JPY" onclick="selectCur(this)">JPY ¥<span class="cur-rate" id="rt_JPY">R$ 0,034000</span></button>
+    <button class="cur-tab" data-cur="SGD" onclick="selectCur(this)">SGD S$<span class="cur-rate" id="rt_SGD">R$ 4,0200</span></button>
+    <button class="cur-tab" data-cur="CNY" onclick="selectCur(this)">CNY ¥<span class="cur-rate" id="rt_CNY">R$ 0,7400</span></button>
   </div>
 
   <div class="section-label">Entrada</div>
@@ -583,7 +587,7 @@ function fmtR(n) {
 function toggleRates() { $('ratesPanel').classList.toggle('open'); }
 
 function onRateChange() {
-  ['USD','PHP','IDR','KRW','JPY'].forEach(c => {
+  ['USD','PHP','IDR','KRW','JPY','SGD','CNY'].forEach(c => {
     const el = $('rt_'+c);
     if (el) el.textContent = 'R$ ' + fmtR(getBase(c));
   });
