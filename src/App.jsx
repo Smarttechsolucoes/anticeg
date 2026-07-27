@@ -2195,6 +2195,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 storageGom.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>aba em construção, aguarde atualizações de fotos.</div>
                 ) : (
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:14, lineHeight:1.6 }}>
+                    caso algum item não seja seu, aguarde a conferência do envio nacional para reportar o erro.
+                  </div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:12 }}>
                     {storageGom.map(s => (
                       <div key={s.id} onClick={() => setStorageAmpliado(s)}
