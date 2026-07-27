@@ -11883,6 +11883,16 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       {/* ENVIO */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Método de envio</div>
+        {/* Notice 10 dias — válido para qualquer método */}
+        <div style={{ marginBottom:12, background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.22)", borderRadius:8, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
+          <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>ℹ️</span>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", lineHeight:1.7 }}>
+            Independente do método escolhido, após a emissão da etiqueta a GOM tem até{" "}
+            <strong style={{ color:"#64B5F6" }}>10 dias corridos</strong>{" "}
+            para realizar o envio do seu pedido.
+          </div>
+        </div>
+
         <div style={fld}>
           <label style={lbl}>Método de envio</label>
           <select style={{ ...inp, cursor:"pointer" }} value={metodo} onChange={e => setMetodo(e.target.value)}>
@@ -11892,16 +11902,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <option value="Mini Envios">Mini Envios (somente photocards)</option>
             <option value="Mais econômico">Método mais econômico (a critério da GOM)</option>
           </select>
-        </div>
-
-        {/* Notice 10 dias */}
-        <div style={{ marginBottom:12, background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.22)", borderRadius:8, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
-          <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>ℹ️</span>
-          <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", lineHeight:1.7 }}>
-            Após a emissão da etiqueta, a GOM tem até{" "}
-            <strong style={{ color:"#64B5F6" }}>10 dias corridos</strong>{" "}
-            para realizar o envio do seu pedido.
-          </div>
         </div>
 
         {/* Aviso JADLOG pick-up (condicional) */}
