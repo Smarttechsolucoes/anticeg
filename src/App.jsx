@@ -1784,6 +1784,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [vencModal,     setVencModal]     = useState(false);
   const [galeriaModal,  setGaleriaModal]  = useState(false);
   const [galeriaTab,    setGaleriaTab]    = useState("claims");
+  const [storageAmpliado, setStorageAmpliado] = useState(null);
   const [minhasFotos,   setMinhasFotos]   = useState(null);
   const [fotoAmpliada,  setFotoAmpliada]  = useState(null);
   const [pagDemandaMap,  setPagDemandaMap]  = useState({});
@@ -2194,14 +2195,17 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 storageGom.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:12 }}>aba em construção, aguarde atualizações de fotos.</div>
                 ) : (
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:12 }}>
                     {storageGom.map(s => (
-                      <div key={s.id} style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(201,168,240,.15)" }}>
-                        <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block" }} />
+                      <div key={s.id} onClick={() => setStorageAmpliado(s)}
+                        style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", cursor:"pointer", transition:"border-color .15s" }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor="rgba(201,168,240,.35)"}
+                        onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
+                        <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
                         <div style={{ padding:"8px 10px 10px" }}>
-                          <div style={{ fontSize:8, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", letterSpacing:"0.5px", marginBottom:3 }}>◧ Storage GOM</div>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", letterSpacing:"0.5px", marginBottom:2 }}>◧ Storage GOM</div>
                           {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
-                            <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.8)", lineHeight:1.4 }}>{l.trim()}</div>
+                            <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", lineHeight:1.4 }}>{l.trim()}</div>
                           ))}
                         </div>
                       </div>
@@ -2255,6 +2259,42 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               </button>
             </div>
             {btnSeta(temProxima, () => ir(minhasFotos[idxAtual + 1]), "›")}
+          </div>
+        );
+      })()}
+
+      {storageAmpliado && (() => {
+        const idx = storageGom.findIndex(s => s.id === storageAmpliado.id);
+        const temAnterior = idx > 0;
+        const temProxima  = idx < storageGom.length - 1;
+        const btnSeta = (enabled, onClick, label) => (
+          <button onClick={e => { e.stopPropagation(); if (enabled) onClick(); }}
+            style={{ background:"rgba(0,0,0,.5)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", cursor: enabled ? "pointer" : "default", opacity: enabled ? 1 : 0.2, color:"var(--offwhite)", fontSize:20, flexShrink:0 }}>
+            {label}
+          </button>
+        );
+        return (
+          <div onClick={() => setStorageAmpliado(null)}
+            style={{ position:"fixed", inset:0, zIndex:10000, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, gap:12 }}>
+            {btnSeta(temAnterior, () => setStorageAmpliado(storageGom[idx - 1]), "‹")}
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth:420, width:"100%", display:"flex", flexDirection:"column", gap:0 }}>
+              <img src={storageAmpliado.foto_url} alt={storageAmpliado.descricao}
+                style={{ width:"100%", borderRadius:10, display:"block", objectFit:"contain", maxHeight:"70vh" }} />
+              <div style={{ background:"#111", borderRadius:"0 0 10px 10px", padding:"12px 16px" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", letterSpacing:"0.5px" }}>◧ Storage GOM</div>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.25)" }}>{idx + 1} / {storageGom.length}</div>
+                </div>
+                {(storageAmpliado.descricao || "").split("\n").filter(Boolean).map((l, i) => (
+                  <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight: i === 0 ? 700 : 400, color:"var(--offwhite)", lineHeight:1.4 }}>{l.trim()}</div>
+                ))}
+              </div>
+              <button onClick={() => setStorageAmpliado(null)}
+                style={{ marginTop:14, background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", fontSize:11, borderRadius:6, padding:"8px 0", cursor:"pointer" }}>
+                fechar
+              </button>
+            </div>
+            {btnSeta(temProxima, () => setStorageAmpliado(storageGom[idx + 1]), "›")}
           </div>
         );
       })()}
