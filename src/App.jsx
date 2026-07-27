@@ -11895,14 +11895,24 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         </div>
 
         {/* Notice 10 dias */}
-        <div style={{ marginBottom:12, background:"rgba(100,181,246,.06)", border:"1px solid rgba(100,181,246,.18)", borderRadius:7, padding:"10px 14px", fontFamily:"'DM Mono',monospace" }}>
-          <div style={{ fontSize:10, color:"#64B5F6", lineHeight:1.6 }}>ℹ Após a emissão da etiqueta, a GOM tem até <strong>10 dias</strong> para realizar o envio do seu pedido.</div>
+        <div style={{ marginBottom:12, background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.22)", borderRadius:8, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
+          <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>ℹ️</span>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", lineHeight:1.7 }}>
+            Após a emissão da etiqueta, a GOM tem até{" "}
+            <strong style={{ color:"#64B5F6" }}>10 dias corridos</strong>{" "}
+            para realizar o envio do seu pedido.
+          </div>
         </div>
 
         {/* Aviso JADLOG pick-up (condicional) */}
         {metodo === "Jadlog" && (
-          <div style={{ marginBottom:12, background:"rgba(230,57,70,.06)", border:"1px solid rgba(230,57,70,.2)", borderRadius:7, padding:"10px 14px", fontFamily:"'DM Mono',monospace" }}>
-            <div style={{ fontSize:10, color:"#E63946", lineHeight:1.6 }}>⚠ A caixa será entregue a um <strong>ponto PICK-UP Jadlog</strong>, que depende da retirada oficial da empresa do local. Isso pode impactar o prazo de entrega sinalizado no site.</div>
+          <div style={{ marginBottom:12, background:"rgba(230,57,70,.07)", border:"1px solid rgba(230,57,70,.25)", borderRadius:8, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
+            <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>⚠️</span>
+            <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", lineHeight:1.7 }}>
+              Ao escolher Jadlog, a caixa é entregue em um{" "}
+              <strong style={{ color:"#E63946" }}>ponto PICK-UP</strong>,{" "}
+              que depende da retirada oficial da empresa do local. Isso pode impactar o prazo de entrega sinalizado no site.
+            </div>
           </div>
         )}
 
