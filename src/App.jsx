@@ -6634,6 +6634,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [joinerUpdates,     setJoinerUpdates]     = useState([]);
   const [pagDemandas,       setPagDemandas]       = useState([]);
   const [adminRepassos,     setAdminRepassos]     = useState(null);
+  const [reportRespostas,   setReportRespostas]   = useState({});
+  const [reportSaving,      setReportSaving]      = useState(new Set());
   const loadedTabsRef = useRef(new Set());
 
   async function confirmarEnvio(s) {
