@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
     { "source": "/masterlist",           "destination": "/index.html" },
     { "source": "/cegs",                 "destination": "/index.html" },
