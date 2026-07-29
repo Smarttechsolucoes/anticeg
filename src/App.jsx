@@ -267,8 +267,8 @@ const STATUS_STEPS = [
   { id: "Comprado",         label: "Comprado",         icon: "🛒" },
   { id: "A Caminho",        label: "A Caminho",        icon: "✈️" },
   { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
-  { id: "ANTIGOM",          label: "ANTIGOM",          icon: "🏠" },
-  { id: "Envio Liberado",   label: "Envio Liberado",   icon: "📬" },
+  { id: "ANTIGOM",          label: "A caminho ANTIGOM", icon: "🏠" },
+  { id: "Envio Liberado",   label: "Nacional em breve", icon: "📬" },
   { id: "Enviado Nacional", label: "Finalizado",       icon: "🚚" },
 ];
 
@@ -279,9 +279,9 @@ const chipMap = {
   "Pré-venda":       ["chip-prevenda",  "Comprado"],
   "A Caminho":       ["chip-caminho",   "A Caminho"],
   "Taxa Liberada":   ["chip-taxa",      "Taxa Liberada"],
-  "ANTIGOM":         ["chip-aqui",      "ANTIGOM"],
-  "Chegou Aqui":     ["chip-aqui",      "ANTIGOM"],
-  "Envio Liberado":  ["chip-nacional",  "Envio Liberado"],
+  "ANTIGOM":         ["chip-aqui",      "A caminho ANTIGOM"],
+  "Chegou Aqui":     ["chip-aqui",      "A caminho ANTIGOM"],
+  "Envio Liberado":  ["chip-nacional",  "Nacional em breve"],
   "Enviado Nacional":["chip-enviado",   "Finalizado"],
   "Disponível":      ["chip-loja-disp", "ANTI-LOJA"],
   "Em análise":      ["chip-prevenda",  "Em análise"],
@@ -302,7 +302,7 @@ function PayBadge({ status }) {
 
 function StatusChip({ status }) {
   const [cls, label] = chipMap[status] || ["chip-prevenda", status || ""];
-  return <span className={`status-chip ${cls}`}>{label}</span>;
+  return <span className={`status-chip ${cls}`} style={{ textTransform:"uppercase" }}>{label}</span>;
 }
 
 function ProgressMini({ activeIdx }) {
@@ -1771,7 +1771,7 @@ function EnvioFlowStepper({ status }) {
   );
 }
 
-function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", bannerEnvioVisivel = true, bannerPagamentosAtivo = false, onOpenPagamentos, onOpenEnvio }) {
+function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "", bannerEnvioVisivel = true, bannerPagamentosAtivo = false, onOpenPagamentos, onOpenEnvio }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
@@ -2038,20 +2038,24 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           ⚠ Verifique os pagamentos em aberto para liberar seu envio nacional
         </div>
       )}
-      {nEnvioLiberado > 0 && bannerEnvioVisivel && (
-        <div style={{ background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"10px 16px", marginBottom:12, fontSize:12, fontFamily:"'DM Mono',monospace", color:"#64B5F6", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-          <span>📬</span>
-          <span style={{ flex:1 }}>
-            {nEnvioLiberado === 1 ? "1 item pronto" : `${nEnvioLiberado} itens prontos`} para Envio Nacional
-            {proximoEnvio ? <> · <strong>{proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
-          </span>
-          {onOpenEnvio && (
-            <button onClick={onOpenEnvio} style={{ background:"rgba(100,181,246,.15)", border:"1px solid rgba(100,181,246,.4)", borderRadius:5, color:"#64B5F6", fontSize:11, fontFamily:"'DM Mono',monospace", padding:"3px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
-              clique aqui →
-            </button>
-          )}
-        </div>
-      )}
+      {nEnvioLiberado > 0 && bannerEnvioVisivel && (() => {
+        const hoje = new Date().toISOString().slice(0, 10);
+        const isEnvioAberto = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
+        return (
+          <div style={{ background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"10px 16px", marginBottom:12, fontSize:12, fontFamily:"'DM Mono',monospace", color:"#64B5F6", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <span>📬</span>
+            <span style={{ flex:1 }}>
+              {nEnvioLiberado === 1 ? "1 item" : `${nEnvioLiberado} itens`} aguardando Envio Nacional
+              {isEnvioAberto ? " · forms aberto!" : proximoEnvio ? <> · abertura: <strong>{proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
+            </span>
+            {onOpenEnvio && isEnvioAberto && (
+              <button onClick={onOpenEnvio} style={{ background:"rgba(100,181,246,.15)", border:"1px solid rgba(100,181,246,.4)", borderRadius:5, color:"#64B5F6", fontSize:11, fontFamily:"'DM Mono',monospace", padding:"3px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
+                pedir envio →
+              </button>
+            )}
+          </div>
+        );
+      })()}
       <div className="page-header">
         <div>
           <div className="page-eyebrow">anticeg · visão completa</div>
@@ -3066,16 +3070,17 @@ const STAFF_MEMBERS = [
 ];
 
 const ALL_ACESSOS = [
-  { id:"envios",       label:"Envios" },
-  { id:"reports",      label:"Reports" },
-  { id:"cadastros",    label:"Cadastros" },
-  { id:"atualizacoes", label:"Atualizações" },
-  { id:"demandas",     label:"Demandas + Repassos" },
-  { id:"pagamentos",   label:"Pagamentos" },
-  { id:"disponiveis",  label:"Disponíveis" },
-  { id:"blocklist",    label:"Blocklist" },
-  { id:"galeria",      label:"Galeria" },
-  { id:"geral",        label:"Config / Geral" },
+  { id:"cadastros",    label:"Cadastros",         grupo:"Joiners" },
+  { id:"atualizacoes", label:"Atualizações",       grupo:"Joiners" },
+  { id:"badges",       label:"Badges",             grupo:"Joiners" },
+  { id:"reports",      label:"Reports",            grupo:"Pedidos" },
+  { id:"demandas",     label:"Repassos",           grupo:"Pedidos" },
+  { id:"disponiveis",  label:"Loja",               grupo:"Pedidos" },
+  { id:"envios",       label:"Envios",             grupo:"Envios"  },
+  { id:"pagamentos",   label:"Pagamentos",         grupo:"Financeiro" },
+  { id:"blocklist",    label:"Blocklist",          grupo:"Config"  },
+  { id:"galeria",      label:"Galeria",            grupo:"Config"  },
+  { id:"geral",        label:"Config / Geral",     grupo:"Config"  },
 ];
 
 const DEFAULT_STAFF_ACESSOS = ["cadastros","pagamentos","disponiveis","blocklist","reports","envios","demandas","badges"];
@@ -3229,24 +3234,34 @@ function StaffPanel() {
               )}
             </div>
             <div style={{ fontSize:11, color:"rgba(245,240,232,.62)", marginBottom:10, letterSpacing:".05em" }}>ACESSOS NO ADMIN</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {ALL_ACESSOS.map(a => {
-                const ativo = staffAcessos.includes(a.id);
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {["Joiners","Pedidos","Envios","Financeiro","Config"].map(grupo => {
+                const itens = ALL_ACESSOS.filter(a => a.grupo === grupo);
                 return (
-                  <div key={a.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.06)" }}>
-                    <span style={{ fontSize:12, color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{a.label}</span>
-                    <button onClick={() => toggle(s.cog, a.id)} style={{
-                      width:42, height:24, borderRadius:99, border:"none", cursor:"pointer",
-                      background: ativo ? "var(--verde)" : "rgba(245,240,232,.12)",
-                      position:"relative", transition:"background .2s", flexShrink:0
-                    }}>
-                      <span style={{
-                        position:"absolute", top:3, left: ativo ? 21 : 3,
-                        width:18, height:18, borderRadius:"50%",
-                        background: ativo ? "#111" : "rgba(245,240,232,.4)",
-                        transition:"left .2s"
-                      }} />
-                    </button>
+                  <div key={grupo}>
+                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:6 }}>{grupo}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {itens.map(a => {
+                        const ativo = staffAcessos.includes(a.id);
+                        return (
+                          <div key={a.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.06)" }}>
+                            <span style={{ fontSize:12, color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{a.label}</span>
+                            <button onClick={() => toggle(s.cog, a.id)} style={{
+                              width:42, height:24, borderRadius:99, border:"none", cursor:"pointer",
+                              background: ativo ? "var(--verde)" : "rgba(245,240,232,.12)",
+                              position:"relative", transition:"background .2s", flexShrink:0
+                            }}>
+                              <span style={{
+                                position:"absolute", top:3, left: ativo ? 21 : 3,
+                                width:18, height:18, borderRadius:"50%",
+                                background: ativo ? "#111" : "rgba(245,240,232,.4)",
+                                transition:"left .2s"
+                              }} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -3300,9 +3315,12 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [fbReplicaTexto,      setFbReplicaTexto]      = useState("");
   const [fbReplicaEnv,        setFbReplicaEnv]        = useState(false);
   const [expandedReports, setExpandedReports] = useState(new Set());
+  const [reportRespostas, setReportRespostas] = useState({});
+  const [reportSaving,    setReportSaving]    = useState(new Set());
   // ── repasse ──
   const [meusItens,           setMeusItens]           = useState([]);
-  const [repasseItem,         setRepasseItem]         = useState(null);
+  const [repasseItensSel,     setRepasseItensSel]     = useState(new Set());
+  const [repasseIsOutros,     setRepasseIsOutros]     = useState(false);
   const [repasseNovoDono,     setRepasseNovoDono]     = useState(null);
   const [repasseNovoDonoSearch, setRepasseNovoDonoSearch] = useState("");
   const [repasseJoiners,      setRepasseJoiners]      = useState(null);
@@ -3338,7 +3356,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: cashbackData },
       ] = await Promise.all([
         supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
-        supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
@@ -4284,9 +4302,21 @@ ${p.comprovante_url ? (() => {
 
       {/* ── REPASSE ── */}
       {perfilSubTab === "repasse" && (() => {
-        const isOutros = repasseItem?.id === "outros";
+        const isOutros = repasseIsOutros;
+        const itensSelecionados = meusItens.filter(i => repasseItensSel.has(i.id));
+        function toggleItem(id) {
+          setRepasseItensSel(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) { next.delete(id); } else { next.add(id); }
+            const itens = meusItens.filter(i => next.has(i.id));
+            const soma = itens.reduce((s, i) => s + Number(i.valor_item||0) + Number(i.frete_inter||0) + Number(i.taxa_rf||0), 0);
+            setRepasseValor(soma > 0 ? soma.toFixed(2).replace(".",",") : "");
+            return next;
+          });
+          setRepasseIsOutros(false);
+        }
         async function handleSubmitRepasse() {
-          if (!repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante) return;
+          if ((repasseItensSel.size === 0 && !isOutros) || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante) return;
           if (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim())) return;
           setRepasseStatus("enviando"); setRepasseErro("");
           const ext  = repasseComprovante.name.split(".").pop();
@@ -4295,35 +4325,31 @@ ${p.comprovante_url ? (() => {
           if (upErr) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const custosPagosArr = [...repasseCustos];
-          const nomeItem = isOutros ? repasseOutrosNome.trim() : repasseItem.nome_do_item;
-          const cegItem  = isOutros ? repasseOutrosCeg.trim()  : repasseItem.ceg;
-          const { data: nova, error } = await supabase.from("repassos").insert([{
-            joiner_cog:     user.cog,
-            joiner_nome:    user.nome_site || user.nome || user.cog,
-            joiner_twitter: user.twitter || null,
-            item_id:        isOutros ? null : repasseItem.id,
-            ceg:            cegItem,
-            nome_do_item:   nomeItem,
-            item_status:    isOutros ? "outros" : repasseItem.status,
-            novo_dono_cog:  repasseNovoDono.cog,
-            novo_dono_nome: repasseNovoDono.nome,
-            novo_dono_twitter: repasseNovoDono.twitter || null,
-            item_quitado:   repasseQuitado,
-            custos_pagos:   custosPagosArr,
+          const joinerNome = user.nome_site || user.nome || user.cog;
+          const base = {
+            joiner_cog: user.cog, joiner_nome: joinerNome, joiner_twitter: user.twitter || null,
+            novo_dono_cog: repasseNovoDono.cog, novo_dono_nome: repasseNovoDono.nome, novo_dono_twitter: repasseNovoDono.twitter || null,
+            item_quitado: repasseQuitado, custos_pagos: custosPagosArr,
             valor_pendente_descricao: !repasseQuitado ? repassePendDesc : null,
             valor_acordado: Number(repasseValor.replace(",",".")),
-            comprovacao_url: publicUrl,
-            obs:            repasseObs || null,
-          }]).select().single();
+            comprovacao_url: publicUrl, obs: repasseObs || null,
+          };
+          let rows;
+          if (isOutros) {
+            rows = [{ ...base, item_id: null, ceg: repasseOutrosCeg.trim(), nome_do_item: repasseOutrosNome.trim(), item_status: "outros" }];
+          } else {
+            rows = itensSelecionados.map(i => ({ ...base, item_id: i.id, ceg: i.ceg, nome_do_item: i.nome_do_item, item_status: i.status }));
+          }
+          const { data: novas, error } = await supabase.from("repassos").insert(rows).select();
           if (error) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar: ${error.message}`); return; }
-          // Notifica novo dono
+          const listaItens = isOutros ? repasseOutrosNome.trim() : itensSelecionados.map(i => `"${i.nome_do_item}"`).join(", ");
           await supabase.from("pushes").insert([{
-            message: `${user.nome_site || user.nome || user.cog} quer te repassar o item "${nomeItem}" (${cegItem}). Aguarde confirmação da admin!`,
+            message: `${joinerNome} quer te repassar ${itensSelecionados.length > 1 ? "os itens" : "o item"} ${listaItens}. Aguarde confirmação da admin!`,
             active: true,
             joiner_cog: repasseNovoDono.cog,
           }]);
-          setMeusRepassos(prev => [nova, ...prev]);
-          setRepasseRecibo(nova);
+          setMeusRepassos(prev => [...(novas || []), ...prev]);
+          setRepasseRecibo(novas?.[0] || null);
           setRepasseStatus("enviado");
         }
 
@@ -4564,26 +4590,47 @@ ${compHTML}
 
                 {/* Seleção do item */}
                 <div>
-                  <span style={labelSt}>Item a repassar</span>
-                  <select value={repasseItem?.id ?? ""} onChange={e => {
-                      if (e.target.value === "outros") { setRepasseItem({ id:"outros" }); setRepasseValor(""); }
-                      else {
-                        const found = meusItens.find(i => i.id === Number(e.target.value));
-                        setRepasseItem(found || null);
-                        if (found) {
-                          const v = Number(found.valor_item||0) + Number(found.frete_inter||0) + Number(found.taxa_rf||0);
-                          setRepasseValor(v > 0 ? v.toFixed(2).replace(".",",") : "");
-                        }
-                      }
-                    }}
-                    style={{ ...inputSt, appearance:"none", cursor:"pointer" }}>
-                    <option value="" style={{ color:"#111" }}>Selecione um item...</option>
-                    {meusItens.map(i => (
-                      <option key={i.id} value={i.id} style={{ color:"#111" }}>[{i.ceg}] {i.nome_do_item} — {i.status}</option>
-                    ))}
-                    <option value="outros" style={{ color:"#111" }}>Outro item (não cadastrado)...</option>
-                  </select>
-                  {repasseItem?.id === "outros" && (
+                  <span style={labelSt}>Item(ns) a repassar</span>
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {meusItens.map(i => {
+                      const sel = repasseItensSel.has(i.id);
+                      return (
+                        <button key={i.id} onClick={() => toggleItem(i.id)} style={{
+                          display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                          background: sel ? "rgba(167,139,250,.1)" : "rgba(245,240,232,.03)",
+                          border: sel ? "1px solid rgba(167,139,250,.5)" : "1px solid rgba(245,240,232,.08)",
+                          borderRadius:8, cursor:"pointer", textAlign:"left", width:"100%", transition:"all .15s"
+                        }}>
+                          <span style={{
+                            width:16, height:16, borderRadius:4, flexShrink:0,
+                            background: sel ? "#A78BFA" : "transparent",
+                            border: sel ? "1px solid #A78BFA" : "1px solid rgba(245,240,232,.25)",
+                            display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#111", fontWeight:900
+                          }}>{sel ? "✓" : ""}</span>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: sel ? "#F5F0E8" : "rgba(245,240,232,.55)", fontWeight: sel ? 700 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{i.nome_do_item}</div>
+                            <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.28)", marginTop:1 }}>{i.ceg} · {i.status}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {/* Outro item */}
+                    <button onClick={() => { setRepasseIsOutros(v => !v); setRepasseItensSel(new Set()); setRepasseValor(""); }} style={{
+                      display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                      background: isOutros ? "rgba(255,163,51,.08)" : "rgba(245,240,232,.02)",
+                      border: isOutros ? "1px solid rgba(255,163,51,.4)" : "1px dashed rgba(245,240,232,.15)",
+                      borderRadius:8, cursor:"pointer", textAlign:"left", width:"100%", transition:"all .15s"
+                    }}>
+                      <span style={{
+                        width:16, height:16, borderRadius:4, flexShrink:0,
+                        background: isOutros ? "#FFA333" : "transparent",
+                        border: isOutros ? "1px solid #FFA333" : "1px solid rgba(245,240,232,.2)",
+                        display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#111", fontWeight:900
+                      }}>{isOutros ? "✓" : ""}</span>
+                      <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: isOutros ? "#FFA333" : "rgba(245,240,232,.35)", fontStyle:"italic" }}>Outro item (não cadastrado)...</div>
+                    </button>
+                  </div>
+                  {isOutros && (
                     <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:8 }}>
                       <div>
                         <div style={{ fontSize:9, letterSpacing:".8px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:4 }}>Nome do item</div>
@@ -4721,7 +4768,7 @@ ${compHTML}
                 {repasseErro && <div style={{ fontSize:11, color:"#ff6b6b", fontFamily:"'DM Mono',monospace" }}>{repasseErro}</div>}
 
                 {(() => {
-                  const disabled = repasseStatus === "enviando" || !repasseItem || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante || !repasseCiente || (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim()));
+                  const disabled = repasseStatus === "enviando" || (repasseItensSel.size === 0 && !isOutros) || !repasseNovoDono || repasseQuitado === null || !repasseValor || !repasseComprovante || !repasseCiente || (isOutros && (!repasseOutrosNome.trim() || !repasseOutrosCeg.trim()));
                   return (
                     <button onClick={handleSubmitRepasse} disabled={disabled}
                       style={{ background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, padding:"12px 0", fontSize:13, fontFamily:"'DM Mono',monospace", fontWeight:900, cursor:"pointer", opacity: disabled ? 0.4 : 1, transition:"opacity .12s", width:"100%" }}>
@@ -5299,7 +5346,7 @@ ${compHTML}
               const resolvido = r.status === "resolvido";
               const expanded  = expandedReports.has(r.id);
               const errosMarcados = Object.keys(ERRO_LABELS).filter(k => r[k]);
-              const temDetalhes = errosMarcados.length > 0 || r.observacao;
+              const temDetalhes = errosMarcados.length > 0 || r.observacao || r.resposta;
               return (
                 <div key={r.id} style={{ background:"var(--card-bg)", border:`1px solid ${resolvido ? "rgba(74,222,128,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:8, marginBottom:8, overflow:"hidden" }}>
                   {/* Header — clicável se tiver detalhes */}
@@ -5341,6 +5388,12 @@ ${compHTML}
                       {r.correcao_taxa  && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Taxa correta</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.correcao_taxa}</div></div>}
                       {r.pag_valor      && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Pagamento informado</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>R$ {r.pag_valor}{r.pag_metodo ? ` · ${r.pag_metodo}` : ""}{r.pag_data ? ` · ${r.pag_data}` : ""}</div></div>}
                       {r.observacao     && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Observação</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, fontStyle:"italic" }}>{r.observacao}</div></div>}
+                      {r.resposta && (
+                        <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.2)", borderRadius:8, padding:"10px 12px" }}>
+                          <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>↩ Resposta da admin</div>
+                          <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", lineHeight:1.65 }}>{r.resposta}</div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -6561,6 +6614,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [cotacaoObs,        setCotacaoObs]        = useState("");
+  const [sfCotas,           setSfCotas]           = useState({});
+  const [sfEtiqueta,        setSfEtiqueta]        = useState({});
+  const [sfRemetenteAberto, setSfRemetenteAberto] = useState(false);
+  const [sfPedidosAberto,   setSfPedidosAberto]   = useState(false);
+  const [sfPedidos,         setSfPedidos]         = useState([]);
+  const [sfPedidosLoading,  setSfPedidosLoading]  = useState(false);
+  const [sfRastreioInput,   setSfRastreioInput]   = useState("");
+  const [sfRastreioRes,     setSfRastreioRes]     = useState(null);
+  const [sfRastreioLoading, setSfRastreioLoading] = useState(false);
+  const [sfRemetente,       setSfRemetente]       = useState(() => {
+    try { return JSON.parse(localStorage.getItem("sf_remetente") || "null") || { nome:"", cpf:"", telefone:"", email:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"Petrópolis", estado:"RJ" }; }
+    catch { return { nome:"", cpf:"", telefone:"", email:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"Petrópolis", estado:"RJ" }; }
+  });
   const [pushManualId,      setPushManualId]      = useState(null);
   const [pushManualMsg,     setPushManualMsg]     = useState("");
   const [pushManualSending, setPushManualSending] = useState(false);
@@ -6664,6 +6730,158 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       active: true, joiner_cog: s.joiner_cog,
     }]);
     setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento", cotacao_opcoes:null, cotacao_frete:null, cotacao_forma:null, cotacao_embalagem:null, cotacao_valor:null, cotacao_prazo:null, cotacao_obs:null, cotacao_seguro:null } : x));
+  }
+
+  function sfHeaders() {
+    if (import.meta.env.DEV) {
+      return { "Authorization": `Bearer ${import.meta.env.VITE_SUPERFRETE_KEY}`, "Content-Type": "application/json" };
+    }
+    return { "Content-Type": "application/json" };
+  }
+
+  async function buscarSuperfrete(s) {
+    const cepDest = (s.cep || "").replace(/\D/g, "");
+    if (!cepDest || cepDest.length < 8) { alert("CEP de destino inválido."); return; }
+    setSfCotas(prev => ({ ...prev, [s.id]: { loading: true, resultados: null, erro: null } }));
+    try {
+      const sfUrl = import.meta.env.DEV
+        ? "/superfrete/api/v0/calculator"
+        : "/api/superfrete?endpoint=calculator";
+      const res = await fetch(sfUrl, {
+        method: "POST",
+        headers: sfHeaders(),
+        body: JSON.stringify({
+          from: { postal_code: "25804000" },
+          to: { postal_code: cepDest },
+          package: { weight: 0.3, width: 12, height: 4, length: 17 },
+          options: { receipt: false, own_hand: false },
+          services: "1,2,3,4,5",
+        }),
+      });
+      const dados = await res.json();
+      if (!Array.isArray(dados)) throw new Error(dados?.message || "Resposta inesperada da API");
+      setSfCotas(prev => ({ ...prev, [s.id]: { loading: false, resultados: dados.filter(d => !d.error), erro: null } }));
+    } catch (err) {
+      setSfCotas(prev => ({ ...prev, [s.id]: { loading: false, resultados: null, erro: err.message } }));
+    }
+  }
+
+  const SF_SERVICE_MAP = { "PAC":1, "SEDEX":2, "Jadlog":3, "JADLOG":3, "JADLOG .COM":4, "Mini Envios":17, "Mini Envios Correios":17 };
+
+  async function criarEtiquetaSuperfrete(s) {
+    const sf = (endpoint) => import.meta.env.DEV ? `/superfrete/api/v0/${endpoint}` : `/api/superfrete?endpoint=${endpoint}`;
+    const serviceId  = SF_SERVICE_MAP[s.cotacao_forma] || 1;
+    const insuranceVal = s.seguro === "sim" ? Number(s.valor_seguro) || 0 : 0;
+
+    if (!sfRemetente.nome || !sfRemetente.cpf || !sfRemetente.endereco) {
+      setSfRemetenteAberto(true);
+      return;
+    }
+
+    setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: true, url: null, erro: null, tracking: null } }));
+    try {
+      const cartRes = await fetch(sf("cart"), {
+        method: "POST",
+        headers: sfHeaders(),
+        body: JSON.stringify({
+          service_id: serviceId,
+          from: {
+            name:       sfRemetente.nome,
+            phone:      sfRemetente.telefone,
+            email:      sfRemetente.email,
+            document:   sfRemetente.cpf.replace(/\D/g, ""),
+            address:    sfRemetente.endereco,
+            number:     sfRemetente.numero,
+            complement: sfRemetente.complemento || "",
+            district:   sfRemetente.bairro,
+            city:       sfRemetente.cidade,
+            state_abbr: sfRemetente.estado,
+            country_id: "BR",
+            postal_code:"25804000",
+          },
+          to: {
+            name:       s.destinatario,
+            phone:      "",
+            email:      "",
+            document:   (s.cpf || "").replace(/\D/g, ""),
+            address:    s.endereco,
+            number:     s.numero || "S/N",
+            complement: s.complemento || "",
+            district:   s.bairro,
+            city:       s.cidade,
+            state_abbr: s.estado,
+            country_id: "BR",
+            postal_code:(s.cep || "").replace(/\D/g, ""),
+          },
+          products: [{ name:"Itens K-pop ANTICEG", quantity: s.itens?.length || 1, unitary_value: insuranceVal || 10 }],
+          volumes:  [{ weight:0.3, width:12, height:4, length:17, unitary_value: insuranceVal || 10 }],
+          options:  { receipt:false, own_hand:false, reverse:false, non_commercial:true, insurance_value: insuranceVal },
+        }),
+      });
+      const cart = await cartRes.json();
+      if (!cart.id) {
+        const erroDetalhe = cart.errors ? JSON.stringify(cart.errors) : (cart.message || JSON.stringify(cart));
+        throw new Error(erroDetalhe);
+      }
+
+      await fetch(sf("checkout"), {
+        method: "POST",
+        headers: sfHeaders(),
+        body: JSON.stringify({ orders: [{ id: cart.id }] }),
+      });
+
+      const genRes = await fetch(sf("generate"), {
+        method: "POST",
+        headers: sfHeaders(),
+        body: JSON.stringify({ orders: [{ id: cart.id }] }),
+      });
+      const gen = await genRes.json();
+
+      const tracking = cart.tracking || cart.protocol || null;
+      setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: false, url: gen.url || null, erro: null, tracking } }));
+
+      if (tracking) {
+        await supabase.from("envio_solicitacoes").update({ rastreio_codigo: tracking }).eq("id", s.id);
+        setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, rastreio_codigo: tracking } : x));
+      }
+    } catch (err) {
+      setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: false, url: null, erro: err.message, tracking: null } }));
+    }
+  }
+
+  async function buscarPedidosSuperfrete() {
+    setSfPedidosLoading(true);
+    try {
+      const ordersUrl = import.meta.env.DEV ? "/superfrete/api/v0/orders?per_page=50&page=1" : "/api/superfrete?endpoint=orders";
+      const res = await fetch(ordersUrl, {
+        headers: sfHeaders(),
+      });
+      const data = await res.json();
+      setSfPedidos(Array.isArray(data) ? data : (data.data || []));
+    } catch (err) {
+      setSfPedidos([]);
+    } finally {
+      setSfPedidosLoading(false);
+    }
+  }
+
+  async function rastrearCodigoSuperfrete(codigo) {
+    setSfRastreioLoading(true);
+    setSfRastreioRes(null);
+    try {
+      const trackUrl = import.meta.env.DEV ? `/superfrete/api/v0/orders?tracking_number=${encodeURIComponent(codigo)}&per_page=5` : `/api/superfrete?endpoint=orders&tracking_number=${encodeURIComponent(codigo)}`;
+      const res = await fetch(trackUrl, {
+        headers: sfHeaders(),
+      });
+      const data = await res.json();
+      const lista = Array.isArray(data) ? data : (data.data || []);
+      const pedido = lista.find(p => (p.tracking || p.tracking_number || p.protocol || "").toLowerCase() === codigo.toLowerCase());
+      setSfRastreioRes(pedido || lista[0] || null);
+    } catch (err) {
+      setSfRastreioRes({ erro: err.message });
+    } finally {
+      setSfRastreioLoading(false);
+    }
   }
 
   async function cancelarSolicitacaoAdmin(s) {
@@ -6805,7 +7023,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   }, [adminMainTab]);
 
   async function fetchDisponiveis() {
-    const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+    const sel = "id, cog, nome, ceg, nome_do_item, status, na_loja, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
     const { data } = await supabase.from("masterlist").select(sel).or("nome.ilike.disponivel,nome.ilike.disponível");
     if (data) setDisponiveisData(data);
   }
@@ -6866,8 +7084,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setPmSending(false);
   }
 
+  async function salvarRespostaReport(rep, resposta) {
+    setReportSaving(prev => new Set([...prev, rep.id]));
+    const { error } = await supabase.from("reports").update({ resposta: resposta || null }).eq("id", rep.id);
+    if (!error) {
+      setReports(r => r.map(x => x.id === rep.id ? { ...x, resposta: resposta || null } : x));
+      setReportRespostas(prev => { const n = { ...prev }; delete n[rep.id]; return n; });
+    }
+    setReportSaving(prev => { const n = new Set(prev); n.delete(rep.id); return n; });
+  }
   async function marcarResolvido(rep) {
-    const { error } = await supabase.from("reports").update({ status: "resolvido" }).eq("id", rep.id);
+    const resposta = reportRespostas[rep.id] ?? rep.resposta ?? null;
+    const { error } = await supabase.from("reports").update({ status: "resolvido", resposta: resposta || null }).eq("id", rep.id);
     if (error) { alert("Erro ao resolver report: " + error.message); return; }
     await supabase.from("pushes").insert([{
       message: `Seu report sobre "${rep.item_nome}" foi atualizado! Acesse a aba Suporte e verifique se está correto.`,
@@ -6889,7 +7117,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
       );
     }
-    setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido" } : x));
+    setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido", resposta: resposta || null } : x));
+    setReportRespostas(prev => { const n = { ...prev }; delete n[rep.id]; return n; });
   }
   async function desfazerResolvido(id) {
     const { error } = await supabase.from("reports").update({ status: "pendente" }).eq("id", id);
@@ -7380,6 +7609,28 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   </div>
                 )}
                 {r.observacao && <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.45)", fontStyle:"italic" }}>"{r.observacao}"</div>}
+                {/* Resposta */}
+                <div style={{ marginTop:10 }}>
+                  {r.resposta && !(r.id in reportRespostas) && (
+                    <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:6, padding:"8px 10px", marginBottom:6 }}>
+                      <div style={{ fontSize:8, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", marginBottom:4 }}>Resposta enviada</div>
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.55 }}>{r.resposta}</div>
+                    </div>
+                  )}
+                  <textarea
+                    value={reportRespostas[r.id] ?? (r.id in reportRespostas ? reportRespostas[r.id] : r.resposta ?? "")}
+                    onChange={e => setReportRespostas(prev => ({ ...prev, [r.id]: e.target.value }))}
+                    placeholder="Resposta para a joiner (opcional)..."
+                    rows={2}
+                    style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 10px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", resize:"vertical" }}
+                  />
+                  {reportRespostas[r.id] !== undefined && reportRespostas[r.id] !== (r.resposta ?? "") && (
+                    <button onClick={() => salvarRespostaReport(r, reportRespostas[r.id])} disabled={reportSaving.has(r.id)}
+                      style={{ marginTop:4, background:"rgba(167,139,250,.1)", border:"1px solid rgba(167,139,250,.3)", color:"#A78BFA", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: reportSaving.has(r.id) ? .5 : 1 }}>
+                      {reportSaving.has(r.id) ? "salvando..." : "Salvar resposta"}
+                    </button>
+                  )}
+                </div>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:8 }}>
                   <div style={{ fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(r.created_at).toLocaleString("pt-BR")}</div>
                   {r.status === "pendente" ? (
@@ -8482,6 +8733,41 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             );
           })()}
+          {/* Config remetente Superfrete */}
+          {sfRemetenteAberto && (() => {
+            const inp3 = { width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
+            const lbl3 = { fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:3, display:"block", letterSpacing:"1px", textTransform:"uppercase" };
+            const set = k => e => setSfRemetente(prev => ({ ...prev, [k]: e.target.value }));
+            return (
+              <div style={{ background:"rgba(100,181,246,.05)", border:"1px solid rgba(100,181,246,.22)", borderRadius:10, padding:"16px", marginBottom:16 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#64B5F6", letterSpacing:"1px", textTransform:"uppercase" }}>Dados do remetente (Superfrete)</span>
+                  <button onClick={() => setSfRemetenteAberto(false)} style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:14 }}>✕</button>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+                  <div><label style={lbl3}>Nome</label><input value={sfRemetente.nome} onChange={set("nome")} style={inp3} /></div>
+                  <div><label style={lbl3}>CPF / CNPJ</label><input value={sfRemetente.cpf} onChange={set("cpf")} style={inp3} /></div>
+                  <div><label style={lbl3}>Telefone</label><input value={sfRemetente.telefone} onChange={set("telefone")} placeholder="(xx) xxxxx-xxxx" style={inp3} /></div>
+                  <div><label style={lbl3}>E-mail</label><input value={sfRemetente.email} onChange={set("email")} style={inp3} /></div>
+                  <div><label style={lbl3}>Endereço</label><input value={sfRemetente.endereco} onChange={set("endereco")} style={inp3} /></div>
+                  <div><label style={lbl3}>Número</label><input value={sfRemetente.numero} onChange={set("numero")} style={inp3} /></div>
+                  <div><label style={lbl3}>Complemento</label><input value={sfRemetente.complemento} onChange={set("complemento")} style={inp3} /></div>
+                  <div><label style={lbl3}>Bairro</label><input value={sfRemetente.bairro} onChange={set("bairro")} style={inp3} /></div>
+                  <div><label style={lbl3}>Cidade</label><input value={sfRemetente.cidade} onChange={set("cidade")} style={inp3} /></div>
+                  <div><label style={lbl3}>Estado (UF)</label><input value={sfRemetente.estado} onChange={set("estado")} maxLength={2} style={inp3} /></div>
+                </div>
+                <button onClick={() => { localStorage.setItem("sf_remetente", JSON.stringify(sfRemetente)); setSfRemetenteAberto(false); }} style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:6, padding:"7px 18px", cursor:"pointer", fontWeight:700 }}>
+                  Salvar dados →
+                </button>
+              </div>
+            );
+          })()}
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
+            <button onClick={() => setSfRemetenteAberto(v => !v)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(100,181,246,.5)", border:"1px solid rgba(100,181,246,.18)", borderRadius:5, padding:"4px 10px", cursor:"pointer" }}>
+              ✏️ Remetente Superfrete
+            </button>
+          </div>
+
           {/* Pills de status */}
           {(() => {
             const statusConfig = [
@@ -8626,6 +8912,72 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Val. declarado:</strong> {s.seguro === "sim" ? `R$ ${s.valor_seguro}` : "—"}
                 </div>
 
+                {/* Comprovante */}
+                {s.comprovante_url && (
+                  <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"9px 14px", marginBottom:12 }}>
+                    <span style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>📎 Comprovante enviado</span>
+                    <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
+                  </div>
+                )}
+
+                {/* Cotação Superfrete */}
+                {["solicitação de envio","cotação em andamento"].includes(s.status) && (() => {
+                  const sf = sfCotas[s.id];
+                  return (
+                    <div style={{ marginBottom:12 }}>
+                      {!sf || (!sf.loading && !sf.resultados && !sf.erro) ? (
+                        <button onClick={() => buscarSuperfrete(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.07)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.22)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                          📦 Cotar via Superfrete
+                        </button>
+                      ) : sf.loading ? (
+                        <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>calculando fretes...</div>
+                      ) : sf.erro ? (
+                        <div style={{ fontSize:10, color:"#ff7875", fontFamily:"'DM Mono',monospace" }}>Erro: {sf.erro} · <span onClick={() => buscarSuperfrete(s)} style={{ cursor:"pointer", textDecoration:"underline" }}>tentar novamente</span></div>
+                      ) : (
+                        <div style={{ background:"rgba(100,181,246,.05)", border:"1px solid rgba(100,181,246,.18)", borderRadius:8, padding:"12px 14px" }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", color:"rgba(100,181,246,.7)", textTransform:"uppercase" }}>Cotação Superfrete · sandbox</span>
+                            <button onClick={() => setSfCotas(prev => ({ ...prev, [s.id]: null }))} style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:12, padding:0 }}>✕</button>
+                          </div>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+                            {sf.resultados.map(srv => {
+                              const preco = Number(srv.price) || 0;
+                              const desconto = Number(srv.discount) || 0;
+                              const original = desconto < 0 ? (preco - desconto).toFixed(2).replace(".",",") : null;
+                              const precoFmt = preco.toFixed(2).replace(".",",");
+                              const prazo = srv.delivery_time ? `${srv.delivery_time} dia(s) útil(eis)` : (srv.delivery_range?.min ? `${srv.delivery_range.min}–${srv.delivery_range.max} dias` : "—");
+                              return (
+                                <div key={srv.id} style={{ background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:7, padding:"10px 14px", minWidth:120, flex:"1 1 120px" }}>
+                                  <div style={{ fontSize:11, fontWeight:700, color:"#64B5F6", fontFamily:"'DM Mono',monospace", marginBottom:2 }}>{srv.name || srv.company?.name}</div>
+                                  <div style={{ fontSize:15, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {precoFmt}</div>
+                                  {original && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textDecoration:"line-through" }}>R$ {original}</div>}
+                                  <div style={{ fontSize:10, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>{prazo}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <button onClick={() => {
+                            const opcoes = sf.resultados.map(srv => {
+                              const preco = Number(srv.price) || 0;
+                              const desconto = Number(srv.discount) || 0;
+                              const original = desconto < 0 ? (preco - desconto).toFixed(2).replace(".",",") : null;
+                              const precoFmt = preco.toFixed(2).replace(".",",");
+                              const prazo = srv.delivery_time ? `${srv.delivery_time} dia(s) útil(eis)` : (srv.delivery_range?.min ? `${srv.delivery_range.min}–${srv.delivery_range.max} dias` : "—");
+                              return { forma: srv.name || srv.company?.name, valor: precoFmt.replace(",","."), valor_original: original ? original.replace(",",".") : "", prazo };
+                            });
+                            setCotacaoAberta(s.id);
+                            setCotacaoOpcoes(opcoes);
+                            setCotacaoEmbalagem("");
+                            setCotacaoObs("");
+                          }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:5, padding:"7px 16px", cursor:"pointer", fontWeight:700, width:"100%" }}>
+                            Usar todas no form →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Itens */}
                 {s.itens?.length > 0 && (() => {
                   const totalCaixa = s.itens.reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
@@ -8661,7 +9013,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 )}
 
                 {/* Form cotação */}
-                {s.status === "cotação em andamento" && cotacaoAberta === s.id && (() => {
+                {cotacaoAberta === s.id && (() => {
                   const valorDecl  = s.seguro === "sim" ? s.valor_seguro : null;
                   const totalItens = (s.itens||[]).reduce((a, it) => a + pf(it.valor) + pf(it.taxa) + pf(it.frete), 0);
                   const emb        = pf(cotacaoEmbalagem);
@@ -8783,6 +9135,26 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       📦 Embalando
                     </button>
                   )}
+                  {["pagamento confirmado","embalando"].includes(s.status) && (() => {
+                    const sf = sfEtiqueta[s.id];
+                    if (sf?.url) return (
+                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                        <a href={sf.url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700, textDecoration:"none" }}>
+                          🏷️ Baixar etiqueta PDF
+                        </a>
+                        {sf.tracking && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>rastreio: {sf.tracking}</span>}
+                      </div>
+                    );
+                    if (sf?.loading) return <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>gerando etiqueta...</div>;
+                    return (
+                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                        <button onClick={() => criarEtiquetaSuperfrete(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.07)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.22)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                          🏷️ Gerar Etiqueta Superfrete
+                        </button>
+                        {sf?.erro && <span style={{ fontSize:9, color:"#ff7875", fontFamily:"'DM Mono',monospace" }}>Erro: {sf.erro}</span>}
+                      </div>
+                    );
+                  })()}
                   {s.status === "pagamento em aberto" && (
                     <button onClick={() => cancelarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Cancelar cotação
@@ -8857,6 +9229,92 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             );
           });
           })()}
+        </div>
+      )}
+
+      {/* ── SUPERFRETE: PEDIDOS + RASTREIO ── */}
+      {adminMainTab === "envios" && (
+        <div style={{ marginTop:24 }}>
+          <button onClick={() => { setSfPedidosAberto(v => !v); if (!sfPedidosAberto) buscarPedidosSuperfrete(); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.07)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.22)", borderRadius:6, padding:"7px 16px", cursor:"pointer", marginBottom:12 }}>
+            {sfPedidosAberto ? "▲" : "▼"} Pedidos Superfrete · Rastreio
+          </button>
+
+          {sfPedidosAberto && (
+            <div style={{ background:"rgba(100,181,246,.04)", border:"1px solid rgba(100,181,246,.15)", borderRadius:10, padding:"16px" }}>
+
+              {/* Rastreio por código */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(100,181,246,.7)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:8 }}>Rastrear código</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <input
+                    value={sfRastreioInput}
+                    onChange={e => setSfRastreioInput(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && sfRastreioInput.trim() && rastrearCodigoSuperfrete(sfRastreioInput.trim())}
+                    placeholder="ex: AA123456789BR"
+                    style={{ flex:1, background:"#0d0d0d", border:"1px solid rgba(100,181,246,.22)", borderRadius:5, padding:"7px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none" }}
+                  />
+                  <button onClick={() => sfRastreioInput.trim() && rastrearCodigoSuperfrete(sfRastreioInput.trim())} disabled={sfRastreioLoading} style={{ padding:"7px 16px", background:"rgba(100,181,246,.12)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.3)", borderRadius:5, fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700, whiteSpace:"nowrap" }}>
+                    {sfRastreioLoading ? "..." : "Rastrear →"}
+                  </button>
+                </div>
+                {sfRastreioRes && (
+                  <div style={{ marginTop:10, background:"rgba(0,0,0,.3)", border:"1px solid rgba(100,181,246,.2)", borderRadius:7, padding:"12px 14px", fontFamily:"'DM Mono',monospace", fontSize:11 }}>
+                    {sfRastreioRes.erro ? (
+                      <span style={{ color:"#ff7875" }}>Erro: {sfRastreioRes.erro}</span>
+                    ) : (
+                      <>
+                        <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:8 }}>
+                          <span style={{ color:"#64B5F6", fontWeight:700 }}>{sfRastreioRes.service?.name || sfRastreioRes.service_id || "—"}</span>
+                          <span style={{ color:"rgba(245,240,232,.5)" }}>#{sfRastreioRes.tracking || sfRastreioRes.protocol || sfRastreioRes.tracking_number || "—"}</span>
+                          <span style={{ color:"#BAFF39", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, padding:"1px 8px", fontSize:9 }}>{sfRastreioRes.status || "—"}</span>
+                        </div>
+                        <div style={{ color:"rgba(245,240,232,.4)", fontSize:10 }}>
+                          Para: {sfRastreioRes.to?.name || "—"} · {sfRastreioRes.to?.city || "—"}/{sfRastreioRes.to?.state_abbr || "—"}
+                        </div>
+                        {sfRastreioRes.tracking_url && (
+                          <a href={sfRastreioRes.tracking_url} target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:8, fontSize:10, color:"#64B5F6", textDecoration:"underline" }}>
+                            🔍 Ver rastreio completo →
+                          </a>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Lista de pedidos */}
+              <div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(100,181,246,.7)", letterSpacing:"1px", textTransform:"uppercase" }}>Pedidos criados ({sfPedidos.length})</div>
+                  <button onClick={buscarPedidosSuperfrete} disabled={sfPedidosLoading} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(100,181,246,.5)", border:"1px solid rgba(100,181,246,.18)", borderRadius:4, padding:"3px 10px", cursor:"pointer" }}>
+                    {sfPedidosLoading ? "..." : "↻ Atualizar"}
+                  </button>
+                </div>
+                {sfPedidosLoading ? (
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>carregando...</div>
+                ) : sfPedidos.length === 0 ? (
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum pedido encontrado no sandbox.</div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {sfPedidos.map(p => (
+                      <div key={p.id} style={{ background:"rgba(0,0,0,.25)", border:"1px solid rgba(100,181,246,.12)", borderRadius:7, padding:"10px 14px", fontFamily:"'DM Mono',monospace", display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
+                        <span style={{ fontSize:11, fontWeight:700, color:"#64B5F6", minWidth:60 }}>{p.service?.name || p.service_id || "—"}</span>
+                        <span style={{ fontSize:10, color:"rgba(245,240,232,.5)", flex:1 }}>{p.to?.name || "—"} · {p.to?.city || "—"}/{p.to?.state_abbr || "—"}</span>
+                        <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>{p.tracking || p.protocol || p.tracking_number || "sem rastreio"}</span>
+                        <span style={{ fontSize:9, color:"#BAFF39", background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.18)", borderRadius:4, padding:"2px 8px", whiteSpace:"nowrap" }}>{p.status || "—"}</span>
+                        {p.print && (
+                          <a href={p.print} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", border:"1px solid rgba(100,181,246,.25)", borderRadius:4, padding:"2px 8px", textDecoration:"none", whiteSpace:"nowrap" }}>
+                            🏷️ etiqueta
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
         </div>
       )}
 
@@ -10296,25 +10754,28 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
 
   async function rejeitarClaim(claim) {
     await supabase.from("claims").update({ status: "rejeitado" }).eq("id", claim.id);
-    await supabase.from("masterlist").update({ status: "Disponível", cog: "disponivel", nome: "disponivel" }).eq("id", claim.masterlist_id);
+    await supabase.from("masterlist").update({ na_loja: true }).eq("id", claim.masterlist_id);
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
-    setItens(prev => prev.map(i => i.id === claim.masterlist_id ? { ...i, status: "Disponível" } : i));
+    setItens(prev => prev.map(i => i.id === claim.masterlist_id ? { ...i, na_loja: true } : i));
   }
 
   async function publicar(id) {
-    await supabase.from("masterlist").update({ status: "Disponível" }).eq("id", id);
-    setItens(prev => prev.map(i => i.id === id ? { ...i, status: "Disponível" } : i));
+    const { data, error } = await supabase.from("masterlist").update({ na_loja: true }).eq("id", id).select("id");
+    if (error || !data?.length) {
+      alert("Erro ao publicar: " + (error?.message || "item não encontrado"));
+      return;
+    }
+    setItens(prev => prev.map(i => i.id === id ? { ...i, na_loja: true } : i));
   }
-  async function retirar(id, statusAnterior) {
-    const novoStatus = statusAnterior && statusAnterior !== "Disponível" ? statusAnterior : "Retirado";
-    await supabase.from("masterlist").update({ status: novoStatus }).eq("id", id);
-    setItens(prev => prev.map(i => i.id === id ? { ...i, status: novoStatus } : i));
+  async function retirar(id) {
+    await supabase.from("masterlist").update({ na_loja: false }).eq("id", id);
+    setItens(prev => prev.map(i => i.id === id ? { ...i, na_loja: false } : i));
   }
 
   const cegs = [...new Set(itens.map(i => i.ceg))].sort();
   const itensFiltrados = filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens;
-  const publicados = itensFiltrados.filter(i => i.status === "Disponível");
-  const naoPublicados = itensFiltrados.filter(i => i.status !== "Disponível");
+  const publicados = itensFiltrados.filter(i => i.na_loja);
+  const naoPublicados = itensFiltrados.filter(i => !i.na_loja);
 
   const renderItem = (item) => {
     const fotoKey = `${item.ceg}||${item.nome_do_item}`;
@@ -10323,7 +10784,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     return (
     <div key={item.id} style={{
       background:"var(--card-bg)",
-      border:`1px solid ${item.status === "Disponível" ? "rgba(255,180,0,.25)" : "rgba(245,240,232,.07)"}`,
+      border:`1px solid ${item.na_loja ? "rgba(255,180,0,.25)" : "rgba(245,240,232,.07)"}`,
       borderRadius:10, padding:"14px 16px", marginBottom:8,
       display:"flex", alignItems:"center", gap:12
     }}>
@@ -10339,9 +10800,10 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
-          {item.status === "Disponível"
+          {item.na_loja
             ? <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ffb400", background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.3)", borderRadius:4, padding:"2px 7px", letterSpacing:"1px" }}>VISÍVEL</span>
-            : <StatusChip status={item.status} />}
+            : null}
+          <StatusChip status={item.status} />
         </div>
         <div style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)", marginTop:4 }}><InfoContent info={item.nome_do_item} /></div>
         {Number(item.valor_item) > 0 && (
@@ -10352,8 +10814,8 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
         )}
       </div>
       <div style={{ flexShrink:0, display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
-        {item.status === "Disponível" ? (
-          <button onClick={() => retirar(item.id, item.status)} style={{
+        {item.na_loja ? (
+          <button onClick={() => retirar(item.id)} style={{
             background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)",
             color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px",
             fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
@@ -10383,8 +10845,8 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
   async function retirarTodos() {
     const ids = publicados.map(i => i.id);
     if (!ids.length) return;
-    await supabase.from("masterlist").update({ status: "Retirado" }).in("id", ids);
-    setItens(prev => prev.map(i => ids.includes(i.id) ? { ...i, status: "Retirado" } : i));
+    await supabase.from("masterlist").update({ na_loja: false }).in("id", ids);
+    setItens(prev => prev.map(i => ids.includes(i.id) ? { ...i, na_loja: false } : i));
   }
 
   return (
@@ -10496,9 +10958,29 @@ function DisponiveisTab({ user }) {
   const [subTab, setSubTab] = useState("loja");
 
   useEffect(() => {
+    if (confirmando) {
+      const y = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${y}px`;
+      document.body.style.width = "100%";
+    } else {
+      const y = parseFloat(document.body.style.top || "0") * -1;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (y) window.scrollTo(0, y);
+    }
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+    };
+  }, [confirmando]);
+
+  function carregarItens() {
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
-      .or("nome.ilike.disponivel,nome.ilike.disponível").eq("status", "Disponível")
+      .or("nome.ilike.disponivel,nome.ilike.disponível").eq("na_loja", true)
       .order("ceg").order("nome_do_item")
       .then(async ({ data }) => {
         const lista = data || [];
@@ -10518,11 +11000,19 @@ function DisponiveisTab({ user }) {
     supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
       .eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => setMeusClaims(data || []));
+  }
+
+  useEffect(() => { carregarItens(); }, []);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") carregarItens(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   async function darClaim(item) {
     setClaiming(item.id); setClaimErro(null);
-    const { error } = await supabase.from("claims").insert([{
+    const { data: inserted, error } = await supabase.from("claims").insert([{
       joiner_cog: user.cog,
       joiner_nome: user.nome || user.cog,
       joiner_email: user.email || null,
@@ -10532,16 +11022,25 @@ function DisponiveisTab({ user }) {
       valor: Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0),
       vencimento: claimVenc || null,
       status: "pendente",
-    }]);
-    if (!error) {
-      await supabase.from("masterlist").update({ status: "Em análise" }).eq("id", item.id);
-    }
-    if (error) {
-      setClaimErro("Erro ao enviar claim. Tente novamente.");
+    }]).select();
+    const ok = !error && inserted && inserted.length > 0;
+    if (ok) {
+      const { data: updated } = await supabase.from("masterlist")
+        .update({ na_loja: false })
+        .eq("id", item.id)
+        .eq("na_loja", true)
+        .select("id");
+      if (!updated || updated.length === 0) {
+        // Outro joiner chegou primeiro — desfaz o claim
+        await supabase.from("claims").update({ status: "rejeitado" }).eq("id", inserted[0].id);
+        setClaimErro("Este item acabou de ser reservado por outra pessoa. Atualize a página para ver os disponíveis.");
+      } else {
+        setItens(prev => prev.filter(i => i.id !== item.id));
+        setClaimOk(item);
+        setTimeout(() => setClaimOk(null), 4000);
+      }
     } else {
-      setItens(prev => prev.filter(i => i.id !== item.id));
-      setClaimOk(item);
-      setTimeout(() => setClaimOk(null), 4000);
+      setClaimErro("Erro ao enviar claim. Tente novamente.");
     }
     setClaiming(null);
     setConfirmando(null);
@@ -12029,6 +12528,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [itensConferidos,  setItensConferidos]  = useState(new Set());
   const [erroSecao,        setErroSecao]        = useState(false);
   const [errosSel,         setErrosSel]         = useState(new Set());
+  const [comprovFiles,     setComprovFiles]     = useState({});
   const [erroObs,          setErroObs]          = useState("");
   const [erroEnviado,      setErroEnviado]      = useState(false);
 
@@ -13073,9 +13573,49 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                             <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); }} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer" }}>Copiar</button>
                                           </div>
                                         </div>
-                                        <a href={`https://wa.me/5524992782023?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
-                                          📎 Enviar comprovante no WhatsApp →
-                                        </a>
+                                        {/* Upload comprovante */}
+                                        {s.comprovante_url ? (
+                                          <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"10px 12px" }}>
+                                            <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>✓ Comprovante enviado</span>
+                                            <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver →</a>
+                                          </div>
+                                        ) : (() => {
+                                          const cf = comprovFiles[s.id];
+                                          const uploading = cf?.uploading;
+                                          return (
+                                            <div style={{ marginTop:8 }}>
+                                              {!cf?.file ? (
+                                                <label style={{ display:"block", textAlign:"center", padding:"10px", background:"rgba(245,240,232,.04)", border:"1px dashed rgba(245,240,232,.15)", borderRadius:7, fontSize:11, color:"rgba(245,240,232,.4)", cursor:"pointer", fontFamily:"'DM Mono',monospace" }}>
+                                                  📎 Anexar comprovante (jpg/png/pdf)
+                                                  <input type="file" accept="image/*,application/pdf" style={{ display:"none" }} onChange={e => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) setComprovFiles(prev => ({ ...prev, [s.id]: { file, uploading: false } }));
+                                                  }} />
+                                                </label>
+                                              ) : (
+                                                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                                  <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"9px 12px" }}>
+                                                    <span style={{ flex:1, fontSize:10, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{cf.file.name}</span>
+                                                    <button onClick={() => setComprovFiles(prev => ({ ...prev, [s.id]: null }))} style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:13 }}>✕</button>
+                                                  </div>
+                                                  <button disabled={uploading} onClick={async () => {
+                                                    setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: true } }));
+                                                    const ext = cf.file.name.split(".").pop();
+                                                    const path = `envio/${s.id}/comprovante_${Date.now()}.${ext}`;
+                                                    const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, cf.file, { upsert: true });
+                                                    if (upErr) { alert("Erro no upload: " + upErr.message); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
+                                                    const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+                                                    await supabase.from("envio_solicitacoes").update({ comprovante_url: publicUrl }).eq("id", s.id);
+                                                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, comprovante_url: publicUrl } : x));
+                                                    setComprovFiles(prev => ({ ...prev, [s.id]: null }));
+                                                  }} style={{ padding:"9px", background: uploading ? "rgba(186,255,57,.05)" : "rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontSize:11, fontWeight:700, cursor: uploading ? "not-allowed" : "pointer", fontFamily:"'DM Mono',monospace" }}>
+                                                    {uploading ? "Enviando..." : "Enviar comprovante →"}
+                                                  </button>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
                                       </>
                                     );
                                   })()}
@@ -13124,6 +13664,22 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                         </div>
                       );
                     })()}
+
+                    {/* Rastreio */}
+                    {s.status === "enviado" && s.rastreio_codigo && (
+                      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"12px 14px", marginTop:10 }}>
+                        <div style={{ fontSize:9, color:"#BAFF39", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", marginBottom:8 }}>Código de rastreio</div>
+                        <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom: s.rastreio_link ? 8 : 0 }}>
+                          <div style={{ flex:1, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"7px 10px", fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", letterSpacing:"1px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.rastreio_codigo}</div>
+                          <button onClick={() => navigator.clipboard.writeText(s.rastreio_codigo)} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer", fontFamily:"'DM Mono',monospace" }}>Copiar</button>
+                        </div>
+                        {s.rastreio_link && (
+                          <a href={s.rastreio_link} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"10px", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:7, fontSize:11, fontWeight:700, textDecoration:"none", fontFamily:"'DM Mono',monospace" }}>
+                            🔍 Rastrear meu pedido →
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>}
                 </div>
               );
@@ -13762,7 +14318,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
+      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
