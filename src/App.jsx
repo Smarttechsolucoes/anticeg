@@ -10453,7 +10453,14 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
       cog: p.cog, nome: p.nome, email: p.email,
       twitter: "@" + p.cog, whatsapp: p.whatsapp || null, confirmado: false,
     }]);
-    if (error) { alert("Erro ao criar conta: " + error.message); setAprovando(null); return; }
+    if (error) {
+      // cog já existe — conta criada antes, só aprova o pré-cadastro
+      if (!error.message?.includes("unique constraint")) {
+        alert("Erro ao criar conta: " + error.message);
+        setAprovando(null);
+        return;
+      }
+    }
     await supabase.from("pre_cadastros").update({ status: "aprovado" }).eq("id", p.id);
     onUpdatePre(prev => prev.filter(x => x.id !== p.id));
     setAprovando(null);
