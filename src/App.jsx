@@ -6770,8 +6770,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   async function criarEtiquetaSuperfrete(s) {
     const sf = (endpoint) => import.meta.env.DEV ? `/superfrete/api/v0/${endpoint}` : `/api/superfrete?endpoint=${endpoint}`;
-    const serviceId  = SF_SERVICE_MAP[s.cotacao_forma] || 1;
     const insuranceVal = s.seguro === "sim" ? Number(s.valor_seguro) || 0 : 0;
+    const cepDest = (s.cep || "").replace(/\D/g, "");
 
     if (!sfRemetente.nome || !sfRemetente.cpf || !sfRemetente.endereco) {
       setSfRemetenteAberto(true);
@@ -6780,6 +6780,30 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: true, url: null, erro: null, tracking: null } }));
     try {
+      // Busca serviços disponíveis para pegar o service_id correto pelo nome
+      let serviceId = SF_SERVICE_MAP[s.cotacao_forma] || 1;
+      try {
+        const calcRes = await fetch(sf("calculator"), {
+          method: "POST",
+          headers: sfHeaders(),
+          body: JSON.stringify({
+            from: { postal_code: "25804000" },
+            to:   { postal_code: cepDest },
+            package: { weight: 0.3, width: 12, height: 4, length: 17 },
+            options: { receipt: false, own_hand: false },
+            services: "1,2,3,4,5,17",
+          }),
+        });
+        const servicos = await calcRes.json();
+        if (Array.isArray(servicos)) {
+          const match = servicos.find(sv =>
+            (sv.name || "").toLowerCase() === (s.cotacao_forma || "").toLowerCase()
+          );
+          if (match?.id) serviceId = match.id;
+          else if (servicos[0]?.id) serviceId = servicos[0].id;
+        }
+      } catch (_) {}
+
       const cartRes = await fetch(sf("cart"), {
         method: "POST",
         headers: sfHeaders(),
