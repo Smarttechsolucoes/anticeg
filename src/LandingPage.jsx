@@ -150,6 +150,16 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const { error: err } = await supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "pendente" }]);
     if (err) { setCadError("Erro ao enviar. Tente novamente."); setCadLoading(false); return; }
 
+    // Notifica a admin por e-mail
+    supabase.functions.invoke("send-email", {
+      body: {
+        to_email: "nandadomarketing@gmail.com",
+        to_name: "Nanda",
+        assunto: "✦ Novo pré-cadastro — ANTICEG",
+        corpo: `<p style="font-family:monospace;font-size:13px;color:#F5F0E8;line-height:1.7">Nova joiner aguardando aprovação:</p><ul style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.7);line-height:2"><li><b>Nome:</b> ${nome}</li><li><b>@:</b> ${cog}</li><li><b>E-mail:</b> ${eml}</li>${whats ? `<li><b>WhatsApp:</b> ${whats}</li>` : ""}</ul><p style="font-family:monospace;font-size:11px;color:rgba(245,240,232,.4)">Acesse o painel admin → Joiners → Cadastros para aprovar ou recusar.</p>`,
+      },
+    }).catch(() => {});
+
     setCadLoading(false);
     onLogin({ pre_cadastro: true, nome, cog, email: eml, whatsapp: whats || null }, []);
   }
