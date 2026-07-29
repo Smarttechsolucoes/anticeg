@@ -10432,6 +10432,20 @@ function AdminMercari({ pedidos = [], onUpdate }) {
 
 function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre }) {
   const [aprovando, setAprovando] = useState(null);
+  const [copiado, setCopiado] = useState(null); // id ou "todos"
+
+  function linhaJoiner(p) {
+    return [
+      "MEMBRO NOVO", p.nome, "PERFIL NOVO", "", "TRUE", "R$ 0,00", "", "", "",
+      "FALSE", "", "", "FALSE", "FALSE", "FALSE", p.email || "", p.cog || "",
+    ].join("\t");
+  }
+
+  function copiar(texto, key) {
+    navigator.clipboard.writeText(texto);
+    setCopiado(key);
+    setTimeout(() => setCopiado(null), 2000);
+  }
 
   async function aprovarCadastro(p) {
     setAprovando(p.id);
@@ -10462,6 +10476,12 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
             <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Novos Joiners</span>
             <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{preCadastros.length}</span>
             <div style={{ flex:1, height:"1px", background:"rgba(186,255,57,.12)" }} />
+            {preCadastros.length > 1 && (
+              <button onClick={() => copiar(preCadastros.map(linhaJoiner).join("\n"), "todos")}
+                style={{ flexShrink:0, fontSize:9, fontFamily:"'DM Mono',monospace", background: copiado==="todos" ? "rgba(186,255,57,.15)" : "rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.25)", color:"#BAFF39", borderRadius:5, padding:"3px 10px", cursor:"pointer", letterSpacing:".5px" }}>
+                {copiado==="todos" ? "✓ copiado" : "◫ copiar todos"}
+              </button>
+            )}
           </div>
           {preCadastros.map(p => (
             <div key={p.id} style={{ padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, marginBottom:8 }}>
@@ -10474,7 +10494,11 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
                   {p.whatsapp && <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{p.whatsapp}</div>}
                   <div style={{ fontSize:10, color:"rgba(245,240,232,.28)", marginTop:6 }}>{new Date(p.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
                 </div>
-                <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                <div style={{ display:"flex", gap:6, flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                  <button onClick={() => copiar(linhaJoiner(p), p.id)}
+                    style={{ background: copiado===p.id ? "rgba(186,255,57,.15)" : "rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.2)", color:"#BAFF39", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                    {copiado===p.id ? "✓ copiado" : "◫ copiar"}
+                  </button>
                   <button onClick={() => aprovarCadastro(p)} disabled={aprovando === p.id}
                     style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
                     {aprovando === p.id ? "..." : "✓ Aprovar"}
