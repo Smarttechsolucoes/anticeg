@@ -6510,6 +6510,262 @@ const DEMO_ADMIN_DATA = {
   ],
 };
 
+// ── Componentes movidos para nível de módulo (evitar recriação a cada render) ──
+
+const ADMIN_PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+function AdminPixBar({ copiado, setCopiado }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"9px 14px", marginBottom:16, flexWrap:"wrap" }}>
+      <span style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>PIX · Mercado Pago</span>
+      <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ADMIN_PIX_KEY}</span>
+      <button onClick={() => { navigator.clipboard.writeText(ADMIN_PIX_KEY); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }}
+        style={{ flexShrink:0, padding:"5px 12px", background: copiado ? "rgba(186,255,57,.2)" : "rgba(186,255,57,.08)", color:"#BAFF39", border:`1px solid ${copiado ? "rgba(186,255,57,.5)" : "rgba(186,255,57,.2)"}`, borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
+        {copiado ? "✓ copiado" : "copiar"}
+      </button>
+    </div>
+  );
+}
+
+function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving, onSalvar, onResolver, onDesfazer }) {
+  const erroLabels = [
+    r.erro_item      && "Item incorreto",
+    r.erro_valor     && "Valor incorreto",
+    r.erro_frete     && "Frete incorreto",
+    r.erro_taxa      && "Taxa RF incorreta",
+    r.erro_pagamento && "Já paguei (pendente)",
+    r.erro_recebido  && "Já recebi esse item",
+    r.erro_outro     && "Outro problema",
+  ].filter(Boolean);
+  return (
+    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
+      <div style={{ fontSize:11, fontWeight:600, color:"var(--offwhite)", marginBottom:3 }}>
+        {r.item_nome} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>· {r.ceg}</span>
+      </div>
+      {erroLabels.length > 0 && (
+        <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:4 }}>
+          {erroLabels.map(l => <span key={l} style={{ fontSize:9, background:"rgba(255,92,26,.12)", border:"1px solid rgba(255,92,26,.25)", borderRadius:3, padding:"1px 6px", color:"var(--laranja)" }}>{l}</span>)}
+        </div>
+      )}
+      {(r.motivo_item || r.correcao_valor || r.correcao_frete || r.correcao_taxa) && (
+        <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.4)", display:"flex", flexDirection:"column", gap:1 }}>
+          {r.motivo_item    && <span>↳ {r.motivo_item}</span>}
+          {r.correcao_valor && <span>↳ Valor: {r.correcao_valor}</span>}
+          {r.correcao_frete && <span>↳ Frete: {r.correcao_frete}</span>}
+          {r.correcao_taxa  && <span>↳ Taxa: {r.correcao_taxa}</span>}
+        </div>
+      )}
+      {r.erro_pagamento && (r.pag_data || r.pag_valor || r.pag_metodo) && (
+        <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.4)", display:"flex", flexWrap:"wrap", gap:8 }}>
+          {r.pag_data   && <span>Data: {new Date(r.pag_data+"T12:00:00").toLocaleDateString("pt-BR")}</span>}
+          {r.pag_valor  && <span>Valor: {r.pag_valor}</span>}
+          {r.pag_metodo && <span>Método: {r.pag_metodo}</span>}
+        </div>
+      )}
+      {r.observacao && <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.45)", fontStyle:"italic" }}>"{r.observacao}"</div>}
+      <div style={{ marginTop:10 }}>
+        {r.resposta && !(r.id in reportRespostas) && (
+          <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:6, padding:"8px 10px", marginBottom:6 }}>
+            <div style={{ fontSize:8, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", marginBottom:4 }}>Resposta enviada</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.55 }}>{r.resposta}</div>
+          </div>
+        )}
+        <textarea
+          value={reportRespostas[r.id] ?? (r.id in reportRespostas ? reportRespostas[r.id] : r.resposta ?? "")}
+          onChange={e => setReportRespostas(prev => ({ ...prev, [r.id]: e.target.value }))}
+          placeholder="Resposta para a joiner (opcional)..."
+          rows={2}
+          style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 10px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", resize:"vertical" }}
+        />
+        {reportRespostas[r.id] !== undefined && reportRespostas[r.id] !== (r.resposta ?? "") && (
+          <button onClick={() => onSalvar(r, reportRespostas[r.id])} disabled={reportSaving.has(r.id)}
+            style={{ marginTop:4, background:"rgba(167,139,250,.1)", border:"1px solid rgba(167,139,250,.3)", color:"#A78BFA", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: reportSaving.has(r.id) ? .5 : 1 }}>
+            {reportSaving.has(r.id) ? "salvando..." : "Salvar resposta"}
+          </button>
+        )}
+      </div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:8 }}>
+        <div style={{ fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(r.created_at).toLocaleString("pt-BR")}</div>
+        {r.status === "pendente" ? (
+          <div style={{ display:"flex", gap:6 }}>
+            <EmailTypeBadge type="report" />
+            <button onClick={() => onResolver(r)} style={{ background:"rgba(74,222,128,.1)", border:"1px solid rgba(74,222,128,.3)", color:"#4ade80", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Resolver ✓</button>
+          </div>
+        ) : (
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:10, color:"#4ade80" }}>✓ resolvido</span>
+            <button onClick={() => onDesfazer(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>desfazer</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarMotivo, setRejeitarMotivo, onConfirmar, onReabrir, onRejeitar }) {
+  const isPend = d.status === "em_analise";
+  const nome = (joinersData || []).find(j => j.cog === d.joiner_cog)?.nome || null;
+  const fmtV = v => Number(v) > 0 ? `R$${Number(v).toFixed(2).replace(".",",")}` : null;
+  const temMulta = d.itens.some(it => Number(it.multa) > 0);
+  const gridCols = `1fr 72px 72px 56px${temMulta ? " 66px" : ""} 80px`;
+  const thStyle = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:6 };
+  const dash = <span style={{opacity:.2}}>—</span>;
+  return (
+    <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:12, padding:"16px", marginBottom:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
+        <div>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:2 }}>
+            {nome && <span style={{ fontSize:14, fontWeight:800, color:"#F5F0E8" }}>{nome}</span>}
+            <span style={{ fontSize:11, color:"rgba(167,139,250,.65)", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
+          </div>
+          <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace" }}>
+            {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+          </div>
+        </div>
+        <div style={{ fontSize:18, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>
+          R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
+        </div>
+      </div>
+      <div style={{ overflowX:"auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", paddingBottom:6, borderBottom:"1px solid rgba(245,240,232,.07)", marginBottom:2, minWidth:380 }}>
+          <div style={{ ...thStyle, textAlign:"left" }}>Item</div>
+          <div style={thStyle}>Item R$</div>
+          <div style={thStyle}>Frete</div>
+          <div style={thStyle}>RF</div>
+          {temMulta && <div style={{ ...thStyle, color:"rgba(255,107,107,.5)" }}>Multa</div>}
+          <div style={{ ...thStyle, color:"rgba(245,240,232,.5)" }}>Total</div>
+        </div>
+        {d.itens.map((it, i) => {
+          const total = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
+          return (
+            <div key={i} style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.04)", minWidth:380 }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.nome_do_item}</div>
+                <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}</div>
+              </div>
+              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.valor_item)  || dash}</div>
+              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.frete_inter) || dash}</div>
+              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.taxa_rf)     || dash}</div>
+              {temMulta && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", fontWeight:700, textAlign:"right" }}>{fmtV(it.multa) || dash}</div>}
+              <div style={{ fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", color:"#BAFF39", textAlign:"right" }}>R${total.toFixed(2).replace(".",",")}</div>
+            </div>
+          );
+        })}
+      </div>
+      {Number(d.cashback_aplicado || 0) > 0 && (
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderTop:"1px solid rgba(186,255,57,.1)", marginTop:4 }}>
+          <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace" }}>🎁 reembolso aplicado</span>
+          <span style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>- R${Number(d.cashback_aplicado).toFixed(2).replace(".",",")}</span>
+        </div>
+      )}
+      {(d.comprovante_url || d.obs) && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
+          {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
+          {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
+        </div>
+      )}
+      <div style={{ marginTop:12 }}>
+        {isPend ? (
+          rejeitarId === d.id ? (
+            <div style={{ border:"1px solid rgba(255,107,107,.2)", borderRadius:7, padding:"12px", background:"rgba(255,107,107,.04)" }}>
+              <div style={{ fontSize:10, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>Motivo da rejeição (opcional)</div>
+              <input
+                value={rejeitarMotivo}
+                onChange={e => setRejeitarMotivo(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && onRejeitar(d.id, rejeitarMotivo)}
+                placeholder="Ex: comprovante ilegível, valor incorreto..."
+                autoFocus
+                style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(255,107,107,.25)", borderRadius:6, padding:"8px 12px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", marginBottom:10 }}
+              />
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => onRejeitar(d.id, rejeitarMotivo)}
+                  style={{ flex:1, padding:"8px", background:"rgba(255,107,107,.15)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                  ✕ confirmar rejeição
+                </button>
+                <button onClick={() => { setRejeitarId(null); setRejeitarMotivo(""); }}
+                  style={{ padding:"8px 14px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>
+                  cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => onConfirmar(d.id)} style={{ flex:1, padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
+              <button onClick={() => { setRejeitarId(d.id); setRejeitarMotivo(""); }}
+                style={{ padding:"10px 16px", background:"rgba(255,107,107,.08)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>✕ Rejeitar</button>
+            </div>
+          )
+        ) : d.status === "rejeitado" ? (
+          <div style={{ display:"flex", gap:8 }}>
+            <span style={{ flex:1, padding:"8px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, background:"rgba(255,107,107,.06)", textAlign:"center" }}>✕ Rejeitado</span>
+            <button onClick={() => onReabrir(d.id)} style={{ padding:"8px 14px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
+          </div>
+        ) : (
+          <button onClick={() => onReabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const REPASSE_CUSTOS_MAP = { item:"Item", frete:"Frete", rf:"Taxa RF" };
+function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
+  return (
+    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+        <div>
+          <div style={{ fontSize:11, fontWeight:600, color:"var(--offwhite)", marginBottom:2 }}>
+            {r.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>· {r.ceg}</span>
+          </div>
+          <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
+            {new Date(r.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+            {r.novo_dono_nome && <> · para <strong style={{color:"rgba(167,139,250,.8)"}}>{r.novo_dono_nome}</strong> @{r.novo_dono_cog}</>}
+          </div>
+        </div>
+        <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>
+          R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")}
+        </div>
+      </div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:6 }}>
+        <span style={{ fontSize:9, padding:"1px 7px", borderRadius:3, fontFamily:"'DM Mono',monospace", border: r.item_quitado ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(255,107,107,.3)", color: r.item_quitado ? "#BAFF39" : "#ff6b6b", background: r.item_quitado ? "rgba(186,255,57,.06)" : "rgba(255,107,107,.06)" }}>
+          {r.item_quitado ? "quitado" : "não quitado"}
+        </span>
+        {(r.custos_pagos || []).map(c => (
+          <span key={c} style={{ fontSize:9, padding:"1px 7px", borderRadius:3, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.5)" }}>{REPASSE_CUSTOS_MAP[c]||c}</span>
+        ))}
+      </div>
+      {!r.item_quitado && r.valor_pendente_descricao && (
+        <div style={{ fontSize:10, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", marginBottom:6, fontStyle:"italic" }}>↳ {r.valor_pendente_descricao}</div>
+      )}
+      {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontStyle:"italic", marginBottom:6 }}>"{r.obs}"</div>}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginTop:4 }}>
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+          {r.comprovacao_url && (
+            <a href={r.comprovacao_url} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:4, padding:"3px 8px", color:"#64B5F6", textDecoration:"none" }}>
+              ↗ ver comprovação
+            </a>
+          )}
+        </div>
+        {r.status === "pendente" ? (
+          <div style={{ display:"flex", gap:6 }}>
+            <button onClick={() => onAprovar(r)} style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>✓ Aprovar</button>
+            <button onClick={() => onRecusar(r)} style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>✗ Recusar</button>
+          </div>
+        ) : (
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: r.status==="aprovado" ? "#BAFF39" : "#ff6b6b" }}>
+              {r.status === "aprovado" ? "✓ aprovado" : r.status === "cancelado" ? "— cancelado" : "✗ recusado"}
+            </span>
+            {r.status !== "cancelado" && (
+              <button onClick={() => onReabrir(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>↩ reabrir</button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
   const [adminWinW, setAdminWinW] = useState(window.innerWidth);
@@ -7579,82 +7835,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           });
           const grupos = Object.values(byJoiner).sort((a, b) => b.reports.length - a.reports.length);
 
-          const ReportCard = ({ r }) => {
-            const erroLabels = [
-              r.erro_item      && "Item incorreto",
-              r.erro_valor     && "Valor incorreto",
-              r.erro_frete     && "Frete incorreto",
-              r.erro_taxa      && "Taxa RF incorreta",
-              r.erro_pagamento && "Já paguei (pendente)",
-              r.erro_recebido  && "Já recebi esse item",
-              r.erro_outro     && "Outro problema",
-            ].filter(Boolean);
-            return (
-              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
-                <div style={{ fontSize:11, fontWeight:600, color:"var(--offwhite)", marginBottom:3 }}>
-                  {r.item_nome} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>· {r.ceg}</span>
-                </div>
-                {erroLabels.length > 0 && (
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:4 }}>
-                    {erroLabels.map(l => <span key={l} style={{ fontSize:9, background:"rgba(255,92,26,.12)", border:"1px solid rgba(255,92,26,.25)", borderRadius:3, padding:"1px 6px", color:"var(--laranja)" }}>{l}</span>)}
-                  </div>
-                )}
-                {(r.motivo_item || r.correcao_valor || r.correcao_frete || r.correcao_taxa) && (
-                  <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.4)", display:"flex", flexDirection:"column", gap:1 }}>
-                    {r.motivo_item    && <span>↳ {r.motivo_item}</span>}
-                    {r.correcao_valor && <span>↳ Valor: {r.correcao_valor}</span>}
-                    {r.correcao_frete && <span>↳ Frete: {r.correcao_frete}</span>}
-                    {r.correcao_taxa  && <span>↳ Taxa: {r.correcao_taxa}</span>}
-                  </div>
-                )}
-                {r.erro_pagamento && (r.pag_data || r.pag_valor || r.pag_metodo) && (
-                  <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.4)", display:"flex", flexWrap:"wrap", gap:8 }}>
-                    {r.pag_data   && <span>Data: {new Date(r.pag_data+"T12:00:00").toLocaleDateString("pt-BR")}</span>}
-                    {r.pag_valor  && <span>Valor: {r.pag_valor}</span>}
-                    {r.pag_metodo && <span>Método: {r.pag_metodo}</span>}
-                  </div>
-                )}
-                {r.observacao && <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.45)", fontStyle:"italic" }}>"{r.observacao}"</div>}
-                {/* Resposta */}
-                <div style={{ marginTop:10 }}>
-                  {r.resposta && !(r.id in reportRespostas) && (
-                    <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:6, padding:"8px 10px", marginBottom:6 }}>
-                      <div style={{ fontSize:8, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", marginBottom:4 }}>Resposta enviada</div>
-                      <div style={{ fontSize:11, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.55 }}>{r.resposta}</div>
-                    </div>
-                  )}
-                  <textarea
-                    value={reportRespostas[r.id] ?? (r.id in reportRespostas ? reportRespostas[r.id] : r.resposta ?? "")}
-                    onChange={e => setReportRespostas(prev => ({ ...prev, [r.id]: e.target.value }))}
-                    placeholder="Resposta para a joiner (opcional)..."
-                    rows={2}
-                    style={{ width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 10px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", resize:"vertical" }}
-                  />
-                  {reportRespostas[r.id] !== undefined && reportRespostas[r.id] !== (r.resposta ?? "") && (
-                    <button onClick={() => salvarRespostaReport(r, reportRespostas[r.id])} disabled={reportSaving.has(r.id)}
-                      style={{ marginTop:4, background:"rgba(167,139,250,.1)", border:"1px solid rgba(167,139,250,.3)", color:"#A78BFA", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: reportSaving.has(r.id) ? .5 : 1 }}>
-                      {reportSaving.has(r.id) ? "salvando..." : "Salvar resposta"}
-                    </button>
-                  )}
-                </div>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:8 }}>
-                  <div style={{ fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(r.created_at).toLocaleString("pt-BR")}</div>
-                  {r.status === "pendente" ? (
-                    <div style={{ display:"flex", gap:6 }}>
-                      <EmailTypeBadge type="report" />
-                      <button onClick={() => marcarResolvido(r)} style={{ background:"rgba(74,222,128,.1)", border:"1px solid rgba(74,222,128,.3)", color:"#4ade80", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>Resolver ✓</button>
-                    </div>
-                  ) : (
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      <span style={{ fontSize:10, color:"#4ade80" }}>✓ resolvido</span>
-                      <button onClick={() => desfazerResolvido(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>desfazer</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          };
-
           return (
             <>
               <div style={{ display:"flex", gap:8, marginBottom:14 }}>
@@ -7683,7 +7863,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     </div>
                     {isOpen && (
                       <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"4px 16px 12px" }}>
-                        {g.reports.map(r => <ReportCard key={r.id} r={r} />)}
+                        {g.reports.map(r => <AdminReportCard key={r.id} r={r} reportRespostas={reportRespostas} setReportRespostas={setReportRespostas} reportSaving={reportSaving} onSalvar={salvarRespostaReport} onResolver={marcarResolvido} onDesfazer={desfazerResolvido} />)}
                       </div>
                     )}
                   </div>
@@ -7696,17 +7876,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "cadastros"   && <AdminCadastros confirmacoes={confirmacoes} onUpdate={setConfirmacoes} preCadastros={preCadastros} onUpdatePre={setPreCadastros} />}
       {adminMainTab === "pagamentos" && (() => {
-        const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
-        const PixBar = () => (
-          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"9px 14px", marginBottom:16, flexWrap:"wrap" }}>
-            <span style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>PIX · Mercado Pago</span>
-            <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</span>
-            <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); setAdminPixCopiado(true); setTimeout(() => setAdminPixCopiado(false), 2000); }}
-              style={{ flexShrink:0, padding:"5px 12px", background: adminPixCopiado ? "rgba(186,255,57,.2)" : "rgba(186,255,57,.08)", color:"#BAFF39", border:`1px solid ${adminPixCopiado ? "rgba(186,255,57,.5)" : "rgba(186,255,57,.2)"}`, borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
-              {adminPixCopiado ? "✓ copiado" : "copiar"}
-            </button>
-          </div>
-        );
         const formPend = pagDemandas.filter(d => d.status === "em_analise").length;
         const subTabs = [
           temAcesso("demandas")  && { id:"formulario", label:"Formulário", badge: formPend },
@@ -7729,7 +7898,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
         return (
           <div>
-            <PixBar />
+            <AdminPixBar copiado={adminPixCopiado} setCopiado={setAdminPixCopiado} />
             <AvisoMasterlistBlock />
             <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:2 }}>
               {subTabs.map(t => (
@@ -7778,125 +7947,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));
                 setRejeitarId(null); setRejeitarMotivo("");
               }
-              const joinerNome = cog => (joinersData || []).find(j => j.cog === cog)?.nome || null;
-
-              const CardDemanda = ({ d }) => {
-                const isPend = d.status === "em_analise";
-                const nome = joinerNome(d.joiner_cog);
-                const fmtV = v => Number(v) > 0 ? `R$${Number(v).toFixed(2).replace(".",",")}` : null;
-                const temMulta = d.itens.some(it => Number(it.multa) > 0);
-                const gridCols = `1fr 72px 72px 56px${temMulta ? " 66px" : ""} 80px`;
-                const thStyle = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:6 };
-                const dash = <span style={{opacity:.2}}>—</span>;
-                return (
-                  <div style={{ background:"var(--card-bg)", border:`1px solid ${isPend ? "rgba(167,139,250,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:12, padding:"16px", marginBottom:10 }}>
-
-                    {/* cabeçalho */}
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
-                      <div>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:2 }}>
-                          {nome && <span style={{ fontSize:14, fontWeight:800, color:"#F5F0E8" }}>{nome}</span>}
-                          <span style={{ fontSize:11, color:"rgba(167,139,250,.65)", fontFamily:"'DM Mono',monospace" }}>@{d.joiner_cog}</span>
-                        </div>
-                        <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace" }}>
-                          {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
-                        </div>
-                      </div>
-                      <div style={{ fontSize:18, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>
-                        R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
-                      </div>
-                    </div>
-
-                    {/* tabela de itens */}
-                    <div style={{ overflowX:"auto" }}>
-                      {/* cabeçalho da tabela */}
-                      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", paddingBottom:6, borderBottom:"1px solid rgba(245,240,232,.07)", marginBottom:2, minWidth:380 }}>
-                        <div style={{ ...thStyle, textAlign:"left" }}>Item</div>
-                        <div style={thStyle}>Item R$</div>
-                        <div style={thStyle}>Frete</div>
-                        <div style={thStyle}>RF</div>
-                        {temMulta && <div style={{ ...thStyle, color:"rgba(255,107,107,.5)" }}>Multa</div>}
-                        <div style={{ ...thStyle, color:"rgba(245,240,232,.5)" }}>Total</div>
-                      </div>
-                      {/* linhas */}
-                      {d.itens.map((it, i) => {
-                        const total = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
-                        return (
-                          <div key={i} style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.04)", minWidth:380 }}>
-                            <div style={{ minWidth:0 }}>
-                              <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.nome_do_item}</div>
-                              <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}</div>
-                            </div>
-                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.valor_item)  || dash}</div>
-                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.frete_inter) || dash}</div>
-                            <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(it.taxa_rf)     || dash}</div>
-                            {temMulta && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", fontWeight:700, textAlign:"right" }}>{fmtV(it.multa) || dash}</div>}
-                            <div style={{ fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", color:"#BAFF39", textAlign:"right" }}>R${total.toFixed(2).replace(".",",")}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* cashback aplicado */}
-                    {Number(d.cashback_aplicado || 0) > 0 && (
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderTop:"1px solid rgba(186,255,57,.1)", marginTop:4 }}>
-                        <span style={{ fontSize:10, color:"rgba(186,255,57,.6)", fontFamily:"'DM Mono',monospace" }}>🎁 reembolso aplicado</span>
-                        <span style={{ fontSize:11, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>- R${Number(d.cashback_aplicado).toFixed(2).replace(".",",")}</span>
-                      </div>
-                    )}
-
-                    {/* comprovante + obs */}
-                    {(d.comprovante_url || d.obs) && (
-                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
-                        {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
-                        {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
-                      </div>
-                    )}
-
-                    <div style={{ marginTop:12 }}>
-                      {isPend ? (
-                        rejeitarId === d.id ? (
-                          <div style={{ border:"1px solid rgba(255,107,107,.2)", borderRadius:7, padding:"12px", background:"rgba(255,107,107,.04)" }}>
-                            <div style={{ fontSize:10, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>Motivo da rejeição (opcional)</div>
-                            <input
-                              value={rejeitarMotivo}
-                              onChange={e => setRejeitarMotivo(e.target.value)}
-                              onKeyDown={e => e.key === "Enter" && rejeitar(d.id, rejeitarMotivo)}
-                              placeholder="Ex: comprovante ilegível, valor incorreto..."
-                              autoFocus
-                              style={{ width:"100%", boxSizing:"border-box", background:"#0d0d0d", border:"1px solid rgba(255,107,107,.25)", borderRadius:6, padding:"8px 12px", color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, outline:"none", marginBottom:10 }}
-                            />
-                            <div style={{ display:"flex", gap:8 }}>
-                              <button onClick={() => rejeitar(d.id, rejeitarMotivo)}
-                                style={{ flex:1, padding:"8px", background:"rgba(255,107,107,.15)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                                ✕ confirmar rejeição
-                              </button>
-                              <button onClick={() => { setRejeitarId(null); setRejeitarMotivo(""); }}
-                                style={{ padding:"8px 14px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>
-                                cancelar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ display:"flex", gap:8 }}>
-                            <button onClick={() => confirmar(d.id)} style={{ flex:1, padding:"10px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:".05em" }}>✓ Confirmar pagamento</button>
-                            <button onClick={() => { setRejeitarId(d.id); setRejeitarMotivo(""); }}
-                              style={{ padding:"10px 16px", background:"rgba(255,107,107,.08)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>✕ Rejeitar</button>
-                          </div>
-                        )
-                      ) : d.status === "rejeitado" ? (
-                        <div style={{ display:"flex", gap:8 }}>
-                          <span style={{ flex:1, padding:"8px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.2)", borderRadius:7, background:"rgba(255,107,107,.06)", textAlign:"center" }}>✕ Rejeitado</span>
-                          <button onClick={() => reabrir(d.id)} style={{ padding:"8px 14px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => reabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
-                      )}
-                    </div>
-                  </div>
-                );
-              };
-
               const listaAtiva = formularioFiltro === "analise" ? pendentes : formularioFiltro === "confirmados" ? resolvidas : rejeitados;
               return (
                 <div>
@@ -7923,7 +7973,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
                         {formularioFiltro === "analise" ? "Nenhum formulário em análise." : formularioFiltro === "confirmados" ? "Nenhum pagamento confirmado ainda." : "Nenhum pagamento rejeitado."}
                       </div>
-                    : listaAtiva.map(d => <CardDemanda key={d.id} d={d} />)
+                    : listaAtiva.map(d => <AdminCardDemanda key={d.id} d={d} joinersData={joinersData} rejeitarId={rejeitarId} setRejeitarId={setRejeitarId} rejeitarMotivo={rejeitarMotivo} setRejeitarMotivo={setRejeitarMotivo} onConfirmar={confirmar} onReabrir={reabrir} onRejeitar={rejeitar} />)
                   }
                 </div>
               );
@@ -9510,64 +9560,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           setAdminRepassos(prev => prev.map(x => x.id === id ? { ...x, status:"pendente" } : x));
         }
 
-        const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
-
-        const RepasseCard = ({ r }) => (
-          <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
-              <div>
-                <div style={{ fontSize:11, fontWeight:600, color:"var(--offwhite)", marginBottom:2 }}>
-                  {r.nome_do_item} <span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>· {r.ceg}</span>
-                </div>
-                <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
-                  {new Date(r.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
-                  {r.novo_dono_nome && <> · para <strong style={{color:"rgba(167,139,250,.8)"}}>{r.novo_dono_nome}</strong> @{r.novo_dono_cog}</>}
-                </div>
-              </div>
-              <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>
-                R$ {Number(r.valor_acordado).toFixed(2).replace(".",",")}
-              </div>
-            </div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:6 }}>
-              <span style={{ fontSize:9, padding:"1px 7px", borderRadius:3, fontFamily:"'DM Mono',monospace", border: r.item_quitado ? "1px solid rgba(186,255,57,.3)" : "1px solid rgba(255,107,107,.3)", color: r.item_quitado ? "#BAFF39" : "#ff6b6b", background: r.item_quitado ? "rgba(186,255,57,.06)" : "rgba(255,107,107,.06)" }}>
-                {r.item_quitado ? "quitado" : "não quitado"}
-              </span>
-              {(r.custos_pagos || []).map(c => (
-                <span key={c} style={{ fontSize:9, padding:"1px 7px", borderRadius:3, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.5)" }}>{custosMap[c]||c}</span>
-              ))}
-            </div>
-            {!r.item_quitado && r.valor_pendente_descricao && (
-              <div style={{ fontSize:10, color:"rgba(255,107,107,.7)", fontFamily:"'DM Mono',monospace", marginBottom:6, fontStyle:"italic" }}>↳ {r.valor_pendente_descricao}</div>
-            )}
-            {r.obs && <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontStyle:"italic", marginBottom:6 }}>"{r.obs}"</div>}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginTop:4 }}>
-              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                {r.comprovacao_url && (
-                  <a href={r.comprovacao_url} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:4, padding:"3px 8px", color:"#64B5F6", textDecoration:"none" }}>
-                    ↗ ver comprovação
-                  </a>
-                )}
-              </div>
-              {r.status === "pendente" ? (
-                <div style={{ display:"flex", gap:6 }}>
-                  <button onClick={() => aprovarRepasse(r)} style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>✓ Aprovar</button>
-                  <button onClick={() => recusarRepasse(r)} style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:5, padding:"4px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>✗ Recusar</button>
-                </div>
-              ) : (
-                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: r.status==="aprovado" ? "#BAFF39" : "#ff6b6b" }}>
-                    {r.status === "aprovado" ? "✓ aprovado" : r.status === "cancelado" ? "— cancelado" : "✗ recusado"}
-                  </span>
-                  {r.status !== "cancelado" && (
-                    <button onClick={() => reabrirRepasse(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>↩ reabrir</button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
         const q    = (searchRepasse||"").trim().toLowerCase();
         const base = (adminRepassos||[]).filter(r =>
           !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) ||
@@ -9627,7 +9619,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   </div>
                   {isOpen && (
                     <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"4px 16px 12px" }}>
-                      {g.repassos.map(r => <RepasseCard key={r.id} r={r} />)}
+                      {g.repassos.map(r => <AdminRepasseCard key={r.id} r={r} onAprovar={aprovarRepasse} onRecusar={recusarRepasse} onReabrir={reabrirRepasse} />)}
                     </div>
                   )}
                 </div>
@@ -14224,7 +14216,7 @@ export default function App() {
               EM MANUTENÇÃO
             </div>
             <div style={{ fontSize: 13, color: "rgba(245,240,232,.5)", lineHeight: 1.6 }}>
-              Estamos atualizando os pagamentos e a base de dados. Voltaremos às 19h!
+              Estamos atualizando os pagamentos e a base de dados. Voltaremos às 20h!
             </div>
 
             {senhaManutencao && (
