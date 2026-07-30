@@ -244,7 +244,7 @@ const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd"];
-const SESSION_VERSION = "3";
+const SESSION_VERSION = "4";
 // Cogs de demonstração: mapeiam para o cog real cujos dados serão exibidos
 const DEMO_COG_MAP = { "ADMMODE": "nandaverseo_c" };
 function dataCog(cog) { return DEMO_COG_MAP[cog] || cog; }
@@ -6623,9 +6623,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [sfRastreioInput,   setSfRastreioInput]   = useState("");
   const [sfRastreioRes,     setSfRastreioRes]     = useState(null);
   const [sfRastreioLoading, setSfRastreioLoading] = useState(false);
+  const SF_REMETENTE_DEFAULT = { nome:"Fernanda Medeiros", cpf:"14375563702", telefone:"+55 24 99278-2023", email:"anticegs@gmail.com", endereco:"Rua 15 de Novembro", numero:"640", complemento:"Monte Carlo", bairro:"Centro", cidade:"Três Rios", estado:"RJ" };
   const [sfRemetente,       setSfRemetente]       = useState(() => {
-    try { return JSON.parse(localStorage.getItem("sf_remetente") || "null") || { nome:"", cpf:"", telefone:"", email:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"Petrópolis", estado:"RJ" }; }
-    catch { return { nome:"", cpf:"", telefone:"", email:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"Petrópolis", estado:"RJ" }; }
+    try { return JSON.parse(localStorage.getItem("sf_remetente") || "null") || SF_REMETENTE_DEFAULT; }
+    catch { return SF_REMETENTE_DEFAULT; }
   });
   const [pushManualId,      setPushManualId]      = useState(null);
   const [pushManualMsg,     setPushManualMsg]     = useState("");
@@ -6782,35 +6783,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: true, url: null, erro: null, tracking: null } }));
     try {
-      // Busca serviços disponíveis para pegar o service_id correto pelo nome
-      let serviceId = SF_SERVICE_MAP[s.cotacao_forma] || 1;
-      try {
-        const calcRes = await fetch(sf("calculator"), {
-          method: "POST",
-          headers: sfHeaders(),
-          body: JSON.stringify({
-            from: { postal_code: "25804000" },
-            to:   { postal_code: cepDest },
-            package: { weight: 0.3, width: 12, height: 4, length: 17 },
-            options: { receipt: false, own_hand: false },
-            services: "1,2,3,4,5,17",
-          }),
-        });
-        const servicos = await calcRes.json();
-        if (Array.isArray(servicos)) {
-          const match = servicos.find(sv =>
-            (sv.name || "").toLowerCase() === (s.cotacao_forma || "").toLowerCase()
-          );
-          if (match?.id) serviceId = match.id;
-          else if (servicos[0]?.id) serviceId = servicos[0].id;
-        }
-      } catch (_) {}
+      const serviceId = SF_SERVICE_MAP[s.cotacao_forma] || 1;
 
       const cartRes = await fetch(sf("cart"), {
         method: "POST",
         headers: sfHeaders(),
         body: JSON.stringify({
-          service_id: serviceId,
+          service: serviceId,
           from: {
             name:       sfRemetente.nome,
             phone:      sfRemetente.telefone,
@@ -6840,8 +6819,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             postal_code:(s.cep || "").replace(/\D/g, ""),
           },
           products: [{ name:"Itens K-pop ANTICEG", quantity: s.itens?.length || 1, unitary_value: insuranceVal || 10 }],
-          volumes:  [{ weight:0.3, width:12, height:4, length:17, unitary_value: insuranceVal || 10 }],
-          options:  { receipt:false, own_hand:false, reverse:false, non_commercial:true, insurance_value: insuranceVal },
+          volumes:  { weight:0.3, width:12, height:4, length:17 },
+          options:  { receipt:false, own_hand:false, reverse:false, non_commercial:true, insurance_value: insuranceVal || 0 },
+          platform: "ANTICEG",
         }),
       });
       const cart = await cartRes.json();
@@ -10571,11 +10551,17 @@ function AdminPagamentos({ data, joiners, subtab }) {
                 + (isPendente(item.pago_rf)    ? diasAtraso(item.venc_rf)    : 0);
     if (pend > 0) byJoiner[cog].itens.push({ ...item, pend, multa });
   });
-  const todos = Object.values(byJoiner).filter(j => j.itens.length > 0)
-    .sort((a, b) => b.itens.reduce((s,i)=>s+i.pend,0) - a.itens.reduce((s,i)=>s+i.pend,0));
+  const sortPend = (a, b) => b.itens.reduce((s,i)=>s+i.pend,0) - a.itens.reduce((s,i)=>s+i.pend,0);
+  const allJoiners = Object.values(byJoiner).filter(j => j.itens.length > 0);
 
-  const atrasados = todos.filter(j => j.itens.some(i => i.multa > 0));
-  const emAberto  = todos.filter(j => j.itens.every(i => i.multa === 0));
+  const atrasados = allJoiners
+    .map(j => ({ ...j, itens: j.itens.filter(i => i.multa > 0) }))
+    .filter(j => j.itens.length > 0)
+    .sort(sortPend);
+  const emAberto = allJoiners
+    .map(j => ({ ...j, itens: j.itens.filter(i => i.multa === 0) }))
+    .filter(j => j.itens.length > 0)
+    .sort(sortPend);
   const baseList  = subtab === "atrasados" ? atrasados : emAberto;
 
   // helpers de atraso por tipo
@@ -11384,9 +11370,9 @@ function AdminBlocklist({ data, joiners, onUpdate }) {
   data.filter(item => (item.nome || "").toLowerCase() !== "disponivel" && item.cog !== "disponivel").forEach(item => {
     const cog = item.cog || "—";
     if (!pendByJoiner[cog]) pendByJoiner[cog] = 0;
-    if (item.pago_item === false && Number(item.valor_item||0) > 0) pendByJoiner[cog]++;
-    if (item.pago_frete === false && Number(item.frete_inter||0) > 0) pendByJoiner[cog]++;
-    if (item.pago_rf === false && Number(item.taxa_rf||0) > 0) pendByJoiner[cog]++;
+    if (isPendente(item.pago_item)  && Number(item.valor_item ||0) > 0 && diasAtraso(item.venc_item)  > 0) pendByJoiner[cog]++;
+    if (isPendente(item.pago_frete) && Number(item.frete_inter||0) > 0 && diasAtraso(item.venc_frete) > 0) pendByJoiner[cog]++;
+    if (isPendente(item.pago_rf)    && Number(item.taxa_rf    ||0) > 0 && diasAtraso(item.venc_rf)    > 0) pendByJoiner[cog]++;
   });
 
   async function toggleBloqueado(cog, atual) {
@@ -11401,7 +11387,7 @@ function AdminBlocklist({ data, joiners, onUpdate }) {
   return (
     <div>
       <div style={{ fontSize:11, color:"rgba(245,240,232,.52)", marginBottom:16, lineHeight:1.6 }}>
-        Joiners bloqueados ou com 3+ pagamentos pendentes aparecem aqui automaticamente.
+        Joiners bloqueados ou com 3+ pagamentos vencidos aparecem aqui automaticamente.
       </div>
       {lista.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.52)" }}>Nenhum joiner na blocklist.</div>}
       {lista.map(j => (
@@ -11409,7 +11395,7 @@ function AdminBlocklist({ data, joiners, onUpdate }) {
           <div style={{ flex:1 }}>
             <span style={{ fontSize:13, fontWeight:600, color: j.bloqueado ? "var(--laranja)" : "var(--offwhite)" }}>{j.nome || j.cog}</span>
             <span className="cog-tip" data-nome={j.nome||j.cog} style={{ fontSize:10, color:"rgba(245,240,232,.52)", marginLeft:8 }}>@{j.cog}</span>
-            {j.pendentes > 0 && <span style={{ fontSize:10, color:"rgba(245,240,232,.52)", marginLeft:8 }}>{j.pendentes} pgto{j.pendentes>1?"s":""} pendente{j.pendentes>1?"s":""}</span>}
+            {j.pendentes > 0 && <span style={{ fontSize:10, color:"#ff6b6b", marginLeft:8 }}>{j.pendentes} pgto{j.pendentes>1?"s":""} vencido{j.pendentes>1?"s":""}</span>}
           </div>
           <button onClick={() => toggleBloqueado(j.cog, j.bloqueado)} style={{
             background: j.bloqueado ? "rgba(255,90,31,.12)" : "rgba(245,240,232,.05)",

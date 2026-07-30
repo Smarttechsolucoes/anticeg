@@ -1,4 +1,4 @@
-const SF_BASE = "https://superfrete.com";
+const SF_BASE = "https://api.superfrete.com";
 
 const ALLOWED = {
   calculator: "/api/v0/calculator",
@@ -29,14 +29,15 @@ export default async function handler(req, res) {
         "Authorization": `Bearer ${key}`,
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "User-Agent": "ANTICEG (nandadomarketing@gmail.com)",
       },
       body: req.method !== "GET" ? JSON.stringify(req.body) : undefined,
     });
 
     const rawText = await sfRes.text();
     let data;
-    try { data = JSON.parse(rawText); } catch (_) { data = { _raw: rawText }; }
-    res.status(sfRes.status).json({ _status: sfRes.status, _url: `${SF_BASE}${path}`, ...data });
+    try { data = JSON.parse(rawText); } catch (_) { data = { error: rawText }; }
+    res.status(sfRes.status).json(data);
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
