@@ -30,6 +30,10 @@ import badgeLeebitOuro     from "./assets/badges/leebit_ouro.jpg.png";
 
 const VAPID_PUBLIC_KEY = "BMjVVcd389vauJzDpbAR5obTCX2UZtmRnVnsDJoE9T0Bc4Biyb7AGWSyNxyvxTySrr6HpXBf5yLCPWHGCOQx4lY";
 
+const EJS_SERVICE  = "YOUR_SERVICE_ID";
+const EJS_TEMPLATE = "YOUR_TEMPLATE_ID";
+const EJS_KEY      = "YOUR_KEY";
+
 async function registrarPush(joinerCog) {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
   try {
