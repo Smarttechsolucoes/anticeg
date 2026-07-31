@@ -6772,6 +6772,7 @@ function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
 
 function ControleEstoqueTab() {
   const inp = { background:"#1e1e1e", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#f5f0e8", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
+  const lbl = { fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4, letterSpacing:"0.5px", textTransform:"uppercase" };
   const [itens, setItens] = useState(null);
   const [compras, setCompras] = useState(null);
   const [sel, setSel] = useState(null);
@@ -6780,16 +6781,13 @@ function ControleEstoqueTab() {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [formNome, setFormNome] = useState("");
-  const [formUnidade, setFormUnidade] = useState("un");
-  const [formTaxa, setFormTaxa] = useState("");
-  const [formMin, setFormMin] = useState("");
-  const [formSaldo, setFormSaldo] = useState("0");
-  const [formDataInicio, setFormDataInicio] = useState(() => new Date().toISOString().slice(0, 10));
-  const [compraForn, setCompraForn] = useState("");
-  const [compraData, setCompraData] = useState(() => new Date().toISOString().slice(0, 10));
-  const [compraQtd, setCompraQtd] = useState("");
-  const [compraValor, setCompraValor] = useState("");
-  const [compraObs, setCompraObs] = useState("");
+  const [formEstoque, setFormEstoque] = useState("");
+  const [formQtd, setFormQtd] = useState("");
+  const [formPreco, setFormPreco] = useState("");
+  const [formDia, setFormDia] = useState(() => new Date().toISOString().slice(0, 10));
+  const [cQtd, setCQtd] = useState("");
+  const [cPreco, setCPreco] = useState("");
+  const [cDia, setCDia] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => { loadData(); }, []);
 
@@ -6803,58 +6801,42 @@ function ControleEstoqueTab() {
   }
 
   function calcEstoque(item) {
-    if (!compras) return Number(item.saldo_inicial);
-    const total = compras.filter(c => c.item_id === item.id).reduce((s, c) => s + Number(c.quantidade), 0);
-    const meses = (Date.now() - new Date(item.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 30);
-    return Math.max(0, Number(item.saldo_inicial) + total - item.taxa_mensal * meses);
+    const total = (compras || []).filter(c => c.item_id === item.id).reduce((s, c) => s + Number(c.quantidade), 0);
+    return Number(item.saldo_inicial || 0) + total;
   }
-
-  function diasRestantes(item) {
-    if (item.taxa_mensal <= 0) return Infinity;
-    return Math.round(calcEstoque(item) / (item.taxa_mensal / 30));
-  }
-
-  function status(item) {
-    const est = calcEstoque(item);
-    const dias = diasRestantes(item);
-    if (est <= item.estoque_minimo || dias < 15) return "critico";
-    if (dias < 45) return "atencao";
-    return "ok";
-  }
-
-  const COR = { ok:"#BAFF39", atencao:"#FFD700", critico:"#FF6B6B" };
-  const BG  = { ok:"rgba(186,255,57,.06)", atencao:"rgba(255,215,0,.06)", critico:"rgba(255,107,107,.06)" };
 
   async function salvarItem() {
     if (!formNome.trim()) return;
     setSaving(true); setErro("");
-    const { error } = await supabase.from("estoque_itens").insert({
-      nome: formNome.trim(), unidade: formUnidade,
-      taxa_mensal: parseFloat(formTaxa) || 0, estoque_minimo: parseFloat(formMin) || 0,
-      saldo_inicial: parseFloat(formSaldo) || 0, data_inicio: formDataInicio,
-    });
+    const { data: novo, error } = await supabase.from("estoque_itens")
+      .insert({ nome: formNome.trim(), saldo_inicial: parseFloat(formEstoque) || 0 })
+      .select().single();
     if (error) { setErro(error.message); setSaving(false); return; }
-    setAddingItem(false); setFormNome(""); setFormTaxa(""); setFormMin(""); setFormSaldo("0");
-    setFormDataInicio(new Date().toISOString().slice(0, 10));
+    if (formQtd && novo) {
+      await supabase.from("estoque_compras").insert({
+        item_id: novo.id, data_compra: formDia,
+        quantidade: parseFloat(formQtd), valor_total: parseFloat(formPreco) || 0,
+      });
+    }
+    setAddingItem(false); setFormNome(""); setFormEstoque(""); setFormQtd(""); setFormPreco("");
+    setFormDia(new Date().toISOString().slice(0, 10));
     await loadData(); setSaving(false);
   }
 
   async function salvarCompra() {
-    if (!compraQtd || !sel) return;
+    if (!cQtd || !sel) return;
     setSaving(true); setErro("");
     const { error } = await supabase.from("estoque_compras").insert({
-      item_id: sel, fornecedor: compraForn.trim() || null, data_compra: compraData,
-      quantidade: parseFloat(compraQtd), valor_total: parseFloat(compraValor) || 0,
-      obs: compraObs.trim() || null,
+      item_id: sel, data_compra: cDia,
+      quantidade: parseFloat(cQtd), valor_total: parseFloat(cPreco) || 0,
     });
     if (error) { setErro(error.message); setSaving(false); return; }
-    setAddingCompra(false); setCompraForn(""); setCompraQtd(""); setCompraValor(""); setCompraObs("");
-    setCompraData(new Date().toISOString().slice(0, 10));
+    setAddingCompra(false); setCQtd(""); setCPreco(""); setCDia(new Date().toISOString().slice(0, 10));
     await loadData(); setSaving(false);
   }
 
   async function apagarItem(id) {
-    if (!window.confirm("Apagar este material e todas as compras vinculadas?")) return;
+    if (!window.confirm("Apagar este material?")) return;
     await supabase.from("estoque_itens").delete().eq("id", id);
     setSel(null); await loadData();
   }
@@ -6869,10 +6851,14 @@ function ControleEstoqueTab() {
   const itemSel = itens.find(i => i.id === sel);
   const comprasSel = itemSel ? (compras || []).filter(c => c.item_id === sel).sort((a, b) => new Date(b.data_compra) - new Date(a.data_compra)) : [];
 
+  const btn = (label, onClick, opts = {}) => (
+    <button onClick={onClick} disabled={opts.disabled} style={{ background: opts.ghost ? "none" : opts.green ? "rgba(186,255,57,.08)" : "var(--laranja)", border: opts.ghost ? "1px solid rgba(245,240,232,.12)" : opts.green ? "1px solid rgba(186,255,57,.22)" : "none", borderRadius:6, padding: opts.sm ? "5px 12px" : "8px 16px", fontSize: opts.sm ? 10 : 11, fontWeight:700, color: opts.ghost ? "rgba(245,240,232,.4)" : opts.green ? "#BAFF39" : "#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: opts.disabled ? 0.45 : 1 }}>{label}</button>
+  );
+
   return (
     <div style={{ padding:"0 0 60px" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)" }}>◧ ESTOQUE — MATERIAL DE EMBALAGEM</div>
+        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)" }}>◧ ESTOQUE — EMBALAGENS</div>
         <button onClick={() => { setAddingItem(true); setSel(null); }} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>+ Novo material</button>
       </div>
 
@@ -6880,22 +6866,17 @@ function ControleEstoqueTab() {
 
       {addingItem && (
         <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:16, marginBottom:20 }}>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:12 }}>NOVO MATERIAL</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>NOME *</div><input value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="ex: Plástico bolha" style={inp} /></div>
-            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>UNIDADE</div>
-              <select value={formUnidade} onChange={e => setFormUnidade(e.target.value)} style={inp}>
-                {["un","m","rolo","cx","pct","kg","L"].map(u => <option key={u} value={u} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{u}</option>)}
-              </select>
-            </div>
-            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>CONSUMO MENSAL EST. ({formUnidade})</div><input type="number" value={formTaxa} onChange={e => setFormTaxa(e.target.value)} placeholder="ex: 50" style={inp} /></div>
-            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>ESTOQUE MÍNIMO ({formUnidade})</div><input type="number" value={formMin} onChange={e => setFormMin(e.target.value)} placeholder="ex: 20" style={inp} /></div>
-            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>SALDO INICIAL ({formUnidade})</div><input type="number" value={formSaldo} onChange={e => setFormSaldo(e.target.value)} placeholder="0" style={inp} /></div>
-            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>DATA DE INÍCIO</div><input type="date" value={formDataInicio} onChange={e => setFormDataInicio(e.target.value)} style={inp} /></div>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:14 }}>NOVO MATERIAL</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+            <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Nome do material *</div><input value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="ex: Plástico bolha" style={inp} autoFocus /></div>
+            <div><div style={lbl}>Em estoque (agora)</div><input type="number" value={formEstoque} onChange={e => setFormEstoque(e.target.value)} placeholder="0" style={inp} /></div>
+            <div><div style={lbl}>Quantidade comprada</div><input type="number" value={formQtd} onChange={e => setFormQtd(e.target.value)} placeholder="ex: 100" style={inp} /></div>
+            <div><div style={lbl}>Preço pago (R$)</div><input type="number" value={formPreco} onChange={e => setFormPreco(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
+            <div><div style={lbl}>Dia da compra</div><input type="date" value={formDia} onChange={e => setFormDia(e.target.value)} style={inp} /></div>
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={salvarItem} disabled={saving || !formNome.trim()} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"8px 16px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity:saving || !formNome.trim() ? 0.5 : 1 }}>{saving ? "salvando..." : "salvar"}</button>
-            <button onClick={() => setAddingItem(false)} style={{ background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 14px", fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>cancelar</button>
+            {btn(saving ? "salvando..." : "salvar", salvarItem, { disabled: saving || !formNome.trim() })}
+            {btn("cancelar", () => setAddingItem(false), { ghost: true })}
           </div>
         </div>
       )}
@@ -6907,27 +6888,21 @@ function ControleEstoqueTab() {
       )}
 
       {!sel && itens.length > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(190px, 1fr))", gap:10 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))", gap:10 }}>
           {itens.map(item => {
             const est = calcEstoque(item);
-            const dias = diasRestantes(item);
-            const s = status(item);
+            const ultima = (compras || []).filter(c => c.item_id === item.id)[0];
             return (
-              <div key={item.id} onClick={() => setSel(item.id)} style={{ background:BG[s], border:`1px solid ${COR[s]}28`, borderRadius:8, padding:"14px", cursor:"pointer" }}>
-                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3, flex:1, marginRight:6 }}>{item.nome}</div>
-                  <div style={{ width:6, height:6, borderRadius:"50%", background:COR[s], flexShrink:0, marginTop:3 }} />
+              <div key={item.id} onClick={() => setSel(item.id)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:8, padding:"14px", cursor:"pointer" }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:10, lineHeight:1.3 }}>{item.nome}</div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:24, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
+                  {est % 1 === 0 ? est : est.toFixed(1)}
+                  <span style={{ fontSize:10, fontWeight:400, color:"rgba(245,240,232,.35)", marginLeft:4 }}>em estoque</span>
                 </div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:22, fontWeight:700, color:COR[s], lineHeight:1 }}>
-                  {est % 1 === 0 ? est : est.toFixed(1)} <span style={{ fontSize:11, fontWeight:400, color:"rgba(245,240,232,.35)" }}>{item.unidade}</span>
-                </div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:6 }}>
-                  {item.taxa_mensal > 0
-                    ? dias === Infinity ? "—" : dias < 1 ? "⚠ acabando" : `≈ ${dias} dias restantes`
-                    : "consumo não definido"}
-                </div>
-                {item.estoque_minimo > 0 && est <= item.estoque_minimo && (
-                  <div style={{ fontSize:9, color:"#FF6B6B", fontFamily:"'DM Mono',monospace", marginTop:4, letterSpacing:"0.5px" }}>ABAIXO DO MÍNIMO</div>
+                {ultima && (
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.28)", marginTop:8 }}>
+                    última compra {new Date(ultima.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}
+                  </div>
                 )}
               </div>
             );
@@ -6939,46 +6914,35 @@ function ControleEstoqueTab() {
         <div>
           <button onClick={() => { setSel(null); setAddingCompra(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", marginBottom:16, padding:0 }}>← voltar</button>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
-            <div>
-              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
-              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:3 }}>
-                Consumo: {itemSel.taxa_mensal} {itemSel.unidade}/mês · Mínimo: {itemSel.estoque_minimo} {itemSel.unidade}
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
+                {(() => { const e = calcEstoque(itemSel); return e % 1 === 0 ? e : e.toFixed(1); })()}
+                <span style={{ fontSize:11, fontWeight:400, color:"rgba(245,240,232,.35)", marginLeft:5 }}>em estoque</span>
               </div>
-            </div>
-            {(() => {
-              const est = calcEstoque(itemSel);
-              const dias = diasRestantes(itemSel);
-              const s = status(itemSel);
-              return (
-                <div style={{ textAlign:"right" }}>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:COR[s], lineHeight:1 }}>
-                    {est % 1 === 0 ? est : est.toFixed(1)} <span style={{ fontSize:12, fontWeight:400, color:"rgba(245,240,232,.35)" }}>{itemSel.unidade}</span>
-                  </div>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:4 }}>
-                    {itemSel.taxa_mensal > 0 && dias !== Infinity ? `≈ ${dias} dias restantes` : ""}
-                  </div>
+              {comprasSel.reduce((s, c) => s + Number(c.valor_total || 0), 0) > 0 && (
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:4 }}>
+                  R$ {comprasSel.reduce((s, c) => s + Number(c.valor_total || 0), 0).toFixed(2)} total investido
                 </div>
-              );
-            })()}
+              )}
+            </div>
           </div>
 
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>COMPRAS</div>
-            <button onClick={() => setAddingCompra(true)} style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.22)", borderRadius:6, padding:"5px 12px", fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>+ Registrar compra</button>
+            {btn("+ Registrar compra", () => setAddingCompra(true), { green: true, sm: true })}
           </div>
 
           {addingCompra && (
             <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:14, marginBottom:12 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
-                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>FORNECEDOR</div><input value={compraForn} onChange={e => setCompraForn(e.target.value)} placeholder="onde comprou" style={inp} /></div>
-                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>DATA</div><input type="date" value={compraData} onChange={e => setCompraData(e.target.value)} style={inp} /></div>
-                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>QUANTIDADE ({itemSel.unidade}) *</div><input type="number" value={compraQtd} onChange={e => setCompraQtd(e.target.value)} placeholder="ex: 100" style={inp} /></div>
-                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>VALOR TOTAL (R$)</div><input type="number" value={compraValor} onChange={e => setCompraValor(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                <div><div style={lbl}>Quantidade *</div><input type="number" value={cQtd} onChange={e => setCQtd(e.target.value)} placeholder="ex: 100" style={inp} autoFocus /></div>
+                <div><div style={lbl}>Preço pago (R$)</div><input type="number" value={cPreco} onChange={e => setCPreco(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
+                <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Dia que comprou</div><input type="date" value={cDia} onChange={e => setCDia(e.target.value)} style={inp} /></div>
               </div>
-              <div style={{ marginBottom:8 }}><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>OBS</div><input value={compraObs} onChange={e => setCompraObs(e.target.value)} placeholder="observação opcional" style={inp} /></div>
               <div style={{ display:"flex", gap:6 }}>
-                <button onClick={salvarCompra} disabled={saving || !compraQtd} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:10, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity:!compraQtd ? 0.5 : 1 }}>{saving ? "salvando..." : "salvar"}</button>
-                <button onClick={() => setAddingCompra(false)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 12px", fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>cancelar</button>
+                {btn(saving ? "salvando..." : "salvar", salvarCompra, { disabled: saving || !cQtd, sm: true })}
+                {btn("cancelar", () => setAddingCompra(false), { ghost: true, sm: true })}
               </div>
             </div>
           )}
@@ -6988,16 +6952,13 @@ function ControleEstoqueTab() {
           )}
 
           {comprasSel.map(c => (
-            <div key={c.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:6, padding:"10px 12px", marginBottom:6, display:"flex", alignItems:"center", gap:12 }}>
+            <div key={c.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:6, padding:"10px 14px", marginBottom:6, display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ flex:1 }}>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)", fontWeight:700 }}>
-                  {c.quantidade} {itemSel.unidade}
-                  {c.fornecedor && <span style={{ color:"rgba(245,240,232,.38)", fontWeight:400 }}> · {c.fornecedor}</span>}
-                </div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:3 }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{c.quantidade} un</div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", marginTop:3 }}>
                   {new Date(c.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}
-                  {c.valor_total > 0 && ` · R$ ${Number(c.valor_total).toFixed(2)} (R$ ${(c.valor_total / c.quantidade).toFixed(2)}/${itemSel.unidade})`}
-                  {c.obs && ` · ${c.obs}`}
+                  {c.valor_total > 0 && ` · R$ ${Number(c.valor_total).toFixed(2)}`}
+                  {c.quantidade > 0 && c.valor_total > 0 && ` (R$ ${(c.valor_total / c.quantidade).toFixed(2)}/un)`}
                 </div>
               </div>
               <button onClick={() => apagarCompra(c.id)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.18)", cursor:"pointer", fontSize:14, padding:"4px 6px" }}>✕</button>
