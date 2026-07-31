@@ -5653,6 +5653,67 @@ function highlightMatch(text, q) {
   return <>{text.slice(0, idx)}<mark>{text.slice(idx, idx + q.length)}</mark>{highlightMatch(text.slice(idx + q.length), q)}</>;
 }
 
+function AntiversarioTab() {
+  const TARGET = new Date("2026-08-01T10:00:00");
+
+  function calcDiff() {
+    const diff = TARGET - Date.now();
+    if (diff <= 0) return null;
+    const s = Math.floor(diff / 1000);
+    return {
+      dias:     Math.floor(s / 86400),
+      horas:    Math.floor((s % 86400) / 3600),
+      minutos:  Math.floor((s % 3600) / 60),
+      segundos: s % 60,
+    };
+  }
+
+  const [tempo, setTempo] = useState(calcDiff);
+
+  useEffect(() => {
+    const id = setInterval(() => setTempo(calcDiff()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const bloco = (val, label) => (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+      <div style={{ fontSize:"clamp(52px, 15vw, 110px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", lineHeight:1, letterSpacing:"-2px", tabularNums:true }}>
+        {String(val).padStart(2, "0")}
+      </div>
+      <div style={{ fontSize:"clamp(8px, 2vw, 11px)", fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"2px", textTransform:"uppercase" }}>
+        {label}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"70vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"40px 24px", textAlign:"center" }}>
+      <div style={{ fontSize:"clamp(22px, 6vw, 42px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:8 }}>
+        ANTIversário
+      </div>
+      <div style={{ fontSize:"clamp(10px, 2.5vw, 13px)", fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", marginBottom:48, letterSpacing:"1px" }}>
+        01 · 08 · 2026 às 10h
+      </div>
+
+      {tempo ? (
+        <div style={{ display:"flex", alignItems:"flex-start", gap:"clamp(16px, 5vw, 48px)" }}>
+          {bloco(tempo.dias,     "dias")}
+          <div style={{ fontSize:"clamp(36px, 10vw, 80px)", fontWeight:900, color:"rgba(245,240,232,.15)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginTop:4 }}>:</div>
+          {bloco(tempo.horas,    "horas")}
+          <div style={{ fontSize:"clamp(36px, 10vw, 80px)", fontWeight:900, color:"rgba(245,240,232,.15)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginTop:4 }}>:</div>
+          {bloco(tempo.minutos,  "minutos")}
+          <div style={{ fontSize:"clamp(36px, 10vw, 80px)", fontWeight:900, color:"rgba(245,240,232,.15)", fontFamily:"'DM Mono',monospace", lineHeight:1, marginTop:4 }}>:</div>
+          {bloco(tempo.segundos, "segundos")}
+        </div>
+      ) : (
+        <div style={{ fontSize:"clamp(28px, 8vw, 56px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", letterSpacing:"-1px" }}>
+          chegou! 🎉
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RegrasTab() {
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState({});
@@ -14444,6 +14505,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     ...(!isGuest ? [{ id:"disponiveis", icon:"◱", label:"Loja" }] : []),
     { id:"mercari",    icon:"🎌", label:"Mercari" },
     { id:"regras",     icon:"☆", label:"Regras" },
+    { id:"antiversario", icon:"★", label:"ANTIversário" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
   return (
@@ -15054,6 +15116,7 @@ export default function App() {
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "disponiveis" ? "active" : ""}`} onClick={() => changeTab("disponiveis")}>◱ Disponíveis</button>}
         <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button>
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
+        <button className={`tab-btn ${tab === "antiversario" ? "active" : ""}`} onClick={() => changeTab("antiversario")}>★ ANTIversário</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
             if (adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
@@ -15104,6 +15167,7 @@ export default function App() {
       {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
       {tab === "mercari" && <MercariTab />}
       {tab === "regras" && <RegrasTab />}
+      {tab === "antiversario" && <AntiversarioTab />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
