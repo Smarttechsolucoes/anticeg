@@ -6796,6 +6796,7 @@ function ControleEstoqueTab() {
   const [editNome, setEditNome] = useState("");
   const [editLinkE, setEditLinkE] = useState("");
   const [editDuracao, setEditDuracao] = useState("");
+  const [editSaldo, setEditSaldo] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -6810,8 +6811,7 @@ function ControleEstoqueTab() {
   }
 
   function calcEstoque(item) {
-    const total = (compras || []).filter(c => c.item_id === item.id).reduce((s, c) => s + Number(c.quantidade), 0);
-    return Number(item.saldo_inicial || 0) + total;
+    return Number(item.saldo_inicial || 0);
   }
 
   async function salvarItem() {
@@ -6930,7 +6930,7 @@ function ControleEstoqueTab() {
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
             <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0 }}>← voltar</button>
-            <button onClick={() => { setEditando(true); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); }}
+            <button onClick={() => { setEditando(true); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); setEditSaldo(itemSel.saldo_inicial ?? ""); }}
               style={{ background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✎ editar item</button>
           </div>
 
@@ -6939,14 +6939,15 @@ function ControleEstoqueTab() {
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:12 }}>EDITAR MATERIAL</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
                 <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Nome</div><input value={editNome} onChange={e => setEditNome(e.target.value)} style={inp} autoFocus /></div>
-                <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja</div><input value={editLinkE} onChange={e => setEditLinkE(e.target.value)} placeholder="https://..." style={inp} /></div>
+                <div><div style={lbl}>Em estoque (agora)</div><input type="number" value={editSaldo} onChange={e => setEditSaldo(e.target.value)} placeholder="0" style={inp} /></div>
                 <div><div style={lbl}>Dura ~quantos dias?</div><input type="number" value={editDuracao} onChange={e => setEditDuracao(e.target.value)} placeholder="ex: 60" style={inp} /></div>
+                <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja</div><input value={editLinkE} onChange={e => setEditLinkE(e.target.value)} placeholder="https://..." style={inp} /></div>
               </div>
               <div style={{ display:"flex", gap:6 }}>
                 <button onClick={async () => {
                   if (!editNome.trim()) return;
                   setSavingEdit(true);
-                  await supabase.from("estoque_itens").update({ nome: editNome.trim(), link_loja: editLinkE.trim() || null, durabilidade_dias: parseInt(editDuracao) || null }).eq("id", sel);
+                  await supabase.from("estoque_itens").update({ nome: editNome.trim(), link_loja: editLinkE.trim() || null, durabilidade_dias: parseInt(editDuracao) || null, saldo_inicial: parseFloat(editSaldo) || 0 }).eq("id", sel);
                   await loadData(); setEditando(false); setSavingEdit(false);
                 }} disabled={savingEdit || !editNome.trim()} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:10, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: savingEdit || !editNome.trim() ? 0.5 : 1 }}>
                   {savingEdit ? "salvando..." : "salvar"}
