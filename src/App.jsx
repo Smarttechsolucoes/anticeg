@@ -6770,6 +6770,249 @@ function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
   );
 }
 
+function ControleEstoqueTab() {
+  const inp = { background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
+  const [itens, setItens] = useState(null);
+  const [compras, setCompras] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [addingItem, setAddingItem] = useState(false);
+  const [addingCompra, setAddingCompra] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState("");
+  const [formNome, setFormNome] = useState("");
+  const [formUnidade, setFormUnidade] = useState("un");
+  const [formTaxa, setFormTaxa] = useState("");
+  const [formMin, setFormMin] = useState("");
+  const [formSaldo, setFormSaldo] = useState("0");
+  const [formDataInicio, setFormDataInicio] = useState(() => new Date().toISOString().slice(0, 10));
+  const [compraForn, setCompraForn] = useState("");
+  const [compraData, setCompraData] = useState(() => new Date().toISOString().slice(0, 10));
+  const [compraQtd, setCompraQtd] = useState("");
+  const [compraValor, setCompraValor] = useState("");
+  const [compraObs, setCompraObs] = useState("");
+
+  useEffect(() => { loadData(); }, []);
+
+  async function loadData() {
+    const [{ data: its }, { data: cps }] = await Promise.all([
+      supabase.from("estoque_itens").select("*").order("nome"),
+      supabase.from("estoque_compras").select("*").order("data_compra", { ascending: false }),
+    ]);
+    setItens(its || []);
+    setCompras(cps || []);
+  }
+
+  function calcEstoque(item) {
+    if (!compras) return Number(item.saldo_inicial);
+    const total = compras.filter(c => c.item_id === item.id).reduce((s, c) => s + Number(c.quantidade), 0);
+    const meses = (Date.now() - new Date(item.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 30);
+    return Math.max(0, Number(item.saldo_inicial) + total - item.taxa_mensal * meses);
+  }
+
+  function diasRestantes(item) {
+    if (item.taxa_mensal <= 0) return Infinity;
+    return Math.round(calcEstoque(item) / (item.taxa_mensal / 30));
+  }
+
+  function status(item) {
+    const est = calcEstoque(item);
+    const dias = diasRestantes(item);
+    if (est <= item.estoque_minimo || dias < 15) return "critico";
+    if (dias < 45) return "atencao";
+    return "ok";
+  }
+
+  const COR = { ok:"#BAFF39", atencao:"#FFD700", critico:"#FF6B6B" };
+  const BG  = { ok:"rgba(186,255,57,.06)", atencao:"rgba(255,215,0,.06)", critico:"rgba(255,107,107,.06)" };
+
+  async function salvarItem() {
+    if (!formNome.trim()) return;
+    setSaving(true); setErro("");
+    const { error } = await supabase.from("estoque_itens").insert({
+      nome: formNome.trim(), unidade: formUnidade,
+      taxa_mensal: parseFloat(formTaxa) || 0, estoque_minimo: parseFloat(formMin) || 0,
+      saldo_inicial: parseFloat(formSaldo) || 0, data_inicio: formDataInicio,
+    });
+    if (error) { setErro(error.message); setSaving(false); return; }
+    setAddingItem(false); setFormNome(""); setFormTaxa(""); setFormMin(""); setFormSaldo("0");
+    setFormDataInicio(new Date().toISOString().slice(0, 10));
+    await loadData(); setSaving(false);
+  }
+
+  async function salvarCompra() {
+    if (!compraQtd || !sel) return;
+    setSaving(true); setErro("");
+    const { error } = await supabase.from("estoque_compras").insert({
+      item_id: sel, fornecedor: compraForn.trim() || null, data_compra: compraData,
+      quantidade: parseFloat(compraQtd), valor_total: parseFloat(compraValor) || 0,
+      obs: compraObs.trim() || null,
+    });
+    if (error) { setErro(error.message); setSaving(false); return; }
+    setAddingCompra(false); setCompraForn(""); setCompraQtd(""); setCompraValor(""); setCompraObs("");
+    setCompraData(new Date().toISOString().slice(0, 10));
+    await loadData(); setSaving(false);
+  }
+
+  async function apagarItem(id) {
+    if (!window.confirm("Apagar este material e todas as compras vinculadas?")) return;
+    await supabase.from("estoque_itens").delete().eq("id", id);
+    setSel(null); await loadData();
+  }
+
+  async function apagarCompra(id) {
+    await supabase.from("estoque_compras").delete().eq("id", id);
+    await loadData();
+  }
+
+  if (itens === null) return <div style={{ padding:32, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11 }}>carregando...</div>;
+
+  const itemSel = itens.find(i => i.id === sel);
+  const comprasSel = itemSel ? (compras || []).filter(c => c.item_id === sel).sort((a, b) => new Date(b.data_compra) - new Date(a.data_compra)) : [];
+
+  return (
+    <div style={{ padding:"0 0 60px" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)" }}>◧ ESTOQUE — MATERIAL DE EMBALAGEM</div>
+        <button onClick={() => { setAddingItem(true); setSel(null); }} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>+ Novo material</button>
+      </div>
+
+      {erro && <div style={{ background:"rgba(255,60,60,.1)", border:"1px solid rgba(255,60,60,.22)", borderRadius:6, padding:"8px 12px", marginBottom:12, fontSize:11, color:"#ff6b6b", fontFamily:"'DM Mono',monospace" }}>{erro}</div>}
+
+      {addingItem && (
+        <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:16, marginBottom:20 }}>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:12 }}>NOVO MATERIAL</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>NOME *</div><input value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="ex: Plástico bolha" style={inp} /></div>
+            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>UNIDADE</div>
+              <select value={formUnidade} onChange={e => setFormUnidade(e.target.value)} style={inp}>
+                {["un","m","rolo","cx","pct","kg","L"].map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>CONSUMO MENSAL EST. ({formUnidade})</div><input type="number" value={formTaxa} onChange={e => setFormTaxa(e.target.value)} placeholder="ex: 50" style={inp} /></div>
+            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>ESTOQUE MÍNIMO ({formUnidade})</div><input type="number" value={formMin} onChange={e => setFormMin(e.target.value)} placeholder="ex: 20" style={inp} /></div>
+            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>SALDO INICIAL ({formUnidade})</div><input type="number" value={formSaldo} onChange={e => setFormSaldo(e.target.value)} placeholder="0" style={inp} /></div>
+            <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>DATA DE INÍCIO</div><input type="date" value={formDataInicio} onChange={e => setFormDataInicio(e.target.value)} style={inp} /></div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={salvarItem} disabled={saving || !formNome.trim()} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"8px 16px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity:saving || !formNome.trim() ? 0.5 : 1 }}>{saving ? "salvando..." : "salvar"}</button>
+            <button onClick={() => setAddingItem(false)} style={{ background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 14px", fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {!sel && itens.length === 0 && !addingItem && (
+        <div style={{ textAlign:"center", padding:"60px 20px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", fontSize:11 }}>
+          Nenhum material cadastrado ainda.<br/><span style={{ fontSize:10, marginTop:4, display:"block" }}>Clique em "+ Novo material" para começar.</span>
+        </div>
+      )}
+
+      {!sel && itens.length > 0 && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(190px, 1fr))", gap:10 }}>
+          {itens.map(item => {
+            const est = calcEstoque(item);
+            const dias = diasRestantes(item);
+            const s = status(item);
+            return (
+              <div key={item.id} onClick={() => setSel(item.id)} style={{ background:BG[s], border:`1px solid ${COR[s]}28`, borderRadius:8, padding:"14px", cursor:"pointer" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3, flex:1, marginRight:6 }}>{item.nome}</div>
+                  <div style={{ width:6, height:6, borderRadius:"50%", background:COR[s], flexShrink:0, marginTop:3 }} />
+                </div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:22, fontWeight:700, color:COR[s], lineHeight:1 }}>
+                  {est % 1 === 0 ? est : est.toFixed(1)} <span style={{ fontSize:11, fontWeight:400, color:"rgba(245,240,232,.35)" }}>{item.unidade}</span>
+                </div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:6 }}>
+                  {item.taxa_mensal > 0
+                    ? dias === Infinity ? "—" : dias < 1 ? "⚠ acabando" : `≈ ${dias} dias restantes`
+                    : "consumo não definido"}
+                </div>
+                {item.estoque_minimo > 0 && est <= item.estoque_minimo && (
+                  <div style={{ fontSize:9, color:"#FF6B6B", fontFamily:"'DM Mono',monospace", marginTop:4, letterSpacing:"0.5px" }}>ABAIXO DO MÍNIMO</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {sel && itemSel && (
+        <div>
+          <button onClick={() => { setSel(null); setAddingCompra(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", marginBottom:16, padding:0 }}>← voltar</button>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
+            <div>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:3 }}>
+                Consumo: {itemSel.taxa_mensal} {itemSel.unidade}/mês · Mínimo: {itemSel.estoque_minimo} {itemSel.unidade}
+              </div>
+            </div>
+            {(() => {
+              const est = calcEstoque(itemSel);
+              const dias = diasRestantes(itemSel);
+              const s = status(itemSel);
+              return (
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:COR[s], lineHeight:1 }}>
+                    {est % 1 === 0 ? est : est.toFixed(1)} <span style={{ fontSize:12, fontWeight:400, color:"rgba(245,240,232,.35)" }}>{itemSel.unidade}</span>
+                  </div>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:4 }}>
+                    {itemSel.taxa_mensal > 0 && dias !== Infinity ? `≈ ${dias} dias restantes` : ""}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>COMPRAS</div>
+            <button onClick={() => setAddingCompra(true)} style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.22)", borderRadius:6, padding:"5px 12px", fontSize:10, fontWeight:700, color:"#BAFF39", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>+ Registrar compra</button>
+          </div>
+
+          {addingCompra && (
+            <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:14, marginBottom:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>FORNECEDOR</div><input value={compraForn} onChange={e => setCompraForn(e.target.value)} placeholder="onde comprou" style={inp} /></div>
+                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>DATA</div><input type="date" value={compraData} onChange={e => setCompraData(e.target.value)} style={inp} /></div>
+                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>QUANTIDADE ({itemSel.unidade}) *</div><input type="number" value={compraQtd} onChange={e => setCompraQtd(e.target.value)} placeholder="ex: 100" style={inp} /></div>
+                <div><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>VALOR TOTAL (R$)</div><input type="number" value={compraValor} onChange={e => setCompraValor(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
+              </div>
+              <div style={{ marginBottom:8 }}><div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", marginBottom:3 }}>OBS</div><input value={compraObs} onChange={e => setCompraObs(e.target.value)} placeholder="observação opcional" style={inp} /></div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={salvarCompra} disabled={saving || !compraQtd} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:10, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity:!compraQtd ? 0.5 : 1 }}>{saving ? "salvando..." : "salvar"}</button>
+                <button onClick={() => setAddingCompra(false)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 12px", fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>cancelar</button>
+              </div>
+            </div>
+          )}
+
+          {comprasSel.length === 0 && !addingCompra && (
+            <div style={{ color:"rgba(245,240,232,.22)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"16px 0" }}>Nenhuma compra registrada ainda.</div>
+          )}
+
+          {comprasSel.map(c => (
+            <div key={c.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:6, padding:"10px 12px", marginBottom:6, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--offwhite)", fontWeight:700 }}>
+                  {c.quantidade} {itemSel.unidade}
+                  {c.fornecedor && <span style={{ color:"rgba(245,240,232,.38)", fontWeight:400 }}> · {c.fornecedor}</span>}
+                </div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:3 }}>
+                  {new Date(c.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}
+                  {c.valor_total > 0 && ` · R$ ${Number(c.valor_total).toFixed(2)} (R$ ${(c.valor_total / c.quantidade).toFixed(2)}/${itemSel.unidade})`}
+                  {c.obs && ` · ${c.obs}`}
+                </div>
+              </div>
+              <button onClick={() => apagarCompra(c.id)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.18)", cursor:"pointer", fontSize:14, padding:"4px 6px" }}>✕</button>
+            </div>
+          ))}
+
+          <div style={{ marginTop:24, paddingTop:16, borderTop:"1px solid rgba(245,240,232,.06)" }}>
+            <button onClick={() => apagarItem(sel)} style={{ background:"none", border:"1px solid rgba(255,107,107,.22)", borderRadius:6, padding:"7px 14px", fontSize:10, color:"rgba(255,107,107,.65)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✕ remover material</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
   const [adminWinW, setAdminWinW] = useState(window.innerWidth);
@@ -7488,6 +7731,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {owner && nav("storage", "Storage", "◧", 0)}
                 {temAcesso("envios") && nav("envios", "Envio", "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
                 {owner && nav("rounds", "Rounds", "◎", 0)}
+                {owner && nav("estoque", "Estoque", "◩", 0)}
               </div>
               )}
               <div className="admin-sidebar-group">
@@ -9691,6 +9935,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           })}
         </div>
       )}
+
+      {adminMainTab === "estoque" && owner && <ControleEstoqueTab />}
 
         </div> {/* admin-content */}
       </div> {/* admin-layout */}
