@@ -6785,6 +6785,7 @@ function ControleEstoqueTab() {
   const [formQtd, setFormQtd] = useState("");
   const [formPreco, setFormPreco] = useState("");
   const [formDia, setFormDia] = useState(() => new Date().toISOString().slice(0, 10));
+  const [formLink, setFormLink] = useState("");
   const [cQtd, setCQtd] = useState("");
   const [cPreco, setCPreco] = useState("");
   const [cDia, setCDia] = useState(() => new Date().toISOString().slice(0, 10));
@@ -6809,7 +6810,7 @@ function ControleEstoqueTab() {
     if (!formNome.trim()) return;
     setSaving(true); setErro("");
     const { data: novo, error } = await supabase.from("estoque_itens")
-      .insert({ nome: formNome.trim(), saldo_inicial: parseFloat(formEstoque) || 0 })
+      .insert({ nome: formNome.trim(), saldo_inicial: parseFloat(formEstoque) || 0, link_loja: formLink.trim() || null })
       .select().single();
     if (error) { setErro(error.message); setSaving(false); return; }
     if (formQtd && novo) {
@@ -6818,7 +6819,7 @@ function ControleEstoqueTab() {
         quantidade: parseFloat(formQtd), valor_total: parseFloat(formPreco) || 0,
       });
     }
-    setAddingItem(false); setFormNome(""); setFormEstoque(""); setFormQtd(""); setFormPreco("");
+    setAddingItem(false); setFormNome(""); setFormEstoque(""); setFormQtd(""); setFormPreco(""); setFormLink("");
     setFormDia(new Date().toISOString().slice(0, 10));
     await loadData(); setSaving(false);
   }
@@ -6869,6 +6870,7 @@ function ControleEstoqueTab() {
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:14 }}>NOVO MATERIAL</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
             <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Nome do material *</div><input value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="ex: Plástico bolha" style={inp} autoFocus /></div>
+            <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja (para recomprar)</div><input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://shopee.com.br/..." style={inp} /></div>
             <div><div style={lbl}>Em estoque (agora)</div><input type="number" value={formEstoque} onChange={e => setFormEstoque(e.target.value)} placeholder="0" style={inp} /></div>
             <div><div style={lbl}>Quantidade comprada</div><input type="number" value={formQtd} onChange={e => setFormQtd(e.target.value)} placeholder="ex: 100" style={inp} /></div>
             <div><div style={lbl}>Preço pago (R$)</div><input type="number" value={formPreco} onChange={e => setFormPreco(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
@@ -6894,7 +6896,13 @@ function ControleEstoqueTab() {
             const ultima = (compras || []).filter(c => c.item_id === item.id)[0];
             return (
               <div key={item.id} onClick={() => setSel(item.id)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:8, padding:"14px", cursor:"pointer" }}>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:10, lineHeight:1.3 }}>{item.nome}</div>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
+                  {item.link_loja && (
+                    <a href={item.link_loja} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                      style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", flexShrink:0, marginLeft:6, marginTop:1 }}>↗</a>
+                  )}
+                </div>
                 <div style={{ fontFamily:"'DM Mono',monospace", fontSize:24, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
                   {est % 1 === 0 ? est : est.toFixed(1)}
                   <span style={{ fontSize:10, fontWeight:400, color:"rgba(245,240,232,.35)", marginLeft:4 }}>em estoque</span>
@@ -6914,7 +6922,13 @@ function ControleEstoqueTab() {
         <div>
           <button onClick={() => { setSel(null); setAddingCompra(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", marginBottom:16, padding:0 }}>← voltar</button>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
-            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
+              {itemSel.link_loja && (
+                <a href={itemSel.link_loja} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", border:"1px solid rgba(255,92,26,.3)", borderRadius:5, padding:"3px 9px", whiteSpace:"nowrap" }}>↗ recomprar</a>
+              )}
+            </div>
             <div style={{ textAlign:"right" }}>
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
                 {(() => { const e = calcEstoque(itemSel); return e % 1 === 0 ? e : e.toFixed(1); })()}
