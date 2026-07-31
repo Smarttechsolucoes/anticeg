@@ -5692,38 +5692,6 @@ function AntiversarioTab() {
     return () => clearInterval(id);
   }, []);
 
-  if (!desbloqueado) return (
-    <div style={{ minHeight:"70vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"40px 24px" }}>
-      <div style={{ fontSize:"clamp(18px, 5vw, 32px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:32, textAlign:"center" }}>
-        ANTIversário
-      </div>
-      <form onSubmit={tentarSenha} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12, width:"min(280px, 100%)" }}>
-        <input
-          autoFocus
-          type="password"
-          value={input}
-          onChange={e => { setInput(e.target.value); setErro(false); }}
-          placeholder="senha"
-          style={{ background: erro ? "rgba(239,68,68,.08)" : "#1e1e1e",
-            border:`1px solid ${erro ? "rgba(239,68,68,.5)" : "rgba(245,240,232,.15)"}`,
-            borderRadius:8, padding:"12px 16px", fontSize:14, color:"#f5f0e8",
-            fontFamily:"'DM Mono',monospace", outline:"none", width:"100%",
-            boxSizing:"border-box", textAlign:"center", letterSpacing:"3px",
-            transition:"border-color .15s, background .15s" }}
-        />
-        {erro && (
-          <div style={{ fontSize:10, color:"#ef4444", fontFamily:"'DM Mono',monospace", letterSpacing:"1px" }}>
-            senha incorreta
-          </div>
-        )}
-        <button type="submit"
-          style={{ background:"var(--laranja)", border:"none", borderRadius:8, padding:"11px 28px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:"1px", width:"100%" }}>
-          entrar
-        </button>
-      </form>
-    </div>
-  );
-
   const bloco = (val, label) => (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
       <div style={{ fontSize:"clamp(52px, 15vw, 110px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", lineHeight:1, letterSpacing:"-2px", tabularNums:true }}>
@@ -5758,6 +5726,30 @@ function AntiversarioTab() {
         <div style={{ fontSize:"clamp(28px, 8vw, 56px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", letterSpacing:"-1px" }}>
           chegou! 🎉
         </div>
+      )}
+
+      {/* campo de senha discreto embaixo */}
+      {!desbloqueado && (
+        <form onSubmit={tentarSenha} style={{ marginTop:60, display:"flex", alignItems:"center", gap:6 }}>
+          <input
+            type="password"
+            value={input}
+            onChange={e => { setInput(e.target.value); setErro(false); }}
+            placeholder="••••••••"
+            style={{ background: erro ? "rgba(239,68,68,.06)" : "rgba(245,240,232,.04)",
+              border:`1px solid ${erro ? "rgba(239,68,68,.4)" : "rgba(245,240,232,.1)"}`,
+              borderRadius:6, padding:"6px 12px", fontSize:11, color:"#f5f0e8",
+              fontFamily:"'DM Mono',monospace", outline:"none", width:120,
+              textAlign:"center", letterSpacing:"2px", transition:"border-color .15s" }}
+          />
+          <button type="submit"
+            style={{ background:"none", border:"none", color: erro ? "#ef4444" : "rgba(245,240,232,.3)", fontSize:16, cursor:"pointer", padding:"4px 2px", lineHeight:1, transition:"color .15s" }}>
+            →
+          </button>
+        </form>
+      )}
+      {desbloqueado && (
+        <div style={{ marginTop:60, fontSize:10, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>✓ acesso liberado</div>
       )}
     </div>
   );
