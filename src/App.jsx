@@ -7032,44 +7032,48 @@ function ControleEstoqueTab() {
             </div>
           )}
 
-          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
-            <div>
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
-                {itemSel.link_loja && (
-                  <a href={itemSel.link_loja} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", border:"1px solid rgba(255,92,26,.3)", borderRadius:5, padding:"3px 9px", whiteSpace:"nowrap" }}>↗ recomprar</a>
-                )}
-              </div>
-              {(() => {
-                if (!itemSel.durabilidade_dias || comprasSel.length === 0) return null;
-                const ultima = comprasSel[0];
-                const prev = new Date(ultima.data_compra + "T12:00:00");
-                prev.setDate(prev.getDate() + Number(itemSel.durabilidade_dias));
-                const hoje = new Date();
-                const diff = Math.round((prev - hoje) / (1000 * 60 * 60 * 24));
-                const cor = diff < 7 ? "#FF6B6B" : diff < 20 ? "#FFD700" : "rgba(245,240,232,.4)";
-                return (
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:cor, marginTop:2 }}>
-                    {diff < 0
-                      ? `⚠ próxima compra estava prevista há ${Math.abs(diff)} dias`
-                      : `próxima compra estimada em ${diff} dias · ${prev.toLocaleDateString("pt-BR")}`}
-                  </div>
-                );
-              })()}
-            </div>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
-                {(() => { const e = calcEstoque(itemSel); return e % 1 === 0 ? e : e.toFixed(1); })()}
-                <span style={{ fontSize:11, fontWeight:400, color:"rgba(245,240,232,.35)", marginLeft:5 }}>em estoque</span>
-              </div>
-              {comprasSel.reduce((s, c) => s + Number(c.valor_total || 0), 0) > 0 && (
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.32)", marginTop:4 }}>
-                  R$ {comprasSel.reduce((s, c) => s + Number(c.valor_total || 0), 0).toFixed(2)} total investido
-                </div>
+          {/* título + link */}
+          <div style={{ marginBottom:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:18, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3 }}>{itemSel.nome}</div>
+              {itemSel.link_loja && (
+                <a href={itemSel.link_loja} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", border:"1px solid rgba(255,92,26,.28)", borderRadius:5, padding:"3px 9px", whiteSpace:"nowrap", flexShrink:0 }}>↗ recomprar</a>
               )}
             </div>
+            {(() => {
+              if (!itemSel.durabilidade_dias || comprasSel.length === 0) return null;
+              const prev = new Date(comprasSel[0].data_compra + "T12:00:00");
+              prev.setDate(prev.getDate() + Number(itemSel.durabilidade_dias));
+              const diff = Math.round((prev - new Date()) / (1000 * 60 * 60 * 24));
+              const cor = diff < 7 ? "#FF6B6B" : diff < 20 ? "#FFD700" : "rgba(245,240,232,.35)";
+              return <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:cor }}>
+                {diff < 0 ? `⚠ recompra estava prevista há ${Math.abs(diff)} dias` : `próxima compra em ~${diff} dias · ${prev.toLocaleDateString("pt-BR")}`}
+              </div>;
+            })()}
           </div>
+
+          {/* tiles de stat */}
+          {(() => {
+            const est = calcEstoque(itemSel);
+            const totalInv = comprasSel.reduce((s, c) => s + Number(c.valor_total || 0), 0);
+            const ultimaC = comprasSel[0];
+            const cuUn = ultimaC && ultimaC.quantidade > 0 ? Number(ultimaC.valor_total) / Number(ultimaC.quantidade) : 0;
+            const tile = (label, value, sub) => (
+              <div style={{ flex:1, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"12px 14px" }}>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", marginBottom:6 }}>{label}</div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>{value}</div>
+                {sub && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.28)", marginTop:4 }}>{sub}</div>}
+              </div>
+            );
+            return (
+              <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+                {tile("em estoque", est % 1 === 0 ? est : est.toFixed(1), itemSel.uso_por_pedido > 0 ? `uso: ${itemSel.uso_por_pedido}/pedido` : null)}
+                {cuUn > 0 && tile("preço/un", `R$ ${cuUn.toFixed(2)}`, "última compra")}
+                {totalInv > 0 && tile("total investido", `R$ ${totalInv.toFixed(2)}`, `${comprasSel.length} compra${comprasSel.length > 1 ? "s" : ""}`)}
+              </div>
+            );
+          })()}
 
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" }}>COMPRAS</div>
@@ -7111,20 +7115,33 @@ function ControleEstoqueTab() {
                   </div>
                 </div>
               ) : (
-                <div style={{ padding:"10px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ padding:"12px 14px", display:"flex", alignItems:"center", gap:12 }}>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                      <div style={{ fontFamily:"'DM Mono',monospace", fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{c.quantidade} un</div>
-                      {c.valor_total > 0 && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.5)" }}>R$ {Number(c.valor_total).toFixed(2)}{c.quantidade > 0 && ` · R$ ${(c.valor_total / c.quantidade).toFixed(2)}/un`}</div>}
+                    {/* linha principal: quantidade + valor */}
+                    <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:6 }}>
+                      <span style={{ fontFamily:"'DM Mono',monospace", fontSize:15, color:"var(--offwhite)", fontWeight:700 }}>{c.quantidade} un</span>
+                      {c.valor_total > 0 && <>
+                        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"rgba(245,240,232,.55)" }}>R$ {Number(c.valor_total).toFixed(2)}</span>
+                        {c.quantidade > 0 && <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)" }}>· R$ {(c.valor_total / c.quantidade).toFixed(2)}/un</span>}
+                      </>}
                     </div>
-                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", marginTop:4, display:"flex", gap:12 }}>
-                      <span>🛒 {new Date(c.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-                      {c.data_chegada && <span>📦 chegou {new Date(c.data_chegada + "T12:00:00").toLocaleDateString("pt-BR")}</span>}
+                    {/* linha de datas */}
+                    <div style={{ display:"flex", alignItems:"center", gap:6, fontFamily:"'DM Mono',monospace", fontSize:10 }}>
+                      <span style={{ color:"rgba(245,240,232,.3)", letterSpacing:"0.3px" }}>comprado</span>
+                      <span style={{ color:"rgba(245,240,232,.6)", fontWeight:700 }}>{new Date(c.data_compra + "T12:00:00").toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" })}</span>
+                      {c.data_chegada && <>
+                        <span style={{ color:"rgba(245,240,232,.2)" }}>→</span>
+                        <span style={{ color:"rgba(245,240,232,.3)", letterSpacing:"0.3px" }}>chegou</span>
+                        <span style={{ color:"rgba(245,240,232,.6)", fontWeight:700 }}>{new Date(c.data_chegada + "T12:00:00").toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" })}</span>
+                      </>}
                     </div>
                   </div>
-                  <button onClick={() => { setEditingCompra(c.id); setEcQtd(c.quantidade); setEcPreco(c.valor_total || ""); setEcDia(c.data_compra); setEcChegada(c.data_chegada || ""); }}
-                    style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:11, fontFamily:"'DM Mono',monospace", padding:"4px 6px" }}>✎</button>
-                  <button onClick={() => apagarCompra(c.id)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.18)", cursor:"pointer", fontSize:14, padding:"4px 6px" }}>✕</button>
+                  <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                    <button onClick={() => { setEditingCompra(c.id); setEcQtd(c.quantidade); setEcPreco(c.valor_total || ""); setEcDia(c.data_compra); setEcChegada(c.data_chegada || ""); }}
+                      style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, color:"rgba(245,240,232,.45)", cursor:"pointer", fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 9px" }}>✎</button>
+                    <button onClick={() => apagarCompra(c.id)}
+                      style={{ background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.15)", borderRadius:5, color:"rgba(255,107,107,.5)", cursor:"pointer", fontSize:12, padding:"5px 9px" }}>✕</button>
+                  </div>
                 </div>
               )}
             </div>
