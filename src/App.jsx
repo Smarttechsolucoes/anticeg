@@ -6792,6 +6792,11 @@ function ControleEstoqueTab() {
   const [editLink, setEditLink] = useState(false);
   const [editLinkVal, setEditLinkVal] = useState("");
   const [savingLink, setSavingLink] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [editNome, setEditNome] = useState("");
+  const [editLinkE, setEditLinkE] = useState("");
+  const [editDuracao, setEditDuracao] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -6923,35 +6928,59 @@ function ControleEstoqueTab() {
 
       {sel && itemSel && (
         <div>
-          <button onClick={() => { setSel(null); setAddingCompra(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", marginBottom:16, padding:0 }}>← voltar</button>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+            <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0 }}>← voltar</button>
+            <button onClick={() => { setEditando(true); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); }}
+              style={{ background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✎ editar item</button>
+          </div>
+
+          {editando && (
+            <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:14, marginBottom:16 }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:12 }}>EDITAR MATERIAL</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Nome</div><input value={editNome} onChange={e => setEditNome(e.target.value)} style={inp} autoFocus /></div>
+                <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja</div><input value={editLinkE} onChange={e => setEditLinkE(e.target.value)} placeholder="https://..." style={inp} /></div>
+                <div><div style={lbl}>Dura ~quantos dias?</div><input type="number" value={editDuracao} onChange={e => setEditDuracao(e.target.value)} placeholder="ex: 60" style={inp} /></div>
+              </div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={async () => {
+                  if (!editNome.trim()) return;
+                  setSavingEdit(true);
+                  await supabase.from("estoque_itens").update({ nome: editNome.trim(), link_loja: editLinkE.trim() || null, durabilidade_dias: parseInt(editDuracao) || null }).eq("id", sel);
+                  await loadData(); setEditando(false); setSavingEdit(false);
+                }} disabled={savingEdit || !editNome.trim()} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:10, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: savingEdit || !editNome.trim() ? 0.5 : 1 }}>
+                  {savingEdit ? "salvando..." : "salvar"}
+                </button>
+                <button onClick={() => setEditando(false)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"7px 12px", fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>cancelar</button>
+              </div>
+            </div>
+          )}
+
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
             <div>
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
                 <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--offwhite)" }}>{itemSel.nome}</div>
-                {itemSel.link_loja && !editLink && (
+                {itemSel.link_loja && (
                   <a href={itemSel.link_loja} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", border:"1px solid rgba(255,92,26,.3)", borderRadius:5, padding:"3px 9px", whiteSpace:"nowrap" }}>↗ recomprar</a>
                 )}
               </div>
-              {!editLink ? (
-                <button onClick={() => { setEditLink(true); setEditLinkVal(itemSel.link_loja || ""); }}
-                  style={{ background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                  {itemSel.link_loja ? "✎ editar link" : "+ adicionar link da loja"}
-                </button>
-              ) : (
-                <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:4 }}>
-                  <input value={editLinkVal} onChange={e => setEditLinkVal(e.target.value)} placeholder="https://..." autoFocus
-                    style={{ ...inp, width:260, fontSize:10, padding:"5px 8px" }} />
-                  <button onClick={async () => {
-                    setSavingLink(true);
-                    await supabase.from("estoque_itens").update({ link_loja: editLinkVal.trim() || null }).eq("id", sel);
-                    await loadData(); setEditLink(false); setSavingLink(false);
-                  }} disabled={savingLink} style={{ background:"var(--laranja)", border:"none", borderRadius:5, padding:"5px 10px", fontSize:10, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                    {savingLink ? "..." : "salvar"}
-                  </button>
-                  <button onClick={() => setEditLink(false)} style={{ background:"none", border:"none", fontSize:12, color:"rgba(245,240,232,.25)", cursor:"pointer", padding:"4px" }}>×</button>
-                </div>
-              )}
+              {(() => {
+                if (!itemSel.durabilidade_dias || comprasSel.length === 0) return null;
+                const ultima = comprasSel[0];
+                const prev = new Date(ultima.data_compra + "T12:00:00");
+                prev.setDate(prev.getDate() + Number(itemSel.durabilidade_dias));
+                const hoje = new Date();
+                const diff = Math.round((prev - hoje) / (1000 * 60 * 60 * 24));
+                const cor = diff < 7 ? "#FF6B6B" : diff < 20 ? "#FFD700" : "rgba(245,240,232,.4)";
+                return (
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:cor, marginTop:2 }}>
+                    {diff < 0
+                      ? `⚠ próxima compra estava prevista há ${Math.abs(diff)} dias`
+                      : `próxima compra estimada em ${diff} dias · ${prev.toLocaleDateString("pt-BR")}`}
+                  </div>
+                );
+              })()}
             </div>
             <div style={{ textAlign:"right" }}>
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
