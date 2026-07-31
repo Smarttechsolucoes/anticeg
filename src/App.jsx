@@ -5705,6 +5705,7 @@ function AntiversarioTab() {
 
   return (
     <div style={{ minHeight:"70vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"40px 24px", textAlign:"center" }}>
+      <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(140px, 35vw, 220px)", marginBottom:16, imageRendering:"auto" }} />
       <div style={{ fontSize:"clamp(22px, 6vw, 42px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:8 }}>
         ANTIversário
       </div>
