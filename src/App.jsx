@@ -6997,10 +6997,10 @@ function ControleEstoqueTab() {
 
       {sel && itemSel && (
         <div>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-            <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0 }}>← voltar</button>
-            <button onClick={() => { setEditando(true); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); setEditSaldo(itemSel.saldo_inicial ?? ""); setEditCat(itemSel.categoria || "outro"); setEditUso(itemSel.uso_por_pedido || ""); }}
-              style={{ background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✎ editar item</button>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
+            <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:"6px 12px", fontWeight:700 }}>← voltar</button>
+            <button onClick={() => { setEditando(v => !v); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); setEditSaldo(itemSel.saldo_inicial ?? ""); setEditCat(itemSel.categoria || "outro"); setEditUso(itemSel.uso_por_pedido || ""); }}
+              style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"6px 12px", fontSize:11, fontWeight:700, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✎ editar item</button>
           </div>
 
           {editando && (
