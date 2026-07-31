@@ -6792,6 +6792,7 @@ function ControleEstoqueTab() {
   const [cQtd, setCQtd] = useState("");
   const [cPreco, setCPreco] = useState("");
   const [cDia, setCDia] = useState(() => new Date().toISOString().slice(0, 10));
+  const [cChegada, setCChegada] = useState("");
   const [editLink, setEditLink] = useState(false);
   const [editLinkVal, setEditLinkVal] = useState("");
   const [savingLink, setSavingLink] = useState(false);
@@ -6843,9 +6844,10 @@ function ControleEstoqueTab() {
     const { error } = await supabase.from("estoque_compras").insert({
       item_id: sel, data_compra: cDia,
       quantidade: parseFloat(cQtd), valor_total: parseFloat(cPreco) || 0,
+      data_chegada: cChegada || null,
     });
     if (error) { setErro(error.message); setSaving(false); return; }
-    setAddingCompra(false); setCQtd(""); setCPreco(""); setCDia(new Date().toISOString().slice(0, 10));
+    setAddingCompra(false); setCQtd(""); setCPreco(""); setCDia(new Date().toISOString().slice(0, 10)); setCChegada("");
     await loadData(); setSaving(false);
   }
 
@@ -7050,7 +7052,8 @@ function ControleEstoqueTab() {
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
                 <div><div style={lbl}>Quantidade *</div><input type="number" value={cQtd} onChange={e => setCQtd(e.target.value)} placeholder="ex: 100" style={inp} autoFocus /></div>
                 <div><div style={lbl}>Preço pago (R$)</div><input type="number" value={cPreco} onChange={e => setCPreco(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
-                <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Dia que comprou</div><input type="date" value={cDia} onChange={e => setCDia(e.target.value)} style={inp} /></div>
+                <div><div style={lbl}>Dia que comprou</div><input type="date" value={cDia} onChange={e => setCDia(e.target.value)} style={inp} /></div>
+                <div><div style={lbl}>Data que chegou</div><input type="date" value={cChegada} onChange={e => setCChegada(e.target.value)} style={inp} /></div>
               </div>
               <div style={{ display:"flex", gap:6 }}>
                 {btn(saving ? "salvando..." : "salvar", salvarCompra, { disabled: saving || !cQtd, sm: true })}
@@ -7066,11 +7069,13 @@ function ControleEstoqueTab() {
           {comprasSel.map(c => (
             <div key={c.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:6, padding:"10px 14px", marginBottom:6, display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ flex:1 }}>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{c.quantidade} un</div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)", marginTop:3 }}>
-                  {new Date(c.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}
-                  {c.valor_total > 0 && ` · R$ ${Number(c.valor_total).toFixed(2)}`}
-                  {c.quantidade > 0 && c.valor_total > 0 && ` (R$ ${(c.valor_total / c.quantidade).toFixed(2)}/un)`}
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{c.quantidade} un</div>
+                  {c.valor_total > 0 && <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.5)" }}>R$ {Number(c.valor_total).toFixed(2)}{c.quantidade > 0 && ` · R$ ${(c.valor_total / c.quantidade).toFixed(2)}/un`}</div>}
+                </div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.3)", marginTop:4, display:"flex", gap:12 }}>
+                  <span>🛒 {new Date(c.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                  {c.data_chegada && <span>📦 chegou {new Date(c.data_chegada + "T12:00:00").toLocaleDateString("pt-BR")}</span>}
                 </div>
               </div>
               <button onClick={() => apagarCompra(c.id)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.18)", cursor:"pointer", fontSize:14, padding:"4px 6px" }}>✕</button>
