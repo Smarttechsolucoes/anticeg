@@ -5655,6 +5655,23 @@ function highlightMatch(text, q) {
 
 function AntiversarioTab() {
   const TARGET = new Date("2026-08-01T10:00:00");
+  const SENHA = "ANTIVERSO";
+
+  const [desbloqueado, setDesbloqueado] = useState(() => localStorage.getItem("antiv_ok") === "1");
+  const [input, setInput] = useState("");
+  const [erro, setErro] = useState(false);
+
+  function tentarSenha(e) {
+    e.preventDefault();
+    if (input.trim().toUpperCase() === SENHA) {
+      localStorage.setItem("antiv_ok", "1");
+      setDesbloqueado(true);
+    } else {
+      setErro(true);
+      setInput("");
+      setTimeout(() => setErro(false), 1200);
+    }
+  }
 
   function calcDiff() {
     const diff = TARGET - Date.now();
@@ -5674,6 +5691,38 @@ function AntiversarioTab() {
     const id = setInterval(() => setTempo(calcDiff()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  if (!desbloqueado) return (
+    <div style={{ minHeight:"70vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"40px 24px" }}>
+      <div style={{ fontSize:"clamp(18px, 5vw, 32px)", fontWeight:900, fontFamily:"'DM Mono',monospace", color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:32, textAlign:"center" }}>
+        ANTIversário
+      </div>
+      <form onSubmit={tentarSenha} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12, width:"min(280px, 100%)" }}>
+        <input
+          autoFocus
+          type="password"
+          value={input}
+          onChange={e => { setInput(e.target.value); setErro(false); }}
+          placeholder="senha"
+          style={{ background: erro ? "rgba(239,68,68,.08)" : "#1e1e1e",
+            border:`1px solid ${erro ? "rgba(239,68,68,.5)" : "rgba(245,240,232,.15)"}`,
+            borderRadius:8, padding:"12px 16px", fontSize:14, color:"#f5f0e8",
+            fontFamily:"'DM Mono',monospace", outline:"none", width:"100%",
+            boxSizing:"border-box", textAlign:"center", letterSpacing:"3px",
+            transition:"border-color .15s, background .15s" }}
+        />
+        {erro && (
+          <div style={{ fontSize:10, color:"#ef4444", fontFamily:"'DM Mono',monospace", letterSpacing:"1px" }}>
+            senha incorreta
+          </div>
+        )}
+        <button type="submit"
+          style={{ background:"var(--laranja)", border:"none", borderRadius:8, padding:"11px 28px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:"1px", width:"100%" }}>
+          entrar
+        </button>
+      </form>
+    </div>
+  );
 
   const bloco = (val, label) => (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
