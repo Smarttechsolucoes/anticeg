@@ -6955,21 +6955,34 @@ function ControleEstoqueTab() {
                       const ultima = (compras || []).filter(c => c.item_id === item.id).sort((a,b) => new Date(b.data_compra) - new Date(a.data_compra))[0];
                       const cu = custoUn(item);
                       return (
-                        <div key={item.id} onClick={() => setSel(item.id)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:8, padding:"13px", cursor:"pointer" }}>
-                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
-                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
+                        <div key={item.id} onClick={() => setSel(item.id)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:8, padding:"14px 14px 12px", cursor:"pointer", display:"flex", flexDirection:"column", gap:0 }}>
+                          {/* nome + link */}
+                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
+                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, color:"rgba(245,240,232,.75)", lineHeight:1.4 }}>{item.nome}</div>
                             {item.link_loja && (
                               <a href={item.link_loja} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                                 style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", flexShrink:0, marginLeft:6 }}>↗</a>
                             )}
                           </div>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:22, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
+                          {/* estoque em destaque */}
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:28, fontWeight:700, color:"var(--laranja)", lineHeight:1, marginBottom:10 }}>
                             {est % 1 === 0 ? est : est.toFixed(1)}
-                            <span style={{ fontSize:10, fontWeight:400, color:"rgba(245,240,232,.3)", marginLeft:4 }}>un</span>
+                            <span style={{ fontSize:11, fontWeight:400, color:"rgba(245,240,232,.3)", marginLeft:5 }}>un</span>
                           </div>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.28)", marginTop:6, display:"flex", justifyContent:"space-between" }}>
-                            {ultima ? <span>última {new Date(ultima.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}</span> : <span>—</span>}
-                            {cu > 0 && <span style={{ color:"rgba(245,240,232,.4)" }}>R${cu.toFixed(2)}/un</span>}
+                          {/* separador */}
+                          <div style={{ borderTop:"1px solid rgba(245,240,232,.07)", paddingTop:8, display:"flex", flexDirection:"column", gap:4 }}>
+                            {cu > 0 && (
+                              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"0.5px", textTransform:"uppercase" }}>preço/un</span>
+                                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"rgba(245,240,232,.7)" }}>R$ {cu.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"0.5px", textTransform:"uppercase" }}>última compra</span>
+                              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.5)" }}>
+                                {ultima ? new Date(ultima.data_compra + "T12:00:00").toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit" }) : "—"}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
