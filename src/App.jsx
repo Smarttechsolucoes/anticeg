@@ -6771,7 +6771,7 @@ function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
 }
 
 function ControleEstoqueTab() {
-  const inp = { background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
+  const inp = { background:"#1e1e1e", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#f5f0e8", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
   const [itens, setItens] = useState(null);
   const [compras, setCompras] = useState(null);
   const [sel, setSel] = useState(null);
@@ -6885,7 +6885,7 @@ function ControleEstoqueTab() {
             <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>NOME *</div><input value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="ex: Plástico bolha" style={inp} /></div>
             <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>UNIDADE</div>
               <select value={formUnidade} onChange={e => setFormUnidade(e.target.value)} style={inp}>
-                {["un","m","rolo","cx","pct","kg","L"].map(u => <option key={u} value={u}>{u}</option>)}
+                {["un","m","rolo","cx","pct","kg","L"].map(u => <option key={u} value={u} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{u}</option>)}
               </select>
             </div>
             <div><div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>CONSUMO MENSAL EST. ({formUnidade})</div><input type="number" value={formTaxa} onChange={e => setFormTaxa(e.target.value)} placeholder="ex: 50" style={inp} /></div>
