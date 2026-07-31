@@ -13891,6 +13891,8 @@ export default function App() {
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [showA2HS, setShowA2HS] = useState(false);
   const [a2hsPrompt, setA2hsPrompt] = useState(null);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const [nudgePushPerm, setNudgePushPerm] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
   const [notificacoes, setNotificacoes] = useState([]);
   const [pushAtivos, setPushAtivos] = useState([]);
   const [pendingReportIds, setPendingReportIds] = useState(new Set());
@@ -14357,6 +14359,41 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
+      {!nudgeDismissed && !user.guest && !user.pre_cadastro && !isAdminUser(user) && (() => {
+        const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const pushOk = nudgePushPerm === "granted";
+        const appOk  = !isMobile || isStandalone;
+        if (pushOk && appOk) return null;
+        const msg = !pushOk && !appOk
+          ? "Ative as notificações e instale o app para não perder nenhum aviso."
+          : !pushOk
+          ? "Ative as notificações para receber avisos de pagamento e envio."
+          : "Instale o app na tela inicial para ter acesso rápido.";
+        return (
+          <div style={{ background:"rgba(255,92,26,.09)", borderBottom:"1px solid rgba(255,92,26,.18)", padding:"10px 14px", display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            <span style={{ flex:1, minWidth:180, fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>
+              {!pushOk ? "🔔 " : "📲 "}{msg}
+            </span>
+            <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+              {!pushOk && (
+                <button onClick={async () => {
+                  await registrarPush(user.cog);
+                  if ("Notification" in window) setNudgePushPerm(Notification.permission);
+                }} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"6px 13px", fontSize:11, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  🔔 Ativar notificações
+                </button>
+              )}
+              {!appOk && (
+                <button onClick={() => setShowA2HS(true)} style={{ background:"rgba(245,240,232,.08)", border:"1px solid rgba(245,240,232,.18)", borderRadius:6, padding:"6px 13px", fontSize:11, fontWeight:700, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  📲 Instalar app
+                </button>
+              )}
+              <button onClick={() => setNudgeDismissed(true)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:18, cursor:"pointer", padding:"2px 6px", lineHeight:1, fontFamily:"monospace" }}>×</button>
+            </div>
+          </div>
+        );
+      })()}
       {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
       {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
       {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
