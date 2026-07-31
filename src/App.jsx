@@ -6780,8 +6780,11 @@ function ControleEstoqueTab() {
   const [addingCompra, setAddingCompra] = useState(false);
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
+  const CATS = ["embalagem","brinde","photocard","outro"];
   const [formNome, setFormNome] = useState("");
   const [formEstoque, setFormEstoque] = useState("");
+  const [formCat, setFormCat] = useState("embalagem");
+  const [formUso, setFormUso] = useState("");
   const [formQtd, setFormQtd] = useState("");
   const [formPreco, setFormPreco] = useState("");
   const [formDia, setFormDia] = useState(() => new Date().toISOString().slice(0, 10));
@@ -6797,6 +6800,8 @@ function ControleEstoqueTab() {
   const [editLinkE, setEditLinkE] = useState("");
   const [editDuracao, setEditDuracao] = useState("");
   const [editSaldo, setEditSaldo] = useState("");
+  const [editCat, setEditCat] = useState("embalagem");
+  const [editUso, setEditUso] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -6818,7 +6823,7 @@ function ControleEstoqueTab() {
     if (!formNome.trim()) return;
     setSaving(true); setErro("");
     const { data: novo, error } = await supabase.from("estoque_itens")
-      .insert({ nome: formNome.trim(), saldo_inicial: parseFloat(formEstoque) || 0, link_loja: formLink.trim() || null })
+      .insert({ nome: formNome.trim(), saldo_inicial: parseFloat(formEstoque) || 0, link_loja: formLink.trim() || null, categoria: formCat, uso_por_pedido: parseFloat(formUso) || 0 })
       .select().single();
     if (error) { setErro(error.message); setSaving(false); return; }
     if (formQtd && novo) {
@@ -6827,7 +6832,7 @@ function ControleEstoqueTab() {
         quantidade: parseFloat(formQtd), valor_total: parseFloat(formPreco) || 0,
       });
     }
-    setAddingItem(false); setFormNome(""); setFormEstoque(""); setFormQtd(""); setFormPreco(""); setFormLink("");
+    setAddingItem(false); setFormNome(""); setFormEstoque(""); setFormQtd(""); setFormPreco(""); setFormLink(""); setFormUso(""); setFormCat("embalagem");
     setFormDia(new Date().toISOString().slice(0, 10));
     await loadData(); setSaving(false);
   }
@@ -6878,7 +6883,13 @@ function ControleEstoqueTab() {
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:14 }}>NOVO MATERIAL</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
             <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Nome do material *</div><input value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="ex: Plástico bolha" style={inp} autoFocus /></div>
-            <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja (para recomprar)</div><input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://shopee.com.br/..." style={inp} /></div>
+            <div><div style={lbl}>Categoria</div>
+              <select value={formCat} onChange={e => setFormCat(e.target.value)} style={inp}>
+                {CATS.map(c => <option key={c} value={c} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{c}</option>)}
+              </select>
+            </div>
+            <div><div style={lbl}>Uso por pedido (un)</div><input type="number" value={formUso} onChange={e => setFormUso(e.target.value)} placeholder="ex: 1" style={inp} /></div>
+            <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja</div><input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://shopee.com.br/..." style={inp} /></div>
             <div><div style={lbl}>Em estoque (agora)</div><input type="number" value={formEstoque} onChange={e => setFormEstoque(e.target.value)} placeholder="0" style={inp} /></div>
             <div><div style={lbl}>Quantidade comprada</div><input type="number" value={formQtd} onChange={e => setFormQtd(e.target.value)} placeholder="ex: 100" style={inp} /></div>
             <div><div style={lbl}>Preço pago (R$)</div><input type="number" value={formPreco} onChange={e => setFormPreco(e.target.value)} placeholder="ex: 45.90" style={inp} /></div>
@@ -6897,40 +6908,67 @@ function ControleEstoqueTab() {
         </div>
       )}
 
-      {!sel && itens.length > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))", gap:10 }}>
-          {itens.map(item => {
-            const est = calcEstoque(item);
-            const ultima = (compras || []).filter(c => c.item_id === item.id)[0];
-            return (
-              <div key={item.id} onClick={() => setSel(item.id)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:8, padding:"14px", cursor:"pointer" }}>
-                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
-                  {item.link_loja && (
-                    <a href={item.link_loja} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                      style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", flexShrink:0, marginLeft:6, marginTop:1 }}>↗</a>
-                  )}
-                </div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:24, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
-                  {est % 1 === 0 ? est : est.toFixed(1)}
-                  <span style={{ fontSize:10, fontWeight:400, color:"rgba(245,240,232,.35)", marginLeft:4 }}>em estoque</span>
-                </div>
-                {ultima && (
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.28)", marginTop:8 }}>
-                    última compra {new Date(ultima.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}
+      {!sel && itens.length > 0 && (() => {
+        function custoUn(item) {
+          const cp = (compras || []).filter(c => c.item_id === item.id);
+          if (!cp.length) return 0;
+          const ult = cp.sort((a,b) => new Date(b.data_compra) - new Date(a.data_compra))[0];
+          return ult.quantidade > 0 ? Number(ult.valor_total) / Number(ult.quantidade) : 0;
+        }
+        const grupos = CATS.filter(cat => itens.some(i => (i.categoria || "outro") === cat));
+        return (
+          <div>
+            {grupos.map(cat => {
+              const grupo = itens.filter(i => (i.categoria || "outro") === cat);
+              const custoCat = grupo.reduce((s, i) => s + custoUn(i) * Number(i.uso_por_pedido || 0), 0);
+              return (
+                <div key={cat} style={{ marginBottom:24 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.35)" }}>{cat}</div>
+                    {custoCat > 0 && (
+                      <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"var(--laranja)" }}>
+                        R$ {custoCat.toFixed(2)}<span style={{ color:"rgba(245,240,232,.3)", fontWeight:400 }}>/pedido</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(175px, 1fr))", gap:8 }}>
+                    {grupo.map(item => {
+                      const est = calcEstoque(item);
+                      const ultima = (compras || []).filter(c => c.item_id === item.id).sort((a,b) => new Date(b.data_compra) - new Date(a.data_compra))[0];
+                      const cu = custoUn(item);
+                      return (
+                        <div key={item.id} onClick={() => setSel(item.id)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:8, padding:"13px", cursor:"pointer" }}>
+                          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
+                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
+                            {item.link_loja && (
+                              <a href={item.link_loja} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textDecoration:"none", flexShrink:0, marginLeft:6 }}>↗</a>
+                            )}
+                          </div>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:22, fontWeight:700, color:"var(--laranja)", lineHeight:1 }}>
+                            {est % 1 === 0 ? est : est.toFixed(1)}
+                            <span style={{ fontSize:10, fontWeight:400, color:"rgba(245,240,232,.3)", marginLeft:4 }}>un</span>
+                          </div>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.28)", marginTop:6, display:"flex", justifyContent:"space-between" }}>
+                            {ultima ? <span>última {new Date(ultima.data_compra + "T12:00:00").toLocaleDateString("pt-BR")}</span> : <span>—</span>}
+                            {cu > 0 && <span style={{ color:"rgba(245,240,232,.4)" }}>R${cu.toFixed(2)}/un</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {sel && itemSel && (
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
             <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0 }}>← voltar</button>
-            <button onClick={() => { setEditando(true); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); setEditSaldo(itemSel.saldo_inicial ?? ""); }}
+            <button onClick={() => { setEditando(true); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); setEditSaldo(itemSel.saldo_inicial ?? ""); setEditCat(itemSel.categoria || "outro"); setEditUso(itemSel.uso_por_pedido || ""); }}
               style={{ background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✎ editar item</button>
           </div>
 
@@ -6939,6 +6977,12 @@ function ControleEstoqueTab() {
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:12 }}>EDITAR MATERIAL</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
                 <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Nome</div><input value={editNome} onChange={e => setEditNome(e.target.value)} style={inp} autoFocus /></div>
+                <div><div style={lbl}>Categoria</div>
+                  <select value={editCat} onChange={e => setEditCat(e.target.value)} style={inp}>
+                    {CATS.map(c => <option key={c} value={c} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{c}</option>)}
+                  </select>
+                </div>
+                <div><div style={lbl}>Uso por pedido (un)</div><input type="number" value={editUso} onChange={e => setEditUso(e.target.value)} placeholder="ex: 1" style={inp} /></div>
                 <div><div style={lbl}>Em estoque (agora)</div><input type="number" value={editSaldo} onChange={e => setEditSaldo(e.target.value)} placeholder="0" style={inp} /></div>
                 <div><div style={lbl}>Dura ~quantos dias?</div><input type="number" value={editDuracao} onChange={e => setEditDuracao(e.target.value)} placeholder="ex: 60" style={inp} /></div>
                 <div style={{ gridColumn:"1/-1" }}><div style={lbl}>Link da loja</div><input value={editLinkE} onChange={e => setEditLinkE(e.target.value)} placeholder="https://..." style={inp} /></div>
@@ -6947,7 +6991,7 @@ function ControleEstoqueTab() {
                 <button onClick={async () => {
                   if (!editNome.trim()) return;
                   setSavingEdit(true);
-                  await supabase.from("estoque_itens").update({ nome: editNome.trim(), link_loja: editLinkE.trim() || null, durabilidade_dias: parseInt(editDuracao) || null, saldo_inicial: parseFloat(editSaldo) || 0 }).eq("id", sel);
+                  await supabase.from("estoque_itens").update({ nome: editNome.trim(), link_loja: editLinkE.trim() || null, durabilidade_dias: parseInt(editDuracao) || null, saldo_inicial: parseFloat(editSaldo) || 0, categoria: editCat, uso_por_pedido: parseFloat(editUso) || 0 }).eq("id", sel);
                   await loadData(); setEditando(false); setSavingEdit(false);
                 }} disabled={savingEdit || !editNome.trim()} style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:10, fontWeight:700, color:"#000", fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: savingEdit || !editNome.trim() ? 0.5 : 1 }}>
                   {savingEdit ? "salvando..." : "salvar"}
