@@ -6770,6 +6770,317 @@ function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
   );
 }
 
+function RastreiosTab() {
+  const inp = { background:"#1e1e1e", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#f5f0e8", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
+  const lbl = { fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4, letterSpacing:"0.5px", textTransform:"uppercase" };
+  const selStyle = { background:"#1a1a1a", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#f5f0e8", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
+  const optStyle = { background:"#1a1a1a", color:"#f5f0e8" };
+
+  const [lista, setLista] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState("");
+  const [filtro, setFiltro] = useState("todos");
+  const [expanded, setExpanded] = useState(null);
+  const [editId, setEditId] = useState(null);
+
+  const [fCodigo, setFCodigo] = useState("");
+  const [fTransp, setFTransp] = useState("Correios");
+  const [fOrigem, setFOrigem] = useState("");
+  const [fSeller, setFSeller] = useState("");
+  const [fItens, setFItens] = useState("");
+  const [fFrete, setFFrete] = useState("");
+  const [fTaxa, setFTaxa] = useState("");
+  const [fMoeda, setFMoeda] = useState("dolar");
+  const [fDecl, setFDecl] = useState("");
+  const [fStatus, setFStatus] = useState("em_transito");
+  const [fCompra, setFCompra] = useState(() => new Date().toISOString().slice(0,10));
+  const [fChegada, setFChegada] = useState("");
+  const [fObs, setFObs] = useState("");
+
+  useEffect(() => { loadRastreios(); }, []);
+
+  async function loadRastreios() {
+    const { data } = await supabase.from("rastreios").select("*").order("criado_em", { ascending: false });
+    setLista(data || []);
+  }
+
+  const TRANSP = ["Correios","FedEx","Shopee","Mercari","DHL","outro"];
+  const MOEDAS = ["dolar","ienes","real","euro","won"];
+  const STATUS_LIST = [
+    { val:"em_transito", label:"Em Trânsito",  cor:"#3b82f6", bg:"rgba(59,130,246,.14)" },
+    { val:"em_cotacao",  label:"Em Cotação",   cor:"#9ca3af", bg:"rgba(156,163,175,.12)" },
+    { val:"previsto",    label:"Previsto",      cor:"#f59e0b", bg:"rgba(245,158,11,.14)" },
+    { val:"finalizada",  label:"Finalizada",    cor:"#22c55e", bg:"rgba(34,197,94,.12)" },
+    { val:"devolvido",   label:"Devolvido",     cor:"#ef4444", bg:"rgba(239,68,68,.12)" },
+    { val:"problema",    label:"Problema",      cor:"#ef4444", bg:"rgba(239,68,68,.12)" },
+  ];
+
+  function stInfo(s) {
+    return STATUS_LIST.find(x => x.val === s) || { label: s || "–", cor:"#9ca3af", bg:"rgba(156,163,175,.12)" };
+  }
+
+  function resetForm() {
+    setFCodigo(""); setFTransp("Correios"); setFOrigem(""); setFSeller("");
+    setFItens(""); setFFrete(""); setFTaxa(""); setFMoeda("dolar");
+    setFDecl(""); setFStatus("em_transito");
+    setFCompra(new Date().toISOString().slice(0,10)); setFChegada(""); setFObs("");
+    setEditId(null);
+  }
+
+  function iniciarEditar(r) {
+    setFCodigo(r.codigo || "");
+    setFTransp(r.transportadora || "Correios");
+    setFOrigem(r.origem || "");
+    setFSeller(r.seller || "");
+    setFItens(r.itens_ceg || "");
+    setFFrete(r.frete_total != null ? String(r.frete_total) : "");
+    setFTaxa(r.taxa_rf != null ? String(r.taxa_rf) : "");
+    setFMoeda(r.moeda || "dolar");
+    setFDecl(r.valor_declarado != null ? String(r.valor_declarado) : "");
+    setFStatus(r.status || "em_transito");
+    setFCompra(r.data_compra || "");
+    setFChegada(r.data_chegada || "");
+    setFObs(r.obs || "");
+    setEditId(r.id);
+    setAdding(true);
+    setExpanded(null);
+  }
+
+  async function salvar() {
+    if (!fCodigo.trim()) return;
+    setSaving(true); setErro("");
+    const payload = {
+      codigo: fCodigo.trim().toUpperCase(),
+      transportadora: fTransp || null,
+      origem: fOrigem.trim() || null,
+      seller: fSeller.trim() || null,
+      itens_ceg: fItens.trim() || null,
+      frete_total: fFrete !== "" ? parseFloat(fFrete) : null,
+      taxa_rf: fTaxa !== "" ? parseFloat(fTaxa) : null,
+      moeda: fMoeda,
+      valor_declarado: fDecl !== "" ? parseFloat(fDecl) : null,
+      status: fStatus,
+      data_compra: fCompra || null,
+      data_chegada: fChegada || null,
+      obs: fObs.trim() || null,
+    };
+    let err2;
+    if (editId) {
+      ({ error: err2 } = await supabase.from("rastreios").update(payload).eq("id", editId));
+    } else {
+      ({ error: err2 } = await supabase.from("rastreios").insert(payload));
+    }
+    if (err2) { setErro(err2.message); setSaving(false); return; }
+    resetForm(); setAdding(false);
+    await loadRastreios(); setSaving(false);
+  }
+
+  async function excluirRastreio(id) {
+    if (!window.confirm("Excluir este rastreio?")) return;
+    await supabase.from("rastreios").delete().eq("id", id);
+    setExpanded(null); setAdding(false); setEditId(null);
+    await loadRastreios();
+  }
+
+  const listaFiltrada = (lista || []).filter(r => filtro === "todos" || r.status === filtro);
+  const ativos = (lista || []).filter(r => ["em_transito","previsto","em_cotacao"].includes(r.status));
+
+  if (lista === null) return (
+    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)", padding:40, textAlign:"center" }}>carregando...</div>
+  );
+
+  return (
+    <div style={{ padding:24, maxWidth:960, fontFamily:"'DM Mono',monospace" }}>
+
+      {/* HEADER */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ fontSize:16, fontWeight:700, color:"var(--offwhite)", letterSpacing:"-.5px" }}>Rastreios</div>
+          {ativos.length > 0 && (
+            <div style={{ background:"rgba(59,130,246,.14)", border:"1px solid rgba(59,130,246,.3)", borderRadius:20, padding:"2px 10px", fontSize:9, color:"#3b82f6", letterSpacing:"1px" }}>
+              {ativos.length} ATIVO{ativos.length !== 1 ? "S" : ""}
+            </div>
+          )}
+        </div>
+        {!adding && (
+          <button onClick={() => { resetForm(); setAdding(true); setExpanded(null); }}
+            style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"7px 14px", fontSize:10, color:"#fff", fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:"0.5px", fontWeight:700 }}>
+            + novo
+          </button>
+        )}
+      </div>
+
+      {/* FORM */}
+      {adding && (
+        <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:20, marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:16 }}>
+            {editId ? "Editar rastreio" : "Novo rastreio"}
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Código de rastreio *</div>
+              <input style={inp} value={fCodigo} onChange={e => setFCodigo(e.target.value)} placeholder="ND713296348BR" /></div>
+            <div><div style={lbl}>Status</div>
+              <select style={selStyle} value={fStatus} onChange={e => setFStatus(e.target.value)}>
+                {STATUS_LIST.map(s => <option key={s.val} value={s.val} style={optStyle}>{s.label}</option>)}
+              </select></div>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Transportadora</div>
+              <select style={selStyle} value={fTransp} onChange={e => setFTransp(e.target.value)}>
+                {TRANSP.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
+              </select></div>
+            <div><div style={lbl}>Origem</div>
+              <input style={inp} value={fOrigem} onChange={e => setFOrigem(e.target.value)} placeholder="Japão" /></div>
+            <div><div style={lbl}>Seller / Loja</div>
+              <input style={inp} value={fSeller} onChange={e => setFSeller(e.target.value)} placeholder="nome da seller" /></div>
+          </div>
+
+          <div style={{ marginBottom:12 }}>
+            <div style={lbl}>Itens CEG</div>
+            <input style={inp} value={fItens} onChange={e => setFItens(e.target.value)} placeholder="Mercari/Lottery · Revistas · ..." />
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Frete Total (R$)</div>
+              <input style={inp} type="number" value={fFrete} onChange={e => setFFrete(e.target.value)} placeholder="0,00" /></div>
+            <div><div style={lbl}>Taxa RF (R$)</div>
+              <input style={inp} type="number" value={fTaxa} onChange={e => setFTaxa(e.target.value)} placeholder="0,00" /></div>
+            <div><div style={lbl}>Moeda</div>
+              <select style={selStyle} value={fMoeda} onChange={e => setFMoeda(e.target.value)}>
+                {MOEDAS.map(m => <option key={m} value={m} style={optStyle}>{m}</option>)}
+              </select></div>
+            <div><div style={lbl}>Declaração</div>
+              <input style={inp} type="number" value={fDecl} onChange={e => setFDecl(e.target.value)} placeholder="valor" /></div>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:16 }}>
+            <div><div style={lbl}>Data da compra</div>
+              <input style={inp} type="date" value={fCompra} onChange={e => setFCompra(e.target.value)} /></div>
+            <div><div style={lbl}>Data de chegada</div>
+              <input style={inp} type="date" value={fChegada} onChange={e => setFChegada(e.target.value)} /></div>
+            <div><div style={lbl}>Observações</div>
+              <input style={inp} value={fObs} onChange={e => setFObs(e.target.value)} placeholder="observações livres" /></div>
+          </div>
+
+          {erro && <div style={{ color:"#ef4444", fontSize:10, marginBottom:10 }}>{erro}</div>}
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={salvar} disabled={saving}
+              style={{ background:"var(--laranja)", border:"none", borderRadius:6, padding:"8px 18px", fontSize:10, color:"#fff", fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
+              {saving ? "salvando..." : (editId ? "salvar alterações" : "adicionar")}
+            </button>
+            {editId && (
+              <button onClick={() => excluirRastreio(editId)}
+                style={{ background:"rgba(239,68,68,.1)", border:"1px solid rgba(239,68,68,.25)", borderRadius:6, padding:"8px 14px", fontSize:10, color:"#ef4444", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                excluir
+              </button>
+            )}
+            <button onClick={() => { resetForm(); setAdding(false); }}
+              style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"8px 14px", fontSize:10, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* FILTROS */}
+      {!adding && (
+        <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+          {[{ val:"todos", label:"Todos" }, ...STATUS_LIST].map(s => (
+            <button key={s.val} onClick={() => setFiltro(s.val)}
+              style={{ background: filtro === s.val ? "rgba(245,240,232,.1)" : "rgba(245,240,232,.03)",
+                border:`1px solid ${filtro === s.val ? "rgba(245,240,232,.18)" : "rgba(245,240,232,.07)"}`,
+                borderRadius:20, padding:"4px 12px", fontSize:9,
+                color: filtro === s.val ? "var(--offwhite)" : "rgba(245,240,232,.4)",
+                fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:"0.5px" }}>
+              {s.label}
+              {s.val !== "todos" && (
+                <span style={{ marginLeft:5, opacity:.5 }}>{(lista || []).filter(r => r.status === s.val).length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* LISTA */}
+      {!adding && (
+        <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+          {listaFiltrada.length === 0 && (
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.2)", textAlign:"center", padding:40 }}>
+              {filtro === "todos" ? "nenhum rastreio cadastrado" : "nenhum com este status"}
+            </div>
+          )}
+          {listaFiltrada.map(r => {
+            const st = stInfo(r.status);
+            const isOpen = expanded === r.id;
+            const badgeLabel = r.status === "previsto" && r.data_chegada
+              ? `PREV ${new Date(r.data_chegada + "T00:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}`
+              : st.label.toUpperCase();
+            return (
+              <div key={r.id}
+                style={{ border:`1px solid ${isOpen ? "rgba(245,240,232,.13)" : "rgba(245,240,232,.07)"}`, borderRadius:8, overflow:"hidden", background: isOpen ? "rgba(245,240,232,.025)" : "transparent", cursor:"pointer", transition:"border-color .15s" }}
+                onClick={() => setExpanded(isOpen ? null : r.id)}>
+                {/* linha principal */}
+                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 14px", flexWrap:"nowrap", overflow:"hidden" }}>
+                  <div style={{ background:st.bg, border:`1px solid ${st.cor}50`, borderRadius:4, padding:"2px 7px", fontSize:8, color:st.cor, fontWeight:700, letterSpacing:"0.5px", whiteSpace:"nowrap", flexShrink:0 }}>
+                    {badgeLabel}
+                  </div>
+                  <a href={`https://t.17track.net/en#nums=${encodeURIComponent(r.codigo)}`} target="_blank" rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize:11, color:"var(--laranja)", fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", flexShrink:0 }}>
+                    {r.codigo} ↗
+                  </a>
+                  {r.seller && (
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.55)", whiteSpace:"nowrap", flexShrink:0 }}>{r.seller}</div>
+                  )}
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.38)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {r.itens_ceg || "—"}
+                  </div>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", whiteSpace:"nowrap", flexShrink:0 }}>
+                    {[r.origem, r.transportadora].filter(Boolean).join(" · ")}
+                  </div>
+                  {(r.frete_total != null || r.taxa_rf != null) && (
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", whiteSpace:"nowrap", flexShrink:0, textAlign:"right" }}>
+                      {r.frete_total != null ? `R$ ${Number(r.frete_total).toFixed(2)}` : ""}
+                      {r.taxa_rf > 0 ? ` +RF ${Number(r.taxa_rf).toFixed(2)}` : ""}
+                    </div>
+                  )}
+                  <div style={{ fontSize:10, color:"rgba(245,240,232,.18)", flexShrink:0 }}>{isOpen ? "▲" : "▼"}</div>
+                </div>
+                {/* detalhe expandido */}
+                {isOpen && (
+                  <div style={{ borderTop:"1px solid rgba(245,240,232,.05)", padding:"12px 14px" }}
+                    onClick={e => e.stopPropagation()}>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:12, marginBottom:12 }}>
+                      {r.data_compra && <div><div style={lbl}>compra</div><div style={{ fontSize:11, color:"var(--offwhite)" }}>{new Date(r.data_compra+"T00:00:00").toLocaleDateString("pt-BR")}</div></div>}
+                      {r.data_chegada && <div><div style={lbl}>chegada</div><div style={{ fontSize:11, color:"var(--offwhite)" }}>{new Date(r.data_chegada+"T00:00:00").toLocaleDateString("pt-BR")}</div></div>}
+                      {r.moeda && <div><div style={lbl}>moeda</div><div style={{ fontSize:11, color:"var(--offwhite)" }}>{r.moeda}</div></div>}
+                      {r.valor_declarado != null && <div><div style={lbl}>declaração</div><div style={{ fontSize:11, color:"var(--offwhite)" }}>{r.valor_declarado}</div></div>}
+                      {r.obs && <div style={{ gridColumn:"span 2" }}><div style={lbl}>obs</div><div style={{ fontSize:11, color:"rgba(245,240,232,.65)" }}>{r.obs}</div></div>}
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => iniciarEditar(r)}
+                        style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"6px 14px", fontSize:9, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                        ✎ editar
+                      </button>
+                      <button onClick={() => excluirRastreio(r.id)}
+                        style={{ background:"rgba(239,68,68,.07)", border:"1px solid rgba(239,68,68,.18)", borderRadius:6, padding:"6px 14px", fontSize:9, color:"#ef4444", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                        excluir
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ControleEstoqueTab() {
   const inp = { background:"#1e1e1e", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#f5f0e8", fontFamily:"'DM Mono',monospace", outline:"none", width:"100%", boxSizing:"border-box" };
   const lbl = { fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:4, letterSpacing:"0.5px", textTransform:"uppercase" };
@@ -7875,6 +8186,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("envios") && nav("envios", "Envio", "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
                 {owner && nav("rounds", "Rounds", "◎", 0)}
                 {owner && nav("estoque", "Estoque", "◩", 0)}
+                {owner && nav("rastreios", "Rastreios", "⊞", 0)}
               </div>
               )}
               <div className="admin-sidebar-group">
@@ -10080,6 +10392,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {adminMainTab === "estoque" && owner && <ControleEstoqueTab />}
+      {adminMainTab === "rastreios" && owner && <RastreiosTab />}
 
         </div> {/* admin-content */}
       </div> {/* admin-layout */}
