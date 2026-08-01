@@ -5735,25 +5735,25 @@ function AntiversarioTab() {
             <div key={s.n} style={{ display:"flex", alignItems:"center" }}>
               <div onClick={() => desbloq && setSemanaVis(s.n)}
                 style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5,
-                  border:`1px solid ${ativa ? "rgba(255,92,26,.7)" : desbloq ? "rgba(245,240,232,.13)" : "rgba(245,240,232,.05)"}`,
+                  border:`1px solid ${ativa ? "rgba(255,92,26,.8)" : desbloq ? "rgba(245,240,232,.25)" : "rgba(245,240,232,.15)"}`,
                   borderRadius:14, padding:"14px 16px",
-                  background: ativa ? "rgba(255,92,26,.08)" : "rgba(245,240,232,.02)",
-                  boxShadow: ativa ? "0 0 28px rgba(255,92,26,.25), 0 0 10px rgba(255,92,26,.12) inset" : "none",
-                  cursor: desbloq ? "pointer" : "default", opacity: desbloq ? 1 : 0.38,
+                  background: ativa ? "rgba(255,92,26,.10)" : desbloq ? "rgba(245,240,232,.04)" : "rgba(245,240,232,.03)",
+                  boxShadow: ativa ? "0 0 28px rgba(255,92,26,.3), 0 0 10px rgba(255,92,26,.15) inset" : "none",
+                  cursor: desbloq ? "pointer" : "default", opacity: desbloq ? 1 : 0.72,
                   minWidth:86, transition:"box-shadow .2s" }}>
-                <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"3px", color: ativa ? "var(--laranja)" : "rgba(245,240,232,.25)" }}>
+                <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"3px", color: ativa ? "var(--laranja)" : "rgba(245,240,232,.5)" }}>
                   LVL {String(s.n).padStart(2,"0")}
                 </div>
                 <div style={{ fontSize:24, lineHeight:1 }}>{icone}</div>
                 <div style={{ fontFamily:mono, fontSize:8, fontWeight:700, textAlign:"center", lineHeight:1.3,
-                  color: ativa ? "var(--laranja)" : desbloq ? "rgba(245,240,232,.55)" : "rgba(245,240,232,.2)" }}>
+                  color: ativa ? "var(--laranja)" : desbloq ? "rgba(245,240,232,.75)" : "rgba(245,240,232,.5)" }}>
                   {s.label}
                 </div>
-                <div style={{ fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.2)" }}>{s.periodo}</div>
+                <div style={{ fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.4)" }}>{s.periodo}</div>
               </div>
               {i < ANTIV_SEMS.length - 1 && (
                 <div style={{ width:16, height:2, flexShrink:0,
-                  background: s.n < semAtual ? "rgba(255,92,26,.35)" : "rgba(245,240,232,.06)" }} />
+                  background: s.n < semAtual ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)" }} />
               )}
             </div>
           );
