@@ -5673,9 +5673,6 @@ function AntiversarioTab() {
   const TARGET = new Date("2026-08-01T10:00:00");
   const LETRAS = ["A","B","C","D"];
 
-  const [desbloqueado, setDesbloqueado] = useState(() => localStorage.getItem("antiv_ok") === "1");
-  const [inputPwd, setInputPwd] = useState("");
-  const [erroPwd, setErroPwd] = useState(false);
   const [tempo, setTempo] = useState(() => {
     const diff = TARGET - Date.now();
     if (diff <= 0) return null;
@@ -5698,16 +5695,6 @@ function AntiversarioTab() {
     return () => clearInterval(id);
   }, []);
 
-  function tentarSenha(e) {
-    e.preventDefault();
-    if (inputPwd.trim().toUpperCase() === "ANTIVERSO") {
-      localStorage.setItem("antiv_ok", "1");
-      setDesbloqueado(true);
-    } else {
-      setErroPwd(true); setInputPwd("");
-      setTimeout(() => setErroPwd(false), 1200);
-    }
-  }
 
   function avancarQuiz() {
     if (opcaoSel === null) return;
@@ -5873,7 +5860,7 @@ function AntiversarioTab() {
       `}</style>
 
       {/* ── ESTADO: CONTADOR ATIVO ── */}
-      {tempo && !desbloqueado && (
+      {tempo && (
         <>
           <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(120px,30vw,200px)", marginBottom:14 }} />
           <div style={{ fontSize:"clamp(20px,5.5vw,38px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:6 }}>ANTIversário</div>
@@ -5887,20 +5874,11 @@ function AntiversarioTab() {
             <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
             {bloco(tempo.segundos,"segundos")}
           </div>
-          {!desbloqueado && (
-            <form onSubmit={tentarSenha} style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <input type="password" value={inputPwd} onChange={e => { setInputPwd(e.target.value); setErroPwd(false); }} placeholder="••••••••"
-                style={{ background: erroPwd ? "rgba(239,68,68,.06)" : "rgba(245,240,232,.04)", border:`1px solid ${erroPwd ? "rgba(239,68,68,.4)" : "rgba(245,240,232,.1)"}`,
-                  borderRadius:6, padding:"6px 12px", fontSize:11, color:"#f5f0e8", fontFamily:mono, outline:"none", width:110, textAlign:"center", letterSpacing:"2px" }} />
-              <button type="submit" style={{ background:"none", border:"none", color: erroPwd ? "#ef4444" : "rgba(245,240,232,.3)", fontSize:16, cursor:"pointer", padding:"4px 2px" }}>→</button>
-            </form>
-          )}
-          {desbloqueado && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)" }}>✓ acesso liberado</div>}
         </>
       )}
 
-      {/* ── ESTADO: FESTIVO (pós-contador ou senha digitada) ── */}
-      {(!tempo || desbloqueado) && (
+      {/* ── ESTADO: FESTIVO (pós-contador) ── */}
+      {!tempo && (
         <>
           {/* glow de fundo */}
           <div style={{ position:"fixed", top:"20%", left:"50%", transform:"translateX(-50%)", width:520, height:520, background:"radial-gradient(circle, rgba(255,92,26,.09) 0%, transparent 68%)", pointerEvents:"none", animation:"antiv-glow-bg 5s ease-in-out infinite", zIndex:0 }} />
@@ -5922,30 +5900,7 @@ function AntiversarioTab() {
             01 · 08 · 2026
           </div>
 
-          {/* senha — mais presente na versão festiva */}
-          {!desbloqueado && (
-            <div style={{ marginBottom:36, zIndex:1, position:"relative" }}>
-              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"2px", color:"rgba(245,240,232,.22)", marginBottom:12 }}>ACESSO ESPECIAL</div>
-              <form onSubmit={tentarSenha} style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center" }}>
-                <input type="password" value={inputPwd} onChange={e => { setInputPwd(e.target.value); setErroPwd(false); }} placeholder="••••••••"
-                  style={{ background: erroPwd ? "rgba(239,68,68,.06)" : "rgba(245,240,232,.05)",
-                    border:`1px solid ${erroPwd ? "rgba(239,68,68,.45)" : "rgba(255,92,26,.22)"}`,
-                    borderRadius:8, padding:"9px 16px", fontSize:12, color:"#f5f0e8",
-                    fontFamily:mono, outline:"none", width:130, textAlign:"center", letterSpacing:"3px",
-                    boxShadow: erroPwd ? "none" : "0 0 14px rgba(255,92,26,.1)" }} />
-                <button type="submit"
-                  style={{ background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.28)", borderRadius:8,
-                    padding:"9px 16px", color:"var(--laranja)", fontSize:15, cursor:"pointer", fontFamily:mono, lineHeight:1 }}>
-                  →
-                </button>
-              </form>
-              {erroPwd && <div style={{ fontFamily:mono, fontSize:9, color:"#ef4444", marginTop:8, letterSpacing:"0.5px" }}>senha incorreta</div>}
-            </div>
-          )}
-
-          {/* conteúdo desbloqueado */}
-          {desbloqueado && (
-            <div style={{ width:"100%", maxWidth:520, zIndex:1, position:"relative" }}>
+          <div style={{ width:"100%", maxWidth:520, zIndex:1, position:"relative" }}>
               {renderLevelMap()}
               <div style={{ background:"rgba(255,92,26,.025)", border:"1px solid rgba(255,92,26,.14)", borderRadius:16, padding:"22px",
                 position:"relative", overflow:"hidden", textAlign:"left", boxShadow:"0 0 48px rgba(255,92,26,.07), 0 0 2px rgba(255,92,26,.12) inset" }}>
@@ -5963,7 +5918,6 @@ function AntiversarioTab() {
                 {semanaVis === 4 && semAtual >= 4 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🃏 em breve</div>}
               </div>
             </div>
-          )}
         </>
       )}
     </div>
