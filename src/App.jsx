@@ -5668,7 +5668,14 @@ const ANTIV_SEMS = [
   { n:4, icon:"🃏", label:"Drop Especial", periodo:"23–31 ago", desde:new Date("2026-08-23") },
 ];
 
-function AntiversarioTab() {
+const ANTIV_BADGES_DEF = [
+  { slug:"quiz_s01",      label:"Quiz da Comu",   sem:1, img:"/badges/quiz_s01.png"      },
+  { slug:"premiacao_s02", label:"Premiações",      sem:2, img:"/badges/premiacao_s02.png" },
+  { slug:"feedback_s03",  label:"Feedback",        sem:3, img:"/badges/feedback_s03.png"  },
+  { slug:"drop_s04",      label:"Drop Especial",   sem:4, img:"/badges/drop_s04.png"     },
+];
+
+function AntiversarioTab({ user }) {
   const mono = "'DM Mono',monospace";
   const TARGET = new Date("2026-08-01T10:00:00");
   const LETRAS = ["A","B","C","D"];
@@ -5684,6 +5691,7 @@ function AntiversarioTab() {
   const [quizDone, setQuizDone] = useState(() => localStorage.getItem("antiv_q_done") === "1");
   const [opcaoSel, setOpcaoSel] = useState(null);
   const [semanaVis, setSemanaVis] = useState(() => ANTIV_SEMS.reduce((acc, s) => new Date() >= s.desde ? s.n : acc, 1));
+  const [meusBadges, setMeusBadges] = useState([]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -5695,6 +5703,12 @@ function AntiversarioTab() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (!user || user.guest || !user.cog) return;
+    supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", user.cog)
+      .then(({ data }) => { if (data) setMeusBadges(data.map(r => r.badge_slug)); });
+  }, [user?.cog]);
+
 
   function avancarQuiz() {
     if (opcaoSel === null) return;
@@ -5703,7 +5717,13 @@ function AntiversarioTab() {
     setQuizResps(novas); setQuizStep(prox); setOpcaoSel(null);
     localStorage.setItem("antiv_q_resps", JSON.stringify(novas));
     localStorage.setItem("antiv_q_step", String(prox));
-    if (prox >= ANTIV_Q.length) { setQuizDone(true); localStorage.setItem("antiv_q_done", "1"); }
+    if (prox >= ANTIV_Q.length) {
+      setQuizDone(true); localStorage.setItem("antiv_q_done", "1");
+      if (user && !user.guest && user.cog) {
+        supabase.from("antiv_badges").upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
+          .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
+      }
+    }
   }
 
   const semAtual = ANTIV_SEMS.reduce((acc, s) => new Date() >= s.desde ? s.n : acc, 1);
@@ -5914,6 +5934,42 @@ function AntiversarioTab() {
 
           <div style={{ width:"100%", maxWidth:520, zIndex:1, position:"relative" }}>
               {renderLevelMap()}
+
+              {/* ── BADGES ── */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:12, textAlign:"left" }}>SEUS BADGES</div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10 }}>
+                  {ANTIV_BADGES_DEF.map(b => {
+                    const ganhou = meusBadges.includes(b.slug);
+                    return (
+                      <div key={b.slug} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                        background: ganhou ? "rgba(255,92,26,.08)" : "rgba(245,240,232,.03)",
+                        border:`1px solid ${ganhou ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.1)"}`,
+                        borderRadius:14, padding:"14px 8px 12px",
+                        boxShadow: ganhou ? "0 0 20px rgba(255,92,26,.2)" : "none",
+                        opacity: ganhou ? 1 : 0.45, transition:"all .3s" }}>
+                        <div style={{ width:56, height:56, borderRadius:"50%", overflow:"hidden", position:"relative",
+                          background:"rgba(245,240,232,.06)", border:`2px solid ${ganhou ? "rgba(255,92,26,.5)" : "rgba(245,240,232,.12)"}`,
+                          display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {ganhou
+                            ? <img src={b.img} alt={b.label} style={{ width:"100%", height:"100%", objectFit:"cover" }}
+                                onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} />
+                            : null}
+                          <div style={{ display: ganhou ? "none" : "flex", fontSize:22, alignItems:"center", justifyContent:"center", width:"100%", height:"100%" }}>🔒</div>
+                        </div>
+                        <div style={{ fontFamily:mono, fontSize:8, fontWeight:700, textAlign:"center", color: ganhou ? "var(--offwhite)" : "rgba(245,240,232,.4)", lineHeight:1.3 }}>{b.label}</div>
+                        {ganhou && <div style={{ fontFamily:mono, fontSize:7, color:"var(--laranja)", letterSpacing:"1px" }}>CONQUISTADO</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {(!user || user.guest) && (
+                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:10, textAlign:"center" }}>
+                    faça login para salvar seus badges
+                  </div>
+                )}
+              </div>
+
               <div style={{ background:"rgba(255,92,26,.025)", border:"1px solid rgba(255,92,26,.14)", borderRadius:16, padding:"22px",
                 position:"relative", overflow:"hidden", textAlign:"left", boxShadow:"0 0 48px rgba(255,92,26,.07), 0 0 2px rgba(255,92,26,.12) inset" }}>
                 <div style={{ position:"absolute", top:-50, right:-50, width:140, height:140, background:"var(--laranja)", borderRadius:"50%", opacity:0.05, pointerEvents:"none" }} />
@@ -15389,7 +15445,7 @@ export default function App() {
       {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
       {tab === "mercari" && <MercariTab />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "antiversario" && <AntiversarioTab />}
+      {tab === "antiversario" && <AntiversarioTab user={user} />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
