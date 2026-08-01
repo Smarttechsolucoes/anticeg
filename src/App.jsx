@@ -5725,36 +5725,48 @@ function AntiversarioTab() {
 
   function renderLevelMap() {
     return (
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", marginBottom:28, flexWrap:"wrap", gap:0 }}>
-        {ANTIV_SEMS.map((s, i) => {
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:28, width:"100%" }}>
+        {ANTIV_SEMS.map((s) => {
           const desbloq  = s.n <= semAtual;
           const ativa    = s.n === semanaVis;
           const completa = s.n === 1 && quizDone;
           const icone    = completa ? "⭐" : desbloq ? s.icon : "🔒";
           return (
-            <div key={s.n} style={{ display:"flex", alignItems:"center" }}>
-              <div onClick={() => desbloq && setSemanaVis(s.n)}
-                style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5,
-                  border:`1px solid ${ativa ? "rgba(255,92,26,.8)" : desbloq ? "rgba(245,240,232,.25)" : "rgba(245,240,232,.15)"}`,
-                  borderRadius:14, padding:"14px 16px",
-                  background: ativa ? "rgba(255,92,26,.10)" : desbloq ? "rgba(245,240,232,.04)" : "rgba(245,240,232,.03)",
-                  boxShadow: ativa ? "0 0 28px rgba(255,92,26,.3), 0 0 10px rgba(255,92,26,.15) inset" : "none",
-                  cursor: desbloq ? "pointer" : "default", opacity: desbloq ? 1 : 0.72,
-                  minWidth:86, transition:"box-shadow .2s" }}>
-                <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"3px", color: ativa ? "var(--laranja)" : "rgba(245,240,232,.5)" }}>
-                  LVL {String(s.n).padStart(2,"0")}
+            <div key={s.n} onClick={() => desbloq && setSemanaVis(s.n)}
+              style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                border:`2px solid ${ativa ? "var(--laranja)" : desbloq ? "rgba(245,240,232,.3)" : "rgba(245,240,232,.18)"}`,
+                borderRadius:14, padding:"16px 10px 14px",
+                background: ativa
+                  ? "linear-gradient(160deg,rgba(255,92,26,.18) 0%,rgba(255,92,26,.06) 100%)"
+                  : desbloq
+                  ? "rgba(245,240,232,.05)"
+                  : "rgba(245,240,232,.04)",
+                boxShadow: ativa ? "0 0 32px rgba(255,92,26,.35), 0 0 12px rgba(255,92,26,.18) inset" : "none",
+                cursor: desbloq ? "pointer" : "default",
+                transition:"box-shadow .2s", position:"relative" }}>
+
+              {/* badge EM BREVE nos bloqueados */}
+              {!desbloq && (
+                <div style={{ position:"absolute", top:-1, right:-1,
+                  background:"rgba(245,240,232,.1)", border:"1px solid rgba(245,240,232,.18)",
+                  borderRadius:"0 12px 0 8px", padding:"2px 7px",
+                  fontFamily:mono, fontSize:6, letterSpacing:"1.5px", color:"rgba(245,240,232,.55)" }}>
+                  EM BREVE
                 </div>
-                <div style={{ fontSize:24, lineHeight:1 }}>{icone}</div>
-                <div style={{ fontFamily:mono, fontSize:8, fontWeight:700, textAlign:"center", lineHeight:1.3,
-                  color: ativa ? "var(--laranja)" : desbloq ? "rgba(245,240,232,.75)" : "rgba(245,240,232,.5)" }}>
-                  {s.label}
-                </div>
-                <div style={{ fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.4)" }}>{s.periodo}</div>
-              </div>
-              {i < ANTIV_SEMS.length - 1 && (
-                <div style={{ width:16, height:2, flexShrink:0,
-                  background: s.n < semAtual ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)" }} />
               )}
+
+              <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"3px",
+                color: ativa ? "var(--laranja)" : "rgba(245,240,232,.45)", fontWeight:700 }}>
+                LVL {String(s.n).padStart(2,"0")}
+              </div>
+              <div style={{ fontSize:28, lineHeight:1 }}>{icone}</div>
+              <div style={{ fontFamily:mono, fontSize:10, fontWeight:700, textAlign:"center", lineHeight:1.35,
+                color: ativa ? "var(--laranja)" : "rgba(245,240,232,.85)" }}>
+                {s.label}
+              </div>
+              <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.5)", letterSpacing:"0.5px" }}>
+                {s.periodo}
+              </div>
             </div>
           );
         })}
