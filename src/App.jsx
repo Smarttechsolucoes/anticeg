@@ -5873,7 +5873,7 @@ function AntiversarioTab() {
       `}</style>
 
       {/* ── ESTADO: CONTADOR ATIVO ── */}
-      {tempo && (
+      {tempo && !desbloqueado && (
         <>
           <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(120px,30vw,200px)", marginBottom:14 }} />
           <div style={{ fontSize:"clamp(20px,5.5vw,38px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:6 }}>ANTIversário</div>
@@ -5899,8 +5899,8 @@ function AntiversarioTab() {
         </>
       )}
 
-      {/* ── ESTADO: FESTIVO (pós-contador) ── */}
-      {!tempo && (
+      {/* ── ESTADO: FESTIVO (pós-contador ou senha digitada) ── */}
+      {(!tempo || desbloqueado) && (
         <>
           {/* glow de fundo */}
           <div style={{ position:"fixed", top:"20%", left:"50%", transform:"translateX(-50%)", width:520, height:520, background:"radial-gradient(circle, rgba(255,92,26,.09) 0%, transparent 68%)", pointerEvents:"none", animation:"antiv-glow-bg 5s ease-in-out infinite", zIndex:0 }} />
