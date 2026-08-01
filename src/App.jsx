@@ -5916,7 +5916,7 @@ function AntiversarioTab() {
             ★ ANTIversário ★
           </div>
           <div style={{ fontFamily:mono, fontSize:"clamp(10px,2.5vw,13px)", color:"rgba(245,240,232,.4)", marginBottom:4, letterSpacing:"0.5px", zIndex:1, position:"relative" }}>
-            uma semana especial para a ANTI CEG 🧡
+            um ano de ANTI CEGS para comemorarmos juntos 🧡
           </div>
           <div style={{ fontFamily:mono, fontSize:"clamp(8px,1.8vw,10px)", color:"rgba(245,240,232,.18)", letterSpacing:"2px", marginBottom:32, zIndex:1, position:"relative" }}>
             01 · 08 · 2026
