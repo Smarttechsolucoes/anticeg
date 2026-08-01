@@ -5864,60 +5864,107 @@ function AntiversarioTab() {
   }
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"36px 20px 60px", textAlign:"center" }}>
-      <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(120px, 30vw, 200px)", marginBottom:14 }} />
-      <div style={{ fontSize:"clamp(20px, 5.5vw, 38px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:6 }}>
-        ANTIversário
-      </div>
-      <div style={{ fontSize:"clamp(9px, 2.2vw, 12px)", fontFamily:mono, color:"rgba(245,240,232,.3)", marginBottom:32, letterSpacing:"1px" }}>
-        01 · 08 · 2026 às 10h
-      </div>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"36px 20px 60px", textAlign:"center", position:"relative" }}>
+      <style>{`
+        @keyframes antiv-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+        @keyframes antiv-glow-bg { 0%,100%{opacity:.07;transform:scale(1)} 50%{opacity:.13;transform:scale(1.1)} }
+        @keyframes antiv-shimmer { 0%{background-position:-300% center} 100%{background-position:300% center} }
+        .antiv-shimmer { background:linear-gradient(90deg,#ff5c1a 0%,#ffb347 28%,#fffbe8 50%,#ffb347 72%,#ff5c1a 100%); background-size:300% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:antiv-shimmer 4s linear infinite; }
+      `}</style>
 
-      {tempo ? (
-        <div style={{ display:"flex", alignItems:"flex-start", gap:"clamp(12px, 4vw, 40px)", marginBottom:32 }}>
-          {bloco(tempo.dias,"dias")}
-          <div style={{ fontSize:"clamp(32px, 9vw, 72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
-          {bloco(tempo.horas,"horas")}
-          <div style={{ fontSize:"clamp(32px, 9vw, 72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
-          {bloco(tempo.minutos,"minutos")}
-          <div style={{ fontSize:"clamp(32px, 9vw, 72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
-          {bloco(tempo.segundos,"segundos")}
-        </div>
-      ) : (
-        <div style={{ fontSize:"clamp(22px, 6vw, 42px)", fontWeight:900, fontFamily:mono, color:"var(--laranja)", marginBottom:32 }}>chegou! 🎉</div>
-      )}
-
-      {!desbloqueado && (
-        <form onSubmit={tentarSenha} style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <input type="password" value={inputPwd} onChange={e => { setInputPwd(e.target.value); setErroPwd(false); }} placeholder="••••••••"
-            style={{ background: erroPwd ? "rgba(239,68,68,.06)" : "rgba(245,240,232,.04)",
-              border:`1px solid ${erroPwd ? "rgba(239,68,68,.4)" : "rgba(245,240,232,.1)"}`,
-              borderRadius:6, padding:"6px 12px", fontSize:11, color:"#f5f0e8",
-              fontFamily:mono, outline:"none", width:110, textAlign:"center", letterSpacing:"2px" }}
-          />
-          <button type="submit" style={{ background:"none", border:"none", color: erroPwd ? "#ef4444" : "rgba(245,240,232,.3)", fontSize:16, cursor:"pointer", padding:"4px 2px" }}>→</button>
-        </form>
-      )}
-
-      {desbloqueado && (
-        <div style={{ width:"100%", maxWidth:520 }}>
-          {renderLevelMap()}
-          <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:16, padding:"22px", position:"relative", overflow:"hidden", textAlign:"left" }}>
-            <div style={{ position:"absolute", top:-50, right:-50, width:130, height:130, background:"var(--laranja)", borderRadius:"50%", opacity:0.04, pointerEvents:"none" }} />
-            {semanaVis === 1 && renderQuiz()}
-            {semanaVis > 1 && semanaVis > semAtual && (
-              <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono }}>
-                <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.25)" }}>
-                  disponível a partir de {["","01/08","09/08","16/08","23/08"][semanaVis]}
-                </div>
-              </div>
-            )}
-            {semanaVis === 2 && semAtual >= 2 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🏆 em breve</div>}
-            {semanaVis === 3 && semAtual >= 3 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>📝 em breve</div>}
-            {semanaVis === 4 && semAtual >= 4 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🃏 em breve</div>}
+      {/* ── ESTADO: CONTADOR ATIVO ── */}
+      {tempo && (
+        <>
+          <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(120px,30vw,200px)", marginBottom:14 }} />
+          <div style={{ fontSize:"clamp(20px,5.5vw,38px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:6 }}>ANTIversário</div>
+          <div style={{ fontSize:"clamp(9px,2.2vw,12px)", fontFamily:mono, color:"rgba(245,240,232,.3)", marginBottom:32, letterSpacing:"1px" }}>01 · 08 · 2026 às 10h</div>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:"clamp(12px,4vw,40px)", marginBottom:32 }}>
+            {bloco(tempo.dias,"dias")}
+            <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
+            {bloco(tempo.horas,"horas")}
+            <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
+            {bloco(tempo.minutos,"minutos")}
+            <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
+            {bloco(tempo.segundos,"segundos")}
           </div>
-        </div>
+          {!desbloqueado && (
+            <form onSubmit={tentarSenha} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <input type="password" value={inputPwd} onChange={e => { setInputPwd(e.target.value); setErroPwd(false); }} placeholder="••••••••"
+                style={{ background: erroPwd ? "rgba(239,68,68,.06)" : "rgba(245,240,232,.04)", border:`1px solid ${erroPwd ? "rgba(239,68,68,.4)" : "rgba(245,240,232,.1)"}`,
+                  borderRadius:6, padding:"6px 12px", fontSize:11, color:"#f5f0e8", fontFamily:mono, outline:"none", width:110, textAlign:"center", letterSpacing:"2px" }} />
+              <button type="submit" style={{ background:"none", border:"none", color: erroPwd ? "#ef4444" : "rgba(245,240,232,.3)", fontSize:16, cursor:"pointer", padding:"4px 2px" }}>→</button>
+            </form>
+          )}
+          {desbloqueado && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)" }}>✓ acesso liberado</div>}
+        </>
+      )}
+
+      {/* ── ESTADO: FESTIVO (pós-contador) ── */}
+      {!tempo && (
+        <>
+          {/* glow de fundo */}
+          <div style={{ position:"fixed", top:"20%", left:"50%", transform:"translateX(-50%)", width:520, height:520, background:"radial-gradient(circle, rgba(255,92,26,.09) 0%, transparent 68%)", pointerEvents:"none", animation:"antiv-glow-bg 5s ease-in-out infinite", zIndex:0 }} />
+
+          {/* imagem flutuando */}
+          <div style={{ position:"relative", zIndex:1, marginBottom:18 }}>
+            <div style={{ position:"absolute", bottom:-4, left:"50%", transform:"translateX(-50%)", width:"75%", height:18, background:"rgba(255,92,26,.22)", borderRadius:"50%", filter:"blur(12px)", pointerEvents:"none" }} />
+            <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(130px,32vw,215px)", animation:"antiv-float 3s ease-in-out infinite", position:"relative", zIndex:1 }} />
+          </div>
+
+          {/* título shimmer */}
+          <div className="antiv-shimmer" style={{ fontSize:"clamp(24px,7vw,48px)", fontWeight:900, fontFamily:mono, letterSpacing:"-1px", marginBottom:8, zIndex:1, position:"relative" }}>
+            ★ ANTIversário ★
+          </div>
+          <div style={{ fontFamily:mono, fontSize:"clamp(10px,2.5vw,13px)", color:"rgba(245,240,232,.4)", marginBottom:4, letterSpacing:"0.5px", zIndex:1, position:"relative" }}>
+            uma semana especial para a ANTI CEG 🧡
+          </div>
+          <div style={{ fontFamily:mono, fontSize:"clamp(8px,1.8vw,10px)", color:"rgba(245,240,232,.18)", letterSpacing:"2px", marginBottom:32, zIndex:1, position:"relative" }}>
+            01 · 08 · 2026
+          </div>
+
+          {/* senha — mais presente na versão festiva */}
+          {!desbloqueado && (
+            <div style={{ marginBottom:36, zIndex:1, position:"relative" }}>
+              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"2px", color:"rgba(245,240,232,.22)", marginBottom:12 }}>ACESSO ESPECIAL</div>
+              <form onSubmit={tentarSenha} style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center" }}>
+                <input type="password" value={inputPwd} onChange={e => { setInputPwd(e.target.value); setErroPwd(false); }} placeholder="••••••••"
+                  style={{ background: erroPwd ? "rgba(239,68,68,.06)" : "rgba(245,240,232,.05)",
+                    border:`1px solid ${erroPwd ? "rgba(239,68,68,.45)" : "rgba(255,92,26,.22)"}`,
+                    borderRadius:8, padding:"9px 16px", fontSize:12, color:"#f5f0e8",
+                    fontFamily:mono, outline:"none", width:130, textAlign:"center", letterSpacing:"3px",
+                    boxShadow: erroPwd ? "none" : "0 0 14px rgba(255,92,26,.1)" }} />
+                <button type="submit"
+                  style={{ background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.28)", borderRadius:8,
+                    padding:"9px 16px", color:"var(--laranja)", fontSize:15, cursor:"pointer", fontFamily:mono, lineHeight:1 }}>
+                  →
+                </button>
+              </form>
+              {erroPwd && <div style={{ fontFamily:mono, fontSize:9, color:"#ef4444", marginTop:8, letterSpacing:"0.5px" }}>senha incorreta</div>}
+            </div>
+          )}
+
+          {/* conteúdo desbloqueado */}
+          {desbloqueado && (
+            <div style={{ width:"100%", maxWidth:520, zIndex:1, position:"relative" }}>
+              {renderLevelMap()}
+              <div style={{ background:"rgba(255,92,26,.025)", border:"1px solid rgba(255,92,26,.14)", borderRadius:16, padding:"22px",
+                position:"relative", overflow:"hidden", textAlign:"left", boxShadow:"0 0 48px rgba(255,92,26,.07), 0 0 2px rgba(255,92,26,.12) inset" }}>
+                <div style={{ position:"absolute", top:-50, right:-50, width:140, height:140, background:"var(--laranja)", borderRadius:"50%", opacity:0.05, pointerEvents:"none" }} />
+                <div style={{ position:"absolute", bottom:-50, left:-50, width:110, height:110, background:"var(--laranja)", borderRadius:"50%", opacity:0.03, pointerEvents:"none" }} />
+                {semanaVis === 1 && renderQuiz()}
+                {semanaVis > 1 && semanaVis > semAtual && (
+                  <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono }}>
+                    <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
+                    <div style={{ fontSize:11, color:"rgba(245,240,232,.25)" }}>disponível a partir de {["","01/08","09/08","16/08","23/08"][semanaVis]}</div>
+                  </div>
+                )}
+                {semanaVis === 2 && semAtual >= 2 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🏆 em breve</div>}
+                {semanaVis === 3 && semAtual >= 3 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>📝 em breve</div>}
+                {semanaVis === 4 && semAtual >= 4 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🃏 em breve</div>}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
