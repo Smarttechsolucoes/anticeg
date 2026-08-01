@@ -5706,7 +5706,15 @@ function AntiversarioTab({ user }) {
   useEffect(() => {
     if (!user || user.guest || !user.cog) return;
     supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", user.cog)
-      .then(({ data }) => { if (data) setMeusBadges(data.map(r => r.badge_slug)); });
+      .then(({ data }) => {
+        const earned = (data || []).map(r => r.badge_slug);
+        setMeusBadges(earned);
+        if (quizDone && !earned.includes("quiz_s01")) {
+          supabase.from("antiv_badges")
+            .upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
+            .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
+        }
+      });
   }, [user?.cog]);
 
 
