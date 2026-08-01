@@ -3344,6 +3344,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [repasseCiente,       setRepasseCiente]       = useState(false);
   // ── badges ──
   const [multasPagasCount, setMultasPagasCount] = useState(0);
+  const [badgesAntiv, setBadgesAntiv] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3358,6 +3359,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: repassosData },
         { count: multasCount },
         { data: cashbackData },
+        { data: antivBadgesData },
       ] = await Promise.all([
         supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
@@ -3372,12 +3374,14 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         supabase.from("repassos").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)),
         supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single(),
+        supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", dataCog(user.cog)),
       ]);
       if (cancelled) return;
       if (envios) setMeuEnvios(envios);
       setMeuReports(reports || []);
       setMeusFeedbacks(feedbacksData || []);
       setSaldoCashback(Number(cashbackData?.saldo_cashback || 0));
+      setBadgesAntiv((antivBadgesData || []).map(r => r.badge_slug));
       if (pendentes && pagamentos) {
         const cfm = {};
         pagamentos.filter(d => d.status === "pago").forEach(d => {
@@ -5028,6 +5032,37 @@ ${compHTML}
                 );
               })}
             </div>
+
+            {/* ── Badges ANTIversário ── */}
+            <div style={{ marginTop: 24 }}>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 8, letterSpacing: "3px", color: "rgba(245,240,232,.3)", marginBottom: 14 }}>
+                ANTIVERSÁRIO 2026
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+                {ANTIV_BADGES_DEF.map(b => {
+                  const ganhou = badgesAntiv.includes(b.slug);
+                  return (
+                    <div key={b.slug} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                      background: ganhou ? "rgba(255,92,26,.08)" : "rgba(245,240,232,.03)",
+                      border: `1px solid ${ganhou ? "rgba(255,92,26,.35)" : "rgba(245,240,232,.09)"}`,
+                      borderRadius: 12, padding: "14px 8px 12px",
+                      boxShadow: ganhou ? "0 0 18px rgba(255,92,26,.18)" : "none",
+                      opacity: ganhou ? 1 : 0.45 }}>
+                      <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden",
+                        border: `2px solid ${ganhou ? "rgba(255,92,26,.45)" : "rgba(245,240,232,.1)"}`,
+                        background: "rgba(245,240,232,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {ganhou
+                          ? <img src={b.img} alt={b.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : <span style={{ fontSize: 20 }}>🔒</span>}
+                      </div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 8, fontWeight: 700, textAlign: "center",
+                        color: ganhou ? "var(--offwhite)" : "rgba(245,240,232,.35)", lineHeight: 1.3 }}>{b.label}</div>
+                      {ganhou && <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 7, color: "var(--laranja)", letterSpacing: "1px" }}>CONQUISTADO</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         );
       })()}
@@ -5705,16 +5740,26 @@ function AntiversarioTab({ user }) {
 
   useEffect(() => {
     if (!user || user.guest || !user.cog) return;
-    supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", user.cog)
-      .then(({ data }) => {
-        const earned = (data || []).map(r => r.badge_slug);
-        setMeusBadges(earned);
-        if (quizDone && !earned.includes("quiz_s01")) {
-          supabase.from("antiv_badges")
-            .upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
-            .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
-        }
-      });
+    Promise.all([
+      supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", user.cog),
+      supabase.from("antiv_quiz").select("step,resps,done").eq("joiner_cog", user.cog).maybeSingle(),
+    ]).then(([{ data: badgesData }, { data: quizData }]) => {
+      const earned = (badgesData || []).map(r => r.badge_slug);
+      setMeusBadges(earned);
+      // restaura progresso do quiz salvo no servidor
+      if (quizData) {
+        setQuizStep(quizData.step || 0);
+        setQuizResps(quizData.resps || []);
+        if (quizData.done) setQuizDone(true);
+      }
+      // auto-concede badge se quiz já estava feito
+      const jaFeito = quizData?.done || (!quizData && localStorage.getItem("antiv_q_done") === "1");
+      if (jaFeito && !earned.includes("quiz_s01")) {
+        supabase.from("antiv_badges")
+          .upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
+          .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
+      }
+    });
   }, [user?.cog]);
 
 
@@ -5722,12 +5767,17 @@ function AntiversarioTab({ user }) {
     if (opcaoSel === null) return;
     const novas = [...quizResps, opcaoSel];
     const prox = quizStep + 1;
+    const done = prox >= ANTIV_Q.length;
     setQuizResps(novas); setQuizStep(prox); setOpcaoSel(null);
     localStorage.setItem("antiv_q_resps", JSON.stringify(novas));
     localStorage.setItem("antiv_q_step", String(prox));
-    if (prox >= ANTIV_Q.length) {
-      setQuizDone(true); localStorage.setItem("antiv_q_done", "1");
-      if (user && !user.guest && user.cog) {
+    if (done) { setQuizDone(true); localStorage.setItem("antiv_q_done", "1"); }
+    if (user && !user.guest && user.cog) {
+      supabase.from("antiv_quiz").upsert(
+        { joiner_cog: user.cog, step: prox, resps: novas, done, atualizado_em: new Date().toISOString() },
+        { onConflict: "joiner_cog" }
+      );
+      if (done) {
         supabase.from("antiv_badges").upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
           .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
       }
