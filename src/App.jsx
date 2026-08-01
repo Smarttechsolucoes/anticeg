@@ -5662,15 +5662,16 @@ const ANTIV_Q = [
 ];
 const ANTIV_MSGS = ["zero acertos 😭 você conhece a comu?","fraquinha mas tá aqui 🙈","metade joiner, metade turista 👀","boa! você sabe das coisas 🧡","JOINER DE VERDADE ✨ quase perfeita!","PERFEITA. você É a comu 🎉🧡"];
 const ANTIV_SEMS = [
-  { n:1, label:"S01 · Quiz da Comu 🎯",    desde:new Date("2026-08-01") },
-  { n:2, label:"S02 · Premiações 🏆",       desde:new Date("2026-08-09") },
-  { n:3, label:"S03 · Feedback 📝",         desde:new Date("2026-08-16") },
-  { n:4, label:"S04 · Drop Especial 🃏",    desde:new Date("2026-08-23") },
+  { n:1, icon:"🎯", label:"Quiz da Comu",  periodo:"01–08 ago", desde:new Date("2026-08-01") },
+  { n:2, icon:"🏆", label:"Premiações",    periodo:"09–15 ago", desde:new Date("2026-08-09") },
+  { n:3, icon:"📝", label:"Feedback",      periodo:"16–22 ago", desde:new Date("2026-08-16") },
+  { n:4, icon:"🃏", label:"Drop Especial", periodo:"23–31 ago", desde:new Date("2026-08-23") },
 ];
 
 function AntiversarioTab() {
   const mono = "'DM Mono',monospace";
   const TARGET = new Date("2026-08-01T10:00:00");
+  const LETRAS = ["A","B","C","D"];
 
   const [desbloqueado, setDesbloqueado] = useState(() => localStorage.getItem("antiv_ok") === "1");
   const [inputPwd, setInputPwd] = useState("");
@@ -5703,8 +5704,7 @@ function AntiversarioTab() {
       localStorage.setItem("antiv_ok", "1");
       setDesbloqueado(true);
     } else {
-      setErroPwd(true);
-      setInputPwd("");
+      setErroPwd(true); setInputPwd("");
       setTimeout(() => setErroPwd(false), 1200);
     }
   }
@@ -5720,36 +5720,89 @@ function AntiversarioTab() {
   }
 
   const semAtual = ANTIV_SEMS.reduce((acc, s) => new Date() >= s.desde ? s.n : acc, 1);
-  const acertos = quizDone ? quizResps.filter((r, i) => r === ANTIV_Q[i]?.certa).length : 0;
+  const acertos  = quizDone ? quizResps.filter((r, i) => r === ANTIV_Q[i]?.certa).length : 0;
+  const xp       = acertos * 200;
 
   function bloco(val, label) {
     return (
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-        <div style={{ fontSize:"clamp(52px, 15vw, 110px)", fontWeight:900, fontFamily:mono, color:"var(--laranja)", lineHeight:1, letterSpacing:"-2px" }}>
+        <div style={{ fontSize:"clamp(46px, 13vw, 96px)", fontWeight:900, fontFamily:mono, color:"var(--laranja)", lineHeight:1, letterSpacing:"-2px" }}>
           {String(val).padStart(2,"0")}
         </div>
-        <div style={{ fontSize:"clamp(8px, 2vw, 11px)", fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"2px", textTransform:"uppercase" }}>
+        <div style={{ fontSize:"clamp(7px, 1.8vw, 10px)", fontFamily:mono, color:"rgba(245,240,232,.28)", letterSpacing:"2px", textTransform:"uppercase" }}>
           {label}
         </div>
       </div>
     );
   }
 
+  function renderLevelMap() {
+    return (
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", marginBottom:28, flexWrap:"wrap", gap:0 }}>
+        {ANTIV_SEMS.map((s, i) => {
+          const desbloq  = s.n <= semAtual;
+          const ativa    = s.n === semanaVis;
+          const completa = s.n === 1 && quizDone;
+          const icone    = completa ? "⭐" : desbloq ? s.icon : "🔒";
+          return (
+            <div key={s.n} style={{ display:"flex", alignItems:"center" }}>
+              <div onClick={() => desbloq && setSemanaVis(s.n)}
+                style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+                  border:`1px solid ${ativa ? "rgba(255,92,26,.7)" : desbloq ? "rgba(245,240,232,.13)" : "rgba(245,240,232,.05)"}`,
+                  borderRadius:14, padding:"14px 16px",
+                  background: ativa ? "rgba(255,92,26,.08)" : "rgba(245,240,232,.02)",
+                  boxShadow: ativa ? "0 0 28px rgba(255,92,26,.25), 0 0 10px rgba(255,92,26,.12) inset" : "none",
+                  cursor: desbloq ? "pointer" : "default", opacity: desbloq ? 1 : 0.38,
+                  minWidth:86, transition:"box-shadow .2s" }}>
+                <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"3px", color: ativa ? "var(--laranja)" : "rgba(245,240,232,.25)" }}>
+                  LVL {String(s.n).padStart(2,"0")}
+                </div>
+                <div style={{ fontSize:24, lineHeight:1 }}>{icone}</div>
+                <div style={{ fontFamily:mono, fontSize:8, fontWeight:700, textAlign:"center", lineHeight:1.3,
+                  color: ativa ? "var(--laranja)" : desbloq ? "rgba(245,240,232,.55)" : "rgba(245,240,232,.2)" }}>
+                  {s.label}
+                </div>
+                <div style={{ fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.2)" }}>{s.periodo}</div>
+              </div>
+              {i < ANTIV_SEMS.length - 1 && (
+                <div style={{ width:16, height:2, flexShrink:0,
+                  background: s.n < semAtual ? "rgba(255,92,26,.35)" : "rgba(245,240,232,.06)" }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   function renderQuiz() {
     if (quizDone) {
+      const estrelas = Math.round((acertos / ANTIV_Q.length) * 5);
       return (
-        <div style={{ textAlign:"center", paddingBottom:20 }}>
-          <div style={{ fontSize:44, marginBottom:10 }}>{acertos >= 4 ? "🎉" : acertos >= 2 ? "⭐" : "😅"}</div>
-          <div style={{ fontFamily:mono, fontSize:30, fontWeight:900, color:"var(--laranja)", marginBottom:6 }}>{acertos} / {ANTIV_Q.length}</div>
-          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:28 }}>{ANTIV_MSGS[acertos]}</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:8, textAlign:"left" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:14 }}>RESULTADO FINAL</div>
+          <div style={{ fontSize:"clamp(1.8rem,7vw,3.2rem)", margin:"0 0 4px" }}>
+            {Array.from({length:5}, (_, i) => (
+              <span key={i} style={{ color: i < estrelas ? "#f59e0b" : "rgba(245,240,232,.12)", fontSize:"1em" }}>★</span>
+            ))}
+          </div>
+          <div style={{ fontFamily:mono, fontSize:"clamp(28px,8vw,48px)", fontWeight:900, color:"var(--laranja)", lineHeight:1, marginBottom:6 }}>
+            {acertos}<span style={{ fontSize:"0.45em", opacity:.5 }}> / {ANTIV_Q.length}</span>
+          </div>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(255,92,26,.7)", marginBottom:4 }}>+{xp} XP</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)", marginBottom:28 }}>{ANTIV_MSGS[acertos]}</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:7, textAlign:"left" }}>
             {ANTIV_Q.map((p, i) => {
               const ok = quizResps[i] === p.certa;
               return (
-                <div key={i} style={{ background: ok ? "rgba(34,197,94,.05)" : "rgba(239,68,68,.05)", border:`1px solid ${ok ? "rgba(34,197,94,.14)" : "rgba(239,68,68,.14)"}`, borderRadius:8, padding:"10px 14px" }}>
-                  <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color: ok ? "#22c55e" : "#ef4444", marginBottom:4 }}>{ok ? "✓ certa" : "✗ errada"}</div>
-                  <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.4, marginBottom: ok ? 0 : 5 }}>{p.q}</div>
-                  {!ok && <div style={{ fontFamily:mono, fontSize:10, color:"#22c55e" }}>→ {p.ops[p.certa]}</div>}
+                <div key={i} style={{ background: ok ? "rgba(34,197,94,.04)" : "rgba(239,68,68,.04)",
+                  border:`1px solid ${ok ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)"}`,
+                  borderRadius:10, padding:"10px 14px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom: ok ? 0 : 6 }}>
+                    <span style={{ fontSize:11, lineHeight:1 }}>{ok ? "✅" : "❌"}</span>
+                    <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.4 }}>{p.q}</div>
+                  </div>
+                  {!ok && <div style={{ fontFamily:mono, fontSize:9, color:"#22c55e", paddingLeft:19 }}>→ {p.ops[p.certa]}</div>}
                 </div>
               );
             })}
@@ -5757,57 +5810,81 @@ function AntiversarioTab() {
         </div>
       );
     }
+
     const p = ANTIV_Q[quizStep];
+    const pct = (quizStep / ANTIV_Q.length) * 100;
     return (
       <div>
-        <div style={{ display:"flex", gap:4, marginBottom:18 }}>
-          {ANTIV_Q.map((_, i) => (
-            <div key={i} style={{ flex:1, height:3, borderRadius:2, background: i < quizStep ? "var(--laranja)" : i === quizStep ? "rgba(255,92,26,.35)" : "rgba(245,240,232,.07)" }} />
-          ))}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+          <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"2px", color:"rgba(245,240,232,.3)" }}>
+            MISSÃO {quizStep + 1} / {ANTIV_Q.length}
+          </div>
+          <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,92,26,.6)", letterSpacing:"1px" }}>
+            {quizStep * 200} XP
+          </div>
         </div>
-        <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.28)", letterSpacing:"1px", marginBottom:14 }}>{quizStep + 1} / {ANTIV_Q.length}</div>
-        <div style={{ fontFamily:mono, fontSize:14, fontWeight:700, color:"var(--offwhite)", marginBottom:18, lineHeight:1.5 }}>{p.q}</div>
+        <div style={{ height:4, background:"rgba(245,240,232,.06)", borderRadius:4, marginBottom:20, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:`${pct}%`, background:"var(--laranja)", borderRadius:4,
+            boxShadow:"0 0 8px rgba(255,92,26,.5)", transition:"width .3s" }} />
+        </div>
+        <div style={{ fontFamily:mono, fontSize:"clamp(12px,3.5vw,15px)", fontWeight:700, color:"var(--offwhite)", marginBottom:20, lineHeight:1.5 }}>
+          {p.q}
+        </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           {p.ops.map((op, i) => (
             <button key={i} onClick={() => setOpcaoSel(i)}
-              style={{ background: opcaoSel === i ? "rgba(255,92,26,.09)" : "rgba(245,240,232,.02)",
-                border:`1px solid ${opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.09)"}`,
-                borderRadius:8, padding:"12px 16px", fontFamily:mono, fontSize:11,
-                color: opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.65)",
-                cursor:"pointer", textAlign:"left", lineHeight:1.4, transition:"all .12s" }}>
-              {op}
+              style={{ display:"flex", alignItems:"center", gap:12,
+                background: opcaoSel === i ? "rgba(255,92,26,.09)" : "rgba(245,240,232,.02)",
+                border:`1px solid ${opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.08)"}`,
+                borderRadius:10, padding:"11px 14px", fontFamily:mono, fontSize:11,
+                color: opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.6)",
+                cursor:"pointer", textAlign:"left", lineHeight:1.4, transition:"all .12s",
+                boxShadow: opcaoSel === i ? "0 0 14px rgba(255,92,26,.14)" : "none" }}>
+              <span style={{ width:22, height:22, borderRadius:6, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
+                background: opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.07)",
+                fontSize:8, fontWeight:900, color: opcaoSel === i ? "#000" : "rgba(245,240,232,.35)" }}>
+                {LETRAS[i]}
+              </span>
+              <span>{op}</span>
             </button>
           ))}
         </div>
         <button onClick={avancarQuiz} disabled={opcaoSel === null}
-          style={{ marginTop:14, width:"100%", background: opcaoSel !== null ? "var(--laranja)" : "rgba(245,240,232,.05)",
-            border:"none", borderRadius:8, padding:"11px", fontFamily:mono, fontSize:11, fontWeight:700,
+          style={{ marginTop:16, width:"100%", background: opcaoSel !== null ? "var(--laranja)" : "rgba(245,240,232,.04)",
+            border:`1px solid ${opcaoSel !== null ? "transparent" : "rgba(245,240,232,.07)"}`,
+            borderRadius:10, padding:"13px", fontFamily:mono, fontSize:11, fontWeight:900,
             color: opcaoSel !== null ? "#000" : "rgba(245,240,232,.18)",
-            cursor: opcaoSel !== null ? "pointer" : "default", transition:"all .18s" }}>
-          {quizStep < ANTIV_Q.length - 1 ? "próxima →" : "ver resultado →"}
+            cursor: opcaoSel !== null ? "pointer" : "default", letterSpacing:"1px",
+            boxShadow: opcaoSel !== null ? "0 0 20px rgba(255,92,26,.3)" : "none",
+            transition:"all .18s" }}>
+          {quizStep < ANTIV_Q.length - 1 ? "CONFIRMAR →" : "VER RESULTADO →"}
         </button>
       </div>
     );
   }
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"40px 24px 60px", textAlign:"center" }}>
-      <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(140px, 35vw, 220px)", marginBottom:16 }} />
-      <div style={{ fontSize:"clamp(22px, 6vw, 42px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:8 }}>ANTIversário</div>
-      <div style={{ fontSize:"clamp(10px, 2.5vw, 13px)", fontFamily:mono, color:"rgba(245,240,232,.35)", marginBottom:36, letterSpacing:"1px" }}>01 · 08 · 2026 às 10h</div>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"36px 20px 60px", textAlign:"center" }}>
+      <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(120px, 30vw, 200px)", marginBottom:14 }} />
+      <div style={{ fontSize:"clamp(20px, 5.5vw, 38px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:6 }}>
+        ANTIversário
+      </div>
+      <div style={{ fontSize:"clamp(9px, 2.2vw, 12px)", fontFamily:mono, color:"rgba(245,240,232,.3)", marginBottom:32, letterSpacing:"1px" }}>
+        01 · 08 · 2026 às 10h
+      </div>
 
       {tempo ? (
-        <div style={{ display:"flex", alignItems:"flex-start", gap:"clamp(16px, 5vw, 48px)", marginBottom:36 }}>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:"clamp(12px, 4vw, 40px)", marginBottom:32 }}>
           {bloco(tempo.dias,"dias")}
-          <div style={{ fontSize:"clamp(36px, 10vw, 80px)", fontWeight:900, color:"rgba(245,240,232,.12)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
+          <div style={{ fontSize:"clamp(32px, 9vw, 72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
           {bloco(tempo.horas,"horas")}
-          <div style={{ fontSize:"clamp(36px, 10vw, 80px)", fontWeight:900, color:"rgba(245,240,232,.12)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
+          <div style={{ fontSize:"clamp(32px, 9vw, 72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
           {bloco(tempo.minutos,"minutos")}
-          <div style={{ fontSize:"clamp(36px, 10vw, 80px)", fontWeight:900, color:"rgba(245,240,232,.12)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
+          <div style={{ fontSize:"clamp(32px, 9vw, 72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
           {bloco(tempo.segundos,"segundos")}
         </div>
       ) : (
-        <div style={{ fontSize:"clamp(24px, 7vw, 48px)", fontWeight:900, fontFamily:mono, color:"var(--laranja)", marginBottom:36 }}>chegou! 🎉</div>
+        <div style={{ fontSize:"clamp(22px, 6vw, 42px)", fontWeight:900, fontFamily:mono, color:"var(--laranja)", marginBottom:32 }}>chegou! 🎉</div>
       )}
 
       {!desbloqueado && (
@@ -5823,39 +5900,23 @@ function AntiversarioTab() {
       )}
 
       {desbloqueado && (
-        <div style={{ width:"100%", maxWidth:540, textAlign:"left" }}>
-          <div style={{ display:"flex", gap:6, marginBottom:24, flexWrap:"wrap", justifyContent:"center" }}>
-            {ANTIV_SEMS.map(s => {
-              const desbloqSem = s.n <= semAtual;
-              const ativa = s.n === semanaVis;
-              return (
-                <button key={s.n} onClick={() => desbloqSem && setSemanaVis(s.n)}
-                  style={{ background: ativa ? "rgba(255,92,26,.11)" : "rgba(245,240,232,.04)",
-                    border:`1px solid ${ativa ? "rgba(255,92,26,.45)" : "rgba(245,240,232,.08)"}`,
-                    borderRadius:8, padding:"8px 14px", fontFamily:mono, fontSize:9,
-                    color: ativa ? "var(--laranja)" : desbloqSem ? "rgba(245,240,232,.45)" : "rgba(245,240,232,.18)",
-                    cursor: desbloqSem ? "pointer" : "default", letterSpacing:"0.5px" }}>
-                  {desbloqSem ? s.label : `🔒 ${s.label.split("·")[0].trim()}`}
-                </button>
-              );
-            })}
+        <div style={{ width:"100%", maxWidth:520 }}>
+          {renderLevelMap()}
+          <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:16, padding:"22px", position:"relative", overflow:"hidden", textAlign:"left" }}>
+            <div style={{ position:"absolute", top:-50, right:-50, width:130, height:130, background:"var(--laranja)", borderRadius:"50%", opacity:0.04, pointerEvents:"none" }} />
+            {semanaVis === 1 && renderQuiz()}
+            {semanaVis > 1 && semanaVis > semAtual && (
+              <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono }}>
+                <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.25)" }}>
+                  disponível a partir de {["","01/08","09/08","16/08","23/08"][semanaVis]}
+                </div>
+              </div>
+            )}
+            {semanaVis === 2 && semAtual >= 2 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🏆 em breve</div>}
+            {semanaVis === 3 && semAtual >= 3 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>📝 em breve</div>}
+            {semanaVis === 4 && semAtual >= 4 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🃏 em breve</div>}
           </div>
-
-          {semanaVis === 1 && renderQuiz()}
-          {semanaVis > 1 && semanaVis > semAtual && (
-            <div style={{ textAlign:"center", padding:"40px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>
-              🔒 disponível a partir de {["","01/08","09/08","16/08","23/08"][semanaVis]}
-            </div>
-          )}
-          {semanaVis === 2 && semAtual >= 2 && (
-            <div style={{ textAlign:"center", padding:"20px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>em breve 🏆</div>
-          )}
-          {semanaVis === 3 && semAtual >= 3 && (
-            <div style={{ textAlign:"center", padding:"20px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>em breve 📝</div>
-          )}
-          {semanaVis === 4 && semAtual >= 4 && (
-            <div style={{ textAlign:"center", padding:"20px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>em breve 🃏</div>
-          )}
         </div>
       )}
     </div>
