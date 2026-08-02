@@ -2338,7 +2338,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           return (
             <tr key={idx} style={{ borderTop:"1px solid rgba(245,240,232,.06)" }}>
               <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
-                <div style={{ fontSize:12, color: hasMulta ? "#ff6b6b" : "var(--offwhite)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{row.i.nome_do_item}</div>
+                <div style={{ fontSize:12, color: hasMulta ? "#ff6b6b" : "var(--offwhite)", fontWeight:600, lineHeight:1.35 }}>{row.i.nome_do_item}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, flexWrap:"wrap" }}>
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{row.i.ceg}</span>
                   {hasMulta && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.2)", borderRadius:4, padding:"1px 6px" }}>{row.diasMax}d em atraso</span>}
@@ -2445,7 +2445,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                             {reembolsoLinhas.map((item, idx) => (
                               <tr key={idx} style={{ borderTop:"1px solid rgba(186,255,57,.08)" }}>
                                 <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
-                                  <div style={{ fontSize:12, color:"#BAFF39", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
+                                  <div style={{ fontSize:12, color:"#BAFF39", fontWeight:600, lineHeight:1.35 }}>{item.nome_do_item}</div>
                                   <div style={{ fontSize:10, color:"rgba(186,255,57,.45)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
                                 </td>
                                 <td style={{ fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"#BAFF39", fontWeight:700, padding:"10px 0", whiteSpace:"nowrap" }}>
