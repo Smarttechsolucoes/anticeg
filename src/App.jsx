@@ -57,6 +57,11 @@ async function registrarPush(joinerCog) {
 
 let _pushGlobalAtivo = true;
 
+async function inserirPush(rows) {
+  if (!_pushGlobalAtivo) return { data: null, error: null };
+  return inserirPush(rows);
+}
+
 async function enviarPushJoiner(joinerCog, title, body, url) {
   if (!_pushGlobalAtivo) return;
   const { data: subs } = await supabase
@@ -4354,7 +4359,7 @@ ${p.comprovante_url ? (() => {
           const { data: novas, error } = await supabase.from("repassos").insert(rows).select();
           if (error) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar: ${error.message}`); return; }
           const listaItens = isOutros ? repasseOutrosNome.trim() : itensSelecionados.map(i => `"${i.nome_do_item}"`).join(", ");
-          await supabase.from("pushes").insert([{
+          await inserirPush([{
             message: `${joinerNome} quer te repassar ${itensSelecionados.length > 1 ? "os itens" : "o item"} ${listaItens}. Aguarde confirmação da admin!`,
             active: true,
             joiner_cog: repasseNovoDono.cog,
@@ -8045,7 +8050,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const pushMsg = rastreioLink.trim()
       ? `Seu pedido foi enviado! Código de rastreio: ${rastreioCodigo.trim()}. Acompanhe em: ${rastreioLink.trim()}`
       : `Seu pedido foi enviado! Código de rastreio: ${rastreioCodigo.trim()}.`;
-    await supabase.from("pushes").insert([{ message: pushMsg, active: true, joiner_cog: s.joiner_cog }]);
+    await inserirPush([{ message: pushMsg, active: true, joiner_cog: s.joiner_cog }]);
     setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"enviado", rastreio_codigo:rastreioCodigo.trim(), rastreio_link:rastreioLink.trim()||null } : x));
     setEnvioLoading(null);
     setRastreioAberto(null); setRastreioCodigo(""); setRastreioLink("");
@@ -8092,7 +8097,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         active: true,
         joiner_cog: m.joiner_cog,
       }));
-      await supabase.from("pushes").insert(pushes);
+      await inserirPush(pushes);
 
       const updFields = { status:"pagamento em aberto", cotacao_opcoes:preenchidas, cotacao_frete:bestOp.valor, cotacao_forma:bestOp.forma, cotacao_seguro:valorDeclarado||null, cotacao_embalagem:cotacaoEmbalagem, cotacao_valor:totalFmt, cotacao_prazo:bestOp.prazo, cotacao_obs:cotacaoObs };
       setEnvioSolic(prev => prev.map(x =>
@@ -8101,7 +8106,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     } else {
       const { error: errCot } = await supabase.from("envio_solicitacoes").update(payload).eq("id", s.id);
       if (errCot) { alert("Erro ao enviar cotação: " + errCot.message); return; }
-      await supabase.from("pushes").insert([{
+      await inserirPush([{
         message: `Sua cotação de envio está disponível! A partir de R$ ${totalFmt} via ${bestOp.forma}. Acesse Meu Perfil → Envios para ver as opções.`,
         active: true,
         joiner_cog: s.joiner_cog,
@@ -8119,7 +8124,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       cotacao_embalagem: null, cotacao_valor: null, cotacao_prazo: null, cotacao_obs: null,
       cotacao_at: null, cotacao_seguro: null,
     }).eq("id", s.id);
-    await supabase.from("pushes").insert([{
+    await inserirPush([{
       message: "Sua cotação de envio foi cancelada e será refeita em breve. Aguarde a nova cotação.",
       active: true, joiner_cog: s.joiner_cog,
     }]);
@@ -8285,7 +8290,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     if (!window.confirm("Cancelar esta solicitação de envio? O joiner será notificado.")) return;
     const { error } = await supabase.from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
     if (error) { alert("Erro ao cancelar: " + error.message); return; }
-    await supabase.from("pushes").insert([{
+    await inserirPush([{
       message: "Sua solicitação de envio foi cancelada. Entre em contato com a GOM para mais informações.",
       active: true, joiner_cog: s.joiner_cog,
     }]);
@@ -8297,7 +8302,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     if (!window.confirm(`Corrigir "${nomeItem}"? O status volta para ANTIGOM e o joiner receberá uma notificação.`)) return;
     const { error } = await supabase.from("masterlist").update({ status: "ANTIGOM" }).eq("id", it.id);
     if (error) { alert("Erro ao corrigir: " + error.message); return; }
-    await supabase.from("pushes").insert([{
+    await inserirPush([{
       message: `O item "${nomeItem}" (${it.ceg}) ainda não chegou à GOM. Entre em contato com a GOM para mais informações.`,
       active: true,
       joiner_cog: s.joiner_cog,
@@ -8436,7 +8441,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setSendingPush(true);
     const payload = { message: novoPush.trim(), active: true };
     if (pushDestinatario === "especifico") payload.joiner_cog = pushJoinerSel.cog;
-    const { data } = await supabase.from("pushes").insert([payload]).select().single();
+    const { data } = _pushGlobalAtivo
+      ? await supabase.from("pushes").insert([payload]).select().single()
+      : { data: null };
     if (data) setPushes(p => [data, ...(p || [])]);
     setNovoPush("");
     setPushJoinerSel(null);
@@ -8494,7 +8501,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const resposta = reportRespostas[rep.id] ?? rep.resposta ?? null;
     const { error } = await supabase.from("reports").update({ status: "resolvido", resposta: resposta || null }).eq("id", rep.id);
     if (error) { alert("Erro ao resolver report: " + error.message); return; }
-    await supabase.from("pushes").insert([{
+    await inserirPush([{
       message: `Seu report sobre "${rep.item_nome}" foi atualizado! Acesse a aba Suporte e verifique se está correto.`,
       active: true,
       joiner_cog: rep.joiner_cog,
@@ -8838,7 +8845,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             if (!fbRespostaTexto.trim()) return;
             setFbRespostaEnv(true);
             await supabase.from("feedbacks").update({ resposta: fbRespostaTexto.trim() }).eq("id", fb.id);
-            await supabase.from("pushes").insert([{ message:`Nanda respondeu seu feedback: "${fbRespostaTexto.trim()}"`, active:true, joiner_cog: fb.joiner_cog }]);
+            await inserirPush([{ message:`Nanda respondeu seu feedback: "${fbRespostaTexto.trim()}"`, active:true, joiner_cog: fb.joiner_cog }]);
             setFeedbacks(prev => prev.map(x => x.id === fb.id ? { ...x, resposta: fbRespostaTexto.trim() } : x));
             setFbRespostaAberta(null);
             setFbRespostaTexto("");
@@ -9057,7 +9064,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
-                  await supabase.from("pushes").insert([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
+                  await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
@@ -9073,7 +9080,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   const msg = motivo.trim()
                     ? `Seu comprovante foi recusado: "${motivo.trim()}". Envie novamente pelo portal.`
                     : "Seu comprovante foi recusado. Por favor, envie novamente pelo portal.";
-                  await supabase.from("pushes").insert([{ message: msg, active: true, joiner_cog: d.joiner_cog }]);
+                  await inserirPush([{ message: msg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✕ Comprovante recusado", msg, "/");
                   const joiner = (joinersData || []).find(j => j.cog === d.joiner_cog);
                   if (joiner?.email) {
@@ -10272,7 +10279,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {s.status === "solicitação de envio" && (
                     <button onClick={async () => {
                       await supabase.from("envio_solicitacoes").update({ status:"cotação em andamento" }).eq("id", s.id);
-                      await supabase.from("pushes").insert([{ message:"Sua solicitação de envio está sendo processada — em até 5 dias úteis você receberá a cotação.", active:true, joiner_cog:s.joiner_cog }]);
+                      await inserirPush([{ message:"Sua solicitação de envio está sendo processada — em até 5 dias úteis você receberá a cotação.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Iniciar cotação
@@ -10313,7 +10320,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     <button onClick={async () => {
                       const { error: ePgto } = await supabase.from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
                       if (ePgto) { alert("Erro: " + ePgto.message); return; }
-                      await supabase.from("pushes").insert([{ message:"Seu pagamento foi confirmado! Em breve seu pedido será enviado.", active:true, joiner_cog:s.joiner_cog }]);
+                      await inserirPush([{ message:"Seu pagamento foi confirmado! Em breve seu pedido será enviado.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"pagamento confirmado" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,209,102,.12)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
                       ✓ Pagamento confirmado
@@ -10323,7 +10330,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     <button onClick={async () => {
                       const { error: eEmb } = await supabase.from("envio_solicitacoes").update({ status:"embalando" }).eq("id", s.id);
                       if (eEmb) { alert("Erro: " + eEmb.message); return; }
-                      await supabase.from("pushes").insert([{ message:"Seu pedido está sendo embalado! Em breve você receberá o código de rastreio.", active:true, joiner_cog:s.joiner_cog }]);
+                      await inserirPush([{ message:"Seu pedido está sendo embalado! Em breve você receberá o código de rastreio.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"embalando" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.1)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.28)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700 }}>
                       📦 Embalando
@@ -10393,7 +10400,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                           if (e.key === "Escape") { setPushManualId(null); setPushManualMsg(""); }
                           if (e.key === "Enter" && pushManualMsg.trim() && !pushManualSending) {
                             setPushManualSending(true);
-                            await supabase.from("pushes").insert([{ message: pushManualMsg.trim(), active: true, joiner_cog: s.joiner_cog }]);
+                            await inserirPush([{ message: pushManualMsg.trim(), active: true, joiner_cog: s.joiner_cog }]);
                             setPushManualId(null); setPushManualMsg(""); setPushManualSending(false);
                           }
                         }}
@@ -10402,7 +10409,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       />
                       <button disabled={!pushManualMsg.trim() || pushManualSending} onClick={async () => {
                         setPushManualSending(true);
-                        await supabase.from("pushes").insert([{ message: pushManualMsg.trim(), active: true, joiner_cog: s.joiner_cog }]);
+                        await inserirPush([{ message: pushManualMsg.trim(), active: true, joiner_cog: s.joiner_cog }]);
                         setPushManualId(null); setPushManualMsg(""); setPushManualSending(false);
                       }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, opacity: pushManualMsg.trim() ? 1 : .4 }}>
                         {pushManualSending ? "..." : "Enviar →"}
@@ -10531,7 +10538,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               if (Object.keys(updates).length > 0)
                 await supabase.from("masterlist").update(updates).eq("id", it.id);
             }
-            await supabase.from("pushes").insert([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
+            await inserirPush([{ message:`Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`, active:true, joiner_cog:d.joiner_cog }]);
           }
           setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
         }
@@ -10684,13 +10691,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
         async function aprovarRepasse(r) {
           await supabase.from("repassos").update({ status: "aprovado" }).eq("id", r.id);
-          await supabase.from("pushes").insert([{ message:`Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`, active:true, joiner_cog:r.joiner_cog }]);
-          await supabase.from("pushes").insert([{ message:`Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`, active:true, joiner_cog:r.novo_dono_cog }]);
+          await inserirPush([{ message:`Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`, active:true, joiner_cog:r.joiner_cog }]);
+          await inserirPush([{ message:`Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`, active:true, joiner_cog:r.novo_dono_cog }]);
           setAdminRepassos(prev => prev.map(x => x.id === r.id ? { ...x, status:"aprovado" } : x));
         }
         async function recusarRepasse(r) {
           await supabase.from("repassos").update({ status: "recusado" }).eq("id", r.id);
-          await supabase.from("pushes").insert([{ message:`Seu repasse de "${r.nome_do_item}" foi recusado. Entre em contato com a admin para mais informações.`, active:true, joiner_cog:r.joiner_cog }]);
+          await inserirPush([{ message:`Seu repasse de "${r.nome_do_item}" foi recusado. Entre em contato com a admin para mais informações.`, active:true, joiner_cog:r.joiner_cog }]);
           setAdminRepassos(prev => prev.map(x => x.id === r.id ? { ...x, status:"recusado" } : x));
         }
         async function reabrirRepasse(id) {
@@ -11421,7 +11428,7 @@ function AdminMercari({ pedidos = [], onUpdate }) {
       finalizado: `🎌 Seu pedido Mercari foi finalizado! A compra no Mercari foi realizada. Em breve você receberá mais informações sobre o envio.`,
     };
     if (msgs[novoStatus]) {
-      await supabase.from("pushes").insert([{ message: msgs[novoStatus], active: true, joiner_cog: p.joiner_cog }]);
+      await inserirPush([{ message: msgs[novoStatus], active: true, joiner_cog: p.joiner_cog }]);
     }
     onUpdate(prev => prev.map(x => x.id === p.id ? { ...x, status: novoStatus } : x));
     setCarregando(null);
