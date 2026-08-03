@@ -59,7 +59,7 @@ let _pushGlobalAtivo = true;
 
 async function inserirPush(rows) {
   if (!_pushGlobalAtivo) return { data: null, error: null };
-  return inserirPush(rows);
+  return supabase.from("pushes").insert(rows);
 }
 
 async function enviarPushJoiner(joinerCog, title, body, url) {
