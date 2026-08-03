@@ -55,7 +55,10 @@ async function registrarPush(joinerCog) {
   } catch (e) { console.error("[push] registrarPush erro:", e); }
 }
 
+let _pushGlobalAtivo = true;
+
 async function enviarPushJoiner(joinerCog, title, body, url) {
+  if (!_pushGlobalAtivo) return;
   const { data: subs } = await supabase
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
@@ -6632,6 +6635,40 @@ function NotificarTodosBlock() {
   );
 }
 
+function PushGlobalToggle() {
+  const [ativo, setAtivo] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
+      .then(({ data }) => { if (data) setAtivo(data.value !== "false"); });
+  }, []);
+
+  async function toggle() {
+    setSalvando(true);
+    const novo = !ativo;
+    setAtivo(novo);
+    _pushGlobalAtivo = novo;
+    await supabase.from("config").upsert({ key: "perfil_push_ativo", value: novo ? "true" : "false" }, { onConflict: "key" });
+    setSalvando(false);
+  }
+
+  return (
+    <div style={{ marginBottom:16, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${ativo ? "rgba(255,92,26,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+      <div>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:3 }}>Push notifications</div>
+        <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>
+          Quando pausado, nenhum push é enviado às joiners (pagamento, claim, rejeição).
+        </div>
+        {!ativo && <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginTop:5 }}>● Envio de notificações pausado</div>}
+      </div>
+      <button onClick={toggle} disabled={salvando} style={{ flexShrink:0, background: ativo ? "rgba(255,92,26,.12)" : "rgba(245,240,232,.05)", border:`1px solid ${ativo ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.15)"}`, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.4)", borderRadius:8, padding:"8px 16px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+        {salvando ? "..." : ativo ? "● Ativo — pausar" : "○ Pausado — ativar"}
+      </button>
+    </div>
+  );
+}
+
 function BannerPagamentosBlock() {
   const [ativo, setAtivo] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -9629,6 +9666,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "avisos" && owner && (
         <div>
+          <PushGlobalToggle />
           <ProximoEnvioBlock />
           <BannerPagamentosBlock />
           <AvisoMasterlistBlock />
@@ -15043,7 +15081,11 @@ export default function App() {
         });
       });
     supabase.from("config").select("value").eq("key", "perfil_push_ativo").single()
-      .then(({ data }) => { if (data) setPerfilPushAtivo(data.value !== "false"); });
+      .then(({ data }) => {
+        const ativo = data ? data.value !== "false" : true;
+        setPerfilPushAtivo(ativo);
+        _pushGlobalAtivo = ativo;
+      });
     supabase.from("config").select("value").eq("key", "admin_pin").single()
       .then(({ data }) => { if (data?.value) setAdminPinStored(data.value); });
     supabase.from("config").select("value").eq("key", "staff_members_extra").single()
