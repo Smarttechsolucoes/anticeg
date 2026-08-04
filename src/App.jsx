@@ -5441,6 +5441,19 @@ ${compHTML}
                           <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", lineHeight:1.65 }}>{r.resposta}</div>
                         </div>
                       )}
+                      {resolvido && (
+                        <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10 }}>
+                          <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>
+                            O problema ainda não foi resolvido?
+                          </div>
+                          <button onClick={async () => {
+                            await supabase.from("reports").update({ status:"pendente" }).eq("id", r.id);
+                            setMeuReports(prev => prev.map(x => x.id === r.id ? { ...x, status:"pendente" } : x));
+                          }} style={{ background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.3)", borderRadius:6, padding:"7px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", cursor:"pointer", fontWeight:700 }}>
+                            Reabrir report
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
