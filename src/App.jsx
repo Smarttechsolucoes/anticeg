@@ -15177,9 +15177,10 @@ function PopupThisAndThatPage() {
   const [nome,    setNome]    = useState("");
   const [email,   setEmail]   = useState("");
   const [social,  setSocial]  = useState("");
-  const [qtds1,   setQtds1]   = useState({});
-  const [qtds2,   setQtds2]   = useState({});
-  const [step,    setStep]    = useState("form"); // "form" | "resumo" | "sucesso"
+  const [qtds1,      setQtds1]      = useState({});
+  const [qtds2,      setQtds2]      = useState({});
+  const [activeWeek, setActiveWeek] = useState("01");
+  const [step,       setStep]       = useState("form"); // "form" | "resumo" | "sucesso"
   const [status,  setStatus]  = useState("idle");
   const [erro,    setErro]    = useState("");
   const [pedidoId,setPedidoId]= useState(null);
@@ -15308,37 +15309,9 @@ function PopupThisAndThatPage() {
   }
 
   // ── Formulário ────────────────────────────────────────────────
-  const WeekSection = ({ wk, closed, qtds, setQtd }) => (
-    <div style={{ border:`1px solid ${closed?"rgba(245,240,232,.06)":"rgba(245,240,232,.1)"}`, borderRadius:12, overflow:"hidden", opacity:closed?.5:1 }}>
-      <div style={{ display:"flex", gap:0 }}>
-        {wk.img && <img src={wk.img} alt={`Week ${wk.id}`} style={{ width:"40%", maxWidth:180, objectFit:"cover", flexShrink:0 }} onError={e=>{e.target.style.display="none"}} />}
-        <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", justifyContent:"center", gap:4 }}>
-          <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, letterSpacing:"1px", color:closed?"rgba(245,240,232,.3)":"var(--offwhite)" }}>WEEK {wk.id}{closed?" · encerrada":""}</div>
-          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{wk.periodo}</div>
-          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)" }}>Pagamento até {wk.pagamento}</div>
-        </div>
-      </div>
-      {!closed && (
-        <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 12px", display:"flex", flexDirection:"column", gap:8 }}>
-          {POPUP_ITEMS.map(item => (
-            <PopupItemCard key={item.id} item={item} qtds={qtds} setQtd={setQtd} mono={mono} />
-          ))}
-          {Object.values(qtds).some(v=>v>0) && (() => {
-            const brl = calcQtdBRL(qtds), krw = calcQtdKRW(qtds), pc = Math.floor(krw/30000);
-            return (
-              <div style={{ marginTop:4, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.15)", borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
-                <div>
-                  <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ {brl},00</div>
-                  {pc>0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", marginTop:2 }}>≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""}</div>}
-                </div>
-                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>₩{krw.toLocaleString()} total</div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
-    </div>
-  );
+  const activeQtds  = activeWeek === "01" ? qtds1 : qtds2;
+  const activeSetQtd = makeSetQtd(activeWeek === "01" ? setQtds1 : setQtds2);
+  const activeClosed = activeWeek === "01" ? w1closed : w2closed;
 
   return (
     <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"48px 16px" }}>
@@ -15410,9 +15383,53 @@ function PopupThisAndThatPage() {
           </div>
         </div>
 
-        {/* Weeks */}
-        <WeekSection wk={w1} closed={w1closed} qtds={qtds1} setQtd={makeSetQtd(setQtds1)} />
-        <WeekSection wk={w2} closed={w2closed} qtds={qtds2} setQtd={makeSetQtd(setQtds2)} />
+        {/* Abas de semana */}
+        <div>
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            {POPUP_WEEKS.map(wk => {
+              const closed   = now > wk.deadline;
+              const active   = activeWeek === wk.id;
+              const qtds     = wk.id==="01" ? qtds1 : qtds2;
+              const brl      = calcQtdBRL(qtds);
+              const pc       = Math.floor(calcQtdKRW(qtds)/30000);
+              return (
+                <button key={wk.id} type="button" onClick={()=>{ if(!closed) setActiveWeek(wk.id); }}
+                  style={{ flex:1, padding:0, borderRadius:12, border:`2px solid ${active?"var(--laranja)":closed?"rgba(245,240,232,.06)":"rgba(245,240,232,.1)"}`, background:active?"rgba(255,92,26,.07)":"transparent", cursor:closed?"default":"pointer", overflow:"hidden", opacity:closed?.45:1, textAlign:"left" }}>
+                  <img src={wk.img} alt={`Week ${wk.id}`} style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", display:"block" }} onError={e=>{e.target.style.display="none"}} />
+                  <div style={{ padding:"10px 12px" }}>
+                    <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1px", color:active?"var(--laranja)":closed?"rgba(245,240,232,.3)":"rgba(245,240,232,.7)" }}>
+                      WEEK {wk.id}{closed?" · encerrada":""}
+                    </div>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginTop:2 }}>{wk.periodo} · pag. {wk.pagamento}</div>
+                    {brl > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", marginTop:4, fontWeight:700 }}>R$ {brl},00{pc>0?` · ${pc} pc`:""}</div>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {activeClosed ? (
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", textAlign:"center", padding:"20px 0" }}>Esta semana está encerrada.</div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {POPUP_ITEMS.map(item => (
+                <PopupItemCard key={item.id} item={item} qtds={activeQtds} setQtd={activeSetQtd} mono={mono} />
+              ))}
+              {Object.values(activeQtds).some(v=>v>0) && (() => {
+                const brl = calcQtdBRL(activeQtds), krw = calcQtdKRW(activeQtds), pc = Math.floor(krw/30000);
+                return (
+                  <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.15)", borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+                    <div>
+                      <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ {brl},00</div>
+                      {pc>0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", marginTop:2 }}>≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""}</div>}
+                    </div>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>₩{krw.toLocaleString()}</div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
 
         {/* Total geral */}
         {temItens && (
