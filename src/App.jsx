@@ -15384,6 +15384,9 @@ function PopupThisAndThatPage() {
         </div>
 
         {/* Abas de semana */}
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"10px 14px", lineHeight:1.6 }}>
+          Você pode preencher o formulário de forma simultânea para a <span style={{ color:"var(--offwhite)" }}>Week 01</span> e <span style={{ color:"var(--offwhite)" }}>Week 02</span> — basta alternar as abas abaixo. O cálculo de photocards é <span style={{ color:"var(--laranja)" }}>separado por semana</span>: o valor de uma semana não acumula para a outra.
+        </div>
         <div>
           <div style={{ display:"flex", gap:8, marginBottom:12 }}>
             {POPUP_WEEKS.map(wk => {
@@ -15433,9 +15436,29 @@ function PopupThisAndThatPage() {
 
         {/* Total geral */}
         {temItens && (
-          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total geral</span>
-            <span style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL},00</span>
+          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+            {tem1 && (
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.45)" }}>
+                  Week 01{pc1>0?` · ≈ ${pc1} photocard${pc1>1?"s":""}`:""}</span>
+                <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"rgba(255,92,26,.8)" }}>R$ {brl1},00</span>
+              </div>
+            )}
+            {tem2 && (
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.45)" }}>
+                  Week 02{pc2>0?` · ≈ ${pc2} photocard${pc2>1?"s":""}`:""}</span>
+                <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"rgba(255,92,26,.8)" }}>R$ {brl2},00</span>
+              </div>
+            )}
+            {tem1 && tem2 && <div style={{ borderTop:"1px solid rgba(255,92,26,.15)", paddingTop:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total geral</span>
+              <span style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL},00</span>
+            </div>}
+            {!(tem1 && tem2) && <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total</span>
+              <span style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL},00</span>
+            </div>}
           </div>
         )}
 
