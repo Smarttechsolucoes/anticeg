@@ -15119,13 +15119,32 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
   );
 }
 
+const POPUP_WEEKS = [
+  {
+    id: "01",
+    periodo: "08/08 — 12/08",
+    deadline: new Date("2026-08-11T23:59:59-03:00"),
+    pagamento: "13/08",
+    img: "/pob-week-1.jpg",
+  },
+  {
+    id: "02",
+    periodo: "13/08 — 19/08",
+    deadline: new Date("2026-08-18T23:59:59-03:00"),
+    pagamento: "19/08",
+    img: "/pob-week-2.jpg",
+  },
+];
+
 function PopupThisAndThatPage() {
   const mono = "'DM Mono',monospace";
+  const now  = new Date();
   const [claim,   setClaim]   = useState("");
   const [nome,    setNome]    = useState("");
   const [email,   setEmail]   = useState("");
   const [social,  setSocial]  = useState("");
-  const [week,    setWeek]    = useState("01");
+  const firstOpen = POPUP_WEEKS.find(w => now <= w.deadline);
+  const [week,    setWeek]    = useState(firstOpen?.id || "01");
   const [qtds,    setQtds]    = useState({});
   const [status,  setStatus]  = useState("idle");
   const [erro,    setErro]    = useState("");
@@ -15201,13 +15220,25 @@ function PopupThisAndThatPage() {
           {/* Semana */}
           <div>
             <label style={labelStyle}>Semana</label>
-            <div style={{ display:"flex", gap:10 }}>
-              {["01","02"].map(w => (
-                <button key={w} type="button" onClick={()=>setWeek(w)}
-                  style={{ flex:1, padding:"12px", borderRadius:10, border:`1px solid ${week===w?"var(--laranja)":"rgba(245,240,232,.12)"}`, background:week===w?"rgba(255,92,26,.08)":"transparent", color:week===w?"var(--laranja)":"rgba(245,240,232,.6)", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:"1px" }}>
-                  WEEK {w}
-                </button>
-              ))}
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+              {POPUP_WEEKS.map(w => {
+                const closed   = now > w.deadline;
+                const selected = week === w.id && !closed;
+                return (
+                  <button key={w.id} type="button" onClick={()=>{ if(!closed) setWeek(w.id); }}
+                    style={{ flex:1, minWidth:140, borderRadius:12, border:`1px solid ${selected?"var(--laranja)":closed?"rgba(245,240,232,.06)":"rgba(245,240,232,.12)"}`, background:selected?"rgba(255,92,26,.08)":closed?"rgba(245,240,232,.02)":"transparent", cursor:closed?"default":"pointer", padding:0, overflow:"hidden", opacity:closed?.5:1, textAlign:"left" }}>
+                    {w.img && <img src={w.img} alt={`Week ${w.id}`} style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", display:"block" }} onError={e=>{e.target.style.display="none"}} />}
+                    <div style={{ padding:"10px 12px" }}>
+                      <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:selected?"var(--laranja)":closed?"rgba(245,240,232,.3)":"rgba(245,240,232,.7)", letterSpacing:"1px", marginBottom:3 }}>WEEK {w.id}{closed?" · encerrada":""}</div>
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)" }}>{w.periodo}</div>
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>Pagamento até {w.pagamento}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginTop:10, lineHeight:1.5 }}>
+              A cada <span style={{ color:"var(--laranja)", fontWeight:700 }}>₩30.000</span> você ganha <span style={{ color:"var(--laranja)", fontWeight:700 }}>1 photocard aleatório</span> referente à semana selecionada.
             </div>
           </div>
 
