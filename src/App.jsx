@@ -15110,6 +15110,7 @@ const WA_REVISTA       = "5524992782023";
 function RevistaFormPage() {
   const encerrado = new Date() > REVISTA_DEADLINE;
   const mono = "'DM Mono',monospace";
+  const [claim,      setClaim]      = useState("");
   const [nome,       setNome]       = useState("");
   const [email,      setEmail]      = useState("");
   const [social,     setSocial]     = useState("");
@@ -15125,6 +15126,7 @@ function RevistaFormPage() {
     try {
       const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
       if (!u?.cog) return;
+      setClaim(u.cog);
       supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
         .then(({ data: j }) => {
           if (j?.nome_site) setNome(j.nome_site);
@@ -15233,9 +15235,15 @@ function RevistaFormPage() {
           <form onSubmit={handleSubmit}>
             {/* Dados pessoais */}
             <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:24 }}>
+              {claim && (
+                <div>
+                  <label style={labelStyle}>Nome de claim <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como está na planilha · não editável</span></label>
+                  <div style={{ ...inputStyle, opacity:.5, cursor:"default", userSelect:"none" }}>{claim}</div>
+                </div>
+              )}
               <div>
-                <label style={labelStyle}>Nome</label>
-                <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome completo" required />
+                <label style={labelStyle}>Nome do site <span style={{ color:"rgba(255,92,26,.6)", fontWeight:400 }}>· como você quer aparecer aqui</span></label>
+                <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
               </div>
               <div>
                 <label style={labelStyle}>E-mail</label>
