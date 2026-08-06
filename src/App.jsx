@@ -15055,9 +15055,21 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
 
   const imgSrc = `/popup/item-${String(item.id).padStart(2,"0")}.png`;
 
+  const [lightbox, setLightbox] = useState(false);
+
   const Foto = () => (
-    <img src={imgSrc} alt={item.nome} onError={e=>{e.target.style.display="none"}}
-      style={{ width:"100%", maxHeight:260, objectFit:"contain", display:"block", background:"rgba(245,240,232,.03)", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }} />
+    <>
+      <img src={imgSrc} alt={item.nome} onError={e=>{e.target.style.display="none"}}
+        onClick={()=>setLightbox(true)}
+        style={{ width:"100%", maxHeight:260, objectFit:"contain", display:"block", background:"rgba(245,240,232,.03)", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"12px 0", cursor:"zoom-in" }} />
+      {lightbox && (
+        <div onClick={()=>setLightbox(false)}
+          style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, cursor:"zoom-out" }}>
+          <img src={imgSrc} alt={item.nome}
+            style={{ maxWidth:"100%", maxHeight:"90vh", objectFit:"contain", borderRadius:12 }} />
+        </div>
+      )}
+    </>
   );
 
   const Info = ({ children }) => (
