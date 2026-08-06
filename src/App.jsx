@@ -7988,6 +7988,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [preCadastros, setPreCadastros] = useState([]);
   const [mercariPedidos, setMercariPedidos] = useState([]);
+  const [revistaCount,   setRevistaCount]   = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
@@ -8383,6 +8384,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setAdminRepassos(data || []); });
     supabase.from("mercari_pedidos").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMercariPedidos(data); });
+    supabase.from("pedidos_revista").select("id", { count: "exact", head: true }).eq("status", "aguardando")
+      .then(({ count }) => { if (count) setRevistaCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8637,7 +8640,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("reports")  && nav("reports",      "Reports",  "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
                 {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
-                {nav("revista", "Revista Nylon", "◈", 0)}
+                {nav("revista", "Revista Nylon", "◈", revistaCount)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
               </div>
               {(temAcesso("envios") || owner) && (
@@ -9274,7 +9277,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {adminMainTab === "revista" && <AdminRevista />}
+      {adminMainTab === "revista" && <AdminRevista onCountChange={setRevistaCount} />}
 
       {adminMainTab === "storage" && owner && (() => {
         async function buscarStorageJoiner(joinerData) {
@@ -15014,7 +15017,7 @@ function AccessibilityWidget() {
 }
 
 // ── Admin: pedidos da revista ───────────────────────────────────
-function AdminRevista() {
+function AdminRevista({ onCountChange }) {
   const [pedidos, setPedidos] = useState(null);
   const mono = "'DM Mono',monospace";
   useEffect(() => {
@@ -15024,11 +15027,11 @@ function AdminRevista() {
 
   async function confirmar(id) {
     await supabase.from("pedidos_revista").update({ status: "confirmado" }).eq("id", id);
-    setPedidos(prev => prev.map(p => p.id === id ? { ...p, status: "confirmado" } : p));
+    setPedidos(prev => { const next = prev.map(p => p.id === id ? { ...p, status: "confirmado" } : p); onCountChange?.(next.filter(p=>p.status==="aguardando").length); return next; });
   }
   async function cancelar(id) {
     await supabase.from("pedidos_revista").update({ status: "cancelado" }).eq("id", id);
-    setPedidos(prev => prev.map(p => p.id === id ? { ...p, status: "cancelado" } : p));
+    setPedidos(prev => { const next = prev.map(p => p.id === id ? { ...p, status: "cancelado" } : p); onCountChange?.(next.filter(p=>p.status==="aguardando").length); return next; });
   }
 
   const total = (pedidos || []).reduce((s,p) => s + Number(p.valor_total||0), 0);
