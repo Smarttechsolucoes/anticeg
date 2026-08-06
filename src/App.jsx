@@ -3452,6 +3452,21 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       .then(({ data }) => { if (data) setBadgesAntiv(data.map(r => r.badge_slug)); });
   }, [perfilSubTab, user.cog]);
 
+  const [meusFormularios, setMeusFormularios] = useState(null);
+  useEffect(() => {
+    if (perfilSubTab !== "formularios" || user.guest) return;
+    if (meusFormularios !== null) return;
+    const email = user.email || "";
+    const cog   = dataCog(user.cog);
+    Promise.all([
+      email ? supabase.from("pedidos_revista").select("id,created_at,qtd_total,valor_total,status").eq("email", email).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
+      email ? supabase.from("pedidos_popup").select("id,created_at,week,itens,status").eq("email", email).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
+      cog   ? supabase.from("mercari_pedidos").select("id,created_at,valor_jpy_total,valor_brl_total,itens,status").eq("joiner_cog", cog).order("created_at",{ascending:false}).limit(20) : Promise.resolve({data:[]}),
+    ]).then(([rev, pop, mer]) => {
+      setMeusFormularios({ revista: rev.data||[], popup: pop.data||[], mercari: mer.data||[] });
+    });
+  }, [perfilSubTab, user.email, user.cog]);
+
   function reportarProblema() {
     setFeedbackTipo("bug");
     setPerfilSubTab("feedback");
@@ -3588,9 +3603,10 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           </div>
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conteúdo</div>
-            {navPerfil("historico", "◷", "Histórico", 0)}
-            {navPerfil("tutorial", "☆", "Tutorial",  0)}
-            {navPerfil("feedback", "✉", "Feedbacks", 0)}
+            {navPerfil("historico",   "◷", "Histórico",   0)}
+            {navPerfil("formularios", "◈", "Formulários", 0)}
+            {navPerfil("tutorial",    "☆", "Tutorial",    0)}
+            {navPerfil("feedback",    "✉", "Feedbacks",   0)}
           </div>
         </nav>
 
@@ -5195,6 +5211,110 @@ ${compHTML}
                 </div>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {perfilSubTab === "formularios" && (() => {
+        const mono = "'DM Mono',monospace";
+        const corStatus = s => s==="confirmado"||s==="pago"||s==="entregue"?"#4ade80":s==="cancelado"?"#ff6b6b":"rgba(255,92,26,.8)";
+        if (!meusFormularios) return <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Carregando...</div>;
+        const { revista, popup, mercari } = meusFormularios;
+        const nenhum = !revista.length && !popup.length && !mercari.length;
+
+        const SecaoLabel = ({ children }) => (
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10, marginTop:4 }}>{children}</div>
+        );
+        const StatusBadge = ({ s }) => (
+          <span style={{ fontFamily:mono, fontSize:9, color:corStatus(s) }}>{s}</span>
+        );
+
+        return (
+          <div style={{ display:"flex", flexDirection:"column", gap:24, paddingTop:4 }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.25)" }}>FORMULÁRIOS PREENCHIDOS</div>
+
+            {nenhum && <div style={{ fontFamily:mono, fontSize:12, opacity:.35 }}>Nenhum formulário preenchido ainda.</div>}
+
+            {/* Revista */}
+            {revista.length > 0 && (
+              <div>
+                <SecaoLabel>REVISTA NYLON HAN</SecaoLabel>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {revista.map(p => (
+                    <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+                      <div>
+                        <div style={{ fontFamily:mono, fontSize:11 }}>{p.qtd_total}x unidade{p.qtd_total>1?"s":""} · <span style={{ color:"var(--laranja)", fontWeight:700 }}>R$ {Number(p.valor_total||0).toFixed(2).replace(".",",")}</span></div>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:3 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} · #{p.id}</div>
+                      </div>
+                      <StatusBadge s={p.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pop-up */}
+            {popup.length > 0 && (
+              <div>
+                <SecaoLabel>POP-UP THIS & THAT</SecaoLabel>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {popup.map(p => {
+                    const itens = Array.isArray(p.itens) ? p.itens : [];
+                    const w1 = itens.filter(it=>it.week==="01"||(!it.week&&p.week==="01"));
+                    const w2 = itens.filter(it=>it.week==="02");
+                    return (
+                      <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:6, marginBottom:8 }}>
+                          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)" }}>Week {p.week}</div>
+                          <StatusBadge s={p.status} />
+                        </div>
+                        {[["01",w1],["02",w2]].map(([wid,its]) => its.length>0 && (
+                          <div key={wid} style={{ marginBottom:6 }}>
+                            <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.3)", marginBottom:3 }}>WEEK {wid}</div>
+                            {its.map((it,i) => (
+                              <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)" }}>
+                                {it.qtd}x {it.item_nome}{it.versao?` — ${it.versao}`:""}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:4 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} · #{p.id}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Mercari */}
+            {mercari.length > 0 && (
+              <div>
+                <SecaoLabel>MERCARI</SecaoLabel>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {mercari.map(p => {
+                    const itens = Array.isArray(p.itens) ? p.itens : [];
+                    return (
+                      <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:6 }}>
+                          <div style={{ fontFamily:mono, fontSize:11 }}>
+                            <span style={{ color:"var(--laranja)", fontWeight:700 }}>¥{Number(p.valor_jpy_total||0).toLocaleString()}</span>
+                            {p.valor_brl_total > 0 && <span style={{ color:"rgba(245,240,232,.4)", marginLeft:8 }}>R$ {Number(p.valor_brl_total||0).toFixed(2).replace(".",",")}</span>}
+                          </div>
+                          <StatusBadge s={p.status} />
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                          {itens.slice(0,5).map((it,i) => (
+                            <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{it.qtd||1}x {it.nome||it.name||it.item||"Item"}</div>
+                          ))}
+                          {itens.length > 5 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>+{itens.length-5} item{itens.length-5>1?"s":""}</div>}
+                        </div>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:4 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} · #{p.id}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
