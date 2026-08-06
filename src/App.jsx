@@ -8637,6 +8637,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("reports")  && nav("reports",      "Reports",  "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
                 {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
+                {nav("revista", "Revista Nylon", "◈", 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
               </div>
               {(temAcesso("envios") || owner) && (
@@ -9272,6 +9273,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "mercari" && (
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
+
+      {adminMainTab === "revista" && <AdminRevista />}
 
       {adminMainTab === "storage" && owner && (() => {
         async function buscarStorageJoiner(joinerData) {
@@ -15010,6 +15013,326 @@ function AccessibilityWidget() {
   );
 }
 
+// ── Admin: pedidos da revista ───────────────────────────────────
+function AdminRevista() {
+  const [pedidos, setPedidos] = useState(null);
+  const mono = "'DM Mono',monospace";
+  useEffect(() => {
+    supabase.from("pedidos_revista").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => setPedidos(data || []));
+  }, []);
+
+  async function confirmar(id) {
+    await supabase.from("pedidos_revista").update({ status: "confirmado" }).eq("id", id);
+    setPedidos(prev => prev.map(p => p.id === id ? { ...p, status: "confirmado" } : p));
+  }
+  async function cancelar(id) {
+    await supabase.from("pedidos_revista").update({ status: "cancelado" }).eq("id", id);
+    setPedidos(prev => prev.map(p => p.id === id ? { ...p, status: "cancelado" } : p));
+  }
+
+  const total = (pedidos || []).reduce((s,p) => s + Number(p.valor_total||0), 0);
+  const aguardando = (pedidos || []).filter(p => p.status === "aguardando").length;
+
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>REVISTA NYLON HAN — PEDIDOS</div>
+      {pedidos === null ? <div style={{ fontFamily:mono, fontSize:12, opacity:.4 }}>carregando...</div> : <>
+        <div style={{ display:"flex", gap:16, marginBottom:20, flexWrap:"wrap" }}>
+          {[
+            ["Total pedidos", pedidos.length],
+            ["Aguardando", aguardando],
+            ["Confirmados", pedidos.filter(p=>p.status==="confirmado").length],
+            ["Receita confirmada", `R$${pedidos.filter(p=>p.status==="confirmado").reduce((s,p)=>s+Number(p.valor_total||0),0).toFixed(2).replace(".",",")}`],
+            ["Unidades", pedidos.filter(p=>p.status!=="cancelado").reduce((s,p)=>s+Number(p.qtd_total||0),0)],
+          ].map(([l,v]) => (
+            <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 16px", minWidth:120 }}>
+              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>{l}</div>
+              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ overflowX:"auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+            <thead>
+              <tr style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.35)", borderBottom:"1px solid rgba(245,240,232,.08)" }}>
+                {["#","Nome","E-mail","@","Regular","Guys","Total","Pagamento","Status","Comprovante","Ações"].map(h => (
+                  <th key={h} style={{ padding:"8px 10px", textAlign:"left", whiteSpace:"nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pedidos.map(p => (
+                <tr key={p.id} style={{ borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                  <td style={{ padding:"10px", fontFamily:mono, fontSize:10, opacity:.4 }}>{p.id}</td>
+                  <td style={{ padding:"10px", whiteSpace:"nowrap" }}>{p.nome}</td>
+                  <td style={{ padding:"10px", fontFamily:mono, fontSize:11, opacity:.7 }}>{p.email}</td>
+                  <td style={{ padding:"10px", fontFamily:mono, fontSize:11, opacity:.7 }}>{p.social || "—"}</td>
+                  <td style={{ padding:"10px", textAlign:"center", fontFamily:mono }}>{p.versao_regular}</td>
+                  <td style={{ padding:"10px", textAlign:"center", fontFamily:mono }}>{p.versao_guys}</td>
+                  <td style={{ padding:"10px", fontFamily:mono, fontWeight:700, color:"var(--laranja)", whiteSpace:"nowrap" }}>R${Number(p.valor_total||0).toFixed(2).replace(".",",")}</td>
+                  <td style={{ padding:"10px", fontFamily:mono, fontSize:10, whiteSpace:"nowrap" }}>{p.forma_pagamento === "pix" ? "PIX" : "Cartão"}</td>
+                  <td style={{ padding:"10px" }}>
+                    <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status), whiteSpace:"nowrap" }}>{p.status}</span>
+                  </td>
+                  <td style={{ padding:"10px" }}>
+                    {p.comprovante_url
+                      ? <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ color:"var(--laranja)", fontSize:11, fontFamily:mono }}>ver</a>
+                      : <span style={{ opacity:.3, fontFamily:mono, fontSize:10 }}>—</span>}
+                  </td>
+                  <td style={{ padding:"10px" }}>
+                    {p.status === "aguardando" && (
+                      <div style={{ display:"flex", gap:6 }}>
+                        <button onClick={() => confirmar(p.id)} style={{ padding:"4px 10px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✓</button>
+                        <button onClick={() => cancelar(p.id)} style={{ padding:"4px 10px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✕</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+        </div>
+      </>}
+    </div>
+  );
+}
+
+// ── Pré-venda Revista NYLON HAN ────────────────────────────────
+const REVISTA_DEADLINE = new Date("2026-09-04T23:59:59-03:00");
+const REVISTA_PRECO    = 68;
+const PIX_REVISTA      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+const WA_REVISTA       = "5524992782023";
+
+function RevistaFormPage() {
+  const encerrado = new Date() > REVISTA_DEADLINE;
+  const mono = "'DM Mono',monospace";
+  const [nome,       setNome]       = useState("");
+  const [email,      setEmail]      = useState("");
+  const [social,     setSocial]     = useState("");
+  const [qtdReg,     setQtdReg]     = useState(0);
+  const [qtdGuys,    setQtdGuys]    = useState(0);
+  const [pagamento,  setPagamento]  = useState("pix");
+  const [comprovante,setComprovante]= useState(null);
+  const [pixCopiado, setPixCopiado] = useState(false);
+  const [status,     setStatus]     = useState("idle");
+  const [erro,       setErro]       = useState("");
+  const [pedidoId,   setPedidoId]   = useState(null);
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
+      if (!u) return;
+      if (u.nome)    setNome(u.nome);
+      if (u.email)   setEmail(u.email);
+      if (u.twitter) setSocial(u.twitter);
+      if (u.cog) {
+        supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
+          .then(({ data: j }) => {
+            if (j?.nome_site) setNome(j.nome_site);
+            if (j?.email)     setEmail(j.email);
+            if (j?.twitter)   setSocial(j.twitter);
+          });
+      }
+    } catch {}
+  }, []);
+
+  const total    = (qtdReg + qtdGuys) * REVISTA_PRECO;
+  const temPedido = qtdReg > 0 || qtdGuys > 0;
+
+  function Qty({ val, set }) {
+    return (
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <button type="button" onClick={() => set(v => Math.max(0, v-1))}
+          style={{ width:32, height:32, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+        <span style={{ fontFamily:mono, fontSize:20, fontWeight:700, minWidth:24, textAlign:"center" }}>{val}</span>
+        <button type="button" onClick={() => set(v => v+1)}
+          style={{ width:32, height:32, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+      </div>
+    );
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!temPedido || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 unidade."); return; }
+    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
+    setStatus("enviando"); setErro("");
+
+    let comprovanteUrl = null;
+    if (pagamento === "pix" && comprovante) {
+      const ext  = comprovante.name.split(".").pop();
+      const path = `revista/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
+      const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+      comprovanteUrl = publicUrl;
+    }
+
+    const { data, error } = await supabase.from("pedidos_revista").insert([{
+      nome: nome.trim(), email: email.trim(), social: social.trim() || null,
+      versao_regular: qtdReg, versao_guys: qtdGuys, qtd_total: qtdReg + qtdGuys,
+      valor_total: total, forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
+      status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
+    }]).select().single();
+
+    if (error) { setStatus("idle"); setErro("Erro ao registrar pedido. Tente novamente."); return; }
+    setPedidoId(data.id);
+
+    if (pagamento === "cartao") {
+      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da NYLON HAN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\nRevista Regular: ${qtdReg}x\nRevista Guys: ${qtdGuys}x\nTotal: R$${total.toFixed(2).replace(".",",")}`);
+      window.open(`https://wa.me/${WA_REVISTA}?text=${msg}`, "_blank");
+    }
+    setStatus("sucesso");
+  }
+
+  const inputStyle = { width:"100%", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:13, outline:"none", boxSizing:"border-box" };
+  const labelStyle = { fontFamily:mono, fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", textTransform:"uppercase", marginBottom:6, display:"block" };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)", color:"var(--offwhite)", display:"flex", flexDirection:"column", alignItems:"center", padding:"40px 16px 80px" }}>
+      <div style={{ width:"100%", maxWidth:520 }}>
+        {/* Header */}
+        <div style={{ marginBottom:32, textAlign:"center" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"4px", color:"rgba(245,240,232,.3)", marginBottom:8 }}>ANTI CEGS × PRÉ-VENDA</div>
+          <div style={{ fontSize:"clamp(22px,6vw,32px)", fontWeight:900, letterSpacing:"-1px", lineHeight:1.1 }}>NYLON JAPAN</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:6 }}>HAN — OUTUBRO 2026</div>
+          {!encerrado && (
+            <div style={{ marginTop:10, fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", letterSpacing:"1px" }}>
+              PEDIDOS ATÉ 04/09/2026
+            </div>
+          )}
+        </div>
+
+        {/* Capas */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:28, borderRadius:12, overflow:"hidden" }}>
+          <img src="/nylon-han.jpg" alt="NYLON Regular" style={{ width:"100%", borderRadius:10, objectFit:"cover", aspectRatio:"3/4" }}
+            onError={e => { e.target.style.display="none"; }} />
+          <img src="/nylon-han-guys.jpg" alt="NYLON Guys" style={{ width:"100%", borderRadius:10, objectFit:"cover", aspectRatio:"3/4" }}
+            onError={e => { e.target.style.display="none"; }} />
+        </div>
+
+        {/* Avisos */}
+        <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.7)" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
+          <div>• CEG longa — revista lança em <strong>outubro</strong>.</div>
+          <div>• Envios podem acontecer somente <strong>após as festas de Natal</strong> (não confirmado ainda).</div>
+          <div>• Haverá <strong>frete internacional</strong>.</div>
+          <div>• <strong>Não haverá</strong> taxa da Receita Federal.</div>
+        </div>
+
+        {encerrado ? (
+          <div style={{ textAlign:"center", padding:"40px 0" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>🔒</div>
+            <div style={{ fontFamily:mono, fontSize:13, color:"rgba(245,240,232,.5)" }}>Pedidos encerrados em 04/09/2026.</div>
+          </div>
+        ) : status === "sucesso" ? (
+          <div style={{ textAlign:"center", padding:"40px 0" }}>
+            <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
+            <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6 }}>
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {/* Dados pessoais */}
+            <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:24 }}>
+              <div>
+                <label style={labelStyle}>Nome</label>
+                <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome completo" required />
+              </div>
+              <div>
+                <label style={labelStyle}>E-mail</label>
+                <input style={inputStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" required />
+              </div>
+              <div>
+                <label style={labelStyle}>@ Rede Social</label>
+                <input style={inputStyle} value={social} onChange={e=>setSocial(e.target.value)} placeholder="@seu_usuario" />
+              </div>
+            </div>
+
+            {/* Versões */}
+            <div style={{ marginBottom:24 }}>
+              <div style={labelStyle}>Quantidades — R${REVISTA_PRECO},00 por unidade</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 16px" }}>
+                  <div>
+                    <div style={{ fontWeight:600, fontSize:13 }}>Versão Regular</div>
+                    <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>The Shape of Beauty</div>
+                  </div>
+                  <Qty val={qtdReg} set={setQtdReg} />
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 16px" }}>
+                  <div>
+                    <div style={{ fontWeight:600, fontSize:13 }}>Versão Guys</div>
+                    <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>guys edition</div>
+                  </div>
+                  <Qty val={qtdGuys} set={setQtdGuys} />
+                </div>
+              </div>
+              {total > 0 && (
+                <div style={{ marginTop:14, fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)", textAlign:"right" }}>
+                  Total: R${total.toFixed(2).replace(".",",")}
+                </div>
+              )}
+            </div>
+
+            {/* Pagamento */}
+            <div style={{ marginBottom:24 }}>
+              <div style={labelStyle}>Forma de Pagamento</div>
+              <div style={{ display:"flex", gap:10, marginBottom:16 }}>
+                {[["pix","PIX"],["cartao","Cartão de Crédito"]].map(([v,l]) => (
+                  <button key={v} type="button" onClick={() => setPagamento(v)}
+                    style={{ flex:1, padding:"10px 0", borderRadius:8, border:`1px solid ${pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagamento===v ? "rgba(255,92,26,.12)" : "transparent", color: pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily:mono, fontSize:11, cursor:"pointer", fontWeight: pagamento===v ? 700 : 400, transition:"all .15s" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+
+              {pagamento === "pix" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
+                    <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>CHAVE PIX</div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                      <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all", color:"var(--offwhite)" }}>{PIX_REVISTA}</span>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_REVISTA); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
+                        style={{ flexShrink:0, padding:"6px 12px", borderRadius:6, border:"1px solid rgba(245,240,232,.2)", background:"transparent", color: pixCopiado ? "#4ade80" : "rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
+                        {pixCopiado ? "✓ copiado" : "copiar"}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Comprovante do PIX</label>
+                    <input type="file" accept="image/*,.pdf" onChange={e=>setComprovante(e.target.files[0])}
+                      style={{ ...inputStyle, padding:"8px 12px", cursor:"pointer" }} required />
+                  </div>
+                </div>
+              )}
+
+              {pagamento === "cartao" && (
+                <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontSize:12, color:"rgba(245,240,232,.6)", lineHeight:1.6 }}>
+                  Ao confirmar o pedido, você será redirecionada para o <strong>WhatsApp</strong> para combinar o pagamento via cartão de crédito.
+                </div>
+              )}
+            </div>
+
+            {erro && <div style={{ marginBottom:16, fontFamily:mono, fontSize:11, color:"#ff6b6b", background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"10px 14px" }}>{erro}</div>}
+
+            <button type="submit" disabled={status==="enviando" || !temPedido}
+              style={{ width:"100%", padding:"14px 0", borderRadius:10, border:"none", background: temPedido ? "var(--laranja)" : "rgba(245,240,232,.1)", color: temPedido ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1px", cursor: temPedido ? "pointer" : "not-allowed", transition:"all .15s" }}>
+              {status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
@@ -15310,6 +15633,7 @@ export default function App() {
       </div>
     );
   }
+  if (window.location.pathname === "/revista") return <RevistaFormPage />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
 
