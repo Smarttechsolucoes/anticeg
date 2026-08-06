@@ -15113,8 +15113,7 @@ function RevistaFormPage() {
   const [nome,       setNome]       = useState("");
   const [email,      setEmail]      = useState("");
   const [social,     setSocial]     = useState("");
-  const [qtdReg,     setQtdReg]     = useState(0);
-  const [qtdGuys,    setQtdGuys]    = useState(0);
+  const [qtd,        setQtd]        = useState(0);
   const [pagamento,  setPagamento]  = useState("pix");
   const [comprovante,setComprovante]= useState(null);
   const [pixCopiado, setPixCopiado] = useState(false);
@@ -15140,8 +15139,8 @@ function RevistaFormPage() {
     } catch {}
   }, []);
 
-  const total    = (qtdReg + qtdGuys) * REVISTA_PRECO;
-  const temPedido = qtdReg > 0 || qtdGuys > 0;
+  const total    = qtd * REVISTA_PRECO;
+  const temPedido = qtd > 0;
 
   function Qty({ val, set }) {
     return (
@@ -15173,7 +15172,7 @@ function RevistaFormPage() {
 
     const { data, error } = await supabase.from("pedidos_revista").insert([{
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
-      versao_regular: qtdReg, versao_guys: qtdGuys, qtd_total: qtdReg + qtdGuys,
+      versao_regular: qtd, versao_guys: 0, qtd_total: qtd,
       valor_total: total, forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
     }]).select().single();
@@ -15182,7 +15181,7 @@ function RevistaFormPage() {
     setPedidoId(data.id);
 
     if (pagamento === "cartao") {
-      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da NYLON HAN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\nRevista Regular: ${qtdReg}x\nRevista Guys: ${qtdGuys}x\nTotal: R$${total.toFixed(2).replace(".",",")}`);
+      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da NYLON HAN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\nQuantidade: ${qtd}x\nTotal: R$${total.toFixed(2).replace(".",",")}`);
       window.open(`https://wa.me/${WA_REVISTA}?text=${msg}`, "_blank");
     }
     setStatus("sucesso");
@@ -15253,24 +15252,15 @@ function RevistaFormPage() {
               </div>
             </div>
 
-            {/* Versões */}
+            {/* Quantidade */}
             <div style={{ marginBottom:24 }}>
-              <div style={labelStyle}>Quantidades — R${REVISTA_PRECO},00 por unidade</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 16px" }}>
-                  <div>
-                    <div style={{ fontWeight:600, fontSize:13 }}>Versão Regular</div>
-                    <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>The Shape of Beauty</div>
-                  </div>
-                  <Qty val={qtdReg} set={setQtdReg} />
+              <div style={labelStyle}>Quantidade — R${REVISTA_PRECO},00 por unidade</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
+                <div>
+                  <div style={{ fontWeight:600, fontSize:13 }}>NYLON JAPAN — HAN</div>
+                  <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>capa frente e verso · outubro 2026</div>
                 </div>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 16px" }}>
-                  <div>
-                    <div style={{ fontWeight:600, fontSize:13 }}>Versão Guys</div>
-                    <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>guys edition</div>
-                  </div>
-                  <Qty val={qtdGuys} set={setQtdGuys} />
-                </div>
+                <Qty val={qtd} set={setQtd} />
               </div>
               {total > 0 && (
                 <div style={{ marginTop:14, fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)", textAlign:"right" }}>
