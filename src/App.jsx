@@ -15038,6 +15038,7 @@ function AdminRevista({ onCountChange }) {
   const aguardando = (pedidos || []).filter(p => p.status === "aguardando").length;
 
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+  const labelStatus = s => s === "confirmado" ? "confirmado" : s === "cancelado" ? "cancelado" : s === "cartao_whatsapp" ? "confirmar pagamento — aguarde atualização na planilha" : "aguardando";
 
   return (
     <div style={{ padding:"24px 0" }}>
@@ -15079,7 +15080,7 @@ function AdminRevista({ onCountChange }) {
                 </div>
                 {/* Lado direito — status + ações */}
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
-                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status), textAlign:"right" }}>{labelStatus(p.status)}</span>
                   {p.status === "aguardando" && (
                     <div style={{ display:"flex", gap:6 }}>
                       <button onClick={() => confirmar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
