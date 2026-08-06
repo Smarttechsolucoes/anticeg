@@ -15081,7 +15081,7 @@ function AdminRevista({ onCountChange }) {
                 {/* Lado direito — status + ações */}
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
                   <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status), textAlign:"right" }}>{labelStatus(p.status)}</span>
-                  {p.status === "aguardando" && (
+                  {(p.status === "aguardando" || p.status === "cartao_whatsapp") && (
                     <div style={{ display:"flex", gap:6 }}>
                       <button onClick={() => confirmar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
                       <button onClick={() => cancelar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
