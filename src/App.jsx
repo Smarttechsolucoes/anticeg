@@ -15027,20 +15027,20 @@ const MEMBER_VER  = ["Bang Chan","Lee Know","Changbin","Hyunjin","HAN","Felix","
 const SKZOO_TASY  = [...SKZOO_VER, "Tasy"];
 
 const POPUP_ITEMS = [
-  { id:1,  preco:73,  nome:"SKZOO CAPSULE ACRYLIC KEYRING", dim:"6,3 × 6,3 cm",                                    mat:"Acrílico e metal",              ver:SKZOO_VER },
-  { id:2,  preco:73,  nome:"SKZOO SPINNING MAGNET",          dim:"5,5 × 5,5 cm",                                    mat:"Acrílico, ímã e metal",         ver:SKZOO_VER },
-  { id:3,  preco:50,  nome:"SKZOO MICRO STICKER",            dim:"9 × 15 cm",                                       mat:"PP e epóxi",                    ver:null },
-  { id:4,  preco:118, nome:"NECKLACE",                       dim:"Corrente 60 cm · pingente 2,2 × 2,2 cm",          mat:"Aço inoxidável 304",            ver:null },
-  { id:5,  preco:88,  nome:"MESH POUCH",                     dim:"19 × 14 × 6 cm",                                  mat:"PVC e poliéster",               ver:null },
-  { id:6,  preco:60,  nome:"PHOTO KEYRING",                  dim:"5,5 × 5,5 cm",                                    mat:"Acrílico e metal",              ver:MEMBER_VER },
-  { id:7,  preco:50,  nome:"TATTOO STICKER",                 dim:"9 × 12 cm",                                       mat:"PP",                            ver:null, nota:"2 unidades" },
-  { id:8,  preco:60,  nome:"SKZOO MIRROR KEYRING",           dim:"3 × 3 cm",                                        mat:"Metal, espelho, epóxi e papel", ver:SKZOO_VER },
-  { id:9,  preco:220, nome:"T-SHIRT",                        dim:"Tamanho único",                                   mat:"Algodão e papel",               ver:null, nota:"Inclui 8 photocards" },
-  { id:10, preco:350, nome:"MESH LONG SLEEVE",               dim:"Tamanho único",                                   mat:"Poliéster e papel",             ver:null, nota:"Inclui 4 photocards" },
-  { id:11, preco:105, nome:"PLUSH MAGNETIC HOLDER",          dim:"6 × 6 × 4 cm · photocard 5,5 × 8,5 cm",          mat:"Poliéster, ABS, ímã e papel",   ver:SKZOO_TASY },
-  { id:12, preco:120, nome:"SKZOO COSTUME PLUSH KEYRING",    dim:"10 cm",                                           mat:"Poliéster e metal",             ver:SKZOO_VER },
-  { id:13, preco:105, nome:"PLUSH KEYRING ICECREAM Ver.",    dim:"5 × 8 cm",                                        mat:"Poliéster e metal",             ver:SKZOO_TASY },
-  { id:14, preco:100, nome:"SKZOO ACRYLIC CONTAINER BOX",   dim:"6 × 6 × 6 cm · photocard 5,5 × 8,5 cm",          mat:"Acrílico e papel",              ver:SKZOO_VER },
+  { id:1,  preco:73,  krw:15000, nome:"SKZOO CAPSULE ACRYLIC KEYRING", dim:"6,3 × 6,3 cm",                                    mat:"Acrílico e metal",              ver:SKZOO_VER },
+  { id:2,  preco:73,  krw:15000, nome:"SKZOO SPINNING MAGNET",          dim:"5,5 × 5,5 cm",                                    mat:"Acrílico, ímã e metal",         ver:SKZOO_VER },
+  { id:3,  preco:50,  krw:10000, nome:"SKZOO MICRO STICKER",            dim:"9 × 15 cm",                                       mat:"PP e epóxi",                    ver:null },
+  { id:4,  preco:118, krw:24000, nome:"NECKLACE",                       dim:"Corrente 60 cm · pingente 2,2 × 2,2 cm",          mat:"Aço inoxidável 304",            ver:null },
+  { id:5,  preco:88,  krw:18000, nome:"MESH POUCH",                     dim:"19 × 14 × 6 cm",                                  mat:"PVC e poliéster",               ver:null },
+  { id:6,  preco:60,  krw:12000, nome:"PHOTO KEYRING",                  dim:"5,5 × 5,5 cm",                                    mat:"Acrílico e metal",              ver:MEMBER_VER },
+  { id:7,  preco:50,  krw:10000, nome:"TATTOO STICKER",                 dim:"9 × 12 cm",                                       mat:"PP",                            ver:null, nota:"2 unidades" },
+  { id:8,  preco:60,  krw:12000, nome:"SKZOO MIRROR KEYRING",           dim:"3 × 3 cm",                                        mat:"Metal, espelho, epóxi e papel", ver:SKZOO_VER },
+  { id:9,  preco:220, krw:48000, nome:"T-SHIRT",                        dim:"Tamanho único",                                   mat:"Algodão e papel",               ver:null, nota:"Inclui 8 photocards" },
+  { id:10, preco:350, krw:78000, nome:"MESH LONG SLEEVE",               dim:"Tamanho único",                                   mat:"Poliéster e papel",             ver:null, nota:"Inclui 4 photocards" },
+  { id:11, preco:105, krw:23000, nome:"PLUSH MAGNETIC HOLDER",          dim:"6 × 6 × 4 cm · photocard 5,5 × 8,5 cm",          mat:"Poliéster, ABS, ímã e papel",   ver:SKZOO_TASY },
+  { id:12, preco:120, krw:26000, nome:"SKZOO COSTUME PLUSH KEYRING",    dim:"10 cm",                                           mat:"Poliéster e metal",             ver:SKZOO_VER },
+  { id:13, preco:105, krw:22000, nome:"PLUSH KEYRING ICECREAM Ver.",    dim:"5 × 8 cm",                                        mat:"Poliéster e metal",             ver:SKZOO_TASY },
+  { id:14, preco:100, krw:20000, nome:"SKZOO ACRYLIC CONTAINER BOX",   dim:"6 × 6 × 6 cm · photocard 5,5 × 8,5 cm",          mat:"Acrílico e papel",              ver:SKZOO_VER },
 ];
 
 function PopupItemCard({ item, qtds, setQtd, mono }) {
@@ -15150,6 +15150,26 @@ const POPUP_WEEKS = [
   },
 ];
 
+function calcQtdBRL(qtds) {
+  return Object.entries(qtds).filter(([,v])=>v>0).reduce((s,[key,qtd]) => {
+    const item = POPUP_ITEMS.find(i => i.id === Number(key.split("_")[0]));
+    return s + (item?.preco||0)*qtd;
+  }, 0);
+}
+function calcQtdKRW(qtds) {
+  return Object.entries(qtds).filter(([,v])=>v>0).reduce((s,[key,qtd]) => {
+    const item = POPUP_ITEMS.find(i => i.id === Number(key.split("_")[0]));
+    return s + (item?.krw||0)*qtd;
+  }, 0);
+}
+function buildItemsFromQtds(qtds, week) {
+  return Object.entries(qtds).filter(([,v])=>v>0).map(([key,qtd]) => {
+    const [idStr,...verParts] = key.split("_");
+    const item = POPUP_ITEMS.find(i => i.id === Number(idStr));
+    return { item_id:item.id, item_nome:item.nome, versao:verParts.join("_")||null, qtd, week };
+  });
+}
+
 function PopupThisAndThatPage() {
   const mono = "'DM Mono',monospace";
   const now  = new Date();
@@ -15157,9 +15177,9 @@ function PopupThisAndThatPage() {
   const [nome,    setNome]    = useState("");
   const [email,   setEmail]   = useState("");
   const [social,  setSocial]  = useState("");
-  const firstOpen = POPUP_WEEKS.find(w => now <= w.deadline);
-  const [week,    setWeek]    = useState(firstOpen?.id || "01");
-  const [qtds,    setQtds]    = useState({});
+  const [qtds1,   setQtds1]   = useState({});
+  const [qtds2,   setQtds2]   = useState({});
+  const [step,    setStep]    = useState("form"); // "form" | "resumo" | "sucesso"
   const [status,  setStatus]  = useState("idle");
   const [erro,    setErro]    = useState("");
   const [pedidoId,setPedidoId]= useState(null);
@@ -15178,135 +15198,236 @@ function PopupThisAndThatPage() {
     } catch {}
   }, []);
 
-  function setQtd(key, val) {
-    setQtds(prev => { const next = {...prev}; if (val <= 0) delete next[key]; else next[key] = val; return next; });
+  function makeSetQtd(setQtds) {
+    return (key, val) => setQtds(prev => { const next={...prev}; if(val<=0) delete next[key]; else next[key]=val; return next; });
   }
 
-  const temItens = Object.values(qtds).some(v => v > 0);
-  const totalBRL = Object.entries(qtds).filter(([,v])=>v>0).reduce((s,[key,qtd]) => {
-    const idStr = key.split("_")[0];
-    const item  = POPUP_ITEMS.find(i => i.id === Number(idStr));
-    return s + (item?.preco || 0) * qtd;
-  }, 0);
-
-  function buildItensList() {
-    return Object.entries(qtds).filter(([,v])=>v>0).map(([key,qtd]) => {
-      const [idStr,...verParts] = key.split("_");
-      const item = POPUP_ITEMS.find(i => i.id === Number(idStr));
-      return { item_id:item.id, item_nome:item.nome, versao:verParts.join("_")||null, qtd };
-    });
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!temItens || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 item."); return; }
-    setStatus("enviando"); setErro("");
-    const { data, error } = await supabase.from("pedidos_popup").insert([{
-      claim: claim.trim()||null, nome:nome.trim(), email:email.trim(),
-      social:social.trim()||null, week, itens:buildItensList(), status:"pendente",
-    }]).select().single();
-    if (error) { setStatus("idle"); setErro("Erro: "+(error.message||JSON.stringify(error))); return; }
-    setPedidoId(data.id);
-    setStatus("sucesso");
-  }
+  const w1 = POPUP_WEEKS[0], w2 = POPUP_WEEKS[1];
+  const w1closed = now > w1.deadline, w2closed = now > w2.deadline;
+  const tem1 = Object.values(qtds1).some(v=>v>0);
+  const tem2 = Object.values(qtds2).some(v=>v>0);
+  const temItens = tem1 || tem2;
+  const brl1 = calcQtdBRL(qtds1), brl2 = calcQtdBRL(qtds2);
+  const krw1 = calcQtdKRW(qtds1), krw2 = calcQtdKRW(qtds2);
+  const pc1  = Math.floor(krw1/30000), pc2 = Math.floor(krw2/30000);
+  const totalBRL = brl1 + brl2;
 
   const labelStyle = { fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.4)", textTransform:"uppercase", display:"block", marginBottom:6 };
   const inputStyle = { width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:13, outline:"none" };
 
-  if (status === "sucesso") return (
+  async function confirmarPedido() {
+    setErro(""); setStatus("enviando");
+    const semanas = [tem1?"01":null,tem2?"02":null].filter(Boolean).join(",");
+    const itens   = [...buildItemsFromQtds(qtds1,"01"), ...buildItemsFromQtds(qtds2,"02")];
+    const { data, error } = await supabase.from("pedidos_popup").insert([{
+      claim:claim.trim()||null, nome:nome.trim(), email:email.trim(),
+      social:social.trim()||null, week:semanas, itens, status:"pendente",
+    }]).select().single();
+    if (error) { setStatus("idle"); setErro("Erro: "+(error.message||JSON.stringify(error))); return; }
+    setPedidoId(data.id); setStep("sucesso");
+  }
+
+  function irParaResumo() {
+    if (!nome.trim() || !email.trim()) { setErro("Preencha nome e e-mail."); return; }
+    if (!temItens) { setErro("Selecione ao menos 1 item."); return; }
+    setErro(""); setStep("resumo");
+  }
+
+  // ── Sucesso ──────────────────────────────────────────────────
+  if (step === "sucesso") return (
     <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
       <div style={{ maxWidth:480, width:"100%", textAlign:"center" }}>
-        <div style={{ fontSize:40, marginBottom:16 }}>✓</div>
+        <div style={{ fontSize:48, marginBottom:16 }}>✓</div>
         <div style={{ fontSize:20, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
-        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:8 }}>
-          Week {week}{pedidoId && <span style={{ opacity:.5 }}> · #{pedidoId}</span>}
+        {pedidoId && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", marginBottom:16 }}>#{pedidoId}</div>}
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", lineHeight:1.8 }}>
+          Aguarde as informações de pagamento.<br />
+          O formulário de pagamento deve ser preenchido até a data combinada, caso contrário o item será cancelado.
         </div>
-        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Aguarde as informações de pagamento.</div>
       </div>
+    </div>
+  );
+
+  // ── Resumo ────────────────────────────────────────────────────
+  if (step === "resumo") {
+    const ResumoWeek = ({ label, qtds, brl, krw, pc }) => {
+      const itens = buildItemsFromQtds(qtds, "");
+      if (!itens.length) return null;
+      return (
+        <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+          <div style={{ fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"1px", color:"var(--laranja)", marginBottom:10 }}>{label}</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12 }}>
+            {itens.map((it,i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                <span style={{ fontFamily:mono, fontSize:11 }}>{it.qtd}x {it.item_nome}{it.versao?` — ${it.versao}`:""}</span>
+                <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", flexShrink:0 }}>R$ {(POPUP_ITEMS.find(p=>p.id===it.item_id)?.preco||0)*it.qtd},00</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10 }}>
+            <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Subtotal</span>
+            <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ {brl},00</span>
+          </div>
+          {pc > 0 && (
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:6 }}>
+              ≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""} (₩{krw.toLocaleString()} ÷ ₩30.000)
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"48px 16px" }}>
+        <div style={{ maxWidth:560, margin:"0 auto", display:"flex", flexDirection:"column", gap:20 }}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.35)", marginBottom:8 }}>RESUMO DO PEDIDO</div>
+            <div style={{ fontSize:20, fontWeight:900 }}>POP-UP THIS & THAT</div>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>{nome} · {email}</div>
+          </div>
+          <ResumoWeek label="WEEK 01 · 08/08 — 12/08" qtds={qtds1} brl={brl1} krw={krw1} pc={pc1} />
+          <ResumoWeek label="WEEK 02 · 13/08 — 19/08" qtds={qtds2} brl={brl2} krw={krw2} pc={pc2} />
+          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total geral</span>
+            <span style={{ fontFamily:mono, fontSize:20, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL},00</span>
+          </div>
+          {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b" }}>{erro}</div>}
+          <div style={{ display:"flex", gap:10 }}>
+            <button type="button" onClick={()=>setStep("form")}
+              style={{ flex:1, padding:"14px", borderRadius:10, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:"1px" }}>
+              ← ALTERAR PEDIDO
+            </button>
+            <button type="button" onClick={confirmarPedido} disabled={status==="enviando"}
+              style={{ flex:2, padding:"14px", borderRadius:10, border:"none", background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:13, fontWeight:700, cursor:status==="enviando"?"not-allowed":"pointer", opacity:status==="enviando"?.7:1, letterSpacing:"1px" }}>
+              {status==="enviando"?"ENVIANDO...":"CONFIRMAR PEDIDO"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Formulário ────────────────────────────────────────────────
+  const WeekSection = ({ wk, closed, qtds, setQtd }) => (
+    <div style={{ border:`1px solid ${closed?"rgba(245,240,232,.06)":"rgba(245,240,232,.1)"}`, borderRadius:12, overflow:"hidden", opacity:closed?.5:1 }}>
+      <div style={{ display:"flex", gap:0 }}>
+        {wk.img && <img src={wk.img} alt={`Week ${wk.id}`} style={{ width:"40%", maxWidth:180, objectFit:"cover", flexShrink:0 }} onError={e=>{e.target.style.display="none"}} />}
+        <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", justifyContent:"center", gap:4 }}>
+          <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, letterSpacing:"1px", color:closed?"rgba(245,240,232,.3)":"var(--offwhite)" }}>WEEK {wk.id}{closed?" · encerrada":""}</div>
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{wk.periodo}</div>
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)" }}>Pagamento até {wk.pagamento}</div>
+        </div>
+      </div>
+      {!closed && (
+        <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 12px", display:"flex", flexDirection:"column", gap:8 }}>
+          {POPUP_ITEMS.map(item => (
+            <PopupItemCard key={item.id} item={item} qtds={qtds} setQtd={setQtd} mono={mono} />
+          ))}
+          {Object.values(qtds).some(v=>v>0) && (() => {
+            const brl = calcQtdBRL(qtds), krw = calcQtdKRW(qtds), pc = Math.floor(krw/30000);
+            return (
+              <div style={{ marginTop:4, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.15)", borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+                <div>
+                  <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ {brl},00</div>
+                  {pc>0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", marginTop:2 }}>≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""}</div>}
+                </div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>₩{krw.toLocaleString()} total</div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 
   return (
     <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"48px 16px" }}>
-      <div style={{ maxWidth:560, margin:"0 auto" }}>
-        <div style={{ marginBottom:32, textAlign:"center" }}>
+      <div style={{ maxWidth:560, margin:"0 auto", display:"flex", flexDirection:"column", gap:24 }}>
+
+        {/* Header */}
+        <div style={{ textAlign:"center" }}>
           <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.35)", marginBottom:8 }}>PRÉ-VENDA</div>
           <div style={{ fontSize:24, fontWeight:900, letterSpacing:"-0.5px", marginBottom:4 }}>POP-UP THIS & THAT</div>
           <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Stray Kids</div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:24 }}>
-          {/* Semana */}
-          <div>
-            <label style={labelStyle}>Semana</label>
-            <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-              {POPUP_WEEKS.map(w => {
-                const closed   = now > w.deadline;
-                const selected = week === w.id && !closed;
-                return (
-                  <button key={w.id} type="button" onClick={()=>{ if(!closed) setWeek(w.id); }}
-                    style={{ flex:1, minWidth:140, borderRadius:12, border:`1px solid ${selected?"var(--laranja)":closed?"rgba(245,240,232,.06)":"rgba(245,240,232,.12)"}`, background:selected?"rgba(255,92,26,.08)":closed?"rgba(245,240,232,.02)":"transparent", cursor:closed?"default":"pointer", padding:0, overflow:"hidden", opacity:closed?.5:1, textAlign:"left" }}>
-                    {w.img && <img src={w.img} alt={`Week ${w.id}`} style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", display:"block" }} onError={e=>{e.target.style.display="none"}} />}
-                    <div style={{ padding:"10px 12px" }}>
-                      <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:selected?"var(--laranja)":closed?"rgba(245,240,232,.3)":"rgba(245,240,232,.7)", letterSpacing:"1px", marginBottom:3 }}>WEEK {w.id}{closed?" · encerrada":""}</div>
-                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)" }}>{w.periodo}</div>
-                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>Pagamento até {w.pagamento}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginTop:10, lineHeight:1.5 }}>
-              A cada <span style={{ color:"var(--laranja)", fontWeight:700 }}>₩30.000</span> você ganha <span style={{ color:"var(--laranja)", fontWeight:700 }}>1 photocard aleatório</span> referente à semana selecionada.
+        {/* Informações */}
+        <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"16px 18px", display:"flex", flexDirection:"column", gap:8 }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)", marginBottom:4 }}>INFORMAÇÕES IMPORTANTES</div>
+          {[
+            "Item em PRÉ-VENDA.",
+            "Itens comprados diretamente pela GOM, sem proxy/seller.",
+            "Trajeto: Coreia › Brasil via FEDEX.",
+            "A caixa será taxada pela receita federal; o envio é feito por CNPJ para garantir a segurança.",
+            "A Soundwave irá fazer os envios a partir de 10 de Novembro.",
+            "Envio internacional somente em Janeiro, mediante combinado pela maioria do grupo.",
+          ].map((t,i) => (
+            <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>☆ {t}</div>
+          ))}
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>
+            ☆ <a href="https://chat.whatsapp.com/DLenhliVlQE8WcUapjLgY8" target="_blank" rel="noopener noreferrer" style={{ color:"var(--laranja)" }}>Grupo da CEG no WhatsApp</a> — acompanhe as atualizações.
+          </div>
+          <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", marginTop:4, paddingTop:8, display:"flex", flexDirection:"column", gap:6 }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)" }}>REGRAS</div>
+            {[
+              "O preenchimento desse formulário será considerado como claim e não poderá ser cancelado.",
+              "Caso queira adicionar algum item, preencha o formulário apenas com os itens adicionais.",
+              "Seu pedido será cancelado sem possibilidade de recompra caso não efetue o pagamento até o dia combinado.",
+              "Caso o formulário de pagamento não esteja preenchido, seu item será cancelado e o valor reembolsado.",
+            ].map((t,i) => (
+              <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", lineHeight:1.5 }}>☆ {t}</div>
+            ))}
+          </div>
+          <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", marginTop:4, paddingTop:8 }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>PAGAMENTO</div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", lineHeight:1.6 }}>
+              ☆ Pix ou cartão até 12x <span style={{ color:"rgba(245,240,232,.35)" }}>(com juros)</span>.<br />
+              ☆ A cada <span style={{ color:"var(--laranja)", fontWeight:700 }}>₩30.000</span> você ganha <span style={{ color:"var(--laranja)", fontWeight:700 }}>1 photocard aleatório</span> da semana selecionada.
             </div>
           </div>
+        </div>
 
-          {/* Dados */}
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            {claim && (
-              <div>
-                <label style={labelStyle}>Nome de claim</label>
-                <input style={inputStyle} value={claim} onChange={e=>setClaim(e.target.value)} placeholder="Seu claim" />
-              </div>
-            )}
+        {/* Dados pessoais */}
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.4)" }}>SEUS DADOS</div>
+          {claim && (
             <div>
-              <label style={labelStyle}>Nome do site</label>
-              <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
-            </div>
-            <div>
-              <label style={labelStyle}>E-mail</label>
-              <input style={inputStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" required />
-            </div>
-            <div>
-              <label style={labelStyle}>@ Rede Social</label>
-              <input style={inputStyle} value={social} onChange={e=>setSocial(e.target.value)} placeholder="@seu_usuario" />
-            </div>
-          </div>
-
-          {/* Itens */}
-          <div>
-            <label style={labelStyle}>Itens</label>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {POPUP_ITEMS.map(item => (
-                <PopupItemCard key={item.id} item={item} qtds={qtds} setQtd={setQtd} mono={mono} />
-              ))}
-            </div>
-          </div>
-
-          {temItens && (
-            <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total estimado</span>
-              <span style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL.toLocaleString("pt-BR")},00</span>
+              <label style={labelStyle}>Nome de claim</label>
+              <input style={inputStyle} value={claim} onChange={e=>setClaim(e.target.value)} placeholder="Seu claim" />
             </div>
           )}
+          <div>
+            <label style={labelStyle}>Nome do site</label>
+            <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
+          </div>
+          <div>
+            <label style={labelStyle}>E-mail</label>
+            <input style={inputStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" required />
+          </div>
+          <div>
+            <label style={labelStyle}>@ Rede Social</label>
+            <input style={inputStyle} value={social} onChange={e=>setSocial(e.target.value)} placeholder="@seu_usuario" />
+          </div>
+        </div>
 
-          {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b" }}>{erro}</div>}
+        {/* Weeks */}
+        <WeekSection wk={w1} closed={w1closed} qtds={qtds1} setQtd={makeSetQtd(setQtds1)} />
+        <WeekSection wk={w2} closed={w2closed} qtds={qtds2} setQtd={makeSetQtd(setQtds2)} />
 
-          <button type="submit" disabled={status==="enviando"}
-            style={{ padding:"14px", borderRadius:10, border:"none", background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:13, fontWeight:700, cursor:status==="enviando"?"not-allowed":"pointer", opacity:status==="enviando"?.7:1, letterSpacing:"1px" }}>
-            {status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO"}
-          </button>
-        </form>
+        {/* Total geral */}
+        {temItens && (
+          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total geral</span>
+            <span style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL},00</span>
+          </div>
+        )}
+
+        {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b" }}>{erro}</div>}
+
+        <button type="button" onClick={irParaResumo}
+          style={{ padding:"14px", borderRadius:10, border:"none", background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:13, fontWeight:700, cursor:"pointer", letterSpacing:"1px" }}>
+          VER RESUMO DO PEDIDO →
+        </button>
       </div>
     </div>
   );
