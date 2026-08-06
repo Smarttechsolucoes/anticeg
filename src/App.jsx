@@ -15027,20 +15027,20 @@ const MEMBER_VER  = ["Bang Chan","Lee Know","Changbin","Hyunjin","HAN","Felix","
 const SKZOO_TASY  = [...SKZOO_VER, "Tasy"];
 
 const POPUP_ITEMS = [
-  { id:1,  nome:"SKZOO CAPSULE ACRYLIC KEYRING", dim:"6,3 × 6,3 cm",                                    mat:"Acrílico e metal",              ver:SKZOO_VER },
-  { id:2,  nome:"SKZOO SPINNING MAGNET",          dim:"5,5 × 5,5 cm",                                    mat:"Acrílico, ímã e metal",         ver:SKZOO_VER },
-  { id:3,  nome:"SKZOO MICRO STICKER",            dim:"9 × 15 cm",                                       mat:"PP e epóxi",                    ver:null },
-  { id:4,  nome:"NECKLACE",                       dim:"Corrente 60 cm · pingente 2,2 × 2,2 cm",          mat:"Aço inoxidável 304",            ver:null },
-  { id:5,  nome:"MESH POUCH",                     dim:"19 × 14 × 6 cm",                                  mat:"PVC e poliéster",               ver:null },
-  { id:6,  nome:"PHOTO KEYRING",                  dim:"5,5 × 5,5 cm",                                    mat:"Acrílico e metal",              ver:MEMBER_VER },
-  { id:7,  nome:"TATTOO STICKER",                 dim:"9 × 12 cm",                                       mat:"PP",                            ver:null, nota:"2 unidades" },
-  { id:8,  nome:"SKZOO MIRROR KEYRING",           dim:"3 × 3 cm",                                        mat:"Metal, espelho, epóxi e papel", ver:SKZOO_VER },
-  { id:9,  nome:"T-SHIRT",                        dim:"Tamanho único",                                   mat:"Algodão e papel",               ver:null, nota:"Inclui 8 photocards" },
-  { id:10, nome:"MESH LONG SLEEVE",               dim:"Tamanho único",                                   mat:"Poliéster e papel",             ver:null, nota:"Inclui 4 photocards" },
-  { id:11, nome:"PLUSH MAGNETIC HOLDER",          dim:"6 × 6 × 4 cm · photocard 5,5 × 8,5 cm",          mat:"Poliéster, ABS, ímã e papel",   ver:SKZOO_TASY },
-  { id:12, nome:"SKZOO COSTUME PLUSH KEYRING",    dim:"10 cm",                                           mat:"Poliéster e metal",             ver:SKZOO_VER },
-  { id:13, nome:"PLUSH KEYRING ICECREAM Ver.",    dim:"5 × 8 cm",                                        mat:"Poliéster e metal",             ver:SKZOO_TASY },
-  { id:14, nome:"SKZOO ACRYLIC CONTAINER BOX",   dim:"6 × 6 × 6 cm · photocard 5,5 × 8,5 cm",          mat:"Acrílico e papel",              ver:SKZOO_VER },
+  { id:1,  preco:73,  nome:"SKZOO CAPSULE ACRYLIC KEYRING", dim:"6,3 × 6,3 cm",                                    mat:"Acrílico e metal",              ver:SKZOO_VER },
+  { id:2,  preco:73,  nome:"SKZOO SPINNING MAGNET",          dim:"5,5 × 5,5 cm",                                    mat:"Acrílico, ímã e metal",         ver:SKZOO_VER },
+  { id:3,  preco:50,  nome:"SKZOO MICRO STICKER",            dim:"9 × 15 cm",                                       mat:"PP e epóxi",                    ver:null },
+  { id:4,  preco:118, nome:"NECKLACE",                       dim:"Corrente 60 cm · pingente 2,2 × 2,2 cm",          mat:"Aço inoxidável 304",            ver:null },
+  { id:5,  preco:88,  nome:"MESH POUCH",                     dim:"19 × 14 × 6 cm",                                  mat:"PVC e poliéster",               ver:null },
+  { id:6,  preco:60,  nome:"PHOTO KEYRING",                  dim:"5,5 × 5,5 cm",                                    mat:"Acrílico e metal",              ver:MEMBER_VER },
+  { id:7,  preco:50,  nome:"TATTOO STICKER",                 dim:"9 × 12 cm",                                       mat:"PP",                            ver:null, nota:"2 unidades" },
+  { id:8,  preco:60,  nome:"SKZOO MIRROR KEYRING",           dim:"3 × 3 cm",                                        mat:"Metal, espelho, epóxi e papel", ver:SKZOO_VER },
+  { id:9,  preco:220, nome:"T-SHIRT",                        dim:"Tamanho único",                                   mat:"Algodão e papel",               ver:null, nota:"Inclui 8 photocards" },
+  { id:10, preco:350, nome:"MESH LONG SLEEVE",               dim:"Tamanho único",                                   mat:"Poliéster e papel",             ver:null, nota:"Inclui 4 photocards" },
+  { id:11, preco:105, nome:"PLUSH MAGNETIC HOLDER",          dim:"6 × 6 × 4 cm · photocard 5,5 × 8,5 cm",          mat:"Poliéster, ABS, ímã e papel",   ver:SKZOO_TASY },
+  { id:12, preco:120, nome:"SKZOO COSTUME PLUSH KEYRING",    dim:"10 cm",                                           mat:"Poliéster e metal",             ver:SKZOO_VER },
+  { id:13, preco:105, nome:"PLUSH KEYRING ICECREAM Ver.",    dim:"5 × 8 cm",                                        mat:"Poliéster e metal",             ver:SKZOO_TASY },
+  { id:14, preco:100, nome:"SKZOO ACRYLIC CONTAINER BOX",   dim:"6 × 6 × 6 cm · photocard 5,5 × 8,5 cm",          mat:"Acrílico e papel",              ver:SKZOO_VER },
 ];
 
 function PopupItemCard({ item, qtds, setQtd, mono }) {
@@ -15077,6 +15077,7 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
       <div style={{ minWidth:0 }}>
         <div style={{ fontWeight:700, fontSize:13 }}>{item.nome}</div>
         <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.dim} · {item.mat}{item.nota ? ` · ${item.nota}` : ""}</div>
+        <div style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", marginTop:4 }}>R$ {item.preco},00</div>
       </div>
       {children}
     </div>
@@ -15182,6 +15183,11 @@ function PopupThisAndThatPage() {
   }
 
   const temItens = Object.values(qtds).some(v => v > 0);
+  const totalBRL = Object.entries(qtds).filter(([,v])=>v>0).reduce((s,[key,qtd]) => {
+    const idStr = key.split("_")[0];
+    const item  = POPUP_ITEMS.find(i => i.id === Number(idStr));
+    return s + (item?.preco || 0) * qtd;
+  }, 0);
 
   function buildItensList() {
     return Object.entries(qtds).filter(([,v])=>v>0).map(([key,qtd]) => {
@@ -15286,6 +15292,13 @@ function PopupThisAndThatPage() {
               ))}
             </div>
           </div>
+
+          {temItens && (
+            <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total estimado</span>
+              <span style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL.toLocaleString("pt-BR")},00</span>
+            </div>
+          )}
 
           {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b" }}>{erro}</div>}
 
