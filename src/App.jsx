@@ -15053,12 +15053,25 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
   const borderColor = totalQtd > 0 ? "rgba(255,92,26,.3)" : "rgba(245,240,232,.08)";
   const bg          = totalQtd > 0 ? "rgba(255,92,26,.05)" : "rgba(245,240,232,.03)";
 
+  const imgSrc = `/popup/item-${String(item.id).padStart(2,"0")}.jpg`;
+  const [hasImg, setHasImg] = useState(false);
+
   const Meta = () => (
-    <div style={{ minWidth:0 }}>
-      <div style={{ fontWeight:700, fontSize:13 }}>{item.nome}</div>
-      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.dim} · {item.mat}{item.nota ? ` · ${item.nota}` : ""}</div>
+    <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
+      {hasImg && <img src={imgSrc} alt={item.nome} onError={()=>setHasImg(false)} style={{ width:52, height:52, objectFit:"cover", borderRadius:8, flexShrink:0 }} />}
+      <div style={{ minWidth:0 }}>
+        <div style={{ fontWeight:700, fontSize:13 }}>{item.nome}</div>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.dim} · {item.mat}{item.nota ? ` · ${item.nota}` : ""}</div>
+      </div>
     </div>
   );
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload  = () => setHasImg(true);
+    img.onerror = () => setHasImg(false);
+    img.src = imgSrc;
+  }, [imgSrc]);
 
   if (!item.ver) {
     const key = `${item.id}_`;
