@@ -15124,18 +15124,13 @@ function RevistaFormPage() {
   useEffect(() => {
     try {
       const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
-      if (!u) return;
-      if (u.nome)    setNome(u.nome);
-      if (u.email)   setEmail(u.email);
-      if (u.twitter) setSocial(u.twitter);
-      if (u.cog) {
-        supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
-          .then(({ data: j }) => {
-            if (j?.nome_site) setNome(j.nome_site);
-            if (j?.email)     setEmail(j.email);
-            if (j?.twitter)   setSocial(j.twitter);
-          });
-      }
+      if (!u?.cog) return;
+      supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
+        .then(({ data: j }) => {
+          if (j?.nome_site) setNome(j.nome_site);
+          if (j?.email)     setEmail(j.email);
+          if (j?.twitter)   setSocial(j.twitter);
+        });
     } catch {}
   }, []);
 
