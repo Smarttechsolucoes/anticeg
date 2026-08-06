@@ -15206,11 +15206,9 @@ function RevistaFormPage() {
           )}
         </div>
 
-        {/* Capas */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:28, borderRadius:12, overflow:"hidden" }}>
-          <img src="/nylon-han.jpg" alt="NYLON Regular" style={{ width:"100%", borderRadius:10, objectFit:"cover", aspectRatio:"3/4" }}
-            onError={e => { e.target.style.display="none"; }} />
-          <img src="/nylon-han-guys.jpg" alt="NYLON Guys" style={{ width:"100%", borderRadius:10, objectFit:"cover", aspectRatio:"3/4" }}
+        {/* Capa */}
+        <div style={{ marginBottom:28, borderRadius:12, overflow:"hidden" }}>
+          <img src="/nylon-han.jpg" alt="NYLON JAPAN — HAN" style={{ width:"100%", borderRadius:10, objectFit:"cover", maxHeight:420, objectPosition:"top" }}
             onError={e => { e.target.style.display="none"; }} />
         </div>
 
