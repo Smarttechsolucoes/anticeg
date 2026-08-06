@@ -7989,6 +7989,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [preCadastros, setPreCadastros] = useState([]);
   const [mercariPedidos, setMercariPedidos] = useState([]);
   const [revistaCount,   setRevistaCount]   = useState(0);
+  const [popupCount,     setPopupCount]     = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
@@ -8386,6 +8387,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setMercariPedidos(data); });
     supabase.from("pedidos_revista").select("id", { count: "exact", head: true }).eq("status", "aguardando")
       .then(({ count }) => { if (count) setRevistaCount(count); });
+    supabase.from("pedidos_popup").select("id", { count: "exact", head: true }).eq("status", "pendente")
+      .then(({ count }) => { if (count != null) setPopupCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8641,6 +8644,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {nav("revista", "Revista Nylon", "◈", revistaCount)}
+                {nav("popup", "Pop-up This & That", "◉", popupCount)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
               </div>
               {(temAcesso("envios") || owner) && (
@@ -9278,6 +9282,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {adminMainTab === "revista" && <AdminRevista onCountChange={setRevistaCount} />}
+      {adminMainTab === "popup"   && <AdminPopup   onCountChange={setPopupCount} />}
 
       {adminMainTab === "storage" && owner && (() => {
         async function buscarStorageJoiner(joinerData) {
@@ -15016,6 +15021,301 @@ function AccessibilityWidget() {
   );
 }
 
+// ── Pop-up This & That ─────────────────────────────────────────
+const SKZOO_VER   = ["Wolf Chan","Leebit","DWAEKKI","Jiniret","HAN QUOKKA","BbokAri","PuppyM","FoxI.Ny"];
+const MEMBER_VER  = ["Bang Chan","Lee Know","Changbin","Hyunjin","HAN","Felix","Seungmin","I.N"];
+const SKZOO_TASY  = [...SKZOO_VER, "Tasy"];
+
+const POPUP_ITEMS = [
+  { id:1,  nome:"SKZOO CAPSULE ACRYLIC KEYRING", dim:"6,3 × 6,3 cm",                                    mat:"Acrílico e metal",              ver:SKZOO_VER },
+  { id:2,  nome:"SKZOO SPINNING MAGNET",          dim:"5,5 × 5,5 cm",                                    mat:"Acrílico, ímã e metal",         ver:SKZOO_VER },
+  { id:3,  nome:"SKZOO MICRO STICKER",            dim:"9 × 15 cm",                                       mat:"PP e epóxi",                    ver:null },
+  { id:4,  nome:"NECKLACE",                       dim:"Corrente 60 cm · pingente 2,2 × 2,2 cm",          mat:"Aço inoxidável 304",            ver:null },
+  { id:5,  nome:"MESH POUCH",                     dim:"19 × 14 × 6 cm",                                  mat:"PVC e poliéster",               ver:null },
+  { id:6,  nome:"PHOTO KEYRING",                  dim:"5,5 × 5,5 cm",                                    mat:"Acrílico e metal",              ver:MEMBER_VER },
+  { id:7,  nome:"TATTOO STICKER",                 dim:"9 × 12 cm",                                       mat:"PP",                            ver:null, nota:"2 unidades" },
+  { id:8,  nome:"SKZOO MIRROR KEYRING",           dim:"3 × 3 cm",                                        mat:"Metal, espelho, epóxi e papel", ver:SKZOO_VER },
+  { id:9,  nome:"T-SHIRT",                        dim:"Tamanho único",                                   mat:"Algodão e papel",               ver:null, nota:"Inclui 8 photocards" },
+  { id:10, nome:"MESH LONG SLEEVE",               dim:"Tamanho único",                                   mat:"Poliéster e papel",             ver:null, nota:"Inclui 4 photocards" },
+  { id:11, nome:"PLUSH MAGNETIC HOLDER",          dim:"6 × 6 × 4 cm · photocard 5,5 × 8,5 cm",          mat:"Poliéster, ABS, ímã e papel",   ver:SKZOO_TASY },
+  { id:12, nome:"SKZOO COSTUME PLUSH KEYRING",    dim:"10 cm",                                           mat:"Poliéster e metal",             ver:SKZOO_VER },
+  { id:13, nome:"PLUSH KEYRING ICECREAM Ver.",    dim:"5 × 8 cm",                                        mat:"Poliéster e metal",             ver:SKZOO_TASY },
+  { id:14, nome:"SKZOO ACRYLIC CONTAINER BOX",   dim:"6 × 6 × 6 cm · photocard 5,5 × 8,5 cm",          mat:"Acrílico e papel",              ver:SKZOO_VER },
+];
+
+function PopupItemCard({ item, qtds, setQtd, mono }) {
+  const totalQtd = item.ver
+    ? item.ver.reduce((s,v) => s + (qtds[`${item.id}_${v}`] || 0), 0)
+    : (qtds[`${item.id}_`] || 0);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (totalQtd > 0 && !open) setOpen(true); }, [totalQtd]);
+
+  const borderColor = totalQtd > 0 ? "rgba(255,92,26,.3)" : "rgba(245,240,232,.08)";
+  const bg          = totalQtd > 0 ? "rgba(255,92,26,.05)" : "rgba(245,240,232,.03)";
+
+  const Meta = () => (
+    <div style={{ minWidth:0 }}>
+      <div style={{ fontWeight:700, fontSize:13 }}>{item.nome}</div>
+      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.dim} · {item.mat}{item.nota ? ` · ${item.nota}` : ""}</div>
+    </div>
+  );
+
+  if (!item.ver) {
+    const key = `${item.id}_`;
+    const qty = qtds[key] || 0;
+    return (
+      <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+        <Meta />
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+          <button type="button" onClick={()=>setQtd(key,qty-1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
+          <span style={{ fontFamily:mono,fontSize:16,fontWeight:700,minWidth:20,textAlign:"center" }}>{qty}</span>
+          <button type="button" onClick={()=>setQtd(key,qty+1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, overflow:"hidden" }}>
+      <div style={{ padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
+        <Meta />
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+          {totalQtd > 0 && <span style={{ fontFamily:mono,fontSize:11,color:"var(--laranja)" }}>{totalQtd}x</span>}
+          <span style={{ fontFamily:mono,fontSize:13,color:"rgba(245,240,232,.4)",display:"inline-block",transform:open?"rotate(180deg)":"none",transition:"transform .2s" }}>▾</span>
+        </div>
+      </div>
+      {open && (
+        <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+          {item.ver.map(v => {
+            const key = `${item.id}_${v}`;
+            const qty = qtds[key] || 0;
+            return (
+              <div key={v} style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontFamily:mono,fontSize:11,color:qty>0?"var(--offwhite)":"rgba(245,240,232,.5)" }}>{v}</span>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <button type="button" onClick={()=>setQtd(key,qty-1)} style={{ width:24,height:24,borderRadius:"50%",border:"1px solid rgba(245,240,232,.12)",background:"transparent",color:"var(--offwhite)",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
+                  <span style={{ fontFamily:mono,fontSize:14,fontWeight:700,minWidth:18,textAlign:"center" }}>{qty}</span>
+                  <button type="button" onClick={()=>setQtd(key,qty+1)} style={{ width:24,height:24,borderRadius:"50%",border:"1px solid rgba(245,240,232,.12)",background:"transparent",color:"var(--offwhite)",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PopupThisAndThatPage() {
+  const mono = "'DM Mono',monospace";
+  const [claim,   setClaim]   = useState("");
+  const [nome,    setNome]    = useState("");
+  const [email,   setEmail]   = useState("");
+  const [social,  setSocial]  = useState("");
+  const [week,    setWeek]    = useState("01");
+  const [qtds,    setQtds]    = useState({});
+  const [status,  setStatus]  = useState("idle");
+  const [erro,    setErro]    = useState("");
+  const [pedidoId,setPedidoId]= useState(null);
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
+      if (!u?.cog) return;
+      setClaim(u.cog);
+      supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
+        .then(({ data: j }) => {
+          if (j?.nome_site) setNome(j.nome_site);
+          if (j?.email)     setEmail(j.email);
+          if (j?.twitter)   setSocial(j.twitter);
+        });
+    } catch {}
+  }, []);
+
+  function setQtd(key, val) {
+    setQtds(prev => { const next = {...prev}; if (val <= 0) delete next[key]; else next[key] = val; return next; });
+  }
+
+  const temItens = Object.values(qtds).some(v => v > 0);
+
+  function buildItensList() {
+    return Object.entries(qtds).filter(([,v])=>v>0).map(([key,qtd]) => {
+      const [idStr,...verParts] = key.split("_");
+      const item = POPUP_ITEMS.find(i => i.id === Number(idStr));
+      return { item_id:item.id, item_nome:item.nome, versao:verParts.join("_")||null, qtd };
+    });
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!temItens || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 item."); return; }
+    setStatus("enviando"); setErro("");
+    const { data, error } = await supabase.from("pedidos_popup").insert([{
+      claim: claim.trim()||null, nome:nome.trim(), email:email.trim(),
+      social:social.trim()||null, week, itens:buildItensList(), status:"pendente",
+    }]).select().single();
+    if (error) { setStatus("idle"); setErro("Erro: "+(error.message||JSON.stringify(error))); return; }
+    setPedidoId(data.id);
+    setStatus("sucesso");
+  }
+
+  const labelStyle = { fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.4)", textTransform:"uppercase", display:"block", marginBottom:6 };
+  const inputStyle = { width:"100%", boxSizing:"border-box", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:13, outline:"none" };
+
+  if (status === "sucesso") return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ maxWidth:480, width:"100%", textAlign:"center" }}>
+        <div style={{ fontSize:40, marginBottom:16 }}>✓</div>
+        <div style={{ fontSize:20, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:8 }}>
+          Week {week}{pedidoId && <span style={{ opacity:.5 }}> · #{pedidoId}</span>}
+        </div>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Aguarde as informações de pagamento.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"48px 16px" }}>
+      <div style={{ maxWidth:560, margin:"0 auto" }}>
+        <div style={{ marginBottom:32, textAlign:"center" }}>
+          <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.35)", marginBottom:8 }}>PRÉ-VENDA</div>
+          <div style={{ fontSize:24, fontWeight:900, letterSpacing:"-0.5px", marginBottom:4 }}>POP-UP THIS & THAT</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Stray Kids</div>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:24 }}>
+          {/* Semana */}
+          <div>
+            <label style={labelStyle}>Semana</label>
+            <div style={{ display:"flex", gap:10 }}>
+              {["01","02"].map(w => (
+                <button key={w} type="button" onClick={()=>setWeek(w)}
+                  style={{ flex:1, padding:"12px", borderRadius:10, border:`1px solid ${week===w?"var(--laranja)":"rgba(245,240,232,.12)"}`, background:week===w?"rgba(255,92,26,.08)":"transparent", color:week===w?"var(--laranja)":"rgba(245,240,232,.6)", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:"1px" }}>
+                  WEEK {w}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dados */}
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            {claim && (
+              <div>
+                <label style={labelStyle}>Nome de claim</label>
+                <input style={inputStyle} value={claim} onChange={e=>setClaim(e.target.value)} placeholder="Seu claim" />
+              </div>
+            )}
+            <div>
+              <label style={labelStyle}>Nome do site</label>
+              <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
+            </div>
+            <div>
+              <label style={labelStyle}>E-mail</label>
+              <input style={inputStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" required />
+            </div>
+            <div>
+              <label style={labelStyle}>@ Rede Social</label>
+              <input style={inputStyle} value={social} onChange={e=>setSocial(e.target.value)} placeholder="@seu_usuario" />
+            </div>
+          </div>
+
+          {/* Itens */}
+          <div>
+            <label style={labelStyle}>Itens</label>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {POPUP_ITEMS.map(item => (
+                <PopupItemCard key={item.id} item={item} qtds={qtds} setQtd={setQtd} mono={mono} />
+              ))}
+            </div>
+          </div>
+
+          {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b" }}>{erro}</div>}
+
+          <button type="submit" disabled={status==="enviando"}
+            style={{ padding:"14px", borderRadius:10, border:"none", background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:13, fontWeight:700, cursor:status==="enviando"?"not-allowed":"pointer", opacity:status==="enviando"?.7:1, letterSpacing:"1px" }}>
+            {status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AdminPopup({ onCountChange }) {
+  const mono = "'DM Mono',monospace";
+  const [pedidos, setPedidos] = useState([]);
+
+  useEffect(() => {
+    supabase.from("pedidos_popup").select("*").order("created_at", { ascending:false })
+      .then(({ data }) => { if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status==="pendente").length); } });
+  }, []);
+
+  async function atualizar(id, novoStatus) {
+    await supabase.from("pedidos_popup").update({ status:novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id===id ? {...p,status:novoStatus} : p);
+      onCountChange?.(next.filter(p=>p.status==="pendente").length);
+      return next;
+    });
+  }
+
+  const corStatus = s => s==="confirmado"?"#4ade80":s==="cancelado"?"#ff6b6b":"rgba(255,92,26,.8)";
+
+  const tots = { pedidos:pedidos.length, pendentes:pedidos.filter(p=>p.status==="pendente").length };
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:20 }}>POP-UP THIS & THAT</div>
+      <div style={{ display:"flex", gap:12, marginBottom:24, flexWrap:"wrap" }}>
+        {[["Pedidos",tots.pedidos],["Pendentes",tots.pendentes]].map(([l,v])=>(
+          <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 20px", minWidth:110 }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:6 }}>{l.toUpperCase()}</div>
+            <div style={{ fontSize:22, fontWeight:900 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {pedidos.length===0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+        {pedidos.map(p => (
+          <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="pendente"?"rgba(255,92,26,.2)":p.status==="confirmado"?"rgba(74,222,128,.15)":"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:4, minWidth:0 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                  {p.claim && p.claim !== p.nome && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)" }}>{p.claim}</span>}
+                  {p.social && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>{p.social}</span>}
+                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                </div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)" }}>{p.email}</div>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>Week {p.week}</div>
+                {Array.isArray(p.itens) && p.itens.length > 0 && (
+                  <div style={{ marginTop:6, display:"flex", flexDirection:"column", gap:3 }}>
+                    {p.itens.map((it,i) => (
+                      <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)" }}>
+                        {it.qtd}x {it.item_nome}{it.versao ? ` — ${it.versao}` : ""}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                {p.status === "pendente" && (
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={()=>atualizar(p.id,"confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                    <button onClick={()=>atualizar(p.id,"cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Admin: pedidos da revista ───────────────────────────────────
 function AdminRevista({ onCountChange }) {
   const [pedidos, setPedidos] = useState(null);
@@ -15625,6 +15925,7 @@ export default function App() {
     );
   }
   if (window.location.pathname === "/revista") return <RevistaFormPage />;
+  if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
 
