@@ -15421,12 +15421,27 @@ function PopupThisAndThatPage() {
               {Object.values(activeQtds).some(v=>v>0) && (() => {
                 const brl = calcQtdBRL(activeQtds), krw = calcQtdKRW(activeQtds), pc = Math.floor(krw/30000);
                 return (
-                  <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.15)", borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
-                    <div>
-                      <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ {brl},00</div>
-                      {pc>0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", marginTop:2 }}>≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""}</div>}
+                  <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontFamily:mono, fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.4)" }}>SUBTOTAL WEEK {activeWeek}</span>
+                      <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>₩{krw.toLocaleString()}</span>
                     </div>
-                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>₩{krw.toLocaleString()}</div>
+                    <div style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"var(--laranja)" }}>R$ {brl},00</div>
+                    {pc > 0 ? (
+                      <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 12px" }}>
+                        <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>
+                          ≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""} — WEEK {activeWeek}
+                        </div>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>
+                          Valor aproximado e pode variar. Calculado com base em ₩{krw.toLocaleString()} ÷ ₩30.000 por photocard.
+                          O photocard é referente exclusivamente à <span style={{ color:"var(--offwhite)" }}>Week {activeWeek}</span> — o valor de cada semana é contado separadamente.
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", lineHeight:1.5 }}>
+                        A cada ₩30.000 você ganha 1 photocard da Week {activeWeek}. Valor atual: ₩{krw.toLocaleString()} — adicione mais itens para atingir ₩{30000-krw} restantes.
+                      </div>
+                    )}
                   </div>
                 );
               })()}
