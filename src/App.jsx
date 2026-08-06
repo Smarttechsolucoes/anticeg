@@ -15053,7 +15053,7 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
   const borderColor = totalQtd > 0 ? "rgba(255,92,26,.3)" : "rgba(245,240,232,.08)";
   const bg          = totalQtd > 0 ? "rgba(255,92,26,.05)" : "rgba(245,240,232,.03)";
 
-  const imgSrc = `/popup/item-${String(item.id).padStart(2,"0")}.jpg`;
+  const imgSrc = `/popup/item-${String(item.id).padStart(2,"0")}.png`;
   const [hasImg, setHasImg] = useState(false);
 
   const Meta = () => (
@@ -15125,14 +15125,14 @@ const POPUP_WEEKS = [
     periodo: "08/08 — 12/08",
     deadline: new Date("2026-08-11T23:59:59-03:00"),
     pagamento: "13/08",
-    img: "/pob-week-1.jpg",
+    img: "/popup/pob-week-1.png",
   },
   {
     id: "02",
     periodo: "13/08 — 19/08",
     deadline: new Date("2026-08-18T23:59:59-03:00"),
     pagamento: "19/08",
-    img: "/pob-week-2.jpg",
+    img: "/popup/pob-week-2.png",
   },
 ];
 
