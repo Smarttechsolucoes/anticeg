@@ -3446,6 +3446,12 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     return () => { cancelled = true; };
   }, [user.cog]);
 
+  useEffect(() => {
+    if (perfilSubTab !== "badges" || !user.cog || user.guest) return;
+    supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", dataCog(user.cog))
+      .then(({ data }) => { if (data) setBadgesAntiv(data.map(r => r.badge_slug)); });
+  }, [perfilSubTab, user.cog]);
+
   function reportarProblema() {
     setFeedbackTipo("bug");
     setPerfilSubTab("feedback");
