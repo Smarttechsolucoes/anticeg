@@ -15712,6 +15712,104 @@ function AdminPopup({ onCountChange }) {
   );
 }
 
+// ── Aba Pré-vendas ─────────────────────────────────────────────
+function PrevendaTab({ user }) {
+  const mono = "'DM Mono',monospace";
+  const now  = new Date();
+
+  const REVISTA_DEADLINE_PV = new Date("2026-09-04T23:59:59-03:00");
+  const revistaAberta = now <= REVISTA_DEADLINE_PV;
+
+  const popup01Aberta = now <= POPUP_WEEKS[0].deadline;
+  const popup02Aberta = now <= POPUP_WEEKS[1].deadline;
+  const popupAberto   = popup01Aberta || popup02Aberta;
+
+  const formularios = [
+    {
+      key: "popup",
+      ativo: popupAberto,
+      titulo: "POP-UP THIS & THAT",
+      subtitulo: "Stray Kids",
+      url: "/popup-this-that",
+      img: "/popup/pob-week-1.png",
+      tags: [
+        popup01Aberta ? `Week 01 · até ${POPUP_WEEKS[0].pagamento}` : "Week 01 · encerrada",
+        popup02Aberta ? `Week 02 · até ${POPUP_WEEKS[1].pagamento}` : "Week 02 · encerrada",
+      ],
+      info: "14 itens exclusivos · pagamento após confirmação",
+    },
+    {
+      key: "revista",
+      ativo: revistaAberta,
+      titulo: "REVISTA NYLON HAN",
+      subtitulo: "Nylon Japan",
+      url: "/revista",
+      img: "/nylon-han.jpg",
+      tags: [`Pré-venda · até 04/09`],
+      info: "R$ 68,00 por unidade · PIX ou cartão",
+    },
+    {
+      key: "mercari",
+      ativo: true,
+      titulo: "MERCARI",
+      subtitulo: "Compras no Japão",
+      url: null,
+      tab: "mercari",
+      img: null,
+      tags: ["Aberto"],
+      info: "Solicite itens do Mercari JP",
+    },
+  ];
+
+  return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:20 }}>PRÉ-VENDAS</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        {formularios.map(f => (
+          <div key={f.key} style={{ border:`1px solid ${f.ativo?"rgba(255,92,26,.25)":"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
+            <div style={{ display:"flex", gap:0 }}>
+              {f.img && (
+                <img src={f.img} alt={f.titulo} onError={e=>{e.target.style.display="none"}}
+                  style={{ width:110, flexShrink:0, objectFit:"cover", objectPosition:"top" }} />
+              )}
+              <div style={{ padding:"16px 18px", flex:1, display:"flex", flexDirection:"column", gap:6, justifyContent:"center" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontWeight:900, fontSize:15, letterSpacing:"-0.3px" }}>{f.titulo}</span>
+                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.ativo?"rgba(255,92,26,.15)":"rgba(245,240,232,.06)", color:f.ativo?"var(--laranja)":"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
+                    {f.ativo?"ABERTO":"ENCERRADO"}
+                  </span>
+                </div>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{f.subtitulo}</div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:2 }}>
+                  {f.tags.map((t,i) => (
+                    <span key={i} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.05)", borderRadius:6, padding:"3px 8px" }}>{t}</span>
+                  ))}
+                </div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:2 }}>{f.info}</div>
+              </div>
+            </div>
+            {f.ativo && (
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px" }}>
+                {f.url ? (
+                  <a href={f.url}
+                    style={{ display:"inline-block", padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
+                    PREENCHER FORMULÁRIO →
+                  </a>
+                ) : (
+                  <button onClick={()=>{ window.dispatchEvent(new CustomEvent("anticeg:changetab", {detail: f.tab})); }}
+                    style={{ padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
+                    ACESSAR →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Admin: pedidos da revista ───────────────────────────────────
 function AdminRevista({ onCountChange }) {
   const [pedidos, setPedidos] = useState(null);
@@ -16041,7 +16139,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -16159,6 +16257,12 @@ export default function App() {
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => { if (TAB_SLUGS.includes(e.detail)) changeTab(e.detail); };
+    window.addEventListener("anticeg:changetab", handler);
+    return () => window.removeEventListener("anticeg:changetab", handler);
   }, []);
 
   function handleAdminSubTab(subTab) {
@@ -16530,6 +16634,7 @@ export default function App() {
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "disponiveis" ? "active" : ""}`} onClick={() => changeTab("disponiveis")}>◱ Disponíveis</button>}
+        <button className={`tab-btn ${tab === "prevenda" ? "active" : ""}`} onClick={() => changeTab("prevenda")}>◈ Pré-vendas</button>
         <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button>
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
         <button className={`tab-btn ${tab === "antiversario" ? "active" : ""}`} onClick={() => changeTab("antiversario")}>★ ANTIversário</button>
@@ -16581,6 +16686,7 @@ export default function App() {
       {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
       {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
       {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
+      {tab === "prevenda" && <PrevendaTab user={user} />}
       {tab === "mercari" && <MercariTab />}
       {tab === "regras" && <RegrasTab />}
       {tab === "antiversario" && <AntiversarioTab user={user} />}
