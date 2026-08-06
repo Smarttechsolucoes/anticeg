@@ -15411,6 +15411,21 @@ function PopupThisAndThatPage() {
             })}
           </div>
 
+          {/* Prazo de pagamento em destaque */}
+          {!activeClosed && (() => {
+            const wk = POPUP_WEEKS.find(w => w.id === activeWeek);
+            return (
+              <div style={{ background:"rgba(255,92,26,.08)", border:"2px solid rgba(255,92,26,.35)", borderRadius:12, padding:"16px 18px", marginBottom:4 }}>
+                <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(255,92,26,.7)", marginBottom:6 }}>PRAZO DE PAGAMENTO — WEEK {activeWeek}</div>
+                <div style={{ fontSize:28, fontWeight:900, color:"var(--laranja)", letterSpacing:"-0.5px", marginBottom:4 }}>{wk.pagamento}</div>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", lineHeight:1.6 }}>
+                  Período do formulário: <span style={{ color:"var(--offwhite)" }}>{wk.periodo}</span><br />
+                  O pagamento deve ser efetuado até essa data. Caso contrário, o item será cancelado sem possibilidade de recompra.
+                </div>
+              </div>
+            );
+          })()}
+
           {activeClosed ? (
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", textAlign:"center", padding:"20px 0" }}>Esta semana está encerrada.</div>
           ) : (
