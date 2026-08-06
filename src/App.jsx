@@ -15057,47 +15057,39 @@ function AdminRevista({ onCountChange }) {
             </div>
           ))}
         </div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-            <thead>
-              <tr style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.35)", borderBottom:"1px solid rgba(245,240,232,.08)" }}>
-                {["#","Nome","E-mail","@","Regular","Guys","Total","Pagamento","Status","Comprovante","Ações"].map(h => (
-                  <th key={h} style={{ padding:"8px 10px", textAlign:"left", whiteSpace:"nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pedidos.map(p => (
-                <tr key={p.id} style={{ borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                  <td style={{ padding:"10px", fontFamily:mono, fontSize:10, opacity:.4 }}>{p.id}</td>
-                  <td style={{ padding:"10px", whiteSpace:"nowrap" }}>{p.nome}</td>
-                  <td style={{ padding:"10px", fontFamily:mono, fontSize:11, opacity:.7 }}>{p.email}</td>
-                  <td style={{ padding:"10px", fontFamily:mono, fontSize:11, opacity:.7 }}>{p.social || "—"}</td>
-                  <td style={{ padding:"10px", textAlign:"center", fontFamily:mono }}>{p.versao_regular}</td>
-                  <td style={{ padding:"10px", textAlign:"center", fontFamily:mono }}>{p.versao_guys}</td>
-                  <td style={{ padding:"10px", fontFamily:mono, fontWeight:700, color:"var(--laranja)", whiteSpace:"nowrap" }}>R${Number(p.valor_total||0).toFixed(2).replace(".",",")}</td>
-                  <td style={{ padding:"10px", fontFamily:mono, fontSize:10, whiteSpace:"nowrap" }}>{p.forma_pagamento === "pix" ? "PIX" : "Cartão"}</td>
-                  <td style={{ padding:"10px" }}>
-                    <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status), whiteSpace:"nowrap" }}>{p.status}</span>
-                  </td>
-                  <td style={{ padding:"10px" }}>
-                    {p.comprovante_url
-                      ? <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ color:"var(--laranja)", fontSize:11, fontFamily:mono }}>ver</a>
-                      : <span style={{ opacity:.3, fontFamily:mono, fontSize:10 }}>—</span>}
-                  </td>
-                  <td style={{ padding:"10px" }}>
-                    {p.status === "aguardando" && (
-                      <div style={{ display:"flex", gap:6 }}>
-                        <button onClick={() => confirmar(p.id)} style={{ padding:"4px 10px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✓</button>
-                        <button onClick={() => cancelar(p.id)} style={{ padding:"4px 10px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✕</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+          {pedidos.map(p => (
+            <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="aguardando" ? "rgba(255,92,26,.2)" : p.status==="confirmado" ? "rgba(74,222,128,.15)" : "rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                {/* Lado esquerdo — dados */}
+                <div style={{ display:"flex", flexDirection:"column", gap:4, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                    {p.social && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>{p.social}</span>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                  </div>
+                  <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)" }}>{p.email}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:mono, fontSize:11 }}>{p.qtd_total}x unidade{p.qtd_total>1?"s":""}</span>
+                    <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${Number(p.valor_total||0).toFixed(2).replace(".",",")}</span>
+                    <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.forma_pagamento === "pix" ? "PIX" : "Cartão"}</span>
+                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                  </div>
+                </div>
+                {/* Lado direito — status + ações */}
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                  {p.status === "aguardando" && (
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={() => confirmar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                      <button onClick={() => cancelar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </>}
     </div>
@@ -15244,15 +15236,13 @@ function RevistaFormPage() {
             <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:24 }}>
               {claim && (
                 <div>
-                  <label style={labelStyle}>Nome de claim <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como está na planilha · não editável</span></label>
-                  <div style={{ ...inputStyle, opacity:.5, cursor:"default", userSelect:"none" }}>{claim}</div>
+                  <label style={labelStyle}>Nome de claim <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como está na planilha</span></label>
+                  <input style={inputStyle} value={claim} onChange={e=>setClaim(e.target.value)} placeholder="Seu claim" />
                 </div>
               )}
               <div>
                 <label style={labelStyle}>Nome do site <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como você quer aparecer aqui</span></label>
-                {nome
-                  ? <div style={{ ...inputStyle, opacity:.5, cursor:"default", userSelect:"none" }}>{nome}</div>
-                  : <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />}
+                <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
               </div>
               <div>
                 <label style={labelStyle}>E-mail</label>
