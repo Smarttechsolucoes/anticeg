@@ -15433,8 +15433,7 @@ function PopupThisAndThatPage() {
                           ≈ {pc} photocard{pc>1?"s":""} aleatório{pc>1?"s":""} — WEEK {activeWeek}
                         </div>
                         <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>
-                          Valor aproximado e pode variar. Calculado com base em ₩{krw.toLocaleString()} ÷ ₩30.000 por photocard.
-                          O photocard é referente exclusivamente à <span style={{ color:"var(--offwhite)" }}>Week {activeWeek}</span> — o valor de cada semana é contado separadamente.
+                          Valor aproximado e pode variar. Calculado com base em ₩30.000 por photocard. O photocard é referente exclusivamente à <span style={{ color:"var(--offwhite)" }}>Week {activeWeek}</span>, cada semana é contada separadamente dentro do pedido.
                         </div>
                       </div>
                     ) : (
