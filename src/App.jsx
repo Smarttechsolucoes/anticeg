@@ -15242,8 +15242,10 @@ function RevistaFormPage() {
                 </div>
               )}
               <div>
-                <label style={labelStyle}>Nome do site <span style={{ color:"rgba(255,92,26,.6)", fontWeight:400 }}>· como você quer aparecer aqui</span></label>
-                <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
+                <label style={labelStyle}>Nome do site <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como você quer aparecer aqui</span></label>
+                {nome
+                  ? <div style={{ ...inputStyle, opacity:.5, cursor:"default", userSelect:"none" }}>{nome}</div>
+                  : <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />}
               </div>
               <div>
                 <label style={labelStyle}>E-mail</label>
