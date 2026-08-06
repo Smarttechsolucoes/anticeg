@@ -15174,7 +15174,7 @@ function RevistaFormPage() {
       status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
     }]).select().single();
 
-    if (error) { setStatus("idle"); setErro("Erro ao registrar pedido. Tente novamente."); return; }
+    if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
 
     if (pagamento === "cartao") {
