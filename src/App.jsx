@@ -15229,10 +15229,14 @@ function RevistaFormPage() {
           <div style={{ textAlign:"center", padding:"40px 0" }}>
             <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
             <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
-            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6 }}>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
               {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : "Redirecionando para o WhatsApp para confirmar pagamento."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
+            <a href="https://chat.whatsapp.com/Bs2rkIZ5Zpp1F1J4lFmBqk" target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-block", padding:"12px 24px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px" }}>
+              Entrar no grupo de atualizações
+            </a>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
