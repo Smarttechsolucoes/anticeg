@@ -15054,48 +15054,49 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
   const bg          = totalQtd > 0 ? "rgba(255,92,26,.05)" : "rgba(245,240,232,.03)";
 
   const imgSrc = `/popup/item-${String(item.id).padStart(2,"0")}.png`;
-  const [hasImg, setHasImg] = useState(false);
 
-  const Meta = () => (
-    <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
-      {hasImg && <img src={imgSrc} alt={item.nome} onError={()=>setHasImg(false)} style={{ width:52, height:52, objectFit:"cover", borderRadius:8, flexShrink:0 }} />}
+  const Foto = () => (
+    <img src={imgSrc} alt={item.nome} onError={e=>{e.target.style.display="none"}}
+      style={{ width:"100%", maxHeight:260, objectFit:"contain", display:"block", background:"rgba(245,240,232,.03)", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }} />
+  );
+
+  const Info = ({ children }) => (
+    <div style={{ padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
       <div style={{ minWidth:0 }}>
         <div style={{ fontWeight:700, fontSize:13 }}>{item.nome}</div>
         <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginTop:2 }}>{item.dim} · {item.mat}{item.nota ? ` · ${item.nota}` : ""}</div>
       </div>
+      {children}
     </div>
   );
-
-  useEffect(() => {
-    const img = new Image();
-    img.onload  = () => setHasImg(true);
-    img.onerror = () => setHasImg(false);
-    img.src = imgSrc;
-  }, [imgSrc]);
 
   if (!item.ver) {
     const key = `${item.id}_`;
     const qty = qtds[key] || 0;
     return (
-      <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
-        <Meta />
-        <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-          <button type="button" onClick={()=>setQtd(key,qty-1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
-          <span style={{ fontFamily:mono,fontSize:16,fontWeight:700,minWidth:20,textAlign:"center" }}>{qty}</span>
-          <button type="button" onClick={()=>setQtd(key,qty+1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
-        </div>
+      <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, overflow:"hidden" }}>
+        <Foto />
+        <Info>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+            <button type="button" onClick={()=>setQtd(key,qty-1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
+            <span style={{ fontFamily:mono,fontSize:16,fontWeight:700,minWidth:20,textAlign:"center" }}>{qty}</span>
+            <button type="button" onClick={()=>setQtd(key,qty+1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
+          </div>
+        </Info>
       </div>
     );
   }
 
   return (
     <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, overflow:"hidden" }}>
-      <div style={{ padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
-        <Meta />
-        <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-          {totalQtd > 0 && <span style={{ fontFamily:mono,fontSize:11,color:"var(--laranja)" }}>{totalQtd}x</span>}
-          <span style={{ fontFamily:mono,fontSize:13,color:"rgba(245,240,232,.4)",display:"inline-block",transform:open?"rotate(180deg)":"none",transition:"transform .2s" }}>▾</span>
-        </div>
+      <Foto />
+      <div style={{ cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
+        <Info>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+            {totalQtd > 0 && <span style={{ fontFamily:mono,fontSize:11,color:"var(--laranja)" }}>{totalQtd}x</span>}
+            <span style={{ fontFamily:mono,fontSize:13,color:"rgba(245,240,232,.4)",display:"inline-block",transform:open?"rotate(180deg)":"none",transition:"transform .2s" }}>▾</span>
+          </div>
+        </Info>
       </div>
       {open && (
         <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"10px 14px", display:"flex", flexDirection:"column", gap:8 }}>
