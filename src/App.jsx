@@ -15534,15 +15534,31 @@ function AdminPopup({ onCountChange }) {
                 </div>
                 <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)" }}>{p.email}</div>
                 <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>Week {p.week}</div>
-                {Array.isArray(p.itens) && p.itens.length > 0 && (
-                  <div style={{ marginTop:6, display:"flex", flexDirection:"column", gap:3 }}>
-                    {p.itens.map((it,i) => (
-                      <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)" }}>
-                        {it.qtd}x {it.item_nome}{it.versao ? ` — ${it.versao}` : ""}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {Array.isArray(p.itens) && p.itens.length > 0 && (() => {
+                  const w1 = p.itens.filter(it => it.week === "01" || (!it.week && p.week === "01"));
+                  const w2 = p.itens.filter(it => it.week === "02");
+                  const renderItens = (itens) => itens.map((it,i) => (
+                    <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)" }}>
+                      {it.qtd}x {it.item_nome}{it.versao ? ` — ${it.versao}` : ""}
+                    </div>
+                  ));
+                  return (
+                    <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:8 }}>
+                      {w1.length > 0 && (
+                        <div>
+                          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(255,92,26,.6)", marginBottom:4 }}>WEEK 01</div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:2 }}>{renderItens(w1)}</div>
+                        </div>
+                      )}
+                      {w2.length > 0 && (
+                        <div>
+                          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(255,92,26,.6)", marginBottom:4 }}>WEEK 02</div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:2 }}>{renderItens(w2)}</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
                 <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
