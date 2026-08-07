@@ -801,38 +801,55 @@ td { padding:10px; vertical-align:middle; }
   .tabs-bar { display:none !important; }
 
   /* Espaço no final do conteúdo para a bottom nav */
-  .main { padding-bottom: 88px !important; }
-  .cal-main { padding-bottom: 88px; }
-  .admin-wrap { padding-bottom: 88px !important; }
+  .main { padding-bottom: 100px !important; }
+  .cal-main { padding-bottom: 100px; }
+  .admin-wrap { padding-bottom: 100px !important; }
 
   /* ── BOTTOM NAV ── */
-  .bottom-nav {
-    display: flex;
+  .bottom-nav-wrap {
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 200;
     background: #0d0d0d;
     border-top: 1px solid #1e1e1e;
-    padding: 8px 4px env(safe-area-inset-bottom, 8px);
-    gap: 0;
   }
+  .bottom-nav {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 10px 8px env(safe-area-inset-bottom, 10px);
+    gap: 4px;
+  }
+  .bottom-nav::-webkit-scrollbar { display: none; }
   .bottom-nav-btn {
-    flex: 1;
+    flex: 0 0 auto;
+    min-width: 64px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: 5px;
     background: none;
     border: none;
-    color: rgba(245,240,232,.35);
+    color: rgba(245,240,232,.38);
     cursor: pointer;
-    padding: 6px 2px;
-    transition: color .15s;
+    padding: 8px 10px;
+    border-radius: 10px;
+    transition: color .15s, background .15s;
     -webkit-tap-highlight-color: transparent;
   }
-  .bottom-nav-btn.active { color: var(--laranja); }
-  .bottom-nav-icon { font-size: 18px; line-height: 1; }
-  .bottom-nav-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+  .bottom-nav-btn:active { background: rgba(245,240,232,.05); }
+  .bottom-nav-btn.active { color: var(--laranja); background: rgba(255,92,26,.08); }
+  .bottom-nav-icon { font-size: 22px; line-height: 1; }
+  .bottom-nav-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+  /* fade hint de scroll */
+  .bottom-nav-fade-right {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 32px;
+    background: linear-gradient(to left, #0d0d0d 30%, transparent);
+    pointer-events: none;
+  }
 
 }
 

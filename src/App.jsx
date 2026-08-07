@@ -15028,26 +15028,30 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
 function BottomNav({ tab, setTab, isGuest, isAdmin }) {
   const items = [
-    { id:"masterlist", icon:"☰", label:"Lista" },
-    { id:"cegs",       icon:"◈", label:"CEGs" },
-    { id:"calendario", icon:"◫", label:"Datas" },
-    ...(!isGuest ? [{ id:"perfil", icon:"○", label:"Perfil" }] : []),
-    ...(!isGuest ? [{ id:"envio",  icon:"▢", label:"Envio" }] : []),
-    ...(!isGuest ? [{ id:"disponiveis", icon:"◱", label:"Loja" }] : []),
-    { id:"mercari",    icon:"🎌", label:"Mercari" },
-    { id:"regras",     icon:"☆", label:"Regras" },
-    { id:"antiversario", icon:"★", label:"ANTIversário" },
+    { id:"masterlist",  icon:"☰",  label:"Lista" },
+    { id:"cegs",        icon:"◈",  label:"CEGs" },
+    { id:"calendario",  icon:"◫",  label:"Datas" },
+    { id:"prevenda",    icon:"✦",  label:"Pré-vendas" },
+    ...(!isGuest ? [{ id:"perfil",      icon:"○",  label:"Perfil" }] : []),
+    ...(!isGuest ? [{ id:"envio",       icon:"▢",  label:"Envio" }] : []),
+    ...(!isGuest ? [{ id:"disponiveis", icon:"◱",  label:"Loja" }] : []),
+    { id:"mercari",     icon:"🎌", label:"Mercari" },
+    { id:"regras",      icon:"☆",  label:"Regras" },
+    { id:"antiversario",icon:"★",  label:"ANTIv." },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
   return (
-    <nav className="bottom-nav">
-      {items.map(item => (
-        <button key={item.id} className={`bottom-nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>
-          <span className="bottom-nav-icon">{item.icon}</span>
-          <span className="bottom-nav-label">{item.label}</span>
-        </button>
-      ))}
-    </nav>
+    <div className="bottom-nav-wrap" style={{ position:"relative" }}>
+      <nav className="bottom-nav">
+        {items.map(item => (
+          <button key={item.id} className={`bottom-nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>
+            <span className="bottom-nav-icon">{item.icon}</span>
+            <span className="bottom-nav-label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="bottom-nav-fade-right" />
+    </div>
   );
 }
 
