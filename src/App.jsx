@@ -15041,7 +15041,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
   return (
-    <div className="bottom-nav-wrap" style={{ position:"relative" }}>
+    <div className="bottom-nav-wrap">
       <nav className="bottom-nav">
         {items.map(item => (
           <button key={item.id} className={`bottom-nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>
