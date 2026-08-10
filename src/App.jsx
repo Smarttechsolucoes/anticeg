@@ -1244,7 +1244,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
 }
 
 const STATUS_FINAIS = ["Enviado Nacional", "Vendido"];
-const CEGS_OCULTAS  = ["PESSOAL RUN IT"];
+const CEGS_OCULTAS  = ["PESSOAL RUN IT", "NOVOS MEMBROS", "MULTA"];
 
 function CegSlugPage({ slug, user }) {
   const [cegNome, setCegNome] = useState(null);
