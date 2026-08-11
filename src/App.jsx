@@ -8109,6 +8109,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [preCadastros, setPreCadastros] = useState([]);
   const [mercariPedidos, setMercariPedidos] = useState([]);
   const [revistaCount,   setRevistaCount]   = useState(0);
+  const [wmagCount,      setWmagCount]      = useState(0);
   const [popupCount,     setPopupCount]     = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
@@ -8764,6 +8765,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {nav("revista", "Revista Nylon", "◈", revistaCount)}
+                {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
                 {nav("popup", "Pop-up This & That", "◉", popupCount)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
               </div>
@@ -9402,6 +9404,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {adminMainTab === "revista" && <AdminRevista onCountChange={setRevistaCount} />}
+      {adminMainTab === "wmag"    && <AdminWMag    onCountChange={setWmagCount} />}
       {adminMainTab === "popup"   && <AdminPopup   onCountChange={setPopupCount} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -15725,6 +15728,304 @@ function AdminPopup({ onCountChange }) {
   );
 }
 
+// ── Pré-venda W MAGAZINE HYUNJIN ───────────────────────────────
+const WMAG_DEADLINE  = new Date("2026-08-14T23:59:59-03:00");
+const WMAG_PRECO     = 48;
+const PIX_WMAG       = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+const WA_WMAG        = "5524992782023";
+const WMAG_CAPAS = [
+  { id:"a", label:"Capa A", img:"https://image.aladin.co.kr/product/40016/37/cover500/k382130232_1.jpg" },
+  { id:"b", label:"Capa B", img:"https://image.aladin.co.kr/product/40016/38/cover500/k322130232_1.jpg" },
+  { id:"c", label:"Capa C", img:"https://image.aladin.co.kr/product/40016/38/cover500/k322130232_1.jpg" },
+];
+
+function WMagFormPage() {
+  const encerrado = new Date() > WMAG_DEADLINE;
+  const mono = "'DM Mono',monospace";
+  const [claim,      setClaim]      = useState("");
+  const [nome,       setNome]       = useState("");
+  const [email,      setEmail]      = useState("");
+  const [social,     setSocial]     = useState("");
+  const [qtds,       setQtds]       = useState({ a:0, b:0, c:0 });
+  const [pagamento,  setPagamento]  = useState("pix");
+  const [comprovante,setComprovante]= useState(null);
+  const [pixCopiado, setPixCopiado] = useState(false);
+  const [status,     setStatus]     = useState("idle");
+  const [erro,       setErro]       = useState("");
+  const [pedidoId,   setPedidoId]   = useState(null);
+  const [lightbox,   setLightbox]   = useState(null);
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
+      if (!u?.cog) return;
+      setClaim(u.cog);
+      supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
+        .then(({ data: j }) => {
+          if (j?.nome_site) setNome(j.nome_site);
+          if (j?.email)     setEmail(j.email);
+          if (j?.twitter)   setSocial(j.twitter);
+        });
+    } catch {}
+  }, []);
+
+  const qtdTotal = qtds.a + qtds.b + qtds.c;
+  const total    = qtdTotal * WMAG_PRECO;
+
+  function Qty({ id }) {
+    return (
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <button type="button" onClick={() => setQtds(q => ({ ...q, [id]: Math.max(0, q[id]-1) }))}
+          style={{ width:32, height:32, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+        <span style={{ fontFamily:mono, fontSize:20, fontWeight:700, minWidth:24, textAlign:"center" }}>{qtds[id]}</span>
+        <button type="button" onClick={() => setQtds(q => ({ ...q, [id]: q[id]+1 }))}
+          style={{ width:32, height:32, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+      </div>
+    );
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 capa."); return; }
+    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
+    setStatus("enviando"); setErro("");
+
+    let comprovanteUrl = null;
+    if (pagamento === "pix" && comprovante) {
+      const ext  = comprovante.name.split(".").pop();
+      const path = `wmag/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
+      const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+      comprovanteUrl = publicUrl;
+    }
+
+    const { data, error } = await supabase.from("pedidos_wmag").insert([{
+      nome: nome.trim(), email: email.trim(), social: social.trim() || null,
+      capa_a: qtds.a, capa_b: qtds.b, capa_c: qtds.c,
+      qtd_total: qtdTotal, valor_total: total,
+      forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
+      status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
+    }]).select().single();
+
+    if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
+    setPedidoId(data.id);
+
+    if (pagamento === "cartao") {
+      const linhas = WMAG_CAPAS.filter(c => qtds[c.id] > 0).map(c => `${c.label}: ${qtds[c.id]}x`).join("\n");
+      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da W MAGAZINE HYUNJIN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\n${linhas}\nTotal: R$${total.toFixed(2).replace(".",",")}`);
+      window.open(`https://wa.me/${WA_WMAG}?text=${msg}`, "_blank");
+    }
+    setStatus("sucesso");
+  }
+
+  const inputStyle = { width:"100%", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:13, outline:"none", boxSizing:"border-box" };
+  const labelStyle = { fontFamily:mono, fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", textTransform:"uppercase", marginBottom:6, display:"block" };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)", color:"var(--offwhite)", display:"flex", flexDirection:"column", alignItems:"center", padding:"40px 16px 80px" }}>
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+          <img src={lightbox} alt="capa" style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:8, objectFit:"contain" }} />
+        </div>
+      )}
+      <div style={{ width:"100%", maxWidth:520 }}>
+        <div style={{ marginBottom:32, textAlign:"center" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"4px", color:"rgba(245,240,232,.3)", marginBottom:8 }}>ANTI CEGS × PRÉ-VENDA</div>
+          <div style={{ fontSize:"clamp(22px,6vw,32px)", fontWeight:900, letterSpacing:"-1px", lineHeight:1.1 }}>W MAGAZINE</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:6 }}>HYUNJIN</div>
+          {!encerrado && (
+            <div style={{ marginTop:10, fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", letterSpacing:"1px" }}>
+              PEDIDOS ATÉ 14/08/2026
+            </div>
+          )}
+        </div>
+
+        {/* Capas */}
+        <div style={{ display:"flex", gap:8, marginBottom:28, justifyContent:"center" }}>
+          {WMAG_CAPAS.map(c => (
+            <div key={c.id} style={{ flex:1, borderRadius:10, overflow:"hidden", cursor:"zoom-in", position:"relative" }} onClick={() => setLightbox(c.img)}>
+              <img src={c.img} alt={c.label} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} onError={e => { e.target.style.display="none"; }} />
+              <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,.55)", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.8)", textAlign:"center", padding:"4px 0", letterSpacing:"1px" }}>{c.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.7)" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
+          <div>• Prazo de pagamento: <strong>20/08/2026</strong>.</div>
+          <div>• Frete internacional previsto para <strong>26/08/2026</strong>.</div>
+          <div>• Haverá <strong>frete internacional</strong>.</div>
+          <div>• Pedido confirmado é <strong>irrevogável</strong> — não será possível cancelar.</div>
+        </div>
+
+        {encerrado ? (
+          <div style={{ textAlign:"center", padding:"40px 0" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>🔒</div>
+            <div style={{ fontFamily:mono, fontSize:13, color:"rgba(245,240,232,.5)" }}>Pedidos encerrados em 14/08/2026.</div>
+          </div>
+        ) : status === "sucesso" ? (
+          <div style={{ textAlign:"center", padding:"40px 0" }}>
+            <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
+            <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:24 }}>
+              {claim && (
+                <div>
+                  <label style={labelStyle}>Nome de claim <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como está na planilha</span></label>
+                  <input style={inputStyle} value={claim} onChange={e=>setClaim(e.target.value)} placeholder="Seu claim" />
+                </div>
+              )}
+              <div>
+                <label style={labelStyle}>Nome do site <span style={{ color:"rgba(245,240,232,.25)", fontWeight:400 }}>· como você quer aparecer aqui</span></label>
+                <input style={inputStyle} value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome" required />
+              </div>
+              <div>
+                <label style={labelStyle}>E-mail</label>
+                <input style={inputStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" required />
+              </div>
+              <div>
+                <label style={labelStyle}>@ Rede Social</label>
+                <input style={inputStyle} value={social} onChange={e=>setSocial(e.target.value)} placeholder="@seu_usuario" />
+              </div>
+            </div>
+
+            <div style={{ marginBottom:24 }}>
+              <div style={labelStyle}>Quantidade — R${WMAG_PRECO},00 por unidade</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {WMAG_CAPAS.map(c => (
+                  <div key={c.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 16px" }}>
+                    <div style={{ fontWeight:600, fontSize:13 }}>{c.label}</div>
+                    <Qty id={c.id} />
+                  </div>
+                ))}
+              </div>
+              {total > 0 && (
+                <div style={{ marginTop:14, fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)", textAlign:"right" }}>
+                  Total: R${total.toFixed(2).replace(".",",")} ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom:24 }}>
+              <div style={labelStyle}>Forma de Pagamento</div>
+              <div style={{ display:"flex", gap:10, marginBottom:16 }}>
+                {[["pix","PIX"],["cartao","Cartão de Crédito"]].map(([v,l]) => (
+                  <button key={v} type="button" onClick={() => setPagamento(v)}
+                    style={{ flex:1, padding:"10px 0", borderRadius:8, border:`1px solid ${pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagamento===v ? "rgba(255,92,26,.12)" : "transparent", color: pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily:mono, fontSize:11, cursor:"pointer", fontWeight: pagamento===v ? 700 : 400, transition:"all .15s" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {pagamento === "pix" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
+                    <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>CHAVE PIX</div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                      <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all" }}>{PIX_WMAG}</span>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_WMAG); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
+                        style={{ flexShrink:0, padding:"6px 12px", borderRadius:6, border:"1px solid rgba(245,240,232,.2)", background:"transparent", color: pixCopiado ? "#4ade80" : "rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
+                        {pixCopiado ? "✓ copiado" : "copiar"}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Comprovante PIX</label>
+                    <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0]||null)}
+                      style={{ ...inputStyle, padding:"8px 14px", fontSize:12 }} />
+                  </div>
+                </div>
+              )}
+              {pagamento === "cartao" && (
+                <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.7 }}>
+                  Após confirmar, você será redirecionada para o WhatsApp para combinar o pagamento no cartão.
+                </div>
+              )}
+            </div>
+
+            {erro && <div style={{ color:"#ff6b6b", fontFamily:mono, fontSize:11, marginBottom:16 }}>{erro}</div>}
+            <button type="submit" disabled={status==="enviando" || !qtdTotal}
+              style={{ width:"100%", padding:"14px 0", borderRadius:10, background: qtdTotal ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:13, fontWeight:700, border:"none", cursor: qtdTotal ? "pointer" : "not-allowed", letterSpacing:"1px", transition:"all .15s" }}>
+              {status==="enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminWMag({ onCountChange }) {
+  const mono = "'DM Mono',monospace";
+  const [pedidos, setPedidos] = useState([]);
+
+  useEffect(() => {
+    supabase.from("pedidos_wmag").select("*").order("created_at", { ascending:false })
+      .then(({ data }) => { if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status==="aguardando").length); } });
+  }, []);
+
+  async function atualizar(id, novoStatus) {
+    await supabase.from("pedidos_wmag").update({ status:novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id===id ? {...p,status:novoStatus} : p);
+      onCountChange?.(next.filter(p=>p.status==="aguardando").length);
+      return next;
+    });
+  }
+
+  const corStatus = s => s==="confirmado"?"#4ade80":s==="cancelado"?"#ff6b6b":s==="cartao_whatsapp"?"rgba(255,200,0,.8)":"rgba(255,92,26,.8)";
+  const labelStatus = s => s==="confirmado"?"confirmado":s==="cancelado"?"cancelado":s==="cartao_whatsapp"?"confirmar pagamento — aguarde atualização na planilha":"aguardando";
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:20 }}>W MAGAZINE — HYUNJIN</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {pedidos.length===0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+        {pedidos.map(p => (
+          <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="aguardando"?"rgba(255,92,26,.2)":p.status==="confirmado"?"rgba(74,222,128,.15)":"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                  {p.social && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>{p.social}</span>}
+                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                </div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)" }}>{p.email}</div>
+                <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                  {WMAG_CAPAS.map(c => p[`capa_${c.id}`] > 0 && (
+                    <span key={c.id} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)" }}>{c.label}: {p[`capa_${c.id}`]}x</span>
+                  ))}
+                </div>
+                <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"var(--laranja)", marginTop:4 }}>
+                  {p.qtd_total} un · R${Number(p.valor_total).toFixed(2).replace(".",",")}
+                </div>
+                {p.comprovante_url && (
+                  <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>ver comprovante ↗</a>
+                )}
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{labelStatus(p.status)}</span>
+                {(p.status === "aguardando" || p.status === "cartao_whatsapp") && (
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={()=>atualizar(p.id,"confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                    <button onClick={()=>atualizar(p.id,"cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Aba Pré-vendas ─────────────────────────────────────────────
 function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
@@ -15738,6 +16039,7 @@ function PrevendaTab({ user }) {
   const popupAberto   = popup01Aberta || popup02Aberta;
 
   const runItJapanAberto = now <= new Date("2026-08-28T23:59:59-03:00");
+  const wmagAberto       = now <= WMAG_DEADLINE;
 
   const formularios = [
     {
@@ -15752,6 +16054,16 @@ function PrevendaTab({ user }) {
         popup02Aberta ? `Week 02 · até ${POPUP_WEEKS[1].pagamento}` : "Week 02 · encerrada",
       ],
       info: "14 itens exclusivos · pagamento após confirmação",
+    },
+    {
+      key: "wmag",
+      ativo: wmagAberto,
+      titulo: "W MAGAZINE",
+      subtitulo: "Hyunjin — 3 capas",
+      url: "/wmag-hyunjin",
+      img: WMAG_CAPAS[0].img,
+      tags: [`Inscrições até 14/08`, `Pagamento até 20/08`],
+      info: "R$ 48,00 por unidade · PIX ou cartão · frete inter 26/08",
     },
     {
       key: "runit-japan",
@@ -16451,6 +16763,7 @@ export default function App() {
     );
   }
   if (window.location.pathname === "/revista") return <RevistaFormPage />;
+  if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
 
