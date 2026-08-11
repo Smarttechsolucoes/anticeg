@@ -15308,7 +15308,9 @@ function PopupThisAndThatPage() {
   const [social,  setSocial]  = useState("");
   const [qtds1,      setQtds1]      = useState({});
   const [qtds2,      setQtds2]      = useState({});
-  const [activeWeek, setActiveWeek] = useState("01");
+  const [activeWeek, setActiveWeek] = useState(() =>
+    new Date() > POPUP_WEEKS[0].deadline ? "02" : "01"
+  );
   const [step,       setStep]       = useState("form"); // "form" | "resumo" | "sucesso"
   const [status,  setStatus]  = useState("idle");
   const [erro,    setErro]    = useState("");
