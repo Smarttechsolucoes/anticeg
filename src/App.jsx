@@ -15736,7 +15736,7 @@ const WA_WMAG        = "5524992782023";
 const WMAG_CAPAS = [
   { id:"a", label:"Capa A", img:"https://image.aladin.co.kr/product/40016/37/cover500/k382130232_1.jpg" },
   { id:"b", label:"Capa B", img:"https://image.aladin.co.kr/product/40016/38/cover500/k322130232_1.jpg" },
-  { id:"c", label:"Capa C", img:"https://image.aladin.co.kr/product/40016/38/cover500/k322130232_1.jpg" },
+  { id:"c", label:"Capa C", img:"https://image.aladin.co.kr/product/40016/43/cover500/k452130232_1.jpg" },
 ];
 
 function WMagFormPage() {
@@ -15900,8 +15900,14 @@ function WMagFormPage() {
               <div style={labelStyle}>Quantidade — R${WMAG_PRECO},00 por unidade</div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {WMAG_CAPAS.map(c => (
-                  <div key={c.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 16px" }}>
-                    <div style={{ fontWeight:600, fontSize:13 }}>{c.label}</div>
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(245,240,232,.04)", border:`1px solid ${qtds[c.id]>0?"rgba(255,92,26,.35)":"rgba(245,240,232,.1)"}`, borderRadius:10, padding:"10px 16px 10px 10px", transition:"border-color .15s" }}>
+                    <img src={c.img} alt={c.label} onClick={() => setLightbox(c.img)}
+                      style={{ width:54, height:80, objectFit:"cover", borderRadius:6, cursor:"zoom-in", flexShrink:0 }}
+                      onError={e => { e.target.style.display="none"; }} />
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:600, fontSize:13 }}>{c.label}</div>
+                      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginTop:2 }}>R${WMAG_PRECO},00</div>
+                    </div>
                     <Qty id={c.id} />
                   </div>
                 ))}
