@@ -87,7 +87,7 @@ async function main() {
 
   const rows = records.filter(r =>
     col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim() &&
-    col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM').trim()
+    col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim()
   );
 
   console.log(`${rows.length} linhas válidas após filtro`);
@@ -102,7 +102,7 @@ async function main() {
     try {
       const ceg      = col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim();
       const nome     = col(r, colMap, 'NOME').trim();
-      const nomeItem = col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM').trim();
+      const nomeItem = col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim();
       const twitter  = col(r, colMap, '@').trim().replace(/^@/, '').toLowerCase();
       const email    = col(r, colMap, 'EMAIL').trim().toLowerCase();
       const chegou    = col(r, colMap, 'Chegou?', 'CHEGOU?').trim().toUpperCase() === 'TRUE';
