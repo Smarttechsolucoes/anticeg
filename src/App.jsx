@@ -8510,6 +8510,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setRevistaCount(count); });
     supabase.from("pedidos_popup").select("id", { count: "exact", head: true }).eq("status", "pendente")
       .then(({ count }) => { if (count != null) setPopupCount(count); });
+    supabase.from("pedidos_wmag").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setWmagCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -15875,6 +15877,10 @@ function WMagFormPage() {
               {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : "Redirecionando para o WhatsApp para confirmar pagamento."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
+            <a href="https://chat.whatsapp.com/CGHeelexfjp7ckWfWwEjz5" target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-block", padding:"12px 24px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px" }}>
+              Entrar no grupo de atualizações
+            </a>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -15995,14 +16001,14 @@ function AdminWMag({ onCountChange }) {
 
   useEffect(() => {
     supabase.from("pedidos_wmag").select("*").order("created_at", { ascending:false })
-      .then(({ data }) => { if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status==="aguardando").length); } });
+      .then(({ data }) => { if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status!=="confirmado"&&p.status!=="cancelado").length); } });
   }, []);
 
   async function atualizar(id, novoStatus) {
     await supabase.from("pedidos_wmag").update({ status:novoStatus }).eq("id", id);
     setPedidos(prev => {
       const next = prev.map(p => p.id===id ? {...p,status:novoStatus} : p);
-      onCountChange?.(next.filter(p=>p.status==="aguardando").length);
+      onCountChange?.(next.filter(p=>p.status!=="confirmado"&&p.status!=="cancelado").length);
       return next;
     });
   }
