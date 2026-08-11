@@ -15737,6 +15737,8 @@ function PrevendaTab({ user }) {
   const popup02Aberta = now <= POPUP_WEEKS[1].deadline;
   const popupAberto   = popup01Aberta || popup02Aberta;
 
+  const runItJapanAberto = now <= new Date("2026-08-28T23:59:59-03:00");
+
   const formularios = [
     {
       key: "popup",
@@ -15750,6 +15752,17 @@ function PrevendaTab({ user }) {
         popup02Aberta ? `Week 02 · até ${POPUP_WEEKS[1].pagamento}` : "Week 02 · encerrada",
       ],
       info: "14 itens exclusivos · pagamento após confirmação",
+    },
+    {
+      key: "runit-japan",
+      ativo: runItJapanAberto,
+      titulo: "RUN IT JAPAN",
+      subtitulo: "SKZ World Tour · Merch Oficial",
+      url: "https://forms.gle/XcpYzjCQrx9QfZoc9",
+      external: true,
+      img: null,
+      tags: [`Inscrições até 28/08`, `Pagamento até 05/09`],
+      info: "Envio em setembro · PIX ou cartão em até 12x",
     },
     {
       key: "revista",
@@ -15804,7 +15817,7 @@ function PrevendaTab({ user }) {
             {f.ativo && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px" }}>
                 {f.url ? (
-                  <a href={f.url}
+                  <a href={f.url} target={f.external ? "_blank" : "_self"} rel={f.external ? "noopener noreferrer" : undefined}
                     style={{ display:"inline-block", padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
                     PREENCHER FORMULÁRIO →
                   </a>
