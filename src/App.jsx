@@ -15681,20 +15681,29 @@ function AdminPopup({ onCountChange }) {
                       {it.qtd}x {it.item_nome}{it.versao ? ` — ${it.versao}` : ""}
                     </div>
                   ));
+                  const calcPcs = (itens) => {
+                    const krw = itens.reduce((acc, it) => {
+                      const item = POPUP_ITEMS.find(pi => pi.id === it.item_id);
+                      return acc + (item ? item.krw * (it.qtd || 1) : 0);
+                    }, 0);
+                    return { krw, pcs: Math.floor(krw / 30000) };
+                  };
                   return (
                     <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:8 }}>
-                      {w1.length > 0 && (
+                      {w1.length > 0 && (() => { const { krw, pcs } = calcPcs(w1); return (
                         <div>
                           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(255,92,26,.6)", marginBottom:4 }}>WEEK 01</div>
                           <div style={{ display:"flex", flexDirection:"column", gap:2 }}>{renderItens(w1)}</div>
+                          {pcs > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.95)", marginTop:5, fontWeight:700 }}>✦ {pcs} photocard{pcs !== 1 ? "s" : ""} <span style={{ fontWeight:400, color:"rgba(255,92,26,.55)" }}>— ₩{krw.toLocaleString()}</span></div>}
                         </div>
-                      )}
-                      {w2.length > 0 && (
+                      ); })()}
+                      {w2.length > 0 && (() => { const { krw, pcs } = calcPcs(w2); return (
                         <div>
                           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(255,92,26,.6)", marginBottom:4 }}>WEEK 02</div>
                           <div style={{ display:"flex", flexDirection:"column", gap:2 }}>{renderItens(w2)}</div>
+                          {pcs > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.95)", marginTop:5, fontWeight:700 }}>✦ {pcs} photocard{pcs !== 1 ? "s" : ""} <span style={{ fontWeight:400, color:"rgba(255,92,26,.55)" }}>— ₩{krw.toLocaleString()}</span></div>}
                         </div>
-                      )}
+                      ); })()}
                     </div>
                   );
                 })()}
