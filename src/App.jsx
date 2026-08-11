@@ -16001,7 +16001,7 @@ function AdminWMag({ onCountChange }) {
 
   useEffect(() => {
     supabase.from("pedidos_wmag").select("*").order("created_at", { ascending:false })
-      .then(({ data }) => { if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status!=="confirmado"&&p.status!=="cancelado").length); } });
+      .then(({ data }) => { if (data) setPedidos(data); });
   }, []);
 
   async function atualizar(id, novoStatus) {
