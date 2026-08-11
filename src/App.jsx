@@ -15787,7 +15787,6 @@ function WMagFormPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 capa."); return; }
-    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
 
     let comprovanteUrl = null;
