@@ -15800,12 +15800,13 @@ function WMagFormPage() {
       comprovanteUrl = publicUrl;
     }
 
+    const statusPedido = pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao_whatsapp";
     const { data, error } = await supabase.from("pedidos_wmag").insert([{
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       capa_a: qtds.a, capa_b: qtds.b, capa_c: qtds.c,
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
-      status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
+      status: statusPedido,
     }]).select().single();
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
@@ -15853,10 +15854,13 @@ function WMagFormPage() {
 
         <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
-          <div>• Prazo de pagamento: <strong>20/08/2026</strong>.</div>
-          <div>• Frete internacional previsto para <strong>26/08/2026</strong>.</div>
-          <div>• Haverá <strong>frete internacional</strong>.</div>
-          <div>• Pedido confirmado é <strong>irrevogável</strong> — não será possível cancelar.</div>
+          <div>• O formulário ficará aberto até <strong>sexta-feira (14/08)</strong>.</div>
+          <div>• Pagamento até <strong>sexta-feira (21/08)</strong>.</div>
+          <div>• O frete internacional será liberado <strong>ainda esse mês</strong>.</div>
+          <div>• Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</div>
+          <div style={{ marginTop:8, padding:"8px 10px", background:"rgba(245,240,232,.05)", borderRadius:6 }}>
+            💡 Tenha em mente que a revista pode ser pesada — o frete pode custar até <strong>R$100</strong>.
+          </div>
         </div>
 
         {encerrado ? (
@@ -15920,38 +15924,57 @@ function WMagFormPage() {
             </div>
 
             <div style={{ marginBottom:24 }}>
-              <div style={labelStyle}>Forma de Pagamento</div>
+              <div style={labelStyle}>Pagamento</div>
               <div style={{ display:"flex", gap:10, marginBottom:16 }}>
-                {[["pix","PIX"],["cartao","Cartão de Crédito"]].map(([v,l]) => (
-                  <button key={v} type="button" onClick={() => setPagamento(v)}
-                    style={{ flex:1, padding:"10px 0", borderRadius:8, border:`1px solid ${pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagamento===v ? "rgba(255,92,26,.12)" : "transparent", color: pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily:mono, fontSize:11, cursor:"pointer", fontWeight: pagamento===v ? 700 : 400, transition:"all .15s" }}>
+                {[["agora","Pagar agora"],["depois","Pagar depois"]].map(([v,l]) => (
+                  <button key={v} type="button" onClick={() => { setPagamento(v==="agora" ? "pix" : "depois"); }}
+                    style={{ flex:1, padding:"12px 0", borderRadius:8, border:`1px solid ${(v==="agora"&&pagamento!=="depois")||(v==="depois"&&pagamento==="depois") ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: (v==="agora"&&pagamento!=="depois")||(v==="depois"&&pagamento==="depois") ? "rgba(255,92,26,.12)" : "transparent", color: (v==="agora"&&pagamento!=="depois")||(v==="depois"&&pagamento==="depois") ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily:mono, fontSize:11, cursor:"pointer", fontWeight: (v==="agora"&&pagamento!=="depois")||(v==="depois"&&pagamento==="depois") ? 700 : 400, transition:"all .15s" }}>
                     {l}
                   </button>
                 ))}
               </div>
-              {pagamento === "pix" && (
-                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                  <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
-                    <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>CHAVE PIX</div>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
-                      <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all" }}>{PIX_WMAG}</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_WMAG); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
-                        style={{ flexShrink:0, padding:"6px 12px", borderRadius:6, border:"1px solid rgba(245,240,232,.2)", background:"transparent", color: pixCopiado ? "#4ade80" : "rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
-                        {pixCopiado ? "✓ copiado" : "copiar"}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Comprovante PIX</label>
-                    <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0]||null)}
-                      style={{ ...inputStyle, padding:"8px 14px", fontSize:12 }} />
-                  </div>
+
+              {pagamento === "depois" && (
+                <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.7 }}>
+                  Seu pedido será registrado sem pagamento agora. O prazo para pagar é <strong style={{ color:"var(--offwhite)" }}>21/08</strong> — após isso o pedido será cancelado automaticamente.
                 </div>
               )}
-              {pagamento === "cartao" && (
-                <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.7 }}>
-                  Após confirmar, você será redirecionada para o WhatsApp para combinar o pagamento no cartão.
-                </div>
+
+              {pagamento !== "depois" && (
+                <>
+                  <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+                    {[["pix","PIX"],["cartao","Cartão"]].map(([v,l]) => (
+                      <button key={v} type="button" onClick={() => setPagamento(v)}
+                        style={{ flex:1, padding:"9px 0", borderRadius:8, border:`1px solid ${pagamento===v ? "rgba(255,92,26,.6)" : "rgba(245,240,232,.1)"}`, background: pagamento===v ? "rgba(255,92,26,.08)" : "transparent", color: pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.5)", fontFamily:mono, fontSize:11, cursor:"pointer", fontWeight: pagamento===v ? 700 : 400, transition:"all .15s" }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  {pagamento === "pix" && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                      <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
+                        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>CHAVE PIX</div>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                          <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all" }}>{PIX_WMAG}</span>
+                          <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_WMAG); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
+                            style={{ flexShrink:0, padding:"6px 12px", borderRadius:6, border:"1px solid rgba(245,240,232,.2)", background:"transparent", color: pixCopiado ? "#4ade80" : "rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
+                            {pixCopiado ? "✓ copiado" : "copiar"}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Comprovante PIX</label>
+                        <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0]||null)}
+                          style={{ ...inputStyle, padding:"8px 14px", fontSize:12 }} />
+                      </div>
+                    </div>
+                  )}
+                  {pagamento === "cartao" && (
+                    <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.7 }}>
+                      Após confirmar, você será redirecionada para o WhatsApp para combinar o pagamento no cartão.
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -15985,8 +16008,8 @@ function AdminWMag({ onCountChange }) {
     });
   }
 
-  const corStatus = s => s==="confirmado"?"#4ade80":s==="cancelado"?"#ff6b6b":s==="cartao_whatsapp"?"rgba(255,200,0,.8)":"rgba(255,92,26,.8)";
-  const labelStatus = s => s==="confirmado"?"confirmado":s==="cancelado"?"cancelado":s==="cartao_whatsapp"?"confirmar pagamento — aguarde atualização na planilha":"aguardando";
+  const corStatus = s => s==="confirmado"?"#4ade80":s==="cancelado"?"#ff6b6b":s==="cartao_whatsapp"?"rgba(255,200,0,.8)":s==="pendente"?"rgba(180,140,255,.8)":"rgba(255,92,26,.8)";
+  const labelStatus = s => s==="confirmado"?"confirmado":s==="cancelado"?"cancelado":s==="cartao_whatsapp"?"confirmar pagamento — aguarde atualização na planilha":s==="pendente"?"pagamento pendente":"aguardando";
 
   return (
     <div style={{ padding:"24px 0" }}>
@@ -16017,7 +16040,7 @@ function AdminWMag({ onCountChange }) {
               </div>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
                 <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{labelStatus(p.status)}</span>
-                {(p.status === "aguardando" || p.status === "cartao_whatsapp") && (
+                {(p.status === "aguardando" || p.status === "cartao_whatsapp" || p.status === "pendente") && (
                   <div style={{ display:"flex", gap:6 }}>
                     <button onClick={()=>atualizar(p.id,"confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
                     <button onClick={()=>atualizar(p.id,"cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
