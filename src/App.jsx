@@ -2415,7 +2415,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
               <div style={{ overflowY:"auto", flex:1, padding:"0 clamp(12px,4vw,24px) 24px", overflowX:"auto" }}>
-                {linhas.length === 0 ? (
+                {linhas.length === 0 && emAnaliseLinhas.length === 0 ? (
                   <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", textAlign:"center", padding:"32px 0" }}>Nenhuma pendência no momento.</div>
                 ) : (
                   <>
