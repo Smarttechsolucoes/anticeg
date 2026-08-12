@@ -2326,9 +2326,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       {totalModal && (() => {
         const linhas = itens.map(i => {
           const ck = `${i.ceg}::${i.nome_do_item}`;
-          const vItem  = isPendente(i.pago_item)  && !pagConfirmMap[ck]?.item  ? Number(i.valor_item  || 0) : 0;
-          const vFrete = isPendente(i.pago_frete) && !pagConfirmMap[ck]?.frete ? Number(i.frete_inter || 0) : 0;
-          const vRf    = isPendente(i.pago_rf)    && !pagConfirmMap[ck]?.rf    ? Number(i.taxa_rf     || 0) : 0;
+          const emAnalise = pagDemandaMap[i.id] === "em_analise";
+          const vItem  = isPendente(i.pago_item)  && !pagConfirmMap[ck]?.item  && !emAnalise ? Number(i.valor_item  || 0) : 0;
+          const vFrete = isPendente(i.pago_frete) && !pagConfirmMap[ck]?.frete && !emAnalise ? Number(i.frete_inter || 0) : 0;
+          const vRf    = isPendente(i.pago_rf)    && !pagConfirmMap[ck]?.rf    && !emAnalise ? Number(i.taxa_rf     || 0) : 0;
           const mItem  = vItem  > 0 ? diasAtraso(i.venc_item)  : 0;
           const mFrete = vFrete > 0 ? diasAtraso(i.venc_frete) : 0;
           const mRf    = vRf    > 0 ? diasAtraso(i.venc_rf)    : 0;
@@ -2339,6 +2340,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         const atrasados = linhas.filter(r => r.diasMax > 0).sort((a, b) => b.diasMax - a.diasMax);
         const noPrazo   = linhas.filter(r => r.diasMax === 0);
         const reembolsoLinhas = itens.filter(i => Number(i.valor_item||0) < 0);
+        const emAnaliseLinhas = itens.filter(i => pagDemandaMap[i.id] === "em_analise" && (isPendente(i.pago_item) || isPendente(i.pago_frete) || isPendente(i.pago_rf)));
         const temMulta = linhas.some(r => r.mItem + r.mFrete + r.mRf > 0);
         const thS = { fontSize:8, letterSpacing:"1.2px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", textAlign:"right", paddingBottom:8, paddingLeft:12 };
         const tdS = { fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(245,240,232,.6)", paddingLeft:12 };
@@ -2408,7 +2410,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)" }}>
                     PENDÊNCIAS <span style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>R${fmtBRL(tPend + tMulta)}</span>
                   </div>
-                  <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2 }}>{linhas.length} item{linhas.length !== 1 ? "ns" : ""} em aberto</div>
+                  <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2 }}>{linhas.length} {linhas.length !== 1 ? "itens" : "item"} em aberto</div>
                 </div>
                 <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
@@ -2441,6 +2443,39 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                         <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
                           {tColgroup}{atrasados.length === 0 && tHead}
                           <tbody>{noPrazo.map(renderLinha)}</tbody>
+                        </table>
+                      </>
+                    )}
+                    {emAnaliseLinhas.length > 0 && (
+                      <>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"14px 0 6px" }}>
+                          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#A78BFA", letterSpacing:"1.5px", textTransform:"uppercase" }}>◉ Em análise de pagamento</span>
+                          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(167,139,250,.4)", background:"rgba(167,139,250,.08)", borderRadius:10, padding:"1px 8px" }}>{emAnaliseLinhas.length}</span>
+                          <div style={{ flex:1, height:"1px", background:"rgba(167,139,250,.12)" }} />
+                        </div>
+                        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                          <tbody>
+                            {emAnaliseLinhas.map((item, idx) => {
+                              const valorItem  = Number(item.valor_item  || 0);
+                              const valorFrete = Number(item.frete_inter || 0);
+                              const valorRf    = Number(item.taxa_rf     || 0);
+                              const total = valorItem + valorFrete + valorRf;
+                              return (
+                                <tr key={idx} style={{ borderTop:"1px solid rgba(167,139,250,.08)" }}>
+                                  <td style={{ padding:"10px 8px 10px 0", verticalAlign:"middle" }}>
+                                    <div style={{ fontSize:12, color:"rgba(245,240,232,.7)", fontWeight:600, lineHeight:1.35 }}>{item.nome_do_item}</div>
+                                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, flexWrap:"wrap" }}>
+                                      <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</span>
+                                      <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#A78BFA", background:"rgba(167,139,250,.12)", border:"1px solid rgba(167,139,250,.25)", borderRadius:4, padding:"1px 6px" }}>em análise</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ fontSize:12, fontFamily:"'DM Mono',monospace", textAlign:"right", color:"rgba(167,139,250,.6)", fontWeight:700, padding:"10px 0", whiteSpace:"nowrap" }}>
+                                    R${fmtBRL(total)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
                         </table>
                       </>
                     )}
