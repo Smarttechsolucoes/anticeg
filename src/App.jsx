@@ -2110,12 +2110,14 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         {!guest && (
           <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : totalSaldoCashback > 0 ? "rgba(186,255,57,.25)" : undefined, cursor:"pointer" }}>
             <div className="sum-label">Total a pagar</div>
-            <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : "var(--lilas)" }}>
+            <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : (tPend + tMulta) === 0 && itens.length > 0 ? "#4ade80" : "var(--lilas)" }}>
               R${fmtBRL(tPend + tMulta)}
             </div>
             {tMulta > 0
               ? <div className="sum-sub" style={{ color:"rgba(255,107,107,.7)" }}>R${fmtBRL(tPend)} + R${fmtBRL(tMulta)} multa</div>
-              : <div className="sum-sub">ver detalhes →</div>
+              : (tPend + tMulta) === 0 && itens.length > 0
+                ? <div className="sum-sub" style={{ color:"rgba(74,222,128,.7)" }}>você saiu do antiseresa! 🎉</div>
+                : <div className="sum-sub">ver detalhes →</div>
             }
             {totalSaldoCashback > 0 && (
               <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid rgba(186,255,57,.15)" }}>
