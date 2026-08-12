@@ -1950,9 +1950,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const tPend  = filtered.reduce((a,b) => {
     if (Number(b.valor_item||0) < 0) return a;
     const ck = `${b.ceg}::${b.nome_do_item}`;
-    return a + (isPendente(b.pago_item)  && !pagConfirmMap[ck]?.item  ? Number(b.valor_item||0)  : 0)
-             + (isPendente(b.pago_frete) && !pagConfirmMap[ck]?.frete ? Number(b.frete_inter||0) : 0)
-             + (isPendente(b.pago_rf)    && !pagConfirmMap[ck]?.rf    ? Number(b.taxa_rf||0)     : 0);
+    const emAnalise = pagDemandaMap[b.id] === "em_analise";
+    return a + (isPendente(b.pago_item)  && !pagConfirmMap[ck]?.item  && !emAnalise ? Number(b.valor_item||0)  : 0)
+             + (isPendente(b.pago_frete) && !pagConfirmMap[ck]?.frete && !emAnalise ? Number(b.frete_inter||0) : 0)
+             + (isPendente(b.pago_rf)    && !pagConfirmMap[ck]?.rf    && !emAnalise ? Number(b.taxa_rf||0)     : 0);
   }, 0);
   const tMulta = itens.reduce((a,b) => {
     const ck = `${b.ceg}::${b.nome_do_item}`;
