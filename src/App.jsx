@@ -2116,7 +2116,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             {tMulta > 0
               ? <div className="sum-sub" style={{ color:"rgba(255,107,107,.7)" }}>R${fmtBRL(tPend)} + R${fmtBRL(tMulta)} multa</div>
               : (tPend + tMulta) === 0 && itens.length > 0
-                ? <div className="sum-sub" style={{ color:"rgba(74,222,128,.7)" }}>você saiu do antiseresa! 🎉</div>
+                ? <div className="sum-sub" style={{ color:"rgba(74,222,128,.7)" }}>você saiu do antiserasa! 🎉</div>
                 : <div className="sum-sub">ver detalhes →</div>
             }
             {totalSaldoCashback > 0 && (
