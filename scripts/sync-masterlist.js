@@ -288,6 +288,30 @@ async function main() {
   }
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros`);
+
+  // Remover registros do banco que não existem mais na planilha
+  const toDelete = [];
+  for (const [key, items] of Object.entries(existingMap)) {
+    const countInSheet = sheetKeyCount[key] || 0;
+    // Se a planilha tem menos ocorrências que o banco, deleta as extras
+    for (let i = countInSheet; i < items.length; i++) {
+      toDelete.push(items[i].id);
+    }
+  }
+
+  if (toDelete.length > 0) {
+    console.log(`\nRemovendo ${toDelete.length} registro(s) ausentes da planilha...`);
+    let deletados = 0, delErros = 0;
+    for (let i = 0; i < toDelete.length; i += 100) {
+      const batch = toDelete.slice(i, i + 100);
+      const { error } = await supabase.from('masterlist').delete().in('id', batch);
+      if (error) { console.error('Erro ao deletar:', error.message); delErros += batch.length; }
+      else deletados += batch.length;
+    }
+    console.log(`✓ Removidos: ${deletados} · ${delErros} erros`);
+  } else {
+    console.log(`\n✓ Nenhum registro para remover`);
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
