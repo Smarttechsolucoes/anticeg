@@ -16,6 +16,8 @@ function parseBRL(str) {
   let cleaned = str.replace(/R\$\s*/g, '').trim();
   if (cleaned.includes(',')) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (/\.\d{3}/.test(cleaned)) {
+    cleaned = cleaned.replace(/\./g, '');
   }
   return parseFloat(cleaned) || 0;
 }
@@ -290,6 +292,11 @@ async function main() {
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros`);
 
   // Remover registros do banco que não existem mais na planilha
+  const totalExistentes = Object.values(existingMap).reduce((a, v) => a + v.length, 0);
+  if (rows.length < totalExistentes * 0.5) {
+    console.error(`Abortando prune: planilha retornou apenas ${rows.length} linhas vs ${totalExistentes} no banco. Possível CSV parcial.`);
+    return;
+  }
   const toDelete = [];
   for (const [key, items] of Object.entries(existingMap)) {
     const countInSheet = sheetKeyCount[key] || 0;

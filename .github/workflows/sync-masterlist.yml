@@ -5,6 +5,10 @@ on:
     - cron: '0 12 * * *'  # todo dia ao meio-dia UTC (9h BRT)
   workflow_dispatch:        # permite rodar manualmente também
 
+concurrency:
+  group: sync-masterlist
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest

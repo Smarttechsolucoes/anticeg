@@ -1818,7 +1818,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         const confirm = {};
         data.forEach(d => {
           (d.itens || []).forEach(it => {
-            if (!map[it.id] || d.status === "em_analise") map[it.id] = d.status;
+            if (!map[it.id] || (d.status === "em_analise" && map[it.id] !== "pago")) map[it.id] = d.status;
             if (d.status === "pago") {
               const k = `${it.ceg}::${it.nome_do_item}`;
               if (!confirm[k]) confirm[k] = {};
@@ -1907,9 +1907,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   itens.forEach(i => {
     const ck = `${i.ceg}::${i.nome_do_item}`;
     const cfm = pagConfirmMap[ck] || {};
-    if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item  && Number(i.valor_item  || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg, val: Number(i.valor_item  || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "item" });
-    if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete && Number(i.frete_inter || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg, val: Number(i.frete_inter || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "frete" });
-    if (i.venc_rf    && isPendente(i.pago_rf)    && !cfm.rf    && Number(i.taxa_rf     || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_rf),    label: "Taxa: "  + i.ceg, val: Number(i.taxa_rf     || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "taxa RF" });
+    const emAnalise = pagDemandaMap[i.id] === "em_analise";
+    if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item  && !emAnalise && Number(i.valor_item  || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg, val: Number(i.valor_item  || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "item" });
+    if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete && !emAnalise && Number(i.frete_inter || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg, val: Number(i.frete_inter || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "frete" });
+    if (i.venc_rf    && isPendente(i.pago_rf)    && !cfm.rf    && !emAnalise && Number(i.taxa_rf     || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_rf),    label: "Taxa: "  + i.ceg, val: Number(i.taxa_rf     || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "taxa RF" });
   });
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
@@ -1955,7 +1956,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
              + (isPendente(b.pago_frete) && !pagConfirmMap[ck]?.frete && !emAnalise ? Number(b.frete_inter||0) : 0)
              + (isPendente(b.pago_rf)    && !pagConfirmMap[ck]?.rf    && !emAnalise ? Number(b.taxa_rf||0)     : 0);
   }, 0);
-  const tMulta = itens.reduce((a,b) => {
+  const tMulta = filtered.reduce((a,b) => {
     const ck = `${b.ceg}::${b.nome_do_item}`;
     return a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.item  ? diasAtraso(b.venc_item)  : 0)
              + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.frete ? diasAtraso(b.venc_frete) : 0)
@@ -15303,7 +15304,7 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
 const POPUP_WEEKS = [
   {
     id: "01",
-    periodo: "08/08 — 12/08",
+    periodo: "08/08 — 11/08",
     deadline: new Date("2026-08-11T23:59:59-03:00"),
     pagamento: "13/08",
     img: "/popup/pob-week-1.png",
@@ -15387,6 +15388,9 @@ function PopupThisAndThatPage() {
 
   async function confirmarPedido() {
     setErro(""); setStatus("enviando");
+    const agora = new Date();
+    if (tem1 && agora > POPUP_WEEKS[0].deadline) { setErro("Week 01 já encerrada."); setStatus("idle"); return; }
+    if (tem2 && agora > POPUP_WEEKS[1].deadline) { setErro("Week 02 já encerrada."); setStatus("idle"); return; }
     const semanas = [tem1?"01":null,tem2?"02":null].filter(Boolean).join(",");
     const itens   = [...buildItemsFromQtds(qtds1,"01"), ...buildItemsFromQtds(qtds2,"02")];
     const { data, error } = await supabase.from("pedidos_popup").insert([{
@@ -15455,7 +15459,7 @@ function PopupThisAndThatPage() {
             <div style={{ fontSize:20, fontWeight:900 }}>POP-UP THIS & THAT</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>{nome} · {email}</div>
           </div>
-          <ResumoWeek label="WEEK 01 · 08/08 — 12/08" qtds={qtds1} brl={brl1} krw={krw1} pc={pc1} />
+          <ResumoWeek label="WEEK 01 · 08/08 — 11/08" qtds={qtds1} brl={brl1} krw={krw1} pc={pc1} />
           <ResumoWeek label="WEEK 02 · 13/08 — 19/08" qtds={qtds2} brl={brl2} krw={krw2} pc={pc2} />
           <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total geral</span>
@@ -15829,6 +15833,7 @@ function WMagFormPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 capa."); return; }
+    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
 
     let comprovanteUrl = null;
@@ -15856,7 +15861,8 @@ function WMagFormPage() {
     if (pagamento === "cartao") {
       const linhas = WMAG_CAPAS.filter(c => qtds[c.id] > 0).map(c => `${c.label}: ${qtds[c.id]}x`).join("\n");
       const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da W MAGAZINE HYUNJIN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\n${linhas}\nTotal: R$${total.toFixed(2).replace(".",",")}`);
-      window.open(`https://wa.me/${WA_WMAG}?text=${msg}`, "_blank");
+      const waWin = window.open("", "_blank");
+      if (waWin) waWin.location = `https://wa.me/${WA_WMAG}?text=${msg}`;
     }
     setStatus("sucesso");
   }
@@ -15914,7 +15920,7 @@ function WMagFormPage() {
             <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
             <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
-              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Redirecionando para o WhatsApp para confirmar pagamento."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
             <a href="https://chat.whatsapp.com/CGHeelexfjp7ckWfWwEjz5" target="_blank" rel="noopener noreferrer"
@@ -16136,7 +16142,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Hyunjin — 3 capas",
       url: "/wmag-hyunjin",
       img: WMAG_CAPAS[0].img,
-      tags: [`Inscrições até 14/08`, `Pagamento até 20/08`],
+      tags: [`Inscrições até 14/08`, `Pagamento até 21/08`],
       info: "R$ 48,00 por unidade · PIX ou cartão · frete inter 26/08",
     },
     {
@@ -16429,7 +16435,7 @@ function RevistaFormPage() {
             <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
             <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
-              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Redirecionando para o WhatsApp para confirmar pagamento."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
             <a href="https://chat.whatsapp.com/Bs2rkIZ5Zpp1F1J4lFmBqk" target="_blank" rel="noopener noreferrer"
