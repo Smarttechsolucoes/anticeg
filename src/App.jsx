@@ -14787,11 +14787,11 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               {/* Botões lado a lado */}
               <div style={{ display:"flex", gap:10, marginBottom:14 }}>
                 <button onClick={() => { setErroSecao(v => !v); setErroEnviado(false); }}
-                  style={{ flex:1, padding:"18px 12px", background: erroSecao ? "rgba(255,92,26,.12)" : "transparent", color:"rgba(255,92,26,.85)", border:`1.5px solid rgba(255,92,26,${erroSecao ? ".4" : ".25"})`, borderRadius:10, fontSize:14, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".03em", transition:"all .2s" }}>
+                  style={{ flex:1, padding:"12px 10px", background: erroSecao ? "rgba(255,92,26,.12)" : "transparent", color:"rgba(255,92,26,.85)", border:`1.5px solid rgba(255,92,26,${erroSecao ? ".4" : ".25"})`, borderRadius:10, fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".03em", transition:"all .2s" }}>
                   ⚠ Reportar erro
                 </button>
                 <button onClick={confirmarConferencia} disabled={envioConfirmando}
-                  style={{ flex:1, padding:"18px 12px", background: todosConferidos ? "rgba(186,255,57,.18)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1.5px solid ${todosConferidos ? "rgba(186,255,57,.5)" : "rgba(100,181,246,.35)"}`, borderRadius:10, fontSize:14, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s", letterSpacing:".03em" }}>
+                  style={{ flex:1, padding:"12px 10px", background: todosConferidos ? "rgba(186,255,57,.18)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1.5px solid ${todosConferidos ? "rgba(186,255,57,.5)" : "rgba(100,181,246,.35)"}`, borderRadius:10, fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s", letterSpacing:".03em" }}>
                   {envioConfirmando ? "Confirmando..." : todosConferidos ? "✓ Tudo certo!" : `Confirmar (${itensConferidos.size}/${storageDisponivel.length})`}
                 </button>
               </div>
