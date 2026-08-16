@@ -9670,7 +9670,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     </div>
                   ) : (
                     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                      {storageFotoQueue.map(item => {
+                      {[...storageFotoQueue].sort((a,b) => (a.status==="enviado"?1:0)-(b.status==="enviado"?1:0)).map(item => {
                         const isEnviado  = item.status === "enviado";
                         const isEnviando = item.status === "enviando";
                         const isErro     = item.status === "erro";
@@ -9678,9 +9678,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                         const filtJoin = q.length > 0 && storageJoiners
                           ? storageJoiners.filter(j => j.nome?.toLowerCase().includes(q) || j.cog?.toLowerCase().includes(q)).slice(0, 8)
                           : [];
+                        if (isEnviado) return (
+                          <div key={item.id} style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.03)", border:"1px solid rgba(186,255,57,.1)", borderRadius:6, padding:"5px 10px", opacity:0.5 }}>
+                            <img src={item.preview} alt="" onClick={() => setStorageFotoAmpliada(item.preview)}
+                              style={{ width:36, height:36, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#1a1a1a", cursor:"zoom-in" }} />
+                            <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", fontWeight:700, flexShrink:0 }}>@{item.joiner?.cog}</span>
+                            <span style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.desc || item.file?.name}</span>
+                            <span style={{ fontSize:11, color:"#BAFF39", flexShrink:0 }}>✓</span>
+                          </div>
+                        );
                         return (
                           <div key={item.id}
-                            style={{ display:"flex", alignItems:"flex-start", gap:12, background: isEnviado ? "rgba(186,255,57,.03)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : isEnviado ? "rgba(186,255,57,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px", opacity: isEnviado ? 0.65 : 1 }}>
+                            style={{ display:"flex", alignItems:"flex-start", gap:12, background: isErro ? "rgba(230,57,70,.04)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px" }}>
                             <img src={item.preview} alt="" onClick={() => setStorageFotoAmpliada(item.preview)}
                               style={{ width:120, height:120, objectFit:"cover", borderRadius:6, flexShrink:0, background:"#1a1a1a", cursor:"zoom-in" }} />
                             <div style={{ flex:1, minWidth:0 }}>
