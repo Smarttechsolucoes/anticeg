@@ -9557,6 +9557,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             id: `${Date.now()}-${i}`, file, preview: URL.createObjectURL(file),
             joiner: null, desc: "", searchStr: "", status: "pendente",
             masterlist: [], mlLoading: false, itensCheck: new Set(), itemSearchStr: "",
+            tipo: "item", enviosCount: 0,
           }));
           setStorageFotoQueue(prev => [...prev, ...novas]);
         }
@@ -9589,9 +9590,24 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             return prev.filter(i => i.id !== id);
           });
         }
+        async function enviarCardPhotocard(itemId) {
+          const item = storageFotoQueue.find(i => i.id === itemId);
+          if (!item || !item.joiner) return;
+          updQueueItem(itemId, { status: "enviando" });
+          try {
+            const ext = item.file.name.split(".").pop();
+            const path = `${item.joiner.cog}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, item.file, { upsert: true });
+            if (upErr) throw upErr;
+            const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+            await supabase.from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
+            setStorageComItens(prev => prev ? prev.map(j => j.cog === item.joiner.cog ? { ...j, count: j.count + 1 } : j) : prev);
+            updQueueItem(itemId, { status: "pendente", joiner: null, searchStr: "", masterlist: [], itensCheck: new Set(), desc: "", itemSearchStr: "", enviosCount: item.enviosCount + 1 });
+          } catch { updQueueItem(itemId, { status: "erro" }); }
+        }
         async function enviarFila() {
           setStorageFotoEnviando(true);
-          const prontas = storageFotoQueue.filter(i => i.joiner && i.status === "pendente");
+          const prontas = storageFotoQueue.filter(i => i.joiner && i.status === "pendente" && i.tipo !== "photocard");
           for (const item of prontas) {
             updQueueItem(item.id, { status: "enviando" });
             try {
@@ -9625,9 +9641,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             </div>
             {storageMode === "foto" && (() => {
-              const prontas   = storageFotoQueue.filter(i => i.joiner && i.status === "pendente");
-              const enviadas  = storageFotoQueue.filter(i => i.status === "enviado");
-              const semJoiner = storageFotoQueue.filter(i => !i.joiner && i.status === "pendente");
+              const prontas      = storageFotoQueue.filter(i => i.joiner && i.status === "pendente" && i.tipo !== "photocard");
+              const enviadas     = storageFotoQueue.filter(i => i.status === "enviado");
+              const semJoiner    = storageFotoQueue.filter(i => !i.joiner && i.status === "pendente");
+              const photocards   = storageFotoQueue.filter(i => i.tipo === "photocard" && i.status !== "enviado");
               return (
                 <div>
                   {/* Barra superior: picker + botões */}
@@ -9657,9 +9674,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {storageFotoQueue.length > 0 && (
                     <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
                       <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(245,240,232,.06)", color:"rgba(245,240,232,.4)", border:"1px solid rgba(245,240,232,.1)" }}>{storageFotoQueue.length} total</span>
-                      {prontas.length   > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(255,92,0,.1)",    color:"var(--laranja)", border:"1px solid rgba(255,92,0,.25)" }}>{prontas.length} prontas</span>}
-                      {semJoiner.length > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(245,240,232,.04)", color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.08)" }}>{semJoiner.length} sem joiner</span>}
-                      {enviadas.length  > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(186,255,57,.08)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.2)" }}>{enviadas.length} enviadas ✓</span>}
+                      {prontas.length    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(255,92,0,.1)",    color:"var(--laranja)", border:"1px solid rgba(255,92,0,.25)" }}>{prontas.length} prontas</span>}
+                      {photocards.length > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(201,168,240,.08)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.2)" }}>{photocards.length} photocard{photocards.length > 1 ? "s" : ""}</span>}
+                      {semJoiner.length  > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(245,240,232,.04)", color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.08)" }}>{semJoiner.length} sem joiner</span>}
+                      {enviadas.length   > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(186,255,57,.08)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.2)" }}>{enviadas.length} enviadas ✓</span>}
                     </div>
                   )}
 
@@ -9687,20 +9705,41 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                             <span style={{ fontSize:11, color:"#BAFF39", flexShrink:0 }}>✓</span>
                           </div>
                         );
+                        const isPhotocard = item.tipo === "photocard";
                         return (
                           <div key={item.id}
-                            style={{ display:"flex", alignItems:"flex-start", gap:12, background: isErro ? "rgba(230,57,70,.04)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px" }}>
+                            style={{ display:"flex", alignItems:"flex-start", gap:12, background: isErro ? "rgba(230,57,70,.04)" : isPhotocard ? "rgba(201,168,240,.02)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : isPhotocard ? "rgba(201,168,240,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px" }}>
                             <img src={item.preview} alt="" onClick={() => setStorageFotoAmpliada(item.preview)}
                               style={{ width:120, height:120, objectFit:"cover", borderRadius:6, flexShrink:0, background:"#1a1a1a", cursor:"zoom-in" }} />
                             <div style={{ flex:1, minWidth:0 }}>
+                              {/* Toggle tipo */}
+                              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
+                                <div style={{ display:"flex", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, overflow:"hidden" }}>
+                                  {[["item","Merch/Item"],["photocard","Photocard"]].map(([val, label]) => (
+                                    <button key={val} onClick={() => updQueueItem(item.id, { tipo: val })}
+                                      style={{ padding:"2px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: item.tipo === val ? (val === "photocard" ? "rgba(201,168,240,.3)" : "rgba(255,92,0,.2)") : "transparent", color: item.tipo === val ? (val === "photocard" ? "#C9A8F0" : "var(--laranja)") : "rgba(245,240,232,.3)" }}>
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                                {isPhotocard && item.enviosCount > 0 && (
+                                  <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#BAFF39", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, padding:"2px 7px" }}>{item.enviosCount}× enviada ✓</span>
+                                )}
+                              </div>
                               {/* Joiner */}
                               {item.joiner ? (
-                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8, flexWrap:"wrap" }}>
                                   <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", fontWeight:700 }}>@{item.joiner.cog}</span>
                                   <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>{item.joiner.nome}</span>
                                   {!isEnviado && !isEnviando && (
                                     <button onClick={() => updQueueItem(item.id, { joiner: null, searchStr: "", masterlist: [], itensCheck: new Set(), desc: "", itemSearchStr: "" })}
                                       style={{ fontSize:9, color:"rgba(245,240,232,.3)", background:"none", border:"none", cursor:"pointer", padding:"0 2px", fontFamily:"'DM Mono',monospace" }}>✕</button>
+                                  )}
+                                  {isPhotocard && !isEnviando && (
+                                    <button onClick={() => enviarCardPhotocard(item.id)}
+                                      style={{ marginLeft:"auto", padding:"3px 10px", background:"rgba(201,168,240,.2)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:4, fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
+                                      {isEnviando ? "Enviando…" : "↑ Enviar para esta joiner"}
+                                    </button>
                                   )}
                                 </div>
                               ) : (
