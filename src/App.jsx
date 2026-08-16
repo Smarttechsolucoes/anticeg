@@ -10170,7 +10170,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         async function carregarRounds() {
           setRoundsLoading(true);
           const { data } = await supabase.from("envio_rounds")
-            .select("*, envio_requests(joiner_cog, posicao_no_round, status, solicitado_em)")
+            .select("*, envio_requests(joiner_cog, posicao_no_round, status, solicitado_em, itens_manuais)")
             .order("numero", { ascending: false });
           setRoundsList(data || []);
           setRoundsLoading(false);
@@ -10233,10 +10233,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {membros.length > 0 && (
                     <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, display:"flex", flexDirection:"column", gap:4 }}>
                       {membros.sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => (
-                        <div key={m.joiner_cog} style={{ display:"flex", alignItems:"center", gap:10, fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)" }}>
-                          <span style={{ color:"rgba(245,240,232,.25)", minWidth:14 }}>{m.posicao_no_round}.</span>
-                          <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
-                          <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(m.solicitado_em).toLocaleDateString("pt-BR")}</span>
+                        <div key={m.joiner_cog} style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10, color:"rgba(245,240,232,.6)" }}>
+                            <span style={{ color:"rgba(245,240,232,.25)", minWidth:14 }}>{m.posicao_no_round}.</span>
+                            <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
+                            <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(m.solicitado_em).toLocaleDateString("pt-BR")}</span>
+                          </div>
+                          {m.itens_manuais && (
+                            <div style={{ marginLeft:24, marginTop:3, padding:"5px 8px", background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.15)", borderRadius:5, fontSize:10, color:"rgba(245,240,232,.5)", whiteSpace:"pre-wrap", lineHeight:1.5 }}>
+                              {m.itens_manuais}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
