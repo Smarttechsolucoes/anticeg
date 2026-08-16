@@ -14783,17 +14783,17 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                   Confira as fotos acima e marque cada item. Quando estiver tudo certo, confirme para liberar a solicitação de envio.
                 </div>
                 <button onClick={confirmarConferencia} disabled={envioConfirmando}
-                  style={{ width:"100%", padding:"11px", background: todosConferidos ? "rgba(186,255,57,.15)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1px solid ${todosConferidos ? "rgba(186,255,57,.4)" : "rgba(100,181,246,.35)"}`, borderRadius:8, fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s" }}>
-                  {envioConfirmando ? "Confirmando..." : todosConferidos ? "✓ Tudo conferido — confirmar!" : `✓ Confirmar itens (${itensConferidos.size}/${storageDisponivel.length})`}
+                  style={{ width:"100%", padding:"18px", background: todosConferidos ? "rgba(186,255,57,.18)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1.5px solid ${todosConferidos ? "rgba(186,255,57,.5)" : "rgba(100,181,246,.35)"}`, borderRadius:10, fontSize:15, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s", letterSpacing:".03em" }}>
+                  {envioConfirmando ? "Confirmando..." : todosConferidos ? "✓ Tudo certo — confirmar!" : `✓ Confirmar itens (${itensConferidos.size}/${storageDisponivel.length})`}
                 </button>
               </div>
 
               {/* Sinalizar erro */}
-              <div style={{ border:"1px solid rgba(255,92,26,.2)", borderRadius:10, overflow:"hidden", marginBottom:14 }}>
+              <div style={{ border:"1.5px solid rgba(255,92,26,.25)", borderRadius:10, overflow:"hidden", marginBottom:14 }}>
                 <button onClick={() => { setErroSecao(v => !v); setErroEnviado(false); }}
-                  style={{ width:"100%", padding:"12px 16px", background: erroSecao ? "rgba(255,92,26,.1)" : "transparent", color:"rgba(255,92,26,.8)", border:"none", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between", letterSpacing:".05em" }}>
-                  <span>⚠ Sinalizar erro na conferência</span>
-                  <span style={{ fontSize:10, opacity:.7 }}>{erroSecao ? "▲" : "▼"}</span>
+                  style={{ width:"100%", padding:"16px 20px", background: erroSecao ? "rgba(255,92,26,.1)" : "transparent", color:"rgba(255,92,26,.85)", border:"none", fontFamily:"'DM Mono',monospace", fontSize:14, fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between", letterSpacing:".03em" }}>
+                  <span>⚠ Reportar erro</span>
+                  <span style={{ fontSize:11, opacity:.7 }}>{erroSecao ? "▲" : "▼"}</span>
                 </button>
                 {erroSecao && (
                   <div style={{ padding:"0 16px 16px", borderTop:"1px solid rgba(255,92,26,.15)" }}>
