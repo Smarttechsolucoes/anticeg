@@ -8193,6 +8193,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageFotoSearch, setStorageFotoSearch] = useState("");
   const [storageFotoQueue,    setStorageFotoQueue]    = useState([]);
   const [storageFotoEnviando, setStorageFotoEnviando] = useState(false);
+  const [storageFotoAmpliada, setStorageFotoAmpliada] = useState(null);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [cotacaoObs,        setCotacaoObs]        = useState("");
@@ -9547,11 +9548,31 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           const novas = Array.from(files).map((file, i) => ({
             id: `${Date.now()}-${i}`, file, preview: URL.createObjectURL(file),
             joiner: null, desc: "", searchStr: "", status: "pendente",
+            masterlist: [], mlLoading: false, itensCheck: new Set(), itemSearchStr: "",
           }));
           setStorageFotoQueue(prev => [...prev, ...novas]);
         }
         function updQueueItem(id, patch) {
           setStorageFotoQueue(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+        }
+        async function selecionarJoinerNaFila(itemId, joiner) {
+          setStorageFotoQueue(prev => prev.map(i => i.id === itemId
+            ? { ...i, joiner, searchStr: "", mlLoading: true, masterlist: [], itensCheck: new Set(), desc: "", itemSearchStr: "" }
+            : i));
+          const { data: ml } = await supabase.from("masterlist")
+            .select("id, ceg, nome_do_item").eq("cog", joiner.cog).order("ceg").order("nome_do_item");
+          setStorageFotoQueue(prev => prev.map(i => i.id === itemId ? { ...i, masterlist: ml || [], mlLoading: false } : i));
+        }
+        function toggleItemNaFila(itemId, mlItem) {
+          setStorageFotoQueue(prev => prev.map(i => {
+            if (i.id !== itemId) return i;
+            const key = `${mlItem.ceg}::${mlItem.nome_do_item}`;
+            const n = new Set(i.itensCheck);
+            n.has(key) ? n.delete(key) : n.add(key);
+            const desc = i.masterlist.filter(m => n.has(`${m.ceg}::${m.nome_do_item}`))
+              .map(m => `${m.ceg} — ${m.nome_do_item}`).join("\n");
+            return { ...i, itensCheck: n, desc, itemSearchStr: "" };
+          }));
         }
         function removerDaFila(id) {
           setStorageFotoQueue(prev => {
@@ -9652,20 +9673,21 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                         return (
                           <div key={item.id}
                             style={{ display:"flex", alignItems:"flex-start", gap:12, background: isEnviado ? "rgba(186,255,57,.03)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : isEnviado ? "rgba(186,255,57,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px", opacity: isEnviado ? 0.65 : 1 }}>
-                            <img src={item.preview} alt="" style={{ width:120, height:120, objectFit:"cover", borderRadius:6, flexShrink:0, background:"#1a1a1a" }} />
+                            <img src={item.preview} alt="" onClick={() => setStorageFotoAmpliada(item.preview)}
+                              style={{ width:120, height:120, objectFit:"cover", borderRadius:6, flexShrink:0, background:"#1a1a1a", cursor:"zoom-in" }} />
                             <div style={{ flex:1, minWidth:0 }}>
                               {/* Joiner */}
                               {item.joiner ? (
-                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
                                   <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", fontWeight:700 }}>@{item.joiner.cog}</span>
                                   <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>{item.joiner.nome}</span>
                                   {!isEnviado && !isEnviando && (
-                                    <button onClick={() => updQueueItem(item.id, { joiner: null, searchStr: "" })}
+                                    <button onClick={() => updQueueItem(item.id, { joiner: null, searchStr: "", masterlist: [], itensCheck: new Set(), desc: "", itemSearchStr: "" })}
                                       style={{ fontSize:9, color:"rgba(245,240,232,.3)", background:"none", border:"none", cursor:"pointer", padding:"0 2px", fontFamily:"'DM Mono',monospace" }}>✕</button>
                                   )}
                                 </div>
                               ) : (
-                                <div style={{ position:"relative", marginBottom:6 }}>
+                                <div style={{ position:"relative", marginBottom:8 }}>
                                   <input style={{ ...inp2, width:"100%", boxSizing:"border-box", fontSize:11, padding:"5px 10px" }}
                                     placeholder="Joiner (nome ou @)..."
                                     value={item.searchStr || ""}
@@ -9676,7 +9698,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                   {filtJoin.length > 0 && (
                                     <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:3, zIndex:50, overflow:"hidden", maxHeight:160, overflowY:"auto" }}>
                                       {filtJoin.map(j => (
-                                        <button key={j.cog} onClick={() => updQueueItem(item.id, { joiner: j, searchStr: "" })}
+                                        <button key={j.cog} onClick={() => selecionarJoinerNaFila(item.id, j)}
                                           style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"7px 12px", cursor:"pointer", color:"#F5F0E8" }}>
                                           <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{j.nome}</span>
                                           <span style={{ fontSize:10, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", marginLeft:6 }}>@{j.cog}</span>
@@ -9686,15 +9708,63 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                   )}
                                 </div>
                               )}
-                              {/* Descrição */}
-                              {!isEnviado ? (
-                                <input style={{ ...inp2, width:"100%", boxSizing:"border-box", fontSize:10, padding:"5px 10px" }}
-                                  placeholder="Descrição (opcional)..."
-                                  value={item.desc}
-                                  onChange={e => updQueueItem(item.id, { desc: e.target.value })} />
-                              ) : item.desc ? (
-                                <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.desc}</div>
-                              ) : null}
+                              {/* Itens */}
+                              {!isEnviado && item.joiner && (
+                                <div>
+                                  {/* Tags dos itens selecionados */}
+                                  {item.itensCheck.size > 0 && (
+                                    <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:6 }}>
+                                      {Array.from(item.itensCheck).map(key => {
+                                        const [ceg, ...rest] = key.split("::");
+                                        return (
+                                          <span key={key} style={{ display:"inline-flex", alignItems:"center", gap:4, fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.25)", borderRadius:4, padding:"2px 7px", color:"#C9A8F0" }}>
+                                            {ceg} — {rest.join("::")}
+                                            <button onClick={() => toggleItemNaFila(item.id, { ceg, nome_do_item: rest.join("::") })}
+                                              style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(201,168,240,.5)", fontSize:10, padding:0, lineHeight:1 }}>✕</button>
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  {/* Busca de item */}
+                                  {item.mlLoading ? (
+                                    <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Carregando itens…</div>
+                                  ) : (
+                                    <div style={{ position:"relative" }}>
+                                      <input style={{ ...inp2, width:"100%", boxSizing:"border-box", fontSize:10, padding:"5px 10px" }}
+                                        placeholder="Buscar item ou CEG..."
+                                        value={item.itemSearchStr || ""}
+                                        onChange={e => updQueueItem(item.id, { itemSearchStr: e.target.value })} />
+                                      {(item.itemSearchStr || "").trim().length > 0 && (() => {
+                                        const qi = item.itemSearchStr.toLowerCase();
+                                        const filtMl = item.masterlist.filter(m =>
+                                          m.nome_do_item?.toLowerCase().includes(qi) || m.ceg?.toLowerCase().includes(qi)
+                                        ).slice(0, 8);
+                                        if (filtMl.length === 0) return null;
+                                        return (
+                                          <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:3, zIndex:50, overflow:"hidden", maxHeight:160, overflowY:"auto" }}>
+                                            {filtMl.map(m => {
+                                              const key = `${m.ceg}::${m.nome_do_item}`;
+                                              const sel = item.itensCheck.has(key);
+                                              return (
+                                                <button key={m.id} onClick={() => toggleItemNaFila(item.id, m)}
+                                                  style={{ display:"flex", alignItems:"center", gap:8, width:"100%", textAlign:"left", background: sel ? "rgba(201,168,240,.08)" : "transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"7px 12px", cursor:"pointer", color:"#F5F0E8" }}>
+                                                  <span style={{ fontSize:9, color: sel ? "#C9A8F0" : "rgba(245,240,232,.2)", fontWeight:900 }}>{sel ? "✓" : "○"}</span>
+                                                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace" }}>{m.nome_do_item}</span>
+                                                  <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>{m.ceg}</span>
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {isEnviado && item.desc && (
+                                <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>{item.desc}</div>
+                              )}
                             </div>
                             {/* Status + remover */}
                             <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
@@ -9714,6 +9784,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 </div>
               );
             })()}
+
+            {storageFotoAmpliada && (
+              <div onClick={() => setStorageFotoAmpliada(null)}
+                style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+                <img src={storageFotoAmpliada} alt="" style={{ maxWidth:"90vw", maxHeight:"90vh", objectFit:"contain", borderRadius:8, boxShadow:"0 0 60px rgba(0,0,0,.8)" }} />
+              </div>
+            )}
 
             {storageMode === "joiner" && (storageJoiner ? (
               <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.25)", borderRadius:8, padding:"8px 14px", marginBottom:16 }}>
