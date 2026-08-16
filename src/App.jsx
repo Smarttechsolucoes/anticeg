@@ -9651,8 +9651,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                           : [];
                         return (
                           <div key={item.id}
-                            style={{ display:"flex", alignItems:"flex-start", gap:10, background: isEnviado ? "rgba(186,255,57,.03)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : isEnviado ? "rgba(186,255,57,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px", opacity: isEnviado ? 0.65 : 1 }}>
-                            <img src={item.preview} alt="" style={{ width:56, height:56, objectFit:"cover", borderRadius:5, flexShrink:0, background:"#1a1a1a" }} />
+                            style={{ display:"flex", alignItems:"flex-start", gap:12, background: isEnviado ? "rgba(186,255,57,.03)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : isEnviado ? "rgba(186,255,57,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px", opacity: isEnviado ? 0.65 : 1 }}>
+                            <img src={item.preview} alt="" style={{ width:120, height:120, objectFit:"cover", borderRadius:6, flexShrink:0, background:"#1a1a1a" }} />
                             <div style={{ flex:1, minWidth:0 }}>
                               {/* Joiner */}
                               {item.joiner ? (
