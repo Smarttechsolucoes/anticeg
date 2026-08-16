@@ -8222,6 +8222,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [reportSaving,      setReportSaving]      = useState(new Set());
   const loadedTabsRef = useRef(new Set());
 
+  useEffect(() => {
+    const pendentes = storageFotoQueue.filter(i => i.status === "pendente");
+    if (pendentes.length === 0) return;
+    const handler = e => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [storageFotoQueue]);
+
   async function confirmarEnvio(s) {
     if (!rastreioCodigo.trim()) { alert("Informe o código de rastreio antes de confirmar."); return; }
     setEnvioLoading(s.id);
