@@ -14300,6 +14300,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [envioConfirmando, setEnvioConfirmando] = useState(false);
   const [envioSolicitando, setEnvioSolicitando] = useState(false);
   const [itensConferidos,  setItensConferidos]  = useState(new Set());
+  const [itensManual,      setItensManual]      = useState(() => localStorage.getItem(`itensManual_${user.cog}`) || "");
   const [erroSecao,        setErroSecao]        = useState(false);
   const [errosSel,         setErrosSel]         = useState(new Set());
   const [comprovFiles,     setComprovFiles]     = useState({});
@@ -14605,7 +14606,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               posicao = 1;
             }
             const { data: request } = await supabase.from("envio_requests")
-              .insert([{ joiner_cog: user.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando" }])
+              .insert([{ joiner_cog: user.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando", itens_manuais: itensManual.trim() || null }])
               .select("*, envio_rounds(*)").single();
             setEnvioRequest(request);
             setEnvioSolicitando(false);
@@ -14781,6 +14782,22 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                 </div>
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
                   Confira as fotos acima e marque cada item. Quando estiver tudo certo, confirme para liberar a solicitação de envio.
+                </div>
+              </div>
+
+              {/* Itens manuais */}
+              <div style={{ marginBottom:10 }}>
+                <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>
+                  Adicionar itens manualmente:
+                </div>
+                <textarea
+                  value={itensManual}
+                  onChange={e => { setItensManual(e.target.value); localStorage.setItem(`itensManual_${user.cog}`, e.target.value); }}
+                  placeholder={"Ex: Photobooklet · Felix\nEx: Sticker pack · Han"}
+                  style={{ width:"100%", padding:"10px 12px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, resize:"vertical", minHeight:72, boxSizing:"border-box", lineHeight:1.6 }}
+                />
+                <div style={{ fontSize:9, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace", marginTop:4 }}>
+                  Liste itens que não foram fotografados mas estão em suas mãos e precisam ser enviados.
                 </div>
               </div>
 
