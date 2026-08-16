@@ -9555,14 +9555,37 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           setStorageComItens(prev => prev ? prev.map(j => j.cog === storageJoiner?.cog ? { ...j, count: Math.max(0, j.count - 1) } : j) : prev);
           setStorageDeletando(null);
         }
-        function adicionarFotos(files) {
+        function centerCropFile(file, ratio = 3 / 4) {
+          return new Promise(resolve => {
+            const img = new Image();
+            const tmp = URL.createObjectURL(file);
+            img.onload = () => {
+              URL.revokeObjectURL(tmp);
+              const sw = img.naturalWidth, sh = img.naturalHeight;
+              const srcRatio = sw / sh;
+              let cw, ch, cx, cy;
+              if (srcRatio > ratio) { ch = sh; cw = sh * ratio; cx = (sw - cw) / 2; cy = 0; }
+              else                  { cw = sw; ch = sw / ratio; cx = 0; cy = (sh - ch) / 2; }
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.round(cw); canvas.height = Math.round(ch);
+              canvas.getContext("2d").drawImage(img, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(blob => resolve(new File([blob], file.name, { type: "image/jpeg" })), "image/jpeg", 0.92);
+            };
+            img.onerror = () => { URL.revokeObjectURL(tmp); resolve(file); };
+            img.src = tmp;
+          });
+        }
+        async function adicionarFotos(files) {
           if (!files || files.length === 0) return;
           if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
-          const novas = Array.from(files).map((file, i) => ({
-            id: `${Date.now()}-${i}`, file, preview: URL.createObjectURL(file),
-            joiner: null, desc: "", searchStr: "", status: "pendente",
-            masterlist: [], mlLoading: false, itensCheck: new Set(), itemSearchStr: "",
-            tipo: "item", enviosCount: 0,
+          const novas = await Promise.all(Array.from(files).map(async (file, i) => {
+            const processado = await centerCropFile(file);
+            return {
+              id: `${Date.now()}-${i}`, file: processado, preview: URL.createObjectURL(processado),
+              joiner: null, desc: "", searchStr: "", status: "pendente",
+              masterlist: [], mlLoading: false, itensCheck: new Set(), itemSearchStr: "",
+              tipo: "item", enviosCount: 0,
+            };
           }));
           setStorageFotoQueue(prev => [...prev, ...novas]);
         }
