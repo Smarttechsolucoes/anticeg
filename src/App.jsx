@@ -16172,7 +16172,7 @@ function AdminPopup({ onCountChange }) {
 }
 
 // ── Pré-venda W MAGAZINE HYUNJIN ───────────────────────────────
-const WMAG_DEADLINE  = new Date("2026-08-14T23:59:59-03:00");
+const WMAG_DEADLINE  = new Date("2026-08-16T23:59:59-03:00");
 const WMAG_PRECO     = 48;
 const PIX_WMAG       = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
 const WA_WMAG        = "5524992782023";
