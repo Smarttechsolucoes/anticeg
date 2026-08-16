@@ -2231,6 +2231,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                           {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
                             <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", lineHeight:1.4 }}>{l.trim()}</div>
                           ))}
+                          {s.created_at && (
+                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.22)", marginTop:5 }}>
+                              adicionado {new Date(s.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -9601,6 +9606,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             if (upErr) throw upErr;
             const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
             await supabase.from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
+            inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: item.joiner.cog }]);
+            enviarPushJoiner(item.joiner.cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
             setStorageComItens(prev => prev ? prev.map(j => j.cog === item.joiner.cog ? { ...j, count: j.count + 1 } : j) : prev);
             updQueueItem(itemId, { status: "pendente", joiner: null, searchStr: "", masterlist: [], itensCheck: new Set(), desc: "", itemSearchStr: "", enviosCount: item.enviosCount + 1 });
           } catch { updQueueItem(itemId, { status: "erro" }); }
@@ -9617,6 +9624,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               if (upErr) throw upErr;
               const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
               await supabase.from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
+              inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: item.joiner.cog }]);
+              enviarPushJoiner(item.joiner.cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
               updQueueItem(item.id, { status: "enviado" });
               URL.revokeObjectURL(item.preview);
               setStorageComItens(prev => prev ? prev.map(j => j.cog === item.joiner.cog ? { ...j, count: j.count + 1 } : j) : prev);
