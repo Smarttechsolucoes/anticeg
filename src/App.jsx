@@ -9557,7 +9557,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         }
         function adicionarFotos(files) {
           if (!files || files.length === 0) return;
-          if (!storageJoiners) supabase.from("joiners").select("cog,nome,masterlist!inner(cog)").order("nome").then(({ data }) => { setStorageJoiners((data||[]).map(({ cog, nome }) => ({ cog, nome }))); });
+          if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
           const novas = Array.from(files).map((file, i) => ({
             id: `${Date.now()}-${i}`, file, preview: URL.createObjectURL(file),
             joiner: null, desc: "", searchStr: "", status: "pendente",
@@ -9758,7 +9758,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                     value={item.searchStr || ""}
                                     onChange={e => {
                                       updQueueItem(item.id, { searchStr: e.target.value });
-                                      if (!storageJoiners) supabase.from("joiners").select("cog,nome,masterlist!inner(cog)").order("nome").then(({ data }) => { setStorageJoiners((data||[]).map(({ cog, nome }) => ({ cog, nome }))); });
+                                      if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
                                     }} />
                                   {filtJoin.length > 0 && (
                                     <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:3, zIndex:50, overflow:"hidden", maxHeight:160, overflowY:"auto" }}>
@@ -9876,7 +9876,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     value={storageSearch}
                     onChange={e => {
                       setStorageSearch(e.target.value);
-                      if (!storageJoiners) supabase.from("joiners").select("cog,nome,masterlist!inner(cog)").order("nome").then(({ data }) => { setStorageJoiners((data||[]).map(({ cog, nome }) => ({ cog, nome }))); });
+                      if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
                     }} />
                   {storageSearch.trim().length > 0 && storageJoiners && (() => {
                     const q = storageSearch.toLowerCase();
