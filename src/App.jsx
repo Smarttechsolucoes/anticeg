@@ -8193,7 +8193,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageItemSearch, setStorageItemSearch] = useState("");
   const [storageItensCheck, setStorageItensCheck] = useState(new Set());
   const [storageMasterlist, setStorageMasterlist] = useState([]);
-  const [storageMode,       setStorageMode]       = useState("joiner");
+  const [storageMode,          setStorageMode]          = useState("joiner");
+  const [storageRecortando,    setStorageRecortando]    = useState(false);
+  const [storageRecortandoProg,setStorageRecortandoProg]= useState({ done: 0, total: 0, erros: 0 });
   const [storageFotoJoiner, setStorageFotoJoiner] = useState(null);
   const [storageFotoSearch, setStorageFotoSearch] = useState("");
   const [storageFotoQueue,    setStorageFotoQueue]    = useState([]);
@@ -9555,12 +9557,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           setStorageComItens(prev => prev ? prev.map(j => j.cog === storageJoiner?.cog ? { ...j, count: Math.max(0, j.count - 1) } : j) : prev);
           setStorageDeletando(null);
         }
-        function centerCropFile(file, ratio = 3 / 4) {
+        function centerCropSrc(src, fileName, ratio = 3 / 4) {
           return new Promise(resolve => {
             const img = new Image();
-            const tmp = URL.createObjectURL(file);
+            img.crossOrigin = "anonymous";
             img.onload = () => {
-              URL.revokeObjectURL(tmp);
               const sw = img.naturalWidth, sh = img.naturalHeight;
               const srcRatio = sw / sh;
               let cw, ch, cx, cy;
@@ -9569,11 +9570,40 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const canvas = document.createElement("canvas");
               canvas.width = Math.round(cw); canvas.height = Math.round(ch);
               canvas.getContext("2d").drawImage(img, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
-              canvas.toBlob(blob => resolve(new File([blob], file.name, { type: "image/jpeg" })), "image/jpeg", 0.92);
+              canvas.toBlob(blob => resolve(new File([blob], fileName, { type: "image/jpeg" })), "image/jpeg", 0.92);
             };
-            img.onerror = () => { URL.revokeObjectURL(tmp); resolve(file); };
-            img.src = tmp;
+            img.onerror = () => resolve(null);
+            img.src = src;
           });
+        }
+        function centerCropFile(file, ratio = 3 / 4) {
+          const tmp = URL.createObjectURL(file);
+          return centerCropSrc(tmp, file.name, ratio).then(result => {
+            URL.revokeObjectURL(tmp);
+            return result || file;
+          });
+        }
+        async function recortarFotosExistentes() {
+          const BUCKET = "storage-itens";
+          const BASE   = `https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/${BUCKET}/`;
+          setStorageRecortando(true);
+          setStorageRecortandoProg({ done: 0, total: 0, erros: 0 });
+          const { data: todos } = await supabase.from("joiner_storage").select("id, foto_url").eq("ativo", true);
+          const itens = (todos || []).filter(i => i.foto_url?.startsWith(BASE));
+          setStorageRecortandoProg({ done: 0, total: itens.length, erros: 0 });
+          let erros = 0;
+          for (let i = 0; i < itens.length; i++) {
+            try {
+              const path = itens[i].foto_url.replace(BASE, "");
+              const nome = path.split("/").pop();
+              const cropped = await centerCropSrc(itens[i].foto_url + "?t=" + Date.now(), nome);
+              if (!cropped) throw new Error("crop falhou");
+              const { error } = await supabase.storage.from(BUCKET).upload(path, cropped, { upsert: true, contentType: "image/jpeg" });
+              if (error) throw error;
+            } catch { erros++; }
+            setStorageRecortandoProg({ done: i + 1, total: itens.length, erros });
+          }
+          setStorageRecortando(false);
         }
         async function adicionarFotos(files) {
           if (!files || files.length === 0) return;
@@ -9659,8 +9689,20 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
         return (
           <div>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: storageRecortando ? 8 : 16, flexWrap:"wrap", gap:8 }}>
               <h3 className="admin-title" style={{ fontSize:16, margin:0 }}>◧ Storage de joiners</h3>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                {!storageRecortando ? (
+                  <button onClick={recortarFotosExistentes}
+                    style={{ padding:"5px 11px", fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, color:"rgba(245,240,232,.35)", cursor:"pointer" }}>
+                    ✂ Recortar existentes
+                  </button>
+                ) : (
+                  <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>
+                    ✂ {storageRecortandoProg.done}/{storageRecortandoProg.total}
+                    {storageRecortandoProg.erros > 0 && ` · ${storageRecortandoProg.erros} erros`}
+                  </span>
+                )}
               <div style={{ display:"flex", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, overflow:"hidden" }}>
                 <button onClick={() => { setStorageMode("joiner"); setStorageMsg(""); }}
                   style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", borderRight:"1px solid rgba(245,240,232,.1)", cursor:"pointer", background: storageMode === "joiner" ? "rgba(201,168,240,.2)" : "transparent", color: storageMode === "joiner" ? "#C9A8F0" : "rgba(245,240,232,.4)" }}>
@@ -9670,6 +9712,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: storageMode === "foto" ? "rgba(201,168,240,.2)" : "transparent", color: storageMode === "foto" ? "#C9A8F0" : "rgba(245,240,232,.4)" }}>
                   Foto → Joiner
                 </button>
+              </div>
               </div>
             </div>
             {storageMode === "foto" && (() => {
