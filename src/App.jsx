@@ -8191,6 +8191,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageMode,       setStorageMode]       = useState("joiner");
   const [storageFotoJoiner, setStorageFotoJoiner] = useState(null);
   const [storageFotoSearch, setStorageFotoSearch] = useState("");
+  const [storageFotoQueue,    setStorageFotoQueue]    = useState([]);
+  const [storageFotoEnviando, setStorageFotoEnviando] = useState(false);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [cotacaoObs,        setCotacaoObs]        = useState("");
@@ -9539,30 +9541,43 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           setStorageComItens(prev => prev ? prev.map(j => j.cog === storageJoiner?.cog ? { ...j, count: Math.max(0, j.count - 1) } : j) : prev);
           setStorageDeletando(null);
         }
-        async function buscarMlParaFoto(joiner) {
-          setStorageFotoJoiner(joiner);
-          setStorageFotoSearch("");
-          setStorageItensCheck(new Set());
-          setStorageDesc("");
-          setStorageItemSearch("");
-          const { data: ml } = await supabase.from("masterlist").select("id, ceg, nome_do_item").eq("cog", joiner.cog).order("ceg").order("nome_do_item");
-          setStorageMasterlist(ml || []);
+        function adicionarFotos(files) {
+          if (!files || files.length === 0) return;
+          if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
+          const novas = Array.from(files).map((file, i) => ({
+            id: `${Date.now()}-${i}`, file, preview: URL.createObjectURL(file),
+            joiner: null, desc: "", searchStr: "", status: "pendente",
+          }));
+          setStorageFotoQueue(prev => [...prev, ...novas]);
         }
-        async function uploadFotoParaJoiner() {
-          if (!storageFile || !storageDesc.trim() || !storageFotoJoiner) return;
-          setStorageUploading(true); setStorageMsg("");
-          const ext = storageFile.name.split(".").pop();
-          const path = `${storageFotoJoiner.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageFile, { upsert: true });
-          if (upErr) { setStorageMsg("Erro ao enviar: " + upErr.message); setStorageUploading(false); return; }
-          const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
-          const { data: novo } = await supabase.from("joiner_storage")
-            .insert([{ joiner_cog: storageFotoJoiner.cog, foto_url: publicUrl, descricao: storageDesc.trim() }])
-            .select().single();
-          if (novo) setStorageComItens(prev => prev ? prev.map(j => j.cog === storageFotoJoiner.cog ? { ...j, count: j.count + 1 } : j) : prev);
-          setStorageFile(null); setStorageDesc(""); setStorageItensCheck(new Set()); setStorageItemSearch("");
-          setStorageMsg("Foto adicionada ✓");
-          setStorageUploading(false);
+        function updQueueItem(id, patch) {
+          setStorageFotoQueue(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+        }
+        function removerDaFila(id) {
+          setStorageFotoQueue(prev => {
+            const item = prev.find(i => i.id === id);
+            if (item?.preview) URL.revokeObjectURL(item.preview);
+            return prev.filter(i => i.id !== id);
+          });
+        }
+        async function enviarFila() {
+          setStorageFotoEnviando(true);
+          const prontas = storageFotoQueue.filter(i => i.joiner && i.status === "pendente");
+          for (const item of prontas) {
+            updQueueItem(item.id, { status: "enviando" });
+            try {
+              const ext = item.file.name.split(".").pop();
+              const path = `${item.joiner.cog}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+              const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, item.file, { upsert: true });
+              if (upErr) throw upErr;
+              const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+              await supabase.from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
+              updQueueItem(item.id, { status: "enviado" });
+              URL.revokeObjectURL(item.preview);
+              setStorageComItens(prev => prev ? prev.map(j => j.cog === item.joiner.cog ? { ...j, count: j.count + 1 } : j) : prev);
+            } catch { updQueueItem(item.id, { status: "erro" }); }
+          }
+          setStorageFotoEnviando(false);
         }
         const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:6, padding:"9px 12px", color:"#F5F0E8", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
         return (
@@ -9581,122 +9596,119 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             </div>
             {storageMode === "foto" && (() => {
-              const podeSalvar = storageFile && storageDesc.trim() && storageFotoJoiner;
+              const prontas   = storageFotoQueue.filter(i => i.joiner && i.status === "pendente");
+              const enviadas  = storageFotoQueue.filter(i => i.status === "enviado");
+              const semJoiner = storageFotoQueue.filter(i => !i.joiner && i.status === "pendente");
               return (
                 <div>
-                  {storageMsg && <div style={{ fontSize:11, color: storageMsg.includes("✓") ? "#BAFF39" : "var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:12 }}>{storageMsg}</div>}
-
-                  {/* Passo 1 — Foto */}
-                  <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:16, marginBottom:12 }}>
-                    <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.35)", textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>1 — Foto</div>
-                    <label style={{ display:"flex", alignItems:"center", gap:10, background: storageFile ? "rgba(186,255,57,.06)" : "rgba(245,240,232,.03)", border:`1px dashed ${storageFile ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer" }}>
-                      <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => setStorageFile(e.target.files[0] || null)} />
-                      <span style={{ fontSize:16 }}>{storageFile ? "✓" : "↑"}</span>
-                      <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: storageFile ? "#BAFF39" : "rgba(245,240,232,.5)" }}>{storageFile ? storageFile.name : "Clique para selecionar foto"}</span>
+                  {/* Barra superior: picker + botões */}
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                    <label style={{ flex:1, display:"flex", alignItems:"center", gap:10, background:"rgba(245,240,232,.03)", border:"1px dashed rgba(245,240,232,.15)", borderRadius:8, padding:"10px 14px", cursor:"pointer" }}>
+                      <input type="file" accept="image/*" multiple style={{ display:"none" }} onChange={e => adicionarFotos(e.target.files)} />
+                      <span style={{ fontSize:14, color:"rgba(245,240,232,.5)" }}>↑</span>
+                      <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)" }}>
+                        {storageFotoQueue.length === 0 ? "Selecionar fotos (múltiplas)" : "+ Adicionar mais fotos"}
+                      </span>
                     </label>
-                  </div>
-
-                  {/* Passo 2 — Joiner */}
-                  <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:16, marginBottom:12 }}>
-                    <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.35)", textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>2 — Joiner</div>
-                    {storageFotoJoiner ? (
-                      <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:7, padding:"8px 12px" }}>
-                        <span style={{ flex:1, fontSize:12, fontFamily:"'DM Mono',monospace", color:"var(--offwhite)" }}>
-                          {storageFotoJoiner.nome} <span style={{ color:"#C9A8F0" }}>@{storageFotoJoiner.cog}</span>
-                        </span>
-                        <button onClick={() => { setStorageFotoJoiner(null); setStorageFotoSearch(""); setStorageMasterlist([]); setStorageItensCheck(new Set()); setStorageDesc(""); }}
-                          style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, padding:"3px 9px", cursor:"pointer" }}>Trocar</button>
-                      </div>
-                    ) : (
-                      <div style={{ position:"relative" }}>
-                        <input style={{ ...inp2, width:"100%", boxSizing:"border-box" }}
-                          placeholder="Buscar joiner por nome ou @..."
-                          value={storageFotoSearch}
-                          onChange={e => {
-                            setStorageFotoSearch(e.target.value);
-                            if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
-                          }} />
-                        {storageFotoSearch.trim().length > 0 && storageJoiners && (() => {
-                          const q = storageFotoSearch.toLowerCase();
-                          const filtFoto = storageJoiners.filter(j => j.nome?.toLowerCase().includes(q) || j.cog?.toLowerCase().includes(q));
-                          return (
-                            <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, zIndex:20, overflow:"hidden", maxHeight:220, overflowY:"auto" }}>
-                              {filtFoto.length === 0
-                                ? <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>Nenhuma joiner encontrada</div>
-                                : filtFoto.map(j => (
-                                  <button key={j.cog} onClick={() => buscarMlParaFoto(j)}
-                                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"9px 14px", cursor:"pointer", color:"#F5F0E8" }}>
-                                    <span style={{ fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{j.nome}</span>
-                                    <span style={{ fontSize:11, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", marginLeft:8 }}>@{j.cog}</span>
-                                  </button>
-                                ))
-                              }
-                            </div>
-                          );
-                        })()}
-                      </div>
+                    {prontas.length > 0 && (
+                      <button onClick={enviarFila} disabled={storageFotoEnviando}
+                        style={{ padding:"9px 14px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
+                        {storageFotoEnviando ? "Enviando..." : `Enviar ${prontas.length} →`}
+                      </button>
+                    )}
+                    {storageFotoQueue.length > 0 && (
+                      <button onClick={() => { storageFotoQueue.forEach(i => { if (i.preview) URL.revokeObjectURL(i.preview); }); setStorageFotoQueue([]); }}
+                        style={{ padding:"9px 12px", background:"none", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                        Limpar
+                      </button>
                     )}
                   </div>
 
-                  {/* Passo 3 — Itens e upload */}
-                  {storageFotoJoiner && (
-                    <div style={{ background:"#111", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:16, marginBottom:12 }}>
-                      <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.35)", textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>3 — Itens (opcional)</div>
-                      {storageMasterlist.length > 0 && (() => {
-                        const q2 = storageItemSearch.toLowerCase();
-                        const filtMl = storageMasterlist.filter(i => !q2 || i.nome_do_item?.toLowerCase().includes(q2) || i.ceg?.toLowerCase().includes(q2));
-                        const toggleItem2 = (key) => {
-                          setStorageItensCheck(prev => {
-                            const n = new Set(prev);
-                            n.has(key) ? n.delete(key) : n.add(key);
-                            const sel = storageMasterlist.filter(i => n.has(`${i.ceg}::${i.nome_do_item}`));
-                            setStorageDesc(sel.map(i => `${i.ceg} — ${i.nome_do_item}`).join("\n"));
-                            return n;
-                          });
-                        };
+                  {/* Badges de resumo */}
+                  {storageFotoQueue.length > 0 && (
+                    <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+                      <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(245,240,232,.06)", color:"rgba(245,240,232,.4)", border:"1px solid rgba(245,240,232,.1)" }}>{storageFotoQueue.length} total</span>
+                      {prontas.length   > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(255,92,0,.1)",    color:"var(--laranja)", border:"1px solid rgba(255,92,0,.25)" }}>{prontas.length} prontas</span>}
+                      {semJoiner.length > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(245,240,232,.04)", color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.08)" }}>{semJoiner.length} sem joiner</span>}
+                      {enviadas.length  > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"3px 9px", borderRadius:4, background:"rgba(186,255,57,.08)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.2)" }}>{enviadas.length} enviadas ✓</span>}
+                    </div>
+                  )}
+
+                  {/* Lista de fotos */}
+                  {storageFotoQueue.length === 0 ? (
+                    <div style={{ fontSize:11, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace", padding:"48px 0", textAlign:"center" }}>
+                      Selecione as fotos para começar
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {storageFotoQueue.map(item => {
+                        const isEnviado  = item.status === "enviado";
+                        const isEnviando = item.status === "enviando";
+                        const isErro     = item.status === "erro";
+                        const q = (item.searchStr || "").toLowerCase();
+                        const filtJoin = q.length > 0 && storageJoiners
+                          ? storageJoiners.filter(j => j.nome?.toLowerCase().includes(q) || j.cog?.toLowerCase().includes(q)).slice(0, 8)
+                          : [];
                         return (
-                          <div style={{ marginBottom:10 }}>
-                            <input style={{ ...inp2, width:"100%", boxSizing:"border-box", marginBottom:6, fontSize:11 }}
-                              placeholder="Filtrar por nome ou CEG..."
-                              value={storageItemSearch}
-                              onChange={e => setStorageItemSearch(e.target.value)} />
-                            <div style={{ maxHeight:160, overflowY:"auto", border:"1px solid rgba(245,240,232,.07)", borderRadius:7, background:"rgba(245,240,232,.02)" }}>
-                              {filtMl.length === 0
-                                ? <div style={{ padding:"10px 14px", fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum item</div>
-                                : filtMl.map(i => {
-                                  const key = `${i.ceg}::${i.nome_do_item}`;
-                                  const checked = storageItensCheck.has(key);
-                                  return (
-                                    <div key={i.id} onClick={() => toggleItem2(key)}
-                                      style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.04)", background: checked ? "rgba(186,255,57,.05)" : "transparent" }}>
-                                      <div style={{ width:14, height:14, borderRadius:3, border:`1px solid ${checked ? "#BAFF39" : "rgba(245,240,232,.2)"}`, background: checked ? "#BAFF39" : "transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                                        {checked && <span style={{ fontSize:9, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
-                                      </div>
-                                      <div style={{ flex:1, minWidth:0 }}>
-                                        <div style={{ fontSize:10, color: checked ? "#F5F0E8" : "rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.nome_do_item}</div>
-                                        <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace" }}>{i.ceg}</div>
-                                      </div>
+                          <div key={item.id}
+                            style={{ display:"flex", alignItems:"flex-start", gap:10, background: isEnviado ? "rgba(186,255,57,.03)" : "rgba(245,240,232,.02)", border:`1px solid ${isErro ? "rgba(230,57,70,.25)" : isEnviado ? "rgba(186,255,57,.12)" : "rgba(245,240,232,.07)"}`, borderRadius:9, padding:"10px 12px", opacity: isEnviado ? 0.65 : 1 }}>
+                            <img src={item.preview} alt="" style={{ width:56, height:56, objectFit:"cover", borderRadius:5, flexShrink:0, background:"#1a1a1a" }} />
+                            <div style={{ flex:1, minWidth:0 }}>
+                              {/* Joiner */}
+                              {item.joiner ? (
+                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+                                  <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#C9A8F0", fontWeight:700 }}>@{item.joiner.cog}</span>
+                                  <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>{item.joiner.nome}</span>
+                                  {!isEnviado && !isEnviando && (
+                                    <button onClick={() => updQueueItem(item.id, { joiner: null, searchStr: "" })}
+                                      style={{ fontSize:9, color:"rgba(245,240,232,.3)", background:"none", border:"none", cursor:"pointer", padding:"0 2px", fontFamily:"'DM Mono',monospace" }}>✕</button>
+                                  )}
+                                </div>
+                              ) : (
+                                <div style={{ position:"relative", marginBottom:6 }}>
+                                  <input style={{ ...inp2, width:"100%", boxSizing:"border-box", fontSize:11, padding:"5px 10px" }}
+                                    placeholder="Joiner (nome ou @)..."
+                                    value={item.searchStr || ""}
+                                    onChange={e => {
+                                      updQueueItem(item.id, { searchStr: e.target.value });
+                                      if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
+                                    }} />
+                                  {filtJoin.length > 0 && (
+                                    <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:3, zIndex:50, overflow:"hidden", maxHeight:160, overflowY:"auto" }}>
+                                      {filtJoin.map(j => (
+                                        <button key={j.cog} onClick={() => updQueueItem(item.id, { joiner: j, searchStr: "" })}
+                                          style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.06)", padding:"7px 12px", cursor:"pointer", color:"#F5F0E8" }}>
+                                          <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600 }}>{j.nome}</span>
+                                          <span style={{ fontSize:10, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", marginLeft:6 }}>@{j.cog}</span>
+                                        </button>
+                                      ))}
                                     </div>
-                                  );
-                                })
-                              }
+                                  )}
+                                </div>
+                              )}
+                              {/* Descrição */}
+                              {!isEnviado ? (
+                                <input style={{ ...inp2, width:"100%", boxSizing:"border-box", fontSize:10, padding:"5px 10px" }}
+                                  placeholder="Descrição (opcional)..."
+                                  value={item.desc}
+                                  onChange={e => updQueueItem(item.id, { desc: e.target.value })} />
+                              ) : item.desc ? (
+                                <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.desc}</div>
+                              ) : null}
                             </div>
-                            {storageItensCheck.size > 0 && (
-                              <div style={{ fontSize:9, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginTop:5 }}>
-                                {storageItensCheck.size} item(s) selecionado(s)
-                              </div>
-                            )}
+                            {/* Status + remover */}
+                            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
+                              {isEnviando && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.45)" }}>enviando…</span>}
+                              {isEnviado  && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#BAFF39" }}>✓</span>}
+                              {isErro     && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(230,57,70,.9)" }}>✗ erro</span>}
+                              {!isEnviado && !isEnviando && (
+                                <button onClick={() => removerDaFila(item.id)}
+                                  style={{ fontSize:13, background:"none", border:"none", color:"rgba(245,240,232,.2)", cursor:"pointer", padding:2, lineHeight:1 }}>✕</button>
+                              )}
+                            </div>
                           </div>
                         );
-                      })()}
-                      <input style={{ ...inp2, width:"100%", marginBottom:10, boxSizing:"border-box" }}
-                        placeholder="Descrição (preenchida automaticamente ao marcar itens)"
-                        value={storageDesc}
-                        onChange={e => setStorageDesc(e.target.value)} />
-                      <button onClick={uploadFotoParaJoiner} disabled={!podeSalvar || storageUploading}
-                        style={{ background: podeSalvar ? "var(--laranja)" : "rgba(245,240,232,.1)", color: podeSalvar ? "#111" : "rgba(245,240,232,.3)", border:"none", borderRadius:7, padding:"9px 20px", fontSize:12, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor: podeSalvar ? "pointer" : "not-allowed" }}>
-                        {storageUploading ? "Enviando..." : "Adicionar ao storage →"}
-                      </button>
+                      })}
                     </div>
                   )}
                 </div>
