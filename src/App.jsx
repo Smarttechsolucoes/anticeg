@@ -16538,8 +16538,9 @@ function PrevendaTab({ user }) {
       titulo: "W MAGAZINE",
       subtitulo: "Hyunjin — 3 capas",
       url: "/wmag-hyunjin",
+      googleForm: "https://forms.gle/NPLoZDrCq1DMEPfo7",
       img: WMAG_CAPAS[0].img,
-      tags: [`Inscrições até 14/08`, `Pagamento até 21/08`],
+      tags: [`Inscrições até 16/08`, `Pagamento até 21/08`],
       info: "R$ 48,00 por unidade · PIX ou cartão · frete inter 26/08",
     },
     {
@@ -16604,7 +16605,7 @@ function PrevendaTab({ user }) {
               </div>
             </div>
             {f.ativo && (
-              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px" }}>
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px", display:"flex", gap:8, flexWrap:"wrap" }}>
                 {f.url ? (
                   <a href={f.url} target={f.external ? "_blank" : "_self"} rel={f.external ? "noopener noreferrer" : undefined}
                     style={{ display:"inline-block", padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
@@ -16615,6 +16616,12 @@ function PrevendaTab({ user }) {
                     style={{ padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
                     ACESSAR →
                   </button>
+                )}
+                {f.googleForm && (
+                  <a href={f.googleForm} target="_blank" rel="noopener noreferrer"
+                    style={{ display:"inline-block", padding:"10px 20px", borderRadius:8, background:"rgba(245,240,232,.06)", color:"rgba(245,240,232,.7)", border:"1px solid rgba(245,240,232,.15)", fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
+                    GOOGLE FORMS →
+                  </a>
                 )}
               </div>
             )}
