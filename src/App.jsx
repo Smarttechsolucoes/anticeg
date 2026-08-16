@@ -14655,6 +14655,17 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               </div>
             )}
 
+            {/* aviso formulário aberto */}
+            <div style={{ background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.22)", borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"#BAFF39", marginBottom:7 }}>◧ FORMULÁRIO DE ENVIO NACIONAL ABERTO</div>
+              <div style={{ fontSize:12, color:"rgba(245,240,232,.82)", lineHeight:1.6 }}>
+                O formulário de envios está aberto até <strong>19 de agosto (quarta-feira)</strong>.
+              </div>
+              <div style={{ marginTop:9, padding:"9px 12px", background:"rgba(245,240,232,.05)", borderRadius:7, fontSize:11.5, color:"rgba(245,240,232,.65)", lineHeight:1.65 }}>
+                ⚠ Os itens <strong>fotografados no storage</strong> são os itens disponíveis para envio. Se algum item estiver faltando na lista abaixo, aguarde o cadastro no storage para então solicitar o envio.
+              </div>
+            </div>
+
             {/* conteúdo — bloqueado antes do unlock */}
             <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
 
