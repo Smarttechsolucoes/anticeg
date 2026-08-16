@@ -16549,7 +16549,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Álbuns · Stray Kids",
       url: "https://forms.gle/NPLoZDrCq1DMEPfo7",
       external: true,
-      img: "/popup/pob-week-1.png",
+      img: "https://i.scdn.co/image/ab67616d0000b27337f636fa384b48481241cbd3",
       tags: ["Álbuns"],
       info: "Preencha o formulário para participar",
     },
