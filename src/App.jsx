@@ -14310,6 +14310,14 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
   const efetivamenteUnlocked = unlocked || isAutoUnlocked;
 
+  // quando o envio está aberto e ainda não há conferência registrada, cria uma conferência virtual
+  const conferenciaEfetiva = envioConferencia || (isAutoUnlocked ? {
+    virtual: true,
+    iniciada_em: envioAberturaInicio + "T00:00:00-03:00",
+    prazo_dias: Math.max(1, Math.ceil((new Date(envioAberturaFim + "T23:59:59-03:00") - new Date(envioAberturaInicio + "T00:00:00-03:00")) / (24 * 60 * 60 * 1000))),
+    confirmada_em: null,
+  } : null);
+
   // grupo de envio
   const [grupoMode,    setGrupoMode]    = useState(null); // null | "criar" | "entrar"
   const [grupoCodigo,  setGrupoCodigo]  = useState("");
@@ -14550,17 +14558,26 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
         {/* ── CONFERÊNCIA ── */}
         {envioSubTab === "conferencia" && (() => {
-          const prazoMs = ((envioConferencia?.prazo_dias) || 5) * 24 * 60 * 60 * 1000;
-          const iniciado = envioConferencia ? new Date(envioConferencia.iniciada_em).getTime() : 0;
-          const msRestantes = envioConferencia ? (iniciado + prazoMs - Date.now()) : 0;
+          const prazoMs = ((conferenciaEfetiva?.prazo_dias) || 5) * 24 * 60 * 60 * 1000;
+          const iniciado = conferenciaEfetiva ? new Date(conferenciaEfetiva.iniciada_em).getTime() : 0;
+          const msRestantes = conferenciaEfetiva ? (iniciado + prazoMs - Date.now()) : 0;
           const diasRestantes = Math.max(0, Math.ceil(msRestantes / (24 * 60 * 60 * 1000)));
-          const conferenciaConcluida = !envioConferencia ? false : (diasRestantes <= 0 || !!envioConferencia.confirmada_em);
+          const conferenciaConcluida = !conferenciaEfetiva ? false : (diasRestantes <= 0 || !!conferenciaEfetiva.confirmada_em);
 
           async function confirmarConferencia() {
             setEnvioConfirmando(true);
+            let confId = envioConferencia?.id;
+            if (!confId) {
+              const { data: novo } = await supabase.from("joiner_conferencias")
+                .insert([{ joiner_cog: user.cog, prazo_dias: conferenciaEfetiva.prazo_dias }])
+                .select().single();
+              setEnvioConferencia(novo);
+              confId = novo?.id;
+            }
+            if (!confId) { setEnvioConfirmando(false); return; }
             const { data } = await supabase.from("joiner_conferencias")
               .update({ confirmada_em: new Date().toISOString() })
-              .eq("id", envioConferencia.id).select().single();
+              .eq("id", confId).select().single();
             setEnvioConferencia(data);
             setEnvioConfirmando(false);
           }
@@ -14680,7 +14697,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               <div style={{ background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"16px 18px", marginBottom:14 }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
                   <div style={{ fontSize:10, letterSpacing:"1.2px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>◧ Seus itens na GOM</div>
-                  {envioConferencia && !conferenciaConcluida && (
+                  {conferenciaEfetiva && !conferenciaConcluida && (
                     <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color: todosConferidos ? "#BAFF39" : "rgba(245,240,232,.35)" }}>
                       {itensConferidos.size}/{storageDisponivel.length} conferidos
                     </div>
@@ -14689,7 +14706,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:10 }}>
                   {storageDisponivel.map(item => {
                     const conferido = itensConferidos.has(item.id);
-                    const podeConferir = !!(envioConferencia && !conferenciaConcluida);
+                    const podeConferir = !!(conferenciaEfetiva && !conferenciaConcluida);
                     return (
                       <div key={item.id}
                         onClick={() => podeConferir && toggleItemConferido(item.id)}
@@ -14712,7 +14729,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                     );
                   })}
                 </div>
-                {envioConferencia && !conferenciaConcluida && (
+                {conferenciaEfetiva && !conferenciaConcluida && (
                   <div style={{ marginTop:10, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
                     Clique em cada foto para marcar como conferido
                   </div>
@@ -14740,7 +14757,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             {/* ── STATUS / FASE ── */}
             {!storageLoadingForm && storageDisponivel.length > 0 && (
             <>
-            {!envioConferencia ? (
+            {!conferenciaEfetiva ? (
               <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", marginBottom:14 }}>
                 <div style={{ fontSize:22, marginBottom:8 }}>🕐</div>
                 <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", marginBottom:6 }}>Conferência pendente</div>
@@ -14817,7 +14834,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, padding:"20px", marginBottom:14, textAlign:"center" }}>
                 <div style={{ fontSize:22, marginBottom:8 }}>📦</div>
                 <div style={{ fontSize:13, fontWeight:700, color:"#BAFF39", marginBottom:6 }}>
-                  {envioConferencia.confirmada_em ? "Itens confirmados ✓" : "Período de conferência encerrado"}
+                  {conferenciaEfetiva?.confirmada_em ? "Itens confirmados ✓" : "Período de conferência encerrado"}
                 </div>
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom:16 }}>
                   Assim que o envio nacional for liberado, os itens marcados serão disponibilizados para cotação.
