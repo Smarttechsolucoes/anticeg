@@ -14779,31 +14779,34 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                 <div style={{ background:"rgba(100,181,246,.1)", borderRadius:4, height:4, marginBottom:14, overflow:"hidden" }}>
                   <div style={{ background:"#64B5F6", height:"100%", width:`${Math.min(100, ((5 - diasRestantes) / 5) * 100)}%`, transition:"width .3s" }} />
                 </div>
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.7, marginBottom:14 }}>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
                   Confira as fotos acima e marque cada item. Quando estiver tudo certo, confirme para liberar a solicitação de envio.
                 </div>
+              </div>
+
+              {/* Botões lado a lado */}
+              <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+                <button onClick={() => { setErroSecao(v => !v); setErroEnviado(false); }}
+                  style={{ flex:1, padding:"18px 12px", background: erroSecao ? "rgba(255,92,26,.12)" : "transparent", color:"rgba(255,92,26,.85)", border:`1.5px solid rgba(255,92,26,${erroSecao ? ".4" : ".25"})`, borderRadius:10, fontSize:14, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".03em", transition:"all .2s" }}>
+                  ⚠ Reportar erro
+                </button>
                 <button onClick={confirmarConferencia} disabled={envioConfirmando}
-                  style={{ width:"100%", padding:"18px", background: todosConferidos ? "rgba(186,255,57,.18)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1.5px solid ${todosConferidos ? "rgba(186,255,57,.5)" : "rgba(100,181,246,.35)"}`, borderRadius:10, fontSize:15, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s", letterSpacing:".03em" }}>
-                  {envioConfirmando ? "Confirmando..." : todosConferidos ? "✓ Tudo certo — confirmar!" : `✓ Confirmar itens (${itensConferidos.size}/${storageDisponivel.length})`}
+                  style={{ flex:1, padding:"18px 12px", background: todosConferidos ? "rgba(186,255,57,.18)" : "rgba(100,181,246,.12)", color: todosConferidos ? "#BAFF39" : "#64B5F6", border:`1.5px solid ${todosConferidos ? "rgba(186,255,57,.5)" : "rgba(100,181,246,.35)"}`, borderRadius:10, fontSize:14, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", transition:"all .2s", letterSpacing:".03em" }}>
+                  {envioConfirmando ? "Confirmando..." : todosConferidos ? "✓ Tudo certo!" : `Confirmar (${itensConferidos.size}/${storageDisponivel.length})`}
                 </button>
               </div>
 
-              {/* Sinalizar erro */}
-              <div style={{ border:"1.5px solid rgba(255,92,26,.25)", borderRadius:10, overflow:"hidden", marginBottom:14 }}>
-                <button onClick={() => { setErroSecao(v => !v); setErroEnviado(false); }}
-                  style={{ width:"100%", padding:"16px 20px", background: erroSecao ? "rgba(255,92,26,.1)" : "transparent", color:"rgba(255,92,26,.85)", border:"none", fontFamily:"'DM Mono',monospace", fontSize:14, fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between", letterSpacing:".03em" }}>
-                  <span>⚠ Reportar erro</span>
-                  <span style={{ fontSize:11, opacity:.7 }}>{erroSecao ? "▲" : "▼"}</span>
-                </button>
-                {erroSecao && (
-                  <div style={{ padding:"0 16px 16px", borderTop:"1px solid rgba(255,92,26,.15)" }}>
+              {/* Formulário de erro — expande abaixo dos botões */}
+              {erroSecao && (
+                <div style={{ border:"1.5px solid rgba(255,92,26,.25)", borderRadius:10, overflow:"hidden", marginBottom:14 }}>
+                  <div style={{ padding:"16px" }}>
                     {erroEnviado ? (
-                      <div style={{ textAlign:"center", padding:"20px 0", fontSize:12, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>
+                      <div style={{ textAlign:"center", padding:"12px 0", fontSize:12, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>
                         ✓ Relatório enviado! A GOM vai verificar e entrar em contato.
                       </div>
                     ) : (
                       <>
-                      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginTop:14, marginBottom:10, letterSpacing:".05em", textTransform:"uppercase" }}>
+                      <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:10, letterSpacing:".05em", textTransform:"uppercase" }}>
                         Selecione o(s) problema(s):
                       </div>
                       {ERROS_CONF.map(e => (
@@ -14826,8 +14829,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                       </>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
               </>
 
             ) : !envioRequest ? (
