@@ -8784,7 +8784,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
         <h2 className="admin-title" style={{ margin:0 }}>⚙ Admin</h2>
-        <a href="https://docs.google.com/spreadsheets/d/1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
+        <a href="https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
           display:"flex", alignItems:"center", gap:6,
           background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)",
           color:"var(--verde)", borderRadius:8, padding:"7px 14px",
