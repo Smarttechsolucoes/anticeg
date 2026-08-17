@@ -3343,6 +3343,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   // ── pagamentos ──
   const [itensPendentes,  setItensPendentes]  = useState([]);
   const [pagSelecionados, setPagSelecionados] = useState(new Set());
+  const [pagMetodo,       setPagMetodo]       = useState("pix"); // pix | cartao
   const [pagComprovante,  setPagComprovante]  = useState(null);
   const [pagUsarCodigo,   setPagUsarCodigo]   = useState(false);
   const [pagCodigoTx,     setPagCodigoTx]     = useState("");
@@ -4248,8 +4249,33 @@ ${p.comprovante_url ? (() => {
                 )}
               </div>
             )}
+            {/* Abas de método de pagamento */}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              {[["pix","◈ PIX"],["cartao","▣ Cartão"]].map(([key, label]) => (
+                <button key={key} onClick={() => setPagMetodo(key)}
+                  style={{ flex:1, padding:"9px 0", background: pagMetodo === key ? "rgba(186,255,57,.12)" : "rgba(245,240,232,.04)", color: pagMetodo === key ? "#BAFF39" : "rgba(245,240,232,.4)", border:`1px solid ${pagMetodo === key ? "rgba(186,255,57,.35)" : "rgba(245,240,232,.1)"}`, borderRadius:8, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".03em", transition:"all .15s" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Aviso cartão */}
+            {pagMetodo === "cartao" && (
+              <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+                <div style={{ fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>Pagamento no cartão</div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.65)", fontFamily:"'DM Mono',monospace", lineHeight:1.7, marginBottom:12 }}>
+                  Você irá para uma página externa para realizar o pagamento no cartão.<br/>
+                  <strong style={{ color:"rgba(245,240,232,.85)" }}>Não esqueça de voltar aqui e anexar o comprovante</strong> para confirmar o pagamento.
+                </div>
+                <a href="https://linknabio.gg/anticeg-comu" target="_blank" rel="noopener noreferrer"
+                  style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(245,240,232,.08)", color:"#F5F0E8", border:"1px solid rgba(245,240,232,.2)", borderRadius:8, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:".03em" }}>
+                  Pagar no cartão →
+                </a>
+              </div>
+            )}
+
             {/* Dados PIX */}
-            {(() => {
+            {pagMetodo === "pix" && (() => {
               const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
               function copiar() {
                 navigator.clipboard.writeText(PIX_KEY);
