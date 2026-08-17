@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 import ws from 'ws';
 
-const SHEET_ID = '1JOH6f_FYs5EVL4M_bNB-1_Bm9FtPN38f';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
 
 const supabase = createClient(
   process.env.SUPABASE_URL,

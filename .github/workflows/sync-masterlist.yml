@@ -2,7 +2,8 @@ name: Sync Masterlist
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # todo dia ao meio-dia UTC (9h BRT)
+    - cron: '0 12 * * *'  # 9h BRT
+    - cron: '0 0 * * *'   # 21h BRT (meia-noite UTC)
   workflow_dispatch:        # permite rodar manualmente também
 
 concurrency:
