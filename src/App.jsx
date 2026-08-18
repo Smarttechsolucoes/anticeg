@@ -1512,6 +1512,13 @@ function ReportModal({ user, item, onClose, onReported }) {
     }]);
     setLoading(false);
     if (error) { alert("Erro ao enviar: " + error.message); return; }
+    if (erros.recebido && item.id_linha) {
+      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+        method: "POST", redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ acao: "recebido", token: "anticeg-pag-2026", id_linha: item.id_linha }),
+      }).catch(() => {});
+    }
     onReported?.(item.id);
     setSent(true);
   }
