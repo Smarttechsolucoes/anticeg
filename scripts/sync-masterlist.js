@@ -161,10 +161,6 @@ async function main() {
 
       if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
-        // Pagamentos só sobem (TRUE) — nunca regridem para FALSE
-        baseFields.pago_item  = baseFields.pago_item  || existingItem.pago_item  || false;
-        baseFields.pago_frete = baseFields.pago_frete || existingItem.pago_frete || false;
-        baseFields.pago_rf    = baseFields.pago_rf    || existingItem.pago_rf    || false;
         const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
         if (error) throw error;
         if (existingItem.status !== status && cog) {

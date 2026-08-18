@@ -3418,7 +3418,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
-          .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
+          .select("id, ceg, nome_do_item, id_linha, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
           .eq("cog", dataCog(user.cog))
           .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)"),
         supabase.from("pagamento_demandas").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
@@ -3834,7 +3834,7 @@ ${p.comprovante_url ? (() => {
           }
 
           const itensPayload = [
-            ...itensSel.map(i => ({ id:i.id, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0), multa:multaItem(i) })),
+            ...itensSel.map(i => ({ id:i.id, id_linha:i.id_linha||null, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0), multa:multaItem(i) })),
             ...(pagOutros && pagOutrosNome.trim() ? [{ id:null, ceg:"—", nome_do_item:pagOutrosNome.trim(), valor_item:Number(pagOutrosItem.replace(",",".")||0), frete_inter:Number(pagOutrosFrete.replace(",",".")||0), taxa_rf:Number(pagOutrosRF.replace(",",".")||0), multa:0 }] : []),
           ];
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
@@ -3846,6 +3846,12 @@ ${p.comprovante_url ? (() => {
             obs:               obsFinal,
           }]).select().single();
           if (error || !nova) { setPagStatus("idle"); setPagErro(error?.message || "Erro ao salvar demanda."); return; }
+          // Atualiza planilha automaticamente
+          fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+            method: "POST", redirect: "follow",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({ acao: "confirmar", token: "anticeg-pag-2026", itens: itensPayload.filter(i => i.id_linha) }),
+          }).catch(() => {});
           try {
             const corpoEmail = buildEmailConfirmacaoPagamento(user.nome_site || user.nome || user.cog, nova);
             await sendEmailJoiner(user.email, user.nome_site || user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
@@ -9323,6 +9329,15 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   if (joiner?.email) {
                     const corpo = buildEmailRejeicaoPagamento(joiner.nome || joiner.cog, d, motivo.trim());
                     sendEmailJoiner(joiner.email, joiner.nome || joiner.cog, "✕ Comprovante recusado — ANTICEG", corpo);
+                  }
+                  // Reverte planilha para FALSE
+                  const itensComId = (d.itens || []).filter(i => i.id_linha);
+                  if (itensComId.length > 0) {
+                    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+                      method: "POST", redirect: "follow",
+                      headers: { "Content-Type": "text/plain" },
+                      body: JSON.stringify({ acao: "cancelar", token: "anticeg-pag-2026", itens: itensComId }),
+                    }).catch(() => {});
                   }
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));
