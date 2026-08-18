@@ -1540,8 +1540,7 @@ function ReportModal({ user, item, onClose, onReported }) {
               {erros.item && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4 }}>
                   {[
-                    { v: "repassei", label: "Repassei o item e já preenchi o forms" },
-                    { v: "membro_errado", label: "Esse é o item mas o membro/skzoo está errado" },
+                    { v: "membro_errado", label: "ITEM CERTO, MEMBRO/SZOO ERRADO" },
                   ].map(({ v, label }) => (
                     <label key={v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 0" }}>
                       <input type="radio" name="motivo_item" checked={motivoItem === v} onChange={() => setMotivoItem(v)}
