@@ -8858,10 +8858,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("reports")  && nav("reports",      "Reports",  "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
                 {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
+                {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
+              </div>
+              <div className="admin-sidebar-group">
+                <div className="admin-sidebar-group-label">Drops</div>
                 {nav("revista", "Revista Nylon", "◈", revistaCount)}
                 {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
                 {nav("popup", "Pop-up This & That", "◉", popupCount)}
-                {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
