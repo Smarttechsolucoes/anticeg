@@ -12237,6 +12237,12 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
       }
     }
     await supabase.from("pre_cadastros").update({ status: "aprovado" }).eq("id", p.id);
+    // Adiciona joiner na planilha (Dados + MASTERLIST)
+    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+      method: "POST", redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }),
+    }).catch(() => {});
     onUpdatePre(prev => prev.filter(x => x.id !== p.id));
     setAprovando(null);
   }
