@@ -1536,20 +1536,7 @@ function ReportModal({ user, item, onClose, onReported }) {
               {!Object.values(erros).some(Boolean) && <span style={{ color: "rgba(245,240,232,.25)", fontSize: 10 }}>selecione ao menos uma opção</span>}
             </div>
             <div style={{ marginBottom: 16, padding: "4px 12px", background: "rgba(245,240,232,.04)", borderRadius: 8 }}>
-              {checkRow("item", "Item incorreto")}
-              {erros.item && (
-                <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4 }}>
-                  {[
-                    { v: "membro_errado", label: "ITEM CERTO, MEMBRO/SKZOO ERRADO" },
-                  ].map(({ v, label }) => (
-                    <label key={v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 0" }}>
-                      <input type="radio" name="motivo_item" checked={motivoItem === v} onChange={() => setMotivoItem(v)}
-                        style={{ accentColor: "var(--laranja)", width: 13, height: 13 }} />
-                      <span style={{ fontSize: 11, color: "rgba(245,240,232,.65)" }}>{label}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+              {checkRow("item", "ITEM CERTO, MEMBRO/SKZOO ERRADO")}
               {checkRow("valor", "Valor do item incorreto")}
               {erros.valor && (
                 <div style={{ marginLeft: 24, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
