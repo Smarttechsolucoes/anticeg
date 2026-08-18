@@ -3754,7 +3754,7 @@ ${p.comprovante_url ? (() => {
                       <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.04)" }}>
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.nome_do_item}</div>
-                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}</div>
+                          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{it.ceg}{it.id_linha && <span style={{ marginLeft:6, color:"rgba(186,255,57,.4)" }}>{it.id_linha}</span>}</div>
                           <div style={{ display:"flex", gap:10, marginTop:2, flexWrap:"wrap" }}>
                             {Number(it.valor_item)>0  && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>item R${Number(it.valor_item ).toFixed(2).replace(".",",")}</span>}
                             {Number(it.frete_inter)>0 && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>frete R${Number(it.frete_inter).toFixed(2).replace(".",",")}</span>}
