@@ -4117,7 +4117,7 @@ ${p.comprovante_url ? (() => {
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
                             <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap" }}>
-                              <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</span>
+                              <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}{item.id_linha != null && item.id_linha !== '' && <span style={{ marginLeft:4, color:"rgba(186,255,57,.4)", fontSize:8 }}>{item.id_linha}</span>}</span>
                               {proxVencM && (() => {
                                 if (dpvM <= 0)  return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>vence hoje!</span>;
                                 if (dpvM === 1) return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.15)", border:"1px solid rgba(255,159,64,.3)", borderRadius:3, padding:"1px 4px" }}>amanhã</span>;
@@ -4180,7 +4180,7 @@ ${p.comprovante_url ? (() => {
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
                           <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                            <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}</span>
+                            <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}{item.id_linha != null && item.id_linha !== '' && <span style={{ marginLeft:4, color:"rgba(186,255,57,.4)", fontSize:8 }}>{item.id_linha}</span>}</span>
                             {proxVencD && (() => {
                               if (dpvD <= 0)  return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>hoje!</span>;
                               if (dpvD === 1) return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.15)", border:"1px solid rgba(255,159,64,.3)", borderRadius:3, padding:"1px 4px" }}>amanhã</span>;
