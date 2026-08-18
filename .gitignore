@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Claude Code local settings (contém allow-list com dados sensíveis)
+.claude/settings.local.json
