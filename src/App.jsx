@@ -11333,6 +11333,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
         async function aprovarRepasse(r) {
           await supabase.from("repassos").update({ status: "aprovado" }).eq("id", r.id);
+          // Atualiza dono na masterlist
+          if (r.item_id) {
+            await supabase.from("masterlist").update({ cog: r.novo_dono_cog, nome: r.novo_dono_nome }).eq("id", r.item_id);
+            // Busca id_linha para atualizar planilha
+            const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", r.item_id).single();
+            if (mlItem?.id_linha) {
+              fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+                method: "POST", redirect: "follow",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ acao: "repassar", token: "anticeg-pag-2026", id_linha: mlItem.id_linha, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }),
+              }).catch(() => {});
+            }
+          }
           await inserirPush([{ message:`Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`, active:true, joiner_cog:r.joiner_cog }]);
           await inserirPush([{ message:`Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`, active:true, joiner_cog:r.novo_dono_cog }]);
           setAdminRepassos(prev => prev.map(x => x.id === r.id ? { ...x, status:"aprovado" } : x));
