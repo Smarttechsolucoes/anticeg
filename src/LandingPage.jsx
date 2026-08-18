@@ -137,31 +137,51 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       return;
     }
 
-    // não tem conta → cadastro pendente
+    // não tem conta → cadastro automático
     if (!nome || !cog || !eml) {
       setCadError("Conta não encontrada. Preencha nome, @ e e-mail para solicitar cadastro.");
       setCadLoading(false); return;
     }
 
-    const { data: dup } = await supabase.from("pre_cadastros").select("id")
-      .eq("status", "pendente").or(`cog.ilike.${cog},email.eq.${eml}`).maybeSingle();
-    if (dup) { setCadError("Já existe um cadastro pendente com esses dados. Aguarde a aprovação."); setCadLoading(false); return; }
+    // verifica duplicata na tabela de joiners
+    const { data: dupJoiner } = await supabase.from("joiners").select("id")
+      .or(`cog.ilike.${cog},email.eq.${eml}`).maybeSingle();
+    if (dupJoiner) { setCadError("Já existe uma conta com esses dados. Entre em contato com a admin."); setCadLoading(false); return; }
 
-    const { error: err } = await supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "pendente" }]);
-    if (err) { setCadError("Erro ao enviar. Tente novamente."); setCadLoading(false); return; }
+    // cria conta diretamente
+    const { error: joinErr } = await supabase.from("joiners").insert([{
+      cog, nome, email: eml, twitter: "@" + cog, whatsapp: whats || null, confirmado: false,
+    }]);
+    if (joinErr) { setCadError("Erro ao criar conta. Tente novamente."); setCadLoading(false); return; }
 
-    // Notifica a admin por e-mail
+    // log para admin (não bloqueia)
+    supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "aprovado" }]).then(() => {});
+
+    // adiciona na planilha (async)
+    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+      method: "POST", redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome, twitter: "@" + cog, email: eml }),
+    }).catch(() => {});
+
+    // notifica admin por e-mail
     supabase.functions.invoke("send-email", {
       body: {
         to_email: "nandadomarketing@gmail.com",
         to_name: "Nanda",
-        assunto: "✦ Novo pré-cadastro — ANTICEG",
-        corpo: `<p style="font-family:monospace;font-size:13px;color:#F5F0E8;line-height:1.7">Nova joiner aguardando aprovação:</p><ul style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.7);line-height:2"><li><b>Nome:</b> ${nome}</li><li><b>@:</b> ${cog}</li><li><b>E-mail:</b> ${eml}</li>${whats ? `<li><b>WhatsApp:</b> ${whats}</li>` : ""}</ul><p style="font-family:monospace;font-size:11px;color:rgba(245,240,232,.4)">Acesse o painel admin → Joiners → Cadastros para aprovar ou recusar.</p>`,
+        assunto: "✦ Novo joiner adicionado — ANTICEG",
+        corpo: `<p style="font-family:monospace;font-size:13px;color:#F5F0E8;line-height:1.7">Novo joiner adicionado automaticamente:</p><ul style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.7);line-height:2"><li><b>Nome:</b> ${nome}</li><li><b>@:</b> ${cog}</li><li><b>E-mail:</b> ${eml}</li>${whats ? `<li><b>WhatsApp:</b> ${whats}</li>` : ""}</ul>`,
       },
     }).catch(() => {});
 
+    // loga direto com a conta recém-criada
+    const { data: novoJoiner } = await supabase.from("joiners").select("*").eq("cog", cog).maybeSingle();
     setCadLoading(false);
-    onLogin({ pre_cadastro: true, nome, cog, email: eml, whatsapp: whats || null }, []);
+    if (novoJoiner) {
+      await entrarCom(novoJoiner);
+    } else {
+      onLogin({ nome, cog, email: eml, whatsapp: whats || null }, []);
+    }
   }
 
   function resetPrimeiroAcesso() {

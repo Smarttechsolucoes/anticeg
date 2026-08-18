@@ -1472,7 +1472,7 @@ function ReportCheckRow({ checked, onChange, label }) {
 }
 
 function ReportModal({ user, item, onClose, onReported }) {
-  const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, outro: false });
+  const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, repassado: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
   const [motivoItem, setMotivoItem] = useState(null);
   const [pagInfo, setPagInfo] = useState({ dataPag: "", dataForms: "", valorPago: "", metodo: null });
@@ -1498,6 +1498,7 @@ function ReportModal({ user, item, onClose, onReported }) {
       erro_taxa:       erros.taxa,
       erro_pagamento:  erros.pagamento,
       erro_recebido:   erros.recebido,
+      erro_repassado:  erros.repassado,
       erro_outro:      erros.outro,
       motivo_item:     erros.item   ? motivoItem        : null,
       correcao_valor:  erros.valor  ? correcoes.valor  : null,
@@ -1606,6 +1607,7 @@ function ReportModal({ user, item, onClose, onReported }) {
                 </div>
               )}
               {checkRow("recebido", "Já recebi esse item")}
+              {checkRow("repassado", "Repassei esse item e ainda aparece para mim.")}
               {checkRow("outro", "Outro problema")}
             </div>
 
@@ -8586,7 +8588,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ data }) => { if (data) setReports(data); });
     supabase.from("confirmacoes").select("*").eq("visto", false).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setConfirmacoes(data); });
-    supabase.from("pre_cadastros").select("*").eq("status", "pendente").order("created_at", { ascending: false })
+    const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("pre_cadastros").select("*").or(`status.eq.pendente,and(status.eq.aprovado,created_at.gte.${seteDiasAtras})`).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setPreCadastros(data); });
     supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
@@ -8848,7 +8851,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               {(temAcesso("cadastros") || temAcesso("atualizacoes") || temAcesso("badges")) && (
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Joiners</div>
-                {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "◉", confirmacoes.length + preCadastros.length || 0)}
+                {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "◉", confirmacoes.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
               </div>
@@ -12252,26 +12255,23 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
     onUpdatePre(prev => prev.filter(x => x.id !== p.id));
   }
 
-  if (preCadastros.length === 0 && confirmacoes.length === 0) return (
+  const pendentes  = preCadastros.filter(p => p.status === "pendente");
+  const recentes   = preCadastros.filter(p => p.status === "aprovado");
+
+  if (pendentes.length === 0 && recentes.length === 0 && confirmacoes.length === 0) return (
     <div style={{ fontSize:12, color:"rgba(245,240,232,.52)", padding:"20px 0" }}>Nenhuma pendência de cadastro.</div>
   );
 
   return (
     <div>
-      {preCadastros.length > 0 && (
+      {pendentes.length > 0 && (
         <>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Novos Joiners</span>
-            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{preCadastros.length}</span>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Pendentes (legado)</span>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{pendentes.length}</span>
             <div style={{ flex:1, height:"1px", background:"rgba(186,255,57,.12)" }} />
-            {preCadastros.length > 1 && (
-              <button onClick={() => copiar(preCadastros.map(linhaJoiner).join("\n"), "todos")}
-                style={{ flexShrink:0, fontSize:9, fontFamily:"'DM Mono',monospace", background: copiado==="todos" ? "rgba(186,255,57,.15)" : "rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.25)", color:"#BAFF39", borderRadius:5, padding:"3px 10px", cursor:"pointer", letterSpacing:".5px" }}>
-                {copiado==="todos" ? "✓ copiado" : "◫ copiar todos"}
-              </button>
-            )}
           </div>
-          {preCadastros.map(p => (
+          {pendentes.map(p => (
             <div key={p.id} style={{ padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, marginBottom:8 }}>
               <div style={{ display:"flex", alignItems:"flex-start", gap:10, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -12283,10 +12283,6 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
                   <div style={{ fontSize:10, color:"rgba(245,240,232,.28)", marginTop:6 }}>{new Date(p.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}</div>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end" }}>
-                  <button onClick={() => copiar(linhaJoiner(p), p.id)}
-                    style={{ background: copiado===p.id ? "rgba(186,255,57,.15)" : "rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.2)", color:"#BAFF39", borderRadius:6, padding:"6px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                    {copiado===p.id ? "✓ copiado" : "◫ copiar"}
-                  </button>
                   <button onClick={() => aprovarCadastro(p)} disabled={aprovando === p.id}
                     style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
                     {aprovando === p.id ? "..." : "✓ Aprovar"}
@@ -12296,6 +12292,32 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
                     ✗ Recusar
                   </button>
                 </div>
+              </div>
+            </div>
+          ))}
+          {(recentes.length > 0 || confirmacoes.length > 0) && <div style={{ height:1, background:"rgba(245,240,232,.06)", margin:"16px 0" }} />}
+        </>
+      )}
+
+      {recentes.length > 0 && (
+        <>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, color:"#BAFF39", letterSpacing:"1.5px", textTransform:"uppercase" }}>Novos Joiners</span>
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)", background:"rgba(186,255,57,.08)", borderRadius:10, padding:"1px 8px" }}>{recentes.length}</span>
+            <div style={{ flex:1, height:"1px", background:"rgba(186,255,57,.12)" }} />
+            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.4)" }}>últimos 7 dias</span>
+          </div>
+          {recentes.map(p => (
+            <div key={p.id} style={{ padding:"12px 16px", background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.12)", borderRadius:10, marginBottom:8, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>
+                  {p.nome} <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontWeight:400 }}>@{p.cog}</span>
+                </div>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace" }}>{p.email}</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.6)", background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"2px 8px" }}>✓ adicionado</span>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{new Date(p.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</span>
               </div>
             </div>
           ))}
@@ -13273,6 +13295,18 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         twitter_novo: twitterNovo,
         email_novo:   emailNovo,
       }]);
+      // Atualiza planilha automaticamente
+      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+        method: "POST", redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          acao: "atualizar_joiner", token: "anticeg-pag-2026",
+          twitter_antigo: user.twitter || "",
+          twitter_novo: twitterNovo || "",
+          email_novo: emailNovo || "",
+          nome_novo: nome.trim(),
+        }),
+      }).catch(() => {});
     }
     const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: twitterNovo, email: emailNovo, confirmado: true };
     localStorage.setItem("anticeg_user_v2", JSON.stringify(updated));
