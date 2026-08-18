@@ -73,7 +73,7 @@ async function main() {
   while (true) {
     const { data: page } = await supabase
       .from('masterlist')
-      .select('id, ceg, nome_do_item, nome, status')
+      .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf')
       .order('id', { ascending: true })
       .range(from, from + 999);
     if (!page || page.length === 0) break;
@@ -112,6 +112,7 @@ async function main() {
       const pagoItem  = col(r, colMap, 'ITEM').trim().toUpperCase() === 'TRUE';
       const pagoFrete = col(r, colMap, 'FRETE').trim().toUpperCase() === 'TRUE';
       const pagoRf    = col(r, colMap, 'RF').trim().toUpperCase() === 'TRUE';
+      const idLinha   = col(r, colMap, 'ID').trim() || null;
 
       const cog = byTwitter[twitter] || byEmail[email] || twitter || email.split('@')[0] || null;
 
@@ -130,6 +131,7 @@ async function main() {
       const baseFields = {
         ceg, cog, nome,
         nome_do_item:    nomeItem,
+        id_linha:        idLinha,
         valor_item:      parseBRL(col(r, colMap, 'PREÇO ITEM', 'PRECO ITEM')),
         frete_inter:     parseBRL(col(r, colMap, 'PREÇO FRETE', 'FRETE INTER', 'PRECO FRETE')),
         taxa_rf:         parseBRL(col(r, colMap, 'PREÇO RF', 'PRECO RF')),
@@ -159,6 +161,10 @@ async function main() {
 
       if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
+        // Pagamentos só sobem (TRUE) — nunca regridem para FALSE
+        baseFields.pago_item  = baseFields.pago_item  || existingItem.pago_item  || false;
+        baseFields.pago_frete = baseFields.pago_frete || existingItem.pago_frete || false;
+        baseFields.pago_rf    = baseFields.pago_rf    || existingItem.pago_rf    || false;
         const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
         if (error) throw error;
         if (existingItem.status !== status && cog) {
