@@ -16357,32 +16357,43 @@ function AdminPopup({ onCountChange }) {
                 {Array.isArray(p.itens) && p.itens.length > 0 && (() => {
                   const w1 = p.itens.filter(it => it.week === "01" || (!it.week && p.week === "01"));
                   const w2 = p.itens.filter(it => it.week === "02");
-                  const renderItens = (itens) => itens.map((it,i) => (
-                    <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)" }}>
-                      {it.qtd}x {it.item_nome}{it.versao ? ` — ${it.versao}` : ""}
-                    </div>
-                  ));
+                  const renderItens = (itens) => itens.map((it,i) => {
+                    const pi = POPUP_ITEMS.find(pi => pi.id === it.item_id);
+                    const subtotal = pi ? pi.preco * (it.qtd || 1) : null;
+                    return (
+                      <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)", display:"flex", justifyContent:"space-between", gap:8 }}>
+                        <span>{it.qtd}x {it.item_nome}{it.versao ? ` — ${it.versao}` : ""}</span>
+                        {subtotal != null && <span style={{ color:"rgba(186,255,57,.55)", flexShrink:0 }}>R${fmtBRL(subtotal)}</span>}
+                      </div>
+                    );
+                  });
                   const calcPcs = (itens) => {
                     const krw = itens.reduce((acc, it) => {
                       const item = POPUP_ITEMS.find(pi => pi.id === it.item_id);
                       return acc + (item ? item.krw * (it.qtd || 1) : 0);
                     }, 0);
-                    return { krw, pcs: Math.floor(krw / 30000) };
+                    const brl = itens.reduce((acc, it) => {
+                      const item = POPUP_ITEMS.find(pi => pi.id === it.item_id);
+                      return acc + (item ? item.preco * (it.qtd || 1) : 0);
+                    }, 0);
+                    return { krw, brl, pcs: Math.floor(krw / 30000) };
                   };
                   return (
                     <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:8 }}>
-                      {w1.length > 0 && (() => { const { krw, pcs } = calcPcs(w1); return (
+                      {w1.length > 0 && (() => { const { krw, brl, pcs } = calcPcs(w1); return (
                         <div>
                           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(255,92,26,.6)", marginBottom:4 }}>WEEK 01</div>
                           <div style={{ display:"flex", flexDirection:"column", gap:2 }}>{renderItens(w1)}</div>
-                          {pcs > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.95)", marginTop:5, fontWeight:700 }}>✦ {pcs} photocard{pcs !== 1 ? "s" : ""} <span style={{ fontWeight:400, color:"rgba(255,92,26,.55)" }}>— ₩{krw.toLocaleString()}</span></div>}
+                          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.9)", marginTop:5, fontWeight:700 }}>R${fmtBRL(brl)} <span style={{ fontWeight:400, color:"rgba(186,255,57,.45)" }}>— ₩{krw.toLocaleString()}</span></div>
+                          {pcs > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.95)", marginTop:2, fontWeight:700 }}>✦ {pcs} photocard{pcs !== 1 ? "s" : ""}</div>}
                         </div>
                       ); })()}
-                      {w2.length > 0 && (() => { const { krw, pcs } = calcPcs(w2); return (
+                      {w2.length > 0 && (() => { const { krw, brl, pcs } = calcPcs(w2); return (
                         <div>
                           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(255,92,26,.6)", marginBottom:4 }}>WEEK 02</div>
                           <div style={{ display:"flex", flexDirection:"column", gap:2 }}>{renderItens(w2)}</div>
-                          {pcs > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.95)", marginTop:5, fontWeight:700 }}>✦ {pcs} photocard{pcs !== 1 ? "s" : ""} <span style={{ fontWeight:400, color:"rgba(255,92,26,.55)" }}>— ₩{krw.toLocaleString()}</span></div>}
+                          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.9)", marginTop:5, fontWeight:700 }}>R${fmtBRL(brl)} <span style={{ fontWeight:400, color:"rgba(186,255,57,.45)" }}>— ₩{krw.toLocaleString()}</span></div>
+                          {pcs > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.95)", marginTop:2, fontWeight:700 }}>✦ {pcs} photocard{pcs !== 1 ? "s" : ""}</div>}
                         </div>
                       ); })()}
                     </div>
