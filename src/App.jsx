@@ -12607,6 +12607,20 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     await supabase.from("masterlist").update({ cog: claim.joiner_cog, nome: claim.joiner_nome }).eq("id", claim.masterlist_id);
     await supabase.from("claims").update({ status: "aprovado" }).eq("id", claim.id);
     enviarPushJoiner(claim.joiner_cog, `✓ Claim aprovado — ${claim.ceg}`, `${claim.nome_do_item} foi confirmado e adicionado à sua lista!`, "/disponiveis");
+    const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", claim.masterlist_id).maybeSingle();
+    if (mlItem?.id_linha) {
+      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+        method: "POST", redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          acao: "aprovar_disponivel", token: "anticeg-pag-2026",
+          id_linha: mlItem.id_linha,
+          novo_nome: claim.joiner_nome,
+          novo_twitter: "@" + claim.joiner_cog,
+          vencimento: claim.vencimento || "",
+        }),
+      }).catch(() => {});
+    }
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
     setItens(prev => prev.filter(i => i.id !== claim.masterlist_id));
   }
