@@ -12561,6 +12561,31 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
   const [claims, setClaims] = useState(claimsInit || []);
   const [fotos, setFotos] = useState({});
   const [uploadingFoto, setUploadingFoto] = useState(null);
+  const [lojaTab, setLojaTab] = useState("disponiveis");
+  const [novoItem, setNovoItem] = useState({ ceg:"", nome_do_item:"", valor_item:"", frete_inter:"", taxa_rf:"", info_adicionais:"" });
+  const [salvando, setSalvando] = useState(false);
+
+  async function salvarNovoItem() {
+    if (!novoItem.ceg.trim() || !novoItem.nome_do_item.trim() || !novoItem.valor_item) {
+      alert("CEG, nome do item e valor são obrigatórios."); return;
+    }
+    setSalvando(true);
+    const { data: inserted, error } = await supabase.from("masterlist").insert([{
+      cog: "disponivel", nome: "disponivel",
+      ceg: novoItem.ceg.trim().toUpperCase(),
+      nome_do_item: novoItem.nome_do_item.trim(),
+      valor_item: Number(novoItem.valor_item) || 0,
+      frete_inter: Number(novoItem.frete_inter) || 0,
+      taxa_rf: Number(novoItem.taxa_rf) || 0,
+      info_adicionais: novoItem.info_adicionais.trim() || null,
+      na_loja: true,
+    }]).select();
+    setSalvando(false);
+    if (error) { alert("Erro: " + error.message); return; }
+    if (inserted?.length) setItens(prev => [...prev, inserted[0]]);
+    setNovoItem({ ceg:"", nome_do_item:"", valor_item:"", frete_inter:"", taxa_rf:"", info_adicionais:"" });
+    setLojaTab("disponiveis");
+  }
 
   useEffect(() => {
     if (data) setItens(data);
@@ -12722,8 +12747,58 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     setItens(prev => prev.map(i => ids.includes(i.id) ? { ...i, na_loja: false } : i));
   }
 
+  const inputStyle2 = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, width:"100%", boxSizing:"border-box" };
+
   return (
     <div>
+      {/* sub-tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+        {[["disponiveis","DISPONÍVEIS CEG"],["adicionar","ADICIONAR MANUAL"]].map(([v,l]) => (
+          <button key={v} onClick={() => setLojaTab(v)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", padding:"5px 14px", borderRadius:20, cursor:"pointer", fontWeight: lojaTab===v ? 700 : 400, border: lojaTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: lojaTab===v ? "rgba(255,92,26,.12)" : "transparent", color: lojaTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* formulário adicionar manual */}
+      {lojaTab === "adicionar" && (
+        <div style={{ background:"var(--card-bg)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"20px 16px", marginBottom:16, display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", letterSpacing:"1.5px", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Novo item na loja</div>
+          <div style={{ display:"flex", gap:10 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>CEG *</div>
+              <input value={novoItem.ceg} onChange={e => setNovoItem(p => ({ ...p, ceg: e.target.value }))} placeholder="ex: THIS" style={inputStyle2} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Nome do item *</div>
+            <input value={novoItem.nome_do_item} onChange={e => setNovoItem(p => ({ ...p, nome_do_item: e.target.value }))} placeholder="ex: Photocard Felix" style={inputStyle2} />
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Valor *</div>
+              <input type="number" value={novoItem.valor_item} onChange={e => setNovoItem(p => ({ ...p, valor_item: e.target.value }))} placeholder="0,00" style={inputStyle2} />
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Frete</div>
+              <input type="number" value={novoItem.frete_inter} onChange={e => setNovoItem(p => ({ ...p, frete_inter: e.target.value }))} placeholder="0,00" style={inputStyle2} />
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Taxa RF</div>
+              <input type="number" value={novoItem.taxa_rf} onChange={e => setNovoItem(p => ({ ...p, taxa_rf: e.target.value }))} placeholder="0,00" style={inputStyle2} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Info adicionais</div>
+            <input value={novoItem.info_adicionais} onChange={e => setNovoItem(p => ({ ...p, info_adicionais: e.target.value }))} placeholder="opcional" style={inputStyle2} />
+          </div>
+          <button onClick={salvarNovoItem} disabled={salvando} style={{ background:"rgba(255,92,26,.15)", border:"1px solid rgba(255,92,26,.4)", color:"var(--laranja)", borderRadius:8, padding:"10px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:"1px", opacity: salvando ? 0.5 : 1 }}>
+            {salvando ? "..." : "PUBLICAR NA LOJA →"}
+          </button>
+        </div>
+      )}
+
+      {lojaTab === "disponiveis" && <>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:cegs.length > 1 ? 10 : 16 }}>
         <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
           {publicados.length} publicado{publicados.length !== 1 ? "s" : ""} · {naoPublicados.length} oculto{naoPublicados.length !== 1 ? "s" : ""}
@@ -12813,6 +12888,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
           {naoPublicados.map(renderItem)}
         </>
       )}
+      </>}
     </div>
   );
 }
