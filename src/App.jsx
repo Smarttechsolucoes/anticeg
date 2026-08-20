@@ -12776,6 +12776,13 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     );
   };
 
+  async function publicarTodos() {
+    const ids = naoPublicados.map(i => i.id);
+    if (!ids.length) return;
+    await supabase.from("masterlist").update({ na_loja: true }).in("id", ids);
+    setItens(prev => prev.map(i => ids.includes(i.id) ? { ...i, na_loja: true } : i));
+  }
+
   async function retirarTodos() {
     const ids = publicados.map(i => i.id);
     if (!ids.length) return;
@@ -12844,6 +12851,11 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
             style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", opacity: refreshing ? 0.5 : 1 }}>
             {refreshing ? "..." : "↻ Atualizar"}
           </button>
+          {naoPublicados.length > 0 && (
+            <button onClick={publicarTodos} style={{ background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.35)", color:"#ffb400", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+              Publicar todos →
+            </button>
+          )}
           {publicados.length > 0 && (
             <button onClick={retirarTodos} style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
               Retirar todos ✕
