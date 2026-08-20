@@ -12952,6 +12952,7 @@ function DisponiveisTab({ user }) {
   const [claimVenc, setClaimVenc] = useState("");
   const [claimWaLink, setClaimWaLink] = useState(null);
   const [meusClaims, setMeusClaims] = useState([]);
+  const [vendidos, setVendidos] = useState([]);
   const [subTab, setSubTab] = useState("loja");
 
   useEffect(() => {
@@ -12997,6 +12998,9 @@ function DisponiveisTab({ user }) {
     supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
       .eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => setMeusClaims(data || []));
+    supabase.from("claims").select("id, ceg, nome_do_item, valor, created_at")
+      .eq("status", "aprovado").order("created_at", { ascending: false })
+      .then(({ data }) => setVendidos(data || []));
   }
 
   useEffect(() => { carregarItens(); }, []);
@@ -13220,6 +13224,32 @@ function DisponiveisTab({ user }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Histórico de vendidos */}
+      {subTab === "loja" && vendidos.length > 0 && (
+        <div style={{ marginTop:8, marginBottom:32 }}>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"2px", color:"rgba(245,240,232,.2)", textTransform:"uppercase", marginBottom:12 }}>— vendidos —</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:10 }}>
+            {vendidos.map(v => (
+              <div key={v.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.05)", borderRadius:14, overflow:"hidden", display:"flex", flexDirection:"column", opacity:.65 }}>
+                <div style={{ width:"100%", aspectRatio:"1/1", background:"rgba(245,240,232,.03)", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"rgba(245,240,232,.1)", letterSpacing:2 }}>SOLD</span>
+                  <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <div style={{ background:"rgba(0,0,0,.55)", borderRadius:6, padding:"3px 10px", border:"1px solid rgba(245,240,232,.12)" }}>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"rgba(245,240,232,.5)", letterSpacing:2 }}>SOLD</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding:"10px 12px" }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"rgba(201,168,240,.4)", letterSpacing:"1.5px", marginBottom:3 }}>{v.ceg}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:"rgba(245,240,232,.35)", lineHeight:1.4, display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{v.nome_do_item}</div>
+                  {v.valor > 0 && <div style={{ fontSize:12, fontWeight:700, color:"rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace", marginTop:6 }}>R${fmtBRL(v.valor)}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
