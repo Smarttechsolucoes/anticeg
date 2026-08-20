@@ -12942,11 +12942,6 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
 }
 
 function DisponiveisTab({ user }) {
-  const [senhaOk, setSenhaOk] = useState(() => sessionStorage.getItem("disponiveis_ok") === "1");
-  const [senhaInput, setSenhaInput] = useState("");
-  const [senhaErro, setSenhaErro] = useState(false);
-  const [senhaConfig, setSenhaConfig] = useState(null);
-
   const [itens, setItens] = useState(null);
   const [fotos, setFotos] = useState({});
   const [filtroCeg, setFiltroCeg] = useState(null);
@@ -12958,48 +12953,6 @@ function DisponiveisTab({ user }) {
   const [claimWaLink, setClaimWaLink] = useState(null);
   const [meusClaims, setMeusClaims] = useState([]);
   const [subTab, setSubTab] = useState("loja");
-
-  useEffect(() => {
-    supabase.from("config").select("value").eq("key", "senha_disponiveis").single()
-      .then(({ data }) => { if (data?.value) setSenhaConfig(data.value); });
-  }, []);
-
-  if (!senhaOk) {
-    const mono = "'DM Mono',monospace";
-    function tentarSenha() {
-      if (senhaConfig && senhaInput.trim() === senhaConfig) {
-        sessionStorage.setItem("disponiveis_ok", "1");
-        setSenhaOk(true);
-      } else {
-        setSenhaErro(true);
-        setTimeout(() => setSenhaErro(false), 1500);
-      }
-    }
-    return (
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:320, gap:16 }}>
-        <div style={{ fontSize:11, letterSpacing:"2px", color:"rgba(245,240,232,.35)", fontFamily:mono, textTransform:"uppercase", marginBottom:4 }}>Acesso restrito</div>
-        <div style={{ fontSize:13, color:"rgba(245,240,232,.5)", fontFamily:mono, textAlign:"center", lineHeight:1.7, maxWidth:280 }}>
-          A loja está em preparação.<br />Insira a senha para visualizar os itens.
-        </div>
-        <div style={{ display:"flex", gap:8, marginTop:8 }}>
-          <input
-            autoFocus
-            type="password"
-            placeholder="senha"
-            value={senhaInput}
-            onChange={e => { setSenhaInput(e.target.value); setSenhaErro(false); }}
-            onKeyDown={e => e.key === "Enter" && tentarSenha()}
-            style={{ fontFamily:mono, fontSize:13, padding:"10px 14px", borderRadius:8, border:`1px solid ${senhaErro ? "rgba(255,107,107,.5)" : "rgba(245,240,232,.15)"}`, background:"var(--card-bg)", color:"#F5F0E8", outline:"none", width:180, transition:"border .15s" }}
-          />
-          <button onClick={tentarSenha}
-            style={{ fontFamily:mono, fontSize:12, fontWeight:700, padding:"10px 20px", borderRadius:8, border:"none", background:"var(--laranja)", color:"#000", cursor:"pointer", letterSpacing:".5px" }}>
-            ENTRAR →
-          </button>
-        </div>
-        {senhaErro && <div style={{ fontSize:11, color:"#ff6b6b", fontFamily:mono }}>senha incorreta</div>}
-      </div>
-    );
-  }
 
   useEffect(() => {
     if (confirmando) {
