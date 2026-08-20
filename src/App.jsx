@@ -3337,7 +3337,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [opcaoEscolhida, setOpcaoEscolhida] = useState({});
   // ── pagamentos ──
   const [itensPendentes,  setItensPendentes]  = useState([]);
-  const [pagSelecionados, setPagSelecionados] = useState(new Set());
+  const [pagSelecionados, setPagSelecionados] = useState(new Map());
   const [pagMetodo,       setPagMetodo]       = useState("pix"); // pix | cartao
   const [pagComprovante,  setPagComprovante]  = useState(null);
   const [pagUsarCodigo,   setPagUsarCodigo]   = useState(false);
@@ -3420,7 +3420,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
           .eq("cog", dataCog(user.cog)).order("ceg").order("nome_do_item"),
         supabase.from("repassos").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
-        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)).gte("created_at", "2026-09-01"),
         supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single(),
         supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", dataCog(user.cog)),
       ]);
@@ -3460,7 +3460,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           return va.localeCompare(vb);
         });
         setItensPendentes(sortPendentes(stillPending));
-        setPagSelecionados(new Set(stillPending.map(i => i.id)));
+        setPagSelecionados(new Map(stillPending.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
       } else if (pendentes) {
         const sortPendentes = arr => [...arr].sort((a, b) => {
           const pv = i => [
@@ -3475,7 +3475,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           return va.localeCompare(vb);
         });
         setItensPendentes(sortPendentes(pendentes));
-        setPagSelecionados(new Set(pendentes.map(i => i.id)));
+        setPagSelecionados(new Map(pendentes.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
       }
       if (pagamentos) setMeusPagamentos(pagamentos);
       if (itensData) setMeusItens(itensData);
@@ -3791,10 +3791,14 @@ ${p.comprovante_url ? (() => {
                + (!i.pago_frete && Number(i.frete_inter||0) > 0 ? diasAtraso(i.venc_frete) : 0)
                + (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 ? diasAtraso(i.venc_rf)    : 0);
         };
-        const subtotalItem = i => (i.pago_item  ? 0 : Number(i.valor_item ||0))
-                                + (i.pago_frete ? 0 : Number(i.frete_inter||0))
-                                + (i.pago_rf    ? 0 : Number(i.taxa_rf    ||0))
-                                + multaItem(i);
+        const subtotalItem = i => {
+          const f = pagSelecionados.get(i.id);
+          if (!f) return 0;
+          return (f.item  ? Number(i.valor_item ||0) : 0)
+               + (f.frete ? Number(i.frete_inter||0) : 0)
+               + (f.rf    ? Number(i.taxa_rf    ||0) : 0)
+               + multaItem(i);
+        };
         const outrosValTotal = pagOutros ? (Number(pagOutrosItem.replace(",",".")||0) + Number(pagOutrosFrete.replace(",",".")||0) + Number(pagOutrosRF.replace(",",".")||0)) : 0;
         const total = itensSel.reduce((acc, i) => acc + subtotalItem(i), 0) + outrosValTotal;
         const cashbackMasterlist = meusItens.reduce((a,b) => {
@@ -3829,7 +3833,7 @@ ${p.comprovante_url ? (() => {
           }
 
           const itensPayload = [
-            ...itensSel.map(i => ({ id:i.id, id_linha:i.id_linha||null, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:i.pago_item?0:Number(i.valor_item||0), frete_inter:i.pago_frete?0:Number(i.frete_inter||0), taxa_rf:i.pago_rf?0:Number(i.taxa_rf||0), multa:multaItem(i) })),
+            ...itensSel.map(i => { const f = pagSelecionados.get(i.id) || {}; return { id:i.id, id_linha:i.id_linha||null, ceg:i.ceg, nome_do_item:i.nome_do_item, valor_item:f.item?Number(i.valor_item||0):0, frete_inter:f.frete?Number(i.frete_inter||0):0, taxa_rf:f.rf?Number(i.taxa_rf||0):0, multa:multaItem(i) }; }),
             ...(pagOutros && pagOutrosNome.trim() ? [{ id:null, ceg:"—", nome_do_item:pagOutrosNome.trim(), valor_item:Number(pagOutrosItem.replace(",",".")||0), frete_inter:Number(pagOutrosFrete.replace(",",".")||0), taxa_rf:Number(pagOutrosRF.replace(",",".")||0), multa:0 }] : []),
           ];
           const { data: nova, error } = await supabase.from("pagamento_demandas").insert([{
@@ -3943,7 +3947,7 @@ ${p.comprovante_url ? (() => {
             )}
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); }}
+              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Map()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); }}
                 style={{ width:"100%", padding:"13px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:13, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
                 + Enviar novo comprovante
               </button>
@@ -4061,7 +4065,7 @@ ${p.comprovante_url ? (() => {
           <div style={{ paddingBottom:40 }}>
             <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
               {[["pendentes","○ Pendentes"],["enviar","◎ Enviar"],["historico","≡ Histórico"]].map(([id, label]) => (
-                <button key={id} onClick={() => { if (id === "enviar" && pagStatus === "enviado") { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Set()); setPagComprovante(null); setPagObs(""); } setPagSubTab(id); }}
+                <button key={id} onClick={() => { if (id === "enviar" && pagStatus === "enviado") { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Map()); setPagComprovante(null); setPagObs(""); } setPagSubTab(id); }}
                   style={{ padding:"6px 16px", borderRadius:6, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, cursor:"pointer", border:`1px solid ${pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: pagSubTab===id ? "rgba(255,92,26,.12)" : "transparent", color: pagSubTab===id ? "var(--laranja)" : "rgba(245,240,232,.4)", transition:"all .12s", letterSpacing:".3px" }}>
                   {label}
                 </button>
@@ -4078,34 +4082,53 @@ ${p.comprovante_url ? (() => {
             {/* Lista de itens — tabela no desktop, cards no mobile */}
             {itensPendentes.length > 0 && (() => {
               const temMulta = itensPendentes.some(i => multaItem(i) > 0);
-              const toggle = id => setPagSelecionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+              const toggle = id => setPagSelecionados(prev => {
+                const n = new Map(prev);
+                if (n.has(id)) { n.delete(id); } else {
+                  const it = itensPendentes.find(i => i.id === id);
+                  n.set(id, { item: !it.pago_item && Number(it.valor_item||0) > 0, frete: !it.pago_frete && Number(it.frete_inter||0) > 0, rf: !it.pago_rf && Number(it.taxa_rf||0) > 0 });
+                }
+                return n;
+              });
+              const toggleField = (id, field, e) => { e.stopPropagation(); setPagSelecionados(prev => {
+                const n = new Map(prev);
+                const cur = n.get(id) || { item: false, frete: false, rf: false };
+                const upd = { ...cur, [field]: !cur[field] };
+                if (!upd.item && !upd.frete && !upd.rf) n.delete(id); else n.set(id, upd);
+                return n;
+              }); };
               const fmtV = v => v > 0 ? `R$${Number(v).toFixed(2).replace(".",",")}` : null;
 
               if (isMobile) return (
                 <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
                   {itensPendentes.map(item => {
                     const sel = pagSelecionados.has(item.id);
+                    const selF = pagSelecionados.get(item.id) || {};
                     const sub = subtotalItem(item);
                     const multa = multaItem(item);
                     const valItem  = !item.pago_item  ? Number(item.valor_item ||0) : 0;
                     const valFrete = !item.pago_frete ? Number(item.frete_inter||0) : 0;
                     const valRf    = !item.pago_rf    ? Number(item.taxa_rf    ||0) : 0;
-                    const cols = [
-                      valItem  > 0 ? { label:"Item",  v:valItem  } : null,
-                      valFrete > 0 ? { label:"Frete", v:valFrete } : null,
-                      valRf    > 0 ? { label:"RF",    v:valRf    } : null,
-                      multa    > 0 ? { label:"Multa", v:multa, red:true } : null,
-                    ].filter(Boolean);
                     const proxVencM = [
                       !item.pago_item  && item.venc_item  ? item.venc_item  : null,
                       !item.pago_frete && item.venc_frete ? item.venc_frete : null,
                       !item.pago_rf    && item.venc_rf    ? item.venc_rf    : null,
                     ].filter(Boolean).sort()[0] || null;
                     const dpvM = proxVencM !== null ? diasParaVencer(proxVencM) : null;
+                    const fieldRow = (field, label, val) => val <= 0 ? null : (
+                      <div key={field} onClick={e => toggleField(item.id, field, e)}
+                        style={{ flex:1, textAlign:"center", cursor:"pointer", padding:"4px 0", borderRadius:5, background: selF[field] ? "rgba(186,255,57,.07)" : "transparent", border:`1px solid ${selF[field] ? "rgba(186,255,57,.2)" : "transparent"}` }}>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:4, marginBottom:2 }}>
+                          <div style={{ width:10, height:10, borderRadius:2, border:`1.5px solid ${selF[field] ? "#BAFF39" : "rgba(245,240,232,.3)"}`, background: selF[field] ? "#BAFF39" : "transparent", flexShrink:0 }} />
+                          <div style={{ fontSize:8, letterSpacing:"1px", color: selF[field] ? "rgba(186,255,57,.8)" : "rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{label}</div>
+                        </div>
+                        <div style={{ fontSize:11, fontWeight:700, color: selF[field] ? "#BAFF39" : "rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace" }}>R${val.toFixed(2).replace(".",",")}</div>
+                      </div>
+                    );
                     return (
                       <div key={item.id} onClick={() => toggle(item.id)}
                         style={{ background: sel ? "rgba(186,255,57,.05)" : "var(--card-bg)", border:`1px solid ${sel ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.07)"}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"all .12s" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: cols.length > 0 ? 10 : 0 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: (valItem > 0 || valFrete > 0 || valRf > 0) ? 10 : 0 }}>
                           <div style={{ width:16, height:16, borderRadius:3, flexShrink:0, background: sel ? "#BAFF39" : "transparent", border:`2px solid ${sel ? "#BAFF39" : "rgba(245,240,232,.2)"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
                             {sel && <span style={{ fontSize:10, color:"#111", fontWeight:900, lineHeight:1 }}>✓</span>}
                           </div>
@@ -4124,14 +4147,17 @@ ${p.comprovante_url ? (() => {
                           </div>
                           <div style={{ fontSize:14, fontWeight:900, color: sel ? "#BAFF39" : "rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", flexShrink:0 }}>R${sub.toFixed(2).replace(".",",")}</div>
                         </div>
-                        {cols.length > 0 && (
-                          <div style={{ display:"flex", gap:0, borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:8 }}>
-                            {cols.map(c => (
-                              <div key={c.label} style={{ flex:1, textAlign:"center" }}>
-                                <div style={{ fontSize:8, letterSpacing:"1px", color: c.red ? "rgba(255,107,107,.5)" : "rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>{c.label}</div>
-                                <div style={{ fontSize:11, fontWeight:700, color: c.red ? "#ff6b6b" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>R${c.v.toFixed(2).replace(".",",")}</div>
+                        {(valItem > 0 || valFrete > 0 || valRf > 0) && (
+                          <div style={{ display:"flex", gap:6, borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:8 }} onClick={e => e.stopPropagation()}>
+                            {fieldRow("item",  "Item",  valItem)}
+                            {fieldRow("frete", "Frete", valFrete)}
+                            {fieldRow("rf",    "RF",    valRf)}
+                            {multa > 0 && (
+                              <div style={{ flex:1, textAlign:"center", padding:"4px 0" }}>
+                                <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(255,107,107,.5)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:2 }}>Multa</div>
+                                <div style={{ fontSize:11, fontWeight:700, color:"#ff6b6b", fontFamily:"'DM Mono',monospace" }}>R${multa.toFixed(2).replace(".",",")}</div>
                               </div>
-                            ))}
+                            )}
                           </div>
                         )}
                       </div>
@@ -4156,6 +4182,7 @@ ${p.comprovante_url ? (() => {
                   </div>
                   {itensPendentes.map(item => {
                     const sel = pagSelecionados.has(item.id);
+                    const selF = pagSelecionados.get(item.id) || {};
                     const sub = subtotalItem(item);
                     const multa = multaItem(item);
                     const proxVencD = [
@@ -4164,6 +4191,15 @@ ${p.comprovante_url ? (() => {
                       !item.pago_rf    && item.venc_rf    ? item.venc_rf    : null,
                     ].filter(Boolean).sort()[0] || null;
                     const dpvD = proxVencD !== null ? diasParaVencer(proxVencD) : null;
+                    const fieldCell = (field, val) => {
+                      if (!val || val <= 0) return <span style={{opacity:.2}}>—</span>;
+                      return (
+                        <div onClick={e => toggleField(item.id, field, e)} style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:4, cursor:"pointer" }}>
+                          <div style={{ width:10, height:10, borderRadius:2, border:`1.5px solid ${selF[field] ? "#BAFF39" : "rgba(245,240,232,.3)"}`, background: selF[field] ? "#BAFF39" : "transparent", flexShrink:0 }} />
+                          <span style={{ color: selF[field] ? "rgba(245,240,232,.9)" : "rgba(245,240,232,.4)" }}>{fmtV(val)}</span>
+                        </div>
+                      );
+                    };
                     return (
                       <div key={item.id} onClick={() => toggle(item.id)}
                         style={{ display:"grid", gridTemplateColumns:gridCols, gap:"0 8px", alignItems:"center", background: sel ? "rgba(186,255,57,.04)" : "transparent", borderRadius:7, padding:"9px 0", marginBottom:2, cursor:"pointer", transition:"background .12s", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
@@ -4185,9 +4221,9 @@ ${p.comprovante_url ? (() => {
                             })()}
                           </div>
                         </div>
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_item ? Number(item.valor_item||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_frete ? Number(item.frete_inter||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
-                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", textAlign:"right" }}>{fmtV(!item.pago_rf ? Number(item.taxa_rf||0) : 0) || <span style={{opacity:.2}}>—</span>}</div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right" }}>{fieldCell("item",  !item.pago_item  ? Number(item.valor_item ||0) : 0)}</div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right" }}>{fieldCell("frete", !item.pago_frete ? Number(item.frete_inter||0) : 0)}</div>
+                        <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right" }}>{fieldCell("rf",    !item.pago_rf    ? Number(item.taxa_rf    ||0) : 0)}</div>
                         {temMulta && <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#ff6b6b", fontWeight: multa > 0 ? 700 : 400, textAlign:"right" }}>{fmtV(multa) || <span style={{opacity:.2}}>—</span>}</div>}
                         <div style={{ fontSize:12, fontWeight:900, fontFamily:"'DM Mono',monospace", color: sel ? "#BAFF39" : "rgba(245,240,232,.45)", textAlign:"right" }}>R${sub.toFixed(2).replace(".",",")}</div>
                       </div>
@@ -8784,7 +8820,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", joiner.cog),
       supabase.from("reports").select("id").eq("joiner_cog", joiner.cog),
       supabase.from("pagamento_demandas").select("id").eq("joiner_cog", joiner.cog),
-      supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", joiner.cog),
+      supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", joiner.cog).gte("created_at", "2026-09-01"),
     ]);
 
     setBadgesJoiner({
@@ -12894,6 +12930,11 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
 }
 
 function DisponiveisTab({ user }) {
+  const [senhaOk, setSenhaOk] = useState(() => sessionStorage.getItem("disponiveis_ok") === "1");
+  const [senhaInput, setSenhaInput] = useState("");
+  const [senhaErro, setSenhaErro] = useState(false);
+  const [senhaConfig, setSenhaConfig] = useState(null);
+
   const [itens, setItens] = useState(null);
   const [fotos, setFotos] = useState({});
   const [filtroCeg, setFiltroCeg] = useState(null);
@@ -12905,6 +12946,48 @@ function DisponiveisTab({ user }) {
   const [claimWaLink, setClaimWaLink] = useState(null);
   const [meusClaims, setMeusClaims] = useState([]);
   const [subTab, setSubTab] = useState("loja");
+
+  useEffect(() => {
+    supabase.from("config").select("value").eq("key", "senha_disponiveis").single()
+      .then(({ data }) => { if (data?.value) setSenhaConfig(data.value); });
+  }, []);
+
+  if (!senhaOk) {
+    const mono = "'DM Mono',monospace";
+    function tentarSenha() {
+      if (senhaConfig && senhaInput.trim() === senhaConfig) {
+        sessionStorage.setItem("disponiveis_ok", "1");
+        setSenhaOk(true);
+      } else {
+        setSenhaErro(true);
+        setTimeout(() => setSenhaErro(false), 1500);
+      }
+    }
+    return (
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:320, gap:16 }}>
+        <div style={{ fontSize:11, letterSpacing:"2px", color:"rgba(245,240,232,.35)", fontFamily:mono, textTransform:"uppercase", marginBottom:4 }}>Acesso restrito</div>
+        <div style={{ fontSize:13, color:"rgba(245,240,232,.5)", fontFamily:mono, textAlign:"center", lineHeight:1.7, maxWidth:280 }}>
+          A loja está em preparação.<br />Insira a senha para visualizar os itens.
+        </div>
+        <div style={{ display:"flex", gap:8, marginTop:8 }}>
+          <input
+            autoFocus
+            type="password"
+            placeholder="senha"
+            value={senhaInput}
+            onChange={e => { setSenhaInput(e.target.value); setSenhaErro(false); }}
+            onKeyDown={e => e.key === "Enter" && tentarSenha()}
+            style={{ fontFamily:mono, fontSize:13, padding:"10px 14px", borderRadius:8, border:`1px solid ${senhaErro ? "rgba(255,107,107,.5)" : "rgba(245,240,232,.15)"}`, background:"var(--card-bg)", color:"#F5F0E8", outline:"none", width:180, transition:"border .15s" }}
+          />
+          <button onClick={tentarSenha}
+            style={{ fontFamily:mono, fontSize:12, fontWeight:700, padding:"10px 20px", borderRadius:8, border:"none", background:"var(--laranja)", color:"#000", cursor:"pointer", letterSpacing:".5px" }}>
+            ENTRAR →
+          </button>
+        </div>
+        {senhaErro && <div style={{ fontSize:11, color:"#ff6b6b", fontFamily:mono }}>senha incorreta</div>}
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (confirmando) {
@@ -16766,29 +16849,6 @@ function PrevendaTab({ user }) {
 
   const formularios = [
     {
-      key: "popup",
-      ativo: popupAberto,
-      titulo: "POP-UP THIS & THAT",
-      subtitulo: "Stray Kids",
-      url: "/popup-this-that",
-      img: "/popup/pob-week-1.png",
-      tags: [
-        popup01Aberta ? `Week 01 · até ${POPUP_WEEKS[0].pagamento}` : "Week 01 · encerrada",
-        popup02Aberta ? `Week 02 · até ${POPUP_WEEKS[1].pagamento}` : "Week 02 · encerrada",
-      ],
-      info: "14 itens exclusivos · pagamento após confirmação",
-    },
-    {
-      key: "wmag",
-      ativo: wmagAberto,
-      titulo: "W MAGAZINE",
-      subtitulo: "Hyunjin — 3 capas",
-      url: "/wmag-hyunjin",
-      img: WMAG_CAPAS[0].img,
-      tags: [`Inscrições até 16/08`, `Pagamento até 21/08`],
-      info: "R$ 48,00 por unidade · PIX ou cartão · frete inter 26/08",
-    },
-    {
       key: "this-that-albuns",
       ativo: true,
       titulo: "THIS & THAT",
@@ -17460,7 +17520,7 @@ export default function App() {
         supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", user.cog),
         supabase.from("reports").select("id").eq("joiner_cog", user.cog),
         supabase.from("pagamento_demandas").select("id").eq("joiner_cog", user.cog),
-        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog).gte("created_at", "2026-09-01"),
       ]);
       if (cancelled) return;
       const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0, cog: user.cog });
