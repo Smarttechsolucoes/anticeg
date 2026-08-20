@@ -13233,41 +13233,42 @@ function DisponiveisTab({ user }) {
           <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum item disponível no momento.</div>
         </div>
       )}
-      {subTab === "loja" && itensFiltrados !== null && itensFiltrados.map(item => {
-        const val = total(item);
-        const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
-        return (
-          <div key={item.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden", marginBottom:10 }}>
-            <div style={{ padding:14, display:"flex", alignItems:"flex-start", gap:12 }}>
-              {/* Thumbnail */}
-              <div style={{ width:64, height:64, borderRadius:8, overflow:"hidden", flexShrink:0, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.07)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {foto
-                  ? <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-                  : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.2)", letterSpacing:".5px", textAlign:"center", lineHeight:1.4 }}>sem{"\n"}foto</span>
-                }
+      {subTab === "loja" && itensFiltrados !== null && itensFiltrados.length > 0 && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(155px, 1fr))", gap:12, marginBottom:32 }}>
+          {itensFiltrados.map(item => {
+            const val = total(item);
+            const foto = fotos[`${item.ceg}||${item.nome_do_item}`];
+            return (
+              <div key={item.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden", display:"flex", flexDirection:"column", transition:"border-color .15s" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,180,0,.3)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(245,240,232,.08)"}>
+                {/* foto */}
+                <div style={{ width:"100%", aspectRatio:"1/1", background:"rgba(245,240,232,.04)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {foto
+                    ? <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                    : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.15)", letterSpacing:".5px" }}>sem foto</span>
+                  }
+                </div>
+                {/* info */}
+                <div style={{ padding:"10px 12px", display:"flex", flexDirection:"column", flex:1 }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"var(--lilas)", letterSpacing:"1.5px", marginBottom:3 }}>{item.ceg}</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:"var(--offwhite)", lineHeight:1.4, flex:1, marginBottom:8, display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{item.nome_do_item}</div>
+                  {item.info_adicionais && (
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginBottom:6, lineHeight:1.45, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{item.info_adicionais}</div>
+                  )}
+                  {val > 0 && (
+                    <div style={{ fontSize:14, fontWeight:900, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>R${fmtBRL(val)}</div>
+                  )}
+                  <button onClick={() => abrirConfirmacao(item)}
+                    style={{ width:"100%", background:"rgba(255,180,0,.12)", border:"1px solid rgba(255,180,0,.4)", color:"#ffb400", borderRadius:8, padding:"8px 0", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".3px" }}>
+                    Dar claim →
+                  </button>
+                </div>
               </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"var(--lilas)", letterSpacing:"1px", marginBottom:4 }}>{item.ceg}</div>
-                <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", lineHeight:1.35, marginBottom:4 }}>{item.nome_do_item}</div>
-                {item.info_adicionais && (
-                  <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:6, lineHeight:1.5 }}>{item.info_adicionais}</div>
-                )}
-                {val > 0 && (
-                  <div style={{ fontSize:13, fontWeight:700, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>
-                    R${fmtBRL(val)}
-                  </div>
-                )}
-              </div>
-              <div style={{ flexShrink:0 }}>
-                <button onClick={() => abrirConfirmacao(item)}
-                  style={{ background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.35)", color:"#ffb400", borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
-                  Dar claim →
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal de confirmação de claim */}
       {confirmando && (() => {
