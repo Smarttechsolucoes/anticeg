@@ -1787,6 +1787,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [cegModal, setCegModal] = useState(null);
   const [reportItem, setReportItem] = useState(null);
 
+  const [filtroCeg, setFiltroCeg] = useState(null);
   const [totalModal,    setTotalModal]    = useState(false);
   const [vencModal,     setVencModal]     = useState(false);
   const [galeriaModal,  setGaleriaModal]  = useState(false);
@@ -1910,7 +1911,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const nextVenc = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d)[0];
   const qtdAtrasados = vencDates.filter(v => v.d < today).length;
 
+  const cegList = [...new Set(itens.map(i => i.ceg))].sort();
+
   let filtered = [...itens];
+  if (filtroCeg) filtered = filtered.filter(i => i.ceg === filtroCeg);
   if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
   if (STATUS_STEPS.some(s => s.id === statusFiltro)) filtered = filtered.filter(i => i.status === statusFiltro);
   if (statusFiltro === "pendente")    filtered = filtered.filter(i =>
@@ -2749,6 +2753,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         </div>
       )}
 
+      {cegList.length > 1 && (
+        <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:8, marginBottom:4, scrollbarWidth:"none" }}>
+          <button onClick={() => setFiltroCeg(null)} style={{ flexShrink:0, fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight: !filtroCeg ? 700 : 400, letterSpacing:"1px", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid rgba(245,240,232,.5)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(245,240,232,.08)" : "transparent", color: !filtroCeg ? "var(--offwhite)" : "rgba(245,240,232,.35)", transition:"all .12s" }}>
+            TODAS
+          </button>
+          {cegList.map(ceg => (
+            <button key={ceg} onClick={() => setFiltroCeg(filtroCeg === ceg ? null : ceg)} style={{ flexShrink:0, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:"1px", padding:"4px 14px", borderRadius:20, cursor:"pointer", border: filtroCeg === ceg ? "1px solid var(--lilas)" : "1px solid rgba(245,240,232,.1)", background: filtroCeg === ceg ? "rgba(201,168,240,.12)" : "transparent", color: filtroCeg === ceg ? "var(--lilas)" : "rgba(245,240,232,.35)", transition:"all .12s" }}>
+              {ceg}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="filters-bar">
         <input className="search-input" type="text" placeholder="Buscar item..." value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
         <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)} style={{
