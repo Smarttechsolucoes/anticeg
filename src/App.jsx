@@ -1788,6 +1788,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const [reportItem, setReportItem] = useState(null);
 
   const [filtroCeg, setFiltroCeg] = useState(null);
+  const cegScrollRef = useRef(null);
   const [totalModal,    setTotalModal]    = useState(false);
   const [vencModal,     setVencModal]     = useState(false);
   const [galeriaModal,  setGaleriaModal]  = useState(false);
@@ -2754,15 +2755,19 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       )}
 
       {cegList.length > 1 && (
-        <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:8, marginBottom:4, scrollbarWidth:"none" }}>
-          <button onClick={() => setFiltroCeg(null)} style={{ flexShrink:0, fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight: !filtroCeg ? 700 : 400, letterSpacing:"1px", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid rgba(245,240,232,.5)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(245,240,232,.08)" : "transparent", color: !filtroCeg ? "var(--offwhite)" : "rgba(245,240,232,.35)", transition:"all .12s" }}>
-            TODAS
-          </button>
-          {cegList.map(ceg => (
-            <button key={ceg} onClick={() => setFiltroCeg(filtroCeg === ceg ? null : ceg)} style={{ flexShrink:0, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:"1px", padding:"4px 14px", borderRadius:20, cursor:"pointer", border: filtroCeg === ceg ? "1px solid var(--lilas)" : "1px solid rgba(245,240,232,.1)", background: filtroCeg === ceg ? "rgba(201,168,240,.12)" : "transparent", color: filtroCeg === ceg ? "var(--lilas)" : "rgba(245,240,232,.35)", transition:"all .12s" }}>
-              {ceg}
+        <div style={{ display:"flex", alignItems:"center", gap:4, marginBottom:4 }}>
+          <button onClick={() => cegScrollRef.current?.scrollBy({ left:-160, behavior:"smooth" })} style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:"50%", width:24, height:24, cursor:"pointer", color:"rgba(245,240,232,.4)", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+          <div ref={cegScrollRef} style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:6, scrollbarWidth:"none", flex:1 }}>
+            <button onClick={() => setFiltroCeg(null)} style={{ flexShrink:0, fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight: !filtroCeg ? 700 : 400, letterSpacing:"1px", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCeg ? "1px solid rgba(245,240,232,.5)" : "1px solid rgba(245,240,232,.12)", background: !filtroCeg ? "rgba(245,240,232,.08)" : "transparent", color: !filtroCeg ? "var(--offwhite)" : "rgba(245,240,232,.35)", transition:"all .12s" }}>
+              TODAS
             </button>
-          ))}
+            {cegList.map(ceg => (
+              <button key={ceg} onClick={() => setFiltroCeg(filtroCeg === ceg ? null : ceg)} style={{ flexShrink:0, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:"1px", padding:"4px 14px", borderRadius:20, cursor:"pointer", border: filtroCeg === ceg ? "1px solid var(--lilas)" : "1px solid rgba(245,240,232,.1)", background: filtroCeg === ceg ? "rgba(201,168,240,.12)" : "transparent", color: filtroCeg === ceg ? "var(--lilas)" : "rgba(245,240,232,.35)", transition:"all .12s" }}>
+                {ceg}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => cegScrollRef.current?.scrollBy({ left:160, behavior:"smooth" })} style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:"50%", width:24, height:24, cursor:"pointer", color:"rgba(245,240,232,.4)", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
         </div>
       )}
       <div className="filters-bar">
