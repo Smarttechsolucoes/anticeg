@@ -8925,7 +8925,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 <div className="admin-sidebar-group-label">Envios</div>
                 {owner && nav("storage", "Storage", "◧", 0)}
                 {temAcesso("envios") && nav("envios", "Envio", "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
-                {owner && nav("rounds", "Rounds", "◎", 0)}
                 {owner && nav("estoque", "Estoque", "◩", 0)}
                 {owner && nav("rastreios", "Rastreios", "⊞", 0)}
               </div>
@@ -10264,109 +10263,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         );
       })()}
 
-      {adminMainTab === "rounds" && owner && (() => {
-        async function carregarRounds() {
-          setRoundsLoading(true);
-          const { data } = await supabase.from("envio_rounds")
-            .select("*, envio_requests(joiner_cog, posicao_no_round, status, solicitado_em, itens_manuais)")
-            .order("numero", { ascending: false });
-          setRoundsList(data || []);
-          setRoundsLoading(false);
-        }
-        if (roundsList === null && !roundsLoading) carregarRounds();
-
-        async function abrirRound(roundId) {
-          await supabase.from("envio_rounds").update({ status: "em_processo" }).eq("id", roundId);
-          setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "em_processo" } : r));
-        }
-        async function fecharRound(roundId) {
-          await supabase.from("envio_rounds").update({ status: "concluido" }).eq("id", roundId);
-          setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "concluido" } : r));
-        }
-
-        const STATUS_COLOR = { aberto:"rgba(245,240,232,.4)", fechado:"#FFD166", em_processo:"#BAFF39", concluido:"rgba(100,181,246,.6)" };
-        const STATUS_LABEL = { aberto:"aberto", fechado:"pronto", em_processo:"em processo", concluido:"concluído" };
-
-        return (
-          <div>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-              <h3 className="admin-title" style={{ fontSize:16, margin:0 }}>◎ Rounds de envio</h3>
-              <button onClick={carregarRounds} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"5px 12px", cursor:"pointer" }}>
-                {roundsLoading ? "..." : "↺ Atualizar"}
-              </button>
-            </div>
-
-            {roundsList === null || roundsLoading ? (
-              <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"20px 0", textAlign:"center" }}>Carregando...</div>
-            ) : roundsList.length === 0 ? (
-              <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"40px 0", textAlign:"center" }}>Nenhum round criado ainda.</div>
-            ) : roundsList.map(round => {
-              const membros = round.envio_requests || [];
-              const cor = STATUS_COLOR[round.status] || "rgba(245,240,232,.4)";
-              return (
-                <div key={round.id} style={{ background:"var(--card-bg)", border:`1px solid rgba(245,240,232,.08)`, borderRadius:10, padding:"16px", marginBottom:10 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, gap:10 }}>
-                    <div>
-                      <div style={{ fontSize:14, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>Round #{round.numero}</div>
-                      <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{new Date(round.created_at).toLocaleDateString("pt-BR")}</div>
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:9, color:cor, border:`1px solid ${cor}55`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
-                        {STATUS_LABEL[round.status] || round.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Fila visual */}
-                  <div style={{ display:"flex", gap:4, marginBottom:12 }}>
-                    {Array.from({ length: 7 }, (_, i) => (
-                      <div key={i} style={{ flex:1, height:6, borderRadius:3, background: i < membros.length ? "rgba(186,255,57,.5)" : "rgba(245,240,232,.07)" }} />
-                    ))}
-                  </div>
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom: membros.length > 0 ? 10 : 0 }}>
-                    {membros.length}/7 joiners
-                  </div>
-
-                  {/* Lista de membros */}
-                  {membros.length > 0 && (
-                    <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, display:"flex", flexDirection:"column", gap:4 }}>
-                      {membros.sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => (
-                        <div key={m.joiner_cog} style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:10, color:"rgba(245,240,232,.6)" }}>
-                            <span style={{ color:"rgba(245,240,232,.25)", minWidth:14 }}>{m.posicao_no_round}.</span>
-                            <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
-                            <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(m.solicitado_em).toLocaleDateString("pt-BR")}</span>
-                          </div>
-                          {m.itens_manuais && (
-                            <div style={{ marginLeft:24, marginTop:3, padding:"5px 8px", background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.15)", borderRadius:5, fontSize:10, color:"rgba(245,240,232,.5)", whiteSpace:"pre-wrap", lineHeight:1.5 }}>
-                              {m.itens_manuais}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Ações */}
-                  {(round.status === "fechado" || (round.status === "aberto" && membros.length > 0)) && round.status !== "em_processo" && round.status !== "concluido" && (
-                    <button onClick={() => abrirRound(round.id)}
-                      style={{ marginTop:12, width:"100%", padding:"9px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                      Abrir envio para este round →
-                    </button>
-                  )}
-                  {round.status === "em_processo" && (
-                    <button onClick={() => fecharRound(round.id)}
-                      style={{ marginTop:12, width:"100%", padding:"9px", background:"rgba(100,181,246,.08)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.25)", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
-                      Marcar como concluído ✓
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
-
       {adminMainTab === "avisos" && owner && (
         <div>
           <PushGlobalToggle />
@@ -10628,18 +10524,27 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             }
             if (roundsSecaoAberta && roundsList === null && !roundsLoading) carregarRoundsLocal();
 
+            async function abrirRound(roundId) {
+              await supabase.from("envio_rounds").update({ status: "em_processo" }).eq("id", roundId);
+              setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "em_processo" } : r));
+            }
+            async function fecharRound(roundId) {
+              await supabase.from("envio_rounds").update({ status: "concluido" }).eq("id", roundId);
+              setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "concluido" } : r));
+            }
+
             const RC = { aberto:"rgba(245,240,232,.4)", fechado:"#FFD166", em_processo:"#BAFF39", concluido:"rgba(100,181,246,.6)" };
             const RL = { aberto:"aberto", fechado:"pronto", em_processo:"em processo", concluido:"concluído" };
 
             return (
               <div style={{ marginBottom:14, border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden" }}>
-                <button onClick={() => { setRoundsSecaoAberta(v => !v); }} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", background:"rgba(245,240,232,.03)", border:"none", cursor:"pointer" }}>
-                  <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.65)", fontWeight:700, letterSpacing:"0.5px" }}>◎ Rounds</span>
+                <button onClick={() => setRoundsSecaoAberta(v => !v)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", background:"rgba(245,240,232,.03)", border:"none", cursor:"pointer" }}>
+                  <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.65)", fontWeight:700, letterSpacing:"0.5px" }}>◎ Rounds de envio</span>
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{roundsSecaoAberta ? "▲" : "▼"}</span>
                 </button>
                 {roundsSecaoAberta && (
-                  <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(245,240,232,.06)" }}>
-                    <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+                  <div style={{ padding:"14px 16px", borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                    <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
                       <button onClick={carregarRoundsLocal} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"4px 10px", cursor:"pointer" }}>
                         {roundsLoading ? "..." : "↺ Atualizar"}
                       </button>
@@ -10647,32 +10552,58 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     {roundsList === null || roundsLoading ? (
                       <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"16px 0", textAlign:"center" }}>Carregando...</div>
                     ) : roundsList.length === 0 ? (
-                      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"16px 0", textAlign:"center" }}>Nenhum round criado ainda.</div>
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"20px 0", textAlign:"center" }}>Nenhum round criado ainda.</div>
                     ) : roundsList.map(round => {
                       const membros = round.envio_requests || [];
                       const cor = RC[round.status] || "rgba(245,240,232,.4)";
                       return (
-                        <div key={round.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"10px 12px", marginBottom:8 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                            <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>Round #{round.numero}</span>
-                            <span style={{ fontSize:9, color:cor, border:`1px solid ${cor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{RL[round.status] || round.status}</span>
-                            <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{membros.length}/7 joiners</span>
+                        <div key={round.id} style={{ background:"var(--card-bg)", border:`1px solid rgba(245,240,232,.08)`, borderRadius:10, padding:"16px", marginBottom:10 }}>
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, gap:10 }}>
+                            <div>
+                              <div style={{ fontSize:14, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>Round #{round.numero}</div>
+                              <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{new Date(round.created_at).toLocaleDateString("pt-BR")}</div>
+                            </div>
+                            <span style={{ fontSize:9, color:cor, border:`1px solid ${cor}55`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
+                              {RL[round.status] || round.status}
+                            </span>
                           </div>
-                          <div style={{ display:"flex", gap:3, marginBottom:6 }}>
+                          <div style={{ display:"flex", gap:4, marginBottom:12 }}>
                             {Array.from({ length: 7 }, (_, i) => (
-                              <div key={i} style={{ flex:1, height:4, borderRadius:2, background: i < membros.length ? "rgba(186,255,57,.45)" : "rgba(245,240,232,.07)" }} />
+                              <div key={i} style={{ flex:1, height:6, borderRadius:3, background: i < membros.length ? "rgba(186,255,57,.5)" : "rgba(245,240,232,.07)" }} />
                             ))}
                           </div>
+                          <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom: membros.length > 0 ? 10 : 0 }}>
+                            {membros.length}/7 joiners
+                          </div>
                           {membros.length > 0 && (
-                            <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                            <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, display:"flex", flexDirection:"column", gap:4 }}>
                               {[...membros].sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => (
-                                <div key={m.joiner_cog} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", display:"flex", alignItems:"center", gap:8 }}>
-                                  <span style={{ color:"rgba(245,240,232,.2)", minWidth:14 }}>{m.posicao_no_round}.</span>
-                                  <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
-                                  {m.itens_manuais && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", marginLeft:"auto" }}>com itens</span>}
+                                <div key={m.joiner_cog} style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
+                                  <div style={{ display:"flex", alignItems:"center", gap:10, color:"rgba(245,240,232,.6)" }}>
+                                    <span style={{ color:"rgba(245,240,232,.25)", minWidth:14 }}>{m.posicao_no_round}.</span>
+                                    <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
+                                    <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(m.solicitado_em).toLocaleDateString("pt-BR")}</span>
+                                  </div>
+                                  {m.itens_manuais && (
+                                    <div style={{ marginLeft:24, marginTop:3, padding:"5px 8px", background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.15)", borderRadius:5, fontSize:10, color:"rgba(245,240,232,.5)", whiteSpace:"pre-wrap", lineHeight:1.5 }}>
+                                      {m.itens_manuais}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
+                          )}
+                          {(round.status === "fechado" || (round.status === "aberto" && membros.length > 0)) && round.status !== "em_processo" && round.status !== "concluido" && (
+                            <button onClick={() => abrirRound(round.id)}
+                              style={{ marginTop:12, width:"100%", padding:"9px", background:"rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                              Abrir envio para este round →
+                            </button>
+                          )}
+                          {round.status === "em_processo" && (
+                            <button onClick={() => fecharRound(round.id)}
+                              style={{ marginTop:12, width:"100%", padding:"9px", background:"rgba(100,181,246,.08)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.25)", borderRadius:7, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                              Marcar como concluído ✓
+                            </button>
                           )}
                         </div>
                       );
