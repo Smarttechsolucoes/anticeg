@@ -8287,6 +8287,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageFotoAmpliada, setStorageFotoAmpliada] = useState(null);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
+  const [roundsSecaoAberta, setRoundsSecaoAberta] = useState(false);
   const [cotacaoObs,        setCotacaoObs]        = useState("");
   const [sfCotas,           setSfCotas]           = useState({});
   const [sfEtiqueta,        setSfEtiqueta]        = useState({});
@@ -10615,6 +10616,72 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
       {adminMainTab === "envios" && (
         <div>
+          {/* Rounds inline */}
+          {(() => {
+            async function carregarRoundsLocal() {
+              setRoundsLoading(true);
+              const { data } = await supabase.from("envio_rounds")
+                .select("*, envio_requests(joiner_cog, posicao_no_round, status, solicitado_em, itens_manuais)")
+                .order("numero", { ascending: false });
+              setRoundsList(data || []);
+              setRoundsLoading(false);
+            }
+            if (roundsSecaoAberta && roundsList === null && !roundsLoading) carregarRoundsLocal();
+
+            const RC = { aberto:"rgba(245,240,232,.4)", fechado:"#FFD166", em_processo:"#BAFF39", concluido:"rgba(100,181,246,.6)" };
+            const RL = { aberto:"aberto", fechado:"pronto", em_processo:"em processo", concluido:"concluído" };
+
+            return (
+              <div style={{ marginBottom:14, border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden" }}>
+                <button onClick={() => { setRoundsSecaoAberta(v => !v); }} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", background:"rgba(245,240,232,.03)", border:"none", cursor:"pointer" }}>
+                  <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.65)", fontWeight:700, letterSpacing:"0.5px" }}>◎ Rounds</span>
+                  <span style={{ fontSize:10, color:"rgba(245,240,232,.25)" }}>{roundsSecaoAberta ? "▲" : "▼"}</span>
+                </button>
+                {roundsSecaoAberta && (
+                  <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                    <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+                      <button onClick={carregarRoundsLocal} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"4px 10px", cursor:"pointer" }}>
+                        {roundsLoading ? "..." : "↺ Atualizar"}
+                      </button>
+                    </div>
+                    {roundsList === null || roundsLoading ? (
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"16px 0", textAlign:"center" }}>Carregando...</div>
+                    ) : roundsList.length === 0 ? (
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"16px 0", textAlign:"center" }}>Nenhum round criado ainda.</div>
+                    ) : roundsList.map(round => {
+                      const membros = round.envio_requests || [];
+                      const cor = RC[round.status] || "rgba(245,240,232,.4)";
+                      return (
+                        <div key={round.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"10px 12px", marginBottom:8 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                            <span style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>Round #{round.numero}</span>
+                            <span style={{ fontSize:9, color:cor, border:`1px solid ${cor}55`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{RL[round.status] || round.status}</span>
+                            <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>{membros.length}/7 joiners</span>
+                          </div>
+                          <div style={{ display:"flex", gap:3, marginBottom:6 }}>
+                            {Array.from({ length: 7 }, (_, i) => (
+                              <div key={i} style={{ flex:1, height:4, borderRadius:2, background: i < membros.length ? "rgba(186,255,57,.45)" : "rgba(245,240,232,.07)" }} />
+                            ))}
+                          </div>
+                          {membros.length > 0 && (
+                            <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                              {[...membros].sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => (
+                                <div key={m.joiner_cog} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", display:"flex", alignItems:"center", gap:8 }}>
+                                  <span style={{ color:"rgba(245,240,232,.2)", minWidth:14 }}>{m.posicao_no_round}.</span>
+                                  <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
+                                  {m.itens_manuais && <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", marginLeft:"auto" }}>com itens</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           {/* PIX */}
           {(() => {
             const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
