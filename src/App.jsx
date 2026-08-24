@@ -14545,21 +14545,28 @@ const TSK_SEED = {
 };
 
 function TabelaStrayKids() {
-  const [abaAtiva,  setAbaAtiva]  = useState("seasons-greetings");
-  const [dados,     setDados]     = useState({});
-  const [loading,   setLoading]   = useState(true);
-  const [editando,  setEditando]  = useState(null);
-  const [editVal,   setEditVal]   = useState("");
-  const [salvando,  setSalvando]  = useState(false);
-  const [salvoId,   setSalvoId]   = useState(null);
+  const adminLocal = (() => { try { const u = JSON.parse(localStorage.getItem("anticeg_user_v2")); return isOwner(u) || isAdminUser(u); } catch { return false; } })();
+
+  const [abaAtiva,   setAbaAtiva]   = useState("seasons-greetings");
+  const [dados,      setDados]      = useState({});
+  const [sugestoes,  setSugestoes]  = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [sugerindo,  setSugerindo]  = useState(null);
+  const [sugestaoVal,setSugestaoVal]= useState("");
+  const [enviando,   setEnviando]   = useState(false);
+  const [enviadoId,  setEnviadoId]  = useState(null);
+  const [aprovando,  setAprovando]  = useState(null);
 
   useEffect(() => { carregarTudo(); }, []);
 
   async function carregarTudo() {
     setLoading(true);
-    const { data } = await supabase.from("tabela_precos").select("*").order("ordem_cat").order("ordem_item");
+    const [{ data: precos }, { data: sugs }] = await Promise.all([
+      supabase.from("tabela_precos").select("*").order("ordem_cat").order("ordem_item"),
+      supabase.from("sugestoes_tabela").select("*").eq("status", "pendente").order("created_at"),
+    ]);
     const grouped = {};
-    for (const row of (data || [])) {
+    for (const row of (precos || [])) {
       if (!grouped[row.sheet]) grouped[row.sheet] = [];
       grouped[row.sheet].push(row);
     }
@@ -14569,6 +14576,7 @@ function TabelaStrayKids() {
       return;
     }
     setDados(grouped);
+    setSugestoes(sugs || []);
     setLoading(false);
   }
 
@@ -14583,26 +14591,45 @@ function TabelaStrayKids() {
     if (rows.length) await supabase.from("tabela_precos").insert(rows);
   }
 
-  async function salvarPreco(id) {
-    if (salvando) return;
-    setSalvando(true);
-    const val = editVal.trim();
-    await supabase.from("tabela_precos").update({ preco: val, updated_at: new Date().toISOString() }).eq("id", id);
+  async function submeterSugestao(row) {
+    const val = sugestaoVal.trim();
+    if (!val) { setSugerindo(null); return; }
+    setEnviando(true);
+    await supabase.from("sugestoes_tabela").insert([{
+      tabela_preco_id: row.id, sheet: row.sheet, categoria: row.categoria,
+      item: row.item, preco_atual: row.preco || "", preco_sugerido: val, status: "pendente",
+    }]);
+    setSugestoes(prev => [...prev, { tabela_preco_id: row.id, preco_sugerido: val, status: "pendente" }]);
+    setSugerindo(null);
+    setEnviando(false);
+    setEnviadoId(row.id);
+    setTimeout(() => setEnviadoId(null), 3000);
+  }
+
+  async function aprovarSugestao(sug) {
+    setAprovando(sug.id);
+    await supabase.from("tabela_precos").update({ preco: sug.preco_sugerido, updated_at: new Date().toISOString() }).eq("id", sug.tabela_preco_id);
+    await supabase.from("sugestoes_tabela").update({ status: "aprovado" }).eq("id", sug.id);
     setDados(prev => {
       const next = {};
-      for (const s in prev) next[s] = prev[s].map(r => r.id === id ? { ...r, preco: val } : r);
+      for (const s in prev) next[s] = prev[s].map(r => r.id === sug.tabela_preco_id ? { ...r, preco: sug.preco_sugerido } : r);
       return next;
     });
-    setEditando(null);
-    setSalvando(false);
-    setSalvoId(id);
-    setTimeout(() => setSalvoId(null), 2000);
+    setSugestoes(prev => prev.filter(s => s.id !== sug.id));
+    setAprovando(null);
+  }
+
+  async function rejeitarSugestao(sug) {
+    setAprovando(sug.id);
+    await supabase.from("sugestoes_tabela").update({ status: "rejeitado" }).eq("id", sug.id);
+    setSugestoes(prev => prev.filter(s => s.id !== sug.id));
+    setAprovando(null);
   }
 
   const abaRows = dados[abaAtiva] || [];
   const cats = [...new Map(abaRows.map(r => [r.categoria, r.ordem_cat])).entries()]
     .sort((a, b) => a[1] - b[1]).map(([cat]) => cat);
-
+  const pendentesTotal = sugestoes.length;
   const mono = "'DM Mono',monospace";
 
   return (
@@ -14613,14 +14640,53 @@ function TabelaStrayKids() {
           <div>
             <div style={{ fontSize:9, letterSpacing:"3px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:mono, marginBottom:6 }}>ANTICEG · REFERÊNCIA</div>
             <h1 style={{ fontSize:"clamp(22px,5vw,40px)", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:"1px", margin:0, lineHeight:1 }}>TABELA DE PREÇOS · STRAY KIDS</h1>
-            <div style={{ fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.35)", marginTop:6 }}>valores sugeridos pela comunidade · clique em qualquer preço para editar</div>
+            <div style={{ fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.35)", marginTop:6 }}>valores sugeridos pela comunidade · clique em qualquer preço para sugerir alteração</div>
           </div>
-          <a href="/" style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px", flexShrink:0 }}>← portal</a>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+            <a href="/" style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px" }}>← portal</a>
+            {adminLocal && pendentesTotal > 0 && (
+              <span style={{ fontSize:10, fontFamily:mono, background:"rgba(255,209,102,.15)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:20, padding:"3px 10px" }}>
+                {pendentesTotal} sugestão(ões) pendente(s)
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Admin: painel de sugestões pendentes */}
+      {adminLocal && pendentesTotal > 0 && (
+        <div style={{ maxWidth:860, margin:"0 auto", padding:"20px 24px 0" }}>
+          <div style={{ background:"rgba(255,209,102,.05)", border:"1px solid rgba(255,209,102,.2)", borderRadius:10, padding:"16px" }}>
+            <div style={{ fontSize:10, fontFamily:mono, fontWeight:700, color:"#FFD166", letterSpacing:"1px", textTransform:"uppercase", marginBottom:12 }}>Sugestões em análise</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {sugestoes.map(sug => (
+                <div key={sug.id} style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap", background:"rgba(245,240,232,.03)", borderRadius:7, padding:"10px 12px" }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.7)", lineHeight:1.4 }}>{sug.item}</div>
+                    <div style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.35)", marginTop:2 }}>{sug.categoria}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                    <span style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.4)", textDecoration:"line-through" }}>{sug.preco_atual || "—"}</span>
+                    <span style={{ fontSize:10, color:"rgba(245,240,232,.4)" }}>→</span>
+                    <span style={{ fontSize:12, fontFamily:mono, fontWeight:700, color:"#BAFF39" }}>{sug.preco_sugerido}</span>
+                    <button disabled={aprovando === sug.id} onClick={() => aprovarSugestao(sug)}
+                      style={{ fontSize:10, fontFamily:mono, padding:"4px 12px", borderRadius:5, cursor:"pointer", background:"rgba(186,255,57,.15)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", fontWeight:700 }}>
+                      {aprovando === sug.id ? "..." : "✓ aprovar"}
+                    </button>
+                    <button disabled={aprovando === sug.id} onClick={() => rejeitarSugestao(sug)}
+                      style={{ fontSize:10, fontFamily:mono, padding:"4px 10px", borderRadius:5, cursor:"pointer", background:"transparent", color:"rgba(255,107,107,.6)", border:"1px solid rgba(255,107,107,.2)" }}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div style={{ borderBottom:"1px solid rgba(245,240,232,.07)", overflowX:"auto" }}>
+      <div style={{ borderBottom:"1px solid rgba(245,240,232,.07)", overflowX:"auto", marginTop:20 }}>
         <div style={{ maxWidth:860, margin:"0 auto", padding:"0 24px", display:"flex", gap:0, minWidth:"max-content" }}>
           {TSK_ABAS.map(({ key, label }) => (
             <button key={key} onClick={() => setAbaAtiva(key)} style={{
@@ -14654,42 +14720,52 @@ function TabelaStrayKids() {
               </div>
               <div style={{ borderRadius:8, border:"1px solid rgba(245,240,232,.07)", overflow:"hidden" }}>
                 {itens.map((row, idx) => {
-                  const isEdit = editando === row.id;
-                  const isSaved = salvoId === row.id;
+                  const isSugerindo = sugerindo === row.id;
+                  const temPendente = sugestoes.some(s => s.tabela_preco_id === row.id);
+                  const isEnviado   = enviadoId === row.id;
                   return (
                     <div key={row.id} style={{
-                      display:"flex", alignItems:"center", justifyContent:"space-between", gap:16,
+                      display:"flex", alignItems:"center", gap:12, flexWrap:"wrap",
                       padding:"10px 14px",
                       background: idx % 2 === 0 ? "rgba(245,240,232,.015)" : "transparent",
                       borderBottom: idx < itens.length - 1 ? "1px solid rgba(245,240,232,.04)" : "none",
                     }}>
                       <span style={{ fontSize:12, color:"rgba(245,240,232,.72)", fontFamily:mono, flex:1, lineHeight:1.4 }}>{row.item}</span>
-                      <div style={{ flexShrink:0 }}>
-                        {isEdit ? (
-                          <input
-                            autoFocus
-                            value={editVal}
-                            onChange={e => setEditVal(e.target.value)}
-                            onKeyDown={e => { if (e.key === "Enter") salvarPreco(row.id); if (e.key === "Escape") setEditando(null); }}
-                            onBlur={() => salvarPreco(row.id)}
-                            placeholder="R$00"
-                            style={{ width:90, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.45)", borderRadius:5, padding:"5px 8px", color:"#FF5C1A", fontSize:12, fontFamily:mono, outline:"none", textAlign:"right" }}
-                          />
+                      <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                        {temPendente && !adminLocal && (
+                          <span style={{ fontSize:9, fontFamily:mono, color:"#FFD166", background:"rgba(255,209,102,.1)", border:"1px solid rgba(255,209,102,.25)", borderRadius:10, padding:"2px 8px" }}>em análise</span>
+                        )}
+                        {isSugerindo ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <input
+                              autoFocus
+                              value={sugestaoVal}
+                              onChange={e => setSugestaoVal(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") submeterSugestao(row); if (e.key === "Escape") setSugerindo(null); }}
+                              placeholder="R$00"
+                              style={{ width:80, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.45)", borderRadius:5, padding:"5px 8px", color:"#FF5C1A", fontSize:12, fontFamily:mono, outline:"none", textAlign:"right" }}
+                            />
+                            <button onClick={() => submeterSugestao(row)} disabled={enviando}
+                              style={{ fontSize:10, fontFamily:mono, padding:"5px 10px", borderRadius:5, cursor:"pointer", background:"rgba(255,92,26,.15)", color:"#FF5C1A", border:"1px solid rgba(255,92,26,.35)", fontWeight:700 }}>
+                              {enviando ? "..." : "sugerir"}
+                            </button>
+                            <button onClick={() => setSugerindo(null)} style={{ fontSize:11, background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer" }}>✕</button>
+                          </div>
                         ) : (
                           <button
-                            onClick={() => { setEditando(row.id); setEditVal(row.preco || ""); }}
-                            title="Clique para editar"
+                            onClick={() => { setSugerindo(row.id); setSugestaoVal(row.preco || ""); }}
+                            title="Sugerir alteração de preço"
                             style={{
-                              background: isSaved ? "rgba(186,255,57,.1)" : "none",
+                              background: isEnviado ? "rgba(186,255,57,.1)" : "none",
                               border:"none", cursor:"pointer", padding:"5px 8px", borderRadius:5,
-                              color: isSaved ? "#BAFF39" : row.preco ? "#BAFF39" : "rgba(245,240,232,.2)",
+                              color: isEnviado ? "#BAFF39" : row.preco ? "#BAFF39" : "rgba(245,240,232,.2)",
                               fontSize:12, fontFamily:mono, fontWeight: row.preco ? 700 : 400,
                               minWidth:70, textAlign:"right", transition:"background .15s"
                             }}
-                            onMouseEnter={e => { if (!isSaved) e.currentTarget.style.background = "rgba(255,92,26,.07)"; }}
-                            onMouseLeave={e => { if (!isSaved) e.currentTarget.style.background = "none"; }}
+                            onMouseEnter={e => { if (!isEnviado) e.currentTarget.style.background = "rgba(255,92,26,.07)"; }}
+                            onMouseLeave={e => { if (!isEnviado) e.currentTarget.style.background = "none"; }}
                           >
-                            {isSaved ? "✓ salvo" : (row.preco || "—")}
+                            {isEnviado ? "✓ enviado!" : (row.preco || "—")}
                           </button>
                         )}
                       </div>
