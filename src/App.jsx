@@ -891,7 +891,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
           <div style={{ textAlign:"right" }}>
             <div className="greeting-sub" style={{ marginTop:8 }}>{itens.length} itens · {joiners} joiners</div>
             <div style={{ display:"flex", gap:4, marginTop:8, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
-              {(fotos.length > 0 || owner) && [["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
+              {(fotos.length > 0 || adminUser) && [["tabela","⊞"],["galeria","⊟"]].map(([mode, icon]) => (
                 <button key={mode} onClick={() => setViewMode(mode)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", padding:"4px 10px", borderRadius:5, cursor:"pointer", border:`1px solid ${viewMode===mode ? "rgba(201,168,240,.4)" : "rgba(245,240,232,.1)"}`, background:viewMode===mode ? "rgba(201,168,240,.12)" : "transparent", color:viewMode===mode ? "#C9A8F0" : "rgba(245,240,232,.3)" }}>
                   {icon} {mode}
                 </button>
