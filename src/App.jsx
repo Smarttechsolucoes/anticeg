@@ -14467,6 +14467,244 @@ function AdminGaleria() {
   );
 }
 
+// ── Tabela de Preços Stray Kids ──────────────────────────────────────────────
+const TSK_ABAS = [
+  { key:"seasons-greetings",    label:"SEASONS GREETINGS" },
+  { key:"fankits",              label:"FANKITS" },
+  { key:"photocards-coreanos",  label:"PHOTOCARDS COREANOS" },
+  { key:"photocards-japoneses", label:"PHOTOCARDS JAPONESES" },
+  { key:"albuns",               label:"ÁLBUNS" },
+  { key:"revistas",             label:"REVISTAS / PHOTOBOOK" },
+  { key:"popup",                label:"POPUP / MERCHS" },
+];
+
+const TSK_SEED = {
+  "seasons-greetings": [
+    { categoria:"2021 Season's Greetings", ordem_cat:0, itens:[
+      { item:"Pobs polaroids", preco:"R$110" },
+      { item:"SET DE MEMBRO (todos os itens)", preco:"R$45" },
+      { item:"Photocard", preco:"R$15" },
+      { item:"Postcard (unidade)", preco:"R$15" },
+      { item:"Postcard (set 3 unidades)", preco:"R$30" },
+    ]},
+    { categoria:"2022 Season's Greetings: Roommates", ordem_cat:1, itens:[
+      { item:"Pobs polaroids (unit e individual)", preco:"R$110" },
+      { item:"SET DE MEMBRO (todos os itens)", preco:"R$45" },
+      { item:"Polaroid (set de 2 unidades)", preco:"R$35" },
+      { item:"Imã (pin)", preco:"R$10" },
+      { item:"Polaroid (unidade)", preco:"R$17,50" },
+    ]},
+    { categoria:"2023 Season's Greetings: SKZ's Mini World", ordem_cat:2, itens:[
+      { item:"SET DE MEMBRO (todos os itens)", preco:"R$45" },
+      { item:"SET DE PHOTOCARDS", preco:"R$25" },
+      { item:"4cut", preco:"R$15" },
+      { item:"Mini standee", preco:"R$5" },
+    ]},
+    { categoria:"2023 Season's Greetings JAPÃO: S-318", ordem_cat:3, itens:[
+      { item:"Box", preco:"" },{ item:"Desk Calendar", preco:"" },{ item:"Diary", preco:"" },
+      { item:"Acrylic Calendar", preco:"" },{ item:"Mini Calendar", preco:"" },{ item:"Poster", preco:"" },
+      { item:"Clear Photocard Set", preco:"" },{ item:"Postcard Set", preco:"" },{ item:"Making Video QR Ticket", preco:"" },
+    ]},
+    { categoria:"2024 Season's Greetings: Perfect Day with SKZ", ordem_cat:4, itens:[
+      { item:"Desk Calendar", preco:"R$30" },{ item:"Caixa + Brochure Book", preco:"R$35" },
+      { item:"Diário", preco:"R$35" },{ item:"Photocard", preco:"R$12,50" },
+      { item:"Polaroid", preco:"R$12,50" },{ item:"Photocard + Polaroid", preco:"R$25" },
+      { item:"Fabric Pouch", preco:"R$15 – 20" },{ item:"Garland", preco:"R$7" },
+      { item:"Paper Air Freshener", preco:"R$5" },{ item:"Paper Calendar", preco:"R$15 – 20" },
+      { item:"Sticker Set", preco:"R$10" },{ item:"Mini Poster Set", preco:"R$15" },{ item:"Folded Poster", preco:"R$25" },
+    ]},
+    { categoria:"2024 Season's Greetings JAPÃO: Air-ful", ordem_cat:5, itens:[
+      { item:"Poster Calendar", preco:"R$25" },{ item:"Caixa + Diário + QR Postcard", preco:"R$40" },
+      { item:"Mini Calendário", preco:"R$15" },{ item:"Marca página", preco:"R$5" },
+      { item:"Photocard lenticular", preco:"R$28" },{ item:"Sticker Set", preco:"R$10" },
+      { item:"Lenticular Badge", preco:"R$10" },{ item:"Accordion Postcard", preco:"R$15" },{ item:"Luckycard", preco:"R$28" },
+    ]},
+    { categoria:"2025 Season's Greetings: The Street Kids", ordem_cat:6, itens:[
+      { item:"Out box", preco:"" },{ item:"Desk calendar", preco:"" },{ item:"Diary", preco:"" },
+      { item:"Mini poster", preco:"" },{ item:"Photocard", preco:"" },{ item:"Removable sticker", preco:"" },
+      { item:"Memo pad", preco:"" },{ item:"Metal logo keyring", preco:"" },{ item:"Id photo", preco:"" },
+      { item:"Mini L holder", preco:"" },{ item:"Message card", preco:"" },{ item:"Acrylic diorama", preco:"" },
+    ]},
+    { categoria:"2025 Season's Greetings JAPÃO: Your Hero", ordem_cat:7, itens:[
+      { item:"Diary", preco:"" },{ item:"Desk calendar", preco:"" },{ item:"Poster set", preco:"" },
+      { item:"Sticker set", preco:"" },{ item:"Popup kit", preco:"" },{ item:"Id photo set", preco:"" },{ item:"Photo card set", preco:"" },
+    ]},
+    { categoria:"2026 Season's Greetings: STARLIGHT SUPPER CLUB", ordem_cat:8, itens:[
+      { item:"Out box", preco:"" },{ item:"Desk calendar", preco:"" },{ item:"Diary", preco:"" },
+      { item:"Mini poster", preco:"" },{ item:"Photocard", preco:"" },{ item:"Removable sticker", preco:"" },
+      { item:"Memo pad", preco:"" },{ item:"Pvc clear pouch", preco:"" },{ item:"Id photo", preco:"" },
+      { item:"Polaroid", preco:"" },{ item:"Message card", preco:"" },{ item:"Paper ornament", preco:"" },
+    ]},
+    { categoria:"2026 Season's Greetings JAPÃO: FORCE", ordem_cat:9, itens:[
+      { item:"Box", preco:"" },{ item:"Diary", preco:"" },{ item:"Desk calendar", preco:"" },
+      { item:"Mini photo book", preco:"" },{ item:"Poster", preco:"" },{ item:"Flip book", preco:"" },
+      { item:"Accordion post card", preco:"" },{ item:"Photo card set", preco:"" },{ item:"Sticker", preco:"" },
+      { item:"Making video QR ticket", preco:"" },{ item:"Key ring", preco:"" },
+    ]},
+  ],
+};
+
+function TabelaStrayKids() {
+  const [abaAtiva,  setAbaAtiva]  = useState("seasons-greetings");
+  const [dados,     setDados]     = useState({});
+  const [loading,   setLoading]   = useState(true);
+  const [editando,  setEditando]  = useState(null);
+  const [editVal,   setEditVal]   = useState("");
+  const [salvando,  setSalvando]  = useState(false);
+  const [salvoId,   setSalvoId]   = useState(null);
+
+  useEffect(() => { carregarTudo(); }, []);
+
+  async function carregarTudo() {
+    setLoading(true);
+    const { data } = await supabase.from("tabela_precos").select("*").order("ordem_cat").order("ordem_item");
+    const grouped = {};
+    for (const row of (data || [])) {
+      if (!grouped[row.sheet]) grouped[row.sheet] = [];
+      grouped[row.sheet].push(row);
+    }
+    if (!grouped["seasons-greetings"]?.length) {
+      await seedSheet("seasons-greetings");
+      carregarTudo();
+      return;
+    }
+    setDados(grouped);
+    setLoading(false);
+  }
+
+  async function seedSheet(sheet) {
+    const cats = TSK_SEED[sheet] || [];
+    const rows = [];
+    cats.forEach(({ categoria, ordem_cat, itens }) => {
+      itens.forEach(({ item, preco }, ordem_item) => {
+        rows.push({ sheet, categoria, ordem_cat, item, ordem_item, preco: preco || "" });
+      });
+    });
+    if (rows.length) await supabase.from("tabela_precos").insert(rows);
+  }
+
+  async function salvarPreco(id) {
+    if (salvando) return;
+    setSalvando(true);
+    const val = editVal.trim();
+    await supabase.from("tabela_precos").update({ preco: val, updated_at: new Date().toISOString() }).eq("id", id);
+    setDados(prev => {
+      const next = {};
+      for (const s in prev) next[s] = prev[s].map(r => r.id === id ? { ...r, preco: val } : r);
+      return next;
+    });
+    setEditando(null);
+    setSalvando(false);
+    setSalvoId(id);
+    setTimeout(() => setSalvoId(null), 2000);
+  }
+
+  const abaRows = dados[abaAtiva] || [];
+  const cats = [...new Map(abaRows.map(r => [r.categoria, r.ordem_cat])).entries()]
+    .sort((a, b) => a[1] - b[1]).map(([cat]) => cat);
+
+  const mono = "'DM Mono',monospace";
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0D0C0B", color:"#F5F0E8", fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ borderBottom:"1px solid rgba(245,240,232,.07)", padding:"28px 24px 20px" }}>
+        <div style={{ maxWidth:860, margin:"0 auto", display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div>
+            <div style={{ fontSize:9, letterSpacing:"3px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:mono, marginBottom:6 }}>ANTICEG · REFERÊNCIA</div>
+            <h1 style={{ fontSize:"clamp(22px,5vw,40px)", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:"1px", margin:0, lineHeight:1 }}>TABELA DE PREÇOS · STRAY KIDS</h1>
+            <div style={{ fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.35)", marginTop:6 }}>valores sugeridos pela comunidade · clique em qualquer preço para editar</div>
+          </div>
+          <a href="/" style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px", flexShrink:0 }}>← portal</a>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ borderBottom:"1px solid rgba(245,240,232,.07)", overflowX:"auto" }}>
+        <div style={{ maxWidth:860, margin:"0 auto", padding:"0 24px", display:"flex", gap:0, minWidth:"max-content" }}>
+          {TSK_ABAS.map(({ key, label }) => (
+            <button key={key} onClick={() => setAbaAtiva(key)} style={{
+              fontSize:10, fontFamily:mono, fontWeight:700, letterSpacing:"0.5px",
+              padding:"14px 16px", cursor:"pointer", border:"none", background:"transparent",
+              color: abaAtiva === key ? "#F5F0E8" : "rgba(245,240,232,.28)",
+              borderBottom: abaAtiva === key ? "2px solid #FF5C1A" : "2px solid transparent",
+              transition:"all .15s", whiteSpace:"nowrap"
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth:860, margin:"0 auto", padding:"28px 24px 100px" }}>
+        {loading ? (
+          <div style={{ textAlign:"center", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:12, padding:"80px 0" }}>carregando...</div>
+        ) : abaRows.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"60px 0" }}>
+            <div style={{ fontSize:28, marginBottom:14, opacity:.3 }}>✦</div>
+            <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>Nenhum item nesta aba ainda</div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)", marginTop:6 }}>em breve!</div>
+          </div>
+        ) : cats.map(cat => {
+          const itens = abaRows.filter(r => r.categoria === cat).sort((a, b) => a.ordem_item - b.ordem_item);
+          return (
+            <div key={cat} style={{ marginBottom:32 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
+                <div style={{ fontSize:10, fontFamily:mono, fontWeight:700, color:"#FF5C1A", letterSpacing:"1px", textTransform:"uppercase", whiteSpace:"nowrap" }}>{cat}</div>
+                <div style={{ flex:1, height:1, background:"rgba(245,240,232,.06)" }} />
+              </div>
+              <div style={{ borderRadius:8, border:"1px solid rgba(245,240,232,.07)", overflow:"hidden" }}>
+                {itens.map((row, idx) => {
+                  const isEdit = editando === row.id;
+                  const isSaved = salvoId === row.id;
+                  return (
+                    <div key={row.id} style={{
+                      display:"flex", alignItems:"center", justifyContent:"space-between", gap:16,
+                      padding:"10px 14px",
+                      background: idx % 2 === 0 ? "rgba(245,240,232,.015)" : "transparent",
+                      borderBottom: idx < itens.length - 1 ? "1px solid rgba(245,240,232,.04)" : "none",
+                    }}>
+                      <span style={{ fontSize:12, color:"rgba(245,240,232,.72)", fontFamily:mono, flex:1, lineHeight:1.4 }}>{row.item}</span>
+                      <div style={{ flexShrink:0 }}>
+                        {isEdit ? (
+                          <input
+                            autoFocus
+                            value={editVal}
+                            onChange={e => setEditVal(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") salvarPreco(row.id); if (e.key === "Escape") setEditando(null); }}
+                            onBlur={() => salvarPreco(row.id)}
+                            placeholder="R$00"
+                            style={{ width:90, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.45)", borderRadius:5, padding:"5px 8px", color:"#FF5C1A", fontSize:12, fontFamily:mono, outline:"none", textAlign:"right" }}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => { setEditando(row.id); setEditVal(row.preco || ""); }}
+                            title="Clique para editar"
+                            style={{
+                              background: isSaved ? "rgba(186,255,57,.1)" : "none",
+                              border:"none", cursor:"pointer", padding:"5px 8px", borderRadius:5,
+                              color: isSaved ? "#BAFF39" : row.preco ? "#BAFF39" : "rgba(245,240,232,.2)",
+                              fontSize:12, fontFamily:mono, fontWeight: row.preco ? 700 : 400,
+                              minWidth:70, textAlign:"right", transition:"background .15s"
+                            }}
+                            onMouseEnter={e => { if (!isSaved) e.currentTarget.style.background = "rgba(255,92,26,.07)"; }}
+                            onMouseLeave={e => { if (!isSaved) e.currentTarget.style.background = "none"; }}
+                          >
+                            {isSaved ? "✓ salvo" : (row.preco || "—")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Galeria pública This & That ──────────────────────────────────────────────
 function ThisAndThatGallery() {
   const [fotos, setFotos] = useState([]);
@@ -17564,6 +17802,7 @@ export default function App() {
     setPage("portal");
   }
 
+  if (window.location.pathname === "/tabela-stray-kids") return <TabelaStrayKids />;
   if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
 
   if (!user && parseUrlParts().tab === "mercari") {
