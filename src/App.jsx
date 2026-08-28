@@ -277,9 +277,9 @@ function fmtBRL(val, hidden) {
 
 const STATUS_STEPS = [
   { id: "Comprado",         label: "Comprado",         icon: "🛒" },
-  { id: "A Caminho",        label: "A Caminho",        icon: "✈️" },
+  { id: "A Caminho",        label: "A Caminho",        icon: "✈︁" },
   { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
-  { id: "ANTIGOM",          label: "A caminho ANTIGOM", icon: "🏠" },
+  { id: "ANTIGOM",          label: "A caminho ANTIGOM", icon: "🁠" },
   { id: "Envio Liberado",   label: "Nacional em breve", icon: "📬" },
   { id: "Enviado Nacional", label: "Finalizado",       icon: "🚚" },
 ];
@@ -593,7 +593,7 @@ function SumCard({ label, value, valueCls, sub, isAmount }) {
         {isAmount ? `R$${fmtBRL(value, hidden)}` : value}
         {isAmount && (
           <button onClick={() => setHidden(!hidden)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: 0.4, padding: 0, lineHeight: 1 }}>
-            {hidden ? "👁️" : "🙈"}
+            {hidden ? "👁︁" : "🙈"}
           </button>
         )}
       </div>
@@ -873,7 +873,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
       <div className="page-header">
         <div>
           <div className="page-eyebrow">
-            <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.62)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", cursor:"pointer", padding:0, letterSpacing:1 }}>← voltar</button>
+            <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.62)", fontFamily:"'DM Mono',monospace", fontSize:"var(--fs-xs)", cursor:"pointer", padding:0, letterSpacing:1 }}>ↁ voltar</button>
           </div>
           {ceg === "THIS & THAT"
             ? <img src="/this-and-that-logo.png" alt="THIS & THAT" style={{ height:60, width:"auto", display:"block", mixBlendMode:"screen", filter:"invert(1)", marginTop:4 }} />
@@ -1022,7 +1022,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
               <div style={{ width:"min(380px, 100vw)", background:"#111", borderLeft:"1px solid rgba(245,240,232,.1)", display:"flex", flexDirection:"column", overflowY:"auto" }}
                 onClick={e => e.stopPropagation()}>
                 <div style={{ padding:"20px 20px 0" }}>
-                  <button onClick={() => setAmpliada(null)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, marginBottom:14 }}>← fechar</button>
+                  <button onClick={() => setAmpliada(null)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, marginBottom:14 }}>ↁ fechar</button>
                   <img src={ampliada.foto_url} alt={ampliada.nome_do_item} style={{ width:"100%", borderRadius:8, display:"block", marginBottom:12 }} />
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--offwhite)", letterSpacing:"1px", marginBottom:4 }}>{ampliada.nome_do_item || "—"}</div>
                 </div>
@@ -1269,7 +1269,7 @@ function CegSlugPage({ slug, user }) {
   if (notFound) return (
     <div className="main" style={{ paddingTop: 40 }}>
       <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: "rgba(245,240,232,.4)" }}>
-        CEG não encontrada. <button onClick={voltar} style={{ background: "none", border: "none", color: "var(--laranja)", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>← voltar</button>
+        CEG não encontrada. <button onClick={voltar} style={{ background: "none", border: "none", color: "var(--laranja)", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>ↁ voltar</button>
       </div>
     </div>
   );
@@ -2009,7 +2009,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         </div>
       </div>
       <div style={{ marginTop: 32, textAlign: "center", fontFamily: "'DM Mono',monospace" }}>
-        <div style={{ fontSize: 32, marginBottom: 16 }}>⏳</div>
+        <div style={{ fontSize: 32, marginBottom: 16 }}>⁳</div>
         <div style={{ fontSize: 14, color: "var(--lilas)", marginBottom: 8 }}>Claims indisponíveis</div>
         <div style={{ fontSize: 12, color: "rgba(245,240,232,.4)", lineHeight: 1.7, maxWidth: 280, margin: "0 auto" }}>
           Seu perfil está aguardando aprovação da admin. Assim que aprovado, seus itens aparecerão aqui.
@@ -2700,7 +2700,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                       supabase.from("mercari_pedidos").select("id,created_at,valor_jpy_total,valor_brl_total,itens,status").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
                       supabase.from("feedbacks").select("id,created_at,mensagem").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
                     ]);
-                    (reps.data||[]).forEach(r => ev.push({ id:"r"+r.id, at:r.created_at, icon:"🐛", cor:"rgba(255,107,107,.7)", label:"Report enviado", sub: r.nome_item ? `${r.nome_item}${r.ceg ? " · "+r.ceg : ""}` : null }));
+                    (reps.data||[]).forEach(r => ev.push({ id:"r"+r.id, at:r.created_at, icon:"🁛", cor:"rgba(255,107,107,.7)", label:"Report enviado", sub: r.nome_item ? `${r.nome_item}${r.ceg ? " · "+r.ceg : ""}` : null }));
                     (envios.data||[]).forEach(e => {
                       const nIt = Array.isArray(e.itens) ? e.itens.length : 0;
                       ev.push({ id:"e"+e.id, at:e.created_at, icon:"📦", cor:"rgba(100,181,246,.7)", label:"Solicitação de envio", sub: [nIt>0?`${nIt} item${nIt!==1?"s":""}`:null, e.status?e.status.charAt(0).toUpperCase()+e.status.slice(1):null].filter(Boolean).join(" · ")||null });
@@ -4055,7 +4055,8 @@ ${p.comprovante_url ? (() => {
                             {valRf    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>RF R${valRf.toFixed(2).replace(".",",")}</span>}
                             {multa    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b", fontWeight:700 }}>⚠ multa R${multa.toFixed(2).replace(".",",")}</span>}
                             {proxVenc && (() => {
-                              if (dpv <= 0)  return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.12)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b" }}>vence hoje!</span>;
+                              if (dpv < 0)   return null;
+                              if (dpv === 0)  return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.12)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b" }}>vence hoje!</span>;
                               if (dpv === 1) return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,159,64,.12)", border:"1px solid rgba(255,159,64,.3)", borderRadius:4, padding:"2px 8px", color:"#FF9F40" }}>vence amanhã</span>;
                               if (dpv <= 5)  return <span style={{ fontSize:9, fontWeight:700, fontFamily:"'DM Mono',monospace", background:"rgba(255,159,64,.10)", border:"1px solid rgba(255,159,64,.25)", borderRadius:4, padding:"2px 8px", color:"#FF9F40" }}>em {dpv}d · {fmtVenc(proxVenc)}</span>;
                               if (dpv <= 14) return <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.2)", borderRadius:4, padding:"2px 8px", color:"rgba(240,192,64,.85)" }}>em {dpv}d · {fmtVenc(proxVenc)}</span>;
@@ -4158,7 +4159,8 @@ ${p.comprovante_url ? (() => {
                             <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap" }}>
                               <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}{item.id_linha != null && item.id_linha !== '' && <span style={{ marginLeft:4, color:"rgba(186,255,57,.4)", fontSize:8 }}>{item.id_linha}</span>}</span>
                               {proxVencM && (() => {
-                                if (dpvM <= 0)  return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>vence hoje!</span>;
+                                if (dpvM < 0)   return null;
+                                if (dpvM === 0) return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>vence hoje!</span>;
                                 if (dpvM === 1) return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.15)", border:"1px solid rgba(255,159,64,.3)", borderRadius:3, padding:"1px 4px" }}>amanhã</span>;
                                 if (dpvM <= 5)  return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.10)", border:"1px solid rgba(255,159,64,.25)", borderRadius:3, padding:"1px 4px" }}>em {dpvM}d</span>;
                                 if (dpvM <= 14) return <span style={{ fontSize:7, color:"rgba(240,192,64,.8)", fontFamily:"'DM Mono',monospace" }}>em {dpvM}d · {fmtVenc(proxVencM)}</span>;
@@ -4234,7 +4236,8 @@ ${p.comprovante_url ? (() => {
                           <div style={{ display:"flex", alignItems:"center", gap:5 }}>
                             <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>{item.ceg}{item.id_linha != null && item.id_linha !== '' && <span style={{ marginLeft:4, color:"rgba(186,255,57,.4)", fontSize:8 }}>{item.id_linha}</span>}</span>
                             {proxVencD && (() => {
-                              if (dpvD <= 0)  return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>hoje!</span>;
+                              if (dpvD < 0)   return null;
+                              if (dpvD === 0) return <span style={{ fontSize:7, fontWeight:700, color:"#ff6b6b", background:"rgba(255,107,107,.15)", border:"1px solid rgba(255,107,107,.3)", borderRadius:3, padding:"1px 4px" }}>hoje!</span>;
                               if (dpvD === 1) return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.15)", border:"1px solid rgba(255,159,64,.3)", borderRadius:3, padding:"1px 4px" }}>amanhã</span>;
                               if (dpvD <= 5)  return <span style={{ fontSize:7, fontWeight:700, color:"#FF9F40", background:"rgba(255,159,64,.10)", border:"1px solid rgba(255,159,64,.25)", borderRadius:3, padding:"1px 4px" }}>em {dpvD}d</span>;
                               if (dpvD <= 14) return <span style={{ fontSize:7, color:"rgba(240,192,64,.8)", fontFamily:"'DM Mono',monospace" }}>em {dpvD}d</span>;
@@ -4405,7 +4408,7 @@ ${p.comprovante_url ? (() => {
                       />
                     </div>
                     <button onClick={() => { setPagUsarCodigo(false); setPagCodigoTx(""); }} style={{ marginTop:8, background:"none", border:"none", padding:0, fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", cursor:"pointer", textDecoration:"underline" }}>
-                      ← Voltar para anexar arquivo
+                      ↁ Voltar para anexar arquivo
                     </button>
                   </>
                 )}
@@ -5662,7 +5665,7 @@ ${compHTML}
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                       <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap", padding:"3px 9px", borderRadius:4, color: resolvido ? "#4ade80" : "rgba(245,240,232,.5)", border:`1px solid ${resolvido ? "rgba(74,222,128,.35)" : "rgba(245,240,232,.15)"}`, background: resolvido ? "rgba(74,222,128,.07)" : "transparent" }}>
-                        {resolvido ? "✓ resolvido" : "🔍 em análise"}
+                        {resolvido ? "✓ resolvido" : "🔁 em análise"}
                       </span>
                       {temDetalhes && <span style={{ fontSize:11, color:"rgba(245,240,232,.3)" }}>{expanded ? "▲" : "▼"}</span>}
                     </div>
@@ -5973,9 +5976,9 @@ const ANTIV_Q = [
 const ANTIV_MSGS = ["zero acertos 😭 você conhece a comu?","fraquinha mas tá aqui 🙈","metade joiner, metade turista 👀","boa! você sabe das coisas 🧡","JOINER DE VERDADE ✨ quase perfeita!","PERFEITA. você É a comu 🎉🧡"];
 const ANTIV_SEMS = [
   { n:1, icon:"🎯", label:"Quiz da Comu",  periodo:"01–08 ago", desde:new Date("2026-08-01") },
-  { n:2, icon:"🏆", label:"Premiações",    periodo:"09–15 ago", desde:new Date("2026-08-09") },
-  { n:3, icon:"📝", label:"Feedback",      periodo:"16–22 ago", desde:new Date("2026-08-16") },
-  { n:4, icon:"🃏", label:"Drop Especial", periodo:"23–31 ago", desde:new Date("2026-08-23") },
+  { n:2, icon:"🁆", label:"Premiações",    periodo:"09–15 ago", desde:new Date("2026-08-09") },
+  { n:3, icon:"📁", label:"Feedback",      periodo:"16–22 ago", desde:new Date("2026-08-16") },
+  { n:4, icon:"🃁", label:"Drop Especial", periodo:"23–31 ago", desde:new Date("2026-08-23") },
 ];
 
 const ANTIV_BADGES_DEF = [
@@ -5985,345 +5988,6 @@ const ANTIV_BADGES_DEF = [
   { slug:"drop_s04",      label:"Drop Especial",   sem:4, img:"/badges/drop_s04.png"     },
 ];
 
-function AntiversarioTab({ user }) {
-  const mono = "'DM Mono',monospace";
-  const TARGET = new Date("2026-08-01T10:00:00");
-  const LETRAS = ["A","B","C","D"];
-
-  const [tempo, setTempo] = useState(() => {
-    const diff = TARGET - Date.now();
-    if (diff <= 0) return null;
-    const s = Math.floor(diff / 1000);
-    return { dias:Math.floor(s/86400), horas:Math.floor((s%86400)/3600), minutos:Math.floor((s%3600)/60), segundos:s%60 };
-  });
-  const [quizStep, setQuizStep] = useState(() => { const v = localStorage.getItem("antiv_q_step"); return v !== null ? parseInt(v) : 0; });
-  const [quizResps, setQuizResps] = useState(() => { try { return JSON.parse(localStorage.getItem("antiv_q_resps") || "[]"); } catch { return []; } });
-  const [quizDone, setQuizDone] = useState(() => localStorage.getItem("antiv_q_done") === "1");
-  const [opcaoSel, setOpcaoSel] = useState(null);
-  const [semanaVis, setSemanaVis] = useState(() => ANTIV_SEMS.reduce((acc, s) => new Date() >= s.desde ? s.n : acc, 1));
-  const [meusBadges, setMeusBadges] = useState([]);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const diff = TARGET - Date.now();
-      if (diff <= 0) { setTempo(null); return; }
-      const s = Math.floor(diff / 1000);
-      setTempo({ dias:Math.floor(s/86400), horas:Math.floor((s%86400)/3600), minutos:Math.floor((s%3600)/60), segundos:s%60 });
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (!user || user.guest || !user.cog) return;
-    Promise.all([
-      supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", user.cog),
-      supabase.from("antiv_quiz").select("step,resps,done").eq("joiner_cog", user.cog).maybeSingle(),
-    ]).then(([{ data: badgesData }, { data: quizData }]) => {
-      const earned = (badgesData || []).map(r => r.badge_slug);
-      setMeusBadges(earned);
-      // restaura progresso do quiz salvo no servidor
-      if (quizData) {
-        setQuizStep(quizData.step || 0);
-        setQuizResps(quizData.resps || []);
-        if (quizData.done) setQuizDone(true);
-      }
-      // auto-concede badge se quiz já estava feito
-      const jaFeito = quizData?.done || (!quizData && localStorage.getItem("antiv_q_done") === "1");
-      if (jaFeito && !earned.includes("quiz_s01")) {
-        supabase.from("antiv_badges")
-          .upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
-          .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
-      }
-    });
-  }, [user?.cog]);
-
-
-  function avancarQuiz() {
-    if (opcaoSel === null) return;
-    const novas = [...quizResps, opcaoSel];
-    const prox = quizStep + 1;
-    const done = prox >= ANTIV_Q.length;
-    setQuizResps(novas); setQuizStep(prox); setOpcaoSel(null);
-    localStorage.setItem("antiv_q_resps", JSON.stringify(novas));
-    localStorage.setItem("antiv_q_step", String(prox));
-    if (done) { setQuizDone(true); localStorage.setItem("antiv_q_done", "1"); }
-    if (user && !user.guest && user.cog) {
-      supabase.from("antiv_quiz").upsert(
-        { joiner_cog: user.cog, step: prox, resps: novas, done, atualizado_em: new Date().toISOString() },
-        { onConflict: "joiner_cog" }
-      );
-      if (done) {
-        supabase.from("antiv_badges").upsert({ joiner_cog: user.cog, badge_slug: "quiz_s01" }, { onConflict: "joiner_cog,badge_slug" })
-          .then(() => setMeusBadges(prev => prev.includes("quiz_s01") ? prev : [...prev, "quiz_s01"]));
-      }
-    }
-  }
-
-  const semAtual = ANTIV_SEMS.reduce((acc, s) => new Date() >= s.desde ? s.n : acc, 1);
-  const acertos  = quizDone ? quizResps.filter((r, i) => r === ANTIV_Q[i]?.certa).length : 0;
-  const xp       = acertos * 200;
-
-  function bloco(val, label) {
-    return (
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-        <div style={{ fontSize:"clamp(46px, 13vw, 96px)", fontWeight:900, fontFamily:mono, color:"var(--laranja)", lineHeight:1, letterSpacing:"-2px" }}>
-          {String(val).padStart(2,"0")}
-        </div>
-        <div style={{ fontSize:"clamp(7px, 1.8vw, 10px)", fontFamily:mono, color:"rgba(245,240,232,.28)", letterSpacing:"2px", textTransform:"uppercase" }}>
-          {label}
-        </div>
-      </div>
-    );
-  }
-
-  function renderLevelMap() {
-    return (
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:28, width:"100%" }}>
-        {ANTIV_SEMS.map((s) => {
-          const desbloq  = s.n <= semAtual;
-          const ativa    = s.n === semanaVis;
-          const completa = s.n === 1 && quizDone;
-          const icone    = completa ? "⭐" : desbloq ? s.icon : "🔒";
-          return (
-            <div key={s.n} onClick={() => desbloq && setSemanaVis(s.n)}
-              style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                border:`2px solid ${ativa ? "var(--laranja)" : desbloq ? "rgba(245,240,232,.3)" : "rgba(245,240,232,.18)"}`,
-                borderRadius:14, padding:"16px 10px 14px",
-                background: ativa
-                  ? "linear-gradient(160deg,rgba(255,92,26,.18) 0%,rgba(255,92,26,.06) 100%)"
-                  : desbloq
-                  ? "rgba(245,240,232,.05)"
-                  : "rgba(245,240,232,.04)",
-                boxShadow: ativa ? "0 0 32px rgba(255,92,26,.35), 0 0 12px rgba(255,92,26,.18) inset" : "none",
-                cursor: desbloq ? "pointer" : "default",
-                transition:"box-shadow .2s", position:"relative" }}>
-
-              {/* badge EM BREVE nos bloqueados */}
-              {!desbloq && (
-                <div style={{ position:"absolute", top:-1, right:-1,
-                  background:"rgba(245,240,232,.1)", border:"1px solid rgba(245,240,232,.18)",
-                  borderRadius:"0 12px 0 8px", padding:"2px 7px",
-                  fontFamily:mono, fontSize:6, letterSpacing:"1.5px", color:"rgba(245,240,232,.55)" }}>
-                  EM BREVE
-                </div>
-              )}
-
-              <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"3px",
-                color: ativa ? "var(--laranja)" : "rgba(245,240,232,.45)", fontWeight:700 }}>
-                LVL {String(s.n).padStart(2,"0")}
-              </div>
-              <div style={{ fontSize:28, lineHeight:1 }}>{icone}</div>
-              <div style={{ fontFamily:mono, fontSize:10, fontWeight:700, textAlign:"center", lineHeight:1.35,
-                color: ativa ? "var(--laranja)" : "rgba(245,240,232,.85)" }}>
-                {s.label}
-              </div>
-              <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.5)", letterSpacing:"0.5px" }}>
-                {s.periodo}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  function renderQuiz() {
-    if (quizDone) {
-      const estrelas = Math.round((acertos / ANTIV_Q.length) * 5);
-      return (
-        <div style={{ textAlign:"center" }}>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:14 }}>RESULTADO FINAL</div>
-          <div style={{ fontSize:"clamp(1.8rem,7vw,3.2rem)", margin:"0 0 4px" }}>
-            {Array.from({length:5}, (_, i) => (
-              <span key={i} style={{ color: i < estrelas ? "#f59e0b" : "rgba(245,240,232,.12)", fontSize:"1em" }}>★</span>
-            ))}
-          </div>
-          <div style={{ fontFamily:mono, fontSize:"clamp(28px,8vw,48px)", fontWeight:900, color:"var(--laranja)", lineHeight:1, marginBottom:6 }}>
-            {acertos}<span style={{ fontSize:"0.45em", opacity:.5 }}> / {ANTIV_Q.length}</span>
-          </div>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(255,92,26,.7)", marginBottom:4 }}>+{xp} XP</div>
-          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)", marginBottom:28 }}>{ANTIV_MSGS[acertos]}</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:7, textAlign:"left" }}>
-            {ANTIV_Q.map((p, i) => {
-              const ok = quizResps[i] === p.certa;
-              return (
-                <div key={i} style={{ background: ok ? "rgba(34,197,94,.04)" : "rgba(239,68,68,.04)",
-                  border:`1px solid ${ok ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)"}`,
-                  borderRadius:10, padding:"10px 14px" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom: ok ? 0 : 6 }}>
-                    <span style={{ fontSize:11, lineHeight:1 }}>{ok ? "✅" : "❌"}</span>
-                    <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.4 }}>{p.q}</div>
-                  </div>
-                  {!ok && <div style={{ fontFamily:mono, fontSize:9, color:"#22c55e", paddingLeft:19 }}>→ {p.ops[p.certa]}</div>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
-
-    const p = ANTIV_Q[quizStep];
-    const pct = (quizStep / ANTIV_Q.length) * 100;
-    return (
-      <div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-          <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"2px", color:"rgba(245,240,232,.3)" }}>
-            MISSÃO {quizStep + 1} / {ANTIV_Q.length}
-          </div>
-          <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,92,26,.6)", letterSpacing:"1px" }}>
-            {quizStep * 200} XP
-          </div>
-        </div>
-        <div style={{ height:4, background:"rgba(245,240,232,.06)", borderRadius:4, marginBottom:20, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${pct}%`, background:"var(--laranja)", borderRadius:4,
-            boxShadow:"0 0 8px rgba(255,92,26,.5)", transition:"width .3s" }} />
-        </div>
-        <div style={{ fontFamily:mono, fontSize:"clamp(12px,3.5vw,15px)", fontWeight:700, color:"var(--offwhite)", marginBottom:20, lineHeight:1.5 }}>
-          {p.q}
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {p.ops.map((op, i) => (
-            <button key={i} onClick={() => setOpcaoSel(i)}
-              style={{ display:"flex", alignItems:"center", gap:12,
-                background: opcaoSel === i ? "rgba(255,92,26,.09)" : "rgba(245,240,232,.02)",
-                border:`1px solid ${opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.08)"}`,
-                borderRadius:10, padding:"11px 14px", fontFamily:mono, fontSize:11,
-                color: opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.6)",
-                cursor:"pointer", textAlign:"left", lineHeight:1.4, transition:"all .12s",
-                boxShadow: opcaoSel === i ? "0 0 14px rgba(255,92,26,.14)" : "none" }}>
-              <span style={{ width:22, height:22, borderRadius:6, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
-                background: opcaoSel === i ? "var(--laranja)" : "rgba(245,240,232,.07)",
-                fontSize:8, fontWeight:900, color: opcaoSel === i ? "#000" : "rgba(245,240,232,.35)" }}>
-                {LETRAS[i]}
-              </span>
-              <span>{op}</span>
-            </button>
-          ))}
-        </div>
-        <button onClick={avancarQuiz} disabled={opcaoSel === null}
-          style={{ marginTop:16, width:"100%", background: opcaoSel !== null ? "var(--laranja)" : "rgba(245,240,232,.04)",
-            border:`1px solid ${opcaoSel !== null ? "transparent" : "rgba(245,240,232,.07)"}`,
-            borderRadius:10, padding:"13px", fontFamily:mono, fontSize:11, fontWeight:900,
-            color: opcaoSel !== null ? "#000" : "rgba(245,240,232,.18)",
-            cursor: opcaoSel !== null ? "pointer" : "default", letterSpacing:"1px",
-            boxShadow: opcaoSel !== null ? "0 0 20px rgba(255,92,26,.3)" : "none",
-            transition:"all .18s" }}>
-          {quizStep < ANTIV_Q.length - 1 ? "CONFIRMAR →" : "VER RESULTADO →"}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"36px 20px 60px", textAlign:"center", position:"relative" }}>
-      <style>{`
-        @keyframes antiv-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
-        @keyframes antiv-glow-bg { 0%,100%{opacity:.07;transform:scale(1)} 50%{opacity:.13;transform:scale(1.1)} }
-        @keyframes antiv-shimmer { 0%{background-position:-300% center} 100%{background-position:300% center} }
-        .antiv-shimmer { background:linear-gradient(90deg,#ff5c1a 0%,#ffb347 28%,#fffbe8 50%,#ffb347 72%,#ff5c1a 100%); background-size:300% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:antiv-shimmer 4s linear infinite; }
-      `}</style>
-
-      {/* ── ESTADO: CONTADOR ATIVO ── */}
-      {tempo && (
-        <>
-          <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(120px,30vw,200px)", marginBottom:14 }} />
-          <div style={{ fontSize:"clamp(20px,5.5vw,38px)", fontWeight:900, fontFamily:mono, color:"var(--offwhite)", letterSpacing:"-1px", marginBottom:6 }}>ANTIversário</div>
-          <div style={{ fontSize:"clamp(9px,2.2vw,12px)", fontFamily:mono, color:"rgba(245,240,232,.3)", marginBottom:32, letterSpacing:"1px" }}>01 · 08 · 2026 às 10h</div>
-          <div style={{ display:"flex", alignItems:"flex-start", gap:"clamp(12px,4vw,40px)", marginBottom:32 }}>
-            {bloco(tempo.dias,"dias")}
-            <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
-            {bloco(tempo.horas,"horas")}
-            <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
-            {bloco(tempo.minutos,"minutos")}
-            <div style={{ fontSize:"clamp(32px,9vw,72px)", fontWeight:900, color:"rgba(245,240,232,.1)", fontFamily:mono, lineHeight:1, marginTop:4 }}>:</div>
-            {bloco(tempo.segundos,"segundos")}
-          </div>
-        </>
-      )}
-
-      {/* ── ESTADO: FESTIVO (pós-contador) ── */}
-      {!tempo && (
-        <>
-          {/* glow de fundo */}
-          <div style={{ position:"fixed", top:"20%", left:"50%", transform:"translateX(-50%)", width:520, height:520, background:"radial-gradient(circle, rgba(255,92,26,.09) 0%, transparent 68%)", pointerEvents:"none", animation:"antiv-glow-bg 5s ease-in-out infinite", zIndex:0 }} />
-
-          {/* imagem flutuando */}
-          <div style={{ position:"relative", zIndex:1, marginBottom:18 }}>
-            <div style={{ position:"absolute", bottom:-4, left:"50%", transform:"translateX(-50%)", width:"75%", height:18, background:"rgba(255,92,26,.22)", borderRadius:"50%", filter:"blur(12px)", pointerEvents:"none" }} />
-            <img src="/ANTIANIVERSARIO.png" alt="" style={{ width:"clamp(130px,32vw,215px)", animation:"antiv-float 3s ease-in-out infinite", position:"relative", zIndex:1 }} />
-          </div>
-
-          {/* título shimmer */}
-          <div className="antiv-shimmer" style={{ fontSize:"clamp(24px,7vw,48px)", fontWeight:900, fontFamily:mono, letterSpacing:"-1px", marginBottom:8, zIndex:1, position:"relative" }}>
-            ★ ANTIversário ★
-          </div>
-          <div style={{ fontFamily:mono, fontSize:"clamp(10px,2.5vw,13px)", color:"rgba(245,240,232,.4)", marginBottom:4, letterSpacing:"0.5px", zIndex:1, position:"relative" }}>
-            um ano de ANTI CEGS para comemorarmos juntos 🧡
-          </div>
-          <div style={{ fontFamily:mono, fontSize:"clamp(8px,1.8vw,10px)", color:"rgba(245,240,232,.18)", letterSpacing:"2px", marginBottom:32, zIndex:1, position:"relative" }}>
-            01 · 08 · 2026
-          </div>
-
-          <div style={{ width:"100%", maxWidth:520, zIndex:1, position:"relative" }}>
-              {renderLevelMap()}
-
-              {/* ── BADGES ── */}
-              <div style={{ marginBottom:20 }}>
-                <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:12, textAlign:"left" }}>SEUS BADGES</div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10 }}>
-                  {ANTIV_BADGES_DEF.map(b => {
-                    const ganhou = meusBadges.includes(b.slug);
-                    return (
-                      <div key={b.slug} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                        background: ganhou ? "rgba(255,92,26,.08)" : "rgba(245,240,232,.03)",
-                        border:`1px solid ${ganhou ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.1)"}`,
-                        borderRadius:14, padding:"14px 8px 12px",
-                        boxShadow: ganhou ? "0 0 20px rgba(255,92,26,.2)" : "none",
-                        opacity: ganhou ? 1 : 0.45, transition:"all .3s" }}>
-                        <div style={{ width:56, height:56, borderRadius:"50%", overflow:"hidden", position:"relative",
-                          background:"rgba(245,240,232,.06)", border:`2px solid ${ganhou ? "rgba(255,92,26,.5)" : "rgba(245,240,232,.12)"}`,
-                          display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          {ganhou
-                            ? <img src={b.img} alt={b.label} style={{ width:"100%", height:"100%", objectFit:"cover" }}
-                                onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} />
-                            : null}
-                          <div style={{ display: ganhou ? "none" : "flex", fontSize:22, alignItems:"center", justifyContent:"center", width:"100%", height:"100%" }}>🔒</div>
-                        </div>
-                        <div style={{ fontFamily:mono, fontSize:8, fontWeight:700, textAlign:"center", color: ganhou ? "var(--offwhite)" : "rgba(245,240,232,.4)", lineHeight:1.3 }}>{b.label}</div>
-                        {ganhou && <div style={{ fontFamily:mono, fontSize:7, color:"var(--laranja)", letterSpacing:"1px" }}>CONQUISTADO</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-                {(!user || user.guest) && (
-                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:10, textAlign:"center" }}>
-                    faça login para salvar seus badges
-                  </div>
-                )}
-              </div>
-
-              <div style={{ background:"rgba(255,92,26,.025)", border:"1px solid rgba(255,92,26,.14)", borderRadius:16, padding:"22px",
-                position:"relative", overflow:"hidden", textAlign:"left", boxShadow:"0 0 48px rgba(255,92,26,.07), 0 0 2px rgba(255,92,26,.12) inset" }}>
-                <div style={{ position:"absolute", top:-50, right:-50, width:140, height:140, background:"var(--laranja)", borderRadius:"50%", opacity:0.05, pointerEvents:"none" }} />
-                <div style={{ position:"absolute", bottom:-50, left:-50, width:110, height:110, background:"var(--laranja)", borderRadius:"50%", opacity:0.03, pointerEvents:"none" }} />
-                {semanaVis === 1 && renderQuiz()}
-                {semanaVis > 1 && semanaVis > semAtual && (
-                  <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono }}>
-                    <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
-                    <div style={{ fontSize:11, color:"rgba(245,240,232,.25)" }}>disponível a partir de {["","01/08","09/08","16/08","23/08"][semanaVis]}</div>
-                  </div>
-                )}
-                {semanaVis === 2 && semAtual >= 2 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🏆 em breve</div>}
-                {semanaVis === 3 && semAtual >= 3 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>📝 em breve</div>}
-                {semanaVis === 4 && semAtual >= 4 && <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>🃏 em breve</div>}
-              </div>
-            </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 function RegrasTab() {
   const [search, setSearch] = useState("");
@@ -6382,7 +6046,7 @@ function RegrasTab() {
       )}
 
       <div className="regras-search-wrap">
-        <span className="regras-search-icon">🔍</span>
+        <span className="regras-search-icon">🔁</span>
         <input className="regras-search-input" type="text" placeholder="Buscar por palavra-chave..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       {q && (
@@ -6603,7 +6267,7 @@ function EmailJSTestBlock() {
       <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>
         E-mail de notificação
         <span style={{ marginLeft:8, fontSize:10, fontFamily:"'DM Mono',monospace", color: configured ? "#4ade80" : "#ff6b6b", fontWeight:400 }}>
-          {configured ? "● configurado" : "● não configurado"}
+          {configured ? "◁ configurado" : "◁ não configurado"}
         </span>
       </div>
       <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>Envie um e-mail de teste para confirmar que a integração está funcionando.</div>
@@ -6932,10 +6596,10 @@ function PushGlobalToggle() {
         <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>
           Quando pausado, nenhum push é enviado às joiners (pagamento, claim, rejeição).
         </div>
-        {!ativo && <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginTop:5 }}>● Envio de notificações pausado</div>}
+        {!ativo && <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginTop:5 }}>◁ Envio de notificações pausado</div>}
       </div>
       <button onClick={toggle} disabled={salvando} style={{ flexShrink:0, background: ativo ? "rgba(255,92,26,.12)" : "rgba(245,240,232,.05)", border:`1px solid ${ativo ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.15)"}`, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.4)", borderRadius:8, padding:"8px 16px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
-        {salvando ? "..." : ativo ? "● Ativo — pausar" : "○ Pausado — ativar"}
+        {salvando ? "..." : ativo ? "◁ Ativo — pausar" : "○ Pausado — ativar"}
       </button>
     </div>
   );
@@ -6968,7 +6632,7 @@ function BannerPagamentosBlock() {
         {ativo && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginTop:5 }}>⚠ Verifique os pagamentos em aberto para liberar seu envio nacional</div>}
       </div>
       <button onClick={toggle} disabled={salvando} style={{ flexShrink:0, background: ativo ? "rgba(255,92,26,.12)" : "rgba(245,240,232,.05)", border:`1px solid ${ativo ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.15)"}`, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.4)", borderRadius:8, padding:"8px 16px", fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
-        {salvando ? "..." : ativo ? "● Ativo — desativar" : "○ Inativo — ativar"}
+        {salvando ? "..." : ativo ? "◁ Ativo — desativar" : "○ Inativo — ativar"}
       </button>
     </div>
   );
@@ -7035,7 +6699,7 @@ function ProximoEnvioBlock() {
     <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${ativo ? "rgba(186,255,57,.25)" : "rgba(100,181,246,.15)"}`, borderRadius:10 }}>
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
         <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Próximo round de Envio Nacional</div>
-        {ativo && <span style={{ fontSize:10, background:"rgba(186,255,57,.15)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace" }}>● ABERTO AGORA</span>}
+        {ativo && <span style={{ fontSize:10, background:"rgba(186,255,57,.15)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace" }}>◁ ABERTO AGORA</span>}
       </div>
       <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:12 }}>
         Defina o período → o forms abre e fecha automaticamente. O texto de exibição é preenchido automaticamente (ou edite manualmente).
@@ -8015,7 +7679,7 @@ function ControleEstoqueTab() {
       {sel && itemSel && (
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-            <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:"6px 12px", fontWeight:700 }}>← voltar</button>
+            <button onClick={() => { setSel(null); setAddingCompra(false); setEditando(false); }} style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:"6px 12px", fontWeight:700 }}>ↁ voltar</button>
             <button onClick={() => { setEditando(v => !v); setEditNome(itemSel.nome); setEditLinkE(itemSel.link_loja || ""); setEditDuracao(itemSel.durabilidade_dias || ""); setEditSaldo(itemSel.saldo_inicial ?? ""); setEditCat(itemSel.categoria || "outro"); setEditUso(itemSel.uso_por_pedido || ""); }}
               style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"6px 12px", fontSize:11, fontWeight:700, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>✎ editar item</button>
           </div>
@@ -8208,7 +7872,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [cashbackSaving, setCashbackSaving] = useState(false);
   const [cashbackSearch, setCashbackSearch] = useState("");
   const [adminMainTab, setAdminMainTab] = useState(initialSubTab || "home");
-  useEffect(() => { setAdminMainTab("home"); }, [resetSignal]);
+  const adminResetMounted = useRef(false);
+  useEffect(() => { if (!adminResetMounted.current) { adminResetMounted.current = true; return; } setAdminMainTab("home"); }, [resetSignal]);
   useEffect(() => { onSubTabChange?.(adminMainTab); }, [adminMainTab]);
   const [pushes, setPushes] = useState(null);
   const [feedbacks, setFeedbacks] = useState(null);
@@ -8239,6 +7904,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [revistaCount,   setRevistaCount]   = useState(0);
   const [wmagCount,      setWmagCount]      = useState(0);
   const [popupCount,     setPopupCount]     = useState(0);
+  const [bazaarInCount,  setBazaarInCount]  = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
@@ -8288,21 +7954,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [roundsSecaoAberta, setRoundsSecaoAberta] = useState(false);
+  const [roundsBusca,       setRoundsBusca]       = useState("");
+  const [addRoundJoiner,    setAddRoundJoiner]    = useState({ aberto: false, cog:"", roundNum:"", salvando: false });
+  const [storagePreview,    setStoragePreview]    = useState({}); // { [solicitacaoId]: { loading, itens } }
+  const [copiadoEnvio,      setCopiadoEnvio]      = useState(null);
+  const [endManualJoiner,   setEndManualJoiner]   = useState(null);
+  const [endManualForm,     setEndManualForm]      = useState({ destinatario:"", cpf:"", cep:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"", estado:"", metodo:"Jadlog", itens_manuais:"" });
+  const [endManualSalvando, setEndManualSalvando] = useState(false);
+  const [endManualCepLoad,  setEndManualCepLoad]  = useState(false);
+  const [solicitandoEndereco, setSolicitandoEndereco] = useState({});
   const [cotacaoObs,        setCotacaoObs]        = useState("");
-  const [sfCotas,           setSfCotas]           = useState({});
-  const [sfEtiqueta,        setSfEtiqueta]        = useState({});
-  const [sfRemetenteAberto, setSfRemetenteAberto] = useState(false);
-  const [sfPedidosAberto,   setSfPedidosAberto]   = useState(false);
-  const [sfPedidos,         setSfPedidos]         = useState([]);
-  const [sfPedidosLoading,  setSfPedidosLoading]  = useState(false);
-  const [sfRastreioInput,   setSfRastreioInput]   = useState("");
-  const [sfRastreioRes,     setSfRastreioRes]     = useState(null);
-  const [sfRastreioLoading, setSfRastreioLoading] = useState(false);
-  const SF_REMETENTE_DEFAULT = { nome:"Fernanda Medeiros", cpf:"14375563702", telefone:"+55 24 99278-2023", email:"anticegs@gmail.com", endereco:"Rua 15 de Novembro", numero:"640", complemento:"Monte Carlo", bairro:"Centro", cidade:"Três Rios", estado:"RJ" };
-  const [sfRemetente,       setSfRemetente]       = useState(() => {
-    try { return JSON.parse(localStorage.getItem("sf_remetente") || "null") || SF_REMETENTE_DEFAULT; }
-    catch { return SF_REMETENTE_DEFAULT; }
-  });
   const [pushManualId,      setPushManualId]      = useState(null);
   const [pushManualMsg,     setPushManualMsg]     = useState("");
   const [pushManualSending, setPushManualSending] = useState(false);
@@ -8418,161 +8079,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento", cotacao_opcoes:null, cotacao_frete:null, cotacao_forma:null, cotacao_embalagem:null, cotacao_valor:null, cotacao_prazo:null, cotacao_obs:null, cotacao_seguro:null } : x));
   }
 
-  function sfHeaders() {
-    if (import.meta.env.DEV) {
-      return { "Authorization": `Bearer ${import.meta.env.VITE_SUPERFRETE_KEY}`, "Content-Type": "application/json" };
-    }
-    return { "Content-Type": "application/json" };
-  }
-
-  async function buscarSuperfrete(s) {
-    const cepDest = (s.cep || "").replace(/\D/g, "");
-    if (!cepDest || cepDest.length < 8) { alert("CEP de destino inválido."); return; }
-    setSfCotas(prev => ({ ...prev, [s.id]: { loading: true, resultados: null, erro: null } }));
-    try {
-      const sfUrl = import.meta.env.DEV
-        ? "/superfrete/api/v0/calculator"
-        : "/api/superfrete?endpoint=calculator";
-      const res = await fetch(sfUrl, {
-        method: "POST",
-        headers: sfHeaders(),
-        body: JSON.stringify({
-          from: { postal_code: "25804000" },
-          to: { postal_code: cepDest },
-          package: { weight: 0.3, width: 12, height: 4, length: 17 },
-          options: { receipt: false, own_hand: false },
-          services: "1,2,3,4,5",
-        }),
-      });
-      const dados = await res.json();
-      if (!Array.isArray(dados)) throw new Error(dados?.message || "Resposta inesperada da API");
-      setSfCotas(prev => ({ ...prev, [s.id]: { loading: false, resultados: dados.filter(d => !d.error), erro: null } }));
-    } catch (err) {
-      setSfCotas(prev => ({ ...prev, [s.id]: { loading: false, resultados: null, erro: err.message } }));
-    }
-  }
-
-  const SF_SERVICE_MAP = { "PAC":1, "SEDEX":2, "Jadlog":3, "JADLOG":3, "JADLOG .COM":4, "Mini Envios":17, "Mini Envios Correios":17 };
-
-  async function criarEtiquetaSuperfrete(s) {
-    const sf = (endpoint) => import.meta.env.DEV ? `/superfrete/api/v0/${endpoint}` : `/api/superfrete?endpoint=${endpoint}`;
-    const insuranceVal = s.seguro === "sim" ? Number(s.valor_seguro) || 0 : 0;
-    const cepDest = (s.cep || "").replace(/\D/g, "");
-
-    if (!sfRemetente.nome || !sfRemetente.cpf || !sfRemetente.endereco) {
-      setSfRemetenteAberto(true);
-      return;
-    }
-
-    setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: true, url: null, erro: null, tracking: null } }));
-    try {
-      const serviceId = SF_SERVICE_MAP[s.cotacao_forma] || 1;
-
-      const cartRes = await fetch(sf("cart"), {
-        method: "POST",
-        headers: sfHeaders(),
-        body: JSON.stringify({
-          service: serviceId,
-          from: {
-            name:       sfRemetente.nome,
-            phone:      sfRemetente.telefone,
-            email:      sfRemetente.email,
-            document:   sfRemetente.cpf.replace(/\D/g, ""),
-            address:    sfRemetente.endereco,
-            number:     sfRemetente.numero,
-            complement: sfRemetente.complemento || "",
-            district:   sfRemetente.bairro,
-            city:       sfRemetente.cidade,
-            state_abbr: sfRemetente.estado,
-            country_id: "BR",
-            postal_code:"25804000",
-          },
-          to: {
-            name:       s.destinatario,
-            phone:      "",
-            email:      "",
-            document:   (s.cpf || "").replace(/\D/g, ""),
-            address:    s.endereco,
-            number:     s.numero || "S/N",
-            complement: s.complemento || "",
-            district:   s.bairro,
-            city:       s.cidade,
-            state_abbr: s.estado,
-            country_id: "BR",
-            postal_code:(s.cep || "").replace(/\D/g, ""),
-          },
-          products: [{ name:"Itens K-pop ANTICEG", quantity: s.itens?.length || 1, unitary_value: insuranceVal || 10 }],
-          volumes:  { weight:0.3, width:12, height:4, length:17 },
-          options:  { receipt:false, own_hand:false, reverse:false, non_commercial:true, insurance_value: insuranceVal || 0 },
-          platform: "ANTICEG",
-        }),
-      });
-      const cart = await cartRes.json();
-      if (!cart.id) {
-        const erroDetalhe = cart.errors ? JSON.stringify(cart.errors) : (cart.message || JSON.stringify(cart));
-        throw new Error(erroDetalhe);
-      }
-
-      await fetch(sf("checkout"), {
-        method: "POST",
-        headers: sfHeaders(),
-        body: JSON.stringify({ orders: [{ id: cart.id }] }),
-      });
-
-      const genRes = await fetch(sf("generate"), {
-        method: "POST",
-        headers: sfHeaders(),
-        body: JSON.stringify({ orders: [{ id: cart.id }] }),
-      });
-      const gen = await genRes.json();
-
-      const tracking = cart.tracking || cart.protocol || null;
-      setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: false, url: gen.url || null, erro: null, tracking } }));
-
-      if (tracking) {
-        await supabase.from("envio_solicitacoes").update({ rastreio_codigo: tracking }).eq("id", s.id);
-        setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, rastreio_codigo: tracking } : x));
-      }
-    } catch (err) {
-      setSfEtiqueta(prev => ({ ...prev, [s.id]: { loading: false, url: null, erro: err.message, tracking: null } }));
-    }
-  }
-
-  async function buscarPedidosSuperfrete() {
-    setSfPedidosLoading(true);
-    try {
-      const ordersUrl = import.meta.env.DEV ? "/superfrete/api/v0/orders?per_page=50&page=1" : "/api/superfrete?endpoint=orders";
-      const res = await fetch(ordersUrl, {
-        headers: sfHeaders(),
-      });
-      const data = await res.json();
-      setSfPedidos(Array.isArray(data) ? data : (data.data || []));
-    } catch (err) {
-      setSfPedidos([]);
-    } finally {
-      setSfPedidosLoading(false);
-    }
-  }
-
-  async function rastrearCodigoSuperfrete(codigo) {
-    setSfRastreioLoading(true);
-    setSfRastreioRes(null);
-    try {
-      const trackUrl = import.meta.env.DEV ? `/superfrete/api/v0/orders?tracking_number=${encodeURIComponent(codigo)}&per_page=5` : `/api/superfrete?endpoint=orders&tracking_number=${encodeURIComponent(codigo)}`;
-      const res = await fetch(trackUrl, {
-        headers: sfHeaders(),
-      });
-      const data = await res.json();
-      const lista = Array.isArray(data) ? data : (data.data || []);
-      const pedido = lista.find(p => (p.tracking || p.tracking_number || p.protocol || "").toLowerCase() === codigo.toLowerCase());
-      setSfRastreioRes(pedido || lista[0] || null);
-    } catch (err) {
-      setSfRastreioRes({ erro: err.message });
-    } finally {
-      setSfRastreioLoading(false);
-    }
-  }
-
   async function cancelarSolicitacaoAdmin(s) {
     if (!window.confirm("Cancelar esta solicitação de envio? O joiner será notificado.")) return;
     const { error } = await supabase.from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
@@ -8658,6 +8164,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setPopupCount(count); });
     supabase.from("pedidos_wmag").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setWmagCount(count); });
+    supabase.from("pedidos_bazaar_in").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setBazaarInCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8698,18 +8206,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const needsMasterlist = ["pagamentos", "blocklist"].includes(adminMainTab);
     if (needsMasterlist && !loaded.has("masterlist")) {
       loaded.add("masterlist");
-      (async () => {
-        const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
-        let all = [], from = 0;
-        while (true) {
-          const { data } = await supabase.from("masterlist").select(sel).neq("cog", "disponivel").range(from, from + 999);
-          if (!data || data.length === 0) break;
-          all = [...all, ...data];
-          if (data.length < 1000) break;
-          from += 1000;
-        }
-        setPendentesData(all);
-      })();
+      fetchPendentesData();
     }
 
     if (adminMainTab === "disponiveis" && !loaded.has("disponiveis")) {
@@ -8727,6 +8224,27 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   async function refreshDisponiveis() {
     setDisponiveisData(null);
     await fetchDisponiveis();
+  }
+
+  async function fetchPendentesData() {
+    const sel = "id, cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
+    setPendentesData(null);
+    let all = [], from = 0;
+    while (true) {
+      const { data } = await supabase.from("masterlist").select(sel).neq("cog","disponivel").range(from, from + 999);
+      if (!data || data.length === 0) break;
+      all = [...all, ...data];
+      if (data.length < 1000) break;
+      from += 1000;
+    }
+    setPendentesData(all);
+  }
+
+  async function refreshPagamentos() {
+    setJoinersData(null);
+    supabase.from("joiners").select("cog, nome, email, bloqueado").order("nome")
+      .then(({ data }) => { if (data) setJoinersData(data); });
+    await fetchPendentesData();
   }
 
   async function enviarPush() {
@@ -8853,6 +8371,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   }
 
   const totalPend = envioSolic.filter(e => e.status === "solicitação de envio").length
+                  + envioSolic.filter(e => e.status === "pagamento em aberto" && e.comprovante_url).length
                   + reports.filter(r => r.status !== "resolvido").length
                   + confirmacoes.length
                   + joinerUpdates.filter(u => !u.lido).length
@@ -8919,12 +8438,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {nav("revista", "Revista Nylon", "◈", revistaCount)}
                 {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
                 {nav("popup", "Pop-up This & That", "◉", popupCount)}
+                {nav("bazaar-in", "Bazaar IN", "◈", bazaarInCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Envios</div>
                 {owner && nav("storage", "Storage", "◧", 0)}
-                {temAcesso("envios") && nav("envios", "Envio", "◫", envioSolic.filter(e => e.status === "solicitação de envio").length || 0)}
+                {temAcesso("envios") && nav("envios", "Envio", "◫", envioSolic.filter(e => e.status === "solicitação de envio" || (e.status === "pagamento em aberto" && e.comprovante_url)).length || 0)}
                 {owner && nav("estoque", "Estoque", "◩", 0)}
                 {owner && nav("rastreios", "Rastreios", "⊞", 0)}
               </div>
@@ -9343,13 +8863,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           <div>
             <AdminPixBar copiado={adminPixCopiado} setCopiado={setAdminPixCopiado} />
             <AvisoMasterlistBlock />
-            <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:2 }}>
+            <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:2, alignItems:"center" }}>
               {subTabs.map(t => (
                 <button key={t.id} style={tabSt(adminPagSubTab === t.id)} onClick={() => setAdminPagSubTab(t.id)}>
                   {t.label}
                   {t.badge > 0 && <span style={{ background:"var(--laranja)", color:"#000", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{t.badge}</span>}
                 </button>
               ))}
+              <button onClick={refreshPagamentos} disabled={loading} style={{ marginLeft:"auto", flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", color: loading ? "rgba(245,240,232,.2)" : "rgba(245,240,232,.4)", borderRadius:8, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor: loading ? "default" : "pointer", letterSpacing:".05em" }}>
+                {loading ? "..." : "↺ Atualizar"}
+              </button>
             </div>
 
             {adminPagSubTab === "formulario" && (() => {
@@ -9434,7 +8957,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             {(adminPagSubTab === "em_aberto" || adminPagSubTab === "atrasados") && (
               loading
                 ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
-                : <AdminPagamentos data={pendentesData} joiners={joinersData} subtab={adminPagSubTab} />
+                : <AdminPagamentos data={pendentesData} joiners={joinersData} subtab={adminPagSubTab} onUpdate={setPendentesData} />
             )}
 
             {adminPagSubTab === "blocklist" && (
@@ -9562,9 +9085,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {adminMainTab === "revista" && <AdminRevista onCountChange={setRevistaCount} />}
-      {adminMainTab === "wmag"    && <AdminWMag    onCountChange={setWmagCount} />}
-      {adminMainTab === "popup"   && <AdminPopup   onCountChange={setPopupCount} />}
+      {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
+      {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
+      {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
+      {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
 
       {adminMainTab === "storage" && owner && (() => {
         async function buscarStorageJoiner(joinerData) {
@@ -10544,11 +10068,176 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 </button>
                 {roundsSecaoAberta && (
                   <div style={{ padding:"14px 16px", borderTop:"1px solid rgba(245,240,232,.06)" }}>
-                    <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
-                      <button onClick={carregarRoundsLocal} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"4px 10px", cursor:"pointer" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, flexWrap:"wrap" }}>
+                      <input
+                        value={roundsBusca}
+                        onChange={e => setRoundsBusca(e.target.value)}
+                        placeholder="buscar joiner por @cog..."
+                        style={{ flex:1, minWidth:160, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"5px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none" }}
+                      />
+                      <button onClick={() => setAddRoundJoiner(v => ({ ...v, aberto: !v.aberto }))} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#BAFF39", background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.22)", borderRadius:5, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
+                        + Adicionar joiner
+                      </button>
+                      <button onClick={carregarRoundsLocal} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"5px 10px", cursor:"pointer" }}>
                         {roundsLoading ? "..." : "↺ Atualizar"}
                       </button>
                     </div>
+
+                    {/* Adicionar joiner manualmente a um round */}
+                    {addRoundJoiner.aberto && (() => {
+                      const inp3 = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 9px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none" };
+                      return (
+                        <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.2)", borderRadius:8, padding:"12px 14px", marginBottom:14 }}>
+                          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(186,255,57,.7)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Adicionar joiner ao round</div>
+                          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+                            <input value={addRoundJoiner.cog} onChange={e => setAddRoundJoiner(v => ({ ...v, cog: e.target.value }))} placeholder="@cog da joiner" style={{ ...inp3, flex:2, minWidth:120 }} />
+                            <input value={addRoundJoiner.roundNum} onChange={e => setAddRoundJoiner(v => ({ ...v, roundNum: e.target.value }))} placeholder="nº do round" style={{ ...inp3, width:80 }} type="number" min="1" />
+                            <button disabled={addRoundJoiner.salvando} onClick={async () => {
+                              const cog = addRoundJoiner.cog.trim().replace(/^@/, "");
+                              const num = parseInt(addRoundJoiner.roundNum);
+                              if (!cog || !num) { alert("Preencha o cog e o número do round."); return; }
+                              setAddRoundJoiner(v => ({ ...v, salvando: true }));
+                              // busca ou cria o round
+                              let { data: rounds } = await supabase.from("envio_rounds").select("id, numero").eq("numero", num);
+                              let roundId;
+                              if (rounds && rounds.length > 0) {
+                                roundId = rounds[0].id;
+                              } else {
+                                const { data: novo } = await supabase.from("envio_rounds").insert([{ numero: num, status: "em_processo" }]).select().single();
+                                if (!novo) { alert("Erro ao criar round."); setAddRoundJoiner(v => ({ ...v, salvando: false })); return; }
+                                roundId = novo.id;
+                              }
+                              // verifica se já existe
+                              const { data: exist } = await supabase.from("envio_requests").select("id").eq("joiner_cog", cog).eq("round_id", roundId).maybeSingle();
+                              if (exist) { alert(`@${cog} já está no round ${num}.`); setAddRoundJoiner(v => ({ ...v, salvando: false })); return; }
+                              const { count } = await supabase.from("envio_requests").select("id", { count:"exact", head:true }).eq("round_id", roundId);
+                              const { error } = await supabase.from("envio_requests").insert([{ joiner_cog: cog, round_id: roundId, posicao_no_round: (count||0)+1, status: "aguardando" }]);
+                              if (error) { alert("Erro: " + error.message); setAddRoundJoiner(v => ({ ...v, salvando: false })); return; }
+                              setAddRoundJoiner({ aberto: false, cog:"", roundNum:"", salvando: false });
+                              await carregarRoundsLocal();
+                            }} style={{ padding:"6px 14px", background:"rgba(186,255,57,.15)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.35)", borderRadius:5, fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700, opacity: addRoundJoiner.salvando ? 0.5 : 1 }}>
+                              {addRoundJoiner.salvando ? "salvando..." : "Adicionar →"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Resultado de busca */}
+                    {roundsBusca.trim() && roundsList && (() => {
+                      const q = roundsBusca.trim().toLowerCase().replace(/^@/, "");
+                      const encontrados = roundsList.flatMap(r => (r.envio_requests||[]).filter(m => m.joiner_cog.toLowerCase().includes(q)).map(m => ({ ...m, roundNum: r.numero, roundStatus: r.status })));
+                      if (encontrados.length === 0) return (
+                        <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"12px 14px", marginBottom:14, fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(255,92,26,.8)" }}>
+                          Nenhum registro encontrado para "{roundsBusca.trim()}" nos rounds. Use "Adicionar joiner" acima para cadastrá-la.
+                        </div>
+                      );
+                      return (
+                        <div style={{ background:"rgba(100,181,246,.04)", border:"1px solid rgba(100,181,246,.18)", borderRadius:8, padding:"12px 14px", marginBottom:14 }}>
+                          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(100,181,246,.7)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Resultado da busca · {encontrados.length} registro(s)</div>
+                          {encontrados.map((m, i) => {
+                            const temFormBusca = envioSolic.some(e => e.joiner_cog === m.joiner_cog && e.status !== "cancelado");
+                            return (
+                              <div key={i} style={{ display:"flex", alignItems:"center", gap:10, fontSize:11, fontFamily:"'DM Mono',monospace", padding:"6px 0", borderBottom:"1px solid rgba(245,240,232,.06)", flexWrap:"wrap" }}>
+                                <span style={{ color:"#C9A8F0", fontWeight:700 }}>@{m.joiner_cog}</span>
+                                <span style={{ color:"rgba(245,240,232,.35)" }}>Round #{m.roundNum}</span>
+                                <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:3, padding:"1px 6px" }}>{m.roundStatus}</span>
+                                <span style={{ fontSize:9, padding:"2px 8px", borderRadius:10, background: temFormBusca ? "rgba(186,255,57,.1)" : "rgba(255,92,26,.1)", color: temFormBusca ? "#BAFF39" : "#FF5C1A", border:`1px solid ${temFormBusca ? "rgba(186,255,57,.3)" : "rgba(255,92,26,.3)"}` }}>
+                                  {temFormBusca ? "✓ tem form" : "sem form"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {roundsList && !roundsLoading && (() => {
+                      const semForm = roundsList.flatMap(r => (r.envio_requests||[]).map(m => ({ ...m, roundNum: r.numero }))).filter(m => !envioSolic.some(e => e.joiner_cog === m.joiner_cog && e.status !== "cancelado"));
+                      if (semForm.length === 0) return null;
+                      return (
+                        <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"12px 14px", marginBottom:14 }}>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"rgba(255,92,26,.8)", marginBottom:10, textTransform:"uppercase" }}>⚠ {semForm.length} joiner{semForm.length>1?"s":""} sem formulário de endereço</div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            {semForm.map(m => {
+                              const endAberto = endManualJoiner === m.joiner_cog;
+                              const inp2 = { width:"100%", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 9px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
+                              const lbl2 = { fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", display:"block", marginBottom:2, textTransform:"uppercase", letterSpacing:"0.8px" };
+                              return (
+                                <div key={m.joiner_cog} style={{ background:"rgba(245,240,232,.03)", borderRadius:8, padding:"10px 12px" }}>
+                                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, flexWrap:"wrap" }}>
+                                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                      <span style={{ fontFamily:"'DM Mono',monospace", fontSize:12, color:"#C9A8F0" }}>@{m.joiner_cog}</span>
+                                      <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.25)" }}>Round #{m.roundNum}</span>
+                                    </div>
+                                    <div style={{ display:"flex", gap:6 }}>
+                                      <button type="button"
+                                        onClick={() => {
+                                          if (endAberto) { setEndManualJoiner(null); return; }
+                                          const ji = (joinersData||[]).find(j => j.cog === m.joiner_cog);
+                                          setEndManualForm({ destinatario: ji?.nome || "", cpf:"", cep:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"", estado:"", metodo:"Jadlog", itens_manuais: m.itens_manuais || "" });
+                                          setEndManualJoiner(m.joiner_cog);
+                                        }}
+                                        style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(100,181,246,.35)", background:"rgba(100,181,246,.08)", color:"#64B5F6", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", fontWeight:700 }}>
+                                        {endAberto ? "✕ fechar" : "Preencher endereço"}
+                                      </button>
+                                      <button type="button"
+                                        disabled={!!solicitandoEndereco[m.joiner_cog]}
+                                        onClick={async () => {
+                                          setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
+                                          await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
+                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
+                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                        }}
+                                        style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
+                                        {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {endAberto && (
+                                    <div style={{ marginTop:10, padding:"12px 14px", background:"rgba(100,181,246,.04)", border:"1px solid rgba(100,181,246,.15)", borderRadius:8 }}>
+                                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                                        <div style={{ gridColumn:"1/-1" }}><label style={lbl2}>Nome do destinatário</label><input value={endManualForm.destinatario} onChange={e => setEndManualForm(f=>({...f,destinatario:e.target.value}))} style={inp2} placeholder="nome completo" /></div>
+                                        <div><label style={lbl2}>CPF</label><input value={endManualForm.cpf} onChange={e => setEndManualForm(f=>({...f,cpf:e.target.value}))} style={inp2} placeholder="000.000.000-00" /></div>
+                                        <div><label style={lbl2}>CEP</label><input value={endManualForm.cep} onChange={async e => {
+                                          const v = e.target.value.replace(/\D/g,"");
+                                          setEndManualForm(f=>({...f,cep:e.target.value}));
+                                          if (v.length===8) { setEndManualCepLoad(true); try { const r = await fetch(`https://viacep.com.br/ws/${v}/json/`); const d = await r.json(); if (!d.erro) setEndManualForm(f=>({...f,endereco:d.logradouro||"",bairro:d.bairro||"",cidade:d.localidade||"",estado:d.uf||""})); } catch {} setEndManualCepLoad(false); }
+                                        }} style={inp2} placeholder="00000-000" /></div>
+                                        <div style={{ gridColumn:"1/-1" }}><label style={lbl2}>Endereço {endManualCepLoad && <span style={{color:"rgba(245,240,232,.3)"}}>buscando...</span>}</label><input value={endManualForm.endereco} onChange={e => setEndManualForm(f=>({...f,endereco:e.target.value}))} style={inp2} placeholder="rua, avenida..." /></div>
+                                        <div><label style={lbl2}>Número</label><input value={endManualForm.numero} onChange={e => setEndManualForm(f=>({...f,numero:e.target.value}))} style={inp2} /></div>
+                                        <div><label style={lbl2}>Complemento</label><input value={endManualForm.complemento} onChange={e => setEndManualForm(f=>({...f,complemento:e.target.value}))} style={inp2} placeholder="apto, bloco..." /></div>
+                                        <div><label style={lbl2}>Bairro</label><input value={endManualForm.bairro} onChange={e => setEndManualForm(f=>({...f,bairro:e.target.value}))} style={inp2} /></div>
+                                        <div><label style={lbl2}>Cidade</label><input value={endManualForm.cidade} onChange={e => setEndManualForm(f=>({...f,cidade:e.target.value}))} style={inp2} /></div>
+                                        <div><label style={lbl2}>Estado (UF)</label><input value={endManualForm.estado} onChange={e => setEndManualForm(f=>({...f,estado:e.target.value}))} style={inp2} maxLength={2} /></div>
+                                        <div><label style={lbl2}>Método</label><select value={endManualForm.metodo} onChange={e => setEndManualForm(f=>({...f,metodo:e.target.value}))} style={{...inp2,cursor:"pointer"}}><option>Jadlog</option><option>PAC</option><option>SEDEX</option></select></div>
+                                        <div style={{ gridColumn:"1/-1" }}><label style={lbl2}>Itens (opcional)</label><textarea value={endManualForm.itens_manuais} onChange={e => setEndManualForm(f=>({...f,itens_manuais:e.target.value}))} style={{...inp2,resize:"vertical",minHeight:50}} /></div>
+                                      </div>
+                                      <button type="button" disabled={endManualSalvando}
+                                        onClick={async () => {
+                                          const f = endManualForm;
+                                          if (!f.destinatario || !f.cpf || !f.cep || !f.endereco || !f.numero || !f.bairro || !f.cidade || !f.estado) { alert("Preencha os campos obrigatórios."); return; }
+                                          setEndManualSalvando(true);
+                                          const ji = (joinersData||[]).find(j => j.cog === m.joiner_cog);
+                                          const { data: novo, error } = await supabase.from("envio_solicitacoes").insert([{ joiner_cog: m.joiner_cog, joiner_nome: ji?.nome || m.joiner_cog, joiner_handle: m.joiner_cog, destinatario: f.destinatario, cpf: f.cpf, cep: f.cep, endereco: f.endereco, numero: f.numero, complemento: f.complemento || null, bairro: f.bairro, cidade: f.cidade, estado: f.estado, metodo: f.metodo, seguro: "nao", itens: [], status: "solicitação de envio" }]).select().single();
+                                          setEndManualSalvando(false);
+                                          if (error) { alert("Erro: " + error.message); return; }
+                                          setEnvioSolic(prev => [novo, ...prev]);
+                                          setEndManualJoiner(null);
+                                        }}
+                                        style={{ width:"100%", padding:"9px", background: endManualSalvando ? "rgba(100,181,246,.05)" : "rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer" }}>
+                                        {endManualSalvando ? "Salvando..." : "Salvar e criar pedido de envio →"}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {roundsList === null || roundsLoading ? (
                       <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", padding:"16px 0", textAlign:"center" }}>Carregando...</div>
                     ) : roundsList.length === 0 ? (
@@ -10577,11 +10266,20 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                           </div>
                           {membros.length > 0 && (
                             <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, display:"flex", flexDirection:"column", gap:4 }}>
-                              {[...membros].sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => (
-                                <div key={m.joiner_cog} style={{ fontSize:11, fontFamily:"'DM Mono',monospace" }}>
+                              {[...membros].sort((a,b) => a.posicao_no_round - b.posicao_no_round).map(m => {
+                                const temForm = envioSolic.some(e => e.joiner_cog === m.joiner_cog && e.status !== "cancelado");
+                                const endAberto = endManualJoiner === m.joiner_cog;
+                                const inp2 = { width:"100%", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 9px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
+                                const lbl2 = { fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", display:"block", marginBottom:2, textTransform:"uppercase", letterSpacing:"0.8px" };
+                                return (
+                                <div key={m.joiner_cog} style={{ fontSize:11, fontFamily:"'DM Mono',monospace", marginBottom:6 }}>
                                   <div style={{ display:"flex", alignItems:"center", gap:10, color:"rgba(245,240,232,.6)" }}>
                                     <span style={{ color:"rgba(245,240,232,.25)", minWidth:14 }}>{m.posicao_no_round}.</span>
                                     <span style={{ color:"#C9A8F0" }}>@{m.joiner_cog}</span>
+                                    {temForm
+                                      ? <span style={{ fontSize:9, color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:4, padding:"1px 6px" }}>✓ form</span>
+                                      : <span style={{ fontSize:9, color:"rgba(255,92,26,.7)", border:"1px solid rgba(255,92,26,.25)", borderRadius:4, padding:"1px 6px" }}>sem form</span>
+                                    }
                                     <span style={{ marginLeft:"auto", fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(m.solicitado_em).toLocaleDateString("pt-BR")}</span>
                                   </div>
                                   {m.itens_manuais && (
@@ -10589,8 +10287,116 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                       {m.itens_manuais}
                                     </div>
                                   )}
+                                  {!temForm && (
+                                    <div style={{ marginLeft:24, marginTop:6, display:"flex", gap:6, flexWrap:"wrap" }}>
+                                      <button type="button"
+                                        onClick={() => {
+                                          if (endAberto) { setEndManualJoiner(null); return; }
+                                          const ji = (joinersData||[]).find(j => j.cog === m.joiner_cog);
+                                          setEndManualForm({ destinatario: ji?.nome || "", cpf:"", cep:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"", estado:"", metodo:"Jadlog", itens_manuais: m.itens_manuais || "" });
+                                          setEndManualJoiner(m.joiner_cog);
+                                        }}
+                                        style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(100,181,246,.35)", background:"rgba(100,181,246,.08)", color:"#64B5F6", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", fontWeight:700 }}>
+                                        {endAberto ? "✕ fechar" : "Preencher endereço"}
+                                      </button>
+                                      <button type="button"
+                                        disabled={!!solicitandoEndereco[m.joiner_cog]}
+                                        onClick={async () => {
+                                          setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
+                                          await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
+                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
+                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                        }}
+                                        style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
+                                        {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
+                                      </button>
+                                    </div>
+                                  )}
+                                  {!temForm && endAberto && (
+                                    <div style={{ marginLeft:24, marginTop:10, padding:"12px 14px", background:"rgba(100,181,246,.04)", border:"1px solid rgba(100,181,246,.15)", borderRadius:8 }}>
+                                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                                        <div style={{ gridColumn:"1/-1" }}>
+                                          <label style={lbl2}>Nome do destinatário</label>
+                                          <input value={endManualForm.destinatario} onChange={e => setEndManualForm(f=>({...f,destinatario:e.target.value}))} style={inp2} placeholder="nome completo" />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>CPF</label>
+                                          <input value={endManualForm.cpf} onChange={e => setEndManualForm(f=>({...f,cpf:e.target.value}))} style={inp2} placeholder="000.000.000-00" />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>CEP</label>
+                                          <input value={endManualForm.cep} onChange={async e => {
+                                            const v = e.target.value.replace(/\D/g,"");
+                                            setEndManualForm(f=>({...f,cep:e.target.value}));
+                                            if (v.length===8) {
+                                              setEndManualCepLoad(true);
+                                              try { const r = await fetch(`https://viacep.com.br/ws/${v}/json/`); const d = await r.json(); if (!d.erro) setEndManualForm(f=>({...f,endereco:d.logradouro||"",bairro:d.bairro||"",cidade:d.localidade||"",estado:d.uf||""})); } catch {}
+                                              setEndManualCepLoad(false);
+                                            }
+                                          }} style={inp2} placeholder="00000-000" />
+                                        </div>
+                                        <div style={{ gridColumn:"1/-1" }}>
+                                          <label style={lbl2}>Endereço {endManualCepLoad && <span style={{color:"rgba(245,240,232,.3)"}}>buscando...</span>}</label>
+                                          <input value={endManualForm.endereco} onChange={e => setEndManualForm(f=>({...f,endereco:e.target.value}))} style={inp2} placeholder="rua, avenida..." />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>Número</label>
+                                          <input value={endManualForm.numero} onChange={e => setEndManualForm(f=>({...f,numero:e.target.value}))} style={inp2} />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>Complemento</label>
+                                          <input value={endManualForm.complemento} onChange={e => setEndManualForm(f=>({...f,complemento:e.target.value}))} style={inp2} placeholder="apto, bloco..." />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>Bairro</label>
+                                          <input value={endManualForm.bairro} onChange={e => setEndManualForm(f=>({...f,bairro:e.target.value}))} style={inp2} />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>Cidade</label>
+                                          <input value={endManualForm.cidade} onChange={e => setEndManualForm(f=>({...f,cidade:e.target.value}))} style={inp2} />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>Estado (UF)</label>
+                                          <input value={endManualForm.estado} onChange={e => setEndManualForm(f=>({...f,estado:e.target.value}))} style={inp2} maxLength={2} />
+                                        </div>
+                                        <div>
+                                          <label style={lbl2}>Método</label>
+                                          <select value={endManualForm.metodo} onChange={e => setEndManualForm(f=>({...f,metodo:e.target.value}))} style={{...inp2, cursor:"pointer"}}>
+                                            <option>Jadlog</option><option>PAC</option><option>SEDEX</option>
+                                          </select>
+                                        </div>
+                                        <div style={{ gridColumn:"1/-1" }}>
+                                          <label style={lbl2}>Itens (opcional)</label>
+                                          <textarea value={endManualForm.itens_manuais} onChange={e => setEndManualForm(f=>({...f,itens_manuais:e.target.value}))} style={{...inp2, resize:"vertical", minHeight:50}} />
+                                        </div>
+                                      </div>
+                                      <button type="button" disabled={endManualSalvando}
+                                        onClick={async () => {
+                                          const f = endManualForm;
+                                          if (!f.destinatario || !f.cpf || !f.cep || !f.endereco || !f.numero || !f.bairro || !f.cidade || !f.estado) { alert("Preencha os campos obrigatórios."); return; }
+                                          setEndManualSalvando(true);
+                                          const ji = (joinersData||[]).find(j => j.cog === m.joiner_cog);
+                                          const { data: novo, error } = await supabase.from("envio_solicitacoes").insert([{
+                                            joiner_cog: m.joiner_cog, joiner_nome: ji?.nome || m.joiner_cog, joiner_handle: m.joiner_cog,
+                                            destinatario: f.destinatario, cpf: f.cpf, cep: f.cep, endereco: f.endereco, numero: f.numero,
+                                            complemento: f.complemento || null, bairro: f.bairro, cidade: f.cidade, estado: f.estado,
+                                            metodo: f.metodo, seguro: "nao", itens: [],
+                                            status: "solicitação de envio",
+                                          }]).select().single();
+                                          setEndManualSalvando(false);
+                                          if (error) { alert("Erro: " + error.message); return; }
+                                          setEnvioSolic(prev => [novo, ...prev]);
+                                          setEndManualJoiner(null);
+                                        }}
+                                        style={{ width:"100%", padding:"9px", background: endManualSalvando ? "rgba(100,181,246,.05)" : "rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer" }}>
+                                        {endManualSalvando ? "Salvando..." : "Salvar e criar pedido de envio →"}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                           {(round.status === "fechado" || (round.status === "aberto" && membros.length > 0)) && round.status !== "em_processo" && round.status !== "concluido" && (
@@ -10627,41 +10433,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
             );
           })()}
-          {/* Config remetente Superfrete */}
-          {sfRemetenteAberto && (() => {
-            const inp3 = { width:"100%", background:"#0d0d0d", border:"1px solid rgba(245,240,232,.14)", borderRadius:5, padding:"7px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", boxSizing:"border-box" };
-            const lbl3 = { fontSize:9, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:3, display:"block", letterSpacing:"1px", textTransform:"uppercase" };
-            const set = k => e => setSfRemetente(prev => ({ ...prev, [k]: e.target.value }));
-            return (
-              <div style={{ background:"rgba(100,181,246,.05)", border:"1px solid rgba(100,181,246,.22)", borderRadius:10, padding:"16px", marginBottom:16 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-                  <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"#64B5F6", letterSpacing:"1px", textTransform:"uppercase" }}>Dados do remetente (Superfrete)</span>
-                  <button onClick={() => setSfRemetenteAberto(false)} style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:14 }}>✕</button>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-                  <div><label style={lbl3}>Nome</label><input value={sfRemetente.nome} onChange={set("nome")} style={inp3} /></div>
-                  <div><label style={lbl3}>CPF / CNPJ</label><input value={sfRemetente.cpf} onChange={set("cpf")} style={inp3} /></div>
-                  <div><label style={lbl3}>Telefone</label><input value={sfRemetente.telefone} onChange={set("telefone")} placeholder="(xx) xxxxx-xxxx" style={inp3} /></div>
-                  <div><label style={lbl3}>E-mail</label><input value={sfRemetente.email} onChange={set("email")} style={inp3} /></div>
-                  <div><label style={lbl3}>Endereço</label><input value={sfRemetente.endereco} onChange={set("endereco")} style={inp3} /></div>
-                  <div><label style={lbl3}>Número</label><input value={sfRemetente.numero} onChange={set("numero")} style={inp3} /></div>
-                  <div><label style={lbl3}>Complemento</label><input value={sfRemetente.complemento} onChange={set("complemento")} style={inp3} /></div>
-                  <div><label style={lbl3}>Bairro</label><input value={sfRemetente.bairro} onChange={set("bairro")} style={inp3} /></div>
-                  <div><label style={lbl3}>Cidade</label><input value={sfRemetente.cidade} onChange={set("cidade")} style={inp3} /></div>
-                  <div><label style={lbl3}>Estado (UF)</label><input value={sfRemetente.estado} onChange={set("estado")} maxLength={2} style={inp3} /></div>
-                </div>
-                <button onClick={() => { localStorage.setItem("sf_remetente", JSON.stringify(sfRemetente)); setSfRemetenteAberto(false); }} style={{ fontSize:11, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:6, padding:"7px 18px", cursor:"pointer", fontWeight:700 }}>
-                  Salvar dados →
-                </button>
-              </div>
-            );
-          })()}
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-            <button onClick={() => setSfRemetenteAberto(v => !v)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(100,181,246,.5)", border:"1px solid rgba(100,181,246,.18)", borderRadius:5, padding:"4px 10px", cursor:"pointer" }}>
-              ✏️ Remetente Superfrete
-            </button>
-          </div>
-
           {/* Pills de status */}
           {(() => {
             const statusConfig = [
@@ -10669,6 +10440,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               { key:"solicitação de envio",     label:"Solicitação",  color:"#BAFF39",               border:"rgba(186,255,57,.3)"   },
               { key:"cotação em andamento",     label:"Cotação",      color:"#FF5C1A",               border:"rgba(255,92,26,.3)"    },
               { key:"pagamento em aberto",      label:"Pgto. aberto", color:"#C9A8F0",               border:"rgba(201,168,240,.3)"  },
+              { key:"__comprovante__",          label:"Comprovante",  color:"#FFD166",               border:"rgba(255,209,102,.5)"  },
               { key:"pagamento confirmado",     label:"Pgto. conf.",  color:"#FFD166",               border:"rgba(255,209,102,.3)"  },
               { key:"embalando",                label:"Embalando",    color:"#64B5F6",               border:"rgba(100,181,246,.3)"  },
               { key:"enviado",                  label:"Enviado",      color:"rgba(245,240,232,.4)",  border:"rgba(245,240,232,.12)" },
@@ -10684,7 +10456,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {statusConfig.map(({ key, label, color, border }) => {
                   const base = buscaEnvio.trim() ? envioSolic.filter(e => { const q = buscaEnvio.toLowerCase(); return (e.joiner_nome||"").toLowerCase().includes(q) || (e.joiner_cog||"").toLowerCase().includes(q); }) : envioSolic;
-                  const count = key === "todos" ? base.length : base.filter(e => e.status === key).length;
+                  const count = key === "todos" ? base.length : key === "__comprovante__" ? base.filter(e => e.status === "pagamento em aberto" && e.comprovante_url).length : base.filter(e => e.status === key).length;
                   if (key !== "todos" && count === 0) return null;
                   const ativo = filtroEnvio === key;
                   return (
@@ -10716,7 +10488,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             const filtradosBusca = buscaQ
               ? envioSolic.filter(e => (e.joiner_nome||"").toLowerCase().includes(buscaQ) || (e.joiner_cog||"").toLowerCase().includes(buscaQ))
               : envioSolic;
-            const listaBase = filtroEnvio === "todos" ? filtradosBusca : filtradosBusca.filter(e => e.status === filtroEnvio);
+            const listaBase = filtroEnvio === "todos" ? filtradosBusca : filtroEnvio === "__comprovante__" ? filtradosBusca.filter(e => e.status === "pagamento em aberto" && e.comprovante_url) : filtradosBusca.filter(e => e.status === filtroEnvio);
             if (listaBase.length === 0) return <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:12, textAlign:"center", padding:"32px 0" }}>Nenhuma solicitação{filtroEnvio !== "todos" ? " neste status" : ""}{buscaQ ? ` para "${buscaEnvio}"` : ""}.</div>;
 
             const lista = listaBase;
@@ -10786,7 +10558,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 <div onClick={toggleExpand} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", cursor:"pointer", gap:10 }}>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:12, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>{s.joiner_nome}</div>
-                    <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>{s.joiner_cog} · {s.itens?.length || 0} item(s) · {s.metodo}</div>
+                    <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>
+                      {s.joiner_cog} · {s.itens?.length || 0} item(s) · {s.modalidade_escolhida ? <span style={{ color:"#C9A8F0", fontWeight:700 }}>{s.modalidade_escolhida.forma}</span> : s.metodo}
+                      {s.modalidade_escolhida && <span style={{ color:"rgba(245,240,232,.4)" }}> · R$ {s.modalidade_escolhida.valor} · {s.modalidade_escolhida.prazo}</span>}
+                    </div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                     <span style={{ fontSize:9, color:statusColor, border:`1px solid ${statusBorder}`, borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", whiteSpace:"nowrap" }}>{s.status}</span>
@@ -10799,12 +10574,58 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {expanded && <div style={{ padding:"0 16px 16px" }}>
                 {s.joiner_handle && <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:10, marginTop:2 }}>{s.joiner_handle}</div>}
 
-                {/* Endereço */}
-                <div style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", marginBottom:10, lineHeight:1.8, background:"rgba(245,240,232,.03)", borderRadius:6, padding:"10px 12px" }}>
-                  <strong style={{ color:"rgba(245,240,232,.7)" }}>Dest.:</strong> {s.destinatario} · CPF: {s.cpf}<br />
-                  {s.endereco}, {s.numero}{s.complemento ? ` (${s.complemento})` : ""} — {s.bairro}, {s.cidade}/{s.estado} · CEP {s.cep}<br />
-                  <strong style={{ color:"rgba(245,240,232,.7)" }}>Método:</strong> {s.metodo} · <strong style={{ color:"rgba(245,240,232,.7)" }}>Val. declarado:</strong> {s.seguro === "sim" ? `R$ ${s.valor_seguro}` : "—"}
-                </div>
+                {/* Endereço — linhas clicáveis para copiar */}
+                {(() => {
+                  const mono = "'DM Mono',monospace";
+                  const linhas = [
+                    { label:"Destinatário", val: s.destinatario },
+                    { label:"CPF",          val: s.cpf },
+                    { label:"CEP",          val: s.cep },
+                    { label:"Endereço",     val: s.endereco },
+                    { label:"Número",       val: s.numero },
+                    ...(s.complemento ? [{ label:"Complemento", val: s.complemento }] : []),
+                    { label:"Bairro",       val: s.bairro },
+                    { label:"Cidade/UF",    val: `${s.cidade}/${s.estado}` },
+                    { label:"Método",       val: s.metodo },
+                    ...(s.seguro === "sim" ? [{ label:"Val. declarado", val: `R$ ${s.valor_seguro}` }] : []),
+                  ];
+                  return (
+                    <div style={{ marginBottom:10, background:"rgba(245,240,232,.03)", borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.06)" }}>
+                      {linhas.map((l, i) => {
+                        const key = `${s.id}_${i}`;
+                        const copiado = copiadoEnvio === key;
+                        return (
+                          <div key={i} onClick={() => { navigator.clipboard.writeText(l.val); setCopiadoEnvio(key); setTimeout(() => setCopiadoEnvio(k => k===key ? null : k), 1500); }}
+                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 12px", cursor:"pointer", borderBottom: i < linhas.length-1 ? "1px solid rgba(245,240,232,.04)" : "none", background: copiado ? "rgba(186,255,57,.06)" : "transparent", transition:"background .15s" }}>
+                            <div style={{ display:"flex", gap:10, alignItems:"baseline", minWidth:0 }}>
+                              <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.28)", textTransform:"uppercase", letterSpacing:"0.8px", flexShrink:0, minWidth:70 }}>{l.label}</span>
+                              <span style={{ fontFamily:mono, fontSize:12, color: copiado ? "#BAFF39" : "rgba(245,240,232,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{l.val}</span>
+                            </div>
+                            <span style={{ fontFamily:mono, fontSize:9, color: copiado ? "#BAFF39" : "rgba(245,240,232,.18)", flexShrink:0, marginLeft:8 }}>{copiado ? "✓ copiado" : "copiar"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* Modalidade escolhida pelo joiner */}
+                {s.modalidade_escolhida && (
+                  <div style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(201,168,240,.07)", border:"1px solid rgba(201,168,240,.25)", borderRadius:8, padding:"10px 14px", marginBottom:12, flexWrap:"wrap" }}>
+                    <div style={{ fontFamily:"'DM Mono',monospace" }}>
+                      <div style={{ fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:3 }}>Modalidade escolhida pelo joiner</div>
+                      <div style={{ fontSize:14, fontWeight:900, color:"#C9A8F0" }}>{s.modalidade_escolhida.forma}</div>
+                    </div>
+                    <div style={{ fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
+                      <div style={{ fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:2 }}>Valor</div>
+                      <div style={{ fontSize:15, fontWeight:700, color:"#F5F0E8" }}>R$ {s.modalidade_escolhida.valor}{s.cotacao_embalagem ? <span style={{ fontSize:11, color:"rgba(245,240,232,.4)" }}> + emb. R$ {s.cotacao_embalagem}</span> : ""}</div>
+                    </div>
+                    <div style={{ fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
+                      <div style={{ fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:2 }}>Prazo</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"rgba(245,240,232,.7)" }}>{s.modalidade_escolhida.prazo}</div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Comprovante */}
                 {s.comprovante_url && (
@@ -10813,64 +10634,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
                   </div>
                 )}
-
-                {/* Cotação Superfrete */}
-                {["solicitação de envio","cotação em andamento"].includes(s.status) && (() => {
-                  const sf = sfCotas[s.id];
-                  return (
-                    <div style={{ marginBottom:12 }}>
-                      {!sf || (!sf.loading && !sf.resultados && !sf.erro) ? (
-                        <button onClick={() => buscarSuperfrete(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.07)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.22)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
-                          📦 Cotar via Superfrete
-                        </button>
-                      ) : sf.loading ? (
-                        <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>calculando fretes...</div>
-                      ) : sf.erro ? (
-                        <div style={{ fontSize:10, color:"#ff7875", fontFamily:"'DM Mono',monospace" }}>Erro: {sf.erro} · <span onClick={() => buscarSuperfrete(s)} style={{ cursor:"pointer", textDecoration:"underline" }}>tentar novamente</span></div>
-                      ) : (
-                        <div style={{ background:"rgba(100,181,246,.05)", border:"1px solid rgba(100,181,246,.18)", borderRadius:8, padding:"12px 14px" }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                            <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", color:"rgba(100,181,246,.7)", textTransform:"uppercase" }}>Cotação Superfrete · sandbox</span>
-                            <button onClick={() => setSfCotas(prev => ({ ...prev, [s.id]: null }))} style={{ background:"transparent", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:12, padding:0 }}>✕</button>
-                          </div>
-                          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-                            {sf.resultados.map(srv => {
-                              const preco = Number(srv.price) || 0;
-                              const desconto = Number(srv.discount) || 0;
-                              const original = desconto < 0 ? (preco - desconto).toFixed(2).replace(".",",") : null;
-                              const precoFmt = preco.toFixed(2).replace(".",",");
-                              const prazo = srv.delivery_time ? `${srv.delivery_time} dia(s) útil(eis)` : (srv.delivery_range?.min ? `${srv.delivery_range.min}–${srv.delivery_range.max} dias` : "—");
-                              return (
-                                <div key={srv.id} style={{ background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:7, padding:"10px 14px", minWidth:120, flex:"1 1 120px" }}>
-                                  <div style={{ fontSize:11, fontWeight:700, color:"#64B5F6", fontFamily:"'DM Mono',monospace", marginBottom:2 }}>{srv.name || srv.company?.name}</div>
-                                  <div style={{ fontSize:15, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R$ {precoFmt}</div>
-                                  {original && <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textDecoration:"line-through" }}>R$ {original}</div>}
-                                  <div style={{ fontSize:10, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", marginTop:3 }}>{prazo}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <button onClick={() => {
-                            const opcoes = sf.resultados.map(srv => {
-                              const preco = Number(srv.price) || 0;
-                              const desconto = Number(srv.discount) || 0;
-                              const original = desconto < 0 ? (preco - desconto).toFixed(2).replace(".",",") : null;
-                              const precoFmt = preco.toFixed(2).replace(".",",");
-                              const prazo = srv.delivery_time ? `${srv.delivery_time} dia(s) útil(eis)` : (srv.delivery_range?.min ? `${srv.delivery_range.min}–${srv.delivery_range.max} dias` : "—");
-                              return { forma: srv.name || srv.company?.name, valor: precoFmt.replace(",","."), valor_original: original ? original.replace(",",".") : "", prazo };
-                            });
-                            setCotacaoAberta(s.id);
-                            setCotacaoOpcoes(opcoes);
-                            setCotacaoEmbalagem("");
-                            setCotacaoObs("");
-                          }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:5, padding:"7px 16px", cursor:"pointer", fontWeight:700, width:"100%" }}>
-                            Usar todas no form →
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
 
                 {/* Itens */}
                 {s.itens?.length > 0 && (() => {
@@ -10896,6 +10659,18 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   </div>
                   );
                 })()}
+
+                {/* Storage selecionado (quando itens está vazio) */}
+                {(!s.itens || s.itens.length === 0) && s.storage_selecionados?.length > 0 && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:10, letterSpacing:"1px", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:6 }}>Itens marcados (storage)</div>
+                    {s.storage_selecionados.map((it, idx) => (
+                      <div key={idx} style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", padding:"5px 0", borderBottom:"1px solid rgba(245,240,232,.05)", whiteSpace:"pre-wrap", lineHeight:1.5 }}>
+                        {it.descricao || <span style={{ color:"rgba(245,240,232,.2)" }}>sem descrição</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Cotação recebida */}
                 {s.cotacao_valor && (
@@ -11029,26 +10804,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       📦 Embalando
                     </button>
                   )}
-                  {["pagamento confirmado","embalando"].includes(s.status) && (() => {
-                    const sf = sfEtiqueta[s.id];
-                    if (sf?.url) return (
-                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
-                        <a href={sf.url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.15)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.35)", borderRadius:5, padding:"6px 14px", cursor:"pointer", fontWeight:700, textDecoration:"none" }}>
-                          🏷️ Baixar etiqueta PDF
-                        </a>
-                        {sf.tracking && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.4)" }}>rastreio: {sf.tracking}</span>}
-                      </div>
-                    );
-                    if (sf?.loading) return <div style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>gerando etiqueta...</div>;
-                    return (
-                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
-                        <button onClick={() => criarEtiquetaSuperfrete(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.07)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.22)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
-                          🏷️ Gerar Etiqueta Superfrete
-                        </button>
-                        {sf?.erro && <span style={{ fontSize:9, color:"#ff7875", fontFamily:"'DM Mono',monospace" }}>Erro: {sf.erro}</span>}
-                      </div>
-                    );
-                  })()}
                   {s.status === "pagamento em aberto" && (
                     <button onClick={() => cancelarCotacao(s)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                       Cancelar cotação
@@ -11059,6 +10814,15 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       Cancelar solicitação
                     </button>
                   )}
+                  <button onClick={async () => {
+                    const prev = storagePreview[s.id];
+                    if (prev) { setStoragePreview(p => { const n={...p}; delete n[s.id]; return n; }); return; }
+                    setStoragePreview(p => ({ ...p, [s.id]: { loading: true, itens: [] } }));
+                    const { data } = await supabase.from("joiner_storage").select("*").eq("joiner_cog", s.joiner_cog).eq("ativo", true).order("created_at", { ascending: false });
+                    setStoragePreview(p => ({ ...p, [s.id]: { loading: false, itens: data || [] } }));
+                  }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
+                    {storagePreview[s.id] ? "✕ Fechar storage" : "◧ Visualizar storage"}
+                  </button>
                   {["cancelado","enviado"].includes(s.status) && (
                     <button onClick={async () => {
                       await supabase.from("envio_solicitacoes").update({
@@ -11080,6 +10844,36 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     </button>
                   )}
                 </div>
+
+                {/* Galeria storage */}
+                {storagePreview[s.id] && (
+                  <div style={{ marginTop:12, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"12px 14px" }}>
+                    <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>
+                      ◧ Storage · @{s.joiner_cog}
+                    </div>
+                    {storagePreview[s.id].loading ? (
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>carregando...</div>
+                    ) : storagePreview[s.id].itens.length === 0 ? (
+                      <div style={{ fontSize:11, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum item ativo no storage.</div>
+                    ) : (
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))", gap:8 }}>
+                        {storagePreview[s.id].itens.map(it => (
+                          <div key={it.id} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:7, overflow:"hidden" }}>
+                            {it.foto_url
+                              ? <img src={it.foto_url} alt="" style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
+                              : <div style={{ width:"100%", aspectRatio:"1/1", background:"rgba(245,240,232,.06)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>📦</div>
+                            }
+                            {it.descricao && (
+                              <div style={{ padding:"5px 7px", fontSize:10, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.4, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
+                                {it.descricao}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Push manual */}
                 <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid rgba(245,240,232,.06)" }}>
@@ -11123,92 +10917,6 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             );
           });
           })()}
-        </div>
-      )}
-
-      {/* ── SUPERFRETE: PEDIDOS + RASTREIO ── */}
-      {adminMainTab === "envios" && (
-        <div style={{ marginTop:24 }}>
-          <button onClick={() => { setSfPedidosAberto(v => !v); if (!sfPedidosAberto) buscarPedidosSuperfrete(); }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.07)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.22)", borderRadius:6, padding:"7px 16px", cursor:"pointer", marginBottom:12 }}>
-            {sfPedidosAberto ? "▲" : "▼"} Pedidos Superfrete · Rastreio
-          </button>
-
-          {sfPedidosAberto && (
-            <div style={{ background:"rgba(100,181,246,.04)", border:"1px solid rgba(100,181,246,.15)", borderRadius:10, padding:"16px" }}>
-
-              {/* Rastreio por código */}
-              <div style={{ marginBottom:16 }}>
-                <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(100,181,246,.7)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:8 }}>Rastrear código</div>
-                <div style={{ display:"flex", gap:8 }}>
-                  <input
-                    value={sfRastreioInput}
-                    onChange={e => setSfRastreioInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && sfRastreioInput.trim() && rastrearCodigoSuperfrete(sfRastreioInput.trim())}
-                    placeholder="ex: AA123456789BR"
-                    style={{ flex:1, background:"#0d0d0d", border:"1px solid rgba(100,181,246,.22)", borderRadius:5, padding:"7px 12px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none" }}
-                  />
-                  <button onClick={() => sfRastreioInput.trim() && rastrearCodigoSuperfrete(sfRastreioInput.trim())} disabled={sfRastreioLoading} style={{ padding:"7px 16px", background:"rgba(100,181,246,.12)", color:"#64B5F6", border:"1px solid rgba(100,181,246,.3)", borderRadius:5, fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700, whiteSpace:"nowrap" }}>
-                    {sfRastreioLoading ? "..." : "Rastrear →"}
-                  </button>
-                </div>
-                {sfRastreioRes && (
-                  <div style={{ marginTop:10, background:"rgba(0,0,0,.3)", border:"1px solid rgba(100,181,246,.2)", borderRadius:7, padding:"12px 14px", fontFamily:"'DM Mono',monospace", fontSize:11 }}>
-                    {sfRastreioRes.erro ? (
-                      <span style={{ color:"#ff7875" }}>Erro: {sfRastreioRes.erro}</span>
-                    ) : (
-                      <>
-                        <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:8 }}>
-                          <span style={{ color:"#64B5F6", fontWeight:700 }}>{sfRastreioRes.service?.name || sfRastreioRes.service_id || "—"}</span>
-                          <span style={{ color:"rgba(245,240,232,.5)" }}>#{sfRastreioRes.tracking || sfRastreioRes.protocol || sfRastreioRes.tracking_number || "—"}</span>
-                          <span style={{ color:"#BAFF39", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, padding:"1px 8px", fontSize:9 }}>{sfRastreioRes.status || "—"}</span>
-                        </div>
-                        <div style={{ color:"rgba(245,240,232,.4)", fontSize:10 }}>
-                          Para: {sfRastreioRes.to?.name || "—"} · {sfRastreioRes.to?.city || "—"}/{sfRastreioRes.to?.state_abbr || "—"}
-                        </div>
-                        {sfRastreioRes.tracking_url && (
-                          <a href={sfRastreioRes.tracking_url} target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:8, fontSize:10, color:"#64B5F6", textDecoration:"underline" }}>
-                            🔍 Ver rastreio completo →
-                          </a>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Lista de pedidos */}
-              <div>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                  <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(100,181,246,.7)", letterSpacing:"1px", textTransform:"uppercase" }}>Pedidos criados ({sfPedidos.length})</div>
-                  <button onClick={buscarPedidosSuperfrete} disabled={sfPedidosLoading} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(100,181,246,.5)", border:"1px solid rgba(100,181,246,.18)", borderRadius:4, padding:"3px 10px", cursor:"pointer" }}>
-                    {sfPedidosLoading ? "..." : "↻ Atualizar"}
-                  </button>
-                </div>
-                {sfPedidosLoading ? (
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>carregando...</div>
-                ) : sfPedidos.length === 0 ? (
-                  <div style={{ fontSize:10, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>Nenhum pedido encontrado no sandbox.</div>
-                ) : (
-                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    {sfPedidos.map(p => (
-                      <div key={p.id} style={{ background:"rgba(0,0,0,.25)", border:"1px solid rgba(100,181,246,.12)", borderRadius:7, padding:"10px 14px", fontFamily:"'DM Mono',monospace", display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:"#64B5F6", minWidth:60 }}>{p.service?.name || p.service_id || "—"}</span>
-                        <span style={{ fontSize:10, color:"rgba(245,240,232,.5)", flex:1 }}>{p.to?.name || "—"} · {p.to?.city || "—"}/{p.to?.state_abbr || "—"}</span>
-                        <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>{p.tracking || p.protocol || p.tracking_number || "sem rastreio"}</span>
-                        <span style={{ fontSize:9, color:"#BAFF39", background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.18)", borderRadius:4, padding:"2px 8px", whiteSpace:"nowrap" }}>{p.status || "—"}</span>
-                        {p.print && (
-                          <a href={p.print} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", border:"1px solid rgba(100,181,246,.25)", borderRadius:4, padding:"2px 8px", textDecoration:"none", whiteSpace:"nowrap" }}>
-                            🏷️ etiqueta
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
         </div>
       )}
 
@@ -11602,7 +11310,7 @@ function WhatsappCegsBlock() {
           return (
             <div key={ceg} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:"var(--card-bg)", border:`1px solid ${atual ? "rgba(37,211,102,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:8 }}>
               <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color: atual ? "#25D366" : "rgba(245,240,232,.55)", minWidth:160, flexShrink:0 }}>
-                {atual ? "●" : "○"} {ceg}
+                {atual ? "◁" : "○"} {ceg}
               </div>
               <input
                 value={draft}
@@ -11928,7 +11636,7 @@ function MercariTab() {
             {!joiner && (
               <div className="mc-pedidos-login">
                 <p>Identifique-se na aba <strong>Fazer Pedido</strong> para ver seus pedidos.</p>
-                <button className="mc-btn-sec" style={{maxWidth:260,margin:'0 auto',display:'block'}} onClick={()=>setItab('pedido')}>← Ir para Fazer Pedido</button>
+                <button className="mc-btn-sec" style={{maxWidth:260,margin:'0 auto',display:'block'}} onClick={()=>setItab('pedido')}>ↁ Ir para Fazer Pedido</button>
               </div>
             )}
             {joiner && pedLoad && <div className="mc-pedidos-loading">Carregando pedidos...</div>}
@@ -11993,7 +11701,7 @@ function MercariTab() {
                 value={idInp} onChange={e=>onId(e.target.value)}
                 onBlur={buscar} onKeyDown={e=>e.key==='Enter'&&buscar()}
               />
-              <span className="mc-id-status">{idSt==='loading'?'⏳':idSt==='found'?'✓':''}</span>
+              <span className="mc-id-status">{idSt==='loading'?'⁳':idSt==='found'?'✓':''}</span>
             </div>
             <div className={`mc-id-info${idSt==='notfound'?' err':''}`}>{idMsg}</div>
 
@@ -12077,7 +11785,7 @@ function MercariTab() {
             </div>
 
             <button className="mc-btn-sem-comp" onClick={()=>{const ns=!semComp;setSemComp(ns);if(ns){setFileComp(null);if(fileRef.current)fileRef.current.value='';}}}>
-              {semComp?'← Voltar a anexar arquivo':'Não consigo anexar o comprovante →'}
+              {semComp?'ↁ Voltar a anexar arquivo':'Não consigo anexar o comprovante →'}
             </button>
 
             {semComp&&(
@@ -12404,9 +12112,39 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
   );
 }
 
-function AdminPagamentos({ data, joiners, subtab }) {
+function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
   const [open, setOpen] = useState(null);
   const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [saving, setSaving] = useState({});
+
+  async function marcarPago(itemId, tipo) {
+    const key = `${itemId}_${tipo}`;
+    setSaving(prev => ({ ...prev, [key]: true }));
+    const campo = tipo === "item" ? "pago_item" : tipo === "frete" ? "pago_frete" : "pago_rf";
+    await supabase.from("masterlist").update({ [campo]: true }).eq("id", itemId);
+    onUpdate?.(prev => (prev || []).map(i => i.id === itemId ? { ...i, [campo]: true } : i));
+    setSaving(prev => { const n = { ...prev }; delete n[key]; return n; });
+  }
+
+  async function marcarTudoPago(joinerCog, itens) {
+    for (const it of itens) {
+      const updates = {};
+      if (isPendente(it.pago_item)  && Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
+      if (isPendente(it.pago_frete) && Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
+      if (isPendente(it.pago_rf)    && Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
+      if (Object.keys(updates).length > 0)
+        await supabase.from("masterlist").update(updates).eq("id", it.id);
+    }
+    onUpdate?.(prev => (prev || []).map(i => {
+      if (i.cog !== joinerCog) return i;
+      const updates = {};
+      if (isPendente(i.pago_item)  && Number(i.valor_item  || 0) > 0) updates.pago_item  = true;
+      if (isPendente(i.pago_frete) && Number(i.frete_inter || 0) > 0) updates.pago_frete = true;
+      if (isPendente(i.pago_rf)    && Number(i.taxa_rf     || 0) > 0) updates.pago_rf    = true;
+      return Object.keys(updates).length > 0 ? { ...i, ...updates } : i;
+    }));
+    setOpen(null);
+  }
 
   const cogValidos = new Set((joiners || []).map(j => j.cog));
 
@@ -12516,6 +12254,18 @@ function AdminPagamentos({ data, joiners, subtab }) {
 
                   const temMulta = itensFiltrados.some(i => i.multa > 0);
 
+                  const btnPago = (itemId, tipo, val) => {
+                    if (val <= 0) return null;
+                    const key = `${itemId}_${tipo}`;
+                    const isSaving = !!saving[key];
+                    return (
+                      <button key={tipo} onClick={e => { e.stopPropagation(); marcarPago(itemId, tipo); }} disabled={isSaving}
+                        style={{ fontSize:9, padding:"2px 7px", borderRadius:4, border:"1px solid rgba(186,255,57,.25)", background:"rgba(186,255,57,.07)", color:"#BAFF39", cursor: isSaving ? "default" : "pointer", fontFamily:"'DM Mono',monospace", whiteSpace:"nowrap", letterSpacing:".02em" }}>
+                        {isSaving ? "..." : `✓ ${tipo}`}
+                      </button>
+                    );
+                  };
+
                   return (
                     <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
                       <colgroup>
@@ -12525,6 +12275,7 @@ function AdminPagamentos({ data, joiners, subtab }) {
                         {mostraRf    && <col style={{ width:46 }} />}
                         {temMulta    && <col style={{ width:62 }} />}
                         <col style={{ width:72 }} />
+                        <col style={{ width:90 }} />
                       </colgroup>
                       <thead>
                         <tr>
@@ -12534,6 +12285,7 @@ function AdminPagamentos({ data, joiners, subtab }) {
                           {mostraRf    && <th style={thS}>RF</th>}
                           {temMulta    && <th style={{ ...thS, color:"rgba(255,107,107,.45)" }}>Multa</th>}
                           <th style={thS}>Total</th>
+                          <th style={thS}></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -12557,6 +12309,13 @@ function AdminPagamentos({ data, joiners, subtab }) {
                               {mostraRf    && <td style={tdS}>{vRf    > 0 ? fmt(vRf)    : dash}</td>}
                               {temMulta    && <td style={{ ...tdS, color: vMulta > 0 ? "rgba(255,107,107,.8)" : undefined }}>{vMulta > 0 ? fmt(vMulta) : dash}</td>}
                               <td style={{ ...tdS, color: vMulta > 0 ? "#ff6b6b" : "#BAFF39", fontWeight:700 }}>{fmt(total)}</td>
+                              <td style={{ ...tdS, textAlign:"right" }}>
+                                <div style={{ display:"flex", gap:3, justifyContent:"flex-end", flexWrap:"wrap" }}>
+                                  {mostraItem  && btnPago(item.id, "item",  vItem)}
+                                  {mostraFrete && btnPago(item.id, "frete", vFrete)}
+                                  {mostraRf    && btnPago(item.id, "rf",    vRf)}
+                                </div>
+                              </td>
                             </tr>
                           );
                         })}
@@ -12586,17 +12345,25 @@ function AdminPagamentos({ data, joiners, subtab }) {
                 })()}
                 {(() => {
                   const joinerInfo = (joiners || []).find(jn => jn.cog === j.cog);
-                  if (!joinerInfo?.email) return null;
                   const itemRowsInd = j.itens.map(it => `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`).join("");
-                  const corpo = buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(total)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table></td></tr>`);
+                  const corpo = joinerInfo?.email ? buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(total)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table></td></tr>`) : null;
                   return (
-                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8 }}>
-                      <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
-                        background:"none", border:"1px solid rgba(245,240,232,.12)",
-                        color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
-                        fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
-                      }}>✉ Notificar por e-mail</button>
-                      <EmailTypeBadge type="pagamento" />
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
+                      <button onClick={e => { e.stopPropagation(); if (window.confirm(`Marcar TODOS os pagamentos pendentes de ${j.nome || j.cog} como pagos?`)) marcarTudoPago(j.cog, j.itens); }} style={{
+                        background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)",
+                        color:"#BAFF39", borderRadius:6, padding:"5px 14px",
+                        fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700, letterSpacing:".05em"
+                      }}>✓ Marcar tudo pago</button>
+                      {joinerInfo?.email && (
+                        <>
+                          <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
+                            background:"none", border:"1px solid rgba(245,240,232,.12)",
+                            color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
+                            fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
+                          }}>✉ Notificar por e-mail</button>
+                          <EmailTypeBadge type="pagamento" />
+                        </>
+                      )}
                     </div>
                   );
                 })()}
@@ -12754,7 +12521,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{item.ceg}</span>
           {item.na_loja
-            ? <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ffb400", background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.3)", borderRadius:4, padding:"2px 7px", letterSpacing:"1px" }}>VISÍVEL</span>
+            ? <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"#ffb400", background:"rgba(255,180,0,.1)", border:"1px solid rgba(255,180,0,.3)", borderRadius:4, padding:"2px 7px", letterSpacing:"1px" }}>VISÁVEL</span>
             : null}
           <StatusChip status={item.status} />
         </div>
@@ -12815,7 +12582,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     <div>
       {/* sub-tabs */}
       <div style={{ display:"flex", gap:6, marginBottom:16 }}>
-        {[["disponiveis","DISPONÍVEIS CEG"],["adicionar","ADICIONAR MANUAL"]].map(([v,l]) => (
+        {[["disponiveis","DISPONÁVEIS CEG"],["adicionar","ADICIONAR MANUAL"]].map(([v,l]) => (
           <button key={v} onClick={() => setLojaTab(v)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", padding:"5px 14px", borderRadius:20, cursor:"pointer", fontWeight: lojaTab===v ? 700 : 400, border: lojaTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: lojaTab===v ? "rgba(255,92,26,.12)" : "transparent", color: lojaTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
             {l}
           </button>
@@ -12973,6 +12740,26 @@ function DisponiveisTab({ user }) {
   const [meusClaims, setMeusClaims] = useState([]);
   const [vendidos, setVendidos] = useState([]);
   const [subTab, setSubTab] = useState("loja");
+  const [filtroMembro, setFiltroMembro] = useState(null);
+  const [filtroCategoria, setFiltroCategoria] = useState(null);
+  const [isBloqueada, setIsBloqueada] = useState(false);
+
+  const SKZ_MEMBROS = ["Changbin","Bang Chan","Lee Know","Hyunjin","Seungmin","Jeongin","Jisung","Minho","Felix","Chan","Han","I.N"];
+  function extrairMembro(nome) {
+    const lc = nome.toLowerCase();
+    for (const m of SKZ_MEMBROS) {
+      if (lc.includes(m.toLowerCase())) return m === "Jeongin" ? "I.N" : m === "Jisung" ? "Han" : m === "Minho" ? "Lee Know" : m === "Chan" ? "Bang Chan" : m;
+    }
+    return null;
+  }
+  function extrairCategoria(nome) {
+    const prefixos = ["Photocard","Polaroid","Poster","Album","Fankit","Fan Kit","Revista","Photobook","Photoset","Keyring","Acrylic","Standee","Deco Kit","Season's Greeting","Seasons Greeting"];
+    const lc = nome.toLowerCase();
+    for (const p of prefixos) {
+      if (lc.startsWith(p.toLowerCase())) return p.replace("Fan Kit","Fankit").replace("Season's Greeting","Seasons Greeting");
+    }
+    return "Outros";
+  }
 
   useEffect(() => {
     if (confirmando) {
@@ -12995,6 +12782,8 @@ function DisponiveisTab({ user }) {
   }, [confirmando]);
 
   function carregarItens() {
+    supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle()
+      .then(({ data }) => { if (data) setIsBloqueada(!!data.bloqueado); });
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
       .or("nome.ilike.disponivel,nome.ilike.disponível").eq("na_loja", true)
@@ -13031,6 +12820,7 @@ function DisponiveisTab({ user }) {
   }, []);
 
   async function darClaim(item) {
+    if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso. Regularize para fazer claims."); return; }
     setClaiming(item.id); setClaimErro(null);
     const { data: inserted, error } = await supabase.from("claims").insert([{
       joiner_cog: user.cog,
@@ -13079,7 +12869,14 @@ function DisponiveisTab({ user }) {
 
   const total = (item) => Number(item.valor_item||0) + Number(item.frete_inter||0) + Number(item.taxa_rf||0);
   const cegs = itens ? [...new Set(itens.map(i => i.ceg))].sort() : [];
-  const itensFiltrados = itens ? (filtroCeg ? itens.filter(i => i.ceg === filtroCeg) : itens) : null;
+  const membros = itens ? [...new Set(itens.map(i => extrairMembro(i.nome_do_item)).filter(Boolean))].sort() : [];
+  const categorias = itens ? [...new Set(itens.map(i => extrairCategoria(i.nome_do_item)))].sort() : [];
+  const itensFiltrados = itens ? itens.filter(i => {
+    if (filtroCeg && i.ceg !== filtroCeg) return false;
+    if (filtroMembro && extrairMembro(i.nome_do_item) !== filtroMembro) return false;
+    if (filtroCategoria && extrairCategoria(i.nome_do_item) !== filtroCategoria) return false;
+    return true;
+  }) : null;
 
   const claimsAtivos    = meusClaims.filter(c => c.status !== "rejeitado");
   const claimsHistorico = meusClaims;
@@ -13163,6 +12960,34 @@ function DisponiveisTab({ user }) {
         </div>
       )}
 
+      {subTab === "loja" && membros.length > 1 && (
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
+          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1px", alignSelf:"center", marginRight:2 }}>membro</span>
+          <button onClick={() => setFiltroMembro(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroMembro ? "1px solid var(--verde)" : "1px solid rgba(245,240,232,.12)", background: !filtroMembro ? "rgba(186,255,57,.1)" : "transparent", color: !filtroMembro ? "var(--verde)" : "rgba(245,240,232,.4)", fontWeight: !filtroMembro ? 700 : 400 }}>
+            Todos
+          </button>
+          {membros.map(m => (
+            <button key={m} onClick={() => setFiltroMembro(m === filtroMembro ? null : m)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: filtroMembro === m ? "1px solid var(--verde)" : "1px solid rgba(245,240,232,.12)", background: filtroMembro === m ? "rgba(186,255,57,.1)" : "transparent", color: filtroMembro === m ? "var(--verde)" : "rgba(245,240,232,.4)", fontWeight: filtroMembro === m ? 700 : 400 }}>
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {subTab === "loja" && categorias.length > 1 && (
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1px", alignSelf:"center", marginRight:2 }}>tipo</span>
+          <button onClick={() => setFiltroCategoria(null)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: !filtroCategoria ? "1px solid rgba(255,180,0,.7)" : "1px solid rgba(245,240,232,.12)", background: !filtroCategoria ? "rgba(255,180,0,.1)" : "transparent", color: !filtroCategoria ? "#ffb400" : "rgba(245,240,232,.4)", fontWeight: !filtroCategoria ? 700 : 400 }}>
+            Todos
+          </button>
+          {categorias.map(cat => (
+            <button key={cat} onClick={() => setFiltroCategoria(cat === filtroCategoria ? null : cat)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: filtroCategoria === cat ? "1px solid rgba(255,180,0,.7)" : "1px solid rgba(245,240,232,.12)", background: filtroCategoria === cat ? "rgba(255,180,0,.1)" : "transparent", color: filtroCategoria === cat ? "#ffb400" : "rgba(245,240,232,.4)", fontWeight: filtroCategoria === cat ? 700 : 400 }}>
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
       {subTab === "loja" && claimOk && (
         <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--verde)" }}>
           ✓ Pedido enviado! <strong>{claimOk.nome_do_item}</strong> aguarda aprovação da admin.
@@ -13197,6 +13022,16 @@ function DisponiveisTab({ user }) {
       {subTab === "loja" && claimErro && (
         <div style={{ background:"rgba(255,90,31,.08)", border:"1px solid rgba(255,90,31,.3)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:"'DM Mono',monospace", fontSize:12, color:"var(--laranja)" }}>
           {claimErro}
+        </div>
+      )}
+
+      {subTab === "loja" && isBloqueada && (
+        <div style={{ background:"rgba(255,90,31,.08)", border:"1px solid rgba(255,90,31,.3)", borderRadius:10, padding:"14px 18px", marginBottom:16, display:"flex", gap:12, alignItems:"flex-start" }}>
+          <span style={{ fontSize:18, lineHeight:1 }}>⚠</span>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>conta bloqueada</div>
+            <div style={{ fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.6 }}>Você possui pagamentos em atraso e está temporariamente bloqueada de fazer claims. Regularize sua situação para voltar a participar.</div>
+          </div>
         </div>
       )}
 
@@ -13355,9 +13190,9 @@ function DisponiveisTab({ user }) {
                     style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:12, padding:"14px", fontFamily:"'DM Mono',monospace", fontSize:12, cursor:"pointer" }}>
                     Cancelar
                   </button>
-                  <button onClick={() => darClaim(item)} disabled={claiming === item.id || !claimVenc}
-                    style={{ background: !claimVenc ? "rgba(255,180,0,.05)" : "rgba(255,180,0,.13)", border:`1px solid ${!claimVenc ? "rgba(255,180,0,.15)" : "rgba(255,180,0,.4)"}`, color: !claimVenc ? "rgba(255,180,0,.4)" : "#ffb400", borderRadius:12, padding:"14px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor: !claimVenc ? "default" : "pointer", letterSpacing:.5, transition:"all .15s" }}>
-                    {claiming === item.id ? "enviando..." : "✓ Confirmar claim"}
+                  <button onClick={() => darClaim(item)} disabled={claiming === item.id || !claimVenc || isBloqueada}
+                    style={{ background: (isBloqueada || !claimVenc) ? "rgba(255,180,0,.05)" : "rgba(255,180,0,.13)", border:`1px solid ${(isBloqueada || !claimVenc) ? "rgba(255,180,0,.15)" : "rgba(255,180,0,.4)"}`, color: (isBloqueada || !claimVenc) ? "rgba(255,180,0,.4)" : "#ffb400", borderRadius:12, padding:"14px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700, cursor: (isBloqueada || !claimVenc) ? "default" : "pointer", letterSpacing:.5, transition:"all .15s" }}>
+                    {claiming === item.id ? "enviando..." : isBloqueada ? "conta bloqueada" : "✓ Confirmar claim"}
                   </button>
                 </div>
               </div>
@@ -13613,7 +13448,7 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
         <div className="page-header">
           <div>
             <div className="page-eyebrow">
-              <a href="/" style={{ background: "none", border: "none", color: "rgba(245,240,232,.62)", fontFamily: "'DM Mono',monospace", fontSize: "var(--fs-xs)", cursor: "pointer", padding: 0, letterSpacing: 1, textDecoration: "none" }}>← voltar</a>
+              <a href="/" style={{ background: "none", border: "none", color: "rgba(245,240,232,.62)", fontFamily: "'DM Mono',monospace", fontSize: "var(--fs-xs)", cursor: "pointer", padding: 0, letterSpacing: 1, textDecoration: "none" }}>ↁ voltar</a>
             </div>
             {logoUrl
               ? <img src={logoUrl} alt={ceg} style={{ height: 64, maxWidth: 320, objectFit: "contain", objectPosition: "left", marginTop: 8, filter: "invert(1)" }} />
@@ -14542,6 +14377,417 @@ const TSK_SEED = {
       { item:"Making video QR ticket", preco:"" },{ item:"Key ring", preco:"" },
     ]},
   ],
+  "fankits": [
+    { categoria:"0th Generation", ordem_cat:0, itens:[
+      { item:"Photocard", preco:"R$60" },
+      { item:"Polaroid", preco:"R$40" },
+    ]},
+    { categoria:"2nd FANKIT", ordem_cat:1, itens:[
+      { item:"Set Membro", preco:"R$65" },
+      { item:"Photocard (valor unitário)", preco:"R$23" },
+      { item:"Postcard", preco:"R$5 - 10" },
+      { item:"ID", preco:"R$10" },
+    ]},
+    { categoria:"3nd FANKIT", ordem_cat:2, itens:[
+      { item:"Set Membro (pc fankit + pc skz replay)", preco:"R$65" },
+      { item:"Photocard (valor unitário)", preco:"R$28" },
+      { item:"ID", preco:"R$10" },
+    ]},
+    { categoria:"4nd FANKIT", ordem_cat:3, itens:[
+      { item:"Set Membro (pc + id + postcard + unit + sticker)", preco:"R$55" },
+      { item:"Set Membro (pc + id + postcard + sticker)", preco:"R$45" },
+      { item:"Photocard (valor unitário)", preco:"R$20" },
+      { item:"Photocard Unit", preco:"R$15" },
+      { item:"Postcard (valor unitário)", preco:"R$10" },
+      { item:"Postcard (SET)", preco:"R$40" },
+      { item:"ID", preco:"R$5" },
+      { item:"Sticker Set", preco:"R$10" },
+      { item:"Bracelete", preco:"R$30" },
+      { item:"Photobook", preco:"R$20" },
+      { item:"Carteira", preco:"R$40" },
+      { item:"Chaveiro Cupcake", preco:"R$40" },
+    ]},
+  ],
+  "photocards-coreanos": [
+    { categoria:"Mixtape", ordem_cat:0, itens:[
+      { item:"Regulares", preco:"R$35" },
+      { item:"Postcards", preco:"R$5 - 10" },
+    ]},
+    { categoria:"I Am Not", ordem_cat:1, itens:[
+      { item:"Regular", preco:"R$30" },
+      { item:"Baby", preco:"R$38 - 45" },
+      { item:"Units (sem o W*)", preco:"R$30" },
+      { item:"Units (com o W*)", preco:"R$10 - 15" },
+      { item:"Poster (dobrado)", preco:"R$15" },
+      { item:"Postcards", preco:"R$5 - 10" },
+    ]},
+    { categoria:"I Am Who", ordem_cat:2, itens:[
+      { item:"Bordas", preco:"R$35" },
+      { item:"Concept", preco:"R$25" },
+      { item:"Self Portrait", preco:"R$10 - 15" },
+      { item:"Postcards", preco:"R$5 - 10" },
+      { item:"Poster (dobrado)", preco:"R$15" },
+    ]},
+    { categoria:"I Am You", ordem_cat:3, itens:[
+      { item:"Regulares", preco:"R$35" },
+      { item:"Units (sem o W*)", preco:"R$30" },
+      { item:"Units (com o W*)", preco:"R$15" },
+      { item:"Polaroid", preco:"R$25" },
+      { item:"Postcards", preco:"R$5 - 10" },
+      { item:"POB I Am You", preco:"R$140 - 200" },
+    ]},
+    { categoria:"Clé: Miroh | Yellow Wood | Levanter", ordem_cat:4, itens:[
+      { item:"Regulares", preco:"R$25 - 28" },
+      { item:"Sticker Miroh", preco:"R$25" },
+      { item:"YW Limited", preco:"R$40" },
+      { item:"Miroh Limited", preco:"R$140 - 200" },
+      { item:"Lenticular", preco:"R$140 - 200" },
+      { item:"Poster (dobrado)", preco:"R$20" },
+    ]},
+    { categoria:"Go Live", ordem_cat:5, itens:[
+      { item:"Regulares", preco:"R$35" },
+      { item:"Go Limited", preco:"R$140 - 200" },
+      { item:"Stripfilm", preco:"R$15" },
+      { item:"Mini Standee", preco:"R$25" },
+      { item:"Polaroid (pob)", preco:"R$35 - 40" },
+      { item:"Poster (dobrado)", preco:"R$20" },
+    ]},
+    { categoria:"In Life", ordem_cat:6, itens:[
+      { item:"Regulares", preco:"R$35" },
+      { item:"Mini Photobook", preco:"R$30" },
+      { item:"Enfeite de Porta", preco:"R$10" },
+      { item:"Postcard Unit", preco:"R$5 - 10" },
+      { item:"Portinha (pob)", preco:"R$40" },
+      { item:"Units", preco:"R$28" },
+      { item:"Poster (dobrado)", preco:"R$20" },
+    ]},
+    { categoria:"Noeasy", ordem_cat:7, itens:[
+      { item:"Regulares", preco:"R$28" },
+      { item:"Regulares DS", preco:"R$30" },
+      { item:"Frame Album/Jewel", preco:"R$15" },
+      { item:"Florzinha (Limited)", preco:"R$8 - 12" },
+      { item:"Set Florzinha (OT8)", preco:"R$45" },
+      { item:"Photocard Jewel Case", preco:"R$35" },
+      { item:"Mini Photobook", preco:"R$30" },
+      { item:"Mini Photobook (Membro)", preco:"R$9" },
+      { item:"Poster (Dobrado)", preco:"R$20" },
+    ]},
+    { categoria:"Christmas EveL", ordem_cat:8, itens:[
+      { item:"Regulares", preco:"R$25 - 28" },
+      { item:"Regular Glitter", preco:"R$20" },
+      { item:"Photocard POB", preco:"R$5 - 8" },
+      { item:"Set OT8 (POB)", preco:"R$45" },
+      { item:"Christmas Seal (Lim.)", preco:"R$20" },
+      { item:"Christ. Postcard (Lim.)", preco:"R$15" },
+      { item:"Poster (dobrado)", preco:"R$15" },
+    ]},
+    { categoria:"Oddinary", ordem_cat:9, itens:[
+      { item:"Regulares (menos Frank)", preco:"R$20 - 25" },
+      { item:"Frank", preco:"R$10" },
+      { item:"ID", preco:"R$10 - 15" },
+      { item:"Photocard Jewel Case", preco:"R$35" },
+      { item:"Mini Poster (individual)", preco:"R$15" },
+      { item:"Art Book (Limited)", preco:"R$8" },
+      { item:"Pop Up", preco:"R$15" },
+      { item:"Units (pob)", preco:"R$10 - 15" },
+    ]},
+    { categoria:"Maxident", ordem_cat:10, itens:[
+      { item:"Regulares", preco:"R$25 - 28" },
+      { item:"Photocard Paper Case", preco:"R$35" },
+      { item:"Photocard Paper Case POB", preco:"R$35" },
+      { item:"Polaroid", preco:"R$15" },
+      { item:"Love Letter + Polaroid", preco:"R$35" },
+      { item:"Sticker (Cabeça Flutuante)", preco:"R$5" },
+      { item:"Mini Poster (individual)", preco:"R$15" },
+      { item:"4cut (Limited)", preco:"R$15" },
+      { item:"Mini Folded Poster (Lim.)", preco:"R$15" },
+    ]},
+    { categoria:"5-Star", ordem_cat:11, itens:[
+      { item:"Regulares", preco:"R$25 - 28" },
+      { item:"Photocard Digipack", preco:"R$30 - 35" },
+      { item:"Photocard Digipack POB", preco:"R$30 - 35" },
+      { item:"Sticker Set", preco:"R$10 - 15" },
+      { item:"Cartoon Postcard", preco:"R$10" },
+      { item:"Mini Poster de Membro", preco:"R$15" },
+      { item:"B-cut Film (POB)", preco:"R$20 - 25" },
+      { item:"Poster Dobrado (POB)", preco:"R$20" },
+    ]},
+    { categoria:"Rock-Star", ordem_cat:12, itens:[
+      { item:"Regulares (Rock/Roll/Headliner/Postcard)", preco:"R$25 - 28" },
+      { item:"Postcard POB", preco:"R$30" },
+      { item:"Unit Photocard", preco:"R$15" },
+      { item:"Nemo Photocard", preco:"R$8" },
+      { item:"Nemo Photocard Set (OT8)", preco:"R$45" },
+      { item:"Polaroid (valor unitário)", preco:"R$8" },
+      { item:"Polaroid Set (c/4)", preco:"R$30" },
+      { item:"Mini Poster", preco:"R$15" },
+      { item:"Sticker", preco:"R$5" },
+      { item:"Poster POB", preco:"R$20" },
+      { item:"Special Miniposter", preco:"R$20" },
+      { item:"4cut", preco:"R$15" },
+      { item:"Postcards Set", preco:"R$30" },
+      { item:"Mini Folded / Mood Board", preco:"R$10" },
+      { item:"L-Holder", preco:"R$15" },
+      { item:"Ornament", preco:"R$10" },
+    ]},
+    { categoria:"Ate", ordem_cat:13, itens:[
+      { item:"Photocard Regular (CHK CHK / BOOM)", preco:"R$25 - 28" },
+      { item:"Photocard Unit", preco:"R$15" },
+      { item:"Photocard Limited", preco:"R$55" },
+      { item:"Photocard Letter", preco:"R$35" },
+      { item:"Photocard Accordion", preco:"R$25 - 28" },
+      { item:"Photocard POB Accordion", preco:"R$35" },
+      { item:"Photocard Nemo Random", preco:"R$25 - 28" },
+      { item:"Photocard Nemo A / B (Concept)", preco:"R$4" },
+      { item:"Photocard Nemo A / B Set (OT8)", preco:"R$32" },
+      { item:"Mini Photobook", preco:"R$25" },
+      { item:"4-Cut", preco:"R$15" },
+      { item:"Folded Poster POB", preco:"R$15" },
+      { item:"Sticker Pack", preco:"R$10" },
+      { item:"Monochrome Photo", preco:"R$10" },
+      { item:"Portrait Poster", preco:"R$15" },
+      { item:"Bitmap Mini Poster", preco:"R$10" },
+      { item:"Mini Newspaper", preco:"R$5" },
+      { item:"Accordion Postcard", preco:"" },
+      { item:"Accordion Postcard Set (OT8)", preco:"" },
+      { item:"Accordion Lyrics Paper", preco:"R$10" },
+      { item:"Mini Lip", preco:"R$10" },
+    ]},
+    { categoria:"Hop", ordem_cat:14, itens:[
+      { item:"Photocard Regular", preco:"R$25 - 28" },
+      { item:"Photocard Unit", preco:"R$15 - 20" },
+      { item:"Photocard Limited", preco:"R$55" },
+      { item:"Photocard Accordion", preco:"R$25 - 28" },
+      { item:"Photocard Monochrome Accordion", preco:"R$25 - 28" },
+      { item:"Photocard POB Accordion", preco:"R$35" },
+      { item:"Photocard Nemo Random", preco:"R$25 - 28" },
+      { item:"Photocard Nemo SET (8)", preco:"R$40" },
+      { item:"Trading Card SET (4)", preco:"R$20" },
+      { item:"Sticker", preco:"R$6" },
+      { item:"Mini Poster", preco:"R$10" },
+      { item:"4-Cut Photo", preco:"R$15" },
+      { item:"Pre Order Folded Poster", preco:"R$15" },
+      { item:"Pre Order Graphic Sticker", preco:"R$10" },
+    ]},
+    { categoria:"Karma", ordem_cat:15, itens:[
+      { item:"Photocard Regular (CEREMONY, HOORAY)", preco:"R$25 - 30" },
+      { item:"Photocard Unit Limited", preco:"R$30" },
+      { item:"Photocard Limited (KARMA)", preco:"R$50" },
+      { item:"Photocard Set OT8 Limited", preco:"R$70 set ou R$10 cada" },
+      { item:"Photocard Accordion", preco:"R$25 - 28" },
+      { item:"Photocard POB Accordion", preco:"R$35" },
+      { item:"Photocard Compact Random", preco:"R$25 - 28" },
+      { item:"Photocard SKZOO", preco:"R$25 - 30" },
+      { item:"Photocard SKZOO Set OT8", preco:"R$70 set ou R$10 cada" },
+      { item:"Photocard SKZOO POB", preco:"R$50" },
+      { item:"Photocard Vinyl", preco:"" },
+      { item:"Sticker", preco:"" },
+      { item:"Mini Poster", preco:"R$15" },
+      { item:"Player Ticket Set", preco:"" },
+      { item:"Trading Card Set", preco:"" },
+      { item:"SKZOO Keyring", preco:"" },
+      { item:"Acrylic Form", preco:"" },
+      { item:"SKZOO Profile Card", preco:"R$15" },
+    ]},
+    { categoria:"Do It", ordem_cat:16, itens:[] },
+  ],
+  "photocards-japoneses": [
+    { categoria:"SKZ2020", ordem_cat:0, itens:[
+      { item:"Photocard", preco:"R$75" },
+    ]},
+    { categoria:"TOP", ordem_cat:1, itens:[
+      { item:"Photocard", preco:"R$75" },
+    ]},
+    { categoria:"All In", ordem_cat:2, itens:[
+      { item:"Photocard Regular", preco:"R$50 - 65" },
+      { item:"Photocard Limited A", preco:"R$65" },
+      { item:"Polaroid Limited B", preco:"R$65" },
+      { item:"Polaroid Limited C", preco:"R$65" },
+    ]},
+    { categoria:"Scars", ordem_cat:3, itens:[
+      { item:"Photocard Regular", preco:"R$50 - 65" },
+      { item:"Photocard Limited A", preco:"R$65" },
+      { item:"Photocard Limited B", preco:"R$65" },
+      { item:"Photocard Limited C", preco:"R$65" },
+      { item:"Polaroid Fanclub", preco:"R$75" },
+      { item:"Unit Fanclub", preco:"R$60 - 100" },
+    ]},
+    { categoria:"Circus", ordem_cat:4, itens:[
+      { item:"Photocard Regular", preco:"R$50 - 65" },
+      { item:"Photocard Limited A", preco:"R$65" },
+      { item:"Photocard Limited B", preco:"R$65" },
+      { item:"Photocard Fanclub", preco:"R$75" },
+      { item:"Unit Fanclub", preco:"R$60 - 100" },
+    ]},
+    { categoria:"The Sound", ordem_cat:5, itens:[
+      { item:"Regular", preco:"R$50 - 65" },
+      { item:"Limited A", preco:"R$65" },
+      { item:"Limited B", preco:"R$65" },
+      { item:"Photocard Fanclub", preco:"R$75" },
+      { item:"Unit Fanclub", preco:"R$60 - 100" },
+    ]},
+    { categoria:"Social Path / Super Bowl (JP Ver.)", ordem_cat:6, itens:[
+      { item:"Photocard Regular", preco:"R$50 - 65" },
+      { item:"Photocard Limited A", preco:"R$65" },
+      { item:"Photocard Limited B", preco:"R$65" },
+      { item:"Photocard Fanclub", preco:"R$75" },
+      { item:"Unit Fanclub", preco:"R$60 - 100" },
+    ]},
+    { categoria:"Hollow", ordem_cat:7, itens:[
+      { item:"Photocard Regular", preco:"R$50 - 60" },
+      { item:"Photocard Limited A", preco:"R$75" },
+      { item:"Photocard Limited B", preco:"R$75" },
+      { item:"Photocard Fanclub", preco:"R$70 - 90" },
+      { item:"Unit Fanclub", preco:"R$60 - 100" },
+    ]},
+    { categoria:"TAIWANESES", ordem_cat:8, itens:[
+      { item:"Photocard / Polaroid", preco:"R$150 - 190" },
+    ]},
+  ],
+  "albuns": [
+    { categoria:"MIXTAPE", ordem_cat:0, itens:[
+      { item:"Lacrado / Completo", preco:"R$160" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"ERAS I AM (IAN, IAW, IAY)", ordem_cat:1, itens:[
+      { item:"Lacrado / Completo", preco:"R$135 - 165" },{ item:"Incompleto", preco:"R$65" },
+    ]},
+    { categoria:"ERAS CLÉ (MIROH, YW, LEVANTER)", ordem_cat:2, itens:[
+      { item:"Lacrado / Completo", preco:"R$150" },{ item:"Incompleto", preco:"R$65" },
+    ]},
+    { categoria:"IN LIFE", ordem_cat:3, itens:[
+      { item:"Lacrado / Completo", preco:"R$180" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"GO LIVE", ordem_cat:4, itens:[
+      { item:"Lacrado / Completo", preco:"R$170" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"NOEASY", ordem_cat:5, itens:[
+      { item:"Lacrado / Completo", preco:"R$180" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"NOEASY — JEWEL", ordem_cat:6, itens:[
+      { item:"Lacrado / Completo", preco:"R$65 - 75" },{ item:"Incompleto", preco:"R$45" },
+    ]},
+    { categoria:"CHRISTMAS EVEL", ordem_cat:7, itens:[
+      { item:"Lacrado / Completo", preco:"R$150" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"ODDINARY", ordem_cat:8, itens:[
+      { item:"Lacrado / Completo", preco:"R$140" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"ODDINARY — JEWEL", ordem_cat:9, itens:[
+      { item:"Lacrado / Completo", preco:"R$65 - 75" },{ item:"Incompleto", preco:"R$45" },
+    ]},
+    { categoria:"MAXIDENT", ordem_cat:10, itens:[
+      { item:"Lacrado / Completo", preco:"R$150 - 160" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"MAXIDENT — PAPER CASE", ordem_cat:11, itens:[
+      { item:"Lacrado / Completo", preco:"R$75" },{ item:"Incompleto", preco:"R$45" },
+    ]},
+    { categoria:"5-STAR", ordem_cat:12, itens:[
+      { item:"Lacrado / Completo", preco:"R$165" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"5-STAR — DIGIPACK", ordem_cat:13, itens:[
+      { item:"Lacrado / Completo", preco:"R$80" },{ item:"Incompleto", preco:"R$45" },
+    ]},
+    { categoria:"ROCK-STAR — ROCK & ROLL", ordem_cat:14, itens:[
+      { item:"Lacrado / Completo", preco:"R$100 - 110" },{ item:"Incompleto", preco:"R$60" },
+    ]},
+    { categoria:"ROCK-STAR — HEADLINER", ordem_cat:15, itens:[
+      { item:"Lacrado / Completo", preco:"R$80 - 90" },{ item:"Incompleto", preco:"R$45 - 55" },
+    ]},
+    { categoria:"ROCK-STAR — POSTCARD", ordem_cat:16, itens:[
+      { item:"Lacrado / Completo", preco:"R$80 - 90" },{ item:"Incompleto", preco:"R$45" },
+    ]},
+    { categoria:"ROCK-STAR — LIMITED", ordem_cat:17, itens:[
+      { item:"Lacrado / Completo", preco:"R$155 - 170" },{ item:"Incompleto", preco:"R$90" },
+    ]},
+    { categoria:"ROCK-STAR — NEMO", ordem_cat:18, itens:[
+      { item:"Lacrado / Completo", preco:"R$65" },{ item:"Incompleto", preco:"R$30" },
+    ]},
+    { categoria:"ATE — CHK CHK / BOOM / ATE", ordem_cat:19, itens:[
+      { item:"Lacrado / Completo", preco:"R$180 - 200" },{ item:"Incompleto", preco:"R$90" },
+    ]},
+    { categoria:"ATE — ACCORDION", ordem_cat:20, itens:[
+      { item:"Lacrado / Completo", preco:"R$180" },{ item:"Incompleto", preco:"R$90" },
+    ]},
+    { categoria:"ATE — NEMO", ordem_cat:21, itens:[
+      { item:"Lacrado / Completo", preco:"R$70 - 100" },{ item:"Incompleto", preco:"R$45 - 55" },
+    ]},
+    { categoria:"HOP — SKZHOP", ordem_cat:22, itens:[
+      { item:"Lacrado / Completo", preco:"R$140 - 165" },{ item:"Incompleto", preco:"R$70 - 85" },
+    ]},
+    { categoria:"HOP — HIPTAPE", ordem_cat:23, itens:[
+      { item:"Lacrado / Completo", preco:"R$200 - 230" },{ item:"Incompleto", preco:"R$100 - 120" },
+    ]},
+    { categoria:"HOP — ACCORDION", ordem_cat:24, itens:[
+      { item:"Lacrado / Completo", preco:"R$130 - 160" },{ item:"Incompleto", preco:"R$65 - 80" },
+    ]},
+    { categoria:"HOP — NEMO", ordem_cat:25, itens:[
+      { item:"Lacrado / Completo", preco:"R$70 - 100" },{ item:"Incompleto", preco:"R$45 - 55" },
+    ]},
+    { categoria:"KARMA — CEREMONY / HOORAY", ordem_cat:26, itens:[
+      { item:"Lacrado / Completo", preco:"R$150 - 190" },{ item:"Incompleto", preco:"R$75" },
+    ]},
+    { categoria:"KARMA — ACCORDION", ordem_cat:27, itens:[
+      { item:"Lacrado / Completo", preco:"R$110" },{ item:"Incompleto", preco:"R$60" },
+    ]},
+    { categoria:"KARMA — COMPACT", ordem_cat:28, itens:[
+      { item:"Lacrado / Completo", preco:"R$130" },{ item:"Incompleto", preco:"R$65" },
+    ]},
+    { categoria:"KARMA — SKZOO / NEMO", ordem_cat:29, itens:[
+      { item:"Lacrado / Completo", preco:"R$180 - 220" },{ item:"Incompleto", preco:"" },
+    ]},
+    { categoria:"KARMA — VINYL", ordem_cat:30, itens:[
+      { item:"Lacrado / Completo", preco:"R$350" },{ item:"Incompleto", preco:"" },
+    ]},
+    { categoria:"ÁLBUNS LIMITED", ordem_cat:31, itens:[
+      { item:"Lacrado / Completo", preco:"R$190 - 220" },{ item:"Incompleto", preco:"R$90" },
+    ]},
+    { categoria:"ÁLBUNS JAPONESES — STANDARD", ordem_cat:32, itens:[
+      { item:"Lacrado / Completo", preco:"R$200 - 220" },{ item:"Incompleto", preco:"R$130" },
+    ]},
+    { categoria:"ÁLBUNS JAPONESES — LIMITED", ordem_cat:33, itens:[
+      { item:"Lacrado / Completo", preco:"R$230 - 250" },{ item:"Incompleto", preco:"R$150" },
+    ]},
+    { categoria:"ÁLBUNS JAPONESES — FANCLUBE", ordem_cat:34, itens:[
+      { item:"Lacrado / Completo", preco:"R$180" },{ item:"Incompleto", preco:"R$90" },
+    ]},
+  ],
+  "revistas": [
+    { categoria:"Clio", ordem_cat:0, itens:[
+      { item:"Spicy / Mild", preco:"R$110" },
+      { item:"Office", preco:"R$70" },
+      { item:"ID", preco:"R$20" },
+    ]},
+    { categoria:"Nacific", ordem_cat:1, itens:[
+      { item:"Photocard", preco:"R$35" },
+      { item:"4Cut", preco:"R$45" },
+      { item:"ID", preco:"R$20 - 25" },
+    ]},
+    { categoria:"Ultramilk", ordem_cat:2, itens:[
+      { item:"Photocard", preco:"R$15 - 25" },
+    ]},
+    { categoria:"Stay in London", ordem_cat:3, itens:[
+      { item:"Photocard (1 random de 5)", preco:"R$70 - 80" },
+      { item:"ID", preco:"R$20" },
+      { item:"Postcard", preco:"R$35" },
+      { item:"Polaroid (POB)", preco:"R$90 - 110" },
+    ]},
+    { categoria:"Stay in Playground", ordem_cat:4, itens:[
+      { item:"Set de Membro", preco:"R$25" },
+      { item:"Polaroid (POB)", preco:"R$90 - 110" },
+    ]},
+    { categoria:"Stay in Stay (Stay in Jeju)", ordem_cat:5, itens:[
+      { item:"POBs Offline", preco:"R$60" },
+      { item:"Set de Membro (2 pcs + 1 postcard)", preco:"R$50" },
+    ]},
+    { categoria:"Magazines", ordem_cat:6, itens:[
+      { item:"Nylon", preco:"R$15" },
+      { item:"Camcam 1", preco:"R$40" },
+      { item:"Mini Magazine", preco:"R$25" },
+      { item:"Nikkei", preco:"R$20" },
+      { item:"Camcam 2", preco:"R$15" },
+    ]},
+  ],
+  "popup": [],
 };
 
 function TabelaStrayKids() {
@@ -14570,11 +14816,14 @@ function TabelaStrayKids() {
       if (!grouped[row.sheet]) grouped[row.sheet] = [];
       grouped[row.sheet].push(row);
     }
-    if (!grouped["seasons-greetings"]?.length) {
-      await seedSheet("seasons-greetings");
-      carregarTudo();
-      return;
+    let needsReload = false;
+    for (const sheet of Object.keys(TSK_SEED)) {
+      if (!grouped[sheet]?.length && TSK_SEED[sheet]?.length) {
+        await seedSheet(sheet);
+        needsReload = true;
+      }
     }
+    if (needsReload) { carregarTudo(); return; }
     setDados(grouped);
     setSugestoes(sugs || []);
     setLoading(false);
@@ -14643,7 +14892,7 @@ function TabelaStrayKids() {
             <div style={{ fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.35)", marginTop:6 }}>valores sugeridos pela comunidade · clique em qualquer preço para sugerir alteração</div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-            <a href="/" style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px" }}>← portal</a>
+            <a href="/" style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px" }}>ↁ portal</a>
             {adminLocal && pendentesTotal > 0 && (
               <span style={{ fontSize:10, fontFamily:mono, background:"rgba(255,209,102,.15)", color:"#FFD166", border:"1px solid rgba(255,209,102,.3)", borderRadius:20, padding:"3px 10px" }}>
                 {pendentesTotal} sugestão(ões) pendente(s)
@@ -14805,7 +15054,7 @@ function ThisAndThatGallery() {
           <div style={{ fontSize:9, letterSpacing:"3px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>ANTICEG · GALERIA</div>
           <h1 style={{ fontSize:"clamp(26px,5vw,44px)", fontWeight:900, letterSpacing:"-1px", margin:0, lineHeight:1 }}>THIS &amp; THAT</h1>
         </div>
-        <a href="/" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px" }}>← portal</a>
+        <a href="/" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", textDecoration:"none", letterSpacing:"1px" }}>ↁ portal</a>
       </div>
 
       {/* Busca */}
@@ -14908,7 +15157,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
   const hoje = new Date().toISOString().slice(0, 10);
   const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
-  const efetivamenteUnlocked = unlocked || isAutoUnlocked;
+  const roundAberto = envioRequest?.envio_rounds?.status === "em_processo";
+  const efetivamenteUnlocked = unlocked || isAutoUnlocked || roundAberto;
 
   // quando o envio está aberto e ainda não há conferência registrada, cria uma conferência virtual
   const conferenciaEfetiva = envioConferencia || (isAutoUnlocked ? {
@@ -15212,7 +15462,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           }
 
           const roundInfo = envioRequest?.envio_rounds;
-          const roundAberto = roundInfo?.status === "em_processo";
 
           const ERROS_CONF = [
             "Item repassado está na imagem",
@@ -15359,7 +15608,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <>
             {!conferenciaEfetiva ? (
               <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", marginBottom:14 }}>
-                <div style={{ fontSize:22, marginBottom:8 }}>🕐</div>
+                <div style={{ fontSize:22, marginBottom:8 }}>🕁</div>
                 <div style={{ fontSize:13, fontWeight:700, color:"#F5F0E8", marginBottom:6 }}>Conferência pendente</div>
                 <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>
                   Seus itens chegaram à GOM. Em breve iniciaremos o período de 5 dias de conferência para você verificar o que foi fotografado.
@@ -15480,7 +15729,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             ) : (
               <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", marginBottom:14 }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>⏳ Round #{roundInfo?.numero || "—"}</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace" }}>⁳ Round #{roundInfo?.numero || "—"}</div>
                   <div style={{ fontSize:9, color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, padding:"2px 8px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
                     {envioRequest.status === "aguardando" ? "Aguardando" : envioRequest.status}
                   </div>
@@ -15587,7 +15836,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
             <button onClick={() => { if (!cep || !endereco) { setGrupoErr("Preencha o endereço antes de criar o grupo."); } else { setGrupoMode("criar"); criarGrupo(); } }}
               style={{ background:"rgba(255,114,64,.1)", border:"1px solid rgba(255,114,64,.3)", color:"#FF7240", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
-              🏠 Sou a host — criar grupo
+              🁠 Sou a host — criar grupo
             </button>
             <button onClick={() => { setGrupoErr(""); setGrupoMode("entrar"); }}
               style={{ background:"none", border:"1px solid rgba(201,168,240,.2)", color:"rgba(201,168,240,.6)", borderRadius:7, padding:"6px 14px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap" }}>
@@ -15610,7 +15859,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
             {/* HOST */}
             <div style={{ background:"rgba(255,114,64,.06)", border:"1px solid rgba(255,114,64,.18)", borderRadius:10, padding:"14px 14px" }}>
-              <div style={{ fontSize:9, letterSpacing:"2px", color:"#FF7240", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🏠 Host · quem tem o endereço</div>
+              <div style={{ fontSize:9, letterSpacing:"2px", color:"#FF7240", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🁠 Host · quem tem o endereço</div>
               {[
                 ["1", "Preencha seus dados e o endereço completo de entrega."],
                 ["2", <>Vai aparecer <strong style={{color:"#F5F0E8"}}>\"Criar grupo de envio\"</strong> no final do endereço — clique.</>],
@@ -15626,7 +15875,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
             {/* GUEST */}
             <div style={{ background:"rgba(201,168,240,.05)", border:"1px solid rgba(201,168,240,.18)", borderRadius:10, padding:"14px 14px" }}>
-              <div style={{ fontSize:9, letterSpacing:"2px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🤝 Amiga · quem entra no grupo</div>
+              <div style={{ fontSize:9, letterSpacing:"2px", color:"#C9A8F0", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:10 }}>🤁 Amiga · quem entra no grupo</div>
               {[
                 ["1", "Peça o código de 6 letras para a host do grupo."],
                 ["2", <>Clique em <strong style={{color:"#F5F0E8"}}>\"Entrar em grupo de amiga\"</strong> aqui em cima.</>],
@@ -15644,8 +15893,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {[
               ["📦", "Não tem limite de pessoas por grupo — quantas amigas quiser podem usar o mesmo código."],
-              ["🛍️", "Cada uma escolhe e paga seus próprios itens — o grupo só compartilha o endereço."],
-              ["⚠️", "A host precisa preencher o endereço antes de criar o grupo — o botão só aparece quando o endereço está preenchido."],
+              ["🛁︁", "Cada uma escolhe e paga seus próprios itens — o grupo só compartilha o endereço."],
+              ["⚠︁", "A host precisa preencher o endereço antes de criar o grupo — o botão só aparece quando o endereço está preenchido."],
             ].map(([icon, txt]) => (
               <div key={icon} style={{ display:"flex", gap:8, fontSize:11, color:"rgba(245,240,232,.35)", lineHeight:1.5 }}>
                 <span style={{flexShrink:0}}>{icon}</span><span>{txt}</span>
@@ -15784,7 +16033,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Método de envio</div>
         {/* Notice 10 dias — válido para qualquer método */}
         <div style={{ marginBottom:12, background:"rgba(100,181,246,.07)", border:"1px solid rgba(100,181,246,.22)", borderRadius:8, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
-          <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>ℹ️</span>
+          <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>ℹ︁</span>
           <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", lineHeight:1.7 }}>
             Independente do método escolhido, após a emissão da etiqueta a GOM tem até{" "}
             <strong style={{ color:"#64B5F6" }}>10 dias corridos</strong>{" "}
@@ -15806,7 +16055,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         {/* Aviso JADLOG pick-up (condicional) */}
         {metodo === "Jadlog" && (
           <div style={{ marginBottom:12, background:"rgba(230,57,70,.07)", border:"1px solid rgba(230,57,70,.25)", borderRadius:8, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
-            <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>⚠️</span>
+            <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>⚠︁</span>
             <div style={{ fontSize:12, color:"rgba(245,240,232,.8)", lineHeight:1.7 }}>
               Ao escolher Jadlog, a caixa é entregue em um{" "}
               <strong style={{ color:"#E63946" }}>ponto PICK-UP</strong>,{" "}
@@ -16096,7 +16345,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                         </div>
                         {s.rastreio_link && (
                           <a href={s.rastreio_link} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"10px", background:"rgba(186,255,57,.1)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.25)", borderRadius:7, fontSize:11, fontWeight:700, textDecoration:"none", fontFamily:"'DM Mono',monospace" }}>
-                            🔍 Rastrear meu pedido →
+                            🔁 Rastrear meu pedido →
                           </a>
                         )}
                       </div>
@@ -16125,7 +16374,6 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     ...(!isGuest ? [{ id:"disponiveis", icon:"◱",  label:"Loja" }] : []),
     { id:"mercari",     icon:"🎌", label:"Mercari" },
     { id:"regras",      icon:"☆",  label:"Regras" },
-    { id:"antiversario",icon:"★",  label:"ANTIv." },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
   return (
@@ -16172,7 +16420,7 @@ function TutorialModal({ onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           {step > 0 && (
-            <button className="modal-cancel-btn" style={{ flex: 1 }} onClick={() => setStep(s => s - 1)}>← Anterior</button>
+            <button className="modal-cancel-btn" style={{ flex: 1 }} onClick={() => setStep(s => s - 1)}>ↁ Anterior</button>
           )}
           {!isLast ? (
             <button className="modal-confirm-btn" style={{ flex: 2 }} onClick={() => setStep(s => s + 1)}>Próximo →</button>
@@ -16513,7 +16761,7 @@ function PopupThisAndThatPage() {
           <div style={{ display:"flex", gap:10 }}>
             <button type="button" onClick={()=>setStep("form")}
               style={{ flex:1, padding:"14px", borderRadius:10, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:"1px" }}>
-              ← ALTERAR PEDIDO
+              ↁ ALTERAR PEDIDO
             </button>
             <button type="button" onClick={confirmarPedido} disabled={status==="enviando"}
               style={{ flex:2, padding:"14px", borderRadius:10, border:"none", background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:13, fontWeight:700, cursor:status==="enviando"?"not-allowed":"pointer", opacity:status==="enviando"?.7:1, letterSpacing:"1px" }}>
@@ -17161,10 +17409,116 @@ function AdminWMag({ onCountChange }) {
   );
 }
 
+function ComprovanteThumb({ url }) {
+  const [aberto, setAberto] = useState(false);
+  const mono = "'DM Mono',monospace";
+  return (
+    <div style={{ marginTop:6 }}>
+      <img
+        src={url} alt="comprovante"
+        onClick={() => setAberto(true)}
+        style={{ height:64, width:"auto", maxWidth:120, objectFit:"cover", borderRadius:6, cursor:"zoom-in", border:"1px solid rgba(255,92,26,.3)" }}
+        onError={e => { e.target.style.display="none"; }}
+      />
+      {aberto && (
+        <div onClick={() => setAberto(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+          <img src={url} alt="comprovante" style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:10, objectFit:"contain" }} onClick={e => e.stopPropagation()} />
+          <a href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+            style={{ position:"absolute", bottom:24, right:24, fontFamily:mono, fontSize:11, color:"rgba(255,92,26,.9)", background:"rgba(0,0,0,.6)", padding:"6px 12px", borderRadius:6, textDecoration:"none" }}>
+            abrir original ↗
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminBazaarIn({ onCountChange }) {
+  const mono = "'DM Mono',monospace";
+  const [pedidos, setPedidos] = useState([]);
+
+  useEffect(() => {
+    supabase.from("pedidos_bazaar_in").select("*").order("created_at", { ascending:false })
+      .then(({ data }) => { if (data) setPedidos(data); });
+  }, []);
+
+  async function atualizar(id, novoStatus) {
+    await supabase.from("pedidos_bazaar_in").update({ status:novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id===id ? {...p,status:novoStatus} : p);
+      onCountChange?.(next.filter(p=>p.status!=="confirmado"&&p.status!=="cancelado").length);
+      return next;
+    });
+  }
+
+  const corStatus = s => s==="confirmado"?"#4ade80":s==="cancelado"?"#ff6b6b":s==="cartao_whatsapp"?"rgba(255,200,0,.8)":s==="pendente"?"rgba(180,140,255,.8)":"rgba(255,92,26,.8)";
+  const labelStatus = s => s==="confirmado"?"confirmado":s==="cancelado"?"cancelado":s==="cartao_whatsapp"?"aguardando pagto cartão":s==="pendente"?"pagamento pendente":"aguardando PIX";
+
+  const ITENS_LABEL = { capa_a:"Capa A", capa_b:"Capa B", capa_c:"Capa C", caixa_f:"Caixa F", caixa_g:"Caixa G" };
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:20 }}>BAZAAR IN</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {pedidos.length===0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+        {pedidos.map(p => (
+          <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="aguardando"?"rgba(255,92,26,.2)":p.status==="confirmado"?"rgba(74,222,128,.15)":"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                  {p.social && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>{p.social}</span>}
+                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                </div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)" }}>{p.email}</div>
+                <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                  {Object.entries(ITENS_LABEL).map(([col, label]) => p[col] > 0 && (
+                    <span key={col} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.6)" }}>{label}: {p[col]}x</span>
+                  ))}
+                </div>
+                <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"var(--laranja)", marginTop:4 }}>
+                  {p.qtd_total} un · R${Number(p.valor_total).toFixed(2).replace(".",",")}
+                </div>
+                {p.comprovante_url && (
+                  <ComprovanteThumb url={p.comprovante_url} />
+                )}
+                {p.membros_grupo && Array.isArray(p.membros_grupo) && p.membros_grupo.length > 0 && (
+                  <div style={{ marginTop:8, padding:"8px 10px", background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.12)", borderRadius:8 }}>
+                    <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(186,255,57,.5)", marginBottom:6 }}>GRUPO</div>
+                    {p.membros_grupo.map((m, i) => (
+                      <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)", marginBottom:4 }}>
+                        <span style={{ color:"rgba(245,240,232,.8)", fontWeight:700 }}>{m.nome}</span>
+                        {m.social && <span style={{ color:"rgba(245,240,232,.35)", marginLeft:6 }}>{m.social}</span>}
+                        {" — "}
+                        {Object.entries(ITENS_LABEL).filter(([col]) => { const k = {capa_a:"capaA",capa_b:"capaB",capa_c:"capaC",caixa_f:"caixaF",caixa_g:"caixaG"}[col]; return k && m[k] > 0; }).map(([col, lbl]) => { const k = {capa_a:"capaA",capa_b:"capaB",capa_c:"capaC",caixa_f:"caixaF",caixa_g:"caixaG"}[col]; return `${m[k]}× ${lbl}`; }).join(", ") || "sem itens"}
+                        {m.valor > 0 && <span style={{ color:"rgba(255,180,0,.7)", marginLeft:6 }}>R${Number(m.valor).toFixed(2).replace(".",",")}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{labelStatus(p.status)}</span>
+                {(p.status === "aguardando" || p.status === "cartao_whatsapp" || p.status === "pendente") && (
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={()=>atualizar(p.id,"confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                    <button onClick={()=>atualizar(p.id,"cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Aba Pré-vendas ─────────────────────────────────────────────
 function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
   const now  = new Date();
+  const [subView, setSubView] = useState(null);
 
   const REVISTA_DEADLINE_PV = new Date("2026-09-04T23:59:59-03:00");
   const revistaAberta = now <= REVISTA_DEADLINE_PV;
@@ -17175,6 +17529,7 @@ function PrevendaTab({ user }) {
 
   const runItJapanAberto = now <= new Date("2026-08-28T23:59:59-03:00");
   const wmagAberto       = now <= WMAG_DEADLINE;
+  const bazaarInAberta   = now <= new Date("2026-08-27T23:59:59-03:00");
 
   const formularios = [
     {
@@ -17210,6 +17565,16 @@ function PrevendaTab({ user }) {
       info: "R$ 68,00 por unidade · PIX ou cartão",
     },
     {
+      key: "revista-bazaar-in",
+      ativo: bazaarInAberta,
+      titulo: "BAZAAR IN",
+      subtitulo: "Revista",
+      url: "/prevenda/bazaar",
+      img: "https://image.yes24.com/goods/195275000/XL",
+      tags: ["Pedidos até 27/08"],
+      info: "Envio direto Coreia › Brasil · sem taxa RF",
+    },
+    {
       key: "mercari",
       ativo: true,
       titulo: "MERCARI",
@@ -17221,6 +17586,10 @@ function PrevendaTab({ user }) {
       info: "Solicite itens do Mercari JP",
     },
   ];
+
+  if (subView === "bazaar-in") {
+    return <RevistaBazaarInPage onVoltar={() => setSubView(null)} />;
+  }
 
   return (
     <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
@@ -17251,7 +17620,12 @@ function PrevendaTab({ user }) {
             </div>
             {f.ativo && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px", display:"flex", gap:8, flexWrap:"wrap" }}>
-                {f.url ? (
+                {f.onInline ? (
+                  <button onClick={f.onInline}
+                    style={{ padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
+                    ACESSAR →
+                  </button>
+                ) : f.url ? (
                   <a href={f.url} target={f.external ? "_blank" : "_self"} rel={f.external ? "noopener noreferrer" : undefined}
                     style={{ display:"inline-block", padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
                     PREENCHER FORMULÁRIO →
@@ -17358,7 +17732,325 @@ function AdminRevista({ onCountChange }) {
   );
 }
 
-// ── Pré-venda Revista NYLON HAN ────────────────────────────────
+// ── Pré-venda Revista BAZAAR IN ────────────────────────────────
+const BAZAAR_IN_DEADLINE = new Date("2026-08-27T23:59:59-03:00");
+const PIX_BAZAAR_IN      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+const CARTAO_BAZAAR_IN   = "https://linknabio.gg/anticeg-comu";
+const BAZAAR_IN_CAPAS = [
+  { id:"capaA", label:"Capa A", preco:60,  img:"https://image.yes24.com/goods/195275000/XL" },
+  { id:"capaB", label:"Capa B", preco:60,  img:"https://image.yes24.com/goods/195275003/XL" },
+  { id:"capaC", label:"Capa C", preco:60,  img:"https://image.yes24.com/goods/195275011/XL" },
+];
+const BAZAAR_IN_CAIXAS = [
+  { id:"caixaF", label:"Caixa Especial F", preco:170, img:"https://image.yes24.com/goods/195275123/XL" },
+  { id:"caixaG", label:"Caixa Especial G", preco:170, img:"https://image.yes24.com/goods/195275124/XL" },
+];
+const BAZAAR_IN_TODOS = [...BAZAAR_IN_CAPAS, ...BAZAAR_IN_CAIXAS];
+
+function RevistaBazaarInPage({ onVoltar }) {
+  const mono = "'DM Mono',monospace";
+  const encerrado = new Date() > BAZAAR_IN_DEADLINE;
+  const [social,     setSocial]     = useState("");
+  const [nome,       setNome]       = useState("");
+  const [email,      setEmail]      = useState("");
+  const [qtds,       setQtds]       = useState({ capaA:0, capaB:0, capaC:0, caixaF:0, caixaG:0 });
+  const [pagamento,  setPagamento]  = useState("pix");
+  const [comprovante,setComprovante]= useState(null);
+  const [pixCopiado, setPixCopiado] = useState(false);
+  const [status,     setStatus]     = useState("idle");
+  const [erro,       setErro]       = useState("");
+  const [pedidoId,   setPedidoId]   = useState(null);
+  const [lightbox,   setLightbox]   = useState(null);
+  const [isGrupo,      setIsGrupo]      = useState(false);
+  const [membrosGrupo, setMembrosGrupo] = useState([]);
+
+  function addMembro() { setMembrosGrupo(m => [...m, { nome:"", social:"", qtds:{ capaA:0, capaB:0, capaC:0, caixaF:0, caixaG:0 } }]); }
+  function removeMembro(idx) { setMembrosGrupo(m => m.filter((_,i) => i!==idx)); }
+  function setMembroField(idx, field, val) { setMembrosGrupo(m => m.map((mem,i) => i===idx ? { ...mem, [field]:val } : mem)); }
+  function setMembroQtd(idx, id, delta) { setMembrosGrupo(m => m.map((mem,i) => i===idx ? { ...mem, qtds:{ ...mem.qtds, [id]: Math.max(0, (mem.qtds[id]||0)+delta) } } : mem)); }
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
+      if (!u?.cog) return;
+      setSocial(u.cog);
+      supabase.from("joiners").select("nome_site,twitter,email").eq("cog", u.cog).single()
+        .then(({ data: j }) => {
+          if (j?.nome_site) setNome(j.nome_site);
+          if (j?.email)     setEmail(j.email);
+          if (j?.twitter)   setSocial(j.twitter);
+        });
+    } catch {}
+  }, []);
+
+  const qtdOwner = BAZAAR_IN_TODOS.reduce((s, p) => s + (qtds[p.id] || 0), 0);
+  const totOwner = BAZAAR_IN_TODOS.reduce((s, p) => s + p.preco * (qtds[p.id] || 0), 0);
+  const qtdGrupo = isGrupo ? membrosGrupo.reduce((s, m) => s + BAZAAR_IN_TODOS.reduce((ms, p) => ms + (m.qtds[p.id]||0), 0), 0) : 0;
+  const totGrupo = isGrupo ? membrosGrupo.reduce((s, m) => s + BAZAAR_IN_TODOS.reduce((ms, p) => ms + p.preco*(m.qtds[p.id]||0), 0), 0) : 0;
+  const qtdTotal = qtdOwner + qtdGrupo;
+  const total    = totOwner + totGrupo;
+
+  function Qty({ id }) {
+    return (
+      <div style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center" }}>
+        <button type="button" onClick={() => setQtds(q => ({ ...q, [id]: Math.max(0, q[id]-1) }))}
+          style={{ width:28, height:28, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+        <span style={{ fontFamily:mono, fontSize:16, fontWeight:700, minWidth:20, textAlign:"center" }}>{qtds[id]}</span>
+        <button type="button" onClick={() => setQtds(q => ({ ...q, [id]: q[id]+1 }))}
+          style={{ width:28, height:28, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+      </div>
+    );
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!qtdTotal) { setErro("Selecione ao menos 1 item."); return; }
+    if (!nome.trim() || !email.trim()) { setErro("Preencha nome e e-mail."); return; }
+    if (isGrupo && membrosGrupo.length === 0) { setErro("Adicione ao menos um membro ao grupo."); return; }
+    if (isGrupo && membrosGrupo.some(m => !m.nome.trim())) { setErro("Preencha o nome de todos os membros."); return; }
+    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
+    if (pagamento === "depois" && !window.confirm("Você escolheu pagar depois. Seu pedido ficará reservado, mas será cancelado se o pagamento não for realizado até 05/09. Confirmar?")) return;
+    setStatus("enviando"); setErro("");
+
+    let comprovanteUrl = null;
+    if (pagamento === "pix" && comprovante) {
+      const ext  = comprovante.name.split(".").pop();
+      const path = `bazaar-in/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
+      const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+      comprovanteUrl = publicUrl;
+    }
+
+    const statusPedido = pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao_whatsapp";
+    const membrosPayload = isGrupo && membrosGrupo.length > 0 ? membrosGrupo.map(m => ({
+      nome: m.nome.trim(), social: m.social.trim() || null,
+      ...Object.fromEntries(BAZAAR_IN_TODOS.map(p => [p.id, m.qtds[p.id]||0])),
+      valor: BAZAAR_IN_TODOS.reduce((s, p) => s + p.preco*(m.qtds[p.id]||0), 0),
+    })) : null;
+    const { data, error } = await supabase.from("pedidos_bazaar_in").insert([{
+      nome: nome.trim(), email: email.trim(), social: social.trim() || null,
+      capa_a: qtds.capaA, capa_b: qtds.capaB, capa_c: qtds.capaC,
+      caixa_f: qtds.caixaF, caixa_g: qtds.caixaG,
+      qtd_total: qtdTotal, valor_total: total,
+      forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
+      status: statusPedido, membros_grupo: membrosPayload,
+    }]).select().single();
+
+    if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
+    setPedidoId(data.id);
+
+    if (pagamento === "cartao") {
+      window.open(CARTAO_BAZAAR_IN, "_blank");
+    }
+    setStatus("sucesso");
+  }
+
+  const inputStyle = { width:"100%", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:13, outline:"none", boxSizing:"border-box" };
+  const labelStyle = { fontFamily:mono, fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", textTransform:"uppercase", marginBottom:6, display:"block" };
+
+  return (
+    <div style={{ padding:"0 0 80px", maxWidth:520, margin:"0 auto" }}>
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+          <img src={lightbox} alt="" style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:8, objectFit:"contain" }} />
+        </div>
+      )}
+      {onVoltar && (
+        <button onClick={onVoltar} style={{ background:"none", border:"none", fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", cursor:"pointer", padding:"0 0 20px", display:"block" }}>ↁ voltar</button>
+      )}
+      <div>
+        <div style={{ marginBottom:28, textAlign:"center" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"4px", color:"rgba(245,240,232,.3)", marginBottom:8 }}>ANTI CEGS × PRÉ-VENDA</div>
+          <div style={{ fontSize:"clamp(22px,6vw,32px)", fontWeight:900, letterSpacing:"-1px", lineHeight:1.1 }}>BAZAAR IN</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:6 }}>Revista</div>
+          {!encerrado && (
+            <div style={{ marginTop:10, fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", letterSpacing:"1px" }}>
+              PEDIDOS ATÉ 27/08/2026 · 23H59
+            </div>
+          )}
+        </div>
+
+        {/* Capas */}
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", textTransform:"uppercase", marginBottom:10 }}>Capas — R$60 cada</div>
+        <div style={{ display:"flex", gap:8, marginBottom:20, justifyContent:"center" }}>
+          {BAZAAR_IN_CAPAS.map(c => (
+            <div key={c.id} style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ borderRadius:10, overflow:"hidden", cursor:"zoom-in", position:"relative" }} onClick={() => setLightbox(c.img)}>
+                <img src={c.img} alt={c.label} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} onError={e => { e.target.style.background="rgba(245,240,232,.05)"; e.target.style.minHeight="120px"; }} />
+                <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,.55)", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.8)", textAlign:"center", padding:"4px 0", letterSpacing:"1px" }}>{c.label}</div>
+              </div>
+              <Qty id={c.id} />
+            </div>
+          ))}
+        </div>
+
+        {/* Caixas Especiais */}
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", textTransform:"uppercase", marginBottom:10 }}>Caixas Especiais — R$170 cada</div>
+        <div style={{ display:"flex", gap:8, marginBottom:28 }}>
+          {BAZAAR_IN_CAIXAS.map(c => (
+            <div key={c.id} style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ borderRadius:10, overflow:"hidden", cursor:"zoom-in", position:"relative" }} onClick={() => setLightbox(c.img)}>
+                <img src={c.img} alt={c.label} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} onError={e => { e.target.style.background="rgba(245,240,232,.05)"; e.target.style.minHeight="120px"; }} />
+                <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,.55)", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.8)", textAlign:"center", padding:"4px 0", letterSpacing:"1px" }}>{c.label}</div>
+              </div>
+              <Qty id={c.id} />
+            </div>
+          ))}
+        </div>
+
+        {/* Pedido em Grupo */}
+        <div style={{ marginBottom:24 }}>
+          <button type="button" onClick={() => { setIsGrupo(g => { if (g) setMembrosGrupo([]); return !g; }); }}
+            style={{ width:"100%", padding:"11px 16px", borderRadius:10, border: isGrupo ? "1px solid rgba(186,255,57,.4)" : "1px solid rgba(245,240,232,.12)", background: isGrupo ? "rgba(186,255,57,.06)" : "transparent", color: isGrupo ? "var(--verde)" : "rgba(245,240,232,.45)", fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            {isGrupo ? "✓ Pedido em grupo ativado" : "+ Pedido em grupo (mais de uma pessoa)"}
+          </button>
+          {isGrupo && (
+            <div style={{ marginTop:14, display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", lineHeight:1.7 }}>
+                Você (dono do grupo) seleciona os itens acima e paga o total. Adicione os outros membros abaixo — cada um recebe seus itens.
+              </div>
+              {membrosGrupo.map((mem, idx) => {
+                const subTotal = BAZAAR_IN_TODOS.reduce((s, p) => s + p.preco*(mem.qtds[p.id]||0), 0);
+                return (
+                  <div key={idx} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.4)", textTransform:"uppercase" }}>Membro {idx+1}</div>
+                      <button type="button" onClick={() => removeMembro(idx)}
+                        style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontFamily:mono, fontSize:11 }}>✕ remover</button>
+                    </div>
+                    <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                      <input value={mem.nome} onChange={e => setMembroField(idx,"nome",e.target.value)} placeholder="nome" style={{ flex:2, background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, outline:"none" }} />
+                      <input value={mem.social} onChange={e => setMembroField(idx,"social",e.target.value)} placeholder="@ na comunidade" style={{ flex:1, background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, outline:"none" }} />
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {BAZAAR_IN_TODOS.map(p => {
+                        const qv = mem.qtds[p.id]||0;
+                        return (
+                          <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)" }}>{p.label} <span style={{ color:"rgba(245,240,232,.3)" }}>R${p.preco}</span></span>
+                            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                              <button type="button" onClick={() => setMembroQtd(idx,p.id,-1)} style={{ width:24, height:24, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+                              <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, minWidth:16, textAlign:"center" }}>{qv}</span>
+                              <button type="button" onClick={() => setMembroQtd(idx,p.id,1)} style={{ width:24, height:24, borderRadius:"50%", border:"1px solid rgba(245,240,232,.2)", background:"transparent", color:"var(--offwhite)", fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {subTotal > 0 && (
+                      <div style={{ textAlign:"right", fontFamily:mono, fontSize:11, color:"rgba(255,180,0,.75)", fontWeight:700, marginTop:10 }}>
+                        Subtotal: R${subTotal.toFixed(2).replace(".",",")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button type="button" onClick={addMembro}
+                style={{ padding:"10px", borderRadius:8, border:"1px dashed rgba(245,240,232,.2)", background:"transparent", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer" }}>
+                + adicionar membro ao grupo
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Avisos */}
+        <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.75, color:"rgba(245,240,232,.7)" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
+          <div>• A cotação do frete internacional será enviada no final dessa semana.</div>
+          <div>• Envio direto: <strong>Coreia do Sul › Brasil</strong>.</div>
+          <div>• Não haverá <strong>taxa da Receita Federal</strong>.</div>
+          <div>• Prazo de pagamento: até <strong>05/09</strong>.</div>
+        </div>
+
+        {encerrado ? (
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"24px", textAlign:"center", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.4)" }}>
+            Pré-venda encerrada.
+          </div>
+        ) : status === "sucesso" ? (
+          <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:12, padding:"24px", textAlign:"center", display:"flex", flexDirection:"column", gap:8 }}>
+            <div style={{ fontSize:28 }}>✓</div>
+            <div style={{ fontFamily:mono, fontSize:13, color:"var(--verde)", fontWeight:700 }}>Pedido recebido!</div>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(186,255,57,.65)", lineHeight:1.6 }}>
+              {pagamento === "pix" ? "Comprovante enviado — aguarde confirmação." : pagamento === "depois" ? "Pedido reservado! Realize o pagamento até 05/09." : "Em breve entraremos em contato para o pagamento via cartão."}
+            </div>
+            {pedidoId && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)", marginTop:4 }}>#{pedidoId}</div>}
+            <a href="https://chat.whatsapp.com/CFnPAS4m2J74AKvdIJosD2" target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-block", marginTop:8, padding:"12px 24px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px" }}>
+              Entrar no grupo de atualizações
+            </a>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:20 }}>
+            {/* Total */}
+            {qtdTotal > 0 && (
+              <div style={{ background:"rgba(255,180,0,.06)", border:"1px solid rgba(255,180,0,.2)", borderRadius:10, padding:"12px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>
+                    {BAZAAR_IN_TODOS.filter(p => qtds[p.id] > 0).map(p => `${qtds[p.id]}× ${p.label}`).join(" · ")}
+                    {isGrupo && qtdGrupo > 0 && membrosGrupo.map((m, i) => {
+                      const ms = BAZAAR_IN_TODOS.filter(p => m.qtds[p.id]>0).map(p => `${m.qtds[p.id]}× ${p.label}`).join(" · ");
+                      return ms ? <span key={i} style={{ display:"block", marginTop:2, color:"rgba(186,255,57,.5)" }}>{m.nome||`Membro ${i+1}`}: {ms}</span> : null;
+                    })}
+                  </div>
+                  <div style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:"#ffb400", flexShrink:0, marginLeft:12 }}>R${total.toFixed(2).replace(".",",")}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Dados */}
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div><label style={labelStyle}>@ CEG</label><input value={social} onChange={e => setSocial(e.target.value)} placeholder="seu @ na comunidade" style={inputStyle} /></div>
+              <div><label style={labelStyle}>Nome *</label><input value={nome} onChange={e => setNome(e.target.value)} placeholder="nome completo" style={inputStyle} required /></div>
+              <div><label style={labelStyle}>E-mail *</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="para contato" style={inputStyle} required /></div>
+            </div>
+
+            {/* Pagamento */}
+            <div>
+              <label style={labelStyle}>Forma de pagamento</label>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {[["pix","PIX"],["cartao","Cartão"],["depois","Pagar depois"]].map(([v,l]) => (
+                  <button key={v} type="button" onClick={() => setPagamento(v)} style={{ flex:1, padding:"10px", borderRadius:8, border: pagamento===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: pagamento===v ? "rgba(255,92,26,.12)" : "transparent", color: pagamento===v ? "var(--laranja)" : "rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, fontWeight: pagamento===v ? 700 : 400, cursor:"pointer" }}>{l}</button>
+                ))}
+                {pagamento === "depois" && (
+                  <div style={{ width:"100%", marginTop:4, fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", lineHeight:1.6 }}>
+                    Seu pedido fica reservado. O pagamento deverá ser realizado até <strong style={{ color:"rgba(245,240,232,.6)" }}>05/09</strong>, caso contrário será cancelado.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {pagamento === "pix" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+                  <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)" }}>CHAVE PIX (CPF)</div>
+                  <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", wordBreak:"break-all" }}>{PIX_BAZAAR_IN}</div>
+                  <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_BAZAAR_IN); setPixCopiado(true); setTimeout(() => setPixCopiado(false), 2000); }}
+                    style={{ alignSelf:"flex-start", background:"rgba(255,180,0,.12)", border:"1px solid rgba(255,180,0,.3)", color:"#ffb400", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, cursor:"pointer" }}>
+                    {pixCopiado ? "✓ copiado!" : "copiar chave"}
+                  </button>
+                </div>
+                <div>
+                  <label style={labelStyle}>Comprovante PIX *</label>
+                  <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0] || null)}
+                    style={{ width:"100%", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }} />
+                </div>
+              </div>
+            )}
+
+            {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b" }}>{erro}</div>}
+            <button type="submit" disabled={status === "enviando" || !qtdTotal} style={{ background: qtdTotal ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:10, padding:"14px", fontSize:12, fontFamily:mono, fontWeight:700, color: qtdTotal ? "#fff" : "rgba(245,240,232,.25)", cursor: qtdTotal ? "pointer" : "not-allowed", letterSpacing:"1px", opacity: status === "enviando" ? 0.6 : 1 }}>
+              {status === "enviando" ? "Enviando..." : `FECHAR PEDIDO${qtdTotal ? ` — R$${total.toFixed(2).replace(".",",")}` : ""} →`}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Pré-venda Revista NYLON HAN ──────────────────────────────── (keep route for direct access)
+
 const REVISTA_DEADLINE = new Date("2026-09-04T23:59:59-03:00");
 const REVISTA_PRECO    = 68;
 const PIX_REVISTA      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
@@ -17468,8 +18160,8 @@ function RevistaFormPage() {
         {/* Avisos */}
         <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
-          <div>• CEG longa — revista lança em <strong>outubro</strong>.</div>
-          <div>• Envios podem acontecer somente <strong>após as festas de Natal</strong> (não confirmado ainda).</div>
+          <div>• CEG longa — revista lança em <strong>setembro</strong>.</div>
+          <div>• Envios acontecerão ainda em <strong>setembro</strong>.</div>
           <div>• Haverá <strong>frete internacional</strong>.</div>
           <div>• <strong>Não haverá</strong> taxa da Receita Federal.</div>
         </div>
@@ -17886,13 +18578,14 @@ export default function App() {
       <div style={{ background:"#131310", minHeight:"100vh" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", background:"#0D0D0D", borderBottom:"1px solid #2a2a26" }}>
           <a href="/" style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", textDecoration:"none", letterSpacing:2 }}>ANTI<span style={{color:"var(--laranja)"}}>CEG</span></a>
-          <a href="/" style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)", textDecoration:"none" }}>← voltar</a>
+          <a href="/" style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)", textDecoration:"none" }}>ↁ voltar</a>
         </div>
         <MercariTab />
       </div>
     );
   }
   if (window.location.pathname === "/revista") return <RevistaFormPage />;
+  if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
@@ -18106,7 +18799,6 @@ export default function App() {
         <button className={`tab-btn ${tab === "prevenda" ? "active" : ""}`} onClick={() => changeTab("prevenda")}>◈ Pré-vendas</button>
         <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button>
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
-        <button className={`tab-btn ${tab === "antiversario" ? "active" : ""}`} onClick={() => changeTab("antiversario")}>★ ANTIversário</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
             if (adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
@@ -18158,7 +18850,6 @@ export default function App() {
       {tab === "prevenda" && <PrevendaTab user={user} />}
       {tab === "mercari" && <MercariTab />}
       {tab === "regras" && <RegrasTab />}
-      {tab === "antiversario" && <AntiversarioTab user={user} />}
       {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
