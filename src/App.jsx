@@ -1781,7 +1781,6 @@ function EnvioFlowStepper({ status }) {
 function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds = new Set(), onReported, avisoMasterlist = "", proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "", bannerEnvioVisivel = true, bannerPagamentosAtivo = false, onOpenPagamentos, onOpenEnvio }) {
   const guest = user.guest;
   const [search, setSearch] = useState("");
-  const [searchGeral, setSearchGeral] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("tudo");
   const [ordenacao, setOrdenacao] = useState("padrao");
   const [openDrawer, setOpenDrawer] = useState(null);
@@ -1917,13 +1916,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
   let filtered = [...itens];
   if (filtroCeg) filtered = filtered.filter(i => i.ceg === filtroCeg);
-  if (search) filtered = filtered.filter(i => (i.nome_do_item || "").toLowerCase().includes(search));
-  if (searchGeral) { const q = searchGeral.toLowerCase(); filtered = filtered.filter(i =>
-    (i.nome_do_item || "").toLowerCase().includes(q) ||
-    (i.ceg || "").toLowerCase().includes(q) ||
-    (i.status || "").toLowerCase().includes(q) ||
-    (i.info_adicionais || "").toLowerCase().includes(q)
-  ); }
+  if (search) filtered = filtered.filter(i =>
+    (i.nome_do_item || "").toLowerCase().includes(search) ||
+    (i.ceg || "").toLowerCase().includes(search) ||
+    (i.status || "").toLowerCase().includes(search) ||
+    (i.info_adicionais || "").toLowerCase().includes(search)
+  );
   if (STATUS_STEPS.some(s => s.id === statusFiltro)) filtered = filtered.filter(i => i.status === statusFiltro);
   if (statusFiltro === "pendente")    filtered = filtered.filter(i =>
     (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||

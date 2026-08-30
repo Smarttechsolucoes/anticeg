@@ -147,7 +147,20 @@ body.high-contrast .regras-list mark        { background:rgba(85,0,187,.15) !imp
 body.high-contrast .side-nav-item.active    { background:rgba(192,57,11,.08) !important; border-color:var(--laranja) !important; }
 
 /* Tooltip */
-body.high-contrast .cog-tip::after          { background:#fff !important; border-color:#555 !important; }
+body.high-contrast .cog-tip::after          { color:#000 !important; background:#fff !important; border-color:#555 !important; }
+
+/* Placeholders — pseudo-elementos não cobertos pela regra * */
+body.high-contrast input::placeholder,
+body.high-contrast textarea::placeholder    { color:#555 !important; }
+
+/* Badges bloqueados */
+body.high-contrast .badge-locked .badge-hex        { background:#d0d0d0 !important; }
+body.high-contrast .badge-locked .badge-hex-inner  { background:#e0e0e0 !important; }
+body.high-contrast .badge-locked .badge-hex-circle { background:#d0d0d0 !important; }
+body.high-contrast .badge-hex-label                { color:#000 !important; }
+
+/* Select options */
+body.high-contrast select option { background:#fff !important; color:#000 !important; }
 
 /* Chip */
 body.high-contrast .chip-prevenda           { background:#ddd !important; border-color:#888 !important; }
