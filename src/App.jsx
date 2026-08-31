@@ -12122,6 +12122,9 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
   const [lojaTab, setLojaTab] = useState("disponiveis");
   const [novoItem, setNovoItem] = useState({ ceg:"", nome_do_item:"", valor_item:"", frete_inter:"", taxa_rf:"", info_adicionais:"" });
   const [salvando, setSalvando] = useState(false);
+  const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
+  const [salvandoSet, setSalvandoSet] = useState(false);
+  const SK_MEMBROS = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
 
   async function salvarNovoItem() {
     if (!novoItem.ceg.trim() || !novoItem.nome_do_item.trim() || !novoItem.valor_item) {
@@ -12317,13 +12320,117 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
   return (
     <div>
       {/* sub-tabs */}
-      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
-        {[["disponiveis","DISPONÁVEIS CEG"],["adicionar","ADICIONAR MANUAL"]].map(([v,l]) => (
+      <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+        {[["disponiveis","DISPONÁVEIS CEG"],["novo-set","NOVO SET"],["adicionar","ADICIONAR MANUAL"]].map(([v,l]) => (
           <button key={v} onClick={() => setLojaTab(v)} style={{ fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", padding:"5px 14px", borderRadius:20, cursor:"pointer", fontWeight: lojaTab===v ? 700 : 400, border: lojaTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: lojaTab===v ? "rgba(255,92,26,.12)" : "transparent", color: lojaTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
             {l}
           </button>
         ))}
       </div>
+
+      {/* formulário novo set */}
+      {lojaTab === "novo-set" && (
+        <div style={{ background:"var(--card-bg)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"20px 16px", marginBottom:16, display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"var(--laranja)", letterSpacing:"1.5px", fontWeight:700 }}>NOVO SET DE CLAIM</div>
+
+          {/* Foto */}
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:6 }}>FOTO</div>
+            <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
+              <div style={{ width:80, height:80, borderRadius:8, border:"1px dashed rgba(245,240,232,.2)", background:"rgba(245,240,232,.03)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0 }}>
+                {novoSet.fotoPreview
+                  ? <img src={novoSet.fotoPreview} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                  : <span style={{ fontSize:22, opacity:.3 }}>📷</span>}
+              </div>
+              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.35)" }}>{novoSet.fotoFile ? novoSet.fotoFile.name : "clique para selecionar"}</span>
+              <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                setNovoSet(p => ({ ...p, fotoFile: f, fotoPreview: URL.createObjectURL(f) }));
+              }} />
+            </label>
+          </div>
+
+          {/* Nome, valor, prazo */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>NOME DO CARD *</div>
+              <input value={novoSet.nome} onChange={e => setNovoSet(p => ({...p, nome: e.target.value}))} placeholder="ex: Photocard Selector" style={inputStyle2} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>VALOR *</div>
+              <input type="number" value={novoSet.valor} onChange={e => setNovoSet(p => ({...p, valor: e.target.value}))} placeholder="R$ 0,00" style={inputStyle2} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>PRAZO</div>
+              <input value={novoSet.prazo} onChange={e => setNovoSet(p => ({...p, prazo: e.target.value}))} placeholder="ex: 20/09" style={inputStyle2} />
+            </div>
+          </div>
+
+          {/* Membros */}
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:8 }}>MEMBROS DISPONÍVEIS</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {SK_MEMBROS.map(m => {
+                const sel = novoSet.membros.includes(m);
+                return (
+                  <button key={m} onClick={() => setNovoSet(p => ({ ...p, membros: sel ? p.membros.filter(x => x !== m) : [...p.membros, m] }))}
+                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, padding:"5px 12px", borderRadius:20, cursor:"pointer", border: sel ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.15)", background: sel ? "rgba(255,92,26,.12)" : "transparent", color: sel ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: sel ? 700 : 400 }}>
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop:8, display:"flex", gap:8 }}>
+              <button onClick={() => setNovoSet(p => ({...p, membros: [...SK_MEMBROS]}))} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>selecionar todos</button>
+              <span style={{ color:"rgba(245,240,232,.15)" }}>·</span>
+              <button onClick={() => setNovoSet(p => ({...p, membros: []}))} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>limpar</button>
+            </div>
+          </div>
+
+          {/* Botão */}
+          <button disabled={salvandoSet || !novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length} onClick={async () => {
+            if (!novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length) return;
+            setSalvandoSet(true);
+            let fotoUrl = null;
+            if (novoSet.fotoFile) {
+              const ext = novoSet.fotoFile.name.split(".").pop().toLowerCase();
+              const path = `claims/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+              const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, novoSet.fotoFile, { upsert: true });
+              if (!upErr) {
+                const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+                fotoUrl = publicUrl;
+              }
+            }
+            const prazoInfo = novoSet.prazo ? `Prazo: ${novoSet.prazo}` : null;
+            const rows = novoSet.membros.map(m => ({
+              cog: "disponivel", nome: "disponivel",
+              ceg: "CLAIM",
+              nome_do_item: `${novoSet.nome.trim()} · ${m}`,
+              valor_item: Number(novoSet.valor) || 0,
+              frete_inter: 0, taxa_rf: 0,
+              info_adicionais: prazoInfo,
+              na_loja: true,
+            }));
+            const { data: inserted, error } = await supabase.from("masterlist").insert(rows).select();
+            if (!error && inserted?.length && fotoUrl) {
+              await Promise.all(inserted.map(item =>
+                supabase.from("item_fotos").insert([{ ceg: "CLAIM", nome_do_item: item.nome_do_item, foto_url: fotoUrl, ordem: -1 }])
+              ));
+            }
+            if (!error && inserted?.length) {
+              setItens(prev => [...prev, ...inserted]);
+              setNovoSet({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
+              setLojaTab("disponiveis");
+            } else {
+              alert("Erro ao criar set: " + (error?.message || "desconhecido"));
+            }
+            setSalvandoSet(false);
+          }} style={{ alignSelf:"flex-end", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, letterSpacing:"1px", padding:"10px 24px", background: (!novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length) ? "rgba(245,240,232,.08)" : "var(--laranja)", border:"none", borderRadius:8, color: (!novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length) ? "rgba(245,240,232,.2)" : "#fff", cursor: (!novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length) ? "not-allowed" : "pointer" }}>
+            {salvandoSet ? "publicando..." : `PUBLICAR ${novoSet.membros.length} ITEM${novoSet.membros.length !== 1 ? "S" : ""} →`}
+          </button>
+        </div>
+      )}
 
       {/* formulário adicionar manual */}
       {lojaTab === "adicionar" && (
@@ -18712,12 +18819,32 @@ export default function App() {
   }
 
   if (window.location.pathname === "/claim") {
+    const monoC = "'DM Mono',monospace";
     return (
       <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
-          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, marginBottom:20 }}>← voltar</button>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:24 }}>CLAIMS</div>
+          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:monoC, fontSize:11, cursor:"pointer", padding:0, marginBottom:20 }}>← voltar</button>
+          <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:20 }}>CLAIMS</div>
+
+          {/* Regras */}
+          <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {[
+                "Pagamento será liberado quando fechar o set.",
+                "Aceito cartão com juros.",
+                "Repasse dos itens apenas após pagamento.",
+                "Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!",
+                "Um amigo pode te ajudar na claim :)",
+              ].map((r, i) => (
+                <div key={i} style={{ fontFamily:monoC, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
+                  <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <DisponiveisTab user={user} />
         </div>
       </div>
