@@ -12578,6 +12578,109 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
   );
 }
 
+function ClaimAoVivo() {
+  const mono = "'DM Mono',monospace";
+  const [dados, setDados] = useState(null);
+  const [fotos, setFotos] = useState({});
+  const [claims, setClaims] = useState([]);
+  const [lastUp, setLastUp] = useState(null);
+
+  async function fetchDados() {
+    const { data: itens } = await supabase.from("masterlist").select("id, nome_do_item, na_loja").eq("ceg","CLAIM").order("nome_do_item");
+    const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
+    const { data: cd } = await supabase.from("claims").select("masterlist_id, joiner_nome, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado");
+    const mapaFotos = {};
+    (fd||[]).forEach(f => { mapaFotos[f.nome_do_item] = f.foto_url; });
+    setDados(itens || []);
+    setFotos(mapaFotos);
+    setClaims(cd || []);
+    setLastUp(new Date());
+  }
+
+  useEffect(() => {
+    fetchDados();
+    const t = setInterval(fetchDados, 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!dados) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0", textAlign:"center" }}>carregando...</div>;
+
+  // Agrupar por set
+  const grupos = {};
+  dados.forEach(item => {
+    const partes = item.nome_do_item.split(" · ");
+    const base = partes.slice(0,-1).join(" · ");
+    const membro = partes[partes.length-1];
+    if (!grupos[base]) grupos[base] = { base, itens:[] };
+    const claim = claims.find(c => c.masterlist_id === item.id);
+    grupos[base].itens.push({ ...item, membro, claim });
+  });
+
+  if (!Object.keys(grupos).length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0", textAlign:"center" }}>Nenhum set publicado.</div>;
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)" }}>ATUALIZA A CADA 15s</div>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {lastUp && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>última vez: {lastUp.toLocaleTimeString("pt-BR")}</span>}
+          <button onClick={fetchDados} style={{ background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"4px 10px", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>↻ agora</button>
+        </div>
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+        {Object.values(grupos).map(({ base, itens }) => {
+          const fotoUrl = fotos[itens[0]?.nome_do_item];
+          const todosFechados = itens.every(i => !i.na_loja);
+          return (
+            <div key={base} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${todosFechados ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.08)"}`, borderRadius:12, overflow:"hidden" }}>
+              {/* Header */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+                {fotoUrl && <img src={fotoUrl} alt={base} style={{ width:44, height:44, borderRadius:6, objectFit:"cover", flexShrink:0 }} />}
+                <div style={{ flex:1 }}>
+                  <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)" }}>{base}</div>
+                  <div style={{ fontFamily:mono, fontSize:9, color: todosFechados ? "var(--lilas)" : "rgba(186,255,57,.5)", marginTop:2 }}>
+                    {todosFechados ? "set fechado" : `${itens.filter(i=>i.na_loja).length} disponíve${itens.filter(i=>i.na_loja).length===1?"l":"is"}`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Membros */}
+              <div style={{ padding:"8px 14px" }}>
+                {itens.map((item, idx) => {
+                  const claimed = !item.na_loja && !!item.claim;
+                  const ts = item.claim?.created_at ? new Date(item.claim.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" }) : null;
+                  return (
+                    <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom: idx < itens.length-1 ? "1px solid rgba(245,240,232,.05)" : "none" }}>
+                      <span style={{ fontFamily:mono, fontSize:11, color: claimed ? "var(--offwhite)" : "rgba(245,240,232,.3)" }}>{item.membro}</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        {claimed
+                          ? <>
+                              <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{item.claim.joiner_nome}</span>
+                              {ts && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>{ts}</span>}
+                              <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background: item.claim.status==="aprovado" ? "rgba(186,255,57,.08)" : "rgba(255,180,0,.08)", border:`1px solid ${item.claim.status==="aprovado" ? "rgba(186,255,57,.25)" : "rgba(255,180,0,.25)"}`, color: item.claim.status==="aprovado" ? "#BAFF39" : "#ffb400" }}>{item.claim.status}</span>
+                            </>
+                          : <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.4)" }}>livre</span>
+                        }
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {todosFechados && (
+                <div style={{ margin:"0 14px 12px", padding:"8px 14px", borderRadius:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center" }}>
+                  Set fechado · aguardando confirmação de compra da GOM
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ClaimPublicoPage({ user }) {
   const mono = "'DM Mono',monospace";
   const [todosItens, setTodosItens] = useState(null);
@@ -19256,6 +19359,7 @@ export default function App() {
 
   if (window.location.pathname === "/claim") {
     const monoC = "'DM Mono',monospace";
+    const [claimPageTab, setClaimPageTab] = useState("claim");
     return (
       <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
@@ -19263,25 +19367,37 @@ export default function App() {
           <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:20 }}>CLAIMS</div>
 
-          {/* Regras */}
-          <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
-            <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {[
-                "Pagamento será liberado quando fechar o set.",
-                "Aceito cartão com juros.",
-                "Repasse dos itens apenas após pagamento.",
-                "Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!",
-                "Um amigo pode te ajudar na claim :)",
-              ].map((r, i) => (
-                <div key={i} style={{ fontFamily:monoC, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
-                  <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
-                </div>
-              ))}
-            </div>
+          {/* Abas */}
+          <div style={{ display:"flex", gap:6, marginBottom:24 }}>
+            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"]].map(([v,l]) => (
+              <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:monoC, fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
+                {l}
+              </button>
+            ))}
           </div>
 
-          <ClaimPublicoPage user={user} />
+          {claimPageTab === "claim" && <>
+            {/* Regras */}
+            <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+              <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {[
+                  "Pagamento será liberado quando fechar o set.",
+                  "Aceito cartão com juros.",
+                  "Repasse dos itens apenas após pagamento.",
+                  "Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!",
+                  "Um amigo pode te ajudar na claim :)",
+                ].map((r, i) => (
+                  <div key={i} style={{ fontFamily:monoC, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
+                    <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ClaimPublicoPage user={user} />
+          </>}
+
+          {claimPageTab === "ao-vivo" && <ClaimAoVivo />}
         </div>
       </div>
     );
