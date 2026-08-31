@@ -16437,7 +16437,7 @@ function PopupSkzooEaawPage() {
                   const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
                   return total > 0
                     ? <div style={{ fontFamily:mono, fontSize:8, color:"var(--laranja)", marginTop:3 }}>{total} selecionado{total > 1 ? "s" : ""}</div>
-                    : <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,92,26,.5)", marginTop:3, letterSpacing:"0.5px" }}>escolha o personagem</div>;
+                    : null;
                 })()}
                 {item.tag && (
                   <span style={{ display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
