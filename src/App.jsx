@@ -17251,6 +17251,7 @@ function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
   const now  = new Date();
   const [subView, setSubView] = useState(null);
+  const [subTabPv, setSubTabPv] = useState("ativos");
 
   const REVISTA_DEADLINE_PV = new Date("2026-09-04T23:59:59-03:00");
   const revistaAberta = now <= REVISTA_DEADLINE_PV;
@@ -17323,11 +17324,35 @@ function PrevendaTab({ user }) {
     return <RevistaBazaarInPage onVoltar={() => setSubView(null)} />;
   }
 
+  const ativos     = formularios.filter(f =>  f.ativo);
+  const encerrados = formularios.filter(f => !f.ativo);
+  const listaAtual = subTabPv === "ativos" ? ativos : encerrados;
+
   return (
     <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
-      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:20 }}>PRÉ-VENDAS</div>
+      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>PRÉ-VENDAS</div>
+
+      {/* sub-tabs */}
+      <div style={{ display:"flex", gap:4, marginBottom:20, borderBottom:"1px solid rgba(245,240,232,.07)", paddingBottom:12 }}>
+        {[
+          { id:"ativos",      label:"◈ Abertas",     count: ativos.length },
+          { id:"finalizados", label:"✕ Encerradas",  count: encerrados.length },
+        ].map(({ id, label, count }) => (
+          <button key={id} onClick={() => setSubTabPv(id)} style={{
+            background: subTabPv === id ? "rgba(255,92,26,.1)" : "transparent",
+            border: subTabPv === id ? "1px solid rgba(255,92,26,.35)" : "1px solid transparent",
+            color: subTabPv === id ? "var(--laranja)" : "rgba(245,240,232,.4)",
+            fontFamily:mono, fontSize:11, fontWeight: subTabPv === id ? 700 : 400,
+            borderRadius:7, padding:"6px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+          }}>
+            {label}
+            {count > 0 && <span style={{ fontSize:9, background: subTabPv === id ? "rgba(255,92,26,.25)" : "rgba(245,240,232,.08)", borderRadius:10, padding:"1px 6px" }}>{count}</span>}
+          </button>
+        ))}
+      </div>
+
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        {formularios.map(f => (
+        {listaAtual.map(f => (
           <div key={f.key} style={{ border:`1px solid ${f.ativo?"rgba(255,92,26,.25)":"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
             <div style={{ display:"flex", gap:0 }}>
               {f.img && (
