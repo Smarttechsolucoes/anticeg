@@ -19075,6 +19075,7 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [showA2HS, setShowA2HS] = useState(false);
+  const [claimPageTab, setClaimPageTab] = useState("claim");
   const [a2hsPrompt, setA2hsPrompt] = useState(null);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [nudgePushPerm, setNudgePushPerm] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
@@ -19359,7 +19360,6 @@ export default function App() {
 
   if (window.location.pathname === "/claim") {
     const monoC = "'DM Mono',monospace";
-    const [claimPageTab, setClaimPageTab] = useState("claim");
     return (
       <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
