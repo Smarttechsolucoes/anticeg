@@ -12715,6 +12715,12 @@ function ClaimPublicoPage({ user }) {
   const [claimErro, setClaimErro] = useState(null);
   const [isBloqueada, setIsBloqueada] = useState(false);
   const [meusClaims, setMeusClaims] = useState([]);
+  const [agora, setAgora] = useState(new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle()
@@ -12800,7 +12806,16 @@ function ClaimPublicoPage({ user }) {
     const partes = item.nome_do_item.split(" · ");
     const base = partes.slice(0,-1).join(" · ");
     const membro = partes[partes.length-1];
-    if (!grupos[base]) grupos[base] = { base, itens:[], valor: item.valor_item, prazo: item.info_adicionais?.replace("Prazo:","").trim()||null };
+    if (!grupos[base]) {
+      const info = item.info_adicionais || "";
+      const prazoMatch = info.match(/Prazo:\s*([^|]+)/);
+      const aberturaMatch = info.match(/Abertura:\s*([^|]+)/);
+      grupos[base] = {
+        base, itens:[], valor: item.valor_item,
+        prazo: prazoMatch ? prazoMatch[1].trim() : null,
+        abertura: aberturaMatch ? new Date(aberturaMatch[1].trim()) : null,
+      };
+    }
     grupos[base].itens.push({ ...item, membro });
   });
 
@@ -12814,6 +12829,12 @@ function ClaimPublicoPage({ user }) {
       {gruposAtivos.map(grupo => {
         const fotoUrl = fotos[grupo.itens[0]?.nome_do_item];
         const totalSel = grupo.itens.reduce((s,i) => s + (qtds[i.id]||0), 0);
+        const bloqueadoPorHorario = grupo.abertura && agora < grupo.abertura;
+        const diffMs = grupo.abertura ? grupo.abertura - agora : 0;
+        const hh = String(Math.floor(diffMs / 3600000)).padStart(2,"0");
+        const mm = String(Math.floor((diffMs % 3600000) / 60000)).padStart(2,"0");
+        const ss = String(Math.floor((diffMs % 60000) / 1000)).padStart(2,"0");
+        const countdown = `${hh}:${mm}:${ss}`;
         return (
           <div key={grupo.base} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
 
@@ -12867,15 +12888,23 @@ function ClaimPublicoPage({ user }) {
               </div>
 
               {/* Confirmar */}
-              <button disabled={enviando || totalSel === 0} onClick={() => confirmarClaim(grupo)} style={{
-                width:"100%", padding:"13px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px",
-                background: totalSel > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)",
-                border:"none", borderRadius:8,
-                color: totalSel > 0 ? "#fff" : "rgba(245,240,232,.2)",
-                cursor: totalSel > 0 ? "pointer" : "not-allowed",
-              }}>
-                {enviando ? "ENVIANDO..." : totalSel > 0 ? `CONFIRMAR CLAIM (${totalSel} membro${totalSel>1?"s":""}) →` : "SELECIONE UM MEMBRO"}
-              </button>
+              {bloqueadoPorHorario ? (
+                <div style={{ width:"100%", padding:"13px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, color:"rgba(245,240,232,.35)", textAlign:"center" }}>
+                  <div style={{ fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.25)", marginBottom:4 }}>ABRE EM</div>
+                  <div style={{ fontSize:22, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3, color:"var(--laranja)" }}>{countdown}</div>
+                  <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>{grupo.abertura.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</div>
+                </div>
+              ) : (
+                <button disabled={enviando || totalSel === 0} onClick={() => confirmarClaim(grupo)} style={{
+                  width:"100%", padding:"13px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px",
+                  background: totalSel > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)",
+                  border:"none", borderRadius:8,
+                  color: totalSel > 0 ? "#fff" : "rgba(245,240,232,.2)",
+                  cursor: totalSel > 0 ? "pointer" : "not-allowed",
+                }}>
+                  {enviando ? "ENVIANDO..." : totalSel > 0 ? `CONFIRMAR CLAIM (${totalSel} membro${totalSel>1?"s":""}) →` : "SELECIONE UM MEMBRO"}
+                </button>
+              )}
 
               {/* Confirmação / erro abaixo do botão */}
               {claimOk && <div style={{ marginTop:12, background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39" }}>{claimOk}</div>}
@@ -17899,7 +17928,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
   const inputS = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, width:"100%", boxSizing:"border-box" };
   const [claimsTab, setClaimsTab] = useState("sets");
   const [pendentes, setPendentes] = useState(pendentesInit || []);
-  const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
+  const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", horario:"", membros:[], fotoFile:null, fotoPreview:null });
   const [salvando, setSalvando] = useState(false);
   const [sets, setSets] = useState(null);
   const [setsFotos, setSetsFotos] = useState({});
@@ -17955,7 +17984,8 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
         fotoUrl = publicUrl;
       }
     }
-    const prazoInfo = novoSet.prazo ? `Prazo: ${novoSet.prazo}` : null;
+    const partes = [novoSet.prazo ? `Prazo: ${novoSet.prazo}` : null, novoSet.horario ? `Abertura: ${novoSet.horario}` : null].filter(Boolean);
+    const prazoInfo = partes.length ? partes.join(" | ") : null;
     const rows = novoSet.membros.map(m => ({
       cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
       nome_do_item: `${novoSet.nome.trim()} · ${m}`,
@@ -17971,7 +18001,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
       ));
     }
     if (!error) {
-      setNovoSet({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
+      setNovoSet({ nome:"", valor:"", prazo:"", horario:"", membros:[], fotoFile:null, fotoPreview:null });
       setClaimsTab("pendentes");
     } else {
       alert("Erro: " + error.message);
@@ -18127,6 +18157,10 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
             <div>
               <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>PRAZO</div>
               <input value={novoSet.prazo} onChange={e => setNovoSet(p => ({...p, prazo: e.target.value}))} placeholder="ex: 20/09" style={inputS} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>HORÁRIO DE ABERTURA</div>
+              <input type="datetime-local" value={novoSet.horario} onChange={e => setNovoSet(p => ({...p, horario: e.target.value}))} style={inputS} />
             </div>
           </div>
 
