@@ -16367,6 +16367,9 @@ function PopupSkzooEaawPage() {
   const BASE = "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo";
   const [lightbox, setLightbox] = useState(null);
   const [qtds, setQtds] = useState({});
+  const [etapa, setEtapa] = useState("loja");
+  const [pagamento, setPagamento] = useState(null);
+  const [envio, setEnvio] = useState(null);
 
   const SKZOOS = ["Wolf Chan","Leebit","Dwaekki","Jiniret","Han Quokka","BbokAri","PuppyM","FoxI.Ny"];
 
@@ -16377,13 +16380,13 @@ function PopupSkzooEaawPage() {
 
   const itens = [
     { n:"01", nome:"Official Light Stick Ver.2" },
-    { n:"02", nome:"SKZOO Face Shoulder Bag", skzoo:"escolha o personagem" },
-    { n:"03", nome:"Evil SKZOO Acrylic Keyring", skzoo:"escolha o personagem" },
-    { n:"04", nome:"SKZOO Plush Collect Book", skzoo:"escolha o personagem" },
-    { n:"05", nome:"SKZOO Strap Plush", skzoo:"escolha o personagem" },
-    { n:"06", nome:"SKZOO Reel Face Set", skzoo:"escolha o personagem" },
+    { n:"02", nome:"SKZOO Face Shoulder Bag", skzoo:true },
+    { n:"03", nome:"Evil SKZOO Acrylic Keyring", skzoo:true },
+    { n:"04", nome:"SKZOO Plush Collect Book", skzoo:true },
+    { n:"05", nome:"SKZOO Strap Plush", skzoo:true },
+    { n:"06", nome:"SKZOO Reel Face Set", skzoo:true },
     { n:"07", nome:"SKZOO Secret Keyring Toy Ver." },
-    { n:"08", nome:"SKZOO Keyring LATAM Ver.", tag:"Exclusivo Online", skzoo:"escolha o personagem" },
+    { n:"08", nome:"SKZOO Keyring LATAM Ver.", tag:"Exclusivo Online", skzoo:true },
     { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Exclusivo Online" },
     { n:"10", nome:"SKZOO City Mug LATAM Ver." },
     { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver." },
@@ -16392,13 +16395,41 @@ function PopupSkzooEaawPage() {
     { n:"14", nome:"Racing Jacket LATAM Ver." },
     { n:"15", nome:"T-Shirt LATAM Ver." },
     { n:"16", nome:"Baseball Jersey LATAM Ver." },
-    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:"escolha o personagem" },
+    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true },
     { n:"18", nome:"SKZOO Travel Pouch" },
     { n:"19", nome:"SKZOO Mouse Pad" },
     { n:"20", nome:"SKZOO Luggage Strap" },
     { n:"21", nome:"Ball Cap" },
     { n:"22", nome:"SKZOO Mini Lightbox" },
   ];
+
+  const ETAPAS = [
+    { id:"loja",     label:"Loja" },
+    { id:"pagamento",label:"Pagamento" },
+    { id:"envio",    label:"Envio / Retirada" },
+    { id:"confirmar",label:"Confirmar" },
+  ];
+
+  const itensSelecionados = itens.filter(item => {
+    if (item.skzoo) return SKZOOS.some(sk => (qtds[`${item.n}:${sk}`] || 0) > 0);
+    return false;
+  });
+
+  const tagStyle = (tag) => ({
+    display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
+    background: tag === "Free" ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.1)",
+    color: tag === "Free" ? "var(--verde)" : "var(--lilas)",
+    border: `1px solid ${tag === "Free" ? "rgba(186,255,57,.25)" : "rgba(201,168,240,.25)"}`,
+    letterSpacing:"0.5px",
+  });
+
+  const btnProximo = (proxima) => (
+    <div style={{ marginTop:32, display:"flex", justifyContent:"flex-end" }}>
+      <button onClick={() => setEtapa(proxima)} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>
+        PRÓXIMA ETAPA →
+      </button>
+    </div>
+  );
 
   return (
     <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
@@ -16410,66 +16441,152 @@ function PopupSkzooEaawPage() {
 
       <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px 80px" }}>
         {/* Header */}
-        <div style={{ marginTop:24, marginBottom:28 }}>
-          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:mono, fontSize:11, cursor:"pointer", padding:0, marginBottom:16 }}>← voltar</button>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:8 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
+        <div style={{ marginTop:24, marginBottom:24 }}>
+          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:mono, fontSize:11, cursor:"pointer", padding:0, marginBottom:14 }}>← voltar</button>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1 }}>SKZOO EVERYWHERE</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1, color:"var(--laranja)" }}>ALL AROUND THE WORLD</div>
           <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginTop:6 }}>in Rio de Janeiro · Formulário 03–05/09</div>
-          <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.3)", letterSpacing:"1px" }}>EM BREVE</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>22 ITENS</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS A CONFIRMAR</span>
           </div>
         </div>
 
-        {/* Regras */}
-        <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>REGRAS IMPORTANTES</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
-              》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
-              <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
+        {/* Nav de etapas */}
+        <div style={{ display:"flex", gap:0, marginBottom:28, borderRadius:10, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
+          {ETAPAS.map((et, i) => (
+            <button key={et.id} onClick={() => setEtapa(et.id)} style={{
+              flex:1, padding:"10px 4px", fontFamily:mono, fontSize:10, fontWeight: etapa === et.id ? 700 : 400,
+              background: etapa === et.id ? "rgba(255,92,26,.12)" : "transparent",
+              color: etapa === et.id ? "var(--laranja)" : "rgba(245,240,232,.35)",
+              border:"none", borderRight: i < ETAPAS.length-1 ? "1px solid rgba(245,240,232,.08)" : "none",
+              cursor:"pointer", letterSpacing:"0.5px", transition:"background .15s",
+            }}>{et.label}</button>
+          ))}
+        </div>
+
+        {/* ── LOJA ── */}
+        {etapa === "loja" && <>
+          {/* Regras */}
+          <div style={{ marginBottom:24, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>REGRAS IMPORTANTES</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+                》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
+                <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
+              </div>
+              {[
+                "A pop-up é NACIONAL e não haverá TAXA INTERNACIONAL e nem FRETE INTERNACIONAL.",
+                "O valor de proxy service está adicionado no valor final.",
+                "O envio nacional poderá ser solicitado a partir da abertura do formulário.",
+              ].map((r, i) => (
+                <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+                  <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+                </div>
+              ))}
             </div>
-            {[
-              "A pop-up é NACIONAL e não haverá TAXA INTERNACIONAL e nem FRETE INTERNACIONAL.",
-              "O valor de proxy service está adicionado no valor final.",
-              "O envio nacional poderá ser solicitado a partir da abertura do formulário.",
-            ].map((r, i) => (
-              <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
-                <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+          </div>
+
+          {/* Grade */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
+            {itens.map(item => (
+              <div key={item.n} onClick={() => setLightbox(item)}
+                style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in", transition:"border-color .15s" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor="rgba(255,92,26,.35)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
+                <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
+                <div style={{ padding:"8px 10px" }}>
+                  <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
+                  <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
+                  {item.skzoo && (() => {
+                    const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
+                    return total > 0 ? <div style={{ fontFamily:mono, fontSize:8, color:"var(--laranja)", marginTop:3 }}>{total} selecionado{total > 1 ? "s" : ""}</div> : null;
+                  })()}
+                  {item.tag && <span style={tagStyle(item.tag)}>{item.tag}</span>}
+                </div>
               </div>
             ))}
           </div>
-        </div>
+          {btnProximo("pagamento")}
+        </>}
 
-        {/* Grade de itens */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
-          {itens.map(item => (
-            <div key={item.n} onClick={() => setLightbox(item)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in", transition:"border-color .15s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor="rgba(255,92,26,.35)"}
-              onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
-              <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
-              <div style={{ padding:"8px 10px" }}>
-                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
-                <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
-                {item.skzoo && (() => {
-                  const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
-                  return total > 0
-                    ? <div style={{ fontFamily:mono, fontSize:8, color:"var(--laranja)", marginTop:3 }}>{total} selecionado{total > 1 ? "s" : ""}</div>
-                    : null;
-                })()}
-                {item.tag && (
-                  <span style={{ display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
-                    background: item.tag === "Free" ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.1)",
-                    color: item.tag === "Free" ? "var(--verde)" : "var(--lilas)",
-                    border: `1px solid ${item.tag === "Free" ? "rgba(186,255,57,.25)" : "rgba(201,168,240,.25)"}`,
-                    letterSpacing:"0.5px" }}>{item.tag}</span>
-                )}
-              </div>
+        {/* ── PAGAMENTO ── */}
+        {etapa === "pagamento" && <>
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"28px 20px", textAlign:"center" }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>FORMAS DE PAGAMENTO</div>
+            <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>Em breve · detalhes serão disponibilizados</div>
+          </div>
+          <div style={{ marginTop:24, display:"flex", justifyContent:"space-between" }}>
+            <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+            <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>PRÓXIMA ETAPA →</button>
+          </div>
+        </>}
+
+        {/* ── ENVIO / RETIRADA ── */}
+        {etapa === "envio" && <>
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"28px 20px", textAlign:"center" }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ENVIO / RETIRADA</div>
+            <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>Em breve · opções serão disponibilizadas</div>
+          </div>
+          <div style={{ marginTop:24, display:"flex", justifyContent:"space-between" }}>
+            <button onClick={() => setEtapa("pagamento")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+            <button onClick={() => setEtapa("confirmar")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>PRÓXIMA ETAPA →</button>
+          </div>
+        </>}
+
+        {/* ── CONFIRMAR ── */}
+        {etapa === "confirmar" && <>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>RESUMO DO PEDIDO</div>
+
+          {/* Itens com skzoo selecionados */}
+          {itensSelecionados.length > 0 ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:20 }}>
+              {itensSelecionados.map(item => (
+                <div key={item.n} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px" }}>
+                  <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:10 }}>
+                    <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:48, height:48, objectFit:"cover", borderRadius:6 }} />
+                    <div>
+                      <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)" }}>#{item.n}</div>
+                      <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", fontWeight:700 }}>{item.nome}</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {SKZOOS.filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0).map(sk => (
+                      <div key={sk} style={{ display:"flex", justifyContent:"space-between", fontFamily:mono, fontSize:10 }}>
+                        <span style={{ color:"rgba(245,240,232,.55)" }}>{sk}</span>
+                        <span style={{ color:"var(--laranja)", fontWeight:700 }}>× {qtds[`${item.n}:${sk}`]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", marginBottom:20 }}>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum item com personagem selecionado ainda.</div>
+            </div>
+          )}
+
+          {/* Pagamento e envio */}
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Pagamento</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>a confirmar</span>
+            </div>
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Envio / Retirada</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>a confirmar</span>
+            </div>
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Preço total</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>a confirmar</span>
+            </div>
+          </div>
+
+          <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+        </>}
       </div>
 
       {/* Lightbox */}
@@ -16482,7 +16599,6 @@ function PopupSkzooEaawPage() {
               <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
               {lightbox.tag && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", marginTop:4 }}>{lightbox.tag}</div>}
             </div>
-
             {lightbox.skzoo && (
               <div style={{ marginTop:20, width:"100%", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
                 <div style={{ fontFamily:mono, fontSize:9, color:"var(--laranja)", letterSpacing:"1.5px", marginBottom:12 }}>ESCOLHA SEU SKZOO:</div>
@@ -16502,7 +16618,6 @@ function PopupSkzooEaawPage() {
                 })}
               </div>
             )}
-
             <button onClick={() => setLightbox(null)} style={{ marginTop:16, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar ✕</button>
           </div>
         </div>
