@@ -12918,7 +12918,7 @@ function ClaimPublicoPage({ user }) {
                               });
                               setClaimErro(null);
                             }} style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"var(--laranja)", background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.3)", borderRadius:20, cursor:"pointer", padding:"3px 12px" }}>
-                              OT8
+                              selecionar tudo
                             </button>
                             {algumSel && <button onClick={() => {
                               setQtds(prev => {
@@ -12950,6 +12950,27 @@ function ClaimPublicoPage({ user }) {
                           </div>
                         );
                       })}
+                      {/* OT8 — linha de atalho para selecionar todos */}
+                      {!setFechado && !bloqueado && (() => {
+                        const disponiveis = setData.itens.filter(i => !i.slots.some(s => meusClaims.includes(s.id)));
+                        if (disponiveis.length < 2) return null;
+                        const todosOT8 = disponiveis.every(i => (qtds[qKey(grupo.base, setData.aberturaKey, i.nome_do_item)]||0) > 0);
+                        return (
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderTop:"1px solid rgba(245,240,232,.07)", marginTop:2 }}>
+                            <span style={{ fontFamily:mono, fontSize:11, color: todosOT8 ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: todosOT8 ? 700 : 400 }}>OT8</span>
+                            <button onClick={() => {
+                              setQtds(prev => {
+                                const n = {...prev};
+                                disponiveis.forEach(i => { n[qKey(grupo.base, setData.aberturaKey, i.nome_do_item)] = 1; });
+                                return n;
+                              });
+                              setClaimErro(null);
+                            }} style={{ fontFamily:mono, fontSize:10, fontWeight:700, color:"var(--laranja)", background: todosOT8 ? "rgba(255,92,26,.2)" : "rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.35)", borderRadius:20, cursor:"pointer", padding:"3px 14px" }}>
+                              {todosOT8 ? "selecionado" : "selecionar"}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Botão / countdown / fechado */}
@@ -18323,11 +18344,13 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                   </button>
                 );
               })}
+              <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))}
+                style={{ fontFamily:mono, fontSize:10, padding:"5px 12px", borderRadius:20, cursor:"pointer", border:"1px solid rgba(255,92,26,.4)", background: novoSet.membros.length === SK_MEMBROS.length ? "rgba(255,92,26,.2)" : "rgba(255,92,26,.06)", color:"var(--laranja)", fontWeight:700 }}>
+                OT8
+              </button>
             </div>
             <div style={{ marginTop:8, display:"flex", gap:8, alignItems:"center" }}>
-              <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))} style={{ fontFamily:mono, fontSize:9, color:"var(--laranja)", background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.3)", borderRadius:20, cursor:"pointer", padding:"3px 10px", fontWeight:700 }}>OT8</button>
-              <span style={{ color:"rgba(245,240,232,.15)" }}>·</span>
-              <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>todos</button>
+              <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>selecionar tudo</button>
               <span style={{ color:"rgba(245,240,232,.15)" }}>·</span>
               <button onClick={() => setNovoSet(p => ({...p, membros:[]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>limpar</button>
             </div>
