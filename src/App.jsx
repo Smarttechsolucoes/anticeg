@@ -16526,7 +16526,10 @@ function PopupSkzooEaawPage() {
 
         {/* ── ENVIO / RETIRADA ── */}
         {etapa === "envio" && <>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>ESCOLHA UMA OPÇÃO</div>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ESCOLHA UMA OPÇÃO</div>
+          <div style={{ marginBottom:16, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"10px 14px", fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.85)", lineHeight:1.5 }}>
+            ⚠ O frete de todas as opções é de responsabilidade do joiner.
+          </div>
           <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
             {[
               { id:"retirada-rio",   label:"Retirada · Rio de Janeiro",  desc:"Encontrar no Rio no dia 09 de Setembro" },
