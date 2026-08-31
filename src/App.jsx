@@ -16505,6 +16505,7 @@ function PopupSkzooEaawPage() {
                     return total > 0 ? <div style={{ fontFamily:mono, fontSize:8, color:"var(--laranja)", marginTop:3 }}>{total} selecionado{total > 1 ? "s" : ""}</div> : null;
                   })()}
                   {item.tag && <span style={tagStyle(item.tag)}>{item.tag}</span>}
+                  <div style={{ marginTop:6, fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)", letterSpacing:"0.5px" }}>{item.preco || "PREÇO"}</div>
                 </div>
               </div>
             ))}
