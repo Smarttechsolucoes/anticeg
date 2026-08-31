@@ -17721,13 +17721,33 @@ function ComprovanteThumb({ url }) {
 function AdminClaims({ pendentesInit, onPendentesChange }) {
   const mono = "'DM Mono',monospace";
   const inputS = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, width:"100%", boxSizing:"border-box" };
-  const [claimsTab, setClaimsTab] = useState("pendentes");
+  const [claimsTab, setClaimsTab] = useState("sets");
   const [pendentes, setPendentes] = useState(pendentesInit || []);
   const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
   const [salvando, setSalvando] = useState(false);
+  const [sets, setSets] = useState(null);
+  const [setsFotos, setSetsFotos] = useState({});
+  const [setsClaims, setSetsClaims] = useState([]);
   const SK_MEMBROS = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
 
   useEffect(() => { setPendentes(pendentesInit || []); }, [pendentesInit]);
+
+  useEffect(() => {
+    if (claimsTab !== "sets" || sets !== null) return;
+    supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
+      .eq("ceg", "CLAIM").or("nome.ilike.disponivel,nome.ilike.disponível").order("nome_do_item")
+      .then(async ({ data }) => {
+        const itens = data || [];
+        setSets(itens);
+        if (!itens.length) return;
+        const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
+        const mapa = {};
+        (fd||[]).forEach(f => { mapa[f.nome_do_item] = f.foto_url; });
+        setSetsFotos(mapa);
+        supabase.from("claims").select("masterlist_id, joiner_nome, joiner_cog, status").eq("ceg","CLAIM").neq("status","rejeitado")
+          .then(({ data: cd }) => { if (cd) setSetsClaims(cd); });
+      });
+  }, [claimsTab, sets]);
 
   function updatePendentes(fn) {
     setPendentes(prev => { const next = fn(prev); onPendentesChange?.(next); return next; });
@@ -17788,13 +17808,74 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
       <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:16 }}>Claims</div>
 
       {/* Sub-tabs */}
-      <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-        {[["pendentes",`PENDENTES (${pendentes.length})`],["novo-set","NOVO SET"]].map(([v,l]) => (
+      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
+        {[["sets","SETS"],["pendentes",`PENDENTES (${pendentes.length})`],["novo-set","NOVO SET"]].map(([v,l]) => (
           <button key={v} onClick={() => setClaimsTab(v)} style={{ fontSize:9, fontFamily:mono, letterSpacing:"1px", padding:"5px 14px", borderRadius:20, cursor:"pointer", fontWeight: claimsTab===v ? 700 : 400, border: claimsTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimsTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimsTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
             {l}
           </button>
         ))}
       </div>
+
+      {/* SETS */}
+      {claimsTab === "sets" && (() => {
+        if (sets === null) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>carregando...</div>;
+        if (!sets.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhum set publicado ainda.</div>;
+
+        // agrupar por nome base
+        const grupos = {};
+        sets.forEach(item => {
+          const partes = item.nome_do_item.split(" · ");
+          const base = partes.slice(0,-1).join(" · ");
+          const membro = partes[partes.length-1];
+          if (!grupos[base]) grupos[base] = { base, itens:[] };
+          const claimDoItem = setsClaims.find(c => c.masterlist_id === item.id);
+          grupos[base].itens.push({ ...item, membro, claim: claimDoItem });
+        });
+
+        return (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {Object.values(grupos).map(({ base, itens }) => {
+              const fotoUrl = setsFotos[itens[0]?.nome_do_item];
+              const prazo = itens[0]?.info_adicionais?.replace("Prazo: ","") || null;
+              const total = itens.length;
+              const disponiveis = itens.filter(i => i.na_loja).length;
+              const pendentesN = itens.filter(i => i.claim?.status === "pendente").length;
+              const aprovados = itens.filter(i => i.claim?.status === "aprovado").length;
+              return (
+                <div key={base} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden" }}>
+                  <div style={{ display:"flex", gap:0 }}>
+                    {fotoUrl && <div style={{ width:80, flexShrink:0 }}><img src={fotoUrl} alt={base} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} /></div>}
+                    <div style={{ flex:1, padding:"12px 14px" }}>
+                      <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>{base}</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+                        <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(itens[0]?.valor_item||0).toFixed(2).replace(".",",")}</span>
+                        {prazo && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>prazo {prazo}</span>}
+                        <span style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.6)" }}>{disponiveis} disponíve{disponiveis!==1?"is":"l"}</span>
+                        {pendentesN > 0 && <span style={{ fontFamily:mono, fontSize:10, color:"#ffb400" }}>{pendentesN} pendente{pendentesN!==1?"s":""}</span>}
+                        {aprovados > 0 && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(201,168,240,.7)" }}>{aprovados} aprovado{aprovados!==1?"s":""}</span>}
+                      </div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                        {itens.map(item => {
+                          const bg = item.na_loja ? "rgba(186,255,57,.08)" : item.claim?.status === "pendente" ? "rgba(255,180,0,.08)" : "rgba(201,168,240,.08)";
+                          const border = item.na_loja ? "rgba(186,255,57,.25)" : item.claim?.status === "pendente" ? "rgba(255,180,0,.3)" : "rgba(201,168,240,.25)";
+                          const color = item.na_loja ? "#BAFF39" : item.claim?.status === "pendente" ? "#ffb400" : "var(--lilas)";
+                          const label = item.na_loja ? "livre" : item.claim?.status === "pendente" ? "pendente" : item.claim?.status === "aprovado" ? "aprovado" : "reservado";
+                          return (
+                            <div key={item.id} style={{ fontFamily:mono, fontSize:9, padding:"4px 10px", borderRadius:20, background:bg, border:`1px solid ${border}`, color }}>
+                              <span style={{ color:"var(--offwhite)", marginRight:4 }}>{item.membro}</span>{label}
+                              {item.claim?.joiner_nome && ` · ${item.claim.joiner_nome}`}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* PENDENTES */}
       {claimsTab === "pendentes" && (
