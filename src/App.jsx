@@ -5564,7 +5564,7 @@ ${compHTML}
           </div>
 
           {feedbackSubTab === "enviar" && (
-            <FeedbackForm user={user} defaultTipo={feedbackTipo} onSent={() => {
+            <FeedbackForm key={feedbackTipo} user={user} defaultTipo={feedbackTipo} onSent={() => {
               supabase.from("feedbacks").select("id, tipo, message, resposta, created_at").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
                 .then(({ data }) => { setMeusFeedbacks(data || []); setFeedbackSubTab("historico"); });
             }} />
@@ -11404,8 +11404,6 @@ function AdminLinks() {
 function MercariTab() {
   const PIX  = 'de1a489d-db81-4864-a8cf-74cdd79d9cdc';
   const WA   = '5524992782023';
-  const SUPA_URL = 'https://ghjfsmwwcfpfvrouyrka.supabase.co';
-  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM';
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
   const STEP_IDX = {pendente:0,aprovado:1,pago:2,finalizado:3,recusado:-1};
 
@@ -11531,8 +11529,8 @@ function MercariTab() {
       try{
         const ext=fileComp.name.split('.').pop()||'jpg';
         const path=`${jRef.current.cog}_${Date.now()}.${ext}`;
-        const up=await fetch(`${SUPA_URL}/storage/v1/object/mercari-comprovantes/${path}`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':fileComp.type||'application/octet-stream'},body:fileComp});
-        if(up.ok) comp=`${SUPA_URL}/storage/v1/object/public/mercari-comprovantes/${path}`;
+        const { error: upErr } = await supabase.storage.from('mercari-comprovantes').upload(path, fileComp, { contentType: fileComp.type || 'application/octet-stream', upsert: false });
+        if (!upErr) { const { data: pub } = supabase.storage.from('mercari-comprovantes').getPublicUrl(path); comp = pub.publicUrl; }
       }catch{}
     }
     const j=jRef.current;
@@ -12816,13 +12814,13 @@ function DisponiveisTab({ user }) {
       .then(({ data }) => setVendidos(data || []));
   }
 
-  useEffect(() => { carregarItens(); }, []);
+  useEffect(() => { carregarItens(); }, [user.cog]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") carregarItens(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+  }, [user.cog]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function darClaim(item) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso. Regularize para fazer claims."); return; }
