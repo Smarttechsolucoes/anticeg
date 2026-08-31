@@ -17318,6 +17318,24 @@ function PrevendaTab({ user }) {
       tags: ["Aberto"],
       info: "Solicite itens do Mercari JP",
     },
+    {
+      key: "wmag-hyunjin",
+      ativo: false,
+      titulo: "W MAGAZINE",
+      subtitulo: "Hyunjin — 3 capas",
+      img: null,
+      tags: ["Inscrições até 16/08", "Pagamento até 21/08"],
+      info: "R$ 48,00 por unidade · PIX ou cartão · frete inter 26/08",
+    },
+    {
+      key: "popup-this-that",
+      ativo: false,
+      titulo: "POP-UP THIS & THAT",
+      subtitulo: "Stray Kids",
+      img: "/popup/pob-week-1.png",
+      tags: ["Week 01 · encerrada", "Week 02 · encerrada"],
+      info: "14 itens exclusivos · pagamento após confirmação",
+    },
   ];
 
   if (subView === "bazaar-in") {
