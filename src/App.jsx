@@ -12624,8 +12624,8 @@ function ClaimAoVivo() {
     const sets = [];
     for (let i = 0; i < maxSlots; i++) {
       const itensDoSet = membros.map(m => membroMap[m][i] || { id: `${m}-vazio-${i}`, membro: m, na_loja: true, claim: null, nome_do_item: `${base} · ${m}` });
-      // fechado só quando TODOS os membros do set têm slot real e claimado nesse índice
-      const todosFechados = membros.every(m => {
+      // fechado só quando há exatamente 8 membros E todos têm slot real e claimado nesse índice
+      const todosFechados = membros.length >= 8 && membros.every(m => {
         const slot = membroMap[m][i];
         return slot && !slot.na_loja && !!slot.claim;
       });
@@ -18056,7 +18056,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
             {Object.values(grupos).map(({ base, itens }) => {
               const fotoUrl = setsFotos[itens[0]?.nome_do_item];
               const prazo = itens[0]?.info_adicionais?.replace("Prazo: ","") || null;
-              const todosFechados = itens.every(i => !i.na_loja);
+              const todosFechados = itens.length >= 8 && itens.every(i => !i.na_loja);
               return (
                 <div key={base} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden" }}>
                   {/* Header com foto e nome */}
