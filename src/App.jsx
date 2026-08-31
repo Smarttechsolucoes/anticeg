@@ -12710,6 +12710,7 @@ function ClaimPublicoPage({ user }) {
 
   function alterarQtd(itemId, delta) {
     setQtds(prev => ({ ...prev, [itemId]: Math.max(0, (prev[itemId]||0) + delta) }));
+    setClaimErro(null);
   }
 
   async function confirmarClaim(grupo) {
