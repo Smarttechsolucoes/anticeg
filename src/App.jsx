@@ -16526,13 +16526,34 @@ function PopupSkzooEaawPage() {
 
         {/* ── ENVIO / RETIRADA ── */}
         {etapa === "envio" && <>
-          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"28px 20px", textAlign:"center" }}>
-            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ENVIO / RETIRADA</div>
-            <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>Em breve · opções serão disponibilizadas</div>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>ESCOLHA UMA OPÇÃO</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+            {[
+              { id:"retirada-rio",   label:"Retirada · Rio de Janeiro",  desc:"Encontrar no Rio no dia 09 de Setembro" },
+              { id:"uber-flash",     label:"Retirada · Uber Flash",       desc:"A combinar dia e horário" },
+              { id:"envio-nacional", label:"Envio Nacional",              desc:"Formulário nacional abre após 15 de Setembro" },
+            ].map(op => {
+              const sel = envio === op.id;
+              return (
+                <div key={op.id} onClick={() => setEnvio(op.id)} style={{
+                  background: sel ? "rgba(255,92,26,.07)" : "rgba(245,240,232,.03)",
+                  border: `1px solid ${sel ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`,
+                  borderRadius:10, padding:"14px 16px", cursor:"pointer", transition:"border-color .15s",
+                }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid ${sel ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, background: sel ? "var(--laranja)" : "transparent", flexShrink:0, transition:"all .15s" }} />
+                    <div>
+                      <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color: sel ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>{op.label}</div>
+                      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginTop:3 }}>{op.desc}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div style={{ marginTop:24, display:"flex", justifyContent:"space-between" }}>
+          <div style={{ display:"flex", justifyContent:"space-between" }}>
             <button onClick={() => setEtapa("pagamento")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
-            <button onClick={() => setEtapa("confirmar")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>PRÓXIMA ETAPA →</button>
+            <button onClick={() => setEtapa("confirmar")} disabled={!envio} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: envio ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: envio ? "#fff" : "rgba(245,240,232,.2)", cursor: envio ? "pointer" : "not-allowed" }}>PRÓXIMA ETAPA →</button>
           </div>
         </>}
 
@@ -16577,7 +16598,9 @@ function PopupSkzooEaawPage() {
             </div>
             <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Envio / Retirada</span>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>a confirmar</span>
+              <span style={{ fontFamily:mono, fontSize:11, color: envio ? "var(--offwhite)" : "rgba(245,240,232,.25)" }}>
+                {envio === "retirada-rio" ? "Retirada · Rio 09/09" : envio === "uber-flash" ? "Uber Flash" : envio === "envio-nacional" ? "Envio Nacional" : "a confirmar"}
+              </span>
             </div>
             <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Preço total</span>
