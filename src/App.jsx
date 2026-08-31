@@ -16362,6 +16362,97 @@ function buildItemsFromQtds(qtds, week) {
   });
 }
 
+function PopupSkzooEaawPage() {
+  const mono = "'DM Mono',monospace";
+  const BASE = "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo";
+  const [lightbox, setLightbox] = useState(null);
+
+  const itens = [
+    { n:"01", nome:"Official Light Stick Ver.2" },
+    { n:"02", nome:"SKZOO Face Shoulder Bag" },
+    { n:"03", nome:"Evil SKZOO Acrylic Keyring" },
+    { n:"04", nome:"SKZOO Plush Collect Book" },
+    { n:"05", nome:"SKZOO Strap Plush" },
+    { n:"06", nome:"SKZOO Reel Face Set" },
+    { n:"07", nome:"SKZOO Secret Keyring Toy Ver." },
+    { n:"08", nome:"SKZOO Keyring LATAM Ver.", tag:"Online Only" },
+    { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Online Only" },
+    { n:"10", nome:"SKZOO City Mug LATAM Ver." },
+    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver." },
+    { n:"12", nome:"SKZOO Index Note LATAM Ver." },
+    { n:"13", nome:"Metal Badge LATAM Ver." },
+    { n:"14", nome:"Racing Jacket LATAM Ver.", tag:"Free" },
+    { n:"15", nome:"T-Shirt LATAM Ver.", tag:"Free" },
+    { n:"16", nome:"Baseball Jersey LATAM Ver.", tag:"Free" },
+    { n:"17", nome:"SKZOO Acrylic Magnetic Holder" },
+    { n:"18", nome:"SKZOO Travel Pouch" },
+    { n:"19", nome:"SKZOO Mouse Pad" },
+    { n:"20", nome:"SKZOO Luggage Strap" },
+    { n:"21", nome:"Ball Cap" },
+    { n:"22", nome:"SKZOO Mini Lightbox" },
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
+      {/* Capa */}
+      <div style={{ position:"relative", maxHeight:280, overflow:"hidden" }}>
+        <img src={`${BASE}/capa.png`} alt="SKZOO EAAW RIO" style={{ width:"100%", objectFit:"cover", objectPosition:"center top", display:"block" }} />
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 40%, #0d0d0d)" }} />
+      </div>
+
+      <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px 80px" }}>
+        {/* Header */}
+        <div style={{ marginTop:24, marginBottom:28 }}>
+          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:mono, fontSize:11, cursor:"pointer", padding:0, marginBottom:16 }}>← voltar</button>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:8 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1 }}>SKZOO EVERYWHERE</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1, color:"var(--laranja)" }}>ALL AROUND THE WORLD</div>
+          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginTop:6 }}>in Rio de Janeiro · Formulário 03–05/09</div>
+          <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.3)", letterSpacing:"1px" }}>EM BREVE</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>22 ITENS</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS A CONFIRMAR</span>
+          </div>
+        </div>
+
+        {/* Grade de itens */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
+          {itens.map(item => (
+            <div key={item.n} onClick={() => setLightbox(item)} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in", transition:"border-color .15s" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor="rgba(255,92,26,.35)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
+              <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
+              <div style={{ padding:"8px 10px" }}>
+                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
+                <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
+                {item.tag && (
+                  <span style={{ display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
+                    background: item.tag === "Free" ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.1)",
+                    color: item.tag === "Free" ? "var(--verde)" : "var(--lilas)",
+                    border: `1px solid ${item.tag === "Free" ? "rgba(186,255,57,.25)" : "rgba(201,168,240,.25)"}`,
+                    letterSpacing:"0.5px" }}>{item.tag}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.9)", zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"zoom-out", padding:24 }}>
+          <img src={`${BASE}/${lightbox.n}.png`} alt={lightbox.nome} style={{ maxWidth:"90vw", maxHeight:"75vh", objectFit:"contain", borderRadius:10 }} onClick={e => e.stopPropagation()} />
+          <div style={{ marginTop:14, textAlign:"center" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>#{lightbox.n}</div>
+            <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
+            {lightbox.tag && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", marginTop:4 }}>{lightbox.tag}</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PopupThisAndThatPage() {
   const mono = "'DM Mono',monospace";
   const now  = new Date();
@@ -17270,6 +17361,7 @@ function PrevendaTab({ user }) {
       ativo: true,
       titulo: "POP-UP SKZOO EAAW",
       subtitulo: "Rio de Janeiro · Merch Oficial",
+      url: "/prevenda/popup-skzoo",
       img: "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo/capa.png",
       tags: ["Em breve · Formulário 03–05/09", "Pagamento a confirmar"],
       info: "22 itens · LATAM Ver. exclusivos · preços a confirmar",
@@ -18370,6 +18462,7 @@ export default function App() {
   }
   if (window.location.pathname === "/revista") return <RevistaFormPage />;
   if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
+  if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
