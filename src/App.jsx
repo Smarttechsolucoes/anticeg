@@ -248,6 +248,7 @@ const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
 
 const WHATSAPP_NUM = "5524992782023";
+const PIX_KEY      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
 const SITE_URL     = "https://anticeg.vercel.app";
 
 function useWindowWidth() {
@@ -4337,7 +4338,6 @@ ${p.comprovante_url ? (() => {
 
             {/* Dados PIX */}
             {pagMetodo === "pix" && (() => {
-              const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
               function copiar() {
                 navigator.clipboard.writeText(PIX_KEY);
                 setPixCopiado(true);
@@ -5056,7 +5056,6 @@ ${compHTML}
                                 <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
                               </div>
                               {s.status === "pagamento em aberto" && (() => {
-                                const PIX_KEY  = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
                                 const totalPix = (pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",");
                                 return (
                                   <>
@@ -6626,13 +6625,13 @@ const DEMO_ADMIN_DATA = {
 
 // ── Componentes movidos para nível de módulo (evitar recriação a cada render) ──
 
-const ADMIN_PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+
 function AdminPixBar({ copiado, setCopiado }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"9px 14px", marginBottom:16, flexWrap:"wrap" }}>
       <span style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>PIX · Mercado Pago</span>
-      <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ADMIN_PIX_KEY}</span>
-      <button onClick={() => { navigator.clipboard.writeText(ADMIN_PIX_KEY); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }}
+      <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.6)", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</span>
+      <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }}
         style={{ flexShrink:0, padding:"5px 12px", background: copiado ? "rgba(186,255,57,.2)" : "rgba(186,255,57,.08)", color:"#BAFF39", border:`1px solid ${copiado ? "rgba(186,255,57,.5)" : "rgba(186,255,57,.2)"}`, borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
         {copiado ? "✓ copiado" : "copiar"}
       </button>
@@ -10158,7 +10157,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           })()}
           {/* PIX */}
           {(() => {
-            const PIX_KEY = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+
             return (
               <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"9px 14px", marginBottom:16, flexWrap:"wrap" }}>
                 <span style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>PIX · Mercado Pago</span>
@@ -11134,7 +11133,7 @@ function AdminLinks() {
 }
 
 function MercariTab() {
-  const PIX  = 'de1a489d-db81-4864-a8cf-74cdd79d9cdc';
+
   const WA   = WHATSAPP_NUM;
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
   const STEP_IDX = {pendente:0,aprovado:1,pago:2,finalizado:3,recusado:-1};
@@ -15965,8 +15964,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                     <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", marginTop:3 }}>Até {s.modalidade_escolhida.prazo}{emb > 0 ? ` · frete R$ ${s.modalidade_escolhida.valor} + emb. R$ ${s.cotacao_embalagem}` : ""}</div>
                                   </div>
                                   {s.status === "pagamento em aberto" && (() => {
-                                    const PIX_KEY  = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
-                                    const totalPix = (pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",");
+                                        const totalPix = (pf(s.modalidade_escolhida.valor)+emb).toFixed(2).replace(".",",");
                                     return (
                                       <>
                                         <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"12px 14px", marginTop:8 }}>
@@ -16814,7 +16812,7 @@ function AdminPopup({ onCountChange }) {
 // ── Pré-venda W MAGAZINE HYUNJIN ───────────────────────────────
 const WMAG_DEADLINE  = new Date("2026-08-16T23:59:59-03:00");
 const WMAG_PRECO     = 48;
-const PIX_WMAG       = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+
 const WA_WMAG        = WHATSAPP_NUM;
 const WMAG_CAPAS = [
   { id:"a", label:"Capa A", img:"https://image.aladin.co.kr/product/40016/37/cover500/k382130232_1.jpg" },
@@ -17043,8 +17041,8 @@ function WMagFormPage() {
                       <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
                         <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>CHAVE PIX</div>
                         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
-                          <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all" }}>{PIX_WMAG}</span>
-                          <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_WMAG); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
+                          <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all" }}>{PIX_KEY}</span>
+                          <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_KEY); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
                             style={{ flexShrink:0, padding:"6px 12px", borderRadius:6, border:"1px solid rgba(245,240,232,.2)", background:"transparent", color: pixCopiado ? "#4ade80" : "rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
                             {pixCopiado ? "✓ copiado" : "copiar"}
                           </button>
@@ -17468,7 +17466,7 @@ function AdminRevista({ onCountChange }) {
 
 // ── Pré-venda Revista BAZAAR IN ────────────────────────────────
 const BAZAAR_IN_DEADLINE = new Date("2026-08-27T23:59:59-03:00");
-const PIX_BAZAAR_IN      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+
 const CARTAO_BAZAAR_IN   = "https://linknabio.gg/anticeg-comu";
 const BAZAAR_IN_CAPAS = [
   { id:"capaA", label:"Capa A", preco:60,  img:"https://image.yes24.com/goods/195275000/XL" },
@@ -17758,8 +17756,8 @@ function RevistaBazaarInPage({ onVoltar }) {
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:8 }}>
                   <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)" }}>CHAVE PIX (CPF)</div>
-                  <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", wordBreak:"break-all" }}>{PIX_BAZAAR_IN}</div>
-                  <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_BAZAAR_IN); setPixCopiado(true); setTimeout(() => setPixCopiado(false), 2000); }}
+                  <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", wordBreak:"break-all" }}>{PIX_KEY}</div>
+                  <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_KEY); setPixCopiado(true); setTimeout(() => setPixCopiado(false), 2000); }}
                     style={{ alignSelf:"flex-start", background:"rgba(255,180,0,.12)", border:"1px solid rgba(255,180,0,.3)", color:"#ffb400", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, cursor:"pointer" }}>
                     {pixCopiado ? "✓ copiado!" : "copiar chave"}
                   </button>
@@ -17787,7 +17785,7 @@ function RevistaBazaarInPage({ onVoltar }) {
 
 const REVISTA_DEADLINE = new Date("2026-09-04T23:59:59-03:00");
 const REVISTA_PRECO    = 68;
-const PIX_REVISTA      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
+
 const WA_REVISTA       = WHATSAPP_NUM;
 
 function RevistaFormPage() {
@@ -17976,8 +17974,8 @@ function RevistaFormPage() {
                   <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px" }}>
                     <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>CHAVE PIX</div>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
-                      <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all", color:"var(--offwhite)" }}>{PIX_REVISTA}</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_REVISTA); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
+                      <span style={{ fontFamily:mono, fontSize:11, wordBreak:"break-all", color:"var(--offwhite)" }}>{PIX_KEY}</span>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_KEY); setPixCopiado(true); setTimeout(()=>setPixCopiado(false),2000); }}
                         style={{ flexShrink:0, padding:"6px 12px", borderRadius:6, border:"1px solid rgba(245,240,232,.2)", background:"transparent", color: pixCopiado ? "#4ade80" : "rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
                         {pixCopiado ? "✓ copiado" : "copiar"}
                       </button>
