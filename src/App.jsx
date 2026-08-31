@@ -17266,6 +17266,15 @@ function PrevendaTab({ user }) {
 
   const formularios = [
     {
+      key: "popup-skzoo-rio",
+      ativo: now >= new Date("2026-09-03T00:00:00-03:00") && now <= new Date("2026-09-05T23:59:59-03:00"),
+      titulo: "POP-UP SKZOO EAAW",
+      subtitulo: "Rio de Janeiro · Merch Oficial",
+      img: "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo/capa.png",
+      tags: ["Formulário 03–05/09", "Pagamento a confirmar"],
+      info: "22 itens · LATAM Ver. exclusivos · preços a confirmar",
+    },
+    {
       key: "this-that-albuns",
       ativo: true,
       titulo: "THIS & THAT",
