@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
@@ -29,10 +29,6 @@ import badgeLeebitPrata    from "./assets/badges/leebit_prata.jpg.png";
 import badgeLeebitOuro     from "./assets/badges/leebit_ouro.jpg.png";
 
 const VAPID_PUBLIC_KEY = "BMjVVcd389vauJzDpbAR5obTCX2UZtmRnVnsDJoE9T0Bc4Biyb7AGWSyNxyvxTySrr6HpXBf5yLCPWHGCOQx4lY";
-
-const EJS_SERVICE  = "YOUR_SERVICE_ID";
-const EJS_TEMPLATE = "YOUR_TEMPLATE_ID";
-const EJS_KEY      = "YOUR_KEY";
 
 async function registrarPush(joinerCog) {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -122,7 +118,7 @@ function buildEmailHTML(_toNome, contentRows) {
   </tr>
   <tr>
     <td align="center" style="background:#111111;padding:0 40px 28px">
-      <a href="https://anticeg.vercel.app/masterlist" style="display:inline-block;background:#FF5C1A;color:#ffffff;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 36px;border-radius:4px">ACESSAR O PORTAL &rarr;</a>
+      <a href="${SITE_URL}/masterlist" style="display:inline-block;background:#FF5C1A;color:#ffffff;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 36px;border-radius:4px">ACESSAR O PORTAL &rarr;</a>
     </td>
   </tr>
   <tr>
@@ -135,7 +131,7 @@ function buildEmailHTML(_toNome, contentRows) {
     <td align="center" style="background:#0D0D0D;padding:24px 40px;border-top:1px solid #1e1e1e">
       <div style="font-size:15px;font-weight:900;color:#F5F0E8;letter-spacing:3px;margin-bottom:4px">ANTI<span style="color:#FF5C1A">CEG</span></div>
       <div style="font-size:9px;color:rgba(245,240,232,0.2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">comunidade antigom</div>
-      <div><a href="https://anticeg.vercel.app" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">Portal</a><span style="color:rgba(245,240,232,0.1)">&middot;</span><a href="https://wa.me/5524992782023" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">WhatsApp</a></div>
+      <div><a href="${SITE_URL}" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">Portal</a><span style="color:rgba(245,240,232,0.1)">&middot;</span><a href="https://wa.me/${WHATSAPP_NUM}" style="color:rgba(245,240,232,0.3);text-decoration:none;font-size:10px;margin:0 8px">WhatsApp</a></div>
     </td>
   </tr>
 </table>
@@ -252,6 +248,17 @@ const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
 
 const WHATSAPP_NUM = "5524992782023";
+const SITE_URL     = "https://anticeg.vercel.app";
+
+function useWindowWidth() {
+  const [w, setW] = useState(window.innerWidth);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return w;
+}
 const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
@@ -1679,7 +1686,7 @@ const ENVIO_STEPS = [
   "enviado",
 ];
 const ENVIO_STEP_COLORS = {
-  "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A",
+  "solicitação de envio":"#BAFF39", "cotação em andamento":"var(--laranja)",
   "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166",
   embalando:"#64B5F6", enviado:"#BAFF39", cancelado:"rgba(245,240,232,.3)",
 };
@@ -2877,7 +2884,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                           );
                         })()}
                         {repasseMap[item.id] === "pendente" && (
-                          <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"#FF5C1A", background:"rgba(255,92,26,.08)" }}>
+                          <span style={{ display:"inline-block", marginTop:4, fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 7px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"var(--laranja)", background:"rgba(255,92,26,.08)" }}>
                             ⇄ repasse em análise
                           </span>
                         )}
@@ -3027,7 +3034,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               {item.info_adicionais && <div className="ml-card-info">{item.info_adicionais}</div>}
               {repasseMap[item.id] === "pendente" && (
                 <div style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 0 2px", marginBottom:2 }}>
-                  <span style={{ fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 8px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"#FF5C1A", background:"rgba(255,92,26,.08)" }}>
+                  <span style={{ fontSize:8, fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".06em", padding:"2px 8px", borderRadius:4, border:"1px solid rgba(255,92,26,.5)", color:"var(--laranja)", background:"rgba(255,92,26,.08)" }}>
                     ⇄ repasse em análise
                   </span>
                 </div>
@@ -3351,8 +3358,7 @@ function StaffPanel() {
 }
 
 function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, initialSubTab = null, onSubTabChange }) {
-  const [winW, setWinW] = useState(window.innerWidth);
-  useEffect(() => { const h = () => setWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const winW = useWindowWidth();
   const isMobile = winW <= 680;
   const [perfilSubTab, setPerfilSubTab] = useState(initialSubTab || "dados");
   const [feedbackTipo, setFeedbackTipo] = useState("sugestão");
@@ -3420,6 +3426,19 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [multasPagasCount, setMultasPagasCount] = useState(0);
   const [badgesAntiv, setBadgesAntiv] = useState([]);
 
+  const sortPendentes = arr => [...arr].sort((a, b) => {
+    const pv = i => [
+      !i.pago_item  && i.venc_item  ? i.venc_item  : null,
+      !i.pago_frete && i.venc_frete ? i.venc_frete : null,
+      !i.pago_rf    && i.venc_rf    ? i.venc_rf    : null,
+    ].filter(Boolean).sort()[0] || null;
+    const va = pv(a), vb = pv(b);
+    if (!va && !vb) return 0;
+    if (!va) return 1;
+    if (!vb) return -1;
+    return va.localeCompare(vb);
+  });
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -3473,33 +3492,9 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
               || (!i.pago_frete && Number(i.frete_inter||0) > 0 && !c.frete)
               || (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 && !c.rf);
         });
-        const sortPendentes = arr => [...arr].sort((a, b) => {
-          const pv = i => [
-            !i.pago_item  && i.venc_item  ? i.venc_item  : null,
-            !i.pago_frete && i.venc_frete ? i.venc_frete : null,
-            !i.pago_rf    && i.venc_rf    ? i.venc_rf    : null,
-          ].filter(Boolean).sort()[0] || null;
-          const va = pv(a), vb = pv(b);
-          if (!va && !vb) return 0;
-          if (!va) return 1;
-          if (!vb) return -1;
-          return va.localeCompare(vb);
-        });
         setItensPendentes(sortPendentes(stillPending));
         setPagSelecionados(new Map(stillPending.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
       } else if (pendentes) {
-        const sortPendentes = arr => [...arr].sort((a, b) => {
-          const pv = i => [
-            !i.pago_item  && i.venc_item  ? i.venc_item  : null,
-            !i.pago_frete && i.venc_frete ? i.venc_frete : null,
-            !i.pago_rf    && i.venc_rf    ? i.venc_rf    : null,
-          ].filter(Boolean).sort()[0] || null;
-          const va = pv(a), vb = pv(b);
-          if (!va && !vb) return 0;
-          if (!va) return 1;
-          if (!vb) return -1;
-          return va.localeCompare(vb);
-        });
         setItensPendentes(sortPendentes(pendentes));
         setPagSelecionados(new Map(pendentes.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
       }
@@ -4957,7 +4952,7 @@ ${compHTML}
       })()}
 
       {false && (() => { return (<div>{meuEnvios.map(s => {
-            const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+            const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"var(--laranja)", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.2)", "cotação em andamento":"rgba(255,92,26,.25)", "pagamento em aberto":"rgba(201,168,240,.25)", "pagamento confirmado":"rgba(255,209,102,.25)", embalando:"rgba(100,181,246,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
             const expanded = expandedEnvio.has(s.id);
             const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
@@ -5073,7 +5068,7 @@ ${compHTML}
                                         <button onClick={() => { navigator.clipboard.writeText(PIX_KEY); }} style={{ flexShrink:0, padding:"7px 12px", background:"rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:5, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, cursor:"pointer" }}>Copiar</button>
                                       </div>
                                     </div>
-                                    <a href={`https://wa.me/5524992782023?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
+                                    <a href={`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(`Olá! Segue o comprovante de pagamento do meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${s.modalidade_escolhida.forma} (${s.modalidade_escolhida.prazo})\nValor pago: R$ ${totalPix}`)}`} target="_blank" rel="noopener noreferrer" style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(201,168,240,.12)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, textDecoration:"none", marginTop:6 }}>
                                       📎 Enviar comprovante no WhatsApp →
                                     </a>
                                   </>
@@ -5120,7 +5115,7 @@ ${compHTML}
                                   <button onClick={async () => {
                                     await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"pagamento em aberto" }).eq("id", s.id);
                                     setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: chosen, status:"pagamento em aberto" } : x));
-                                    window.open(`https://wa.me/5524992782023?text=${waMsg}`, "_blank");
+                                    window.open(`https://wa.me/${WHATSAPP_NUM}?text=${waMsg}`, "_blank");
                                   }} style={{ width:"100%", marginTop:6, padding:"10px", background:"rgba(201,168,240,.15)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.35)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                                     Confirmar {chosen.forma} — R$ {totalChosen} e enviar PIX →
                                   </button>
@@ -6244,57 +6239,9 @@ function PushAdminCard({ p, onDesativar, onReativar }) {
   );
 }
 
-function EmailJSTestBlock() {
-  const [testEmail, setTestEmail] = useState("");
-  const [status, setStatus] = useState(null); // null | "sending" | "ok" | "error" | "notcfg"
-
-  const configured = !EJS_SERVICE.startsWith("YOUR");
-
-  async function testar() {
-    if (!testEmail.trim()) return;
-    if (!configured) { setStatus("notcfg"); return; }
-    setStatus("sending");
-    try {
-      await sendEmailJoiner(testEmail.trim(), "você", "Teste de e-mail ANTICEG ✓", buildEmailHTML("você", `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 8px;font-size:13px;color:#F5F0E8;font-weight:700;line-height:1.6">Configura&ccedil;&atilde;o confirmada ✓</p><p style="margin:0;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Se voc&ecirc; recebeu este e-mail, o EmailJS est&aacute; funcionando corretamente e os envios autom&aacute;ticos est&atilde;o ativos.</p></td></tr>`));
-      setStatus("ok");
-    } catch { setStatus("error"); }
-  }
-
-  const statusMsg = {
-    notcfg: { text: "Preencha EJS_SERVICE, EJS_TEMPLATE e EJS_KEY em App.jsx primeiro.", color: "#ff6b6b" },
-    sending: { text: "Enviando...", color: "rgba(245,240,232,.4)" },
-    ok:      { text: "✓ E-mail enviado! Verifique a caixa de entrada.", color: "#4ade80" },
-    error:   { text: "✗ Erro ao enviar. Verifique as credenciais no EmailJS.", color: "#ff6b6b" },
-  };
-
-  return (
-    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:`1px solid ${configured ? "rgba(245,240,232,.08)" : "rgba(255,107,107,.2)"}`, borderRadius:10 }}>
-      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>
-        E-mail de notificação
-        <span style={{ marginLeft:8, fontSize:10, fontFamily:"'DM Mono',monospace", color: configured ? "#4ade80" : "#ff6b6b", fontWeight:400 }}>
-          {configured ? "◁ configurado" : "◁ não configurado"}
-        </span>
-      </div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>Envie um e-mail de teste para confirmar que a integração está funcionando.</div>
-      <div style={{ display:"flex", gap:8 }}>
-        <input
-          value={testEmail} onChange={e => { setTestEmail(e.target.value); setStatus(null); }}
-          placeholder="seu@email.com"
-          style={{ flex:1, background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"8px 12px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }}
-        />
-        <button onClick={testar} disabled={status === "sending"} style={{
-          background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.15)", color:"var(--offwhite)",
-          borderRadius:8, padding:"8px 16px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer"
-        }}>Testar →</button><EmailTypeBadge type="teste" />
-      </div>
-      {status && <div style={{ fontSize:11, color:statusMsg[status].color, marginTop:8, fontFamily:"'DM Mono',monospace" }}>{statusMsg[status].text}</div>}
-    </div>
-  );
-}
-
 const EMAIL_TYPE_BADGE = {
   pagamento: { label: "pagamento", bg: "rgba(186,255,57,.1)",  color: "#BAFF39", border: "rgba(186,255,57,.25)" },
-  report:    { label: "report",    bg: "rgba(255,92,26,.1)",   color: "#FF5C1A", border: "rgba(255,92,26,.3)"  },
+  report:    { label: "report",    bg: "rgba(255,92,26,.1)",   color: "var(--laranja)", border: "rgba(255,92,26,.3)"  },
   teste:     { label: "teste",     bg: "rgba(201,168,240,.1)", color: "#C9A8F0", border: "rgba(201,168,240,.3)"},
 };
 function EmailTypeBadge({ type }) {
@@ -6363,218 +6310,6 @@ function EmailPreviewsBlock() {
   );
 }
 
-function NotificarTodosBlock() {
-  const [status, setStatus]       = useState(null);
-  const [resultado, setResultado] = useState(null);
-  const [lista, setLista]         = useState(null);   // null | [] | [{nome, cog, email, nItens, total}]
-  const [listaLoading, setListaLoading] = useState(false);
-  const [listaOpen, setListaOpen] = useState(false);
-
-  const configured = !EJS_SERVICE.startsWith("YOUR");
-
-  async function carregarLista() {
-    setListaLoading(true);
-    try {
-      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email").not("email", "is", null).neq("email", "");
-      const { data: itens }   = await supabase.from("masterlist").select("cog, nome_do_item, ceg, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf, venc_item, venc_frete, venc_rf").neq("cog","disponivel");
-      const resultado = (joiners || []).reduce((acc, j) => {
-        const meus = (itens || []).filter(i => i.cog === j.cog);
-        const pendentes = meus.filter(i =>
-          (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
-          (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
-          (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
-        );
-        if (pendentes.length === 0) return acc;
-        const total = pendentes.reduce((s, i) =>
-          s + (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
-            + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
-            + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0), 0);
-        const totalMulta = pendentes.reduce((s, i) =>
-          s + diasAtraso(i.venc_item) + diasAtraso(i.venc_frete) + diasAtraso(i.venc_rf), 0);
-        acc.push({ nome: j.nome || j.cog, cog: j.cog, email: j.email, nItens: pendentes.length, total, totalMulta, pendentes });
-        return acc;
-      }, []);
-      setLista(resultado);
-      setListaOpen(true);
-    } catch (e) { console.error(e); }
-    setListaLoading(false);
-  }
-
-  function previewJoiner(r) {
-    const itemRows = r.pendentes.map(i => {
-      const v = (isPendente(i.pago_item)  ? Number(i.valor_item||0)  : 0)
-              + (isPendente(i.pago_frete) ? Number(i.frete_inter||0) : 0)
-              + (isPendente(i.pago_rf)    ? Number(i.taxa_rf||0)     : 0);
-      return `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${i.nome_do_item}${i.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${i.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(v)}</td></tr>`;
-    }).join("");
-    const content = `<tr><td style="background:#111111;padding:20px 40px 8px">
-  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p>
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(r.total + r.totalMulta)}</div>${r.totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(r.total)} item + R$&nbsp;${fmtBRL(r.totalMulta)} multa</div>` : ""}</td></tr></table>
-</td></tr>`;
-    const w = window.open("", "_blank");
-    w.document.write(buildEmailHTML(r.nome, content));
-    w.document.close();
-  }
-
-  async function notificarTodos() {
-    if (!configured) { setStatus("notcfg"); return; }
-    setStatus("loading");
-    try {
-      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email, last_notified_at").not("email", "is", null).neq("email", "");
-      if (!joiners?.length) { setStatus("done"); setResultado({ enviados:0, semPendencia:0, cooldown:0 }); return; }
-
-      const { data: itens } = await supabase.from("masterlist").select("cog, nome_do_item, ceg, pago_item, valor_item, pago_frete, frete_inter, pago_rf, taxa_rf, venc_item, venc_frete, venc_rf").neq("cog","disponivel");
-
-      setStatus("sending");
-      let enviados = 0, semPendencia = 0, cooldown = 0;
-      const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-      const ts   = new Date().toISOString();
-
-      // monta a lista de quem precisa receber e-mail
-      const paraEnviar = [];
-      for (const j of joiners) {
-        const meus = (itens || []).filter(i => i.cog === j.cog);
-        const pendentes = meus.filter(i =>
-          (isPendente(i.pago_item)  && Number(i.valor_item||0)  > 0) ||
-          (isPendente(i.pago_frete) && Number(i.frete_inter||0) > 0) ||
-          (isPendente(i.pago_rf)    && Number(i.taxa_rf||0)     > 0)
-        );
-        if (pendentes.length === 0) { semPendencia++; continue; }
-        const ultimoEnvio = j.last_notified_at
-          ? new Date(j.last_notified_at).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
-          : null;
-        if (ultimoEnvio === hoje) { cooldown++; continue; }
-        paraEnviar.push({ j, pendentes });
-      }
-
-      // envia em lotes de 5 (respeita limite de taxa do EmailJS)
-      const BATCH = 5;
-      for (let i = 0; i < paraEnviar.length; i += BATCH) {
-        await Promise.all(paraEnviar.slice(i, i + BATCH).map(async ({ j, pendentes }) => {
-          const totalPend = pendentes.reduce((s,it) =>
-            s + (isPendente(it.pago_item)  ? Number(it.valor_item||0)  : 0)
-              + (isPendente(it.pago_frete) ? Number(it.frete_inter||0) : 0)
-              + (isPendente(it.pago_rf)    ? Number(it.taxa_rf||0)     : 0), 0);
-          const totalMulta = pendentes.reduce((s,it) =>
-            s + diasAtraso(it.venc_item) + diasAtraso(it.venc_frete) + diasAtraso(it.venc_rf), 0);
-          const itemRows = pendentes.map(it => {
-            const v = (isPendente(it.pago_item)  ? Number(it.valor_item||0)  : 0)
-                    + (isPendente(it.pago_frete) ? Number(it.frete_inter||0) : 0)
-                    + (isPendente(it.pago_rf)    ? Number(it.taxa_rf||0)     : 0);
-            return `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(v)}</td></tr>`;
-          }).join("");
-          const emailContent = `<tr><td style="background:#111111;padding:20px 40px 8px">
-  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p>
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(totalPend + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(totalPend)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table>
-</td></tr>`;
-          const corpo = buildEmailHTML(j.nome || j.cog, emailContent);
-          await Promise.all([
-            sendEmailJoiner(j.email, j.nome, "📋 Pagamentos em aberto — ANTICEG", corpo),
-            supabase.from("joiners").update({ last_notified_at: ts }).eq("cog", j.cog),
-          ]);
-          enviados++;
-        }));
-      }
-
-      setResultado({ enviados, semPendencia, cooldown });
-      setStatus("done");
-    } catch (e) {
-      console.error(e);
-      setStatus("error");
-    }
-  }
-
-  function previewEmail() {
-    const mockItems = [
-      { nome_do_item: "Leebit SKZOO Plush", ceg: "7TH FAN", pend: 85.00 },
-      { nome_do_item: "Photo Card Set", ceg: "SKZ", pend: 45.00 },
-      { nome_do_item: "Frete Internacional", ceg: "", pend: 22.50 },
-    ];
-    const mockTotal = mockItems.reduce((s, i) => s + i.pend, 0);
-    const mockMulta = 3.00;
-    const itemRows = mockItems.map(it =>
-      `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`
-    ).join("");
-    const content = `<tr><td style="background:#111111;padding:20px 40px 8px">
-  <p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p>
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRows}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(mockTotal + mockMulta)}</div><div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(mockTotal)} item + R$&nbsp;${fmtBRL(mockMulta)} multa</div></td></tr></table>
-</td></tr>`;
-    const html = buildEmailHTML("Antigom Exemplo", content);
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
-  }
-
-  return (
-    <div style={{ marginBottom:20, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-        <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>Notificar todos os joiners</div>
-        <EmailTypeBadge type="pagamento" />
-      </div>
-      <div style={{ fontSize:11, color:"rgba(245,240,232,.58)", marginBottom:12 }}>
-        Envia um e-mail para cada joiner com pagamentos em aberto. Use após atualizar a planilha.
-      </div>
-      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-        <button onClick={notificarTodos} disabled={!!status && status !== "done" && status !== "error" && status !== "notcfg"} style={{
-          background:"rgba(201,168,240,.1)", border:"1px solid rgba(201,168,240,.3)",
-          color:"#C9A8F0", borderRadius:8, padding:"9px 18px",
-          fontSize:12, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", letterSpacing:".05em"
-        }}>
-          {status === "loading" ? "Carregando dados..." : status === "sending" ? "Enviando e-mails..." : "✉ Notificar todos →"}
-        </button>
-        <button onClick={() => { if (listaOpen) { setListaOpen(false); } else if (lista) { setListaOpen(true); } else { carregarLista(); } }} style={{
-          background:"none", border:"1px solid rgba(245,240,232,.15)",
-          color:"rgba(245,240,232,.55)", borderRadius:8, padding:"9px 14px",
-          fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
-        }}>{listaLoading ? "carregando..." : listaOpen ? "ocultar lista" : "ver destinatários"}</button>
-      </div>
-
-      {listaOpen && lista !== null && (
-        <div style={{ marginTop:12, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
-          <div style={{ overflowX:"auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0, minWidth:480,
-            background:"rgba(245,240,232,.04)", padding:"6px 12px",
-            fontSize:9, letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
-            <span>Nome</span><span>@</span><span>E-mail</span><span style={{ textAlign:"center" }}>Itens</span><span style={{ textAlign:"right" }}>Total</span><span></span>
-          </div>
-          {lista.length === 0
-            ? <div style={{ padding:"12px", fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace" }}>Nenhum joiner com pagamento pendente e e-mail cadastrado.</div>
-            : lista.map((r, i) => (
-              <div key={r.cog} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto auto auto", gap:0, minWidth:480,
-                padding:"8px 12px", borderTop:"1px solid rgba(245,240,232,.05)",
-                background: i % 2 === 0 ? "transparent" : "rgba(245,240,232,.02)", alignItems:"center" }}>
-                <span style={{ fontSize:11, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.nome}</span>
-                <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>@{r.cog}</span>
-                <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.email}</span>
-                <span style={{ fontSize:11, color:"rgba(245,240,232,.5)", fontFamily:"'DM Mono',monospace", textAlign:"center", paddingLeft:8 }}>{r.nItens}i</span>
-                <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textAlign:"right", paddingLeft:12, fontWeight:700 }}>R${fmtBRL(r.total)}</span>
-                <button onClick={() => previewJoiner(r)} style={{ marginLeft:10, background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.45)", borderRadius:4, padding:"3px 8px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>ver</button>
-              </div>
-            ))
-          }
-          </div>
-          {lista.length > 0 && (
-            <div style={{ padding:"6px 12px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between",
-              fontSize:10, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace" }}>
-              <span>{lista.length} destinatário{lista.length !== 1 ? "s" : ""}</span>
-              <span style={{ color:"#BAFF39" }}>R${fmtBRL(lista.reduce((s, r) => s + r.total, 0))} total em aberto</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {status === "notcfg" && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Configure o EmailJS primeiro.</div>}
-      {status === "error"   && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:8, fontFamily:"'DM Mono',monospace" }}>Erro ao enviar. Tente novamente.</div>}
-      {status === "done" && resultado && (
-        <div style={{ fontSize:11, color:"#4ade80", marginTop:8, fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
-          ✓ {resultado.enviados} e-mail(s) enviado(s)
-          {resultado.semPendencia > 0 && <span style={{ color:"rgba(245,240,232,.52)" }}> · {resultado.semPendencia} sem pendência</span>}
-          {resultado.cooldown > 0 && <span style={{ color:"rgba(245,240,232,.52)" }}> · {resultado.cooldown} já notificado(s) hoje</span>}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function PushGlobalToggle() {
   const [ativo, setAtivo] = useState(true);
@@ -7844,8 +7579,7 @@ function ControleEstoqueTab() {
 
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
-  const [adminWinW, setAdminWinW] = useState(window.innerWidth);
-  useEffect(() => { const h = () => setAdminWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const adminWinW = useWindowWidth();
   const adminIsMobile = adminWinW <= 680;
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [senhaManutAdmin,     setSenhaManutAdmin]     = useState("");
@@ -8481,7 +8215,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         const lbl = { fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"1.5px", textTransform:"uppercase", color:"rgba(245,240,232,.28)" };
         const PIPELINE = [
           { key:"solicitação de envio",  label:"Nova",         icon:"✦", cor:"#BAFF39",              bg:"rgba(186,255,57,.08)",  border:"rgba(186,255,57,.25)"  },
-          { key:"cotação em andamento",  label:"Cotação",      icon:"◎", cor:"#FF5C1A",              bg:"rgba(255,92,26,.08)",   border:"rgba(255,92,26,.25)"   },
+          { key:"cotação em andamento",  label:"Cotação",      icon:"◎", cor:"var(--laranja)",              bg:"rgba(255,92,26,.08)",   border:"rgba(255,92,26,.25)"   },
           { key:"pagamento em aberto",   label:"Pgto. aberto", icon:"◷", cor:"#ef4444",              bg:"rgba(239,68,68,.08)",   border:"rgba(239,68,68,.25)"   },
           { key:"pagamento confirmado",  label:"Confirmado",   icon:"✓", cor:"#FFD166",              bg:"rgba(255,209,102,.08)", border:"rgba(255,209,102,.25)" },
           { key:"embalando",             label:"Embalando",    icon:"□", cor:"#64B5F6",              bg:"rgba(100,181,246,.08)", border:"rgba(100,181,246,.25)" },
@@ -8501,7 +8235,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         const urgentLines = [
           { count: cnt["solicitação de envio"],  singular:"nova solicitação de envio",   plural:"novas solicitações de envio",   tab:"envios",     cor:"#BAFF39",          filtro:"solicitação de envio"  },
           { count: cnt["pagamento em aberto"],   singular:"pagamento em aberto",          plural:"pagamentos em aberto",          tab:"envios",     cor:"#ef4444",          filtro:"pagamento em aberto"   },
-          { count: cnt["cotação em andamento"],  singular:"cotação pendente",             plural:"cotações pendentes",            tab:"envios",     cor:"#FF5C1A",          filtro:"cotação em andamento"  },
+          { count: cnt["cotação em andamento"],  singular:"cotação pendente",             plural:"cotações pendentes",            tab:"envios",     cor:"var(--laranja)",          filtro:"cotação em andamento"  },
           { count: (reports||[]).filter(r => r.status !== "resolvido").length, singular:"report pendente", plural:"reports pendentes", tab:"reports", cor:"var(--laranja)", filtro:null },
           { count: pagDemandas.filter(d => d.status === "em_analise").length, singular:"formulário em análise", plural:"formulários em análise", tab:"pagamentos", cor:"#FFD166", filtro:null },
           { count: confirmacoes.length, singular:"cadastro aguardando", plural:"cadastros aguardando", tab:"cadastros", cor:"var(--lilas)", filtro:null },
@@ -8651,9 +8385,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         {senhaManutMsg && <div style={{ marginTop:6, fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>{senhaManutMsg}</div>}
       </div>
 
-      <EmailJSTestBlock />
       <EmailPreviewsBlock />
-      <NotificarTodosBlock />
 
       <div style={{ marginTop:28 }}>
         <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:12 }}>
@@ -10147,7 +9879,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                 <span style={{ color:"#C9A8F0", fontWeight:700 }}>@{m.joiner_cog}</span>
                                 <span style={{ color:"rgba(245,240,232,.35)" }}>Round #{m.roundNum}</span>
                                 <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:3, padding:"1px 6px" }}>{m.roundStatus}</span>
-                                <span style={{ fontSize:9, padding:"2px 8px", borderRadius:10, background: temFormBusca ? "rgba(186,255,57,.1)" : "rgba(255,92,26,.1)", color: temFormBusca ? "#BAFF39" : "#FF5C1A", border:`1px solid ${temFormBusca ? "rgba(186,255,57,.3)" : "rgba(255,92,26,.3)"}` }}>
+                                <span style={{ fontSize:9, padding:"2px 8px", borderRadius:10, background: temFormBusca ? "rgba(186,255,57,.1)" : "rgba(255,92,26,.1)", color: temFormBusca ? "#BAFF39" : "var(--laranja)", border:`1px solid ${temFormBusca ? "rgba(186,255,57,.3)" : "rgba(255,92,26,.3)"}` }}>
                                   {temFormBusca ? "✓ tem form" : "sem form"}
                                 </span>
                               </div>
@@ -10443,7 +10175,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             const statusConfig = [
               { key:"todos",                   label:"Todos",        color:"rgba(245,240,232,.5)",  border:"rgba(245,240,232,.15)" },
               { key:"solicitação de envio",     label:"Solicitação",  color:"#BAFF39",               border:"rgba(186,255,57,.3)"   },
-              { key:"cotação em andamento",     label:"Cotação",      color:"#FF5C1A",               border:"rgba(255,92,26,.3)"    },
+              { key:"cotação em andamento",     label:"Cotação",      color:"var(--laranja)",               border:"rgba(255,92,26,.3)"    },
               { key:"pagamento em aberto",      label:"Pgto. aberto", color:"#C9A8F0",               border:"rgba(201,168,240,.3)"  },
               { key:"__comprovante__",          label:"Comprovante",  color:"#FFD166",               border:"rgba(255,209,102,.5)"  },
               { key:"pagamento confirmado",     label:"Pgto. conf.",  color:"#FFD166",               border:"rgba(255,209,102,.3)"  },
@@ -10487,7 +10219,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           {(() => {
             const ORDEM_STATUS = ["solicitação de envio","cotação em andamento","pagamento em aberto","pagamento confirmado","embalando","enviado","cancelado"];
             const STATUS_LABEL = { "solicitação de envio":"Solicitação de Envio", "cotação em andamento":"Cotação em Andamento", "pagamento em aberto":"Pagamento em Aberto", "pagamento confirmado":"Pagamento Confirmado", embalando:"Embalando", enviado:"Enviado", cancelado:"Cancelado" };
-            const STATUS_COLOR = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" };
+            const STATUS_COLOR = { "solicitação de envio":"#BAFF39", "cotação em andamento":"var(--laranja)", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" };
 
             const buscaQ = buscaEnvio.trim().toLowerCase();
             const filtradosBusca = buscaQ
@@ -10525,7 +10257,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
             let lastStatus = null;
 
             return sortedLista.map(s => {
-            const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
+            const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"var(--laranja)", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.35)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.35)";
             const statusBorder = { "solicitação de envio":"rgba(186,255,57,.25)", "cotação em andamento":"rgba(255,92,26,.3)", "pagamento em aberto":"rgba(201,168,240,.3)", "pagamento confirmado":"rgba(255,209,102,.3)", embalando:"rgba(100,181,246,.3)", enviado:"rgba(245,240,232,.1)", cancelado:"rgba(245,240,232,.08)" }[s.status] || "rgba(245,240,232,.1)";
             const expanded = expandedEnvio.has(s.id);
             const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
@@ -11403,7 +11135,7 @@ function AdminLinks() {
 
 function MercariTab() {
   const PIX  = 'de1a489d-db81-4864-a8cf-74cdd79d9cdc';
-  const WA   = '5524992782023';
+  const WA   = WHATSAPP_NUM;
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
   const STEP_IDX = {pendente:0,aprovado:1,pago:2,finalizado:3,recusado:-1};
 
@@ -14967,7 +14699,7 @@ function TabelaStrayKids() {
           return (
             <div key={cat} style={{ marginBottom:32 }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
-                <div style={{ fontSize:10, fontFamily:mono, fontWeight:700, color:"#FF5C1A", letterSpacing:"1px", textTransform:"uppercase", whiteSpace:"nowrap" }}>{cat}</div>
+                <div style={{ fontSize:10, fontFamily:mono, fontWeight:700, color:"var(--laranja)", letterSpacing:"1px", textTransform:"uppercase", whiteSpace:"nowrap" }}>{cat}</div>
                 <div style={{ flex:1, height:1, background:"rgba(245,240,232,.06)" }} />
               </div>
               <div style={{ borderRadius:8, border:"1px solid rgba(245,240,232,.07)", overflow:"hidden" }}>
@@ -14995,10 +14727,10 @@ function TabelaStrayKids() {
                               onChange={e => setSugestaoVal(e.target.value)}
                               onKeyDown={e => { if (e.key === "Enter") submeterSugestao(row); if (e.key === "Escape") setSugerindo(null); }}
                               placeholder="R$00"
-                              style={{ width:80, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.45)", borderRadius:5, padding:"5px 8px", color:"#FF5C1A", fontSize:12, fontFamily:mono, outline:"none", textAlign:"right" }}
+                              style={{ width:80, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.45)", borderRadius:5, padding:"5px 8px", color:"var(--laranja)", fontSize:12, fontFamily:mono, outline:"none", textAlign:"right" }}
                             />
                             <button onClick={() => submeterSugestao(row)} disabled={enviando}
-                              style={{ fontSize:10, fontFamily:mono, padding:"5px 10px", borderRadius:5, cursor:"pointer", background:"rgba(255,92,26,.15)", color:"#FF5C1A", border:"1px solid rgba(255,92,26,.35)", fontWeight:700 }}>
+                              style={{ fontSize:10, fontFamily:mono, padding:"5px 10px", borderRadius:5, cursor:"pointer", background:"rgba(255,92,26,.15)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.35)", fontWeight:700 }}>
                               {enviando ? "..." : "sugerir"}
                             </button>
                             <button onClick={() => setSugerindo(null)} style={{ fontSize:11, background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer" }}>✕</button>
@@ -15105,10 +14837,9 @@ function ThisAndThatGallery() {
 }
 
 function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
-  const WA_GOM = "5524992782023";
+  const WA_GOM = WHATSAPP_NUM;
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
-  const [envioWinW, setEnvioWinW] = useState(window.innerWidth);
-  useEffect(() => { const h = () => setEnvioWinW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const envioWinW = useWindowWidth();
   const envioIsMobile = envioWinW <= 680;
 
   const [unlocked,    setUnlocked]    = useState(false);
@@ -15487,7 +15218,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             const linhas = [...errosSel].map(e => `• ${e}`).join("\n");
             const obs = erroObs.trim() ? `\n\nObservação: ${erroObs.trim()}` : "";
             const msg = `Olá! Tenho um erro para sinalizar na conferência dos meus itens.\n\n${linhas}${obs}`;
-            window.open(`https://wa.me/5524992782023?text=${encodeURIComponent(msg)}`, "_blank");
+            window.open(`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`, "_blank");
             setErroEnviado(true);
           }
 
@@ -15679,10 +15410,10 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                       </div>
                       {ERROS_CONF.map(e => (
                         <label key={e} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                          <div style={{ width:18, height:18, borderRadius:4, border:`1.5px solid ${errosSel.has(e) ? "#FF5C1A" : "rgba(245,240,232,.2)"}`, background: errosSel.has(e) ? "rgba(255,92,26,.2)" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all .15s" }} onClick={() => toggleErro(e)}>
-                            {errosSel.has(e) && <span style={{ fontSize:11, color:"#FF5C1A", fontWeight:900 }}>✓</span>}
+                          <div style={{ width:18, height:18, borderRadius:4, border:`1.5px solid ${errosSel.has(e) ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, background: errosSel.has(e) ? "rgba(255,92,26,.2)" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all .15s" }} onClick={() => toggleErro(e)}>
+                            {errosSel.has(e) && <span style={{ fontSize:11, color:"var(--laranja)", fontWeight:900 }}>✓</span>}
                           </div>
-                          <span style={{ fontSize:11, color: errosSel.has(e) ? "#FF5C1A" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{e}</span>
+                          <span style={{ fontSize:11, color: errosSel.has(e) ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.4 }}>{e}</span>
                         </label>
                       ))}
                       <textarea
@@ -15691,7 +15422,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                         style={{ width:"100%", marginTop:10, padding:"10px 12px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", fontSize:11, resize:"vertical", minHeight:70, boxSizing:"border-box" }}
                       />
                       <button onClick={enviarErroWA} disabled={errosSel.size === 0}
-                        style={{ marginTop:10, width:"100%", padding:"10px", background: errosSel.size > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.04)", color: errosSel.size > 0 ? "#FF5C1A" : "rgba(245,240,232,.2)", border:`1px solid ${errosSel.size > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`, borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor: errosSel.size > 0 ? "pointer" : "default", letterSpacing:".05em" }}>
+                        style={{ marginTop:10, width:"100%", padding:"10px", background: errosSel.size > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.04)", color: errosSel.size > 0 ? "var(--laranja)" : "rgba(245,240,232,.2)", border:`1px solid ${errosSel.size > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`, borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor: errosSel.size > 0 ? "pointer" : "default", letterSpacing:".05em" }}>
                         Enviar relatório via WhatsApp →
                       </button>
                       </>
@@ -16140,7 +15871,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
         )}
       </div>
 
-      {erro && <div style={{ fontSize:11, color:"#FF5C1A", fontFamily:"'DM Mono',monospace", marginBottom:12, lineHeight:1.5 }}>{erro}</div>}
+      {erro && <div style={{ fontSize:11, color:"var(--laranja)", fontFamily:"'DM Mono',monospace", marginBottom:12, lineHeight:1.5 }}>{erro}</div>}
 
       <button onClick={handleSubmit} disabled={loading} style={{
         width:"100%", padding:"14px 0", background:"var(--laranja)", color:"#111",
@@ -16163,7 +15894,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                 </button>
               </div>
             ) : meuEnvios.map(s => {
-              const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"#FF5C1A", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
+              const statusColor  = { "solicitação de envio":"#BAFF39", "cotação em andamento":"var(--laranja)", "pagamento em aberto":"#C9A8F0", "pagamento confirmado":"#FFD166", embalando:"#64B5F6", enviado:"rgba(245,240,232,.4)", cancelado:"rgba(245,240,232,.2)" }[s.status] || "rgba(245,240,232,.4)";
               const statusBorder = { "solicitação de envio":"rgba(186,255,57,.2)", "cotação em andamento":"rgba(255,92,26,.25)", "pagamento em aberto":"rgba(201,168,240,.25)", "pagamento confirmado":"rgba(255,209,102,.25)", embalando:"rgba(100,181,246,.25)", enviado:"rgba(245,240,232,.08)", cancelado:"rgba(245,240,232,.06)" }[s.status] || "rgba(245,240,232,.08)";
               const expanded = expandedEnvio.has(s.id);
               const toggleExpand = () => setExpandedEnvio(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; });
@@ -17084,7 +16815,7 @@ function AdminPopup({ onCountChange }) {
 const WMAG_DEADLINE  = new Date("2026-08-16T23:59:59-03:00");
 const WMAG_PRECO     = 48;
 const PIX_WMAG       = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
-const WA_WMAG        = "5524992782023";
+const WA_WMAG        = WHATSAPP_NUM;
 const WMAG_CAPAS = [
   { id:"a", label:"Capa A", img:"https://image.aladin.co.kr/product/40016/37/cover500/k382130232_1.jpg" },
   { id:"b", label:"Capa B", img:"https://image.aladin.co.kr/product/40016/38/cover500/k322130232_1.jpg" },
@@ -18057,7 +17788,7 @@ function RevistaBazaarInPage({ onVoltar }) {
 const REVISTA_DEADLINE = new Date("2026-09-04T23:59:59-03:00");
 const REVISTA_PRECO    = 68;
 const PIX_REVISTA      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
-const WA_REVISTA       = "5524992782023";
+const WA_REVISTA       = WHATSAPP_NUM;
 
 function RevistaFormPage() {
   const encerrado = new Date() > REVISTA_DEADLINE;
