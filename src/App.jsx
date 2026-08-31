@@ -12714,37 +12714,53 @@ function ClaimPublicoPage({ user }) {
 
   async function confirmarClaim(grupo) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
-    const selecionados = grupo.itens.filter(i => i.na_loja && (qtds[i.id]||0) > 0);
+    const selecionados = grupo.itens.filter(i => (qtds[i.id]||0) > 0);
     if (!selecionados.length) { setClaimErro("Selecione ao menos 1 membro."); return; }
     setEnviando(true); setClaimErro(null);
-    const resultados = [];
+    const membrosOk = [];
     for (const item of selecionados) {
-      const { data: inserted, error } = await supabase.from("claims").insert([{
-        joiner_cog: user.cog, joiner_nome: user.nome || user.cog, joiner_email: user.email || null,
-        masterlist_id: item.id, ceg: "CLAIM", nome_do_item: item.nome_do_item,
-        valor: Number(item.valor_item||0), status: "pendente",
-      }]).select();
-      if (!error && inserted?.length) {
+      let masterlistId = item.id;
+      // Se slot já ocupado, cria novo slot automaticamente
+      if (!item.na_loja) {
+        const { data: novoSlot } = await supabase.from("masterlist").insert([{
+          cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
+          nome_do_item: item.nome_do_item,
+          valor_item: item.valor_item,
+          frete_inter: 0, taxa_rf: 0,
+          info_adicionais: item.info_adicionais,
+          na_loja: false,
+        }]).select().single();
+        if (!novoSlot) continue;
+        masterlistId = novoSlot.id;
+      } else {
+        // Tenta pegar slot existente
         const { data: upd } = await supabase.from("masterlist").update({ na_loja: false }).eq("id", item.id).eq("na_loja", true).select("id");
         if (!upd?.length) {
-          await supabase.from("claims").update({ status: "rejeitado" }).eq("id", inserted[0].id);
-          resultados.push({ membro: item.membro, ok: false });
-        } else {
-          resultados.push({ membro: item.membro, ok: true });
+          // Alguém pegou antes — cria novo slot
+          const { data: novoSlot } = await supabase.from("masterlist").insert([{
+            cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
+            nome_do_item: item.nome_do_item,
+            valor_item: item.valor_item,
+            frete_inter: 0, taxa_rf: 0,
+            info_adicionais: item.info_adicionais,
+            na_loja: false,
+          }]).select().single();
+          if (!novoSlot) continue;
+          masterlistId = novoSlot.id;
         }
-      } else {
-        resultados.push({ membro: item.membro, ok: false });
       }
+      const { error } = await supabase.from("claims").insert([{
+        joiner_cog: user.cog, joiner_nome: user.nome || user.cog, joiner_email: user.email || null,
+        masterlist_id: masterlistId, ceg: "CLAIM", nome_do_item: item.nome_do_item,
+        valor: Number(item.valor_item||0), status: "pendente",
+      }]);
+      if (!error) membrosOk.push(item.membro);
     }
-    const ok = resultados.filter(r => r.ok).map(r => r.membro);
-    const fail = resultados.filter(r => !r.ok).map(r => r.membro);
-    if (ok.length) {
-      setTodosItens(prev => (prev||[]).map(i => selecionados.find(s => s.id === i.id && resultados.find(r => r.membro === i.membro && r.ok)) ? { ...i, na_loja: false } : i));
+    if (membrosOk.length) {
       setQtds(prev => { const n = {...prev}; selecionados.forEach(s => { delete n[s.id]; }); return n; });
-      setClaimOk(`✓ Claim enviado: ${ok.join(", ")}. Aguarde confirmação.`);
+      setClaimOk(`✓ Claim enviado: ${membrosOk.join(", ")}. Aguarde confirmação.`);
       setTimeout(() => setClaimOk(null), 6000);
     }
-    if (fail.length) setClaimErro(`⚠ Já reservado por outra pessoa: ${fail.join(", ")}.`);
     setEnviando(false);
   }
 
