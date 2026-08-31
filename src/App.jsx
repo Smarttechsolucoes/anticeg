@@ -12662,9 +12662,6 @@ function ClaimPublicoPage({ user }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
-      {claimOk && <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39" }}>{claimOk}</div>}
-      {claimErro && <div style={{ background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>{claimErro}</div>}
-
       {gruposAtivos.map(grupo => {
         const fotoUrl = fotos[grupo.itens[0]?.nome_do_item];
         const totalSel = grupo.itens.reduce((s,i) => s + (qtds[i.id]||0), 0);
@@ -12730,6 +12727,10 @@ function ClaimPublicoPage({ user }) {
               }}>
                 {enviando ? "ENVIANDO..." : totalSel > 0 ? `CONFIRMAR CLAIM (${totalSel} membro${totalSel>1?"s":""}) →` : "SELECIONE UM MEMBRO"}
               </button>
+
+              {/* Confirmação / erro abaixo do botão */}
+              {claimOk && <div style={{ marginTop:12, background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39" }}>{claimOk}</div>}
+              {claimErro && <div style={{ marginTop:12, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>{claimErro}</div>}
             </div>
           </div>
         );
