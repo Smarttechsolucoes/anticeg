@@ -16369,13 +16369,13 @@ function PopupSkzooEaawPage() {
 
   const itens = [
     { n:"01", nome:"Official Light Stick Ver.2" },
-    { n:"02", nome:"SKZOO Face Shoulder Bag" },
-    { n:"03", nome:"Evil SKZOO Acrylic Keyring" },
-    { n:"04", nome:"SKZOO Plush Collect Book" },
-    { n:"05", nome:"SKZOO Strap Plush" },
-    { n:"06", nome:"SKZOO Reel Face Set" },
+    { n:"02", nome:"SKZOO Face Shoulder Bag", skzoo:"Wolf Chan" },
+    { n:"03", nome:"Evil SKZOO Acrylic Keyring", skzoo:"Leebit" },
+    { n:"04", nome:"SKZOO Plush Collect Book", skzoo:"Dwaekki" },
+    { n:"05", nome:"SKZOO Strap Plush", skzoo:"Jiniret" },
+    { n:"06", nome:"SKZOO Reel Face Set", skzoo:"Han Quokka" },
     { n:"07", nome:"SKZOO Secret Keyring Toy Ver." },
-    { n:"08", nome:"SKZOO Keyring LATAM Ver.", tag:"Online Only" },
+    { n:"08", nome:"SKZOO Keyring LATAM Ver.", tag:"Online Only", skzoo:"BbokAri" },
     { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Online Only" },
     { n:"10", nome:"SKZOO City Mug LATAM Ver." },
     { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver." },
@@ -16384,7 +16384,7 @@ function PopupSkzooEaawPage() {
     { n:"14", nome:"Racing Jacket LATAM Ver.", tag:"Free" },
     { n:"15", nome:"T-Shirt LATAM Ver.", tag:"Free" },
     { n:"16", nome:"Baseball Jersey LATAM Ver.", tag:"Free" },
-    { n:"17", nome:"SKZOO Acrylic Magnetic Holder" },
+    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:"PuppyM · FoxI.Ny" },
     { n:"18", nome:"SKZOO Travel Pouch" },
     { n:"19", nome:"SKZOO Mouse Pad" },
     { n:"20", nome:"SKZOO Luggage Strap" },
@@ -16425,6 +16425,9 @@ function PopupSkzooEaawPage() {
               <div style={{ padding:"8px 10px" }}>
                 <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
                 <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
+                {item.skzoo && (
+                  <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,92,26,.7)", marginTop:3, letterSpacing:"0.5px" }}>{item.skzoo}</div>
+                )}
                 {item.tag && (
                   <span style={{ display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
                     background: item.tag === "Free" ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.1)",
@@ -16445,6 +16448,7 @@ function PopupSkzooEaawPage() {
           <div style={{ marginTop:14, textAlign:"center" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>#{lightbox.n}</div>
             <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
+            {lightbox.skzoo && <div style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", marginTop:3 }}>{lightbox.skzoo}</div>}
             {lightbox.tag && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", marginTop:4 }}>{lightbox.tag}</div>}
           </div>
         </div>
