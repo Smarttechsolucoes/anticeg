@@ -17414,11 +17414,13 @@ function PrevendaTab({ user }) {
                     style={{ display:"inline-block", padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
                     PREENCHER FORMULÁRIO →
                   </a>
-                ) : (
+                ) : f.tab ? (
                   <button onClick={()=>{ window.dispatchEvent(new CustomEvent("anticeg:changetab", {detail: f.tab})); }}
                     style={{ padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
                     ACESSAR →
                   </button>
+                ) : (
+                  <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.35)", alignSelf:"center" }}>Link disponível em breve</span>
                 )}
                 {f.googleForm && (
                   <a href={f.googleForm} target="_blank" rel="noopener noreferrer"
