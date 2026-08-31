@@ -7644,6 +7644,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [popupCount,     setPopupCount]     = useState(0);
   const [bazaarInCount,  setBazaarInCount]  = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
+  const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
   const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
@@ -7951,6 +7952,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       loaded.add("disponiveis");
       fetchDisponiveis();
     }
+    if (adminMainTab === "claims-admin" && !loaded.has("claims-admin")) {
+      loaded.add("claims-admin");
+      supabase.from("claims").select("*").eq("ceg", "CLAIM").eq("status", "pendente").order("created_at", { ascending: false })
+        .then(({ data }) => { if (data) setClaimsAdminPendentes(data); });
+    }
   }, [adminMainTab]);
 
   async function fetchDisponiveis() {
@@ -8169,7 +8175,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("reports")  && nav("reports",      "Reports",  "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
                 {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
-                {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.length || 0)}
+                {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.filter(c => c.ceg !== "CLAIM").length || 0)}
+                {nav("claims-admin", "Claims", "◈", claimsAdminPendentes.length || 0)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
@@ -8827,6 +8834,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
       {adminMainTab === "skzoo-rio" && <AdminSkzooRio />}
+      {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
         async function buscarStorageJoiner(joinerData) {
@@ -17704,6 +17712,179 @@ function ComprovanteThumb({ url }) {
             style={{ position:"absolute", bottom:24, right:24, fontFamily:mono, fontSize:11, color:"rgba(255,92,26,.9)", background:"rgba(0,0,0,.6)", padding:"6px 12px", borderRadius:6, textDecoration:"none" }}>
             abrir original ↗
           </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminClaims({ pendentesInit, onPendentesChange }) {
+  const mono = "'DM Mono',monospace";
+  const inputS = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, width:"100%", boxSizing:"border-box" };
+  const [claimsTab, setClaimsTab] = useState("pendentes");
+  const [pendentes, setPendentes] = useState(pendentesInit || []);
+  const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
+  const [salvando, setSalvando] = useState(false);
+  const SK_MEMBROS = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+
+  useEffect(() => { setPendentes(pendentesInit || []); }, [pendentesInit]);
+
+  function updatePendentes(fn) {
+    setPendentes(prev => { const next = fn(prev); onPendentesChange?.(next); return next; });
+  }
+
+  async function aprovar(claim) {
+    await supabase.from("claims").update({ status: "aprovado" }).eq("id", claim.id);
+    enviarPushJoiner(claim.joiner_cog, `✓ Claim aprovado!`, `${claim.nome_do_item} foi confirmado.`, "/claim");
+    updatePendentes(prev => prev.filter(c => c.id !== claim.id));
+  }
+
+  async function rejeitar(claim) {
+    await supabase.from("claims").update({ status: "rejeitado" }).eq("id", claim.id);
+    await supabase.from("masterlist").update({ na_loja: true }).eq("id", claim.masterlist_id);
+    enviarPushJoiner(claim.joiner_cog, `✕ Claim não aprovado`, `${claim.nome_do_item} não pôde ser confirmado desta vez.`, "/claim");
+    updatePendentes(prev => prev.filter(c => c.id !== claim.id));
+  }
+
+  async function publicarSet() {
+    if (!novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length) return;
+    setSalvando(true);
+    let fotoUrl = null;
+    if (novoSet.fotoFile) {
+      const ext = novoSet.fotoFile.name.split(".").pop().toLowerCase();
+      const path = `claims/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, novoSet.fotoFile, { upsert: true });
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+        fotoUrl = publicUrl;
+      }
+    }
+    const prazoInfo = novoSet.prazo ? `Prazo: ${novoSet.prazo}` : null;
+    const rows = novoSet.membros.map(m => ({
+      cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
+      nome_do_item: `${novoSet.nome.trim()} · ${m}`,
+      valor_item: Number(novoSet.valor) || 0,
+      frete_inter: 0, taxa_rf: 0,
+      info_adicionais: prazoInfo,
+      na_loja: true,
+    }));
+    const { data: inserted, error } = await supabase.from("masterlist").insert(rows).select();
+    if (!error && inserted?.length && fotoUrl) {
+      await Promise.all(inserted.map(item =>
+        supabase.from("item_fotos").insert([{ ceg:"CLAIM", nome_do_item: item.nome_do_item, foto_url: fotoUrl, ordem: -1 }])
+      ));
+    }
+    if (!error) {
+      setNovoSet({ nome:"", valor:"", prazo:"", membros:[], fotoFile:null, fotoPreview:null });
+      setClaimsTab("pendentes");
+    } else {
+      alert("Erro: " + error.message);
+    }
+    setSalvando(false);
+  }
+
+  return (
+    <div style={{ maxWidth:680 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:16 }}>Claims</div>
+
+      {/* Sub-tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+        {[["pendentes",`PENDENTES (${pendentes.length})`],["novo-set","NOVO SET"]].map(([v,l]) => (
+          <button key={v} onClick={() => setClaimsTab(v)} style={{ fontSize:9, fontFamily:mono, letterSpacing:"1px", padding:"5px 14px", borderRadius:20, cursor:"pointer", fontWeight: claimsTab===v ? 700 : 400, border: claimsTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimsTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimsTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* PENDENTES */}
+      {claimsTab === "pendentes" && (
+        pendentes.length === 0
+          ? <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhum claim pendente.</div>
+          : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {pendentes.map(claim => (
+                <div key={claim.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 16px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                    <div>
+                      <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:4 }}>{claim.nome_do_item}</div>
+                      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>
+                        {claim.joiner_nome} · {claim.joiner_cog}
+                      </div>
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:3 }}>
+                        {new Date(claim.created_at).toLocaleString("pt-BR")}
+                        {claim.valor > 0 && ` · R$ ${Number(claim.valor).toFixed(2).replace(".",",")}`}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                      <button onClick={() => aprovar(claim)} style={{ fontFamily:mono, fontSize:10, fontWeight:700, padding:"6px 14px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, color:"#BAFF39", cursor:"pointer" }}>✓ Aprovar</button>
+                      <button onClick={() => rejeitar(claim)} style={{ fontFamily:mono, fontSize:10, padding:"6px 14px", background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.2)", borderRadius:6, color:"var(--laranja)", cursor:"pointer" }}>✕ Rejeitar</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+      )}
+
+      {/* NOVO SET */}
+      {claimsTab === "novo-set" && (
+        <div style={{ background:"var(--card-bg)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"20px 16px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"var(--laranja)", letterSpacing:"1.5px", fontWeight:700 }}>NOVO SET DE CLAIM</div>
+
+          {/* Foto */}
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:6 }}>FOTO</div>
+            <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
+              <div style={{ width:80, height:80, borderRadius:8, border:"1px dashed rgba(245,240,232,.2)", background:"rgba(245,240,232,.03)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0 }}>
+                {novoSet.fotoPreview ? <img src={novoSet.fotoPreview} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : <span style={{ fontSize:22, opacity:.3 }}>📷</span>}
+              </div>
+              <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>{novoSet.fotoFile ? novoSet.fotoFile.name : "clique para selecionar"}</span>
+              <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                const f = e.target.files[0]; if (!f) return;
+                setNovoSet(p => ({ ...p, fotoFile: f, fotoPreview: URL.createObjectURL(f) }));
+              }} />
+            </label>
+          </div>
+
+          {/* Campos */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>NOME DO CARD *</div>
+              <input value={novoSet.nome} onChange={e => setNovoSet(p => ({...p, nome: e.target.value}))} placeholder="ex: Photocard Selector" style={inputS} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>VALOR *</div>
+              <input type="number" value={novoSet.valor} onChange={e => setNovoSet(p => ({...p, valor: e.target.value}))} placeholder="0.00" style={inputS} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>PRAZO</div>
+              <input value={novoSet.prazo} onChange={e => setNovoSet(p => ({...p, prazo: e.target.value}))} placeholder="ex: 20/09" style={inputS} />
+            </div>
+          </div>
+
+          {/* Membros */}
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>MEMBROS</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {SK_MEMBROS.map(m => {
+                const sel = novoSet.membros.includes(m);
+                return (
+                  <button key={m} onClick={() => setNovoSet(p => ({ ...p, membros: sel ? p.membros.filter(x => x !== m) : [...p.membros, m] }))}
+                    style={{ fontFamily:mono, fontSize:10, padding:"5px 12px", borderRadius:20, cursor:"pointer", border: sel ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.15)", background: sel ? "rgba(255,92,26,.12)" : "transparent", color: sel ? "var(--laranja)" : "rgba(245,240,232,.4)", fontWeight: sel ? 700 : 400 }}>
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop:8, display:"flex", gap:8 }}>
+              <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>todos</button>
+              <span style={{ color:"rgba(245,240,232,.15)" }}>·</span>
+              <button onClick={() => setNovoSet(p => ({...p, membros:[]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>limpar</button>
+            </div>
+          </div>
+
+          <button disabled={salvando || !novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length} onClick={publicarSet}
+            style={{ alignSelf:"flex-end", fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1px", padding:"10px 24px", background: (!novoSet.nome.trim()||!novoSet.valor||!novoSet.membros.length) ? "rgba(245,240,232,.08)" : "var(--laranja)", border:"none", borderRadius:8, color: (!novoSet.nome.trim()||!novoSet.valor||!novoSet.membros.length) ? "rgba(245,240,232,.2)" : "#fff", cursor: (!novoSet.nome.trim()||!novoSet.valor||!novoSet.membros.length) ? "not-allowed" : "pointer" }}>
+            {salvando ? "publicando..." : `PUBLICAR ${novoSet.membros.length} ITEM${novoSet.membros.length!==1?"S":""} →`}
+          </button>
         </div>
       )}
     </div>
