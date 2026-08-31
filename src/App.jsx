@@ -16514,11 +16514,22 @@ function PopupSkzooEaawPage() {
 
         {/* ── PAGAMENTO ── */}
         {etapa === "pagamento" && <>
-          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"28px 20px", textAlign:"center" }}>
-            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>FORMAS DE PAGAMENTO</div>
-            <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.35)" }}>Em breve · detalhes serão disponibilizados</div>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>PRAZOS DE PAGAMENTO</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+            {[
+              { n:"01", label:"Prazo 01", prazo:"a definir" },
+              { n:"02", label:"Prazo 02", prazo:"a definir" },
+            ].map(p => (
+              <div key={p.n} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div>
+                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:4 }}>PAGAR ATÉ O PRAZO {p.n}</div>
+                  <div style={{ fontFamily:mono, fontSize:13, color:"rgba(245,240,232,.25)", fontStyle:"italic" }}>{p.prazo}</div>
+                </div>
+                <span style={{ fontFamily:mono, fontSize:8, padding:"3px 8px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.25)", border:"1px solid rgba(245,240,232,.08)" }}>EM BREVE</span>
+              </div>
+            ))}
           </div>
-          <div style={{ marginTop:24, display:"flex", justifyContent:"space-between" }}>
+          <div style={{ display:"flex", justifyContent:"space-between" }}>
             <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
             <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>PRÓXIMA ETAPA →</button>
           </div>
