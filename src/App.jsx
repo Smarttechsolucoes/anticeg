@@ -12690,10 +12690,13 @@ function ClaimPublicoPage({ user }) {
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
   const [isBloqueada, setIsBloqueada] = useState(false);
+  const [meusClaims, setMeusClaims] = useState([]);
 
   useEffect(() => {
     supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle()
       .then(({ data }) => { if (data) setIsBloqueada(!!data.bloqueado); });
+    supabase.from("claims").select("nome_do_item").eq("joiner_cog", user.cog).eq("ceg","CLAIM").neq("status","rejeitado")
+      .then(({ data }) => { if (data) setMeusClaims(data.map(c => c.nome_do_item)); });
     supabase.from("masterlist")
       .select("id, nome_do_item, valor_item, info_adicionais, na_loja")
       .eq("ceg", "CLAIM").or("nome.ilike.disponivel,nome.ilike.disponível").order("nome_do_item")
@@ -12717,6 +12720,8 @@ function ClaimPublicoPage({ user }) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const selecionados = grupo.itens.filter(i => (qtds[i.id]||0) > 0);
     if (!selecionados.length) { setClaimErro("Selecione ao menos 1 membro."); return; }
+    const duplicados = selecionados.filter(i => meusClaims.includes(i.nome_do_item)).map(i => i.membro);
+    if (duplicados.length) { setClaimErro(`⚠ Você já deu claim em: ${duplicados.join(", ")}. Parece um bug — não é possível repetir.`); return; }
     setEnviando(true); setClaimErro(null);
     const membrosOk = [];
     for (const item of selecionados) {
@@ -12815,16 +12820,22 @@ function ClaimPublicoPage({ user }) {
                 <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                   {grupo.itens.map(item => {
                     const qtd = qtds[item.id]||0;
+                    const jaClaim = meusClaims.includes(item.nome_do_item);
                     return (
                       <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                        <span style={{ fontFamily:mono, fontSize:11, color: qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
+                        <span style={{ fontFamily:mono, fontSize:11, color: jaClaim ? "rgba(245,240,232,.25)" : qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
                           {item.membro}
+                          {jaClaim && <span style={{ marginLeft:8, fontSize:9, color:"rgba(245,240,232,.2)" }}>já claimado</span>}
                         </span>
-                        <div style={{ display:"flex", alignItems:"center" }}>
-                          <button onClick={() => alterarQtd(item.id,-1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>−</button>
-                          <div style={{ width:34, height:28, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd>0?"var(--laranja)":"rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd>0?700:400 }}>{qtd}</div>
-                          <button onClick={() => alterarQtd(item.id,+1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>+</button>
-                        </div>
+                        {jaClaim ? (
+                          <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.15)" }}>—</span>
+                        ) : (
+                          <div style={{ display:"flex", alignItems:"center" }}>
+                            <button onClick={() => alterarQtd(item.id,-1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>−</button>
+                            <div style={{ width:34, height:28, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd>0?"var(--laranja)":"rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd>0?700:400 }}>{qtd}</div>
+                            <button onClick={() => alterarQtd(item.id,+1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>+</button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
