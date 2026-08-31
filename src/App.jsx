@@ -12760,7 +12760,7 @@ function ClaimPublicoPage({ user }) {
 
   if (todosItens === null) return <div style={{ textAlign:"center", padding:"40px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>carregando...</div>;
 
-  const gruposAtivos = Object.values(grupos).filter(g => g.itens.some(i => i.na_loja));
+  const gruposAtivos = Object.values(grupos);
   if (!gruposAtivos.length) return <div style={{ textAlign:"center", padding:"40px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum item disponível no momento.</div>;
 
   return (
@@ -12798,22 +12798,16 @@ function ClaimPublicoPage({ user }) {
                 <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                   {grupo.itens.map(item => {
                     const qtd = qtds[item.id]||0;
-                    const disponivel = item.na_loja;
                     return (
                       <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                        <span style={{ fontFamily:mono, fontSize:11, color: !disponivel ? "rgba(245,240,232,.2)" : qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
+                        <span style={{ fontFamily:mono, fontSize:11, color: qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
                           {item.membro}
-                          {!disponivel && <span style={{ marginLeft:8, fontSize:9, color:"rgba(245,240,232,.2)" }}>esgotado</span>}
                         </span>
-                        {disponivel ? (
-                          <div style={{ display:"flex", alignItems:"center" }}>
-                            <button onClick={() => alterarQtd(item.id,-1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>−</button>
-                            <div style={{ width:34, height:28, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd>0?"var(--laranja)":"rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd>0?700:400 }}>{qtd}</div>
-                            <button onClick={() => alterarQtd(item.id,+1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>+</button>
-                          </div>
-                        ) : (
-                          <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.15)" }}>—</span>
-                        )}
+                        <div style={{ display:"flex", alignItems:"center" }}>
+                          <button onClick={() => alterarQtd(item.id,-1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>−</button>
+                          <div style={{ width:34, height:28, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd>0?"var(--laranja)":"rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd>0?700:400 }}>{qtd}</div>
+                          <button onClick={() => alterarQtd(item.id,+1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>+</button>
+                        </div>
                       </div>
                     );
                   })}
