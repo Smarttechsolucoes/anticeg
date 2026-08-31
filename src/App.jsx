@@ -18697,9 +18697,32 @@ export default function App() {
   if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
-  if (page === "landing" || !user) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+  if (page === "landing" || !user) {
+    if (window.location.pathname === "/claim") {
+      return (
+        <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, fontFamily:"'DM Mono',monospace", padding:24 }}>
+          <div style={{ fontSize:28 }}>◈</div>
+          <div style={{ fontSize:13, fontWeight:700 }}>ANTICEG · CLAIMS</div>
+          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:8 }}>Faça login para ver os itens disponíveis</div>
+          <button onClick={handleLogin} style={{ background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"10px 24px", cursor:"pointer", letterSpacing:"1px" }}>ENTRAR →</button>
+        </div>
+      );
+    }
+    return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+  }
 
-
+  if (window.location.pathname === "/claim") {
+    return (
+      <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
+        <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
+          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer", padding:0, marginBottom:20 }}>← voltar</button>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:24 }}>CLAIMS</div>
+          <DisponiveisTab user={user} />
+        </div>
+      </div>
+    );
+  }
 
   const isAdmin = isAdminUser(user);
 
