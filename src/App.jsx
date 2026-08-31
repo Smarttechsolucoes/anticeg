@@ -8177,6 +8177,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
                 {nav("popup", "Pop-up This & That", "◉", popupCount)}
                 {nav("bazaar-in", "Bazaar IN", "◈", bazaarInCount)}
+                {nav("skzoo-rio", "SKZOO Pop-up Rio", "◈", 0)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -8825,6 +8826,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
+      {adminMainTab === "skzoo-rio" && <AdminSkzooRio />}
 
       {adminMainTab === "storage" && owner && (() => {
         async function buscarStorageJoiner(joinerData) {
@@ -17463,6 +17465,25 @@ function ComprovanteThumb({ url }) {
           </a>
         </div>
       )}
+    </div>
+  );
+}
+
+function AdminSkzooRio() {
+  const mono = "'DM Mono',monospace";
+  return (
+    <div style={{ padding:"32px 24px", maxWidth:720 }}>
+      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>SKZOO EVERYWHERE</div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:2, color:"var(--laranja)", lineHeight:1, marginBottom:20 }}>ALL AROUND THE WORLD · RIO</div>
+      <div style={{ display:"flex", gap:8, marginBottom:28, flexWrap:"wrap" }}>
+        <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.3)" }}>EM BREVE</span>
+        <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", border:"1px solid rgba(245,240,232,.08)" }}>Formulário 03–05/09</span>
+        <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", border:"1px solid rgba(245,240,232,.08)" }}>22 ITENS</span>
+      </div>
+      <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:11 }}>
+        Gestão de pedidos disponível após abertura do formulário.
+      </div>
     </div>
   );
 }
