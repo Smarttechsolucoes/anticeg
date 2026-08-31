@@ -16423,6 +16423,26 @@ function PopupSkzooEaawPage() {
           </div>
         </div>
 
+        {/* Regras */}
+        <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>REGRAS IMPORTANTES</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+              》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
+              <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
+            </div>
+            {[
+              "A pop-up é NACIONAL e não haverá TAXA INTERNACIONAL e nem FRETE INTERNACIONAL.",
+              "O valor de proxy service está adicionado no valor final.",
+              "O envio nacional poderá ser solicitado a partir da abertura do formulário.",
+            ].map((r, i) => (
+              <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+                <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Grade de itens */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
           {itens.map(item => (
