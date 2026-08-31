@@ -12713,12 +12713,12 @@ function ClaimPublicoPage({ user }) {
   const mono = "'DM Mono',monospace";
   const [todosItens, setTodosItens] = useState(null);
   const [fotos, setFotos] = useState({});
-  const [qtds, setQtds] = useState({});   // keyed by nome_do_item
+  const [qtds, setQtds] = useState({});   // keyed por `base||aberturaKey||nome_do_item`
   const [enviando, setEnviando] = useState(false);
   const [claimOk, setClaimOk] = useState(null);
   const [claimErro, setClaimErro] = useState(null);
   const [isBloqueada, setIsBloqueada] = useState(false);
-  const [meusClaims, setMeusClaims] = useState([]);
+  const [meusClaims, setMeusClaims] = useState([]); // masterlist_id values
   const [agora, setAgora] = useState(new Date());
 
   useEffect(() => {
@@ -12728,7 +12728,7 @@ function ClaimPublicoPage({ user }) {
 
   async function fetchItens() {
     const { data } = await supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
-      .eq("ceg", "CLAIM").order("nome_do_item");
+      .eq("ceg", "CLAIM").order("nome_do_item").order("id");
     setTodosItens(data || []);
     if (!data?.length) return;
     const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
@@ -12738,8 +12738,8 @@ function ClaimPublicoPage({ user }) {
   }
 
   async function fetchMeusClaims() {
-    const { data } = await supabase.from("claims").select("nome_do_item").eq("joiner_cog", user.cog).eq("ceg","CLAIM").neq("status","rejeitado");
-    if (data) setMeusClaims(data.map(c => c.nome_do_item));
+    const { data } = await supabase.from("claims").select("masterlist_id").eq("joiner_cog", user.cog).eq("ceg","CLAIM").neq("status","rejeitado");
+    if (data) setMeusClaims(data.map(c => c.masterlist_id));
   }
 
   useEffect(() => {
@@ -12751,36 +12751,38 @@ function ClaimPublicoPage({ user }) {
     return () => clearInterval(t);
   }, [user.cog]);
 
-  function alterarQtd(nomeDoItem, delta) {
-    setQtds(prev => ({ ...prev, [nomeDoItem]: Math.max(0, (prev[nomeDoItem]||0) + delta) }));
+  function qKey(base, aberturaKey, nomeDoItem) {
+    return `${base}||${aberturaKey}||${nomeDoItem}`;
+  }
+
+  function alterarQtd(key, delta) {
+    setQtds(prev => ({ ...prev, [key]: Math.max(0, (prev[key]||0) + delta) }));
     setClaimErro(null);
   }
 
-  async function confirmarClaim(grupo) {
+  async function confirmarClaim(setData) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
-    const selecionados = grupo.itens.filter(i => (qtds[i.nome_do_item]||0) > 0);
+    const selecionados = setData.itens.filter(i => (qtds[qKey(setData.base, setData.aberturaKey, i.nome_do_item)]||0) > 0);
     if (!selecionados.length) { setClaimErro("Selecione ao menos 1 membro."); return; }
-    const duplicados = selecionados.filter(i => meusClaims.includes(i.nome_do_item)).map(i => i.membro);
-    if (duplicados.length) { setClaimErro(`⚠ Você já deu claim em: ${duplicados.join(", ")}. Parece um bug — não é possível repetir.`); return; }
+    const duplicados = selecionados.filter(i => i.slots.some(s => meusClaims.includes(s.id))).map(i => i.membro);
+    if (duplicados.length) { setClaimErro(`⚠ Você já deu claim em: ${duplicados.join(", ")} neste set.`); return; }
     setEnviando(true); setClaimErro(null);
     const membrosOk = [];
     for (const membroItem of selecionados) {
-      // Busca qualquer slot disponível para esse membro
       const slotDisponivel = membroItem.slots.find(s => s.na_loja);
       let masterlistId = null;
-      const templateRow = membroItem.slots[0]; // referência para copiar dados
+      const templateRow = membroItem.slots[0];
       if (slotDisponivel) {
         const { data: upd } = await supabase.from("masterlist").update({ na_loja: false }).eq("id", slotDisponivel.id).eq("na_loja", true).select("id");
         masterlistId = upd?.length ? slotDisponivel.id : null;
       }
       if (!masterlistId) {
-        // Nenhum slot disponível (já pego por outro na corrida) — cria novo
         const { data: novoSlot } = await supabase.from("masterlist").insert([{
           cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
           nome_do_item: membroItem.nome_do_item,
-          valor_item: templateRow.valor_item,
+          valor_item: templateRow?.valor_item,
           frete_inter: 0, taxa_rf: 0,
-          info_adicionais: templateRow.info_adicionais,
+          info_adicionais: templateRow?.info_adicionais,
           na_loja: false,
         }]).select().single();
         masterlistId = novoSlot?.id || null;
@@ -12789,15 +12791,15 @@ function ClaimPublicoPage({ user }) {
       const { error } = await supabase.from("claims").insert([{
         joiner_cog: user.cog, joiner_nome: user.nome || user.cog, joiner_email: user.email || null,
         masterlist_id: masterlistId, ceg: "CLAIM", nome_do_item: membroItem.nome_do_item,
-        valor: Number(templateRow.valor_item||0), status: "pendente",
+        valor: Number(templateRow?.valor_item||0), status: "pendente",
       }]);
       if (!error) {
         membrosOk.push(membroItem.membro);
-        setMeusClaims(prev => [...prev, membroItem.nome_do_item]);
+        setMeusClaims(prev => [...prev, masterlistId]);
       }
     }
     if (membrosOk.length) {
-      setQtds(prev => { const n = {...prev}; selecionados.forEach(s => { delete n[s.nome_do_item]; }); return n; });
+      setQtds(prev => { const n = {...prev}; selecionados.forEach(s => { delete n[qKey(setData.base, setData.aberturaKey, s.nome_do_item)]; }); return n; });
       setClaimOk(`✓ Claim enviado: ${membrosOk.join(", ")}. Aguarde confirmação.`);
       setTimeout(() => setClaimOk(null), 6000);
       fetchItens();
@@ -12806,123 +12808,151 @@ function ClaimPublicoPage({ user }) {
     setEnviando(false);
   }
 
-  // Agrupa por base → um entry por membro único com todos os slots
+  // Agrupa por base → por abertura (set) → por membro
   const grupos = {};
   (todosItens||[]).forEach(item => {
     const partes = item.nome_do_item.split(" · ");
     const base = partes.slice(0,-1).join(" · ");
     const membro = partes[partes.length-1];
+    const info = item.info_adicionais || "";
+    const prazoMatch = info.match(/Prazo:\s*([^|]+)/);
+    const aberturaMatch = info.match(/Abertura:\s*([^|]+)/);
+    const aberturaStr = aberturaMatch ? aberturaMatch[1].trim() : "";
+    const aberturaKey = aberturaStr || "sem-horario";
+    const abertura = aberturaStr ? new Date(aberturaStr) : null;
     if (!grupos[base]) {
-      const info = item.info_adicionais || "";
-      const prazoMatch = info.match(/Prazo:\s*([^|]+)/);
-      const aberturaMatch = info.match(/Abertura:\s*([^|]+)/);
-      grupos[base] = {
-        base, membros: {}, valor: item.valor_item,
-        prazo: prazoMatch ? prazoMatch[1].trim() : null,
-        abertura: aberturaMatch ? new Date(aberturaMatch[1].trim()) : null,
-      };
+      grupos[base] = { base, valor: item.valor_item, prazo: prazoMatch ? prazoMatch[1].trim() : null, sets: {} };
     }
-    if (!grupos[base].membros[membro]) {
-      grupos[base].membros[membro] = { membro, nome_do_item: item.nome_do_item, slots: [] };
+    if (!grupos[base].sets[aberturaKey]) {
+      grupos[base].sets[aberturaKey] = { abertura, aberturaKey, base, membros: {} };
     }
-    grupos[base].membros[membro].slots.push(item);
+    if (!grupos[base].sets[aberturaKey].membros[membro]) {
+      grupos[base].sets[aberturaKey].membros[membro] = { membro, nome_do_item: item.nome_do_item, slots: [] };
+    }
+    grupos[base].sets[aberturaKey].membros[membro].slots.push(item);
   });
-  // Converte membros em array ordenado
-  Object.values(grupos).forEach(g => {
-    g.itens = Object.values(g.membros).sort((a,b) => a.membro.localeCompare(b.membro));
+
+  const gruposAtivos = Object.values(grupos).map(g => {
+    const setsArray = Object.values(g.sets).sort((a, b) => {
+      if (!a.abertura && !b.abertura) return 0;
+      if (!a.abertura) return -1;
+      if (!b.abertura) return 1;
+      return a.abertura - b.abertura;
+    });
+    setsArray.forEach((s, i) => {
+      s.setNum = i + 1;
+      s.itens = Object.values(s.membros).sort((a, b) => a.membro.localeCompare(b.membro));
+    });
+    return { ...g, setsArray };
   });
 
   if (todosItens === null) return <div style={{ textAlign:"center", padding:"40px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>carregando...</div>;
-
-  const gruposAtivos = Object.values(grupos);
   if (!gruposAtivos.length) return <div style={{ textAlign:"center", padding:"40px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum item disponível no momento.</div>;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
       {gruposAtivos.map(grupo => {
-        const fotoUrl = fotos[grupo.itens[0]?.nome_do_item] || Object.values(fotos).find(Boolean);
-        const totalSel = grupo.itens.reduce((s,i) => s + (qtds[i.nome_do_item]||0), 0);
-        const bloqueadoPorHorario = grupo.abertura && agora < grupo.abertura;
-        const diffMs = grupo.abertura ? grupo.abertura - agora : 0;
-        const hh = String(Math.floor(diffMs / 3600000)).padStart(2,"0");
-        const mm = String(Math.floor((diffMs % 3600000) / 60000)).padStart(2,"0");
-        const ss = String(Math.floor((diffMs % 60000) / 1000)).padStart(2,"0");
-        const countdown = `${hh}:${mm}:${ss}`;
+        const fotoUrl = grupo.setsArray[0]?.itens?.map(i => fotos[i.nome_do_item]).find(Boolean) || null;
         return (
-          <div key={grupo.base} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
-
-            {/* Foto grande */}
-            {fotoUrl && <img src={fotoUrl} alt={grupo.base} style={{ width:"100%", maxHeight:360, objectFit:"contain", background:"#111", display:"block" }} />}
-
-            <div style={{ padding:"18px 18px 20px" }}>
-              {/* Infos do set */}
-              <div style={{ marginBottom:16 }}>
-                <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>DETALHES DO SET</div>
+          <div key={grupo.base}>
+            {/* Header do set */}
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden", marginBottom:12 }}>
+              {fotoUrl && <img src={fotoUrl} alt={grupo.base} style={{ width:"100%", maxHeight:320, objectFit:"contain", background:"#111", display:"block" }} />}
+              <div style={{ padding:"16px 18px" }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, color:"var(--offwhite)", marginBottom:6 }}>{grupo.base}</div>
-                <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:12 }}>
                   <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>R$ {Number(grupo.valor||0).toFixed(2).replace(".",",")} por membro</span>
                   {grupo.prazo && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)" }}>prazo: {grupo.prazo}</span>}
                 </div>
-              </div>
-
-              {/* Infos do joiner */}
-              <div style={{ marginBottom:16, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"10px 14px" }}>
-                <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>SEUS DADOS</div>
-                <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{user.nome || user.cog}</div>
-                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>@{user.cog}{user.email ? ` · ${user.email}` : ""}</div>
-              </div>
-
-              {/* Membros com contador */}
-              <div style={{ marginBottom:18 }}>
-                <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>MEMBROS</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {grupo.itens.map(item => {
-                    const qtd = qtds[item.nome_do_item]||0;
-                    const jaClaim = meusClaims.includes(item.nome_do_item);
-                    return (
-                      <div key={item.nome_do_item} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                        <span style={{ fontFamily:mono, fontSize:11, color: jaClaim ? "rgba(245,240,232,.25)" : qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
-                          {item.membro}
-                          {jaClaim && <span style={{ marginLeft:8, fontSize:9, color:"rgba(245,240,232,.2)" }}>já claimado</span>}
-                        </span>
-                        {jaClaim ? (
-                          <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.15)" }}>—</span>
-                        ) : (
-                          <div style={{ display:"flex", alignItems:"center" }}>
-                            <button onClick={() => alterarQtd(item.nome_do_item,-1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>−</button>
-                            <div style={{ width:34, height:28, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd>0?"var(--laranja)":"rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd>0?700:400 }}>{qtd}</div>
-                            <button onClick={() => alterarQtd(item.nome_do_item,+1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>+</button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.07)", borderRadius:8, padding:"9px 14px" }}>
+                  <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:4 }}>SEUS DADOS</div>
+                  <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{user.nome || user.cog}</div>
+                  <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>@{user.cog}{user.email ? ` · ${user.email}` : ""}</div>
                 </div>
               </div>
-
-              {/* Confirmar */}
-              {bloqueadoPorHorario ? (
-                <div style={{ width:"100%", padding:"13px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, color:"rgba(245,240,232,.35)", textAlign:"center" }}>
-                  <div style={{ fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.25)", marginBottom:4 }}>ABRE EM</div>
-                  <div style={{ fontSize:22, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3, color:"var(--laranja)" }}>{countdown}</div>
-                  <div style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>{grupo.abertura.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</div>
-                </div>
-              ) : (
-                <button disabled={enviando || totalSel === 0} onClick={() => confirmarClaim(grupo)} style={{
-                  width:"100%", padding:"13px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px",
-                  background: totalSel > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)",
-                  border:"none", borderRadius:8,
-                  color: totalSel > 0 ? "#fff" : "rgba(245,240,232,.2)",
-                  cursor: totalSel > 0 ? "pointer" : "not-allowed",
-                }}>
-                  {enviando ? "ENVIANDO..." : totalSel > 0 ? `CONFIRMAR CLAIM (${totalSel} membro${totalSel>1?"s":""}) →` : "SELECIONE UM MEMBRO"}
-                </button>
-              )}
-
-              {/* Confirmação / erro abaixo do botão */}
-              {claimOk && <div style={{ marginTop:12, background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39" }}>{claimOk}</div>}
-              {claimErro && <div style={{ marginTop:12, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>{claimErro}</div>}
             </div>
+
+            {/* Cards por set */}
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {grupo.setsArray.map((setData, idx) => {
+                const setFechado = setData.itens.length >= 8 && setData.itens.every(i => i.slots.length > 0 && !i.slots.some(s => s.na_loja));
+                const prevFechado = idx > 0 && (() => {
+                  const prev = grupo.setsArray[idx-1];
+                  return prev.itens.length >= 8 && prev.itens.every(i => i.slots.length > 0 && !i.slots.some(s => s.na_loja));
+                })();
+                const bloqueado = !setFechado && !!setData.abertura && agora < setData.abertura && !prevFechado;
+                const diffMs = bloqueado && setData.abertura ? setData.abertura - agora : 0;
+                const hh = String(Math.floor(diffMs / 3600000)).padStart(2,"0");
+                const mm = String(Math.floor((diffMs % 3600000) / 60000)).padStart(2,"0");
+                const ss = String(Math.floor((diffMs % 60000) / 1000)).padStart(2,"0");
+                const totalSel = setData.itens.reduce((acc, i) => acc + (qtds[qKey(grupo.base, setData.aberturaKey, i.nome_do_item)]||0), 0);
+                return (
+                  <div key={setData.aberturaKey} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${setFechado ? "rgba(201,168,240,.2)" : bloqueado ? "rgba(245,240,232,.06)" : "rgba(245,240,232,.1)"}`, borderRadius:12, overflow:"hidden" }}>
+                    {/* Cabeçalho do set */}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 16px", borderBottom:"1px solid rgba(245,240,232,.06)", background: setFechado ? "rgba(201,168,240,.04)" : "transparent" }}>
+                      <span style={{ fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"2px", color: setFechado ? "var(--lilas)" : bloqueado ? "rgba(245,240,232,.3)" : "var(--offwhite)" }}>
+                        SET {String(setData.setNum).padStart(2,"0")}
+                      </span>
+                      <span style={{ fontFamily:mono, fontSize:9, color: setFechado ? "var(--lilas)" : bloqueado ? "rgba(245,240,232,.3)" : "rgba(186,255,57,.7)" }}>
+                        {setFechado ? "fechado" : bloqueado ? `abre ${setData.abertura.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}` : "aberto"}
+                      </span>
+                    </div>
+
+                    {/* Membros */}
+                    <div style={{ padding:"8px 16px 10px" }}>
+                      {setData.itens.map(item => {
+                        const key = qKey(grupo.base, setData.aberturaKey, item.nome_do_item);
+                        const qtd = qtds[key]||0;
+                        const jaClaim = item.slots.some(s => meusClaims.includes(s.id));
+                        return (
+                          <div key={item.nome_do_item} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                            <span style={{ fontFamily:mono, fontSize:11, color: jaClaim ? "rgba(245,240,232,.3)" : qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
+                              {item.membro}
+                              {jaClaim && <span style={{ marginLeft:8, fontSize:9, color:"rgba(186,255,57,.6)" }}>✓ claimado</span>}
+                            </span>
+                            {!jaClaim && !setFechado && !bloqueado ? (
+                              <div style={{ display:"flex", alignItems:"center" }}>
+                                <button onClick={() => alterarQtd(key,-1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>−</button>
+                                <div style={{ width:34, height:28, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd>0?"var(--laranja)":"rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd>0?700:400 }}>{qtd}</div>
+                                <button onClick={() => alterarQtd(key,+1)} disabled={enviando} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:30, height:28, cursor:"pointer", lineHeight:1 }}>+</button>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Botão / countdown / fechado */}
+                    <div style={{ padding:"0 16px 14px" }}>
+                      {bloqueado ? (
+                        <div style={{ padding:"12px", fontFamily:mono, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, textAlign:"center" }}>
+                          <div style={{ fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.25)", marginBottom:4 }}>ABRE EM</div>
+                          <div style={{ fontSize:20, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3, color:"var(--laranja)" }}>{hh}:{mm}:{ss}</div>
+                          <div style={{ fontSize:9, color:"rgba(245,240,232,.2)", marginTop:2 }}>{setData.abertura.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</div>
+                        </div>
+                      ) : setFechado ? (
+                        <div style={{ padding:"10px 14px", background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.15)", borderRadius:8, fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center" }}>
+                          Set fechado · aguardando confirmação de compra da GOM
+                        </div>
+                      ) : (
+                        <button disabled={enviando || totalSel === 0} onClick={() => confirmarClaim(setData)} style={{
+                          width:"100%", padding:"12px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px",
+                          background: totalSel > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)",
+                          border:"none", borderRadius:8,
+                          color: totalSel > 0 ? "#fff" : "rgba(245,240,232,.2)",
+                          cursor: totalSel > 0 ? "pointer" : "not-allowed",
+                        }}>
+                          {enviando ? "ENVIANDO..." : totalSel > 0 ? `CONFIRMAR SET ${String(setData.setNum).padStart(2,"0")} (${totalSel}) →` : "SELECIONE UM MEMBRO"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {claimOk && <div style={{ marginTop:10, background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39" }}>{claimOk}</div>}
+            {claimErro && <div style={{ marginTop:10, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>{claimErro}</div>}
           </div>
         );
       })}
@@ -17941,7 +17971,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
   const inputS = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, width:"100%", boxSizing:"border-box" };
   const [claimsTab, setClaimsTab] = useState("sets");
   const [pendentes, setPendentes] = useState(pendentesInit || []);
-  const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", horario:"", membros:[], fotoFile:null, fotoPreview:null });
+  const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", horario:"", nSets:1, intervalo:2, membros:[], fotoFile:null, fotoPreview:null });
   const [salvando, setSalvando] = useState(false);
   const [sets, setSets] = useState(null);
   const [setsFotos, setSetsFotos] = useState({});
@@ -17950,22 +17980,33 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
 
   useEffect(() => { setPendentes(pendentesInit || []); }, [pendentesInit]);
 
+  async function fetchSets() {
+    setSets(null);
+    const { data } = await supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
+      .eq("ceg", "CLAIM").order("nome_do_item").order("id");
+    setSets(data || []);
+    const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
+    const mapa = {};
+    (fd||[]).forEach(f => { mapa[f.nome_do_item] = f.foto_url; });
+    setSetsFotos(mapa);
+    const { data: cd } = await supabase.from("claims").select("masterlist_id, joiner_nome, joiner_cog, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado");
+    if (cd) setSetsClaims(cd);
+  }
+
   useEffect(() => {
     if (claimsTab !== "sets") return;
-    setSets(null);
-    supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
-      .eq("ceg", "CLAIM").order("nome_do_item")
-      .then(async ({ data }) => {
-        const itens = data || [];
-        setSets(itens);
-        const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
-        const mapa = {};
-        (fd||[]).forEach(f => { mapa[f.nome_do_item] = f.foto_url; });
-        setSetsFotos(mapa);
-        supabase.from("claims").select("masterlist_id, joiner_nome, joiner_cog, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado")
-          .then(({ data: cd }) => { if (cd) setSetsClaims(cd); });
-      });
+    fetchSets();
   }, [claimsTab]);
+
+  async function confirmarCompraSet(masterlistIds) {
+    if (!masterlistIds.length) return;
+    const { data: claimsDoSet } = await supabase.from("claims").select("id").in("masterlist_id", masterlistIds).eq("ceg","CLAIM").neq("status","rejeitado");
+    if (!claimsDoSet?.length) { alert("Nenhum claim pendente neste set."); return; }
+    if (!window.confirm(`Confirmar compra com a GOM para ${claimsDoSet.length} claim(s)?`)) return;
+    const { error } = await supabase.from("claims").update({ status: "aprovado" }).in("id", claimsDoSet.map(c => c.id));
+    if (error) { alert("Erro: " + error.message); return; }
+    fetchSets();
+  }
 
   function updatePendentes(fn) {
     setPendentes(prev => { const next = fn(prev); onPendentesChange?.(next); return next; });
@@ -17997,25 +18038,39 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
         fotoUrl = publicUrl;
       }
     }
-    const partes = [novoSet.prazo ? `Prazo: ${novoSet.prazo}` : null, novoSet.horario ? `Abertura: ${novoSet.horario}` : null].filter(Boolean);
-    const prazoInfo = partes.length ? partes.join(" | ") : null;
-    const rows = novoSet.membros.map(m => ({
-      cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
-      nome_do_item: `${novoSet.nome.trim()} · ${m}`,
-      valor_item: Number(novoSet.valor) || 0,
-      frete_inter: 0, taxa_rf: 0,
-      info_adicionais: prazoInfo,
-      na_loja: true,
-    }));
-    const { data: inserted, error } = await supabase.from("masterlist").insert(rows).select();
+    const nSets = Math.max(1, Number(novoSet.nSets) || 1);
+    const intervaloMin = Number(novoSet.intervalo) || 2;
+    const baseHorario = novoSet.horario ? new Date(novoSet.horario) : null;
+    const allRows = [];
+    for (let s = 0; s < nSets; s++) {
+      let setHorario = null;
+      if (baseHorario) {
+        const dt = new Date(baseHorario.getTime() + s * intervaloMin * 60000);
+        setHorario = dt.toISOString().slice(0, 16);
+      }
+      const partes = [novoSet.prazo ? `Prazo: ${novoSet.prazo}` : null, setHorario ? `Abertura: ${setHorario}` : null].filter(Boolean);
+      const prazoInfo = partes.length ? partes.join(" | ") : null;
+      for (const m of novoSet.membros) {
+        allRows.push({
+          cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
+          nome_do_item: `${novoSet.nome.trim()} · ${m}`,
+          valor_item: Number(novoSet.valor) || 0,
+          frete_inter: 0, taxa_rf: 0,
+          info_adicionais: prazoInfo,
+          na_loja: true,
+        });
+      }
+    }
+    const { data: inserted, error } = await supabase.from("masterlist").insert(allRows).select();
     if (!error && inserted?.length && fotoUrl) {
-      await Promise.all(inserted.map(item =>
-        supabase.from("item_fotos").insert([{ ceg:"CLAIM", nome_do_item: item.nome_do_item, foto_url: fotoUrl, ordem: -1 }])
+      const uniqueNames = [...new Set(inserted.map(i => i.nome_do_item))];
+      await Promise.all(uniqueNames.map(name =>
+        supabase.from("item_fotos").insert([{ ceg:"CLAIM", nome_do_item: name, foto_url: fotoUrl, ordem: -1 }])
       ));
     }
     if (!error) {
-      setNovoSet({ nome:"", valor:"", prazo:"", horario:"", membros:[], fotoFile:null, fotoPreview:null });
-      setClaimsTab("pendentes");
+      setNovoSet({ nome:"", valor:"", prazo:"", horario:"", nSets:1, intervalo:2, membros:[], fotoFile:null, fotoPreview:null });
+      setClaimsTab("sets");
     } else {
       alert("Erro: " + error.message);
     }
@@ -18124,10 +18179,18 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                             })}
                           </div>
 
-                          {/* Banner fechado */}
+                          {/* Banner fechado + confirmar compra */}
                           {fechado && (
-                            <div style={{ margin:"0 14px 10px", padding:"8px 14px", borderRadius:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.15)", fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center", letterSpacing:".5px" }}>
-                              Set fechado · aguardando confirmação de compra da GOM
+                            <div style={{ margin:"0 14px 10px" }}>
+                              <div style={{ padding:"8px 14px", borderRadius:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.15)", fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center", letterSpacing:".5px", marginBottom:6 }}>
+                                Set fechado · aguardando confirmação de compra da GOM
+                              </div>
+                              {itens.some(i => { const c = setsClaims.find(c => c.masterlist_id === i.id); return c && c.status === "pendente"; }) && (
+                                <button onClick={() => confirmarCompraSet(itens.map(i => i.id).filter(id => !String(id).includes("vazio")))}
+                                  style={{ width:"100%", fontFamily:mono, fontSize:10, fontWeight:700, padding:"8px 14px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, color:"#BAFF39", cursor:"pointer", letterSpacing:".5px" }}>
+                                  ✓ Confirmar compra com a GOM
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -18204,8 +18267,16 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
               <input value={novoSet.prazo} onChange={e => setNovoSet(p => ({...p, prazo: e.target.value}))} placeholder="ex: 20/09" style={inputS} />
             </div>
             <div>
-              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>HORÁRIO DE ABERTURA</div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>HORÁRIO ABERTURA SET 01</div>
               <input type="datetime-local" value={novoSet.horario} onChange={e => setNovoSet(p => ({...p, horario: e.target.value}))} style={inputS} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>Nº DE SETS</div>
+              <input type="number" min="1" max="10" value={novoSet.nSets} onChange={e => setNovoSet(p => ({...p, nSets: e.target.value}))} style={inputS} />
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>INTERVALO ENTRE SETS (min)</div>
+              <input type="number" min="1" value={novoSet.intervalo} onChange={e => setNovoSet(p => ({...p, intervalo: e.target.value}))} style={inputS} />
             </div>
           </div>
 
@@ -18232,7 +18303,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
 
           <button disabled={salvando || !novoSet.nome.trim() || !novoSet.valor || !novoSet.membros.length} onClick={publicarSet}
             style={{ alignSelf:"flex-end", fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1px", padding:"10px 24px", background: (!novoSet.nome.trim()||!novoSet.valor||!novoSet.membros.length) ? "rgba(245,240,232,.08)" : "var(--laranja)", border:"none", borderRadius:8, color: (!novoSet.nome.trim()||!novoSet.valor||!novoSet.membros.length) ? "rgba(245,240,232,.2)" : "#fff", cursor: (!novoSet.nome.trim()||!novoSet.valor||!novoSet.membros.length) ? "not-allowed" : "pointer" }}>
-            {salvando ? "publicando..." : `PUBLICAR ${novoSet.membros.length} ITEM${novoSet.membros.length!==1?"S":""} →`}
+            {salvando ? "publicando..." : `PUBLICAR ${Math.max(1,Number(novoSet.nSets)||1)} SET${Number(novoSet.nSets)>1?"S":""} · ${novoSet.membros.length * Math.max(1,Number(novoSet.nSets)||1)} ITENS →`}
           </button>
         </div>
       )}
