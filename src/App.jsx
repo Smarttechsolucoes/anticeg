@@ -8400,9 +8400,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           async function enviarResposta(fb) {
             if (!fbRespostaTexto.trim()) return;
             setFbRespostaEnv(true);
-            await supabase.from("feedbacks").update({ resposta: fbRespostaTexto.trim() }).eq("id", fb.id);
+            await supabase.from("feedbacks").update({ resposta: fbRespostaTexto.trim(), status: "respondido" }).eq("id", fb.id);
             await inserirPush([{ message:`Nanda respondeu seu feedback: "${fbRespostaTexto.trim()}"`, active:true, joiner_cog: fb.joiner_cog }]);
-            setFeedbacks(prev => prev.map(x => x.id === fb.id ? { ...x, resposta: fbRespostaTexto.trim() } : x));
+            setFeedbacks(prev => prev.map(x => x.id === fb.id ? { ...x, resposta: fbRespostaTexto.trim(), status: "respondido" } : x));
             setFbRespostaAberta(null);
             setFbRespostaTexto("");
             setFbRespostaEnv(false);
