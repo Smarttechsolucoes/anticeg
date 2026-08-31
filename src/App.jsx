@@ -18294,7 +18294,9 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                 );
               })}
             </div>
-            <div style={{ marginTop:8, display:"flex", gap:8 }}>
+            <div style={{ marginTop:8, display:"flex", gap:8, alignItems:"center" }}>
+              <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))} style={{ fontFamily:mono, fontSize:9, color:"var(--laranja)", background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.3)", borderRadius:20, cursor:"pointer", padding:"3px 10px", fontWeight:700 }}>OT8</button>
+              <span style={{ color:"rgba(245,240,232,.15)" }}>·</span>
               <button onClick={() => setNovoSet(p => ({...p, membros:[...SK_MEMBROS]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>todos</button>
               <span style={{ color:"rgba(245,240,232,.15)" }}>·</span>
               <button onClick={() => setNovoSet(p => ({...p, membros:[]}))} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", background:"none", border:"none", cursor:"pointer", padding:0 }}>limpar</button>
