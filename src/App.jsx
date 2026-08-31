@@ -11499,8 +11499,8 @@ function MercariTab() {
               <div className="mc-pix-title">✦ Chave PIX — Mercado Pago</div>
               <div className="mc-pix-name">Fernanda Gomes Medeiros</div>
               <div className="mc-pix-key-row">
-                <div className="mc-pix-key">{PIX}</div>
-                <button className="mc-btn-copy" onClick={()=>{navigator.clipboard.writeText(PIX);setPixCopied(true);setTimeout(()=>setPixCopied(false),2000);}}>
+                <div className="mc-pix-key">{PIX_KEY}</div>
+                <button className="mc-btn-copy" onClick={()=>{navigator.clipboard.writeText(PIX_KEY);setPixCopied(true);setTimeout(()=>setPixCopied(false),2000);}}>
                   {pixCopied?'Copiado ✓':'Copiar'}
                 </button>
               </div>
