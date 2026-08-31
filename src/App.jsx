@@ -16395,9 +16395,9 @@ function PopupSkzooEaawPage() {
   return (
     <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
       {/* Capa */}
-      <div style={{ position:"relative", maxHeight:280, overflow:"hidden" }}>
-        <img src={`${BASE}/capa.png`} alt="SKZOO EAAW RIO" style={{ width:"100%", objectFit:"cover", objectPosition:"center top", display:"block" }} />
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 40%, #0d0d0d)" }} />
+      <div style={{ position:"relative" }}>
+        <img src={`${BASE}/capa.png`} alt="SKZOO EAAW RIO" style={{ width:"100%", display:"block" }} />
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 50%, #0d0d0d)" }} />
       </div>
 
       <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px 80px" }}>
