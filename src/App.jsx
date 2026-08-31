@@ -12624,7 +12624,12 @@ function ClaimAoVivo() {
     const sets = [];
     for (let i = 0; i < maxSlots; i++) {
       const itensDoSet = membros.map(m => membroMap[m][i] || { id: `${m}-vazio-${i}`, membro: m, na_loja: true, claim: null, nome_do_item: `${base} · ${m}` });
-      sets.push({ setNum: i + 1, itens: itensDoSet });
+      // fechado só quando TODOS os membros do set têm slot real e claimado nesse índice
+      const todosFechados = membros.every(m => {
+        const slot = membroMap[m][i];
+        return slot && !slot.na_loja && !!slot.claim;
+      });
+      sets.push({ setNum: i + 1, itens: itensDoSet, todosFechados });
     }
     return { base, sets };
   });
@@ -12674,8 +12679,7 @@ function ClaimAoVivo() {
 
               {/* Sets numerados */}
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                {sets.map(({ setNum, itens }) => {
-                  const todosFechados = itens.every(i => !i.na_loja);
+                {sets.map(({ setNum, itens, todosFechados }) => {
                   const disponiveis = itens.filter(i => i.na_loja).length;
                   return (
                     <div key={setNum} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${todosFechados ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.08)"}`, borderRadius:10, overflow:"hidden" }}>
