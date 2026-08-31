@@ -16366,6 +16366,14 @@ function PopupSkzooEaawPage() {
   const mono = "'DM Mono',monospace";
   const BASE = "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo";
   const [lightbox, setLightbox] = useState(null);
+  const [qtds, setQtds] = useState({});
+
+  const SKZOOS = ["Wolf Chan","Leebit","Dwaekki","Jiniret","Han Quokka","BbokAri","PuppyM","FoxI.Ny"];
+
+  function alterarQtd(itemN, personagem, delta) {
+    const key = `${itemN}:${personagem}`;
+    setQtds(prev => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }));
+  }
 
   const itens = [
     { n:"01", nome:"Official Light Stick Ver.2" },
@@ -16425,9 +16433,12 @@ function PopupSkzooEaawPage() {
               <div style={{ padding:"8px 10px" }}>
                 <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
                 <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
-                {item.skzoo && (
-                  <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,92,26,.7)", marginTop:3, letterSpacing:"0.5px" }}>{item.skzoo}</div>
-                )}
+                {item.skzoo && (() => {
+                  const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
+                  return total > 0
+                    ? <div style={{ fontFamily:mono, fontSize:8, color:"var(--laranja)", marginTop:3 }}>{total} selecionado{total > 1 ? "s" : ""}</div>
+                    : <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,92,26,.5)", marginTop:3, letterSpacing:"0.5px" }}>escolha o personagem</div>;
+                })()}
                 {item.tag && (
                   <span style={{ display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
                     background: item.tag === "Free" ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.1)",
@@ -16443,13 +16454,36 @@ function PopupSkzooEaawPage() {
 
       {/* Lightbox */}
       {lightbox && (
-        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.9)", zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"zoom-out", padding:24 }}>
-          <img src={`${BASE}/${lightbox.n}.png`} alt={lightbox.nome} style={{ maxWidth:"90vw", maxHeight:"75vh", objectFit:"contain", borderRadius:10 }} onClick={e => e.stopPropagation()} />
-          <div style={{ marginTop:14, textAlign:"center" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>#{lightbox.n}</div>
-            <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
-            {lightbox.skzoo && <div style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", marginTop:3 }}>{lightbox.skzoo}</div>}
-            {lightbox.tag && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", marginTop:4 }}>{lightbox.tag}</div>}
+        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.92)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out", padding:24, overflowY:"auto" }}>
+          <div onClick={e => e.stopPropagation()} style={{ display:"flex", flexDirection:"column", alignItems:"center", maxWidth:420, width:"100%", cursor:"default" }}>
+            <img src={`${BASE}/${lightbox.n}.png`} alt={lightbox.nome} style={{ maxWidth:"80vw", maxHeight:"45vh", objectFit:"contain", borderRadius:10 }} />
+            <div style={{ marginTop:14, textAlign:"center", width:"100%" }}>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>#{lightbox.n}</div>
+              <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
+              {lightbox.tag && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", marginTop:4 }}>{lightbox.tag}</div>}
+            </div>
+
+            {lightbox.skzoo && (
+              <div style={{ marginTop:20, width:"100%", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+                <div style={{ fontFamily:mono, fontSize:9, color:"var(--laranja)", letterSpacing:"1.5px", marginBottom:12 }}>ESCOLHA SEU SKZOO:</div>
+                {SKZOOS.map(sk => {
+                  const key = `${lightbox.n}:${sk}`;
+                  const qtd = qtds[key] || 0;
+                  return (
+                    <div key={sk} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                      <span style={{ fontFamily:mono, fontSize:11, color: qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.45)" }}>{sk}</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:0 }}>
+                        <button onClick={() => alterarQtd(lightbox.n, sk, -1)} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"6px 0 0 6px", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:28, height:26, cursor:"pointer", lineHeight:1 }}>−</button>
+                        <div style={{ width:32, height:26, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono, fontSize:12, color: qtd > 0 ? "var(--laranja)" : "rgba(245,240,232,.3)", background:"rgba(245,240,232,.04)", borderTop:"1px solid rgba(245,240,232,.15)", borderBottom:"1px solid rgba(245,240,232,.15)", fontWeight: qtd > 0 ? 700 : 400 }}>{qtd}</div>
+                        <button onClick={() => alterarQtd(lightbox.n, sk, +1)} style={{ background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:"0 6px 6px 0", color:"rgba(245,240,232,.5)", fontFamily:mono, fontSize:13, width:28, height:26, cursor:"pointer", lineHeight:1 }}>+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button onClick={() => setLightbox(null)} style={{ marginTop:16, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar ✕</button>
           </div>
         </div>
       )}
