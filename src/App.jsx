@@ -18040,68 +18040,100 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
         if (sets === null) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>carregando...</div>;
         if (!sets.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhum set publicado ainda.</div>;
 
-        // agrupar por nome base
-        const grupos = {};
+        // Agrupar por base → membro → slots[] (igual ao AoVivo)
+        const porBase = {};
         sets.forEach(item => {
           const partes = item.nome_do_item.split(" · ");
           const base = partes.slice(0,-1).join(" · ");
           const membro = partes[partes.length-1];
-          if (!grupos[base]) grupos[base] = { base, itens:[] };
-          const claimDoItem = setsClaims.find(c => c.masterlist_id === item.id);
-          grupos[base].itens.push({ ...item, membro, claim: claimDoItem });
+          if (!porBase[base]) porBase[base] = { membroMap:{}, primeiroItem: item };
+          if (!porBase[base].membroMap[membro]) porBase[base].membroMap[membro] = [];
+          const claim = setsClaims.find(c => c.masterlist_id === item.id);
+          porBase[base].membroMap[membro].push({ ...item, membro, claim });
         });
 
         return (
-          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            {Object.values(grupos).map(({ base, itens }) => {
-              const fotoUrl = setsFotos[itens[0]?.nome_do_item];
-              const prazo = itens[0]?.info_adicionais?.replace("Prazo: ","") || null;
-              const todosFechados = itens.length >= 8 && itens.every(i => !i.na_loja);
+          <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+            {Object.entries(porBase).map(([base, { membroMap, primeiroItem }]) => {
+              const fotoUrl = setsFotos[primeiroItem?.nome_do_item];
+              const infoAd = primeiroItem?.info_adicionais || "";
+              const prazoMatch = infoAd.match(/Prazo:\s*([^|]+)/);
+              const prazo = prazoMatch ? prazoMatch[1].trim() : null;
+              const membros = Object.keys(membroMap).sort();
+              const maxSlots = Math.max(...membros.map(m => membroMap[m].length));
+
+              // Montar sets numerados
+              const setsNumerados = [];
+              for (let i = 0; i < maxSlots; i++) {
+                const itensDoSet = membros.map(m => membroMap[m][i] || { id:`${m}-vazio-${i}`, membro:m, na_loja:true, claim:null, nome_do_item:`${base} · ${m}` });
+                const fechado = membros.length >= 8 && membros.every(m => { const s = membroMap[m][i]; return s && !s.na_loja && !!s.claim; });
+                setsNumerados.push({ setNum: i+1, itens: itensDoSet, fechado });
+              }
+
               return (
-                <div key={base} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden" }}>
-                  {/* Header com foto e nome */}
-                  <div style={{ display:"flex", gap:0, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+                <div key={base}>
+                  {/* Header geral do set */}
+                  <div style={{ display:"flex", gap:0, background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden", marginBottom:10 }}>
                     {fotoUrl && <div style={{ width:64, flexShrink:0 }}><img src={fotoUrl} alt={base} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", minHeight:64 }} /></div>}
                     <div style={{ flex:1, padding:"10px 14px", display:"flex", flexDirection:"column", justifyContent:"center" }}>
                       <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)" }}>{base}</div>
                       <div style={{ display:"flex", gap:10, marginTop:3 }}>
-                        <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(itens[0]?.valor_item||0).toFixed(2).replace(".",",")}</span>
+                        <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(primeiroItem?.valor_item||0).toFixed(2).replace(".",",")}</span>
                         {prazo && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>prazo {prazo}</span>}
+                        <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>{maxSlots} set{maxSlots!==1?"s":""}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Lista de membros */}
-                  <div style={{ padding:"10px 14px", display:"flex", flexDirection:"column", gap:0 }}>
-                    {itens.map((item, idx) => {
-                      const isClaimed = !item.na_loja && !!item.claim;
-                      const ts = item.claim?.created_at ? (() => {
-                        const d = new Date(item.claim.created_at);
-                        return d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-                      })() : null;
-                      const statusColor = item.na_loja ? "rgba(186,255,57,.5)" : item.claim?.status === "pendente" ? "#ffb400" : "rgba(201,168,240,.7)";
+                  {/* Cards por set */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, paddingLeft:8 }}>
+                    {setsNumerados.map(({ setNum, itens, fechado }) => {
+                      const claimados = itens.filter(i => !i.na_loja && !!i.claim).length;
                       return (
-                        <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom: idx < itens.length-1 ? "1px solid rgba(245,240,232,.05)" : "none" }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                            <span style={{ fontFamily:mono, fontSize:11, color: isClaimed ? "var(--offwhite)" : "rgba(245,240,232,.35)", minWidth:80 }}>{item.membro}</span>
-                            {isClaimed && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{item.claim.joiner_nome}</span>}
-                            {!isClaimed && item.na_loja && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.4)" }}>livre</span>}
+                        <div key={setNum} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${fechado ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, overflow:"hidden" }}>
+                          {/* Cabeçalho do set */}
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 14px", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                            <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"rgba(245,240,232,.5)", letterSpacing:"1.5px" }}>SET {setNum}</span>
+                            <span style={{ fontFamily:mono, fontSize:9, color: fechado ? "var(--lilas)" : "rgba(245,240,232,.3)" }}>
+                              {fechado ? "fechado" : `${claimados}/${membros.length} claimados`}
+                            </span>
                           </div>
-                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                            {ts && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>{ts}</span>}
-                            {isClaimed && <span style={{ fontFamily:mono, fontSize:9, color:statusColor }}>{item.claim.status}</span>}
+
+                          {/* Membros */}
+                          <div style={{ padding:"4px 14px 8px" }}>
+                            {itens.map((item, idx) => {
+                              const isClaimed = !item.na_loja && !!item.claim;
+                              const ts = item.claim?.created_at ? (() => {
+                                const d = new Date(item.claim.created_at);
+                                return d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+                              })() : null;
+                              const statusColor = item.claim?.status === "pendente" ? "#ffb400" : "rgba(201,168,240,.7)";
+                              return (
+                                <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 0", borderBottom: idx < itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
+                                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                    <span style={{ fontFamily:mono, fontSize:11, color: isClaimed ? "var(--offwhite)" : "rgba(245,240,232,.25)", minWidth:80 }}>{item.membro}</span>
+                                    {isClaimed && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{item.claim.joiner_nome}</span>}
+                                    {!isClaimed && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.35)" }}>livre</span>}
+                                  </div>
+                                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                    {ts && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{ts}</span>}
+                                    {isClaimed && <span style={{ fontFamily:mono, fontSize:9, color:statusColor }}>{item.claim.status}</span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
+
+                          {/* Banner fechado */}
+                          {fechado && (
+                            <div style={{ margin:"0 14px 10px", padding:"8px 14px", borderRadius:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.15)", fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center", letterSpacing:".5px" }}>
+                              Set fechado · aguardando confirmação de compra da GOM
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-
-                  {/* Banner set fechado */}
-                  {todosFechados && (
-                    <div style={{ margin:"0 14px 12px", padding:"9px 14px", borderRadius:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center", letterSpacing:".5px" }}>
-                      Set fechado · aguardando confirmação de compra da GOM
-                    </div>
-                  )}
                 </div>
               );
             })}
