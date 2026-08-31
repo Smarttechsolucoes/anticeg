@@ -17760,13 +17760,13 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
   useEffect(() => { setPendentes(pendentesInit || []); }, [pendentesInit]);
 
   useEffect(() => {
-    if (claimsTab !== "sets" || sets !== null) return;
+    if (claimsTab !== "sets") return;
+    setSets(null);
     supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
       .eq("ceg", "CLAIM").order("nome_do_item")
       .then(async ({ data }) => {
         const itens = data || [];
         setSets(itens);
-        if (!itens.length) return;
         const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
         const mapa = {};
         (fd||[]).forEach(f => { mapa[f.nome_do_item] = f.foto_url; });
@@ -17774,7 +17774,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
         supabase.from("claims").select("masterlist_id, joiner_nome, joiner_cog, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado")
           .then(({ data: cd }) => { if (cd) setSetsClaims(cd); });
       });
-  }, [claimsTab, sets]);
+  }, [claimsTab]);
 
   function updatePendentes(fn) {
     setPendentes(prev => { const next = fn(prev); onPendentesChange?.(next); return next; });
