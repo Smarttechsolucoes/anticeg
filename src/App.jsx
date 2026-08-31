@@ -12726,23 +12726,29 @@ function ClaimPublicoPage({ user }) {
     return () => clearInterval(t);
   }, []);
 
+  async function fetchItens() {
+    const { data } = await supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
+      .eq("ceg", "CLAIM").order("nome_do_item");
+    setTodosItens(data || []);
+    if (!data?.length) return;
+    const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
+    const mapa = {};
+    (fd||[]).forEach(f => { mapa[f.nome_do_item] = f.foto_url; });
+    setFotos(mapa);
+  }
+
+  async function fetchMeusClaims() {
+    const { data } = await supabase.from("claims").select("nome_do_item").eq("joiner_cog", user.cog).eq("ceg","CLAIM").neq("status","rejeitado");
+    if (data) setMeusClaims(data.map(c => c.nome_do_item));
+  }
+
   useEffect(() => {
     supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle()
       .then(({ data }) => { if (data) setIsBloqueada(!!data.bloqueado); });
-    supabase.from("claims").select("nome_do_item").eq("joiner_cog", user.cog).eq("ceg","CLAIM").neq("status","rejeitado")
-      .then(({ data }) => { if (data) setMeusClaims(data.map(c => c.nome_do_item)); });
-    // Sem filtro por nome — pega todos os membros do set
-    supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
-      .eq("ceg", "CLAIM").order("nome_do_item")
-      .then(async ({ data }) => {
-        const itens = data || [];
-        setTodosItens(itens);
-        if (!itens.length) return;
-        const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
-        const mapa = {};
-        (fd||[]).forEach(f => { mapa[f.nome_do_item] = f.foto_url; });
-        setFotos(mapa);
-      });
+    fetchMeusClaims();
+    fetchItens();
+    const t = setInterval(fetchItens, 30000);
+    return () => clearInterval(t);
   }, [user.cog]);
 
   function alterarQtd(nomeDoItem, delta) {
@@ -12794,6 +12800,8 @@ function ClaimPublicoPage({ user }) {
       setQtds(prev => { const n = {...prev}; selecionados.forEach(s => { delete n[s.nome_do_item]; }); return n; });
       setClaimOk(`✓ Claim enviado: ${membrosOk.join(", ")}. Aguarde confirmação.`);
       setTimeout(() => setClaimOk(null), 6000);
+      fetchItens();
+      fetchMeusClaims();
     }
     setEnviando(false);
   }
