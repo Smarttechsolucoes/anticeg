@@ -17762,7 +17762,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
   useEffect(() => {
     if (claimsTab !== "sets" || sets !== null) return;
     supabase.from("masterlist").select("id, nome_do_item, valor_item, info_adicionais, na_loja")
-      .eq("ceg", "CLAIM").or("nome.ilike.disponivel,nome.ilike.disponível").order("nome_do_item")
+      .eq("ceg", "CLAIM").order("nome_do_item")
       .then(async ({ data }) => {
         const itens = data || [];
         setSets(itens);
