@@ -18230,47 +18230,44 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
         if (sets === null) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>carregando...</div>;
         if (!sets.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhum set publicado ainda.</div>;
 
-        // Agrupar por base → membro → slots[] (igual ao AoVivo)
+        // Agrupar por base → aberturaKey → membro → slots[]
         const porBase = {};
         sets.forEach(item => {
           const partes = item.nome_do_item.split(" · ");
           const base = partes.slice(0,-1).join(" · ");
           const membro = partes[partes.length-1];
-          if (!porBase[base]) porBase[base] = { membroMap:{}, primeiroItem: item };
-          if (!porBase[base].membroMap[membro]) porBase[base].membroMap[membro] = [];
+          const info = item.info_adicionais || "";
+          const prazoMatch = info.match(/Prazo:\s*([^|]+)/);
+          const aberturaMatch = info.match(/Abertura:\s*([^|]+)/);
+          const aberturaStr = aberturaMatch ? aberturaMatch[1].trim() : "";
+          const aberturaKey = aberturaStr || "sem-horario";
+          const abertura = aberturaStr ? new Date(aberturaStr) : null;
+          const prazo = prazoMatch ? prazoMatch[1].trim() : null;
+          if (!porBase[base]) porBase[base] = { sets:{}, primeiroItem: item, prazo: null, valor: item.valor_item };
+          if (prazo && !porBase[base].prazo) porBase[base].prazo = prazo;
+          if (!porBase[base].sets[aberturaKey]) porBase[base].sets[aberturaKey] = { aberturaKey, abertura, membros:{} };
+          if (!porBase[base].sets[aberturaKey].membros[membro]) porBase[base].sets[aberturaKey].membros[membro] = [];
           const claim = setsClaims.find(c => c.masterlist_id === item.id);
-          porBase[base].membroMap[membro].push({ ...item, membro, claim });
+          porBase[base].sets[aberturaKey].membros[membro].push({ ...item, membro, claim });
         });
 
         return (
           <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
-            {Object.entries(porBase).map(([base, { membroMap, primeiroItem }]) => {
+            {Object.entries(porBase).map(([base, { sets: setsMap, primeiroItem, prazo, valor }]) => {
               const fotoUrl = setsFotos[primeiroItem?.nome_do_item];
-              const infoAd = primeiroItem?.info_adicionais || "";
-              const prazoMatch = infoAd.match(/Prazo:\s*([^|]+)/);
-              const prazo = prazoMatch ? prazoMatch[1].trim() : null;
-              const membros = Object.keys(membroMap).sort();
-              const maxSlots = Math.max(...membros.map(m => membroMap[m].length));
-
-              // Montar sets numerados
-              const setsNumerados = [];
-              for (let i = 0; i < maxSlots; i++) {
-                const itensDoSet = membros.map(m => membroMap[m][i] || { id:`${m}-vazio-${i}`, membro:m, na_loja:true, claim:null, nome_do_item:`${base} · ${m}` });
-                const fechado = membros.length >= 8 && membros.every(m => { const s = membroMap[m][i]; return s && !s.na_loja && !!s.claim; });
-                setsNumerados.push({ setNum: i+1, itens: itensDoSet, fechado });
-              }
-
-              // Última abertura registrada nos slots (para calcular a do próximo set)
-              let ultimaAbertura = null;
-              membros.forEach(m => {
-                (membroMap[m] || []).forEach(slot => {
-                  const match = (slot.info_adicionais||"").match(/Abertura:\s*([^|]+)/);
-                  if (match) {
-                    const d = new Date(match[1].trim());
-                    if (!ultimaAbertura || d > ultimaAbertura) ultimaAbertura = d;
-                  }
-                });
+              // Ordena sets por abertura (sem horário primeiro, depois por data crescente)
+              const setsArray = Object.values(setsMap).sort((a, b) => {
+                if (!a.abertura && !b.abertura) return 0;
+                if (!a.abertura) return -1;
+                if (!b.abertura) return 1;
+                return a.abertura - b.abertura;
               });
+              // Todos os membros distintos (union de todos os sets)
+              const todosMembros = [...new Set(setsArray.flatMap(s => Object.keys(s.membros)))].sort();
+              // Última abertura para calcular próximo set
+              let ultimaAbertura = null;
+              setsArray.forEach(s => { if (s.abertura && (!ultimaAbertura || s.abertura > ultimaAbertura)) ultimaAbertura = s.abertura; });
+              const membros = todosMembros;
 
               return (
                 <div key={base}>
@@ -18280,23 +18277,35 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                     <div style={{ flex:1, padding:"10px 14px", display:"flex", flexDirection:"column", justifyContent:"center" }}>
                       <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)" }}>{base}</div>
                       <div style={{ display:"flex", gap:10, marginTop:3 }}>
-                        <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(primeiroItem?.valor_item||0).toFixed(2).replace(".",",")}</span>
+                        <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(valor||0).toFixed(2).replace(".",",")}</span>
                         {prazo && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>prazo {prazo}</span>}
-                        <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>{maxSlots} set{maxSlots!==1?"s":""}</span>
+                        <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>{setsArray.length} set{setsArray.length!==1?"s":""}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Cards por set */}
                   <div style={{ display:"flex", flexDirection:"column", gap:8, paddingLeft:8 }}>
-                    {setsNumerados.map(({ setNum, itens, fechado }) => {
-
+                    {setsArray.map((setData, setIdx) => {
+                      const itens = membros.map(m => {
+                        const slots = setData.membros[m] || [];
+                        // Slot preferencial: na_loja=false (claimado) ou o primeiro disponível
+                        const slot = slots.find(s => !s.na_loja) || slots[0] || null;
+                        return slot ? { ...slot, membro: m } : { id:`${m}-vazio-${setData.aberturaKey}`, membro:m, na_loja:true, claim:null, nome_do_item:`${base} · ${m}` };
+                      });
+                      const fechado = membros.length >= 8 && itens.every(i => !i.na_loja && !!i.claim);
                       const claimados = itens.filter(i => !i.na_loja && !!i.claim).length;
+                      const horarioLabel = setData.abertura
+                        ? setData.abertura.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })
+                        : null;
                       return (
-                        <div key={setNum} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${fechado ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, overflow:"hidden" }}>
+                        <div key={setData.aberturaKey} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${fechado ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, overflow:"hidden" }}>
                           {/* Cabeçalho do set */}
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 14px", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                            <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"rgba(245,240,232,.5)", letterSpacing:"1.5px" }}>SET {setNum}</span>
+                            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                              <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"rgba(245,240,232,.5)", letterSpacing:"1.5px" }}>SET {setIdx+1}</span>
+                              {horarioLabel && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{horarioLabel}</span>}
+                            </div>
                             <span style={{ fontFamily:mono, fontSize:9, color: fechado ? "var(--lilas)" : "rgba(245,240,232,.3)" }}>
                               {fechado ? "fechado" : `${claimados}/${membros.length} claimados`}
                             </span>
@@ -18347,7 +18356,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                     {/* Botão adicionar set */}
                     <button onClick={() => adicionarSet(base, membros, primeiroItem, prazo, ultimaAbertura)}
                       style={{ alignSelf:"flex-start", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.03)", border:"1px dashed rgba(245,240,232,.12)", borderRadius:6, cursor:"pointer", padding:"6px 14px", marginTop:2 }}>
-                      + ADICIONAR SET {maxSlots + 1}
+                      + ADICIONAR SET {setsArray.length + 1}
                     </button>
                   </div>
                 </div>
