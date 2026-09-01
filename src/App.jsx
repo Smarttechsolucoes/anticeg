@@ -18230,6 +18230,23 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
         if (sets === null) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>carregando...</div>;
         if (!sets.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhum set publicado ainda.</div>;
 
+        // Detectar joiners que enviaram 8+ claims no mesmo segundo (= OT8 por horário)
+        // Agrupa por joiner_cog + segundo do created_at; se tiver >= 8 = OT8
+        const claimsPorJoinerSegundo = {};
+        setsClaims.forEach(c => {
+          if (!c.created_at) return;
+          const seg = c.created_at.slice(0, 19); // "YYYY-MM-DDTHH:MM:SS"
+          const k = `${c.joiner_cog}||${seg}`;
+          if (!claimsPorJoinerSegundo[k]) claimsPorJoinerSegundo[k] = 0;
+          claimsPorJoinerSegundo[k]++;
+        });
+        // joinerOT8Keys: set de "joiner_cog||segundo" que têm >= 8 claims simultâneos
+        const joinerOT8Keys = new Set(Object.entries(claimsPorJoinerSegundo).filter(([,n]) => n >= 8).map(([k]) => k));
+        function isOT8Joiner(joinerCog, claimCreatedAt) {
+          if (!claimCreatedAt) return false;
+          return joinerOT8Keys.has(`${joinerCog}||${claimCreatedAt.slice(0, 19)}`);
+        }
+
         // Agrupar por base → aberturaKey → membro → slots[]
         const porBase = {};
         sets.forEach(item => {
@@ -18339,7 +18356,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                                     <div key={joiner.cog} style={{ marginBottom: livres.length || joiners.indexOf(joiner) < joiners.length-1 ? 6 : 0 }}>
                                       <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", padding:"4px 0 2px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
                                         {joiner.nome}
-                                        {joiner.itens.length === membros.length && <span style={{ marginLeft:6, color:"var(--laranja)" }}>OT8</span>}
+                                        {isOT8Joiner(joiner.cog, joiner.primeiroTs) && <span style={{ marginLeft:6, color:"var(--laranja)" }}>OT8</span>}
                                       </div>
                                       {joiner.itens.map(item => {
                                         const ts = item.claim?.created_at ? new Date(item.claim.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" }) : null;
