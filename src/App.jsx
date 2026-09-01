@@ -12863,6 +12863,8 @@ function ClaimPublicoPage({ user }) {
       setTimeout(() => setClaimOk(null), 6000);
       fetchItens();
       fetchMeusClaims();
+    } else {
+      setClaimErro("Não foi possível reservar nenhum slot. Atualize a página e tente novamente.");
     }
     setEnviando(false);
   }
@@ -12959,33 +12961,19 @@ function ClaimPublicoPage({ user }) {
 
                     {/* Membros */}
                     <div style={{ padding:"8px 16px 10px" }}>
-                      {/* Atalho OT8 */}
+                      {/* Limpar seleção */}
                       {!setFechado && !bloqueado && (() => {
-                        const todosJa = setData.itens.every(i => i.slots.some(s => meusClaims.includes(s.id)));
                         const algumSel = setData.itens.some(i => (qtds[qKey(grupo.base, setData.aberturaKey, i.nome_do_item)]||0) > 0);
-                        if (todosJa) return null;
+                        if (!algumSel) return null;
                         return (
-                          <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
+                          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:6 }}>
                             <button onClick={() => {
-                              setQtds(prev => {
-                                const n = {...prev};
-                                setData.itens.forEach(i => {
-                                  if (!i.slots.some(s => meusClaims.includes(s.id)))
-                                    n[qKey(grupo.base, setData.aberturaKey, i.nome_do_item)] = 1;
-                                });
-                                return n;
-                              });
-                              setClaimErro(null);
-                            }} style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"var(--laranja)", background:"rgba(255,92,26,.1)", border:"1px solid rgba(255,92,26,.3)", borderRadius:20, cursor:"pointer", padding:"3px 12px" }}>
-                              selecionar tudo
-                            </button>
-                            {algumSel && <button onClick={() => {
                               setQtds(prev => {
                                 const n = {...prev};
                                 setData.itens.forEach(i => { delete n[qKey(grupo.base, setData.aberturaKey, i.nome_do_item)]; });
                                 return n;
                               });
-                            }} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", background:"none", border:"none", cursor:"pointer", padding:0 }}>limpar</button>}
+                            }} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", background:"none", border:"none", cursor:"pointer", padding:0 }}>limpar</button>
                           </div>
                         );
                       })()}
