@@ -19760,50 +19760,6 @@ export default function App() {
     return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
   }
 
-  if (window.location.pathname === "/claim") {
-    const monoC = "'DM Mono',monospace";
-    return (
-      <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
-        <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
-          <button onClick={() => window.location.href = "/"} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontFamily:monoC, fontSize:11, cursor:"pointer", padding:0, marginBottom:20 }}>← voltar</button>
-          <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:20 }}>CLAIMS</div>
-
-          {/* Abas */}
-          <div style={{ display:"flex", gap:6, marginBottom:24 }}>
-            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"]].map(([v,l]) => (
-              <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:monoC, fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
-                {l}
-              </button>
-            ))}
-          </div>
-
-          {claimPageTab === "claim" && <>
-            {/* Regras */}
-            <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
-              <div style={{ fontFamily:monoC, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {[
-                  "Pagamento será liberado quando fechar o set.",
-                  "Aceito cartão com juros.",
-                  "Repasse dos itens apenas após pagamento.",
-                  "Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!",
-                  "Um amigo pode te ajudar na claim :)",
-                ].map((r, i) => (
-                  <div key={i} style={{ fontFamily:monoC, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
-                    <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <ClaimPublicoPage user={user} />
-          </>}
-
-          {claimPageTab === "ao-vivo" && <ClaimAoVivo />}
-        </div>
-      </div>
-    );
-  }
 
   const isAdmin = isAdminUser(user);
 
@@ -20054,16 +20010,47 @@ export default function App() {
           </div>
         );
       })()}
-      {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
-      {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
-      {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
-      {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
-      {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
-      {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
-      {tab === "prevenda" && <PrevendaTab user={user} />}
-      {tab === "mercari" && <MercariTab />}
-      {tab === "regras" && <RegrasTab />}
-      {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
+      {window.location.pathname === "/claim" ? (
+        <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:20 }}>CLAIMS</div>
+          {/* Abas */}
+          <div style={{ display:"flex", gap:6, marginBottom:24 }}>
+            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"]].map(([v,l]) => (
+              <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {claimPageTab === "claim" && <>
+            <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {["Pagamento será liberado quando fechar o set.","Aceito cartão com juros.","Repasse dos itens apenas após pagamento.","Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!","Um amigo pode te ajudar na claim :)"].map((r, i) => (
+                  <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
+                    <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ClaimPublicoPage user={user} />
+          </>}
+          {claimPageTab === "ao-vivo" && <ClaimAoVivo />}
+        </div>
+      ) : (
+        <>
+          {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
+          {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
+          {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
+          {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
+          {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
+          {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
+          {tab === "prevenda" && <PrevendaTab user={user} />}
+          {tab === "mercari" && <MercariTab />}
+          {tab === "regras" && <RegrasTab />}
+          {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
+        </>
+      )}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
 
