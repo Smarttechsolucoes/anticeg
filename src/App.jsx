@@ -7961,7 +7961,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   async function fetchDisponiveis() {
     const sel = "id, cog, nome, ceg, nome_do_item, status, na_loja, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf, info_adicionais";
-    const { data } = await supabase.from("masterlist").select(sel).or("nome.ilike.disponivel,nome.ilike.disponível");
+    const { data } = await supabase.from("masterlist").select(sel).or("nome.ilike.disponivel,nome.ilike.disponível").neq("ceg", "CLAIM");
     if (data) setDisponiveisData(data);
   }
 
