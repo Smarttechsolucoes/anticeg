@@ -12777,15 +12777,29 @@ function ClaimPublicoPage({ user }) {
         masterlistId = upd?.length ? slotDisponivel.id : null;
       }
       if (!masterlistId) {
-        const { data: novoSlot } = await supabase.from("masterlist").insert([{
-          cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
-          nome_do_item: membroItem.nome_do_item,
-          valor_item: templateRow?.valor_item,
-          frete_inter: 0, taxa_rf: 0,
-          info_adicionais: templateRow?.info_adicionais,
-          na_loja: false,
-        }]).select().single();
-        masterlistId = novoSlot?.id || null;
+        // Race condition: busca slot disponível em outro set (próximo set) para este membro
+        const outrosSlots = (todosItens || []).filter(i =>
+          i.nome_do_item === membroItem.nome_do_item &&
+          i.na_loja &&
+          i.info_adicionais !== templateRow?.info_adicionais
+        );
+        for (const outro of outrosSlots) {
+          const { data: upd2 } = await supabase.from("masterlist").update({ na_loja: false }).eq("id", outro.id).eq("na_loja", true).select("id");
+          if (upd2?.length) { masterlistId = outro.id; break; }
+        }
+        if (!masterlistId) {
+          // Cria no próximo set disponível (usa info_adicionais do próximo set se existir)
+          const nextInfo = outrosSlots[0]?.info_adicionais ?? templateRow?.info_adicionais;
+          const { data: novoSlot } = await supabase.from("masterlist").insert([{
+            cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
+            nome_do_item: membroItem.nome_do_item,
+            valor_item: templateRow?.valor_item,
+            frete_inter: 0, taxa_rf: 0,
+            info_adicionais: nextInfo,
+            na_loja: false,
+          }]).select().single();
+          masterlistId = novoSlot?.id || null;
+        }
       }
       if (!masterlistId) continue;
       const { error } = await supabase.from("claims").insert([{
