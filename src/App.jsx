@@ -12760,24 +12760,67 @@ function ClaimPublicoPage({ user }) {
     setClaimErro(null);
   }
 
-  async function confirmarClaim(setData) {
+  async function confirmarClaim(setData, grupo) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const selecionados = setData.itens.filter(i => (qtds[qKey(setData.base, setData.aberturaKey, i.nome_do_item)]||0) > 0);
     if (!selecionados.length) { setClaimErro("Selecione ao menos 1 membro."); return; }
     const duplicados = selecionados.filter(i => i.slots.some(s => meusClaims.includes(s.id))).map(i => i.membro);
     if (duplicados.length) { setClaimErro(`⚠ Você já deu claim em: ${duplicados.join(", ")} neste set.`); return; }
+
+    const isMultiplo = selecionados.length > 1;
+
+    // Para OT8/múltiplos: garante que todos vêm do mesmo set
+    let targetSetData = setData;
+    if (isMultiplo && grupo) {
+      const todosNaLojaAtual = selecionados.every(sel => sel.slots.some(s => s.na_loja));
+      if (!todosNaLojaAtual) {
+        const outroSet = grupo.setsArray.find(s => {
+          if (s.aberturaKey === setData.aberturaKey) return false;
+          return selecionados.every(sel => {
+            const m = s.membros[sel.membro];
+            return m && m.slots.some(slot => slot.na_loja);
+          });
+        });
+        if (outroSet) {
+          targetSetData = outroSet;
+        } else {
+          setClaimErro("Slots insuficientes. Tente selecionar membros individualmente.");
+          return;
+        }
+      }
+    }
+
     setEnviando(true); setClaimErro(null);
     const membrosOk = [];
+    const rollbackList = []; // { claimId, masterlistId }
+
     for (const membroItem of selecionados) {
-      const slotDisponivel = membroItem.slots.find(s => s.na_loja);
+      // Busca o membro no set alvo (pode ser diferente de setData)
+      const itemAlvo = (isMultiplo && targetSetData.membros[membroItem.membro]) || membroItem;
+      const slotDisponivel = itemAlvo.slots.find(s => s.na_loja);
       let masterlistId = null;
       const templateRow = membroItem.slots[0];
+
       if (slotDisponivel) {
         const { data: upd } = await supabase.from("masterlist").update({ na_loja: false }).eq("id", slotDisponivel.id).eq("na_loja", true).select("id");
         masterlistId = upd?.length ? slotDisponivel.id : null;
       }
+
       if (!masterlistId) {
-        // Race condition: busca slot disponível em outro set (próximo set) para este membro
+        if (isMultiplo) {
+          // OT8: não faz overflow individual — rollback e aborta
+          if (rollbackList.length) {
+            await supabase.from("claims").delete().in("id", rollbackList.map(r => r.claimId));
+            await supabase.from("masterlist").update({ na_loja: true }).in("id", rollbackList.map(r => r.masterlistId));
+            setMeusClaims(prev => prev.filter(id => !rollbackList.some(r => r.masterlistId === id)));
+          }
+          setClaimErro(`Set ficou cheio durante o claim (${membroItem.membro}). Tente novamente.`);
+          setEnviando(false);
+          fetchItens();
+          fetchMeusClaims();
+          return;
+        }
+        // Individual: overflow para próximo set
         const outrosSlots = (todosItens || []).filter(i =>
           i.nome_do_item === membroItem.nome_do_item &&
           i.na_loja &&
@@ -12788,7 +12831,6 @@ function ClaimPublicoPage({ user }) {
           if (upd2?.length) { masterlistId = outro.id; break; }
         }
         if (!masterlistId) {
-          // Cria no próximo set disponível (usa info_adicionais do próximo set se existir)
           const nextInfo = outrosSlots[0]?.info_adicionais ?? templateRow?.info_adicionais;
           const { data: novoSlot } = await supabase.from("masterlist").insert([{
             cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
@@ -12801,17 +12843,20 @@ function ClaimPublicoPage({ user }) {
           masterlistId = novoSlot?.id || null;
         }
       }
+
       if (!masterlistId) continue;
-      const { error } = await supabase.from("claims").insert([{
+      const { error, data: claimInserido } = await supabase.from("claims").insert([{
         joiner_cog: user.cog, joiner_nome: user.nome || user.cog, joiner_email: user.email || null,
         masterlist_id: masterlistId, ceg: "CLAIM", nome_do_item: membroItem.nome_do_item,
         valor: Number(templateRow?.valor_item||0), status: "pendente",
-      }]);
+      }]).select("id").single();
       if (!error) {
         membrosOk.push(membroItem.membro);
+        if (claimInserido?.id) rollbackList.push({ claimId: claimInserido.id, masterlistId });
         setMeusClaims(prev => [...prev, masterlistId]);
       }
     }
+
     if (membrosOk.length) {
       setQtds(prev => { const n = {...prev}; selecionados.forEach(s => { delete n[qKey(setData.base, setData.aberturaKey, s.nome_do_item)]; }); return n; });
       setClaimOk(`✓ Claim enviado: ${membrosOk.join(", ")}. Aguarde confirmação.`);
@@ -12892,7 +12937,7 @@ function ClaimPublicoPage({ user }) {
                 const setFechado = setData.itens.length >= 8 && setData.itens.every(i => i.slots.length > 0 && !i.slots.some(s => s.na_loja));
                 const prevFechado = idx > 0 && (() => {
                   const prev = grupo.setsArray[idx-1];
-                  return prev.itens.length >= 8 && prev.itens.every(i => i.slots.length > 0 && !i.slots.some(s => s.na_loja));
+                  return prev.itens.length > 0 && prev.itens.every(i => i.slots.length > 0 && !i.slots.some(s => s.na_loja));
                 })();
                 const bloqueado = !setFechado && !!setData.abertura && agora < setData.abertura && !prevFechado;
                 const diffMs = bloqueado && setData.abertura ? setData.abertura - agora : 0;
@@ -13000,7 +13045,7 @@ function ClaimPublicoPage({ user }) {
                           Set fechado · aguardando confirmação de compra da GOM
                         </div>
                       ) : (
-                        <button disabled={enviando || totalSel === 0} onClick={() => confirmarClaim(setData)} style={{
+                        <button disabled={enviando || totalSel === 0} onClick={() => confirmarClaim(setData, grupo)} style={{
                           width:"100%", padding:"12px", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1.5px",
                           background: totalSel > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)",
                           border:"none", borderRadius:8,
@@ -18063,6 +18108,31 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
     fetchSets();
   }, [claimsTab]);
 
+  async function adicionarSet(base, membros, primeiroItem, prazo, ultimaAbertura) {
+    let novaAberturaStr = null;
+    if (ultimaAbertura) {
+      const nova = new Date(ultimaAbertura.getTime() + 2 * 60000);
+      novaAberturaStr = nova.toISOString().slice(0, 16);
+    }
+    const partes = [prazo ? `Prazo: ${prazo}` : null, novaAberturaStr ? `Abertura: ${novaAberturaStr}` : null].filter(Boolean);
+    const novaInfo = partes.length ? partes.join(" | ") : null;
+    const horarioStr = novaAberturaStr
+      ? new Date(novaAberturaStr).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })
+      : "imediata";
+    if (!window.confirm(`Adicionar novo SET para "${base}"?\nAbertura: ${horarioStr}`)) return;
+    const rows = membros.map(m => ({
+      cog: "disponivel", nome: "disponivel", ceg: "CLAIM",
+      nome_do_item: `${base} · ${m}`,
+      valor_item: Number(primeiroItem?.valor_item || 0),
+      frete_inter: 0, taxa_rf: 0,
+      info_adicionais: novaInfo,
+      na_loja: true,
+    }));
+    const { error } = await supabase.from("masterlist").insert(rows);
+    if (error) { alert("Erro ao criar set: " + error.message); return; }
+    fetchSets();
+  }
+
   async function confirmarCompraSet(masterlistIds) {
     if (!masterlistIds.length) return;
     const { data: claimsDoSet } = await supabase.from("claims").select("id").in("masterlist_id", masterlistIds).eq("ceg","CLAIM").neq("status","rejeitado");
@@ -18190,6 +18260,18 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                 setsNumerados.push({ setNum: i+1, itens: itensDoSet, fechado });
               }
 
+              // Última abertura registrada nos slots (para calcular a do próximo set)
+              let ultimaAbertura = null;
+              membros.forEach(m => {
+                (membroMap[m] || []).forEach(slot => {
+                  const match = (slot.info_adicionais||"").match(/Abertura:\s*([^|]+)/);
+                  if (match) {
+                    const d = new Date(match[1].trim());
+                    if (!ultimaAbertura || d > ultimaAbertura) ultimaAbertura = d;
+                  }
+                });
+              });
+
               return (
                 <div key={base}>
                   {/* Header geral do set */}
@@ -18208,6 +18290,7 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                   {/* Cards por set */}
                   <div style={{ display:"flex", flexDirection:"column", gap:8, paddingLeft:8 }}>
                     {setsNumerados.map(({ setNum, itens, fechado }) => {
+
                       const claimados = itens.filter(i => !i.na_loja && !!i.claim).length;
                       return (
                         <div key={setNum} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${fechado ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, overflow:"hidden" }}>
@@ -18261,6 +18344,11 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                         </div>
                       );
                     })}
+                    {/* Botão adicionar set */}
+                    <button onClick={() => adicionarSet(base, membros, primeiroItem, prazo, ultimaAbertura)}
+                      style={{ alignSelf:"flex-start", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.03)", border:"1px dashed rgba(245,240,232,.12)", borderRadius:6, cursor:"pointer", padding:"6px 14px", marginTop:2 }}>
+                      + ADICIONAR SET {maxSlots + 1}
+                    </button>
                   </div>
                 </div>
               );
