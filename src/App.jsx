@@ -18289,9 +18289,17 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                     {setsArray.map((setData, setIdx) => {
                       const itens = membros.map(m => {
                         const slots = setData.membros[m] || [];
-                        // Slot preferencial: na_loja=false (claimado) ou o primeiro disponível
                         const slot = slots.find(s => !s.na_loja) || slots[0] || null;
                         return slot ? { ...slot, membro: m } : { id:`${m}-vazio-${setData.aberturaKey}`, membro:m, na_loja:true, claim:null, nome_do_item:`${base} · ${m}` };
+                      });
+                      // Ordenar por horário da claim (quem claimou primeiro aparece primeiro), livres por último
+                      itens.sort((a, b) => {
+                        const ta = a.claim?.created_at ? new Date(a.claim.created_at).getTime() : null;
+                        const tb = b.claim?.created_at ? new Date(b.claim.created_at).getTime() : null;
+                        if (ta && tb) return ta - tb;
+                        if (ta) return -1;
+                        if (tb) return 1;
+                        return a.membro.localeCompare(b.membro);
                       });
                       const fechado = membros.length >= 8 && itens.every(i => !i.na_loja && !!i.claim);
                       const claimados = itens.filter(i => !i.na_loja && !!i.claim).length;
