@@ -12997,7 +12997,7 @@ function ClaimPublicoPage({ user }) {
                           <div key={item.nome_do_item} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
                             <span style={{ fontFamily:mono, fontSize:11, color: jaClaim ? "rgba(245,240,232,.3)" : qtd > 0 ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>
                               {item.membro}
-                              {jaClaim && <span style={{ marginLeft:8, fontSize:9, color:"rgba(186,255,57,.6)" }}>✓ claimado</span>}
+                              {jaClaim && <span style={{ marginLeft:8, fontSize:9, color:"rgba(186,255,57,.6)" }}>✓ claim enviado</span>}
                             </span>
                             {!jaClaim && !setFechado && !bloqueado ? (
                               <div style={{ display:"flex", alignItems:"center" }}>
@@ -18315,33 +18315,60 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                               {horarioLabel && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{horarioLabel}</span>}
                             </div>
                             <span style={{ fontFamily:mono, fontSize:9, color: fechado ? "var(--lilas)" : "rgba(245,240,232,.3)" }}>
-                              {fechado ? "fechado" : `${claimados}/${membros.length} claimados`}
+                              {fechado ? "fechado" : `${claimados}/${membros.length} com claim`}
                             </span>
                           </div>
 
-                          {/* Membros */}
+                          {/* Membros agrupados por joiner */}
                           <div style={{ padding:"4px 14px 8px" }}>
-                            {itens.map((item, idx) => {
-                              const isClaimed = !item.na_loja && !!item.claim;
-                              const ts = item.claim?.created_at ? (() => {
-                                const d = new Date(item.claim.created_at);
-                                return d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-                              })() : null;
-                              const statusColor = item.claim?.status === "pendente" ? "#ffb400" : "rgba(201,168,240,.7)";
+                            {(() => {
+                              const claimados = itens.filter(i => !i.na_loja && !!i.claim);
+                              const livres = itens.filter(i => i.na_loja || !i.claim);
+                              // Agrupar claimados por joiner, ordenado pelo primeiro claim de cada um
+                              const porJoiner = {};
+                              claimados.forEach(item => {
+                                const key = item.claim.joiner_cog || item.claim.joiner_nome;
+                                if (!porJoiner[key]) porJoiner[key] = { nome: item.claim.joiner_nome, cog: item.claim.joiner_cog, itens: [], primeiroTs: item.claim.created_at };
+                                porJoiner[key].itens.push(item);
+                                if (item.claim.created_at < porJoiner[key].primeiroTs) porJoiner[key].primeiroTs = item.claim.created_at;
+                              });
+                              const joiners = Object.values(porJoiner).sort((a, b) => a.primeiroTs < b.primeiroTs ? -1 : 1);
                               return (
-                                <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 0", borderBottom: idx < itens.length-1 ? "1px solid rgba(245,240,232,.04)" : "none" }}>
-                                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                    <span style={{ fontFamily:mono, fontSize:11, color: isClaimed ? "var(--offwhite)" : "rgba(245,240,232,.25)", minWidth:80 }}>{item.membro}</span>
-                                    {isClaimed && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{item.claim.joiner_nome}</span>}
-                                    {!isClaimed && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.35)" }}>livre</span>}
-                                  </div>
-                                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                    {ts && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{ts}</span>}
-                                    {isClaimed && <span style={{ fontFamily:mono, fontSize:9, color:statusColor }}>{item.claim.status}</span>}
-                                  </div>
-                                </div>
+                                <>
+                                  {joiners.map(joiner => (
+                                    <div key={joiner.cog} style={{ marginBottom: livres.length || joiners.indexOf(joiner) < joiners.length-1 ? 6 : 0 }}>
+                                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", padding:"4px 0 2px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+                                        {joiner.nome}
+                                        {joiner.itens.length === membros.length && <span style={{ marginLeft:6, color:"var(--laranja)" }}>OT8</span>}
+                                      </div>
+                                      {joiner.itens.map(item => {
+                                        const ts = item.claim?.created_at ? new Date(item.claim.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" }) : null;
+                                        const statusColor = item.claim?.status === "pendente" ? "#ffb400" : "rgba(201,168,240,.7)";
+                                        return (
+                                          <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 0 5px 10px" }}>
+                                            <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{item.membro}</span>
+                                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                              {ts && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{ts}</span>}
+                                              <span style={{ fontFamily:mono, fontSize:9, color:statusColor }}>{item.claim.status}</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ))}
+                                  {livres.length > 0 && (
+                                    <div style={{ marginTop: joiners.length ? 4 : 0 }}>
+                                      {livres.map(item => (
+                                        <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 0" }}>
+                                          <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.2)" }}>{item.membro}</span>
+                                          <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)" }}>livre</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
                               );
-                            })}
+                            })()}
                           </div>
 
                           {/* Banner fechado + confirmar compra */}
