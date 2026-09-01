@@ -12294,16 +12294,18 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
             fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", whiteSpace:"nowrap"
           }}>Publicar na loja →</button>
         )}
-        <button onClick={async () => {
-          if (!window.confirm(`Apagar "${item.nome_do_item}" da masterlist? Isso não pode ser desfeito.`)) return;
-          const { error } = await supabase.from("masterlist").delete().eq("id", item.id);
-          if (error) { alert("Erro: " + error.message); return; }
-          setItens(prev => prev.filter(i => i.id !== item.id));
-        }} style={{
-          background:"none", border:"none",
-          color:"rgba(255,107,107,.45)", fontSize:10,
-          fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"2px 0"
-        }}>🗑 apagar</button>
+        {item.ceg !== "CLAIM" && (
+          <button onClick={async () => {
+            if (!window.confirm(`Apagar "${item.nome_do_item}" da masterlist? Isso não pode ser desfeito.`)) return;
+            const { error } = await supabase.from("masterlist").delete().eq("id", item.id);
+            if (error) { alert("Erro: " + error.message); return; }
+            setItens(prev => prev.filter(i => i.id !== item.id));
+          }} style={{
+            background:"none", border:"none",
+            color:"rgba(255,107,107,.45)", fontSize:10,
+            fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"2px 0"
+          }}>🗑 apagar</button>
+        )}
       </div>
     </div>
     );
@@ -18131,6 +18133,19 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
     fetchSets();
   }
 
+  async function finalizarSet(itens) {
+    const reais = itens.filter(i => !String(i.id).includes("vazio"));
+    if (!reais.length) return;
+    if (!window.confirm("Marcar set como finalizado? O histórico fica salvo e o set não pode mais ser apagado acidentalmente.")) return;
+    await Promise.all(reais.map(i => {
+      const info = i.info_adicionais || "";
+      if (info.includes("Finalizado: true")) return Promise.resolve();
+      const novaInfo = info ? info + " | Finalizado: true" : "Finalizado: true";
+      return supabase.from("masterlist").update({ info_adicionais: novaInfo }).eq("id", i.id);
+    }));
+    fetchSets();
+  }
+
   function updatePendentes(fn) {
     setPendentes(prev => { const next = fn(prev); onPendentesChange?.(next); return next; });
   }
@@ -18307,20 +18322,21 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                         return a.membro.localeCompare(b.membro);
                       });
                       const fechado = membros.length >= 8 && itens.every(i => !i.na_loja && !!i.claim);
+                      const finalizado = itens.some(i => (i.info_adicionais || "").includes("Finalizado: true"));
                       const claimados = itens.filter(i => !i.na_loja && !!i.claim).length;
                       const horarioLabel = setData.abertura
                         ? setData.abertura.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })
                         : null;
                       return (
-                        <div key={setData.aberturaKey} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${fechado ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, overflow:"hidden" }}>
+                        <div key={setData.aberturaKey} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${finalizado ? "rgba(78,203,113,.2)" : fechado ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)"}`, borderRadius:10, overflow:"hidden" }}>
                           {/* Cabeçalho do set */}
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 14px", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
                             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                               <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"rgba(245,240,232,.5)", letterSpacing:"1.5px" }}>SET {setIdx+1}</span>
                               {horarioLabel && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{horarioLabel}</span>}
                             </div>
-                            <span style={{ fontFamily:mono, fontSize:9, color: fechado ? "var(--lilas)" : "rgba(245,240,232,.3)" }}>
-                              {fechado ? "fechado" : `${claimados}/${membros.length} com claim`}
+                            <span style={{ fontFamily:mono, fontSize:9, color: finalizado ? "#4ecb71" : fechado ? "var(--lilas)" : "rgba(245,240,232,.3)" }}>
+                              {finalizado ? "✓ finalizado" : fechado ? "fechado" : `${claimados}/${membros.length} com claim`}
                             </span>
                           </div>
 
@@ -18377,8 +18393,8 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                           </div>
 
                           {/* Banner fechado + confirmar compra */}
-                          {fechado && (
-                            <div style={{ margin:"0 14px 10px" }}>
+                          {fechado && !finalizado && (
+                            <div style={{ margin:"0 14px 6px" }}>
                               <div style={{ padding:"8px 14px", borderRadius:8, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.15)", fontFamily:mono, fontSize:10, color:"var(--lilas)", textAlign:"center", letterSpacing:".5px", marginBottom:6 }}>
                                 Set fechado · aguardando confirmação de compra da GOM
                               </div>
@@ -18390,6 +18406,19 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
                               )}
                             </div>
                           )}
+                          {/* Botão finalizar set */}
+                          <div style={{ margin:"0 14px 10px" }}>
+                            {finalizado ? (
+                              <div style={{ padding:"7px 14px", borderRadius:8, background:"rgba(78,203,113,.05)", border:"1px solid rgba(78,203,113,.12)", fontFamily:mono, fontSize:10, color:"#4ecb71", textAlign:"center", letterSpacing:".5px" }}>
+                                ✓ Set finalizado · histórico preservado
+                              </div>
+                            ) : (
+                              <button onClick={() => finalizarSet(itens)}
+                                style={{ width:"100%", fontFamily:mono, fontSize:10, fontWeight:700, padding:"8px 14px", background:"rgba(78,203,113,.07)", border:"1px solid rgba(78,203,113,.18)", borderRadius:6, color:"#4ecb71", cursor:"pointer", letterSpacing:".5px" }}>
+                                Marcar set como finalizado
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
