@@ -13119,7 +13119,7 @@ function DisponiveisTab({ user }) {
       .then(({ data }) => { if (data) setIsBloqueada(!!data.bloqueado); });
     supabase.from("masterlist")
       .select("id, ceg, nome_do_item, valor_item, frete_inter, taxa_rf, info_adicionais, status")
-      .or("nome.ilike.disponivel,nome.ilike.disponível").eq("na_loja", true)
+      .or("nome.ilike.disponivel,nome.ilike.disponível").eq("na_loja", true).neq("ceg", "CLAIM")
       .order("ceg").order("nome_do_item")
       .then(async ({ data }) => {
         const lista = data || [];
