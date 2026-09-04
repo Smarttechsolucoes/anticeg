@@ -310,8 +310,9 @@ const chipMap = {
 
 function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status); }
 function isPendente(val) {
+  if (val === null || val === undefined) return true; // null = não preenchido = pendente
   if (typeof val === "boolean") return !val; // true=pago, false=pendente
-  return val && val !== "Pago" && val !== "N/A";
+  return val !== "Pago" && val !== "N/A";
 }
 
 function PayBadge({ status }) {
@@ -1825,11 +1826,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           (d.itens || []).forEach(it => {
             if (!map[it.id] || (d.status === "em_analise" && map[it.id] !== "pago")) map[it.id] = d.status;
             if (d.status === "pago") {
-              const k = `${it.ceg}::${it.nome_do_item}`;
-              if (!confirm[k]) confirm[k] = {};
-              if (Number(it.valor_item  || 0) > 0) confirm[k].item  = true;
-              if (Number(it.frete_inter || 0) > 0) confirm[k].frete = true;
-              if (Number(it.taxa_rf     || 0) > 0) confirm[k].rf    = true;
+              if (!confirm[it.id]) confirm[it.id] = {};
+              if (Number(it.valor_item  || 0) > 0) confirm[it.id].item  = true;
+              if (Number(it.frete_inter || 0) > 0) confirm[it.id].frete = true;
+              if (Number(it.taxa_rf     || 0) > 0) confirm[it.id].rf    = true;
             }
           });
         });
@@ -1910,8 +1910,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
   const vencDates = [];
   itens.forEach(i => {
-    const ck = `${i.ceg}::${i.nome_do_item}`;
-    const cfm = pagConfirmMap[ck] || {};
+    const cfm = pagConfirmMap[i.id] || {};
     const emAnalise = pagDemandaMap[i.id] === "em_analise";
     if (i.venc_item  && isPendente(i.pago_item)  && !cfm.item  && !emAnalise && Number(i.valor_item  || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_item),  label: "Item: "  + i.ceg, val: Number(i.valor_item  || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "item" });
     if (i.venc_frete && isPendente(i.pago_frete) && !cfm.frete && !emAnalise && Number(i.frete_inter || 0) > 0) vencDates.push({ d: parseLocalDate(i.venc_frete), label: "Frete: " + i.ceg, val: Number(i.frete_inter || 0), nome: i.nome_do_item, ceg: i.ceg, tipo: "frete" });
@@ -1963,17 +1962,15 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   }, 0);
   const tPend  = filtered.reduce((a,b) => {
     if (Number(b.valor_item||0) < 0) return a;
-    const ck = `${b.ceg}::${b.nome_do_item}`;
     const emAnalise = pagDemandaMap[b.id] === "em_analise";
-    return a + (isPendente(b.pago_item)  && !pagConfirmMap[ck]?.item  && !emAnalise ? Number(b.valor_item||0)  : 0)
-             + (isPendente(b.pago_frete) && !pagConfirmMap[ck]?.frete && !emAnalise ? Number(b.frete_inter||0) : 0)
-             + (isPendente(b.pago_rf)    && !pagConfirmMap[ck]?.rf    && !emAnalise ? Number(b.taxa_rf||0)     : 0);
+    return a + (isPendente(b.pago_item)  && !pagConfirmMap[b.id]?.item  && !emAnalise ? Number(b.valor_item||0)  : 0)
+             + (isPendente(b.pago_frete) && !pagConfirmMap[b.id]?.frete && !emAnalise ? Number(b.frete_inter||0) : 0)
+             + (isPendente(b.pago_rf)    && !pagConfirmMap[b.id]?.rf    && !emAnalise ? Number(b.taxa_rf||0)     : 0);
   }, 0);
   const tMulta = filtered.reduce((a,b) => {
-    const ck = `${b.ceg}::${b.nome_do_item}`;
-    return a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.item  ? diasAtraso(b.venc_item)  : 0)
-             + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.frete ? diasAtraso(b.venc_frete) : 0)
-             + (isPendente(b.pago_rf)    && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[ck]?.rf    ? diasAtraso(b.venc_rf)    : 0);
+    return a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.item  ? diasAtraso(b.venc_item)  : 0)
+             + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.frete ? diasAtraso(b.venc_frete) : 0)
+             + (isPendente(b.pago_rf)    && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.rf    ? diasAtraso(b.venc_rf)    : 0);
   }, 0);
 
 
@@ -2344,11 +2341,10 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
       {totalModal && (() => {
         const linhas = itens.map(i => {
-          const ck = `${i.ceg}::${i.nome_do_item}`;
           const emAnalise = pagDemandaMap[i.id] === "em_analise";
-          const vItem  = isPendente(i.pago_item)  && !pagConfirmMap[ck]?.item  && !emAnalise ? Number(i.valor_item  || 0) : 0;
-          const vFrete = isPendente(i.pago_frete) && !pagConfirmMap[ck]?.frete && !emAnalise ? Number(i.frete_inter || 0) : 0;
-          const vRf    = isPendente(i.pago_rf)    && !pagConfirmMap[ck]?.rf    && !emAnalise ? Number(i.taxa_rf     || 0) : 0;
+          const vItem  = isPendente(i.pago_item)  && !pagConfirmMap[i.id]?.item  && !emAnalise ? Number(i.valor_item  || 0) : 0;
+          const vFrete = isPendente(i.pago_frete) && !pagConfirmMap[i.id]?.frete && !emAnalise ? Number(i.frete_inter || 0) : 0;
+          const vRf    = isPendente(i.pago_rf)    && !pagConfirmMap[i.id]?.rf    && !emAnalise ? Number(i.taxa_rf     || 0) : 0;
           const mItem  = vItem  > 0 ? diasAtraso(i.venc_item)  : 0;
           const mFrete = vFrete > 0 ? diasAtraso(i.venc_frete) : 0;
           const mRf    = vRf    > 0 ? diasAtraso(i.venc_rf)    : 0;
@@ -2567,7 +2563,47 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                     {atrasados.length > 0 && <span style={{ color:"rgba(255,107,107,.7)", marginLeft:8 }}>· {atrasados.length} atrasado{atrasados.length !== 1 ? "s" : ""}</span>}
                   </div>
                 </div>
-                <button onClick={() => setVencModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  {futuros.length > 0 && (
+                    <button
+                      title="Exportar lembretes para o calendário (.ics)"
+                      style={{ background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" }}
+                      onClick={() => {
+                        const fmt = d => {
+                          const p = n => String(n).padStart(2,"0");
+                          return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`;
+                        };
+                        const uid = () => Math.random().toString(36).slice(2) + "@anticeg";
+                        const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+                        for (const v of futuros) {
+                          const dateStr = fmt(v.d);
+                          lines.push(
+                            "BEGIN:VEVENT",
+                            `UID:${uid()}`,
+                            `DTSTART;VALUE=DATE:${dateStr}`,
+                            `DTEND;VALUE=DATE:${dateStr}`,
+                            `SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,
+                            `DESCRIPTION:${v.nome}\\n${v.tipo} · R$${fmtBRL(v.val)}`,
+                            "BEGIN:VALARM",
+                            "ACTION:DISPLAY",
+                            "TRIGGER:-PT9H",
+                            `DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,
+                            "END:VALARM",
+                            "END:VEVENT"
+                          );
+                        }
+                        lines.push("END:VCALENDAR");
+                        const ics = lines.join("\r\n");
+                        const blob = new Blob([ics], { type:"text/calendar;charset=utf-8" });
+                        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      }}
+                    >
+                      ↓ salvar no calendário
+                    </button>
+                  )}
+                  <button onClick={() => setVencModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
+                </div>
               </div>
               <div style={{ overflowY:"auto", flex:1, padding:"16px 24px 24px", display:"flex", flexDirection:"column", gap:0 }}>
                 {atrasados.length > 0 && (
@@ -2859,9 +2895,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         {showEnvio ? (
@@ -2951,9 +2987,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr className="row-finalizado">
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
                     <td><InfoCell info={item.info_adicionais} isOpen={isOpen} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
@@ -2991,7 +3027,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             </div>
           );
           const total = Number(item.valor_item||0)+Number(item.frete_inter||0)+Number(item.taxa_rf||0);
-          const cfm       = pagConfirmMap[`${item.ceg}::${item.nome_do_item}`] || {};
+          const cfm       = pagConfirmMap[item.id] || {};
           const pendItem  = !guest && isPendente(item.pago_item)  && Number(item.valor_item) > 0  && !cfm.item;
           const pendFrete = !guest && isPendente(item.pago_frete) && Number(item.frete_inter) > 0 && !cfm.frete;
           const pendRf    = !guest && isPendente(item.pago_rf)    && Number(item.taxa_rf) > 0     && !cfm.rf;
@@ -3042,9 +3078,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               )}
               {!guest && (
                 <div className="ml-card-vals">
-                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.item} /></div>}
-                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.frete} /></div>}
-                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[`${item.ceg}::${item.nome_do_item}`]?.rf} /></div>}
+                  {Number(item.valor_item) > 0 && <div className="ml-val-row"><span className="ml-val-label">item</span><ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} /></div>}
+                  {Number(item.frete_inter) > 0 && <div className="ml-val-row"><span className="ml-val-label">frete</span><ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} /></div>}
+                  {Number(item.taxa_rf) > 0 && <div className="ml-val-row"><span className="ml-val-label">taxa RF</span><ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /></div>}
                   {total > 0 && (
                     <div className={`ml-val-total${temPendente ? "" : " ml-val-total-pago"}`}>
                       total R${fmtBRL(total)}
@@ -3524,8 +3560,10 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       email ? supabase.from("pedidos_revista").select("id,created_at,qtd_total,valor_total,status").eq("email", email).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
       email ? supabase.from("pedidos_popup").select("id,created_at,week,itens,status").eq("email", email).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
       cog   ? supabase.from("mercari_pedidos").select("id,created_at,valor_jpy_total,valor_brl_total,itens,status").eq("joiner_cog", cog).order("created_at",{ascending:false}).limit(20) : Promise.resolve({data:[]}),
-    ]).then(([rev, pop, mer]) => {
-      setMeusFormularios({ revista: rev.data||[], popup: pop.data||[], mercari: mer.data||[] });
+      cog   ? supabase.from("pedidos_skzoo_rio").select("id,created_at,itens,envio,pagamento,total_reais,status").eq("cog", cog).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
+      cog   ? supabase.from("claims").select("id,ceg,nome_do_item,valor,status,vencimento,created_at").eq("joiner_cog", cog).order("created_at",{ascending:false}).limit(30) : Promise.resolve({data:[]}),
+    ]).then(([rev, pop, mer, skzoo, cls]) => {
+      setMeusFormularios({ revista: rev.data||[], popup: pop.data||[], mercari: mer.data||[], skzoo: skzoo.data||[], claims: cls.data||[] });
     });
   }, [perfilSubTab, user.email, user.cog]);
 
@@ -5349,8 +5387,8 @@ ${compHTML}
         const mono = "'DM Mono',monospace";
         const corStatus = s => s==="confirmado"||s==="pago"||s==="entregue"?"#4ade80":s==="cancelado"?"#ff6b6b":"rgba(255,92,26,.8)";
         if (!meusFormularios) return <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Carregando...</div>;
-        const { revista, popup, mercari } = meusFormularios;
-        const nenhum = !revista.length && !popup.length && !mercari.length;
+        const { revista, popup, mercari, skzoo = [], claims = [] } = meusFormularios;
+        const nenhum = !revista.length && !popup.length && !mercari.length && !skzoo.length && !claims.length;
 
         const SecaoLabel = ({ children }) => (
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10, marginTop:4 }}>{children}</div>
@@ -5412,6 +5450,63 @@ ${compHTML}
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* SKZOO Rio */}
+            {skzoo.length > 0 && (
+              <div>
+                <SecaoLabel>SKZOO EAAW RIO · PRÉ-VENDA</SecaoLabel>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {skzoo.map(p => {
+                    const itens = Array.isArray(p.itens) ? p.itens : [];
+                    const envioLabel = p.envio === "retirada-rio" ? "Retirada · Rio 09/09" : p.envio === "uber-flash" ? "Uber Flash" : p.envio === "envio-nacional" ? "Envio Nacional" : p.envio || "—";
+                    const prazoLabel = p.pagamento === "01" ? "até 13/09" : p.pagamento === "02" ? "até 05/10" : null;
+                    return (
+                      <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:6, marginBottom:8 }}>
+                          <div>
+                            {p.total_reais > 0 && <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${Number(p.total_reais).toFixed(2).replace(".",",")}</div>}
+                            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginTop:2 }}>
+                              {envioLabel}{prazoLabel ? ` · prazo ${prazoLabel}` : ""}
+                            </div>
+                          </div>
+                          <StatusBadge s={p.status} />
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:2, marginBottom:6 }}>
+                          {itens.slice(0,5).map((it,i) => (
+                            <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>
+                              {it.qtd||1}× {it.nome}{it.skzoo ? ` (${it.skzoo})` : ""}
+                            </div>
+                          ))}
+                          {itens.length > 5 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>+{itens.length-5} item{itens.length-5>1?"s":""}</div>}
+                        </div>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} · #{p.id}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Claims */}
+            {claims.length > 0 && (
+              <div>
+                <SecaoLabel>CLAIMS</SecaoLabel>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {claims.map(p => (
+                    <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+                      <div>
+                        <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", fontWeight:700 }}>{p.nome_do_item}</div>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:3 }}>
+                          {p.ceg}{p.valor ? ` · R$${Number(p.valor).toFixed(2).replace(".",",")}` : ""}{p.vencimento ? ` · vence ${new Date(p.vencimento).toLocaleDateString("pt-BR")}` : ""}
+                        </div>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} · #{p.id}</div>
+                      </div>
+                      <StatusBadge s={p.status} />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -8629,6 +8724,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
+                  // Atualiza pago_item/pago_frete/pago_rf no masterlist para cada item da demanda
+                  for (const it of (d.itens || [])) {
+                    if (!it.id) continue;
+                    const updates = {};
+                    if (Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
+                    if (Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
+                    if (Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
+                    if (Object.keys(updates).length > 0)
+                      await supabase.from("masterlist").update(updates).eq("id", it.id);
+                  }
                   const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
                   await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
@@ -8687,6 +8792,44 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       {rejeitados.length > 0 && <span style={{ background:"rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:99, fontSize:9, fontWeight:700, padding:"1px 6px" }}>{rejeitados.length}</span>}
                     </button>
                   </div>
+
+                  {formularioFiltro === "confirmados" && resolvidas.length > 0 && (
+                    <div style={{ marginBottom:12, display:"flex", justifyContent:"flex-end" }}>
+                      <button
+                        style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39", cursor:"pointer", letterSpacing:".04em" }}
+                        onClick={() => {
+                          const joinerNomeMap = Object.fromEntries((joinersData || []).map(j => [j.cog, j.nome || j.cog]));
+                          const rows = [["#demanda","@joiner","nome","data","ceg","item","R$_item","R$_frete","R$_rf","R$_multa","R$_total_linha","R$_total_demanda","comprovante","obs"]];
+                          for (const d of resolvidas) {
+                            const data = new Date(d.created_at).toLocaleDateString("pt-BR");
+                            const nome = joinerNomeMap[d.joiner_cog] || "";
+                            for (const it of (d.itens || [])) {
+                              const vi = Number(it.valor_item  || 0);
+                              const vf = Number(it.frete_inter || 0);
+                              const vr = Number(it.taxa_rf     || 0);
+                              const vm = Number(it.multa       || 0);
+                              const tot = vi + vf + vr + vm;
+                              const fmtN = v => v > 0 ? v.toFixed(2).replace(".",",") : "";
+                              rows.push([
+                                d.id, `@${d.joiner_cog}`, nome, data,
+                                it.ceg || "", it.nome_do_item || "",
+                                fmtN(vi), fmtN(vf), fmtN(vr), fmtN(vm), fmtN(tot),
+                                Number(d.valor_total || 0).toFixed(2).replace(".",","),
+                                d.comprovante_url || "", d.obs || ""
+                              ]);
+                            }
+                          }
+                          const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(";")).join("\n");
+                          const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
+                          const url  = URL.createObjectURL(blob);
+                          const a    = Object.assign(document.createElement("a"), { href:url, download:`pagamentos_confirmados_${new Date().toISOString().slice(0,10)}.csv` });
+                          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                        }}
+                      >
+                        ↓ exportar CSV
+                      </button>
+                    </div>
+                  )}
 
                   {listaAtiva.length === 0
                     ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
@@ -12711,7 +12854,651 @@ function ClaimAoVivo() {
   );
 }
 
+function ClaimGuestPage({ onLogin }) {
+  const mono = "'DM Mono',monospace";
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function entrar() {
+    const val = input.trim();
+    if (!val) { setErro("Informe seu @ ou e-mail."); return; }
+    setLoading(true); setErro("");
+    const isEmail = val.indexOf("@") > 0;
+    let joiner = null;
+    if (isEmail) {
+      const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).maybeSingle();
+      joiner = data;
+    } else {
+      const handle = val.startsWith("@") ? val.slice(1) : val;
+      const { data } = await supabase.from("joiners").select("*").or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`).maybeSingle();
+      joiner = data;
+    }
+    if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
+    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
+    onLogin(joiner, itens || []);
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)", fontFamily:mono }}>
+      <div style={{ maxWidth:480, margin:"0 auto", padding:"48px 20px 80px", display:"flex", flexDirection:"column", gap:24 }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>◈</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:2 }}>ANTICEG · CLAIMS</div>
+        </div>
+        <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:12, padding:"20px 18px", display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.35)" }}>// acesso rápido</div>
+          <input
+            value={input} onChange={e => { setInput(e.target.value); setErro(""); }}
+            onKeyDown={e => e.key === "Enter" && entrar()}
+            placeholder="@ da rede social ou e-mail"
+            style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"10px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, outline:"none" }}
+            autoFocus
+          />
+          {erro && <div style={{ fontSize:10, color:"rgba(255,92,26,.8)" }}>{erro}</div>}
+          <button onClick={entrar} disabled={loading}
+            style={{ background:"var(--laranja)", border:"none", borderRadius:8, color:"#0d0d0d", fontFamily:mono, fontSize:11, fontWeight:700, padding:"11px 24px", cursor:"pointer", letterSpacing:"1px" }}>
+            {loading ? "..." : "ENTRAR →"}
+          </button>
+        </div>
+        <div style={{ marginTop:8 }}>
+          <div style={{ fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.25)", marginBottom:14, textAlign:"center" }}>AO VIVO</div>
+          <ClaimScoreboard />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClaimHistorico() {
+  const mono = "'DM Mono',monospace";
+  const [eventos, setEventos] = useState(null);
+  const [sets, setSets] = useState({});
+  const [reservas, setReservas] = useState({});
+  const [expandido, setExpandido] = useState({});
+
+  useEffect(() => {
+    async function carregar() {
+      const { data: evData } = await supabase.from("claim_eventos")
+        .select("*").eq("status","encerrado").order("created_at", { ascending: false });
+      if (!evData?.length) { setEventos([]); return; }
+      setEventos(evData);
+      const evIds = evData.map(e => e.id);
+      const { data: setsData } = await supabase.from("claim_sets")
+        .select("*").in("evento_id", evIds).neq("status","cancelado").order("numero");
+      const setsMap = {};
+      (setsData || []).forEach(s => { if (!setsMap[s.evento_id]) setsMap[s.evento_id] = []; setsMap[s.evento_id].push(s); });
+      setSets(setsMap);
+      const setIds = (setsData || []).map(s => s.id);
+      if (!setIds.length) return;
+      const { data: resData } = await supabase.from("claim_reservas")
+        .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      const resMap = {};
+      (resData || []).forEach(r => { if (!resMap[r.set_id]) resMap[r.set_id] = []; resMap[r.set_id].push(r); });
+      setReservas(resMap);
+    }
+    carregar();
+  }, []);
+
+  if (!eventos) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"24px 0", textAlign:"center" }}>carregando...</div>;
+  if (!eventos.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"24px 0", textAlign:"center" }}>Nenhum evento encerrado ainda.</div>;
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {eventos.map(ev => {
+        const evSets = sets[ev.id] || [];
+        const aberto = expandido[ev.id];
+        return (
+          <div key={ev.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
+            {ev.foto_url && <img src={ev.foto_url} alt="" style={{ width:"100%", aspectRatio:"3/4", maxHeight:240, objectFit:"cover", display:"block" }} />}
+            <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:2 }}>{ev.nome}</div>
+                <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                  <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>R$ {Number(ev.valor).toFixed(2).replace(".",",")}</span>
+                  {ev.prazo && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.35)" }}>prazo {ev.prazo}</span>}
+                  <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>{evSets.length} set{evSets.length !== 1 ? "s" : ""} fechado{evSets.length !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+              <span style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.5)", letterSpacing:"1px", paddingTop:4 }}>✓ encerrado</span>
+            </div>
+            <div style={{ padding:"10px 18px 14px" }}>
+              <button onClick={() => setExpandido(p => ({ ...p, [ev.id]: !p[ev.id] }))}
+                style={{ background:"none", border:"none", padding:"0 0 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.6)", letterSpacing:"1.5px" }}>VER SETS</span>
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.4)" }}>{aberto ? "▲" : "▼"}</span>
+              </button>
+              {aberto && (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {evSets.map(set => {
+                    const resSet = reservas[set.id] || [];
+                    const membros = ev.membros || ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+                    return (
+                      <div key={set.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10, overflow:"hidden" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 14px", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                          <span style={{ fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"2px", color:"rgba(245,240,232,.4)" }}>SET {String(set.numero).padStart(2,"0")}</span>
+                          <span style={{ fontFamily:mono, fontSize:9, color: set.status==="confirmado"?"rgba(201,168,240,.7)":"var(--lilas)" }}>
+                            {set.status==="confirmado" ? "✓ confirmado" : "✓ fechado"}
+                          </span>
+                        </div>
+                        <div style={{ padding:"6px 14px 10px" }}>
+                          {membros.map(m => {
+                            const res = resSet.find(r => r.membro === m);
+                            const ehAdmin = res?.is_admin;
+                            const nome = res?.joiner_cog ? `@${res.joiner_cog}` : (res?.joiner_nome || "—");
+                            return (
+                              <div key={m} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"4px 0", borderBottom:"1px solid rgba(245,240,232,.03)" }}>
+                                <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>{m}</span>
+                                <span style={{ fontFamily:mono, fontSize:10, color: ehAdmin?"rgba(255,92,26,.6)":"rgba(201,168,240,.8)" }}>
+                                  {ehAdmin ? "GOM" : nome}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ClaimScoreboard() {
+  const mono = "'DM Mono',monospace";
+  const SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+  const [eventos, setEventos] = useState(null);
+  const [sets, setSets] = useState({});
+  const [reservas, setReservas] = useState({});
+  const [standby, setStandby] = useState({});
+  const [agora, setAgora] = useState(new Date());
+  const [sbExpandido, setSbExpandido] = useState({});
+  const [setsExpandido, setSetsExpandido] = useState({});
+
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function fetchTudo() {
+    const { data: evData } = await supabase.from("claim_eventos").select("*").eq("status","ativo").order("abertura");
+    if (!evData?.length) { setEventos([]); return; }
+    setEventos(evData);
+    const evIds = evData.map(e => e.id);
+    const { data: setsData } = await supabase.from("claim_sets").select("*").in("evento_id", evIds).neq("status","cancelado").order("numero");
+    const setsMap = {};
+    (setsData || []).forEach(s => { if (!setsMap[s.evento_id]) setsMap[s.evento_id] = []; setsMap[s.evento_id].push(s); });
+    setSets(setsMap);
+    const setIds = (setsData || []).map(s => s.id);
+    const newRes = {};
+    if (setIds.length) {
+      const { data: resData } = await supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      (resData || []).forEach(r => { if (!newRes[r.set_id]) newRes[r.set_id] = []; newRes[r.set_id].push(r); });
+    }
+    setReservas(newRes);
+    const { data: sbData } = await supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at");
+    const sbMap = {};
+    (sbData || []).forEach(r => { if (!sbMap[r.evento_id]) sbMap[r.evento_id] = []; sbMap[r.evento_id].push(r); });
+    setStandby(sbMap);
+  }
+
+  useEffect(() => { fetchTudo(); const t = setInterval(fetchTudo, 10000); return () => clearInterval(t); }, []);
+
+  if (!eventos) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"24px 0", textAlign:"center" }}>carregando...</div>;
+  if (!eventos.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"24px 0", textAlign:"center" }}>Nenhum evento ativo no momento.</div>;
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+      {eventos.map(ev => {
+        const evSets = (sets[ev.id] || []);
+        const aberto = agora >= new Date(ev.abertura);
+        const diffMs = aberto ? 0 : new Date(ev.abertura) - agora;
+        const hh = String(Math.floor(diffMs/3600000)).padStart(2,"0");
+        const mm = String(Math.floor((diffMs%3600000)/60000)).padStart(2,"0");
+        const ss = String(Math.floor((diffMs%60000)/1000)).padStart(2,"0");
+        const membros = ev.membros || SK8;
+        const sbEvento = standby[ev.id] || [];
+
+        return (
+          <div key={ev.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
+            {ev.foto_url && <img src={ev.foto_url} alt="" style={{ width:"100%", aspectRatio:"3/4", maxHeight:320, objectFit:"cover", display:"block" }} />}
+            <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1, marginBottom:4 }}>{ev.nome}</div>
+              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>R$ {Number(ev.valor).toFixed(2).replace(".",",")}</span>
+                {ev.prazo && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.35)" }}>prazo {ev.prazo}</span>}
+              </div>
+            </div>
+
+            {!aberto ? (
+              <div style={{ padding:"20px 18px 16px", textAlign:"center" }}>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:6 }}>ABRE EM</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:40, color:"var(--offwhite)", letterSpacing:2, marginBottom:16 }}>{hh}:{mm}:{ss}</div>
+                {evSets.length > 0 && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, textAlign:"left" }}>
+                    {evSets.map(set => {
+                      const resSet = reservas[set.id] || [];
+                      const adminSlots = resSet.filter(r => r.is_admin);
+                      return (
+                        <div key={set.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"8px 14px" }}>
+                          <div style={{ fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"2px", color:"rgba(245,240,232,.4)", marginBottom:6 }}>SET {String(set.numero).padStart(2,"0")}</div>
+                          {membros.map(m => {
+                            const adminSlot = adminSlots.find(r => r.membro === m);
+                            return (
+                              <div key={m} style={{ display:"flex", justifyContent:"space-between", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.03)" }}>
+                                <span style={{ fontFamily:mono, fontSize:11, color: adminSlot?"rgba(255,92,26,.5)":"rgba(245,240,232,.35)" }}>{m}</span>
+                                <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.15)" }}>{adminSlot ? "reservado" : "—"}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ padding:"12px 18px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+                <button onClick={() => setSetsExpandido(p => ({ ...p, [ev.id]: !p[ev.id] }))}
+                  style={{ background:"none", border:"none", padding:"0 0 4px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, alignSelf:"flex-start" }}>
+                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.6)", letterSpacing:"1.5px" }}>VER SETS</span>
+                  <span style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.5)" }}>{setsExpandido[ev.id] ? "▲" : "▼"}</span>
+                </button>
+                {setsExpandido[ev.id] && evSets.map(set => {
+                  const resSet = reservas[set.id] || [];
+                  const claimsNoSet = resSet.filter(r => !r.is_admin).length;
+                  const cor = set.status === "fechado" ? "rgba(201,168,240,.2)" : set.status === "a_confirmar" ? "rgba(255,180,0,.2)" : "rgba(245,240,232,.06)";
+                  return (
+                    <div key={set.id} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${cor}`, borderRadius:10, overflow:"hidden" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 14px", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                        <span style={{ fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"2px", color:"rgba(245,240,232,.5)" }}>SET {String(set.numero).padStart(2,"0")}</span>
+                        <span style={{ fontFamily:mono, fontSize:9, color: set.status==="fechado"?"var(--lilas)":set.status==="a_confirmar"?"#ffb400":"rgba(186,255,57,.6)" }}>
+                          {set.status==="fechado"?"✓ fechado":set.status==="a_confirmar"?"a confirmar":`${claimsNoSet}/${membros.length}`}
+                        </span>
+                      </div>
+                      <div style={{ padding:"6px 14px 10px", display:"flex", flexDirection:"column", gap:0 }}>
+                        {membros.map(m => {
+                          const res = resSet.find(r => r.membro === m);
+                          const livre = !res;
+                          const ehAdmin = res?.is_admin;
+                          const nome = res?.joiner_cog ? `@${res.joiner_cog}` : (res?.joiner_nome || "");
+                          return (
+                            <div key={m} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid rgba(245,240,232,.03)" }}>
+                              <span style={{ fontFamily:mono, fontSize:12, color: livre?"rgba(245,240,232,.4)":ehAdmin?"rgba(255,92,26,.6)":"var(--offwhite)" }}>{m}</span>
+                              <span style={{ fontFamily:mono, fontSize:10, color: livre?"rgba(186,255,57,.4)":ehAdmin?"rgba(255,92,26,.5)":"rgba(201,168,240,.8)" }}>
+                                {livre ? "livre" : ehAdmin ? "GOM" : nome}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {sbEvento.length > 0 && (
+                  <div style={{ background:"rgba(255,180,0,.03)", border:"1px solid rgba(255,180,0,.12)", borderRadius:10, padding:"10px 14px" }}>
+                    <button onClick={() => setSbExpandido(p => ({ ...p, [ev.id]: !p[ev.id] }))}
+                      style={{ background:"none", border:"none", padding:0, cursor:"pointer", width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: sbExpandido[ev.id] ? 8 : 0 }}>
+                      <span style={{ fontFamily:mono, fontSize:9, color:"#ffb400", letterSpacing:"1.5px" }}>STANDBY ({sbEvento.length})</span>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(255,180,0,.5)" }}>{sbExpandido[ev.id] ? "▲" : "▼"}</span>
+                    </button>
+                    {sbExpandido[ev.id] && membros.map(m => {
+                      const sb = sbEvento.filter(r => r.membro === m);
+                      if (!sb.length) return null;
+                      return (
+                        <div key={m} style={{ display:"flex", gap:8, padding:"3px 0", fontFamily:mono, fontSize:10 }}>
+                          <span style={{ color:"rgba(245,240,232,.4)", minWidth:80 }}>{m}</span>
+                          <span style={{ color:"rgba(245,240,232,.6)" }}>{sb.map(r => r.joiner_cog ? `@${r.joiner_cog}` : r.joiner_nome).join(", ")}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ClaimPublicoPage({ user }) {
+  const mono = "'DM Mono',monospace";
+  const SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+  const [eventos, setEventos] = useState(null);
+  const [sets, setSets] = useState({});
+  const [reservas, setReservas] = useState({});
+  const [standby, setStandby] = useState({});
+  const [quantidades, setQuantidades] = useState({});
+  const [enviando, setEnviando] = useState(false);
+  const [claimOk, setClaimOk] = useState(null);
+  const [claimErro, setClaimErro] = useState(null);
+  const [agora, setAgora] = useState(new Date());
+  const [isBloqueada, setIsBloqueada] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function fetchTudo(fazAutoAbrir = true) {
+    const { data: evData } = await supabase.from("claim_eventos")
+      .select("*").eq("status", "ativo").order("abertura");
+    if (!evData?.length) { setEventos([]); return; }
+    setEventos(evData);
+    const evIds = evData.map(e => e.id);
+    const { data: setsData } = await supabase.from("claim_sets")
+      .select("*").in("evento_id", evIds).neq("status","cancelado").order("numero");
+    const setsMap = {};
+    (setsData || []).forEach(s => {
+      if (!setsMap[s.evento_id]) setsMap[s.evento_id] = [];
+      setsMap[s.evento_id].push(s);
+    });
+    setSets(setsMap);
+    const setIds = (setsData || []).map(s => s.id);
+    const newRes = {};
+    if (setIds.length) {
+      const { data: resData } = await supabase.from("claim_reservas")
+        .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      (resData || []).forEach(r => {
+        if (!newRes[r.set_id]) newRes[r.set_id] = [];
+        newRes[r.set_id].push(r);
+      });
+    }
+    setReservas(newRes);
+    const { data: sbData } = await supabase.from("claim_reservas")
+      .select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado")
+      .order("created_at");
+    const sbMap = {};
+    (sbData || []).forEach(r => {
+      if (!sbMap[r.evento_id]) sbMap[r.evento_id] = [];
+      sbMap[r.evento_id].push(r);
+    });
+    setStandby(sbMap);
+
+    if (!fazAutoAbrir) return;
+
+    // Auto-abrir set se todos fecharam e ainda tem standby
+    let abriuAlgum = false;
+    for (const ev of evData) {
+      if (ev.status !== "ativo") continue;
+      if (new Date() < new Date(ev.abertura)) continue;
+
+      const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
+      if (evSets.length >= 10) continue; // limite máximo de sets
+      if (evSets.some(s => s.status === "aberto")) continue;
+
+      const sbEvento = (sbData || []).filter(r => r.evento_id === ev.id);
+      if (!sbEvento.length) continue;
+
+      // Re-verifica no banco para evitar race condition entre clientes
+      const { data: aindaAberto } = await supabase.from("claim_sets")
+        .select("id").eq("evento_id", ev.id).eq("status","aberto").limit(1);
+      if (aindaAberto?.length) continue;
+
+      const prox = evSets.length ? Math.max(...evSets.map(s => s.numero)) + 1 : 1;
+      const { data: novoSet } = await supabase.from("claim_sets")
+        .insert([{ evento_id: ev.id, numero: prox, status: "aberto" }]).select().single();
+      if (!novoSet) continue;
+
+      abriuAlgum = true;
+      const membrosPromovidos = new Set();
+      for (const r of sbEvento) {
+        if (membrosPromovidos.has(r.membro)) continue;
+        if (!Array.isArray(ev.membros) || !ev.membros.includes(r.membro)) continue;
+        await supabase.from("claim_reservas")
+          .update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
+        membrosPromovidos.add(r.membro);
+      }
+    }
+
+    if (abriuAlgum) await fetchTudo(false);
+  }
+
+  useEffect(() => {
+    supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle()
+      .then(({ data }) => { if (data) setIsBloqueada(!!data.bloqueado); });
+    fetchTudo();
+    const t = setInterval(fetchTudo, 30000);
+    return () => clearInterval(t);
+  }, [user.cog]);
+
+  function setQtd(eventoId, membro, val) {
+    setQuantidades(prev => {
+      const cur = prev[eventoId] || {};
+      return { ...prev, [eventoId]: { ...cur, [membro]: Math.max(0, val) } };
+    });
+    setClaimErro(null);
+  }
+
+  async function verificarFechamento(eventoId, setId) {
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (!ev) return;
+    const { data: resDoSet } = await supabase.from("claim_reservas")
+      .select("membro").eq("set_id", setId).neq("status","cancelado");
+    const claimados = new Set((resDoSet || []).map(r => r.membro));
+    if (!ev.membros.every(m => claimados.has(m))) return;
+
+    await supabase.from("claim_sets").update({ status:"fechado", closed_at: new Date().toISOString() }).eq("id", setId);
+
+    // Verifica se há standby aguardando
+    const { data: sbCheck } = await supabase.from("claim_reservas")
+      .select("id").eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado").limit(1);
+    if (!sbCheck?.length) return;
+
+    // Verifica se ainda existe algum set aberto (evita duplicação em paralelo)
+    const { data: abertos } = await supabase.from("claim_sets")
+      .select("id").eq("evento_id", eventoId).eq("status","aberto").limit(1);
+    if (abertos?.length) return;
+
+    // Abre novo set automaticamente (limite: 10 sets)
+    const { data: todosOsSets } = await supabase.from("claim_sets").select("numero").eq("evento_id", eventoId).neq("status","cancelado");
+    if ((todosOsSets || []).length >= 10) return;
+    const prox = Math.max(0, ...(todosOsSets || []).map(s => s.numero)) + 1;
+    const { data: novoSet, error: errSet } = await supabase.from("claim_sets")
+      .insert([{ evento_id: eventoId, numero: prox, status: "aberto" }]).select().single();
+    if (errSet || !novoSet) return;
+
+    // Promove standby para o novo set (um por membro, ordem de criação)
+    const { data: sbAll } = await supabase.from("claim_reservas")
+      .select("*").eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado").order("created_at");
+    const membrosPromovidos = new Set();
+    for (const r of (sbAll || [])) {
+      if (membrosPromovidos.has(r.membro)) continue;
+      if (!ev.membros.includes(r.membro)) continue;
+      await supabase.from("claim_reservas").update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
+      membrosPromovidos.add(r.membro);
+    }
+
+    // Verifica se o novo set já está completo (standby tinha todos os membros)
+    await verificarFechamento(eventoId, novoSet.id);
+  }
+
+  async function enviarClaims(eventoId) {
+    if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (!ev) return;
+    const qtds = quantidades[eventoId] || {};
+    const pedidos = Object.entries(qtds).filter(([, q]) => q > 0);
+    if (!pedidos.length) return;
+    setEnviando(true); setClaimErro(null);
+    const evSetsAbertos = (sets[eventoId] || []).filter(s => s.status === "aberto");
+    const limite = ev.limite_por_joiner || Infinity;
+    const rows = [];
+    for (const [membro, qtd] of pedidos) {
+      const jaTemNoSets = (sets[eventoId] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
+      const jaTemStandby = (standby[eventoId]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
+      const jaTem = jaTemNoSets + jaTemStandby;
+      const qtdPermitida = Math.min(qtd, Math.max(0, limite - jaTem));
+      if (qtdPermitida === 0) continue;
+      let adicionados = 0;
+      for (const s of evSetsAbertos) {
+        if (adicionados >= qtdPermitida) break;
+        const resSet = reservas[s.id] || [];
+        const jaMeu = resSet.some(r => r.membro === membro && r.joiner_cog === user.cog);
+        const ocupado = resSet.some(r => r.membro === membro);
+        if (!jaMeu && !ocupado) {
+          rows.push({ evento_id: eventoId, set_id: s.id, joiner_cog: user.cog, joiner_nome: user.nome || user.cog, membro, status: "pendente" });
+          adicionados++;
+        }
+      }
+      for (let i = adicionados; i < qtdPermitida; i++) {
+        rows.push({ evento_id: eventoId, set_id: null, joiner_cog: user.cog, joiner_nome: user.nome || user.cog, membro, status: "standby" });
+      }
+    }
+    if (!rows.length) { setClaimErro("Você já fez claim desses membros."); setEnviando(false); return; }
+    const { error } = await supabase.from("claim_reservas").insert(rows);
+    if (error) {
+      setClaimErro(error.code === "23505" ? "Alguém acabou de pegar esse membro. Recarregue e tente novamente." : "Erro ao enviar. Tente novamente.");
+      setEnviando(false); fetchTudo(); return;
+    }
+    for (const s of evSetsAbertos) await verificarFechamento(eventoId, s.id);
+    setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
+    const todosStandby = rows.every(r => r.status === "standby");
+    setClaimOk(todosStandby ? "Você está no standby! Será notificada se uma vaga abrir." : "Claim enviado com sucesso!");
+    setTimeout(() => setClaimOk(null), 4000);
+    setEnviando(false);
+    fetchTudo();
+  }
+
+
+  if (!eventos) return (
+    <div style={{ padding:"40px 0", textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>
+      carregando eventos...
+    </div>
+  );
+
+  if (!eventos.length) return (
+    <div style={{ padding:"40px 0", textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>
+      Nenhum evento de claim ativo no momento.
+    </div>
+  );
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {claimOk && <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39" }}>{claimOk}</div>}
+      {claimErro && <div style={{ background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>{claimErro}</div>}
+
+      {eventos.map(ev => {
+        const evSets = (sets[ev.id] || []).filter(s => s.status !== "cancelado");
+        const aberto = agora >= new Date(ev.abertura);
+        const diffMs = aberto ? 0 : new Date(ev.abertura) - agora;
+        const hh = String(Math.floor(diffMs/3600000)).padStart(2,"0");
+        const mm = String(Math.floor((diffMs%3600000)/60000)).padStart(2,"0");
+        const ss = String(Math.floor((diffMs%60000)/1000)).padStart(2,"0");
+        const sbEvento = (standby[ev.id] || []).filter(r => r.joiner_cog === user.cog);
+        return (
+          <div key={ev.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
+            {/* Header do evento */}
+            {ev.foto_url && (
+              <div style={{ width:"100%", aspectRatio:"3/4", maxHeight:420, overflow:"hidden" }}>
+                <img src={ev.foto_url} alt="foto" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              </div>
+            )}
+            <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:4 }}>{ev.nome}</div>
+              <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+                <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>R$ {Number(ev.valor).toFixed(2).replace(".",",")}</span>
+                {ev.prazo && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.35)" }}>prazo {ev.prazo}</span>}
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>
+                  claims a partir de {new Date(ev.abertura).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+                </span>
+              </div>
+            </div>
+
+            {/* Countdown + preview dos sets */}
+            {!aberto && (
+              <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+                <div style={{ padding:"18px 18px 12px", textAlign:"center" }}>
+                  <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:6 }}>ABRE EM</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36, color:"var(--offwhite)", letterSpacing:2 }}>{hh}:{mm}:{ss}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Membros + quantidade — sempre visível para preparar antes do horário */}
+            <div style={{ padding:"12px 18px 16px", display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ display:"flex", flexDirection:"column" }}>
+                {(ev.membros || SK8).map(membro => {
+                  const slotsAbertos = evSets.filter(s => s.status === "aberto");
+                  const meuNoSets = (sets[ev.id] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
+                  const meuStandby = (standby[ev.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
+                  const meuTotal = meuNoSets + meuStandby;
+                  const livres = slotsAbertos.filter(s => !(reservas[s.id]||[]).some(r=>r.membro===membro)).length;
+                  const limiteEfetivo = ev.limite_por_joiner || Math.max(slotsAbertos.length, 1);
+                  const qtdAtual = (quantidades[ev.id] || {})[membro] || 0;
+                  const atingiuLimite = aberto && meuTotal + qtdAtual >= limiteEfetivo;
+                  return (
+                    <div key={membro} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                      <span style={{ fontFamily:mono, fontSize:12, color: meuTotal>0?"var(--lilas)":"var(--offwhite)", flex:1 }}>
+                        {membro}
+                        {meuTotal > 0 && <span style={{ marginLeft:8, fontSize:9, color:"var(--lilas)" }}>✓ {meuTotal}x</span>}
+                      </span>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        {aberto && ev.limite_por_joiner && <span style={{ fontFamily:mono, fontSize:8, color: meuTotal>=ev.limite_por_joiner?"rgba(255,107,107,.5)":"rgba(245,240,232,.2)" }}>{meuTotal}/{ev.limite_por_joiner}</span>}
+                        {aberto && !ev.limite_por_joiner && livres > 0 && livres < slotsAbertos.length && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.2)" }}>{livres} livre{livres>1?"s":""}</span>}
+                        <button onClick={() => setQtd(ev.id, membro, qtdAtual - 1)} disabled={qtdAtual===0||enviando}
+                          style={{ width:28, height:28, borderRadius:6, border:"1px solid rgba(245,240,232,.12)", background:"rgba(245,240,232,.03)", color:qtdAtual===0?"rgba(245,240,232,.15)":"rgba(245,240,232,.6)", fontFamily:mono, fontSize:14, cursor:qtdAtual===0?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+                        <span style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", minWidth:16, textAlign:"center" }}>{qtdAtual}</span>
+                        <button onClick={() => setQtd(ev.id, membro, qtdAtual + 1)} disabled={enviando||atingiuLimite}
+                          style={{ width:28, height:28, borderRadius:6, border:`1px solid ${atingiuLimite?"rgba(255,107,107,.25)":qtdAtual>0?"rgba(186,255,57,.4)":"rgba(245,240,232,.12)"}`, background:atingiuLimite?"rgba(255,107,107,.06)":qtdAtual>0?"rgba(186,255,57,.1)":"rgba(245,240,232,.03)", color:atingiuLimite?"rgba(255,107,107,.4)":qtdAtual>0?"#BAFF39":"rgba(245,240,232,.4)", fontFamily:mono, fontSize:14, cursor:atingiuLimite?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {Object.values(quantidades[ev.id] || {}).some(q => q > 0) && (
+                <div style={{ display:"flex", gap:6 }}>
+                  {aberto ? (
+                    <button onClick={() => enviarClaims(ev.id)} disabled={enviando}
+                      style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, color:"#BAFF39", cursor:"pointer", letterSpacing:".5px" }}>
+                      {enviando ? "enviando..." : "Enviar claim"}
+                    </button>
+                  ) : (
+                    <div style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                      <span>🔒 abre em</span>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:2, color:"var(--offwhite)" }}>{hh}:{mm}:{ss}</span>
+                    </div>
+                  )}
+                  <button onClick={() => setQuantidades(prev => ({ ...prev, [ev.id]: {} }))}
+                    style={{ fontFamily:mono, fontSize:9, padding:"10px 12px", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", cursor:"pointer" }}>
+                    limpar
+                  </button>
+                </div>
+              )}
+
+              {sbEvento.length > 0 && (
+                <div style={{ background:"rgba(255,180,0,.04)", border:"1px solid rgba(255,180,0,.15)", borderRadius:10, padding:"10px 14px" }}>
+                  <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"#ffb400", marginBottom:6 }}>STANDBY — aguardando vaga</div>
+                  {sbEvento.map(r => (
+                    <div key={r.id} style={{ display:"flex", justifyContent:"space-between", padding:"3px 0", fontFamily:mono, fontSize:11 }}>
+                      <span style={{ color:"var(--offwhite)" }}>{r.membro}</span>
+                      <span style={{ color:"rgba(245,240,232,.3)", fontSize:9 }}>
+                        posição {(standby[ev.id]||[]).filter(s=>s.membro===r.membro).findIndex(s=>s.id===r.id)+1}ª na fila
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── ClaimPublicoPage antigo (masterlist-based) — mantido para compatibilidade ──
+function ClaimPublicoPageLegacy({ user }) {
   const mono = "'DM Mono',monospace";
   const [todosItens, setTodosItens] = useState(null);
   const [fotos, setFotos] = useState({});
@@ -13060,6 +13847,650 @@ function ClaimPublicoPage({ user }) {
   );
 }
 
+function CustomSelect({ value, onChange, options, placeholder, style }) {
+  const mono = "'DM Mono',monospace";
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    function outside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", outside);
+    return () => document.removeEventListener("mousedown", outside);
+  }, []);
+  const selected = options.find(o => o === value);
+  return (
+    <div ref={ref} style={{ position:"relative", ...style }}>
+      <button onClick={() => setOpen(p => !p)} style={{ width:"100%", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"6px 10px", color: value ? "var(--offwhite)" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:11, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:4 }}>
+        <span>{value || placeholder}</span>
+        <span style={{ fontSize:9, opacity:.5 }}>▾</span>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", top:"calc(100% + 3px)", left:0, zIndex:200, background:"#141414", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, overflow:"hidden", minWidth:"100%", maxHeight:200, overflowY:"auto", boxShadow:"0 8px 24px rgba(0,0,0,.5)" }}>
+          {options.map(o => (
+            <button key={o} onClick={() => { onChange(o); setOpen(false); }} style={{ display:"block", width:"100%", textAlign:"left", padding:"7px 12px", background: o === value ? "rgba(201,168,240,.15)" : "transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.04)", color: o === value ? "var(--lilas)" : "var(--offwhite)", fontFamily:mono, fontSize:11, cursor:"pointer" }}>
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LojinhaRepasses({ user }) {
+  const mono = "'DM Mono',monospace";
+  const [repasses, setRepasses] = useState(null);
+  const [minhosRepasses, setMinhosRepasses] = useState([]);
+  const [transferindo, setTransferindo] = useState(null);
+  const [reservandoId, setReservandoId] = useState(null);
+  const [joiners, setJoiners] = useState([]);
+  const [buscaJoiner, setBuscaJoiner] = useState("");
+  const [joinerSelecionado, setJoinerSelecionado] = useState(null);
+  const [transferindo2, setTransferindo2] = useState(false);
+  const [buscaItem, setBuscaItem] = useState("");
+  const [editandoId, setEditandoId] = useState(null);
+  const [editForm, setEditForm] = useState({ whatsapp:"", prazo:"", foto:null, fotoUrl:"" });
+  const [salvandoEdit, setSalvandoEdit] = useState(false);
+  const [showRegras, setShowRegras] = useState(false);
+  const [meusItens, setMeusItens] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [contatoId, setContatoId] = useState(null);
+  const [abaMinhaLojinha, setAbaMinhaLojinha] = useState(false);
+  const [form, setForm] = useState({
+    masterlistId: "", nomeCard: "", ceg: "",
+    valorItem: null, frete: null, taxaRf: null,
+    prazo: "", prazoProprio: false,
+    foto: null, fotoUrl: null, whatsapp: "",
+  });
+
+  useEffect(() => { carregarTudo(); }, []);
+
+  async function carregarTudo() {
+    const [{ data: pub }, { data: meus }, { data: itens }] = await Promise.all([
+      supabase.from("lojinha_repasses").select("*").eq("status", "disponivel").order("created_at", { ascending: false }),
+      user ? supabase.from("lojinha_repasses").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false }) : { data: [] },
+      user ? supabase.from("masterlist").select("id, nome_do_item, ceg, valor_item, frete_inter, taxa_rf, status, info_adicionais").eq("cog", user.cog).not("status", "in", '("Cancelado","Repassado")').order("ceg").order("nome_do_item") : { data: [] },
+    ]);
+    setRepasses(pub || []);
+    setMinhosRepasses(meus || []);
+    setMeusItens(itens || []);
+  }
+
+  function fmtR(v) { return v != null && Number(v) > 0 ? `R$${Number(v).toFixed(2).replace(".", ",")}` : null; }
+
+  function selecionarItem(item) {
+    const prazoAdmin = (item.info_adicionais || "").trim();
+    const temPrazo = prazoAdmin.length > 0;
+    setForm(p => ({
+      ...p,
+      masterlistId: item.id,
+      nomeCard: item.nome_do_item,
+      ceg: item.ceg,
+      valorItem: Number(item.valor_item) || null,
+      frete: Number(item.frete_inter) > 0 ? Number(item.frete_inter) : null,
+      taxaRf: Number(item.taxa_rf) > 0 ? Number(item.taxa_rf) : null,
+      prazo: prazoAdmin,
+      prazoProprio: !temPrazo,
+    }));
+  }
+
+  function totalForm() {
+    return ((form.valorItem || 0) + (form.frete || 0) + (form.taxaRf || 0));
+  }
+
+  function limparForm() {
+    setForm({ masterlistId: "", nomeCard: "", ceg: "", valorItem: null, frete: null, taxaRf: null, prazo: "", prazoProprio: false, foto: null, fotoUrl: null, whatsapp: user?.whatsapp || "" });
+  }
+
+  async function salvarRepasse() {
+    const valorFinal = totalForm();
+    if (!form.masterlistId || !form.nomeCard || !valorFinal || !form.whatsapp) return;
+    setSalvando(true);
+    let foto_url = null;
+    if (form.foto) {
+      const ext = form.foto.name.split(".").pop().toLowerCase();
+      const path = `lojinha/${user.cog}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, form.foto, { upsert: true });
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+        foto_url = publicUrl;
+      }
+    }
+    await supabase.from("lojinha_repasses").insert([{
+      joiner_cog: user.cog,
+      joiner_nome: user.nome_site || user.nome || user.cog,
+      masterlist_id: form.masterlistId || null,
+      nome_card: form.nomeCard,
+      ceg: form.ceg,
+      valor: valorFinal,
+      prazo: form.prazo || null,
+      foto_url,
+      whatsapp: form.whatsapp.replace(/\D/g, ""),
+      status: "disponivel",
+    }]);
+    setSalvando(false);
+    setShowForm(false);
+    limparForm();
+    carregarTudo();
+  }
+
+  async function mudarStatus(id, novoStatus) {
+    if (!window.confirm(`Marcar como "${novoStatus}"?`)) return;
+    await supabase.from("lojinha_repasses").update({ status: novoStatus }).eq("id", id);
+    carregarTudo();
+  }
+
+  async function abrirReserva(repasseId) {
+    setReservandoId(repasseId);
+    setTransferindo(null);
+    setBuscaJoiner(""); setJoinerSelecionado(null);
+    if (joiners.length === 0) {
+      const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
+      setJoiners(data || []);
+    }
+  }
+
+  async function confirmarReserva() {
+    if (!joinerSelecionado || !reservandoId) return;
+    await supabase.from("lojinha_repasses").update({ status: "reservado", reservado_para: joinerSelecionado.cog }).eq("id", reservandoId);
+    setReservandoId(null); setJoinerSelecionado(null); setBuscaJoiner("");
+    carregarTudo();
+  }
+
+  async function abrirTransferencia(repasse) {
+    setTransferindo({ repasseId: repasse.id, masterlistId: repasse.masterlist_id });
+    setBuscaJoiner(""); setJoinerSelecionado(null);
+    if (joiners.length === 0) {
+      const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
+      setJoiners(data || []);
+    }
+  }
+
+  async function confirmarTransferencia() {
+    if (!joinerSelecionado || !transferindo) return;
+    setTransferindo2(true);
+    if (transferindo.masterlistId) {
+      await supabase.from("masterlist").update({ cog: joinerSelecionado.cog }).eq("id", transferindo.masterlistId);
+    }
+    await supabase.from("lojinha_repasses").update({ status: "transferido" }).eq("id", transferindo.repasseId);
+    setTransferindo(null); setJoinerSelecionado(null); setBuscaJoiner("");
+    setTransferindo2(false);
+    carregarTudo();
+  }
+
+  function abrirEdicao(r) {
+    setEditandoId(r.id);
+    setEditForm({ whatsapp: r.whatsapp || "", prazo: r.prazo || "", foto: null, fotoUrl: r.foto_url || "" });
+    setReservandoId(null); setTransferindo(null);
+  }
+
+  async function salvarEdicao(repasseId) {
+    setSalvandoEdit(true);
+    let fotoUrl = editForm.fotoUrl;
+    if (editForm.foto) {
+      const ext = editForm.foto.name.split(".").pop();
+      const path = `lojinha/${user.cog}/${Date.now()}.${ext}`;
+      await supabase.storage.from("fotos-itens").upload(path, editForm.foto, { upsert: true });
+      const { data: pub } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+      fotoUrl = pub.publicUrl;
+    }
+    await supabase.from("lojinha_repasses").update({
+      whatsapp: editForm.whatsapp.replace(/\D/g, ""),
+      prazo: editForm.prazo,
+      foto_url: fotoUrl,
+    }).eq("id", repasseId);
+    setEditandoId(null);
+    setSalvandoEdit(false);
+    carregarTudo();
+  }
+
+  const corStatus = { disponivel: "#BAFF39", reservado: "#ffb400", vendido: "var(--lilas)", retirado: "rgba(245,240,232,.3)", transferido: "rgba(186,255,57,.4)" };
+
+  const inp = { width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"9px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, boxSizing:"border-box", outline:"none" };
+  const lbl = { fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", display:"block", marginBottom:5 };
+  const fieldWrap = { marginBottom:14 };
+
+  const totalCalculado = totalForm();
+  const itensFiltrados = buscaItem.trim()
+    ? meusItens.filter(i => i.nome_do_item.toLowerCase().includes(buscaItem.toLowerCase()) || (i.ceg||"").toLowerCase().includes(buscaItem.toLowerCase()))
+    : meusItens;
+
+  return (
+    <div>
+      {/* Regras */}
+      <div style={{ marginBottom:16 }}>
+        <button onClick={() => setShowRegras(p => !p)} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,180,0,.05)", border:"1px solid rgba(255,180,0,.15)", borderRadius:8, padding:"6px 14px", color:"rgba(255,180,0,.7)", fontFamily:mono, fontSize:9, cursor:"pointer", letterSpacing:"1.5px", width:"100%" }}>
+          <span>📋</span>
+          <span style={{ flex:1, textAlign:"left" }}>REGRAS DE POSTAGEM</span>
+          <span style={{ fontSize:8, opacity:.6 }}>{showRegras ? "▲ fechar" : "▼ ver"}</span>
+        </button>
+        {showRegras && (
+          <div style={{ background:"rgba(255,180,0,.03)", border:"1px solid rgba(255,180,0,.1)", borderTop:"none", borderRadius:"0 0 8px 8px", padding:"14px 16px", display:"flex", flexDirection:"column", gap:14 }}>
+            {[
+              {
+                titulo: "SOBRE O ITEM",
+                itens: [
+                  "Só podem ser repassados cards presentes na masterlist da comunidade.",
+                  "O preço deve ser exatamente o que foi pago — valor do item + frete + taxa RF, sem lucro.",
+                  "Foto do card é obrigatória para publicar.",
+                  "Após publicar, só é permitido editar: prazo (se o item já estiver quitado), telefone e foto.",
+                ],
+              },
+              {
+                titulo: "SOBRE CONTATO E RESERVA",
+                itens: [
+                  "WhatsApp deve estar cadastrado no seu perfil para anunciar.",
+                  "Ao receber interesse, responda em até 48h.",
+                  "Marcar como reservado é um compromisso — não reserve o mesmo item para mais de uma pessoa.",
+                ],
+              },
+              {
+                titulo: "SOBRE A VENDA",
+                itens: [
+                  "Ao marcar como vendido, a transferência na masterlist para o novo dono é obrigatória e irreversível.",
+                ],
+              },
+              {
+                titulo: "APROVAÇÃO",
+                itens: [
+                  "Itens de repasse passam por aprovação da GOM antes de ficarem visíveis.",
+                  "Em caso de erro, reporte imediatamente com prints.",
+                  "Caso haja o descumprimento de qualquer regra citada, o repasse pode ser negado.",
+                ],
+              },
+            ].map(({ titulo, itens }) => (
+              <div key={titulo}>
+                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,180,0,.5)", letterSpacing:"2px", marginBottom:6 }}>{titulo}</div>
+                {itens.map((item, i) => (
+                  <div key={i} style={{ display:"flex", gap:8, marginBottom:4 }}>
+                    <span style={{ color:"rgba(255,180,0,.4)", fontSize:9, flexShrink:0, marginTop:1 }}>·</span>
+                    <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", lineHeight:1.6 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Header */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
+        {user && (
+          <button onClick={() => { setAbaMinhaLojinha(p => !p); if (!abaMinhaLojinha) setShowForm(false); }} style={{ background: abaMinhaLojinha ? "rgba(201,168,240,.15)" : "rgba(245,240,232,.05)", border: abaMinhaLojinha ? "1px solid rgba(201,168,240,.3)" : "1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"5px 14px", color: abaMinhaLojinha ? "var(--lilas)" : "rgba(245,240,232,.5)", fontFamily:mono, fontSize:10, cursor:"pointer", letterSpacing:"1px" }}>
+            {abaMinhaLojinha ? "◱ VER TODOS" : "⬟ MINHA LOJINHA"}
+          </button>
+        )}
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px" }}>REPASSES DA COMUNIDADE</div>
+      </div>
+
+      {/* ──── MINHA LOJINHA ──── */}
+      {abaMinhaLojinha && user && (
+        <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+            <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", letterSpacing:"1.5px" }}>MINHA LOJINHA</div>
+            <button
+              onClick={() => { if (!user.whatsapp && !showForm) return; setShowForm(p => !p); if (!showForm) setForm(p => ({ ...p, whatsapp: p.whatsapp || user.whatsapp || "" })); else limparForm(); }}
+              disabled={!user.whatsapp && !showForm}
+              style={{ background: showForm ? "rgba(255,107,107,.08)" : !user.whatsapp ? "rgba(245,240,232,.03)" : "rgba(186,255,57,.1)", border: showForm ? "1px solid rgba(255,107,107,.2)" : !user.whatsapp ? "1px solid rgba(245,240,232,.08)" : "1px solid rgba(186,255,57,.25)", borderRadius:8, padding:"5px 14px", color: showForm ? "rgba(255,107,107,.8)" : !user.whatsapp ? "rgba(245,240,232,.2)" : "var(--verde)", fontFamily:mono, fontSize:10, cursor: !user.whatsapp && !showForm ? "not-allowed" : "pointer", letterSpacing:"1px" }}>
+              {showForm ? "✕ cancelar" : "+ ADICIONAR CARD"}
+            </button>
+          </div>
+
+          {/* Aviso WhatsApp não cadastrado */}
+          {!user.whatsapp && (
+            <div style={{ background:"rgba(255,180,0,.06)", border:"1px solid rgba(255,180,0,.2)", borderRadius:8, padding:"10px 14px", marginBottom:14, fontFamily:mono, fontSize:10, color:"rgba(255,180,0,.8)", lineHeight:1.6 }}>
+              ⚠ Você não tem WhatsApp cadastrado no seu perfil.<br />
+              <span style={{ fontSize:9, color:"rgba(255,180,0,.5)" }}>Vá em Perfil → Editar dados e adicione seu número para publicar repasses.</span>
+            </div>
+          )}
+
+          {/* ── Formulário ── */}
+          {showForm && (() => {
+            const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+            const anoAtual = new Date().getFullYear();
+            const anos = [anoAtual, anoAtual + 1, anoAtual + 2];
+            const dias = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
+            const partes = (form.prazo || "").split(" ");
+            const dia = partes[0] || ""; const mes = partes[1] || ""; const ano = partes[2] || "";
+            const setPrazo = (d, m, a) => setForm(p => ({ ...p, prazo: [d, m, a].filter(Boolean).join(" ") }));
+            const sel = {}; // unused, kept for reference
+            const roBox = { fontFamily:mono, fontSize:11, padding:"7px 10px", borderRadius:7, background:"rgba(245,240,232,.03)", color:"rgba(245,240,232,.45)", border:"1px solid rgba(245,240,232,.07)" };
+            const fldLbl = { fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)", display:"block", marginBottom:4 };
+            return (
+            <div style={{ border:"1px solid rgba(201,168,240,.15)", borderRadius:10, marginBottom:20, maxWidth:520, margin:"0 auto 20px" }}>
+              {/* Cabeçalho */}
+              <div style={{ padding:"8px 14px", borderBottom:"1px solid rgba(201,168,240,.08)", background:"rgba(201,168,240,.04)", borderRadius:"10px 10px 0 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.5)", letterSpacing:"2px" }}>NOVO REPASSE</span>
+                {form.masterlistId && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.5)" }}>✓ {form.ceg} · {form.nomeCard}</span>}
+              </div>
+
+              <div style={{ padding:"12px 14px" }}>
+                {/* Lista da masterlist */}
+                <div style={{ marginBottom: form.masterlistId ? 12 : 0 }}>
+                  <span style={fldLbl}>SELECIONAR DA MINHA LISTA *</span>
+                  {meusItens.length === 0 ? (
+                    <div style={{ padding:"14px 0", textAlign:"center", fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)", lineHeight:1.7 }}>
+                      Sem itens na masterlist — só cards da comunidade podem ser repassados.
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:"7px 7px 0 0", padding:"6px 10px" }}>
+                        <span style={{ fontSize:11, opacity:.4 }}>🔍</span>
+                        <input
+                          style={{ flex:1, background:"none", border:"none", outline:"none", color:"var(--offwhite)", fontFamily:mono, fontSize:11 }}
+                          placeholder="buscar pelo nome..."
+                          value={buscaItem}
+                          onChange={e => setBuscaItem(e.target.value)}
+                        />
+                        {buscaItem && <button onClick={() => setBuscaItem("")} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:12, lineHeight:1 }}>✕</button>}
+                      </div>
+                      <div style={{ maxHeight: form.masterlistId ? 110 : 200, overflowY:"auto", borderRadius:"0 0 7px 7px", border:"1px solid rgba(245,240,232,.07)", borderTop:"none" }}>
+                        {itensFiltrados.length === 0 ? (
+                          <div style={{ padding:"12px", textAlign:"center", fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)" }}>nenhum item encontrado</div>
+                        ) : itensFiltrados.map(item => (
+                          <button key={item.id} onClick={() => selecionarItem(item)} style={{ display:"flex", width:"100%", textAlign:"left", alignItems:"center", gap:8, background: form.masterlistId === item.id ? "rgba(201,168,240,.12)" : "transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.04)", padding:"7px 10px", cursor:"pointer" }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"rgba(201,168,240,.5)", letterSpacing:"1px", flexShrink:0 }}>{item.ceg}</span>
+                            <span style={{ fontFamily:mono, fontSize:10, color: form.masterlistId === item.id ? "var(--lilas)" : "rgba(245,240,232,.65)", flex:1 }}>{item.nome_do_item}</span>
+                            {form.masterlistId === item.id && <span style={{ color:"var(--lilas)", fontSize:10, flexShrink:0 }}>✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Campos — só aparecem após selecionar */}
+                {form.masterlistId && (<>
+                  {/* Composição de valores */}
+                  <div style={{ marginBottom:10 }}>
+                    <span style={fldLbl}>COMPOSIÇÃO DO VALOR</span>
+                    <div style={{ borderRadius:7, overflow:"hidden", border:"1px solid rgba(245,240,232,.07)" }}>
+                      {[["Valor do item", form.valorItem], ["Frete internacional", form.frete], ["Taxa RF / imposto", form.taxaRf]].map(([nome, val]) => (
+                        <div key={nome} style={{ display:"flex", justifyContent:"space-between", padding:"6px 10px", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                          <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{nome}</span>
+                          <span style={{ fontFamily:mono, fontSize:10, color: val == null ? "rgba(245,240,232,.18)" : "rgba(245,240,232,.7)", fontStyle: val == null ? "italic" : "normal" }}>
+                            {val != null ? fmtR(val) : "não disponível"}
+                          </span>
+                        </div>
+                      ))}
+                      <div style={{ display:"flex", justifyContent:"space-between", padding:"7px 10px", background:"rgba(255,92,26,.06)" }}>
+                        <span style={{ fontFamily:mono, fontSize:10, fontWeight:700, color:"rgba(245,240,232,.5)" }}>TOTAL</span>
+                        <span style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--laranja)" }}>
+                          {totalCalculado > 0 ? `R$${totalCalculado.toFixed(2).replace(".", ",")}` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                    {(form.frete == null || form.taxaRf == null) && (
+                      <div style={{ fontFamily:mono, fontSize:8, color:"rgba(255,180,0,.4)", marginTop:4 }}>⚠ valores não lançados serão somados quando disponíveis</div>
+                    )}
+                  </div>
+
+                  {/* Prazo + WhatsApp lado a lado */}
+                  <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                    <div style={{ flex:1 }}>
+                      <span style={fldLbl}>PRAZO {form.prazoProprio ? "— você define" : "— pela admin"}</span>
+                      {form.prazoProprio ? (
+                        <div style={{ display:"flex", gap:4 }}>
+                          <CustomSelect value={dia} onChange={d => setPrazo(d, mes, "")} options={dias} placeholder="dia" style={{ flex:"0 0 80px" }} />
+                          <CustomSelect value={mes} onChange={m => setPrazo(dia, m, "")} options={meses} placeholder="mês" style={{ flex:"0 0 130px" }} />
+                        </div>
+                      ) : (
+                        <div style={roBox}>{form.prazo || "—"}</div>
+                      )}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <span style={fldLbl}>SEU WHATSAPP *</span>
+                      <input style={{ ...inp, marginBottom:0, fontSize:11, padding:"6px 10px" }} placeholder="24 99999-9999 ou 5524..." value={form.whatsapp} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} />
+                    </div>
+                  </div>
+
+                  {/* Foto */}
+                  <div style={{ marginBottom:10 }}>
+                    <span style={fldLbl}>FOTO DO CARD *</span>
+                    <input type="file" accept="image/*" style={{ display:"none" }} id="foto-repasse" onChange={e => { const f = e.target.files[0]; if (f) setForm(p => ({ ...p, foto: f, fotoUrl: URL.createObjectURL(f) })); }} />
+                    <label htmlFor="foto-repasse" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, border:`1px dashed ${form.fotoUrl ? "rgba(186,255,57,.2)" : "rgba(245,240,232,.1)"}`, borderRadius:7, padding:"8px", cursor:"pointer", color:"rgba(245,240,232,.25)", fontFamily:mono, fontSize:10, minHeight:44 }}>
+                      {form.fotoUrl ? <img src={form.fotoUrl} alt="preview" style={{ maxHeight:70, borderRadius:5, objectFit:"cover" }} /> : <><span>📷</span> clique para adicionar foto</>}
+                    </label>
+                  </div>
+
+                  <button onClick={salvarRepasse} disabled={salvando || !form.whatsapp || !form.foto || totalCalculado <= 0}
+                    style={{ width:"100%", background: salvando ? "rgba(255,92,26,.4)" : "var(--laranja)", border:"none", borderRadius:8, padding:"9px 0", color:"#111", fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", cursor: salvando ? "wait" : "pointer" }}>
+                    {salvando ? "publicando..." : "PUBLICAR REPASSE →"}
+                  </button>
+                </>)}
+              </div>
+            </div>
+            );
+          })()}
+
+          {/* Lista dos meus repasses */}
+          {minhosRepasses.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.2)", fontFamily:mono, fontSize:11 }}>Nenhum repasse publicado ainda.</div>
+          ) : minhosRepasses.map(r => (
+            <div key={r.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 14px", marginBottom:8, display:"flex", gap:12, alignItems:"flex-start" }}>
+              {r.foto_url && <img src={r.foto_url} alt={r.nome_card} style={{ width:52, height:66, objectFit:"cover", borderRadius:6, flexShrink:0 }} />}
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:6, marginBottom:5 }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"var(--lilas)", letterSpacing:"1px" }}>{r.ceg}</div>
+                  <span style={{ fontSize:9, fontFamily:mono, color: corStatus[r.status] || "rgba(245,240,232,.3)", letterSpacing:"1px" }}>● {r.status}</span>
+                </div>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:5, lineHeight:1.3 }}>{r.nome_card}</div>
+                <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                  <span style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700 }}>R${Number(r.valor).toFixed(2).replace(".", ",")}</span>
+                  {r.prazo && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>{r.prazo}</span>}
+                </div>
+                <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+                  {r.status === "disponivel" && <button onClick={() => abrirReserva(r.id)} style={{ fontSize:9, fontFamily:mono, background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:6, padding:"4px 10px", color:"#ffb400", cursor:"pointer" }}>marcar reservado</button>}
+                  {r.status === "reservado" && <button onClick={() => abrirReserva(r.id)} style={{ fontSize:9, fontFamily:mono, background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:6, padding:"4px 10px", color:"#ffb400", cursor:"pointer" }}>{r.reservado_para ? "editar reserva" : "definir para quem"}</button>}
+                  {r.status === "reservado" && <button onClick={() => mudarStatus(r.id, "disponivel")} style={{ fontSize:9, fontFamily:mono, background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.15)", borderRadius:6, padding:"4px 10px", color:"var(--verde)", cursor:"pointer" }}>recolocar</button>}
+                  {(r.status === "reservado" || r.status === "disponivel") && <button onClick={() => mudarStatus(r.id, "vendido")} style={{ fontSize:9, fontFamily:mono, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.18)", borderRadius:6, padding:"4px 10px", color:"var(--lilas)", cursor:"pointer" }}>marcar vendido</button>}
+                  {r.status === "vendido" && <button onClick={() => abrirTransferencia(r)} style={{ fontSize:9, fontFamily:mono, background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"4px 10px", color:"var(--verde)", cursor:"pointer", fontWeight:700 }}>transferir para dono →</button>}
+                  {r.status !== "retirado" && r.status !== "transferido" && <button onClick={() => mudarStatus(r.id, "retirado")} style={{ fontSize:9, fontFamily:mono, background:"transparent", border:"1px solid rgba(245,240,232,.08)", borderRadius:6, padding:"4px 10px", color:"rgba(245,240,232,.2)", cursor:"pointer" }}>retirar anúncio</button>}
+                  <button onClick={() => editandoId === r.id ? setEditandoId(null) : abrirEdicao(r)} style={{ fontSize:9, fontFamily:mono, background:"transparent", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"4px 10px", color:"rgba(245,240,232,.35)", cursor:"pointer" }}>{editandoId === r.id ? "fechar edição" : "✏ editar"}</button>
+                </div>
+
+                {/* Quem está reservado */}
+                {r.status === "reservado" && r.reservado_para && (
+                  <div style={{ marginTop:6, fontFamily:mono, fontSize:9, color:"rgba(255,180,0,.6)" }}>
+                    reservado para <span style={{ color:"#ffb400", fontWeight:700 }}>@{r.reservado_para}</span>
+                  </div>
+                )}
+
+                {/* Painel de reserva */}
+                {reservandoId === r.id && (
+                  <div style={{ marginTop:10, background:"rgba(255,180,0,.04)", border:"1px solid rgba(255,180,0,.18)", borderRadius:8, padding:"12px" }}>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(255,180,0,.6)", letterSpacing:"1.5px", marginBottom:8 }}>RESERVADO PARA</div>
+                    <input
+                      style={{ width:"100%", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"7px 10px", color:"var(--offwhite)", fontFamily:mono, fontSize:11, boxSizing:"border-box", outline:"none", marginBottom:6 }}
+                      placeholder="buscar joiner por nome ou @"
+                      value={buscaJoiner}
+                      onChange={e => { setBuscaJoiner(e.target.value); setJoinerSelecionado(null); }}
+                    />
+                    {buscaJoiner.length >= 2 && (
+                      <div style={{ maxHeight:120, overflowY:"auto", border:"1px solid rgba(245,240,232,.07)", borderRadius:7, marginBottom:8 }}>
+                        {joiners.filter(j => {
+                          const q = buscaJoiner.toLowerCase();
+                          return (j.nome||"").toLowerCase().includes(q) || (j.cog||"").toLowerCase().includes(q) || (j.twitter||"").toLowerCase().includes(q);
+                        }).slice(0, 10).map(j => (
+                          <button key={j.cog} onClick={() => { setJoinerSelecionado(j); setBuscaJoiner(j.nome || j.cog); }}
+                            style={{ display:"flex", width:"100%", textAlign:"left", alignItems:"center", gap:8, background: joinerSelecionado?.cog === j.cog ? "rgba(255,180,0,.12)" : "transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.04)", padding:"7px 10px", cursor:"pointer" }}>
+                            <span style={{ fontFamily:mono, fontSize:10, color: joinerSelecionado?.cog === j.cog ? "#ffb400" : "rgba(245,240,232,.7)" }}>{j.nome || j.cog}</span>
+                            <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>{j.twitter || `@${j.cog}`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {joinerSelecionado && (
+                      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(255,180,0,.7)", marginBottom:8 }}>
+                        ✓ reservado para <strong>@{joinerSelecionado.cog}</strong>
+                      </div>
+                    )}
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={confirmarReserva} disabled={!joinerSelecionado}
+                        style={{ flex:1, background: joinerSelecionado ? "rgba(255,180,0,.12)" : "rgba(245,240,232,.04)", border:`1px solid ${joinerSelecionado ? "rgba(255,180,0,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:7, padding:"7px 0", color: joinerSelecionado ? "#ffb400" : "rgba(245,240,232,.2)", fontFamily:mono, fontSize:10, cursor: joinerSelecionado ? "pointer" : "default", fontWeight:700 }}>
+                        CONFIRMAR RESERVA
+                      </button>
+                      <button onClick={() => { setReservandoId(null); setJoinerSelecionado(null); setBuscaJoiner(""); }}
+                        style={{ background:"transparent", border:"1px solid rgba(245,240,232,.08)", borderRadius:7, padding:"7px 12px", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
+                        cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Modal inline de transferência */}
+                {transferindo?.repasseId === r.id && (
+                  <div style={{ marginTop:10, background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:8, padding:"12px" }}>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.6)", letterSpacing:"1.5px", marginBottom:8 }}>TRANSFERIR PARA</div>
+                    <input
+                      style={{ width:"100%", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"7px 10px", color:"var(--offwhite)", fontFamily:mono, fontSize:11, boxSizing:"border-box", outline:"none", marginBottom:6 }}
+                      placeholder="buscar joiner por nome ou @"
+                      value={buscaJoiner}
+                      onChange={e => { setBuscaJoiner(e.target.value); setJoinerSelecionado(null); }}
+                    />
+                    {buscaJoiner.length >= 2 && (
+                      <div style={{ maxHeight:120, overflowY:"auto", border:"1px solid rgba(245,240,232,.07)", borderRadius:7, marginBottom:8 }}>
+                        {joiners.filter(j => {
+                          const q = buscaJoiner.toLowerCase();
+                          return (j.nome||"").toLowerCase().includes(q) || (j.cog||"").toLowerCase().includes(q) || (j.twitter||"").toLowerCase().includes(q);
+                        }).slice(0, 10).map(j => (
+                          <button key={j.cog} onClick={() => { setJoinerSelecionado(j); setBuscaJoiner(j.nome || j.cog); }}
+                            style={{ display:"flex", width:"100%", textAlign:"left", alignItems:"center", gap:8, background: joinerSelecionado?.cog === j.cog ? "rgba(186,255,57,.12)" : "transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.04)", padding:"7px 10px", cursor:"pointer" }}>
+                            <span style={{ fontFamily:mono, fontSize:10, color: joinerSelecionado?.cog === j.cog ? "var(--verde)" : "rgba(245,240,232,.7)" }}>{j.nome || j.cog}</span>
+                            <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>{j.twitter || `@${j.cog}`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {joinerSelecionado && (
+                      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.7)", marginBottom:8 }}>
+                        ✓ transferindo para <strong>{joinerSelecionado.nome || joinerSelecionado.cog}</strong>
+                        {transferindo.masterlistId && <span style={{ color:"rgba(245,240,232,.35)", marginLeft:6 }}>— card será movido na masterlist</span>}
+                      </div>
+                    )}
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={confirmarTransferencia} disabled={!joinerSelecionado || transferindo2}
+                        style={{ flex:1, background: joinerSelecionado ? "rgba(186,255,57,.15)" : "rgba(245,240,232,.04)", border:`1px solid ${joinerSelecionado ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.08)"}`, borderRadius:7, padding:"7px 0", color: joinerSelecionado ? "var(--verde)" : "rgba(245,240,232,.2)", fontFamily:mono, fontSize:10, cursor: joinerSelecionado ? "pointer" : "default", fontWeight:700 }}>
+                        {transferindo2 ? "transferindo..." : "CONFIRMAR TRANSFERÊNCIA"}
+                      </button>
+                      <button onClick={() => { setTransferindo(null); setJoinerSelecionado(null); setBuscaJoiner(""); }}
+                        style={{ background:"transparent", border:"1px solid rgba(245,240,232,.08)", borderRadius:7, padding:"7px 12px", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
+                        cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Painel de edição */}
+                {editandoId === r.id && (
+                  <div style={{ marginTop:10, background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"12px" }}>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px", marginBottom:10 }}>EDITAR POSTAGEM</div>
+
+                    {/* Foto */}
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:5 }}>FOTO</div>
+                      {editForm.fotoUrl && !editForm.foto && (
+                        <img src={editForm.fotoUrl} alt="" style={{ width:60, height:76, objectFit:"cover", borderRadius:6, marginBottom:6, display:"block" }} />
+                      )}
+                      {editForm.foto && (
+                        <img src={URL.createObjectURL(editForm.foto)} alt="" style={{ width:60, height:76, objectFit:"cover", borderRadius:6, marginBottom:6, display:"block" }} />
+                      )}
+                      <label style={{ display:"inline-block", padding:"5px 12px", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.5)", cursor:"pointer" }}>
+                        {editForm.foto ? "trocar foto" : "alterar foto"}
+                        <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => { if (e.target.files[0]) setEditForm(p => ({ ...p, foto: e.target.files[0] })); }} />
+                      </label>
+                    </div>
+
+                    {/* WhatsApp */}
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:5 }}>WHATSAPP</div>
+                      <input
+                        style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"7px 10px", color:"var(--offwhite)", fontFamily:mono, fontSize:11, boxSizing:"border-box", outline:"none" }}
+                        placeholder="(XX) XXXXX-XXXX"
+                        value={editForm.whatsapp}
+                        onChange={e => setEditForm(p => ({ ...p, whatsapp: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Prazo */}
+                    <div style={{ marginBottom:12 }}>
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:5 }}>PRAZO</div>
+                      <input
+                        style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, padding:"7px 10px", color:"var(--offwhite)", fontFamily:mono, fontSize:11, boxSizing:"border-box", outline:"none" }}
+                        placeholder="ex: 10 de março"
+                        value={editForm.prazo}
+                        onChange={e => setEditForm(p => ({ ...p, prazo: e.target.value }))}
+                      />
+                    </div>
+
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={() => salvarEdicao(r.id)} disabled={salvandoEdit}
+                        style={{ flex:1, background:"rgba(245,240,232,.08)", border:"1px solid rgba(245,240,232,.18)", borderRadius:7, padding:"7px 0", color:"var(--offwhite)", fontFamily:mono, fontSize:10, cursor: salvandoEdit ? "wait" : "pointer", fontWeight:700 }}>
+                        {salvandoEdit ? "salvando..." : "SALVAR ALTERAÇÕES"}
+                      </button>
+                      <button onClick={() => setEditandoId(null)}
+                        style={{ background:"transparent", border:"1px solid rgba(245,240,232,.08)", borderRadius:7, padding:"7px 12px", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>
+                        cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ──── LISTAGEM PÚBLICA ──── */}
+      {!abaMinhaLojinha && (
+        <div>
+          {repasses === null ? (
+            <div style={{ textAlign:"center", padding:"48px 0", color:"rgba(245,240,232,.2)", fontFamily:mono, fontSize:11 }}>carregando...</div>
+          ) : repasses.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"48px 0" }}>
+              <div style={{ fontSize:32, marginBottom:10, opacity:.3 }}>⇄</div>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum repasse disponível no momento.</div>
+              {user && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(201,168,240,.35)", marginTop:8 }}>Abra "Minha Lojinha" para publicar o seu.</div>}
+            </div>
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
+              {repasses.map(r => (
+                <div key={r.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, overflow:"hidden", display:"flex", flexDirection:"column" }}>
+                  {r.foto_url
+                    ? <img src={r.foto_url} alt={r.nome_card} style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
+                    : <div style={{ width:"100%", height:72, background:"rgba(245,240,232,.02)", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(245,240,232,.08)", fontSize:28 }}>◱</div>}
+                  <div style={{ padding:"12px 14px", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"var(--lilas)", letterSpacing:"1px" }}>{r.ceg}</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3, flex:1 }}>{r.nome_card}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginTop:6 }}>
+                      <span style={{ fontFamily:mono, fontSize:15, color:"var(--laranja)", fontWeight:700 }}>R${Number(r.valor).toFixed(2).replace(".", ",")}</span>
+                      {r.prazo && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.28)" }}>{r.prazo}</span>}
+                    </div>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:8 }}>por <span style={{ color:"rgba(245,240,232,.55)" }}>@{r.joiner_cog}</span></div>
+                    {contatoId === r.id ? (
+                      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"10px 12px" }}>
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.55)", marginBottom:6, letterSpacing:"1px" }}>CONTATO DA VENDEDORA</div>
+                        <a href={`https://wa.me/${(r.whatsapp||"").replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:12, color:"var(--verde)", fontWeight:700, textDecoration:"none", display:"block", marginBottom:8 }}>
+                          💬 Abrir WhatsApp →
+                        </a>
+                        <button onClick={() => setContatoId(null)} style={{ background:"none", border:"none", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", cursor:"pointer" }}>fechar</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setContatoId(r.id)} style={{ width:"100%", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"9px", color:"var(--verde)", fontFamily:mono, fontSize:10, cursor:"pointer", fontWeight:700, letterSpacing:"1px" }}>
+                        TENHO INTERESSE →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DisponiveisTab({ user }) {
   const [itens, setItens] = useState(null);
   const [fotos, setFotos] = useState({});
@@ -13217,16 +14648,17 @@ function DisponiveisTab({ user }) {
   return (
     <div className="main" style={{ paddingBottom: 100 }}>
       <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>Disponíveis</h2>
+        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>Lojinha</h2>
         <div style={{ fontSize:11, color:"rgba(245,240,232,.38)", fontFamily:"'DM Mono',monospace" }}>
-          Itens disponíveis para claim — transferidos direto para sua lista
+          Itens extras de sets fechados, tem de tudo!
         </div>
       </div>
 
       {/* sub-tabs */}
       <div style={{ display:"flex", gap:4, marginBottom:20, borderBottom:"1px solid rgba(245,240,232,.07)", paddingBottom:12 }}>
         {[
-          { id:"loja",      label:"◱ Disponíveis" },
+          { id:"loja",      label:"◱ ANTICEG" },
+          { id:"repasses",  label:"⇄ ANTIJOINERS" },
           { id:"historico", label:"◎ Histórico", count: claimsHistorico.length },
         ].map(({ id, label, count }) => (
           <button key={id} onClick={() => setSubTab(id)} style={{
@@ -13241,6 +14673,10 @@ function DisponiveisTab({ user }) {
           </button>
         ))}
       </div>
+
+      {subTab === "repasses" && (
+        <LojinhaRepasses user={user} />
+      )}
 
       {subTab === "historico" && (
         <div>
@@ -16695,11 +18131,13 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 }
 
 function BottomNav({ tab, setTab, isGuest, isAdmin }) {
+  const isClaimPage = window.location.pathname === "/claim";
   const items = [
     { id:"masterlist",  icon:"☰",  label:"Lista" },
     { id:"cegs",        icon:"◈",  label:"CEGs" },
     { id:"calendario",  icon:"◫",  label:"Datas" },
     { id:"prevenda",    icon:"✦",  label:"Pré-vendas" },
+    { id:"claim",       icon:"◉",  label:"Claims" },
     ...(!isGuest ? [{ id:"perfil",      icon:"○",  label:"Perfil" }] : []),
     ...(!isGuest ? [{ id:"envio",       icon:"▢",  label:"Envio" }] : []),
     ...(!isGuest ? [{ id:"disponiveis", icon:"◱",  label:"Loja" }] : []),
@@ -16710,12 +18148,18 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
   return (
     <div className="bottom-nav-wrap">
       <nav className="bottom-nav">
-        {items.map(item => (
-          <button key={item.id} className={`bottom-nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>
-            <span className="bottom-nav-icon">{item.icon}</span>
-            <span className="bottom-nav-label">{item.label}</span>
-          </button>
-        ))}
+        {items.map(item => {
+          const active = item.id === "claim" ? isClaimPage : (tab === item.id && !isClaimPage);
+          const handleClick = item.id === "claim"
+            ? () => { window.location.href = "/claim"; }
+            : () => setTab(item.id);
+          return (
+            <button key={item.id} className={`bottom-nav-btn ${active ? "active" : ""}`} onClick={handleClick}>
+              <span className="bottom-nav-icon">{item.icon}</span>
+              <span className="bottom-nav-label">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
       <div className="bottom-nav-fade-right" />
     </div>
@@ -16969,6 +18413,14 @@ function PopupSkzooEaawPage() {
   const [etapa, setEtapa] = useState("loja");
   const [pagamento, setPagamento] = useState(null);
   const [envio, setEnvio] = useState(null);
+  const [cog, setCog] = useState(() => {
+    try { const u = JSON.parse(localStorage.getItem("anticeg_user_v2")); return u?.cog || ""; } catch { return ""; }
+  });
+  const [nomeJoiner, setNomeJoiner] = useState(() => {
+    try { const u = JSON.parse(localStorage.getItem("anticeg_user_v2")); return u?.nome_site || u?.nome || ""; } catch { return ""; }
+  });
+  const [enviando, setEnviando] = useState(false);
+  const [pedidoId, setPedidoId] = useState(null);
 
   const SKZOOS = ["Wolf Chan","Leebit","Dwaekki","Jiniret","Han Quokka","BbokAri","PuppyM","FoxI.Ny"];
 
@@ -16978,28 +18430,28 @@ function PopupSkzooEaawPage() {
   }
 
   const itens = [
-    { n:"01", nome:"Official Light Stick Ver.2" },
-    { n:"02", nome:"SKZOO Face Shoulder Bag", skzoo:true },
-    { n:"03", nome:"Evil SKZOO Acrylic Keyring", skzoo:true },
-    { n:"04", nome:"SKZOO Plush Collect Book", skzoo:true },
-    { n:"05", nome:"SKZOO Strap Plush", skzoo:true },
-    { n:"06", nome:"SKZOO Reel Face Set", skzoo:true },
-    { n:"07", nome:"SKZOO Secret Keyring Toy Ver." },
-    { n:"08", nome:"SKZOO Keyring LATAM Ver.", tag:"Exclusivo Online", skzoo:true },
+    { n:"01", nome:"Official Light Stick Ver.2",               preco:"R$604" },
+    { n:"02", nome:"SKZOO Face Shoulder Bag",       skzoo:true, preco:"R$585" },
+    { n:"03", nome:"Evil SKZOO Acrylic Keyring",    skzoo:true, preco:"R$113" },
+    { n:"04", nome:"SKZOO Plush Collect Book",      skzoo:true, preco:"R$299" },
+    { n:"05", nome:"SKZOO Strap Plush",             skzoo:true, preco:"R$294" },
+    { n:"06", nome:"SKZOO Reel Face Set",           skzoo:true, preco:"R$294" },
+    { n:"07", nome:"SKZOO Secret Keyring Toy Ver.",             preco:"R$303" },
+    { n:"08", nome:"SKZOO Keyring LATAM Ver.",      tag:"Exclusivo Online", skzoo:true },
     { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Exclusivo Online" },
-    { n:"10", nome:"SKZOO City Mug LATAM Ver." },
-    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver." },
-    { n:"12", nome:"SKZOO Index Note LATAM Ver." },
-    { n:"13", nome:"Metal Badge LATAM Ver." },
-    { n:"14", nome:"Racing Jacket LATAM Ver." },
-    { n:"15", nome:"T-Shirt LATAM Ver." },
-    { n:"16", nome:"Baseball Jersey LATAM Ver." },
-    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true },
-    { n:"18", nome:"SKZOO Travel Pouch" },
-    { n:"19", nome:"SKZOO Mouse Pad" },
-    { n:"20", nome:"SKZOO Luggage Strap" },
-    { n:"21", nome:"Ball Cap" },
-    { n:"22", nome:"SKZOO Mini Lightbox" },
+    { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$87", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$153", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$173" },
+    { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$27"  },
+    { n:"14", nome:"Racing Jacket LATAM Ver.",                  preco:"R$755" },
+    { n:"15", nome:"T-Shirt LATAM Ver.",                        preco:"R$224" },
+    { n:"16", nome:"Baseball Jersey LATAM Ver.",                preco:"R$605" },
+    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"18", nome:"SKZOO Travel Pouch",                        preco:"R$92", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"19", nome:"SKZOO Mouse Pad",                           preco:"R$57", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"20", nome:"SKZOO Luggage Strap",                       preco:"R$62"  },
+    { n:"21", nome:"Ball Cap",                                  preco:"R$183", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"22", nome:"SKZOO Mini Lightbox",                       preco:"R$153" },
   ];
 
   const ETAPAS = [
@@ -17011,24 +18463,58 @@ function PopupSkzooEaawPage() {
 
   const itensSelecionados = itens.filter(item => {
     if (item.skzoo) return SKZOOS.some(sk => (qtds[`${item.n}:${sk}`] || 0) > 0);
-    return false;
+    return (qtds[`${item.n}:_`] || 0) > 0;
   });
+
+  async function enviarPedido() {
+    if (!cog.trim() || !nomeJoiner.trim()) return;
+    setEnviando(true);
+    const itensPedido = itens.flatMap(item => {
+      if (item.skzoo) {
+        return SKZOOS.filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0).map(sk => ({
+          n: item.n, nome: item.nome, skzoo: sk, qtd: qtds[`${item.n}:${sk}`],
+        }));
+      }
+      const qtd = qtds[`${item.n}:_`] || 0;
+      return qtd > 0 ? [{ n: item.n, nome: item.nome, qtd }] : [];
+    });
+    const { data, error } = await supabase.from("pedidos_skzoo_rio").insert([{
+      cog: cog.trim().replace(/^@/, ""),
+      nome: nomeJoiner.trim(),
+      itens: itensPedido,
+      envio,
+      pagamento,
+      total_reais: totalReais,
+      status: "pendente",
+    }]).select().single();
+    setEnviando(false);
+    if (!error && data) { setPedidoId(data.id); setEtapa("sucesso"); }
+  }
 
   const tagStyle = (tag) => ({
     display:"inline-block", marginTop:4, fontFamily:mono, fontSize:8, padding:"2px 6px", borderRadius:4,
-    background: tag === "Free" ? "rgba(186,255,57,.1)" : "rgba(201,168,240,.1)",
-    color: tag === "Free" ? "var(--verde)" : "var(--lilas)",
-    border: `1px solid ${tag === "Free" ? "rgba(186,255,57,.25)" : "rgba(201,168,240,.25)"}`,
+    background: tag === "Free" ? "rgba(186,255,57,.1)" : tag === "TEMPORARIAMENTE ESGOTADO" ? "rgba(255,92,26,.1)" : "rgba(201,168,240,.1)",
+    color: tag === "Free" ? "var(--verde)" : tag === "TEMPORARIAMENTE ESGOTADO" ? "var(--laranja)" : "var(--lilas)",
+    border: `1px solid ${tag === "Free" ? "rgba(186,255,57,.25)" : tag === "TEMPORARIAMENTE ESGOTADO" ? "rgba(255,92,26,.3)" : "rgba(201,168,240,.25)"}`,
     letterSpacing:"0.5px",
   });
 
-  const btnProximo = (proxima) => (
-    <div style={{ marginTop:32, display:"flex", justifyContent:"flex-end" }}>
-      <button onClick={() => setEtapa(proxima)} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>
-        PRÓXIMA ETAPA →
-      </button>
-    </div>
-  );
+  const totalReais = itensSelecionados.reduce((acc, item) => {
+    const preco = item.preco ? Number(item.preco.replace("R$","").replace(",",".")) : 0;
+    const qtdTotal = item.skzoo
+      ? SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0)
+      : (qtds[`${item.n}:_`] || 0);
+    return acc + preco * qtdTotal;
+  }, 0);
+  const pcs = Math.floor(totalReais / 400);
+
+  const PRAZOS = [
+    { n:"01", label:"Prazo 01", prazo:"até 13 de Setembro", curto:"até 13/09" },
+    { n:"02", label:"Prazo 02", prazo:"até 05 de Outubro",  curto:"até 05/10" },
+  ];
+  const prazoLabel = PRAZOS.find(p => p.n === pagamento);
+
+  const fmtReais = (v) => `R$${v.toFixed(2).replace(".",",")}`;
 
   return (
     <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
@@ -17047,9 +18533,9 @@ function PopupSkzooEaawPage() {
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1, color:"var(--laranja)" }}>ALL AROUND THE WORLD</div>
           <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginTop:6 }}>in Rio de Janeiro · Formulário 03–05/09</div>
           <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.3)", letterSpacing:"1px" }}>EM BREVE</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(186,255,57,.1)", color:"var(--verde)", border:"1px solid rgba(186,255,57,.3)", letterSpacing:"1px" }}>ABERTO</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>22 ITENS</span>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS A CONFIRMAR</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS CONFIRMADOS</span>
           </div>
         </div>
 
@@ -17080,6 +18566,7 @@ function PopupSkzooEaawPage() {
                 "A pop-up é NACIONAL e não haverá TAXA INTERNACIONAL e nem FRETE INTERNACIONAL.",
                 "O valor de proxy service está adicionado no valor final.",
                 "O envio nacional poderá ser solicitado a partir da abertura do formulário.",
+                "Os itens só podem ser retirados presencialmente mediante pagamento integral. Local de retirada a combinar.",
               ].map((r, i) => (
                 <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
                   <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
@@ -17088,55 +18575,195 @@ function PopupSkzooEaawPage() {
             </div>
           </div>
 
+          {/* Promo photocard */}
+          <div style={{ marginBottom:20, background:"linear-gradient(135deg, rgba(201,168,240,.08), rgba(255,92,26,.06))", border:"1px solid rgba(201,168,240,.25)", borderRadius:12, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
+            <img src={`${BASE}/pob.png`} alt="POB Photocard" onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} style={{ width:80, height:56, objectFit:"cover", borderRadius:8, flexShrink:0, border:"1px solid rgba(201,168,240,.2)" }} />
+            <div style={{ display:"none", width:80, height:56, borderRadius:8, flexShrink:0, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.15)", alignItems:"center", justifyContent:"center", fontSize:22 }}>🃏</div>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"var(--lilas)", letterSpacing:"0.5px", marginBottom:3 }}>PHOTOCARD ALEATÓRIO DE BRINDE</div>
+              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>
+                A cada <span style={{ color:"var(--laranja)", fontWeight:700 }}>R$400</span> em compras, você ganha um photocard aleatório.
+              </div>
+            </div>
+          </div>
+
           {/* Grade */}
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:12 }}>
             {itens.map(item => (
               <div key={item.n} onClick={() => setLightbox(item)}
-                style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in", transition:"border-color .15s" }}
+                style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in", transition:"border-color .15s", display:"flex", flexDirection:"column" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor="rgba(255,92,26,.35)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
                 <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
-                <div style={{ padding:"8px 10px" }}>
+                <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column" }}>
                   <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
                   <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
-                  {item.skzoo && (() => {
-                    const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
-                    return total > 0 ? <div style={{ fontFamily:mono, fontSize:8, color:"var(--laranja)", marginTop:3 }}>{total} selecionado{total > 1 ? "s" : ""}</div> : null;
-                  })()}
                   {item.tag && <span style={tagStyle(item.tag)}>{item.tag}</span>}
-                  <div style={{ marginTop:6, fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)", letterSpacing:"0.5px" }}>{item.preco || "PREÇO"}</div>
+                  <div style={{ marginTop:6, fontFamily:mono, fontSize:13, fontWeight:700, color: item.preco ? "var(--verde)" : "rgba(245,240,232,.2)", letterSpacing:"0.5px" }}>{item.preco || "a confirmar"}</div>
+                  <div style={{ flex:1 }} />
+                  {/* Botão de adicionar */}
+                  {item.skzoo ? (() => {
+                    const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
+                    return (
+                      <button onClick={e => { e.stopPropagation(); setLightbox(item); }} style={{ marginTop:8, width:"100%", padding:"6px 0", background: total > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.05)", border: `1px solid ${total > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)"}`, borderRadius:6, fontFamily:mono, fontSize:9, color: total > 0 ? "var(--laranja)" : "rgba(245,240,232,.4)", cursor:"pointer", letterSpacing:"1px", fontWeight: total > 0 ? 700 : 400 }}>
+                        {total > 0 ? `${total} no carrinho ✓` : "ESCOLHER MEMBRO →"}
+                      </button>
+                    );
+                  })() : (() => {
+                    const qtd = qtds[`${item.n}:_`] || 0;
+                    return qtd === 0 ? (
+                      <button onClick={e => { e.stopPropagation(); setQtds(p => ({ ...p, [`${item.n}:_`]: 1 })); }} style={{ marginTop:8, width:"100%", padding:"6px 0", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", cursor:"pointer", letterSpacing:"1px" }}>
+                        + ADICIONAR
+                      </button>
+                    ) : (
+                      <div onClick={e => e.stopPropagation()} style={{ marginTop:8, display:"flex", alignItems:"center", border:"1px solid rgba(255,92,26,.3)", borderRadius:6, overflow:"hidden" }}>
+                        <button onClick={() => setQtds(p => ({ ...p, [`${item.n}:_`]: Math.max(0, qtd - 1) }))} style={{ flex:1, background:"none", border:"none", color:"var(--laranja)", fontFamily:mono, fontSize:14, cursor:"pointer", padding:"4px 0" }}>−</button>
+                        <span style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"var(--laranja)", minWidth:20, textAlign:"center" }}>{qtd}</span>
+                        <button onClick={() => setQtds(p => ({ ...p, [`${item.n}:_`]: qtd + 1 }))} style={{ flex:1, background:"none", border:"none", color:"var(--laranja)", fontFamily:mono, fontSize:14, cursor:"pointer", padding:"4px 0" }}>+</button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
           </div>
-          {btnProximo("pagamento")}
+          {/* Resumo da seleção */}
+          {itensSelecionados.length > 0 && (
+            <div style={{ marginTop:28, background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, overflow:"hidden" }}>
+              <div style={{ padding:"10px 14px", borderBottom:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.35)" }}>RESUMO DA SELEÇÃO</div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>{itensSelecionados.length} item{itensSelecionados.length !== 1 ? "s" : ""}</div>
+              </div>
+              {(() => {
+                return (
+                  <>
+                    {itensSelecionados.map(item => {
+                      const selecionados = item.skzoo ? SKZOOS.filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0) : [];
+                      const qtdSimples = item.skzoo ? 0 : (qtds[`${item.n}:_`] || 0);
+                      return (
+                        <div key={item.n} style={{ padding:"10px 14px", borderBottom:"1px solid rgba(245,240,232,.04)", display:"flex", gap:10, alignItems:"flex-start" }}>
+                          <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:38, height:38, objectFit:"cover", borderRadius:5, flexShrink:0 }} />
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", fontWeight:700, marginBottom:3 }}>{item.nome}</div>
+                            {item.skzoo ? (
+                              <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                                {selecionados.map(sk => (
+                                  <span key={sk} style={{ display:"inline-flex", alignItems:"center", gap:4, fontFamily:mono, fontSize:9, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.2)", borderRadius:5, padding:"2px 7px", color:"var(--laranja)" }}>
+                                    {sk} ×{qtds[`${item.n}:${sk}`]}
+                                    <button onClick={() => setQtds(p => { const n = {...p}; delete n[`${item.n}:${sk}`]; return n; })} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:10, lineHeight:1, padding:0 }}>✕</button>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)" }}>quantidade:</span>
+                                <div style={{ display:"flex", alignItems:"center", border:"1px solid rgba(255,92,26,.25)", borderRadius:5, overflow:"hidden" }}>
+                                  <button onClick={() => setQtds(p => ({ ...p, [`${item.n}:_`]: Math.max(0, qtdSimples - 1) }))} style={{ background:"none", border:"none", color:"var(--laranja)", fontFamily:mono, fontSize:13, width:24, height:22, cursor:"pointer" }}>−</button>
+                                  <span style={{ fontFamily:mono, fontSize:10, fontWeight:700, color:"var(--laranja)", minWidth:18, textAlign:"center" }}>{qtdSimples}</span>
+                                  <button onClick={() => setQtds(p => ({ ...p, [`${item.n}:_`]: qtdSimples + 1 }))} style={{ background:"none", border:"none", color:"var(--laranja)", fontFamily:mono, fontSize:13, width:24, height:22, cursor:"pointer" }}>+</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <button onClick={() => setQtds(p => { const n = {...p}; if (item.skzoo) selecionados.forEach(sk => delete n[`${item.n}:${sk}`]); else delete n[`${item.n}:_`]; return n; })} style={{ background:"none", border:"none", color:"rgba(245,240,232,.2)", cursor:"pointer", fontSize:13, lineHeight:1, flexShrink:0, padding:"0 2px" }}>✕</button>
+                        </div>
+                      );
+                    })}
+                    <div style={{ padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", borderTop:"1px solid rgba(245,240,232,.06)" }}>
+                      <div>
+                        {totalReais > 0 && (
+                          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>
+                            Total estimado: <span style={{ color:"var(--laranja)", fontWeight:700 }}>R${totalReais.toFixed(2).replace(".",",")}</span>
+                          </div>
+                        )}
+                      </div>
+                      {pcs > 0 ? (
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"6px 12px" }}>
+                            <span style={{ fontSize:14 }}>🃏</span>
+                            <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>{pcs} photocard{pcs > 1 ? "s" : ""} de brinde</span>
+                          </div>
+                          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>
+                            faltam R${(400 - (totalReais % 400)).toFixed(0)} para +1 photocard
+                          </div>
+                        </div>
+                      ) : totalReais > 0 ? (
+                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>
+                          faltam R${(400 - (totalReais % 400)).toFixed(0)} para 1 photocard
+                        </div>
+                      ) : null}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          <div style={{ marginTop:32, display:"flex", justifyContent:"flex-end" }}>
+            <button onClick={() => itensSelecionados.length > 0 && setEtapa("pagamento")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: itensSelecionados.length > 0 ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: itensSelecionados.length > 0 ? "#fff" : "rgba(245,240,232,.2)", cursor: itensSelecionados.length > 0 ? "pointer" : "not-allowed" }}>
+              PRÓXIMA ETAPA →
+            </button>
+          </div>
         </>}
 
         {/* ── PAGAMENTO ── */}
         {etapa === "pagamento" && <>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>PRAZOS DE PAGAMENTO</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-            {[
-              { n:"01", label:"Prazo 01", prazo:"a definir" },
-              { n:"02", label:"Prazo 02", prazo:"a definir" },
-            ].map(p => (
-              <div key={p.n} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <div>
-                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:4 }}>PAGAR ATÉ O PRAZO {p.n}</div>
-                  <div style={{ fontFamily:mono, fontSize:13, color:"rgba(245,240,232,.25)", fontStyle:"italic" }}>{p.prazo}</div>
-                </div>
-                <span style={{ fontFamily:mono, fontSize:8, padding:"3px 8px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.25)", border:"1px solid rgba(245,240,232,.08)" }}>EM BREVE</span>
+          {/* Total destaque */}
+          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"18px 20px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:6 }}>TOTAL A PAGAR</div>
+              <div style={{ fontFamily:mono, fontSize:24, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</div>
+            </div>
+            {pcs > 0 && (
+              <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"6px 12px" }}>
+                <span style={{ fontSize:14 }}>🃏</span>
+                <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>{pcs} pc{pcs > 1 ? "s" : ""} de brinde</span>
               </div>
-            ))}
+            )}
+          </div>
+
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ESCOLHA O PRAZO</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+            {PRAZOS.map(p => {
+              const sel = pagamento === p.n;
+              return (
+                <div key={p.n} onClick={() => setPagamento(p.n)} style={{
+                  background: sel ? "rgba(255,92,26,.07)" : "rgba(245,240,232,.03)",
+                  border: `1px solid ${sel ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`,
+                  borderRadius:10, padding:"14px 16px", cursor:"pointer", transition:"border-color .15s",
+                }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid ${sel ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, background: sel ? "var(--laranja)" : "transparent", flexShrink:0, transition:"all .15s" }} />
+                    <div>
+                      <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color: sel ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>{p.prazo}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div style={{ display:"flex", justifyContent:"space-between" }}>
             <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
-            <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", cursor:"pointer" }}>PRÓXIMA ETAPA →</button>
+            <button onClick={() => pagamento && setEtapa("envio")} disabled={!pagamento} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: pagamento ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: pagamento ? "#fff" : "rgba(245,240,232,.2)", cursor: pagamento ? "pointer" : "not-allowed" }}>PRÓXIMA ETAPA →</button>
           </div>
         </>}
 
         {/* ── ENVIO / RETIRADA ── */}
         {etapa === "envio" && <>
+          {/* Mini-resumo herdado */}
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:3 }}>VALOR A PAGAR</div>
+              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</div>
+            </div>
+            {prazoLabel && (
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:3 }}>PRAZO</div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.7)", fontWeight:700 }}>{prazoLabel.prazo}</div>
+              </div>
+            )}
+          </div>
+
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ESCOLHA UMA OPÇÃO</div>
           <div style={{ marginBottom:16, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"10px 14px", fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.85)", lineHeight:1.5 }}>
             ⚠ O frete de todas as opções é de responsabilidade do joiner.
@@ -17204,26 +18831,79 @@ function PopupSkzooEaawPage() {
             </div>
           )}
 
-          {/* Pagamento e envio */}
-          <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
-            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Pagamento</span>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>a confirmar</span>
+          {/* Resumo financeiro */}
+          <div style={{ background:"rgba(255,92,26,.05)", border:"1px solid rgba(255,92,26,.18)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:prazoLabel || pcs > 0 ? 10 : 0 }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total a pagar</span>
+              <span style={{ fontFamily:mono, fontSize:18, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</span>
             </div>
+            {prazoLabel && (
+              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginTop: pcs > 0 ? 0 : 0 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>Prazo escolhido</span>
+                <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", fontWeight:700 }}>{prazoLabel.label} · {prazoLabel.prazo}</span>
+              </div>
+            )}
+            {pcs > 0 && (
+              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginTop:prazoLabel ? 10 : 0 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>Photocards de brinde</span>
+                <span style={{ display:"flex", alignItems:"center", gap:5, fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>🃏 {pcs} pc{pcs > 1 ? "s" : ""}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Envio */}
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
             <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Envio / Retirada</span>
               <span style={{ fontFamily:mono, fontSize:11, color: envio ? "var(--offwhite)" : "rgba(245,240,232,.25)" }}>
                 {envio === "retirada-rio" ? "Retirada · Rio 09/09" : envio === "uber-flash" ? "Uber Flash" : envio === "envio-nacional" ? "Envio Nacional" : "a confirmar"}
               </span>
             </div>
-            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Preço total</span>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.25)" }}>a confirmar</span>
-            </div>
           </div>
 
-          <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+          {/* Identificação */}
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:20 }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:4 }}>SEUS DADOS</div>
+            <input
+              style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"11px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, boxSizing:"border-box", outline:"none" }}
+              placeholder="seu @ da rede social"
+              value={cog}
+              onChange={e => setCog(e.target.value)}
+            />
+            <input
+              style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"11px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, boxSizing:"border-box", outline:"none" }}
+              placeholder="nome completo"
+              value={nomeJoiner}
+              onChange={e => setNomeJoiner(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
+            <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+            <button onClick={enviarPedido} disabled={enviando || !cog.trim() || !nomeJoiner.trim()}
+              style={{ flex:1, fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 0", background: (!cog.trim() || !nomeJoiner.trim()) ? "rgba(245,240,232,.06)" : "var(--laranja)", border:"none", borderRadius:8, color: (!cog.trim() || !nomeJoiner.trim()) ? "rgba(245,240,232,.2)" : "#111", cursor: (!cog.trim() || !nomeJoiner.trim()) ? "not-allowed" : "pointer" }}>
+              {enviando ? "enviando..." : "ENVIAR PEDIDO →"}
+            </button>
+          </div>
         </>}
+
+        {/* ── SUCESSO ── */}
+        {etapa === "sucesso" && (
+          <div style={{ textAlign:"center", padding:"48px 0" }}>
+            <div style={{ fontSize:40, marginBottom:16 }}>✦</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:2, color:"var(--verde)", marginBottom:8 }}>PEDIDO ENVIADO!</div>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.7, maxWidth:340, margin:"0 auto 8px" }}>
+              Seu pedido #{pedidoId} foi recebido com sucesso.<br />
+              A GOM entrará em contato para confirmação e pagamento.
+            </div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", marginBottom:28 }}>
+              Formulário aberto até 05/09
+            </div>
+            <button onClick={() => window.location.href = "/"} style={{ fontFamily:mono, fontSize:11, padding:"11px 28px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.25)", borderRadius:8, color:"var(--verde)", cursor:"pointer" }}>
+              voltar ao início
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Lightbox */}
@@ -17255,7 +18935,17 @@ function PopupSkzooEaawPage() {
                 })}
               </div>
             )}
-            <button onClick={() => setLightbox(null)} style={{ marginTop:16, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar ✕</button>
+            {lightbox?.skzoo && (() => {
+              const total = SKZOOS.reduce((s, sk) => s + (qtds[`${lightbox.n}:${sk}`] || 0), 0);
+              return (
+                <button onClick={() => setLightbox(null)} style={{ marginTop:16, width:"100%", padding:"12px 0", background: total > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)", border:`1px solid ${total > 0 ? "var(--laranja)" : "rgba(245,240,232,.1)"}`, borderRadius:8, fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", color: total > 0 ? "#111" : "rgba(245,240,232,.25)", cursor: total > 0 ? "pointer" : "not-allowed" }}>
+                  {total > 0 ? `✓ ADICIONAR AO CARRINHO (${total})` : "SELECIONE UM PERSONAGEM"}
+                </button>
+              );
+            })()}
+            {!lightbox?.skzoo && (
+              <button onClick={() => setLightbox(null)} style={{ marginTop:16, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar ✕</button>
+            )}
           </div>
         </div>
       )}
@@ -18066,10 +19756,453 @@ function ComprovanteThumb({ url }) {
   );
 }
 
+function AdminClaimEventos() {
+  const mono = "'DM Mono',monospace";
+  const SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+  const inputS = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, width:"100%", boxSizing:"border-box" };
+  const [tab, setTab] = useState("eventos");
+  const [eventos, setEventos] = useState(null);
+  const [sets, setSets] = useState({});
+  const [reservas, setReservas] = useState({});
+  const [standby, setStandby] = useState({});
+  const [expandido, setExpandido] = useState(new Set());
+  const [salvando, setSalvando] = useState(false);
+  const [form, setForm] = useState({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
+
+  async function fetchTudo() {
+    const { data: evData } = await supabase.from("claim_eventos").select("*").order("abertura", { ascending:false });
+    setEventos(evData || []);
+    if (!evData?.length) return;
+    const evIds = evData.map(e => e.id);
+    const { data: setsData } = await supabase.from("claim_sets").select("*").in("evento_id", evIds).order("numero");
+    const setsMap = {};
+    (setsData || []).forEach(s => { if (!setsMap[s.evento_id]) setsMap[s.evento_id] = []; setsMap[s.evento_id].push(s); });
+    setSets(setsMap);
+    const setIds = (setsData || []).map(s => s.id);
+    const newRes = {};
+    if (setIds.length) {
+      const { data: resData } = await supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      (resData || []).forEach(r => { if (!newRes[r.set_id]) newRes[r.set_id] = []; newRes[r.set_id].push(r); });
+    }
+    setReservas(newRes);
+    const { data: sbData } = await supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at");
+    const sbMap = {};
+    (sbData || []).forEach(r => { if (!sbMap[r.evento_id]) sbMap[r.evento_id] = []; sbMap[r.evento_id].push(r); });
+    setStandby(sbMap);
+  }
+
+  useEffect(() => { fetchTudo(); }, []);
+
+  async function criarEvento() {
+    if (!form.nome.trim() || !form.valor || !form.abertura || !form.membros.length) { alert("Preencha nome, valor, abertura e membros."); return; }
+    setSalvando(true);
+    const { data: ev, error } = await supabase.from("claim_eventos").insert([{
+      nome: form.nome.trim(), valor: Number(form.valor), prazo: form.prazo || null,
+      abertura: form.abertura ? form.abertura + ":00-03:00" : form.abertura, membros: form.membros, sets_iniciais: Number(form.sets_iniciais) || 2, limite_por_joiner: form.limite_por_joiner ? Number(form.limite_por_joiner) : null,
+    }]).select().single();
+    if (error || !ev) { alert("Erro: " + error?.message); setSalvando(false); return; }
+    if (form.foto) {
+      const ext = form.foto.name.split(".").pop().toLowerCase();
+      const path = `claim/${ev.id}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, form.foto, { upsert: true });
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+        await supabase.from("claim_eventos").update({ foto_url: publicUrl }).eq("id", ev.id);
+      }
+    }
+    const setsRows = Array.from({ length: Number(form.sets_iniciais) || 2 }, (_, i) => ({ evento_id: ev.id, numero: i+1, status:"aberto" }));
+    const { data: createdSets } = await supabase.from("claim_sets").insert(setsRows).select();
+    const adminRows = [];
+    (createdSets || []).forEach((s, si) => {
+      const adm = form.adminReservas[si] || new Set();
+      adm.forEach(membro => adminRows.push({ evento_id: ev.id, set_id: s.id, joiner_cog:"nandaverseo_c", joiner_nome:"GOM", membro, status:"aprovado", is_admin:true }));
+    });
+    if (adminRows.length) await supabase.from("claim_reservas").insert(adminRows);
+    setSalvando(false);
+    setForm({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
+    setTab("eventos");
+    fetchTudo();
+  }
+
+  async function abrirNovoSet(eventoId) {
+    const evSets = sets[eventoId] || [];
+    const prox = Math.max(0, ...evSets.map(s => s.numero)) + 1;
+    if (!window.confirm(`Abrir SET ${prox} para este evento?`)) return;
+    const { data: novoSet, error } = await supabase.from("claim_sets").insert([{ evento_id:eventoId, numero:prox, status:"aberto" }]).select().single();
+    if (error || !novoSet) { alert("Erro: " + error?.message); return; }
+    const sbEvento = (standby[eventoId] || []);
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (ev && sbEvento.length) {
+      const promoRows = [];
+      const membrosPromovidos = new Set();
+      for (const r of sbEvento) {
+        if (membrosPromovidos.has(r.membro)) continue;
+        if (!ev.membros.includes(r.membro)) continue;
+        promoRows.push({ id: r.id });
+        membrosPromovidos.add(r.membro);
+      }
+      for (const p of promoRows) {
+        await supabase.from("claim_reservas").update({ set_id: novoSet.id, status:"pendente" }).eq("id", p.id);
+      }
+      if (ev.membros.every(m => membrosPromovidos.has(m))) {
+        await supabase.from("claim_sets").update({ status:"fechado", closed_at: new Date().toISOString() }).eq("id", novoSet.id);
+      }
+    }
+    fetchTudo();
+  }
+
+  async function cancelarSet(setId, eventoId) {
+    if (!window.confirm("Cancelar este set? Claims voltam para o standby.")) return;
+    await supabase.from("claim_reservas").update({ set_id: null, status:"standby" }).eq("set_id", setId).neq("is_admin", true);
+    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("set_id", setId).eq("is_admin", true);
+    await supabase.from("claim_sets").update({ status:"cancelado" }).eq("id", setId);
+    fetchTudo();
+  }
+
+  async function marcarAConfirmar(setId) {
+    await supabase.from("claim_sets").update({ status:"a_confirmar" }).eq("id", setId);
+    fetchTudo();
+  }
+
+  async function confirmarSet(setId) {
+    await supabase.from("claim_sets").update({ status:"aberto" }).eq("id", setId);
+    fetchTudo();
+  }
+
+  async function confirmarSetFinal(setId) {
+    if (!window.confirm("Confirmar este set? Ele será salvo no Histórico.")) return;
+    await supabase.from("claim_sets").update({ status:"confirmado", closed_at: new Date().toISOString() }).eq("id", setId);
+    fetchTudo();
+  }
+
+  async function fecharEvento(eventoId) {
+    if (!window.confirm("Encerrar evento? Não abrirá novos sets.")) return;
+    await supabase.from("claim_eventos").update({ status:"encerrado" }).eq("id", eventoId);
+    fetchTudo();
+  }
+
+  async function reativarEvento(eventoId) {
+    await supabase.from("claim_eventos").update({ status:"ativo" }).eq("id", eventoId);
+    fetchTudo();
+  }
+
+  async function cancelarStandby(reservaId, joinerNome) {
+    if (!window.confirm(`Remover ${joinerNome} do standby?`)) return;
+    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("id", reservaId);
+    fetchTudo();
+  }
+
+  async function cancelarTodoStandby(eventoId, total) {
+    if (!window.confirm(`Cancelar todos os ${total} standby deste evento?`)) return;
+    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado");
+    fetchTudo();
+  }
+
+  function toggleExpandido(id) {
+    setExpandido(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function toggleMembroForm(membro) {
+    setForm(p => {
+      const cur = new Set(p.membros);
+      cur.has(membro) ? cur.delete(membro) : cur.add(membro);
+      return { ...p, membros: SK8.filter(m => cur.has(m)) };
+    });
+  }
+
+  function toggleAdminReserva(setIdx, membro) {
+    setForm(p => {
+      const cur = new Set(p.adminReservas[setIdx] || []);
+      cur.has(membro) ? cur.delete(membro) : cur.add(membro);
+      return { ...p, adminReservas: { ...p.adminReservas, [setIdx]: cur } };
+    });
+  }
+
+  const tabBtn = active => ({ fontFamily:mono, fontSize:10, fontWeight:700, padding:"6px 14px", borderRadius:6, border:"none", cursor:"pointer", letterSpacing:"1px", background: active?"rgba(255,92,26,.15)":"rgba(245,240,232,.04)", color: active?"var(--laranja)":"rgba(245,240,232,.4)" });
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+        <button style={tabBtn(tab==="eventos")} onClick={() => setTab("eventos")}>ATIVOS</button>
+        <button style={tabBtn(tab==="finalizados")} onClick={() => setTab("finalizados")}>FINALIZADOS</button>
+        <button style={tabBtn(tab==="novo")} onClick={() => setTab("novo")}>+ NOVO EVENTO</button>
+      </div>
+
+      {tab==="novo" && (
+        <div style={{ background:"var(--card-bg)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"20px 16px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"var(--laranja)", letterSpacing:"1.5px", fontWeight:700 }}>NOVO EVENTO DE CLAIM</div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>NOME DO EVENTO *</div>
+              <input value={form.nome} onChange={e=>setForm(p=>({...p,nome:e.target.value}))} placeholder="ex: NAGOYA SHOW 06-09 | SUIATSU" style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>VALOR *</div>
+              <input type="number" value={form.valor} onChange={e=>setForm(p=>({...p,valor:e.target.value}))} placeholder="0.00" style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>PRAZO</div>
+              <input value={form.prazo} onChange={e=>setForm(p=>({...p,prazo:e.target.value}))} placeholder="ex: 08/set" style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>ABERTURA *</div>
+              <input type="datetime-local" value={form.abertura} onChange={e=>setForm(p=>({...p,abertura:e.target.value}))} style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>SETS INICIAIS</div>
+              <input type="number" min={1} max={10} value={form.sets_iniciais} onChange={e=>setForm(p=>({...p,sets_iniciais:e.target.value}))} style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>LIMITE POR JOINER <span style={{ color:"rgba(245,240,232,.2)" }}>(opcional)</span></div>
+              <input type="number" min={1} value={form.limite_por_joiner} onChange={e=>setForm(p=>({...p,limite_por_joiner:e.target.value}))} placeholder="sem limite" style={inputS} /></div>
+          </div>
+
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>FOTO DO PHOTOCARD</div>
+            <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
+              <div style={{ width:80, height:80, borderRadius:8, border:`1px dashed ${form.fotoPreview?"rgba(186,255,57,.3)":"rgba(245,240,232,.12)"}`, background:"rgba(245,240,232,.03)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                {form.fotoPreview
+                  ? <img src={form.fotoPreview} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="preview" />
+                  : <span style={{ fontFamily:mono, fontSize:22, color:"rgba(245,240,232,.15)" }}>+</span>}
+              </div>
+              <div>
+                <div style={{ fontFamily:mono, fontSize:10, color: form.foto?"var(--offwhite)":"rgba(245,240,232,.35)" }}>{form.foto ? form.foto.name : "Nenhuma foto selecionada"}</div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", marginTop:4 }}>clique para selecionar</div>
+                {form.fotoPreview && <button type="button" onClick={e => { e.preventDefault(); setForm(p=>({...p,foto:null,fotoPreview:null})); }} style={{ marginTop:6, fontFamily:mono, fontSize:8, background:"none", border:"none", color:"rgba(255,107,107,.5)", cursor:"pointer", padding:0 }}>remover</button>}
+              </div>
+              <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setForm(p => ({ ...p, foto:f, fotoPreview:URL.createObjectURL(f) }));
+              }} />
+            </label>
+          </div>
+
+          <div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>MEMBROS</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+              {SK8.map(m => {
+                const sel = form.membros.includes(m);
+                return <button key={m} onClick={() => toggleMembroForm(m)} style={{ fontFamily:mono, fontSize:10, padding:"5px 12px", borderRadius:6, border:"1px solid", cursor:"pointer",
+                  background: sel?"rgba(186,255,57,.15)":"rgba(245,240,232,.03)",
+                  borderColor: sel?"rgba(186,255,57,.4)":"rgba(245,240,232,.1)",
+                  color: sel?"#BAFF39":"rgba(245,240,232,.35)" }}>{m}</button>;
+              })}
+            </div>
+          </div>
+
+          {/* Admin reservas por set */}
+          {form.membros.length > 0 && Number(form.sets_iniciais) >= 1 && (
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>SLOTS RESERVADOS PELA ADMIN (por set)</div>
+              {Array.from({ length: Number(form.sets_iniciais) || 2 }, (_, si) => (
+                <div key={si} style={{ marginBottom:8 }}>
+                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4, letterSpacing:"1px" }}>SET {si+1}</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                    {form.membros.map(m => {
+                      const sel = (form.adminReservas[si] || new Set()).has(m);
+                      return <button key={m} onClick={() => toggleAdminReserva(si, m)} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:6, border:"1px solid", cursor:"pointer",
+                        background: sel?"rgba(255,92,26,.15)":"rgba(245,240,232,.03)",
+                        borderColor: sel?"rgba(255,92,26,.3)":"rgba(245,240,232,.08)",
+                        color: sel?"var(--laranja)":"rgba(245,240,232,.3)" }}>{m}</button>;
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button onClick={criarEvento} disabled={salvando} style={{ fontFamily:mono, fontSize:11, fontWeight:700, padding:"10px 20px", background:"rgba(255,92,26,.15)", border:"1px solid rgba(255,92,26,.3)", borderRadius:8, color:"var(--laranja)", cursor:"pointer", letterSpacing:"1px" }}>
+            {salvando?"CRIANDO...":"CRIAR EVENTO"}
+          </button>
+        </div>
+      )}
+
+      {tab==="eventos" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {!eventos ? <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>carregando...</div>
+          : !eventos.filter(e=>e.status==="ativo").length ? <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum evento ativo no momento.</div>
+          : eventos.filter(e=>e.status==="ativo").map(ev => {
+            const evSets = (sets[ev.id] || []);
+            const sbEvento = (standby[ev.id] || []);
+            const aberto = expandido.has(ev.id);
+            const totalClaims = evSets.reduce((acc, s) => acc + (reservas[s.id]||[]).filter(r=>!r.is_admin).length, 0);
+            return (
+              <div key={ev.id} style={{ background:"var(--card-bg)", border:`1px solid ${ev.status==="encerrado"?"rgba(245,240,232,.05)":"rgba(245,240,232,.08)"}`, borderRadius:12, overflow:"hidden", opacity: ev.status==="encerrado"?.6:1 }}>
+                <div onClick={() => toggleExpandido(ev.id)} style={{ padding:"12px 16px", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                  {ev.foto_url && <img src={ev.foto_url} alt="foto" style={{ width:48, height:48, borderRadius:6, objectFit:"cover", flexShrink:0 }} />}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>{ev.nome}</div>
+                    <div style={{ display:"flex", gap:10 }}>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(ev.valor).toFixed(2).replace(".",",")}</span>
+                      {ev.prazo && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>prazo {ev.prazo}</span>}
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>
+                        {new Date(ev.abertura).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+                      </span>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)" }}>{evSets.filter(s=>s.status!=="cancelado").length} set(s) · {totalClaims} claim(s)</span>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    {sbEvento.length > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"#ffb400", padding:"3px 8px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:4 }}>{sbEvento.length} standby</span>}
+                    <span style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)" }}>{aberto?"▲":"▼"}</span>
+                  </div>
+                </div>
+
+                {aberto && (
+                  <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 16px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+                    {evSets.map(s => {
+                      const resSet = reservas[s.id] || [];
+                      const claimadosPorJoiner = {};
+                      resSet.filter(r=>!r.is_admin).forEach(r => {
+                        if (!claimadosPorJoiner[r.joiner_cog]) claimadosPorJoiner[r.joiner_cog] = { nome: r.joiner_nome, membros: [], ts: r.created_at };
+                        claimadosPorJoiner[r.joiner_cog].membros.push(r.membro);
+                        if (r.created_at < claimadosPorJoiner[r.joiner_cog].ts) claimadosPorJoiner[r.joiner_cog].ts = r.created_at;
+                      });
+                      const joiners = Object.values(claimadosPorJoiner).sort((a,b) => a.ts < b.ts ? -1 : 1);
+                      const adminSlots = resSet.filter(r=>r.is_admin);
+                      const livres = (ev.membros||SK8).filter(m => !resSet.some(r => r.membro === m));
+                      return (
+                        <div key={s.id} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${s.status==="fechado"?"rgba(201,168,240,.2)":s.status==="cancelado"?"rgba(245,240,232,.04)":s.status==="a_confirmar"?"rgba(255,180,0,.2)":"rgba(245,240,232,.06)"}`, borderRadius:8, opacity: s.status==="cancelado"?.4:1 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 12px", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                            <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"rgba(245,240,232,.5)", letterSpacing:"1.5px" }}>SET {s.numero}</span>
+                            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                              <span style={{ fontFamily:mono, fontSize:9, color: s.status==="confirmado"?"rgba(201,168,240,.7)":s.status==="fechado"?"var(--lilas)":s.status==="cancelado"?"rgba(245,240,232,.2)":s.status==="a_confirmar"?"#ffb400":"rgba(186,255,57,.7)" }}>
+                                {s.status==="confirmado"?"✓ confirmado":s.status==="fechado"?"✓ fechado":s.status==="cancelado"?"cancelado":s.status==="a_confirmar"?"a confirmar":"aberto"} · {resSet.filter(r=>!r.is_admin).length}/{(ev.membros||SK8).length} claims
+                              </span>
+                              {s.status==="aberto" && <button onClick={() => marcarAConfirmar(s.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:4, color:"#ffb400", cursor:"pointer" }}>a confirmar</button>}
+                              {s.status==="a_confirmar" && <button onClick={() => confirmarSet(s.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, color:"#BAFF39", cursor:"pointer" }}>confirmar</button>}
+                              {s.status==="fechado" && <button onClick={() => confirmarSetFinal(s.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.35)", borderRadius:4, color:"var(--lilas)", cursor:"pointer", fontWeight:700 }}>✓ CONFIRMAR SET</button>}
+                              {s.status==="confirmado" && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.5)", padding:"2px 8px" }}>✓ confirmado</span>}
+                              {s.status!=="cancelado" && s.status!=="fechado" && s.status!=="confirmado" && <button onClick={() => cancelarSet(s.id, ev.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.15)", borderRadius:4, color:"rgba(255,107,107,.7)", cursor:"pointer" }}>cancelar set</button>}
+                            </div>
+                          </div>
+                          <div style={{ padding:"6px 12px 8px" }}>
+                            {adminSlots.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(255,92,26,.5)", marginBottom:4 }}>admin: {adminSlots.map(r=>r.membro).join(", ")}</div>}
+                            {joiners.map(j => (
+                              <div key={j.nome} style={{ padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{j.nome} · </span>
+                                <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)" }}>{j.membros.join(", ")}</span>
+                                {j.membros.length >= 8 && <span style={{ marginLeft:8, fontFamily:mono, fontSize:8, color:"var(--laranja)" }}>OT8</span>}
+                              </div>
+                            ))}
+                            {livres.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)", marginTop:4 }}>livres: {livres.join(", ")}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Standby */}
+                    {sbEvento.length > 0 && (
+                      <div style={{ background:"rgba(255,180,0,.03)", border:"1px solid rgba(255,180,0,.12)", borderRadius:8, padding:"8px 12px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                          <span style={{ fontFamily:mono, fontSize:9, color:"#ffb400", letterSpacing:"1px" }}>STANDBY ({sbEvento.length})</span>
+                          <button onClick={() => cancelarTodoStandby(ev.id, sbEvento.length)}
+                            style={{ background:"none", border:"1px solid rgba(255,107,107,.2)", borderRadius:4, color:"rgba(255,107,107,.6)", fontFamily:mono, fontSize:8, padding:"2px 8px", cursor:"pointer", letterSpacing:"0.5px" }}>
+                            cancelar todos
+                          </button>
+                        </div>
+                        {(ev.membros||SK8).map(membro => {
+                          const sbMembro = sbEvento.filter(r => r.membro === membro);
+                          if (!sbMembro.length) return null;
+                          return (
+                            <div key={membro} style={{ marginBottom:4 }}>
+                              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:2 }}>{membro}</div>
+                              {sbMembro.map((r, i) => (
+                                <div key={r.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"2px 0 2px 8px", borderLeft:"1px solid rgba(255,180,0,.15)" }}>
+                                  <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>
+                                    {i+1}º {r.joiner_nome || r.joiner_cog}
+                                  </span>
+                                  <button onClick={() => cancelarStandby(r.id, r.joiner_nome || r.joiner_cog)}
+                                    style={{ background:"none", border:"none", color:"rgba(255,107,107,.5)", fontFamily:mono, fontSize:12, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                      {ev.status==="ativo" && <button onClick={() => abrirNovoSet(ev.id)} style={{ fontFamily:mono, fontSize:9, fontWeight:700, padding:"6px 14px", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:6, color:"#BAFF39", cursor:"pointer", letterSpacing:"1px" }}>+ ABRIR NOVO SET</button>}
+                      <button onClick={() => fecharEvento(ev.id)} style={{ fontFamily:mono, fontSize:9, padding:"6px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:6, color:"rgba(245,240,232,.3)", cursor:"pointer" }}>ENCERRAR EVENTO</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab==="finalizados" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {!eventos ? <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>carregando...</div>
+          : !eventos.filter(e=>e.status==="encerrado").length
+            ? <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum evento finalizado ainda.</div>
+          : eventos.filter(e=>e.status==="encerrado").map(ev => {
+            const evSets = (sets[ev.id] || []).filter(s => s.status !== "cancelado");
+            const aberto = expandido.has(ev.id);
+            const totalClaims = evSets.reduce((acc, s) => acc + (reservas[s.id]||[]).filter(r=>!r.is_admin).length, 0);
+            return (
+              <div key={ev.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.06)", borderRadius:12, overflow:"hidden" }}>
+                <div onClick={() => toggleExpandido(ev.id)} style={{ padding:"12px 16px", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                  {ev.foto_url && <img src={ev.foto_url} alt="foto" style={{ width:40, height:40, borderRadius:6, objectFit:"cover", flexShrink:0 }} />}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)", marginBottom:2 }}>{ev.nome}</div>
+                    <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>R$ {Number(ev.valor).toFixed(2).replace(".",",")}</span>
+                      {ev.prazo && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>prazo {ev.prazo}</span>}
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>{evSets.length} set(s) · {totalClaims} claim(s)</span>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <button onClick={e => { e.stopPropagation(); reativarEvento(ev.id); }}
+                      style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, color:"rgba(186,255,57,.6)", cursor:"pointer" }}>
+                      REATIVAR
+                    </button>
+                    <span style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)" }}>{aberto?"▲":"▼"}</span>
+                  </div>
+                </div>
+                {aberto && (
+                  <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 16px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+                    {evSets.map(s => {
+                      const resSet = reservas[s.id] || [];
+                      const claimadosPorJoiner = {};
+                      resSet.filter(r=>!r.is_admin).forEach(r => {
+                        if (!claimadosPorJoiner[r.joiner_cog]) claimadosPorJoiner[r.joiner_cog] = { nome: r.joiner_nome, membros: [], ts: r.created_at };
+                        claimadosPorJoiner[r.joiner_cog].membros.push(r.membro);
+                        if (r.created_at < claimadosPorJoiner[r.joiner_cog].ts) claimadosPorJoiner[r.joiner_cog].ts = r.created_at;
+                      });
+                      const joiners = Object.values(claimadosPorJoiner).sort((a,b) => a.ts < b.ts ? -1 : 1);
+                      const adminSlots = resSet.filter(r=>r.is_admin);
+                      const livres = (ev.membros||SK8).filter(m => !resSet.some(r => r.membro === m));
+                      return (
+                        <div key={s.id} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${s.status==="confirmado"?"rgba(201,168,240,.2)":"rgba(245,240,232,.06)"}`, borderRadius:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 12px", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                            <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px" }}>SET {s.numero}</span>
+                            <span style={{ fontFamily:mono, fontSize:9, color: s.status==="confirmado"?"rgba(201,168,240,.7)":"var(--lilas)" }}>
+                              {s.status==="confirmado"?"✓ confirmado":"✓ fechado"} · {resSet.filter(r=>!r.is_admin).length}/{(ev.membros||SK8).length} claims
+                            </span>
+                          </div>
+                          <div style={{ padding:"6px 12px 8px" }}>
+                            {adminSlots.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(255,92,26,.5)", marginBottom:4 }}>admin: {adminSlots.map(r=>r.membro).join(", ")}</div>}
+                            {joiners.map(j => (
+                              <div key={j.nome} style={{ padding:"2px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{j.nome} · </span>
+                                <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)" }}>{j.membros.join(", ")}</span>
+                                {j.membros.length >= 8 && <span style={{ marginLeft:8, fontFamily:mono, fontSize:8, color:"var(--laranja)" }}>OT8</span>}
+                              </div>
+                            ))}
+                            {livres.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)", marginTop:4 }}>livres: {livres.join(", ")}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminClaims({ pendentesInit, onPendentesChange }) {
   const mono = "'DM Mono',monospace";
   const inputS = { background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"8px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, width:"100%", boxSizing:"border-box" };
-  const [claimsTab, setClaimsTab] = useState("sets");
+  const [claimsTab, setClaimsTab] = useState("eventos");
   const [pendentes, setPendentes] = useState(pendentesInit || []);
   const [novoSet, setNovoSet] = useState({ nome:"", valor:"", prazo:"", horario:"", nSets:1, intervalo:2, membros:[], fotoFile:null, fotoPreview:null });
   const [salvando, setSalvando] = useState(false);
@@ -18221,14 +20354,17 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
 
       {/* Sub-tabs */}
       <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
-        {[["sets","SETS"],["pendentes",`PENDENTES (${pendentes.length})`],["novo-set","NOVO SET"]].map(([v,l]) => (
+        {[["eventos","EVENTOS"],["sets","SETS (legado)"],["pendentes",`PENDENTES (${pendentes.length})`],["novo-set","NOVO SET (legado)"]].map(([v,l]) => (
           <button key={v} onClick={() => setClaimsTab(v)} style={{ fontSize:9, fontFamily:mono, letterSpacing:"1px", padding:"5px 14px", borderRadius:20, cursor:"pointer", fontWeight: claimsTab===v ? 700 : 400, border: claimsTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimsTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimsTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
             {l}
           </button>
         ))}
       </div>
 
-      {/* SETS */}
+      {/* EVENTOS (novo sistema) */}
+      {claimsTab === "eventos" && <AdminClaimEventos />}
+
+      {/* SETS (legado) */}
       {claimsTab === "sets" && (() => {
         if (sets === null) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>carregando...</div>;
         if (!sets.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0" }}>Nenhum set publicado ainda.</div>;
@@ -18548,19 +20684,173 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
 
 function AdminSkzooRio() {
   const mono = "'DM Mono',monospace";
+  const [pedidos, setPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pcsAberto, setPcsAberto] = useState(false);
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+
+  function carregar() {
+    setLoading(true);
+    supabase.from("pedidos_skzoo_rio").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setPedidos(data); setLoading(false); });
+  }
+
+  useEffect(() => { carregar(); }, []);
+
+  async function atualizar(id, novoStatus) {
+    await supabase.from("pedidos_skzoo_rio").update({ status: novoStatus }).eq("id", id);
+    setPedidos(prev => prev.map(p => p.id === id ? { ...p, status: novoStatus } : p));
+  }
+
+  const ativos      = pedidos.filter(p => p.status !== "cancelado");
+  const confirmados = pedidos.filter(p => p.status === "confirmado");
+  const fmtR = v => `R$${Number(v||0).toFixed(2).replace(".",",")}`;
+  const pcsPedido = p => Math.floor(Number(p.total_reais||0) / 400);
+
+  // Agrupa total por joiner (soma apenas confirmados, igual ao valor total)
+  const totalPorJoiner = confirmados.reduce((acc, p) => {
+    acc[p.cog] = (acc[p.cog] || 0) + Number(p.total_reais || 0);
+    return acc;
+  }, {});
+  // pcs por joiner baseado no total acumulado (a cada R$400 = 1 pc)
+  const pcsJoinerMap = Object.fromEntries(
+    Object.entries(totalPorJoiner).map(([cog, total]) => [cog, Math.floor(total / 400)])
+  );
+  const joinersComPcs = Object.entries(pcsJoinerMap).filter(([, pcs]) => pcs >= 1);
+  const totalValor = confirmados.reduce((s,p) => s + Number(p.total_reais||0), 0);
+  const pcsTotal = Math.floor(totalValor / 400);
+
+  const envioLabel = e => e === "retirada-rio" ? "Retirada · Rio 09/09" : e === "uber-flash" ? "Uber Flash" : e === "envio-nacional" ? "Envio Nacional" : e || "—";
+  const prazoLabel = n => n === "01" ? "até 13/09" : n === "02" ? "até 05/10" : "—";
+
+  const Stat = ({ label, val, color, sub }) => (
+    <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", flex:1, minWidth:120 }}>
+      <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>{label}</div>
+      <div style={{ fontFamily:mono, fontSize:18, fontWeight:700, color: color || "var(--offwhite)" }}>{val}</div>
+      {sub && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:3 }}>{sub}</div>}
+    </div>
+  );
+
   return (
-    <div style={{ padding:"32px 24px", maxWidth:720 }}>
-      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>SKZOO EVERYWHERE</div>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:2, color:"var(--laranja)", lineHeight:1, marginBottom:20 }}>ALL AROUND THE WORLD · RIO</div>
-      <div style={{ display:"flex", gap:8, marginBottom:28, flexWrap:"wrap" }}>
-        <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.3)" }}>EM BREVE</span>
-        <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", border:"1px solid rgba(245,240,232,.08)" }}>Formulário 03–05/09</span>
-        <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", border:"1px solid rgba(245,240,232,.08)" }}>22 ITENS</span>
+    <div style={{ padding:"32px 24px", maxWidth:800 }}>
+      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:4 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>SKZOO EAAW · RIO</div>
+        <button onClick={carregar} disabled={loading} style={{ fontFamily:mono, fontSize:10, padding:"6px 14px", borderRadius:7, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color: loading ? "rgba(245,240,232,.25)" : "rgba(245,240,232,.6)", cursor: loading ? "not-allowed" : "pointer", letterSpacing:"1px" }}>
+          {loading ? "..." : "↻ atualizar"}
+        </button>
       </div>
-      <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:11 }}>
-        Gestão de pedidos disponível após abertura do formulário.
-      </div>
+
+      {/* Contadores */}
+      {!loading && (
+        <>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:16 }}>
+            <Stat label="TOTAL DE PEDIDOS"  val={ativos.length} sub={`${pedidos.length} total incl. cancelados`} />
+            <Stat label="VALOR TOTAL"        val={fmtR(totalValor)} color="var(--laranja)" sub="apenas confirmados" />
+            <Stat label="PHOTOCARDS TOTAIS"  val={`🃏 ${pcsTotal}`} color="var(--lilas)" sub="apenas confirmados" />
+          </div>
+
+          {/* Breakdown de photocards por joiner — colapsível */}
+          {pcsTotal > 0 && (
+            <div style={{ background:"rgba(201,168,240,.05)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10, marginBottom:24, overflow:"hidden" }}>
+              <button onClick={() => setPcsAberto(v => !v)} style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", background:"none", border:"none", cursor:"pointer" }}>
+                <span style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--lilas)", opacity:.7 }}>PHOTOCARDS POR JOINER ({joinersComPcs.length} joiners · {joinersComPcs.reduce((s,[,v])=>s+v,0)} pcs total)</span>
+                <span style={{ fontFamily:mono, fontSize:12, color:"var(--lilas)", transition:"transform .2s", display:"inline-block", transform: pcsAberto ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+              </button>
+              {pcsAberto && (
+                <div style={{ display:"flex", flexDirection:"column", gap:6, padding:"0 16px 14px" }}>
+                  {joinersComPcs.sort((a,b) => b[1]-a[1]).map(([cog, pcs]) => (
+                    <div key={cog} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderTop:"1px solid rgba(201,168,240,.08)" }}>
+                      <div>
+                        <span style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"var(--offwhite)" }}>@{cog}</span>
+                        <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginLeft:8 }}>{fmtR(totalPorJoiner[cog])}</span>
+                      </div>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        {Array.from({ length: pcs }).map((_,i) => (
+                          <span key={i} style={{ fontSize:14 }}>🃏</span>
+                        ))}
+                        <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700, marginLeft:4 }}>{pcs} pc{pcs > 1 ? "s" : ""}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {loading ? (
+        <div style={{ color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:11 }}>carregando...</div>
+      ) : pedidos.length === 0 ? (
+        <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"20px", textAlign:"center", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:11 }}>Nenhum pedido ainda.</div>
+      ) : (() => {
+        const ordenados = [...ativos, ...pedidos.filter(p => p.status === "cancelado")];
+        return ordenados.map(p => {
+          const cancelado = p.status === "cancelado";
+          const pcs = pcsPedido(p);
+          if (cancelado) return (
+            <div key={p.id} style={{ background:"rgba(245,240,232,.01)", border:"1px solid rgba(245,240,232,.04)", borderRadius:8, padding:"8px 14px", marginBottom:6, display:"flex", justifyContent:"space-between", alignItems:"center", opacity:.45 }}>
+              <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+                <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>@{p.cog}</span>
+                {p.total_reais > 0 && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", textDecoration:"line-through" }}>{fmtR(p.total_reais)}</span>}
+                <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{(p.itens||[]).length} item{(p.itens||[]).length !== 1 ? "s" : ""}</span>
+              </div>
+              <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                <span style={{ fontFamily:mono, fontSize:9, color:"#ff6b6b" }}>cancelado</span>
+                <button onClick={() => atualizar(p.id, "pendente")} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", borderRadius:5, cursor:"pointer", border:"1px solid rgba(245,240,232,.1)", background:"transparent", color:"rgba(245,240,232,.3)" }}>reativar</button>
+              </div>
+            </div>
+          );
+          return (
+            <div key={p.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"14px 16px", marginBottom:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8, gap:8, flexWrap:"wrap" }}>
+                <div>
+                  <span style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--offwhite)" }}>@{p.cog}</span>
+                  <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginLeft:8 }}>{p.nome}</span>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontFamily:mono, fontSize:9, color: corStatus(p.status) }}>● {p.status}</span>
+                  <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                </div>
+              </div>
+
+              <div style={{ display:"flex", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+                {p.total_reais > 0 && <span style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--laranja)" }}>{fmtR(p.total_reais)}</span>}
+                {pcs > 0 && (
+                  <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)", borderRadius:6, padding:"2px 8px" }}>
+                    🃏 {pcs} photocard{pcs > 1 ? "s" : ""}
+                  </span>
+                )}
+                {p.total_reais > 0 && pcs === 0 && (
+                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>
+                    faltam {fmtR(400 - (Number(p.total_reais) % 400))} p/ 1 pc
+                  </span>
+                )}
+              </div>
+
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:6 }}>
+                {envioLabel(p.envio)}{p.pagamento ? ` · prazo ${prazoLabel(p.pagamento)}` : ""}
+                <span style={{ marginLeft:8, color:"rgba(245,240,232,.18)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
+              </div>
+
+              <div style={{ display:"flex", flexDirection:"column", gap:3, marginBottom:10 }}>
+                {(p.itens || []).map((it, i) => (
+                  <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)" }}>
+                    {it.qtd > 1 && <span style={{ color:"var(--laranja)", marginRight:4 }}>×{it.qtd}</span>}
+                    {it.nome}{it.skzoo ? <span style={{ color:"rgba(245,240,232,.35)" }}> · {it.skzoo}</span> : ""}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                {["pendente","confirmado","cancelado"].map(s => (
+                  <button key={s} onClick={() => atualizar(p.id, s)} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:6, cursor:"pointer", border: p.status === s ? `1px solid ${corStatus(s)}` : "1px solid rgba(245,240,232,.08)", background: p.status === s ? "rgba(255,255,255,.04)" : "transparent", color: p.status === s ? corStatus(s) : "rgba(245,240,232,.3)" }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          );
+        });
+      })()}
     </div>
   );
 }
@@ -18672,8 +20962,8 @@ function PrevendaTab({ user }) {
       subtitulo: "Rio de Janeiro · Merch Oficial",
       url: "/prevenda/popup-skzoo",
       img: "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo/capa.png",
-      tags: ["Em breve · Formulário 03–05/09", "Pagamento a confirmar"],
-      info: "22 itens · LATAM Ver. exclusivos · preços a confirmar",
+      tags: ["Aberto · Formulário 03–05/09", "Pagamento a confirmar"],
+      info: "22 itens · LATAM Ver. exclusivos · preços confirmados",
     },
     {
       key: "this-that-albuns",
@@ -19777,14 +22067,7 @@ export default function App() {
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) {
     if (window.location.pathname === "/claim") {
-      return (
-        <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, fontFamily:"'DM Mono',monospace", padding:24 }}>
-          <div style={{ fontSize:28 }}>◈</div>
-          <div style={{ fontSize:13, fontWeight:700 }}>ANTICEG · CLAIMS</div>
-          <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:8 }}>Faça login para ver os itens disponíveis</div>
-          <button onClick={handleLogin} style={{ background:"var(--laranja)", border:"none", borderRadius:8, color:"#fff", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, padding:"10px 24px", cursor:"pointer", letterSpacing:"1px" }}>ENTRAR →</button>
-        </div>
-      );
+      return <ClaimGuestPage onLogin={handleLogin} />;
     }
     return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
   }
@@ -19993,8 +22276,9 @@ export default function App() {
         <button className={`tab-btn ${tab === "calendario" ? "active" : ""}`} onClick={() => changeTab("calendario")}>◫ Calendário</button>
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "perfil" ? "active" : ""}`} onClick={() => changeTab("perfil")}>⚙ Meu Perfil</button>}
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "envio"  ? "active" : ""}`} onClick={() => changeTab("envio")}>◫ Envio Nacional</button>}
-        {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "disponiveis" ? "active" : ""}`} onClick={() => changeTab("disponiveis")}>◱ Disponíveis</button>}
+        {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "disponiveis" ? "active" : ""}`} onClick={() => changeTab("disponiveis")}>◱ Itens da COMU</button>}
         <button className={`tab-btn ${tab === "prevenda" ? "active" : ""}`} onClick={() => changeTab("prevenda")}>◈ Pré-vendas</button>
+        <button className={`tab-btn ${window.location.pathname === "/claim" ? "active" : ""}`} onClick={() => { window.location.href = "/claim"; }}>◉ Claims</button>
         <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button>
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
         {isAdminUser(user) && (
@@ -20042,10 +22326,10 @@ export default function App() {
       {window.location.pathname === "/claim" ? (
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:20 }}>CLAIMS</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
           {/* Abas */}
           <div style={{ display:"flex", gap:6, marginBottom:24 }}>
-            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"]].map(([v,l]) => (
+            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"],["historico","HISTÓRICO"]].map(([v,l]) => (
               <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
                 {l}
               </button>
@@ -20064,7 +22348,8 @@ export default function App() {
             </div>
             <ClaimPublicoPage user={user} />
           </>}
-          {claimPageTab === "ao-vivo" && <ClaimAoVivo />}
+          {claimPageTab === "ao-vivo" && <ClaimScoreboard />}
+          {claimPageTab === "historico" && <ClaimHistorico />}
         </div>
       ) : (
         <>
