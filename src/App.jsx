@@ -313,7 +313,7 @@ function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status
 function gerarIcs(vencFuturos) {
   const fmtD = d => { const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`; };
   const uid  = () => Math.random().toString(36).slice(2) + "@anticeg";
-  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:ANTICEG","X-WR-TIMEZONE:America/Sao_Paulo"];
   for (const v of vencFuturos) {
     const ds = fmtD(v.d);
     const valStr = v.val ? v.val.toFixed(2).replace(".",",") : "";
