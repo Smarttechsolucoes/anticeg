@@ -5965,13 +5965,41 @@ function CalendarTab({ user, itens, calEventos, setCalEventos }) {
     })
     .sort(([a], [b]) => a.localeCompare(b));
 
+  const vencFuturos = calView === "meu" ? itens.flatMap(item => {
+    const r = [];
+    const parseLocalDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+    if (item.venc_item  && !item.pago_item  && Number(item.valor_item  || 0) > 0) { const d = parseLocalDate(item.venc_item);  if (d >= today) r.push({ d, ceg: item.ceg, nome: item.nome_do_item, tipo: "item",    val: Number(item.valor_item  || 0) }); }
+    if (item.venc_frete && !item.pago_frete && Number(item.frete_inter || 0) > 0) { const d = parseLocalDate(item.venc_frete); if (d >= today) r.push({ d, ceg: item.ceg, nome: item.nome_do_item, tipo: "frete",   val: Number(item.frete_inter || 0) }); }
+    if (item.venc_rf    && !item.pago_rf    && Number(item.taxa_rf     || 0) > 0) { const d = parseLocalDate(item.venc_rf);    if (d >= today) r.push({ d, ceg: item.ceg, nome: item.nome_do_item, tipo: "taxa RF", val: Number(item.taxa_rf     || 0) }); }
+    return r;
+  }) : [];
+
+  function exportarIcs() {
+    const fmtD = d => { const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`; };
+    const uid  = () => Math.random().toString(36).slice(2) + "@anticeg";
+    const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+    for (const v of vencFuturos) {
+      const ds = fmtD(v.d);
+      lines.push("BEGIN:VEVENT",`UID:${uid()}`,`DTSTART;VALUE=DATE:${ds}`,`DTEND;VALUE=DATE:${ds}`,`SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,`DESCRIPTION:${v.nome}\\n${v.tipo} · R$${v.val.toFixed(2).replace(".",",")}`, "BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:-PT9H",`DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,"END:VALARM","END:VEVENT");
+    }
+    lines.push("END:VCALENDAR");
+    const blob = new Blob([lines.join("\r\n")], { type:"text/calendar;charset=utf-8" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
   const viewBtns = (
-    <div style={{ display:"flex", gap:4 }}>
+    <div style={{ display:"flex", gap:4, alignItems:"center" }}>
       {["geral","meu"].map(v => (
         <button key={v} onClick={() => setCalView(v)} style={{ background: calView === v ? "var(--laranja)" : "transparent", color: calView === v ? "#000" : "rgba(245,240,232,.45)", border: `1px solid ${calView === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, borderRadius:6, padding:"5px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer", textTransform:"uppercase" }}>
           {v === "geral" ? "Geral" : "Meu Calendário"}
         </button>
       ))}
+      {calView === "meu" && vencFuturos.length > 0 && (
+        <button onClick={exportarIcs} title="Exportar lembretes para o calendário (.ics)" style={{ background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" }}>
+          ↓ salvar no calendário
+        </button>
+      )}
     </div>
   );
 
