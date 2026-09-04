@@ -309,6 +309,35 @@ const chipMap = {
 };
 
 function getStepIdx(status) { return STATUS_STEPS.findIndex(s => s.id === status); }
+
+function gerarIcs(vencFuturos) {
+  const fmtD = d => { const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`; };
+  const uid  = () => Math.random().toString(36).slice(2) + "@anticeg";
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  for (const v of vencFuturos) {
+    const ds = fmtD(v.d);
+    const valStr = v.val ? v.val.toFixed(2).replace(".",",") : "";
+    lines.push("BEGIN:VEVENT",`UID:${uid()}`,`DTSTART;VALUE=DATE:${ds}`,`DTEND;VALUE=DATE:${ds}`,`SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,`DESCRIPTION:${v.nome}\\n${v.tipo}${valStr ? " · R$" + valStr : ""}`,"BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:-PT9H",`DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,"END:VALARM","END:VEVENT");
+  }
+  lines.push("END:VCALENDAR");
+  const blob = new Blob([lines.join("\r\n")], { type:"text/calendar;charset=utf-8" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function abrirGoogleCalendar(v) {
+  const fmtD = d => { const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`; };
+  const start = fmtD(v.d);
+  const end   = fmtD(new Date(v.d.getFullYear(), v.d.getMonth(), v.d.getDate() + 1));
+  const valStr = v.val ? " · R$" + v.val.toFixed(2).replace(".",",") : "";
+  const params = new URLSearchParams({
+    action:  "TEMPLATE",
+    text:    `💳 Vencimento anticeg — ${v.ceg}`,
+    dates:   `${start}/${end}`,
+    details: `${v.nome}\n${v.tipo}${valStr}`,
+  });
+  window.open(`https://calendar.google.com/calendar/render?${params}`, "_blank");
+}
 function isPendente(val) {
   if (val === null || val === undefined) return true; // null = não preenchido = pendente
   if (typeof val === "boolean") return !val; // true=pago, false=pendente
@@ -2427,27 +2456,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   </div>
                   <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2 }}>{linhas.length} {linhas.length !== 1 ? "itens" : "item"} em aberto</div>
                 </div>
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  {vencDates.filter(v => v.d >= today).length > 0 && (
-                    <button
-                      title="Exportar lembretes para o calendário (.ics)"
-                      style={{ background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" }}
-                      onClick={() => {
-                        const futuros = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d);
-                        const fmt = d => { const p = n => String(n).padStart(2,"0"); return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`; };
-                        const uid = () => Math.random().toString(36).slice(2) + "@anticeg";
-                        const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
-                        for (const v of futuros) {
-                          const dateStr = fmt(v.d);
-                          lines.push("BEGIN:VEVENT",`UID:${uid()}`,`DTSTART;VALUE=DATE:${dateStr}`,`DTEND;VALUE=DATE:${dateStr}`,`SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,`DESCRIPTION:${v.nome}\\n${v.tipo} · R$${fmtBRL(v.val)}`,"BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:-PT9H",`DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,"END:VALARM","END:VEVENT");
-                        }
-                        lines.push("END:VCALENDAR");
-                        const blob = new Blob([lines.join("\r\n")], { type:"text/calendar;charset=utf-8" });
-                        const a = Object.assign(document.createElement("a"), { href:URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                      }}
-                    >↓ salvar no calendário</button>
-                  )}
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  {(() => {
+                    const futuros = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d);
+                    if (!futuros.length) return null;
+                    const btnStyle = { border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" };
+                    return (
+                      <>
+                        <button title="Baixar arquivo .ics (Apple/Outlook/telefone)" style={{ ...btnStyle, background:"rgba(240,192,64,.08)" }} onClick={() => gerarIcs(futuros)}>↓ .ics</button>
+                        <button title="Abrir próximo vencimento no Google Calendar" style={{ ...btnStyle, background:"rgba(66,133,244,.08)", border:"1px solid rgba(66,133,244,.25)", color:"#7aaff7" }} onClick={() => abrirGoogleCalendar(futuros[0])}>Google Cal</button>
+                      </>
+                    );
+                  })()}
                   <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
                 </div>
               </div>
@@ -2586,44 +2606,15 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   </div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  {futuros.length > 0 && (
-                    <button
-                      title="Exportar lembretes para o calendário (.ics)"
-                      style={{ background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" }}
-                      onClick={() => {
-                        const fmt = d => {
-                          const p = n => String(n).padStart(2,"0");
-                          return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`;
-                        };
-                        const uid = () => Math.random().toString(36).slice(2) + "@anticeg";
-                        const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
-                        for (const v of futuros) {
-                          const dateStr = fmt(v.d);
-                          lines.push(
-                            "BEGIN:VEVENT",
-                            `UID:${uid()}`,
-                            `DTSTART;VALUE=DATE:${dateStr}`,
-                            `DTEND;VALUE=DATE:${dateStr}`,
-                            `SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,
-                            `DESCRIPTION:${v.nome}\\n${v.tipo} · R$${fmtBRL(v.val)}`,
-                            "BEGIN:VALARM",
-                            "ACTION:DISPLAY",
-                            "TRIGGER:-PT9H",
-                            `DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,
-                            "END:VALARM",
-                            "END:VEVENT"
-                          );
-                        }
-                        lines.push("END:VCALENDAR");
-                        const ics = lines.join("\r\n");
-                        const blob = new Blob([ics], { type:"text/calendar;charset=utf-8" });
-                        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                      }}
-                    >
-                      ↓ salvar no calendário
-                    </button>
-                  )}
+                  {futuros.length > 0 && (() => {
+                    const btnStyle = { border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" };
+                    return (
+                      <>
+                        <button title="Baixar arquivo .ics (Apple/Outlook/telefone)" style={{ ...btnStyle, background:"rgba(240,192,64,.08)" }} onClick={() => gerarIcs(futuros)}>↓ .ics</button>
+                        <button title="Abrir próximo vencimento no Google Calendar" style={{ ...btnStyle, background:"rgba(66,133,244,.08)", border:"1px solid rgba(66,133,244,.25)", color:"#7aaff7" }} onClick={() => abrirGoogleCalendar(futuros[0])}>Google Cal</button>
+                      </>
+                    );
+                  })()}
                   <button onClick={() => setVencModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
                 </div>
               </div>
@@ -5974,20 +5965,6 @@ function CalendarTab({ user, itens, calEventos, setCalEventos }) {
     return r;
   }) : [];
 
-  function exportarIcs() {
-    const fmtD = d => { const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`; };
-    const uid  = () => Math.random().toString(36).slice(2) + "@anticeg";
-    const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
-    for (const v of vencFuturos) {
-      const ds = fmtD(v.d);
-      lines.push("BEGIN:VEVENT",`UID:${uid()}`,`DTSTART;VALUE=DATE:${ds}`,`DTEND;VALUE=DATE:${ds}`,`SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,`DESCRIPTION:${v.nome}\\n${v.tipo} · R$${v.val.toFixed(2).replace(".",",")}`, "BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:-PT9H",`DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,"END:VALARM","END:VEVENT");
-    }
-    lines.push("END:VCALENDAR");
-    const blob = new Blob([lines.join("\r\n")], { type:"text/calendar;charset=utf-8" });
-    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
-
   const viewBtns = (
     <div style={{ display:"flex", gap:4, alignItems:"center" }}>
       {["geral","meu"].map(v => (
@@ -5995,11 +5972,15 @@ function CalendarTab({ user, itens, calEventos, setCalEventos }) {
           {v === "geral" ? "Geral" : "Meu Calendário"}
         </button>
       ))}
-      {calView === "meu" && vencFuturos.length > 0 && (
-        <button onClick={exportarIcs} title="Exportar lembretes para o calendário (.ics)" style={{ background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" }}>
-          ↓ salvar no calendário
-        </button>
-      )}
+      {calView === "meu" && vencFuturos.length > 0 && (() => {
+        const btnStyle = { border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 10px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" };
+        return (
+          <>
+            <button title="Baixar arquivo .ics (Apple/Outlook/telefone)" style={{ ...btnStyle, background:"rgba(240,192,64,.08)" }} onClick={() => gerarIcs(vencFuturos)}>↓ .ics</button>
+            <button title="Abrir próximo vencimento no Google Calendar" style={{ ...btnStyle, background:"rgba(66,133,244,.08)", border:"1px solid rgba(66,133,244,.25)", color:"#7aaff7" }} onClick={() => abrirGoogleCalendar(vencFuturos[0])}>Google Cal</button>
+          </>
+        );
+      })()}
     </div>
   );
 
