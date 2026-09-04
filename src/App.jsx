@@ -2427,7 +2427,29 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   </div>
                   <div style={{ fontSize:11, color:"rgba(245,240,232,.45)", marginTop:2 }}>{linhas.length} {linhas.length !== 1 ? "itens" : "item"} em aberto</div>
                 </div>
-                <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  {vencDates.filter(v => v.d >= today).length > 0 && (
+                    <button
+                      title="Exportar lembretes para o calendário (.ics)"
+                      style={{ background:"rgba(240,192,64,.08)", border:"1px solid rgba(240,192,64,.25)", borderRadius:6, padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#F0C040", cursor:"pointer", letterSpacing:".04em", whiteSpace:"nowrap" }}
+                      onClick={() => {
+                        const futuros = vencDates.filter(v => v.d >= today).sort((a,b) => a.d - b.d);
+                        const fmt = d => { const p = n => String(n).padStart(2,"0"); return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`; };
+                        const uid = () => Math.random().toString(36).slice(2) + "@anticeg";
+                        const lines = ["BEGIN:VCALENDAR","VERSION:2.0","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+                        for (const v of futuros) {
+                          const dateStr = fmt(v.d);
+                          lines.push("BEGIN:VEVENT",`UID:${uid()}`,`DTSTART;VALUE=DATE:${dateStr}`,`DTEND;VALUE=DATE:${dateStr}`,`SUMMARY:💳 Vencimento anticeg — ${v.ceg}`,`DESCRIPTION:${v.nome}\\n${v.tipo} · R$${fmtBRL(v.val)}`,"BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:-PT9H",`DESCRIPTION:Pagamento vence hoje — ${v.ceg}`,"END:VALARM","END:VEVENT");
+                        }
+                        lines.push("END:VCALENDAR");
+                        const blob = new Blob([lines.join("\r\n")], { type:"text/calendar;charset=utf-8" });
+                        const a = Object.assign(document.createElement("a"), { href:URL.createObjectURL(blob), download:"lembretes_anticeg.ics" });
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      }}
+                    >↓ salvar no calendário</button>
+                  )}
+                  <button onClick={() => setTotalModal(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.52)", fontSize:20, cursor:"pointer" }}>✕</button>
+                </div>
               </div>
               <div style={{ overflowY:"auto", flex:1, padding:"0 clamp(12px,4vw,24px) 24px", overflowX:"auto" }}>
                 {linhas.length === 0 && emAnaliseLinhas.length === 0 ? (
