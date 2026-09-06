@@ -18576,6 +18576,7 @@ function PopupSkzooEaawPage() {
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(186,255,57,.1)", color:"var(--verde)", border:"1px solid rgba(186,255,57,.3)", letterSpacing:"1px" }}>ABERTO</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>22 ITENS</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS CONFIRMADOS</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.35)", letterSpacing:"1px" }}>PAGAMENTO IMEDIATO</span>
           </div>
         </div>
 
