@@ -21053,13 +21053,14 @@ function PrevendaTab({ user }) {
     {
       key: "mercari",
       ativo: true,
+      fechado: true,
       titulo: "MERCARI",
       subtitulo: "Compras no Japão",
       url: null,
       tab: "mercari",
       img: null,
-      tags: ["Aberto"],
-      info: "Solicite itens do Mercari JP",
+      tags: ["Em pausa"],
+      info: "A caixinha está pausada no momento. Fique de olho nos avisos para a reabertura.",
     },
     {
       key: "wmag-hyunjin",
@@ -21123,8 +21124,8 @@ function PrevendaTab({ user }) {
               <div style={{ padding:"16px 18px", flex:1, display:"flex", flexDirection:"column", gap:6, justifyContent:"center" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                   <span style={{ fontWeight:900, fontSize:15, letterSpacing:"-0.3px" }}>{f.titulo}</span>
-                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.ativo?"rgba(255,92,26,.15)":"rgba(245,240,232,.06)", color:f.ativo?"var(--laranja)":"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
-                    {f.ativo?"ABERTO":"ENCERRADO"}
+                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.fechado?"rgba(255,107,107,.12)":f.ativo?"rgba(255,92,26,.15)":"rgba(245,240,232,.06)", color:f.fechado?"#ff6b6b":f.ativo?"var(--laranja)":"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
+                    {f.fechado?"TEMP. FECHADO":f.ativo?"ABERTO":"ENCERRADO"}
                   </span>
                 </div>
                 <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{f.subtitulo}</div>
@@ -21136,7 +21137,7 @@ function PrevendaTab({ user }) {
                 <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:2 }}>{f.info}</div>
               </div>
             </div>
-            {f.ativo && (f.onInline || f.url || f.tab) && (
+            {f.ativo && !f.fechado && (f.onInline || f.url || f.tab) && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px", display:"flex", gap:8, flexWrap:"wrap" }}>
                 {f.onInline ? (
                   <button onClick={f.onInline}
