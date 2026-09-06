@@ -22322,7 +22322,7 @@ export default function App() {
         {!user.guest && !user.pre_cadastro && <button className={`tab-btn ${tab === "disponiveis" ? "active" : ""}`} onClick={() => changeTab("disponiveis")}>◱ Itens da COMU</button>}
         <button className={`tab-btn ${tab === "prevenda" ? "active" : ""}`} onClick={() => changeTab("prevenda")}>◈ Pré-vendas</button>
         <button className={`tab-btn ${window.location.pathname === "/claim" ? "active" : ""}`} onClick={() => { window.location.href = "/claim"; }}>◉ Claims</button>
-        <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button>
+        {/* <button className={`tab-btn ${tab === "mercari" ? "active" : ""}`} onClick={() => changeTab("mercari")}>🎌 Mercari</button> */}
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
