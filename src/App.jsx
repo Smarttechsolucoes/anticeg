@@ -7765,10 +7765,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [confirmacoes, setConfirmacoes] = useState([]);
   const [preCadastros, setPreCadastros] = useState([]);
   const [mercariPedidos, setMercariPedidos] = useState([]);
-  const [revistaCount,   setRevistaCount]   = useState(0);
-  const [wmagCount,      setWmagCount]      = useState(0);
-  const [popupCount,     setPopupCount]     = useState(0);
-  const [bazaarInCount,  setBazaarInCount]  = useState(0);
+  const [revistaCount,      setRevistaCount]      = useState(0);
+  const [wmagCount,         setWmagCount]         = useState(0);
+  const [popupCount,        setPopupCount]        = useState(0);
+  const [bazaarInCount,     setBazaarInCount]     = useState(0);
+  const [lightstickCount,   setLightstickCount]   = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
@@ -8031,6 +8032,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setWmagCount(count); });
     supabase.from("pedidos_bazaar_in").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setBazaarInCount(count); });
+    supabase.from("pedidos_lightstick").select("id", { count: "exact", head: true }).eq("status", "aguardando")
+      .then(({ count }) => { if (count) setLightstickCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8310,7 +8313,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
                 {nav("popup", "Pop-up This & That", "◉", popupCount)}
                 {nav("bazaar-in", "Bazaar IN", "◈", bazaarInCount)}
-                {nav("skzoo-rio", "SKZOO Pop-up Rio", "◈", 0)}
+                {nav("skzoo-rio",   "SKZOO Pop-up Rio",   "◈", 0)}
+                {nav("lightstick",  "Lightstick SKZ",     "◈", lightstickCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9007,7 +9011,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
-      {adminMainTab === "skzoo-rio" && <AdminSkzooRio />}
+      {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
+      {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -18454,7 +18459,6 @@ function PopupSkzooEaawPage() {
   const [lightbox, setLightbox] = useState(null);
   const [qtds, setQtds] = useState({});
   const [etapa, setEtapa] = useState("loja");
-  const [pagamento, setPagamento] = useState(null);
   const [envio, setEnvio] = useState(null);
   const [cog, setCog] = useState(() => {
     try { const u = JSON.parse(localStorage.getItem("anticeg_user_v2")); return u?.cog || ""; } catch { return ""; }
@@ -18499,7 +18503,6 @@ function PopupSkzooEaawPage() {
 
   const ETAPAS = [
     { id:"loja",     label:"Loja" },
-    { id:"pagamento",label:"Pagamento" },
     { id:"envio",    label:"Envio / Retirada" },
     { id:"confirmar",label:"Confirmar" },
   ];
@@ -18526,7 +18529,7 @@ function PopupSkzooEaawPage() {
       nome: nomeJoiner.trim(),
       itens: itensPedido,
       envio,
-      pagamento,
+      pagamento: "imediato",
       total_reais: totalReais,
       status: "pendente",
     }]).select().single();
@@ -18550,12 +18553,6 @@ function PopupSkzooEaawPage() {
     return acc + preco * qtdTotal;
   }, 0);
   const pcs = Math.floor(totalReais / 400);
-
-  const PRAZOS = [
-    { n:"01", label:"Prazo 01", prazo:"até 13 de Setembro", curto:"até 13/09" },
-    { n:"02", label:"Prazo 02", prazo:"até 05 de Outubro",  curto:"até 05/10" },
-  ];
-  const prazoLabel = PRAZOS.find(p => p.n === pagamento);
 
   const fmtReais = (v) => `R$${v.toFixed(2).replace(".",",")}`;
 
@@ -18743,51 +18740,9 @@ function PopupSkzooEaawPage() {
           )}
 
           <div style={{ marginTop:32, display:"flex", justifyContent:"flex-end" }}>
-            <button onClick={() => itensSelecionados.length > 0 && setEtapa("pagamento")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: itensSelecionados.length > 0 ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: itensSelecionados.length > 0 ? "#fff" : "rgba(245,240,232,.2)", cursor: itensSelecionados.length > 0 ? "pointer" : "not-allowed" }}>
+            <button onClick={() => itensSelecionados.length > 0 && setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: itensSelecionados.length > 0 ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: itensSelecionados.length > 0 ? "#fff" : "rgba(245,240,232,.2)", cursor: itensSelecionados.length > 0 ? "pointer" : "not-allowed" }}>
               PRÓXIMA ETAPA →
             </button>
-          </div>
-        </>}
-
-        {/* ── PAGAMENTO ── */}
-        {etapa === "pagamento" && <>
-          {/* Total destaque */}
-          <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"18px 20px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <div>
-              <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:6 }}>TOTAL A PAGAR</div>
-              <div style={{ fontFamily:mono, fontSize:24, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</div>
-            </div>
-            {pcs > 0 && (
-              <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"6px 12px" }}>
-                <span style={{ fontSize:14 }}>🃏</span>
-                <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>{pcs} pc{pcs > 1 ? "s" : ""} de brinde</span>
-              </div>
-            )}
-          </div>
-
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ESCOLHA O PRAZO</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-            {PRAZOS.map(p => {
-              const sel = pagamento === p.n;
-              return (
-                <div key={p.n} onClick={() => setPagamento(p.n)} style={{
-                  background: sel ? "rgba(255,92,26,.07)" : "rgba(245,240,232,.03)",
-                  border: `1px solid ${sel ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`,
-                  borderRadius:10, padding:"14px 16px", cursor:"pointer", transition:"border-color .15s",
-                }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid ${sel ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, background: sel ? "var(--laranja)" : "transparent", flexShrink:0, transition:"all .15s" }} />
-                    <div>
-                      <div style={{ fontFamily:mono, fontSize:13, fontWeight:700, color: sel ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>{p.prazo}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display:"flex", justifyContent:"space-between" }}>
-            <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
-            <button onClick={() => pagamento && setEtapa("envio")} disabled={!pagamento} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: pagamento ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: pagamento ? "#fff" : "rgba(245,240,232,.2)", cursor: pagamento ? "pointer" : "not-allowed" }}>PRÓXIMA ETAPA →</button>
           </div>
         </>}
 
@@ -18799,12 +18754,7 @@ function PopupSkzooEaawPage() {
               <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:3 }}>VALOR A PAGAR</div>
               <div style={{ fontFamily:mono, fontSize:16, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</div>
             </div>
-            {prazoLabel && (
-              <div style={{ textAlign:"right" }}>
-                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:3 }}>PRAZO</div>
-                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.7)", fontWeight:700 }}>{prazoLabel.prazo}</div>
-              </div>
-            )}
+            <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", background:"rgba(186,255,57,.1)", borderRadius:6, padding:"4px 10px", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>PAGAMENTO IMEDIATO</span>
           </div>
 
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ESCOLHA UMA OPÇÃO</div>
@@ -18836,7 +18786,7 @@ function PopupSkzooEaawPage() {
             })}
           </div>
           <div style={{ display:"flex", justifyContent:"space-between" }}>
-            <button onClick={() => setEtapa("pagamento")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+            <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
             <button onClick={() => setEtapa("confirmar")} disabled={!envio} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: envio ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: envio ? "#fff" : "rgba(245,240,232,.2)", cursor: envio ? "pointer" : "not-allowed" }}>PRÓXIMA ETAPA →</button>
           </div>
         </>}
@@ -18876,18 +18826,12 @@ function PopupSkzooEaawPage() {
 
           {/* Resumo financeiro */}
           <div style={{ background:"rgba(255,92,26,.05)", border:"1px solid rgba(255,92,26,.18)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:prazoLabel || pcs > 0 ? 10 : 0 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: pcs > 0 ? 10 : 0 }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total a pagar</span>
               <span style={{ fontFamily:mono, fontSize:18, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</span>
             </div>
-            {prazoLabel && (
-              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginTop: pcs > 0 ? 0 : 0 }}>
-                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>Prazo escolhido</span>
-                <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", fontWeight:700 }}>{prazoLabel.label} · {prazoLabel.prazo}</span>
-              </div>
-            )}
             {pcs > 0 && (
-              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10, marginTop:prazoLabel ? 10 : 0 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10 }}>
                 <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>Photocards de brinde</span>
                 <span style={{ display:"flex", alignItems:"center", gap:5, fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>🃏 {pcs} pc{pcs > 1 ? "s" : ""}</span>
               </div>
@@ -20979,6 +20923,231 @@ function AdminBazaarIn({ onCountChange }) {
   );
 }
 
+// ── Lightstick SKZ Form ────────────────────────────────────────
+const LS_CARTAO_URL = "https://linknabio.gg/anticeg-comu";
+
+function LightstickForm({ onVoltar }) {
+  const mono = "'DM Mono',monospace";
+  const [joiner, setJoiner]   = useState(null);
+  const [idInp, setIdInp]     = useState('');
+  const [idSt, setIdSt]       = useState('');
+  const [idMsg, setIdMsg]     = useState('');
+  const [metodo, setMetodo]   = useState('pix');
+  const [comprovante, setComprovante] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [err, setErr]         = useState('');
+  const [copiado, setCopiado] = useState(false);
+  const fileRef = useRef(null);
+  const tmrRef  = useRef(null);
+  const idRef   = useRef('');
+  const jRef    = useRef(null);
+
+  const formOk = idInp.trim().length >= 3 && (metodo === 'cartao' || !!comprovante);
+
+  const copiarPix = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const buscar = async () => {
+    clearTimeout(tmrRef.current);
+    const v = idRef.current.trim();
+    if (!v) return;
+    setIdSt('loading'); setIdMsg('Buscando...');
+    const isEml = v.includes('@') && v.indexOf('@') > 0;
+    let q = supabase.from('joiners').select('cog,nome,email').limit(1);
+    q = isEml ? q.eq('email', v.toLowerCase()) : q.ilike('twitter', `@${v.replace(/^@/, '')}`);
+    try {
+      const { data } = await q;
+      if (data?.length) {
+        const j = data[0]; setJoiner(j); jRef.current = j;
+        setIdSt('found'); setIdMsg(`✦ ${j.nome || j.cog} · @${j.cog}`);
+      } else {
+        setJoiner(null); jRef.current = null;
+        setIdSt('notfound'); setIdMsg('Não encontrado no cadastro — pode enviar assim mesmo.');
+      }
+    } catch {
+      setJoiner(null); jRef.current = null;
+      setIdSt('notfound'); setIdMsg('Erro de conexão — pode enviar assim mesmo.');
+    }
+  };
+
+  const onId = (v) => {
+    idRef.current = v; setIdInp(v);
+    setIdSt(''); setIdMsg(''); setJoiner(null); jRef.current = null;
+    clearTimeout(tmrRef.current);
+    if (v.trim().length >= 3) tmrRef.current = setTimeout(buscar, 600);
+  };
+
+  const enviar = async () => {
+    if (!formOk || sending) return;
+    setSending(true); setErr('');
+    const j = jRef.current;
+    const contato = j ? j.cog : idInp.trim();
+    const nome    = j ? (j.nome || j.cog) : idInp.trim();
+    let comprovanteUrl = null;
+    if (metodo === 'pix' && comprovante) {
+      try {
+        const slug = contato.replace(/[^a-z0-9]/gi, '_');
+        const ext = comprovante.name.split('.').pop() || 'jpg';
+        const path = `lightstick/${slug}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+          contentType: comprovante.type || 'application/octet-stream', upsert: false,
+        });
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(path);
+          comprovanteUrl = pub.publicUrl;
+        }
+      } catch { /* salva mesmo sem comprovante */ }
+    }
+    const { error } = await supabase.from('pedidos_lightstick').insert([{
+      nome, contato, joiner_cog: j?.cog || null,
+      metodo_pagamento: metodo, comprovante_url: comprovanteUrl, status: 'aguardando',
+    }]);
+    if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
+    setDone(true); setSending(false);
+  };
+
+  if (done) return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer", marginBottom:20, padding:0 }}>← voltar</button>
+      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.25)", borderRadius:14, padding:"32px 24px", textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>✦</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1, color:"#BAFF39", marginBottom:8 }}>PEDIDO REGISTRADO!</div>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.7 }}>
+          {metodo === 'cartao'
+            ? <>Recebemos seu pedido.<br/>Confirme o pagamento pelo link que foi aberto.</>
+            : <>Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.</>}
+        </div>
+        <div style={{ marginTop:20, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>Em caso de falta de estoque, reembolso integral no valor de R$ 450,00.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer", marginBottom:20, padding:0 }}>← voltar</button>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, marginBottom:4 }}>LIGHTSTICK STRAY KIDS</div>
+      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginBottom:24 }}>Pré-venda · formulário até 08/09</div>
+
+      {/* Preço */}
+      <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between", alignItems:"center", gap:8, marginBottom:18 }}>
+        <div>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"#BAFF39", letterSpacing:0.5 }}>R$ 450,00</div>
+        </div>
+        <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", background:"rgba(186,255,57,.1)", borderRadius:6, padding:"4px 10px", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>PAGAMENTO IMEDIATO</span>
+      </div>
+
+      {/* Informações do item */}
+      <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px", marginBottom:16, display:"flex", flexDirection:"column", gap:8 }}>
+        {[
+          ["🎌", "Comprado na Pop-up SEAAW · Rio de Janeiro"],
+          ["📦", "Item lacrado e original"],
+          ["📍", "Retirada em 09/09, 10/09 ou a combinar mediante disponibilidade da GOM"],
+        ].map(([icon, text]) => (
+          <div key={text} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+            <span style={{ fontSize:13, flexShrink:0 }}>{icon}</span>
+            <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>{text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Seletor de método */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>FORMA DE PAGAMENTO</div>
+        <div style={{ display:"flex", gap:8 }}>
+          {[{ id:"pix", label:"PIX", icon:"⚡" }, { id:"cartao", label:"Cartão", icon:"💳" }].map(({ id, label, icon }) => (
+            <button key={id} onClick={() => setMetodo(id)} style={{
+              flex:1, padding:"12px 8px", borderRadius:8, fontFamily:mono, fontSize:12, fontWeight:700,
+              cursor:"pointer", letterSpacing:"0.5px",
+              background: metodo === id ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.04)",
+              border: metodo === id ? "1px solid rgba(255,92,26,.5)" : "1px solid rgba(245,240,232,.1)",
+              color: metodo === id ? "var(--laranja)" : "rgba(245,240,232,.5)",
+            }}>{icon} {label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bloco PIX */}
+      {metodo === 'pix' && (
+        <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX</div>
+          <div style={{ display:"flex", gap:8, alignItems:"stretch" }}>
+            <div style={{ flex:1, minWidth:0, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"10px 11px", fontSize:11, fontFamily:mono, color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
+            <button onClick={copiarPix} style={{ flexShrink:0, padding:"10px 16px", background: copiado ? "rgba(186,255,57,.25)" : "rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+              {copiado ? "✓" : "Copiar"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bloco Cartão */}
+      {metodo === 'cartao' && (
+        <div style={{ background:"rgba(66,133,244,.04)", border:"1px solid rgba(66,133,244,.2)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", marginBottom:12, lineHeight:1.6 }}>
+            Clique no botão abaixo para acessar o link de pagamento. Após pagar, preencha o formulário e envie.
+          </div>
+          <a href={LS_CARTAO_URL} target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:6, padding:"12px 16px", borderRadius:7, background:"rgba(66,133,244,.2)", border:"1px solid rgba(66,133,244,.4)", color:"#7aaff7", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px", boxSizing:"border-box" }}>
+            💳 Ir para o link de pagamento →
+          </a>
+        </div>
+      )}
+
+      {/* Aviso estoque */}
+      <div style={{ background:"rgba(240,192,64,.04)", border:"1px solid rgba(240,192,64,.15)", borderRadius:10, padding:"10px 14px", marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(240,192,64,.7)", lineHeight:1.6 }}>
+          <strong>Em caso de falta de estoque</strong>, reembolso integral no valor de R$ 450,00.
+        </div>
+      </div>
+
+      {/* Identificação */}
+      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <div>
+          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>SEU @ OU E-MAIL</label>
+          <input value={idInp} onChange={e => onId(e.target.value)} placeholder="@usuario ou email@exemplo.com"
+            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:`1px solid ${idSt==='found'?"rgba(186,255,57,.4)":idSt==='notfound'?"rgba(240,192,64,.35)":"rgba(245,240,232,.12)"}`, borderRadius:8, padding:"10px 12px", color:"#F5F0E8", fontFamily:mono, fontSize:12, outline:"none", boxSizing:"border-box" }} />
+          {idMsg && (
+            <div style={{ fontFamily:mono, fontSize:10, marginTop:5, color: idSt==='found'?"#BAFF39":idSt==='loading'?"rgba(245,240,232,.4)":"rgba(240,192,64,.8)" }}>{idMsg}</div>
+          )}
+        </div>
+
+        {metodo === 'pix' && (
+          <div>
+            <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>COMPROVANTE DE PAGAMENTO *</label>
+            <div onClick={() => fileRef.current?.click()} style={{ border:"1px dashed rgba(245,240,232,.18)", borderRadius:8, padding:"20px 16px", textAlign:"center", cursor:"pointer", background: comprovante ? "rgba(186,255,57,.04)" : "rgba(245,240,232,.02)" }}>
+              {comprovante ? (
+                <div style={{ fontFamily:mono, fontSize:11, color:"#BAFF39" }}>✓ {comprovante.name}</div>
+              ) : (
+                <>
+                  <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:4 }}>Clique para anexar</div>
+                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>JPG, PNG ou PDF</div>
+                </>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files?.[0] || null)} style={{ display:"none" }} />
+          </div>
+        )}
+
+        {err && <div style={{ fontFamily:mono, fontSize:10, color:"#ff6b6b" }}>{err}</div>}
+
+        <button onClick={enviar} disabled={!formOk || sending}
+          style={{ padding:"14px", borderRadius:10, background: formOk && !sending ? "var(--laranja)" : "rgba(245,240,232,.06)", color: formOk && !sending ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:12, fontWeight:700, border:"none", cursor: formOk && !sending ? "pointer" : "default", letterSpacing:"1px", marginTop:4 }}>
+          {sending ? "Enviando..." : "CONFIRMAR PEDIDO →"}
+        </button>
+
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", textAlign:"center", lineHeight:1.6 }}>
+          {metodo === 'pix' ? "Realize o PIX antes de enviar · " : ""}Formulário disponível até 08/09
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Aba Pré-vendas ─────────────────────────────────────────────
 function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
@@ -20986,16 +21155,18 @@ function PrevendaTab({ user }) {
   const [subView, setSubView] = useState(null);
   const [subTabPv, setSubTabPv] = useState("ativos");
 
-  const REVISTA_DEADLINE_PV = new Date("2026-09-04T23:59:59-03:00");
+  const REVISTA_DEADLINE_PV   = new Date("2026-09-04T23:59:59-03:00");
+  const LIGHTSTICK_DEADLINE   = new Date("2026-09-08T23:59:59-03:00");
   const revistaAberta = now <= REVISTA_DEADLINE_PV;
 
   const popup01Aberta = now <= POPUP_WEEKS[0].deadline;
   const popup02Aberta = now <= POPUP_WEEKS[1].deadline;
   const popupAberto   = popup01Aberta || popup02Aberta;
 
-  const runItJapanAberto = now <= new Date("2026-08-28T23:59:59-03:00");
-  const wmagAberto       = now <= WMAG_DEADLINE;
-  const bazaarInAberta   = now <= new Date("2026-08-27T23:59:59-03:00");
+  const runItJapanAberto  = now <= new Date("2026-08-28T23:59:59-03:00");
+  const wmagAberto        = now <= WMAG_DEADLINE;
+  const bazaarInAberta    = now <= new Date("2026-08-27T23:59:59-03:00");
+  const lightstickAberto  = now <= LIGHTSTICK_DEADLINE;
 
   const formularios = [
     {
@@ -21005,7 +21176,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Rio de Janeiro · Merch Oficial",
       url: "/prevenda/popup-skzoo",
       img: "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo/capa.png",
-      tags: ["Aberto · Formulário 03–05/09", "Pagamento a confirmar"],
+      tags: ["Aberto · Formulário 03–05/09", "Pagamento imediato"],
       info: "22 itens · LATAM Ver. exclusivos · preços confirmados",
     },
     {
@@ -21051,6 +21222,16 @@ function PrevendaTab({ user }) {
       info: "Envio direto Coreia › Brasil · sem taxa RF",
     },
     {
+      key: "lightstick-skz",
+      ativo: lightstickAberto,
+      titulo: "LIGHTSTICK STRAY KIDS",
+      subtitulo: "Stray Kids Official",
+      img: "https://acdn-us.mitiendanube.com/stores/001/695/722/products/1000338412-ffa9cf04704444528817340080176482-1024-1024.webp",
+      url: "/prevenda/lightstick",
+      tags: ["Pedidos até 08/09", "R$ 450,00"],
+      info: "Pagamento imediato via PIX · Reembolso integral em caso de falta de estoque",
+    },
+    {
       key: "mercari",
       ativo: true,
       fechado: true,
@@ -21085,6 +21266,7 @@ function PrevendaTab({ user }) {
   if (subView === "bazaar-in") {
     return <RevistaBazaarInPage onVoltar={() => setSubView(null)} />;
   }
+
 
   const ativos     = formularios.filter(f =>  f.ativo);
   const encerrados = formularios.filter(f => !f.ativo);
@@ -21239,6 +21421,150 @@ function AdminRevista({ onCountChange }) {
                     <div style={{ display:"flex", gap:6 }}>
                       <button onClick={() => confirmar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
                       <button onClick={() => cancelar(p.id)} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
+}
+
+// ── Admin Lightstick SKZ ───────────────────────────────────────
+function AdminLightstick({ onCountChange }) {
+  const [pedidos, setPedidos]   = useState(null);
+  const [showAdd, setShowAdd]   = useState(false);
+  const [addNome, setAddNome]   = useState('');
+  const [addContato, setAddContato] = useState('');
+  const [addMetodo, setAddMetodo]   = useState('pix');
+  const [addStatus, setAddStatus]   = useState('confirmado');
+  const [addSaving, setAddSaving]   = useState(false);
+  const mono = "'DM Mono',monospace";
+
+  useEffect(() => {
+    supabase.from("pedidos_lightstick").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => setPedidos(data || []));
+  }, []);
+
+  const atualizar = async (id, novoStatus) => {
+    await supabase.from("pedidos_lightstick").update({ status: novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, status: novoStatus } : p);
+      onCountChange?.(next.filter(p => p.status === "aguardando").length);
+      return next;
+    });
+  };
+
+  const adicionarManual = async () => {
+    if (!addNome.trim() || !addContato.trim() || addSaving) return;
+    setAddSaving(true);
+    const { data, error } = await supabase.from("pedidos_lightstick").insert([{
+      nome: addNome.trim(), contato: addContato.trim().replace(/^@/, ''),
+      metodo_pagamento: addMetodo, status: addStatus,
+    }]).select().single();
+    if (!error && data) {
+      setPedidos(prev => {
+        const next = [data, ...(prev || [])];
+        onCountChange?.(next.filter(p => p.status === "aguardando").length);
+        return next;
+      });
+      setAddNome(''); setAddContato(''); setAddMetodo('pix'); setAddStatus('confirmado');
+      setShowAdd(false);
+    }
+    setAddSaving(false);
+  };
+
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+  const aguardando = (pedidos || []).filter(p => p.status === "aguardando").length;
+  const inp = { width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"8px 10px", color:"#F5F0E8", fontFamily:mono, fontSize:11, outline:"none", boxSizing:"border-box" };
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+        <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.3)" }}>LIGHTSTICK STRAY KIDS — PEDIDOS</div>
+        <button onClick={() => setShowAdd(v => !v)} style={{ fontFamily:mono, fontSize:10, padding:"6px 14px", borderRadius:7, border:"1px solid rgba(255,92,26,.35)", background:"rgba(255,92,26,.08)", color:"var(--laranja)", cursor:"pointer" }}>
+          {showAdd ? "✕ fechar" : "+ adicionar"}
+        </button>
+      </div>
+
+      {showAdd && (
+        <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"16px", marginBottom:20, display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:4 }}>ADICIONAR PEDIDO MANUALMENTE</div>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            <div style={{ flex:1, minWidth:160 }}>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>NOME</div>
+              <input value={addNome} onChange={e => setAddNome(e.target.value)} placeholder="Nome" style={inp} />
+            </div>
+            <div style={{ flex:1, minWidth:160 }}>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>@ OU E-MAIL</div>
+              <input value={addContato} onChange={e => setAddContato(e.target.value)} placeholder="@usuario" style={inp} />
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>MÉTODO</div>
+              <select value={addMetodo} onChange={e => setAddMetodo(e.target.value)} style={{ ...inp, appearance:"none" }}>
+                <option value="pix">⚡ PIX</option>
+                <option value="cartao">💳 Cartão</option>
+              </select>
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>STATUS</div>
+              <select value={addStatus} onChange={e => setAddStatus(e.target.value)} style={{ ...inp, appearance:"none" }}>
+                <option value="confirmado">confirmado</option>
+                <option value="aguardando">aguardando</option>
+              </select>
+            </div>
+          </div>
+          <button onClick={adicionarManual} disabled={!addNome.trim() || !addContato.trim() || addSaving}
+            style={{ alignSelf:"flex-start", padding:"8px 20px", borderRadius:7, background: addNome.trim() && addContato.trim() ? "var(--laranja)" : "rgba(245,240,232,.06)", color: addNome.trim() && addContato.trim() ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer" }}>
+            {addSaving ? "Salvando..." : "Salvar pedido"}
+          </button>
+        </div>
+      )}
+
+      {pedidos === null ? <div style={{ fontFamily:mono, fontSize:12, opacity:.4 }}>carregando...</div> : <>
+        <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap" }}>
+          {[
+            ["Total",       pedidos.length],
+            ["Aguardando",  aguardando],
+            ["Confirmados", pedidos.filter(p => p.status === "confirmado").length],
+            ["PIX",         pedidos.filter(p => p.metodo_pagamento === "pix").length],
+            ["Cartão",      pedidos.filter(p => p.metodo_pagamento === "cartao").length],
+          ].map(([l, v]) => (
+            <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 16px", minWidth:100 }}>
+              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>{l}</div>
+              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+          {pedidos.map(p => (
+            <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="aguardando"?"rgba(255,92,26,.2)":p.status==="confirmado"?"rgba(74,222,128,.15)":"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:4, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                    {p.contato && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>@{p.contato}</span>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ 450,00</span>
+                    <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "pix" ? "⚡ PIX" : "💳 Cartão"}</span>
+                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
+                  </div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                  {p.status === "aguardando" && (
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={() => atualizar(p.id, "confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                      <button onClick={() => atualizar(p.id, "cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b",  fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
                     </div>
                   )}
                 </div>
@@ -22107,6 +22433,7 @@ export default function App() {
   if (window.location.pathname === "/revista") return <RevistaFormPage />;
   if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
+  if (window.location.pathname === "/prevenda/lightstick") return <LightstickForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) {
