@@ -18184,7 +18184,7 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
     ...(!isGuest ? [{ id:"perfil",      icon:"○",  label:"Perfil" }] : []),
     ...(!isGuest ? [{ id:"envio",       icon:"▢",  label:"Envio" }] : []),
     ...(!isGuest ? [{ id:"disponiveis", icon:"◱",  label:"Loja" }] : []),
-    { id:"mercari",     icon:"🎌", label:"Mercari" },
+    // { id:"mercari",     icon:"🎌", label:"Mercari" }, // temporariamente fechado
     { id:"regras",      icon:"☆",  label:"Regras" },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
