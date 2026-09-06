@@ -11484,6 +11484,8 @@ function MercariTab() {
     <span key="c3">Estou ciente que a GOM é responsável por <strong>intermediar</strong> o processo de compra.</span>,
   ];
 
+  const FECHADO = true;
+
   return (
     <div className="mc-wrap">
       <div className="mc-top">
@@ -11496,6 +11498,16 @@ function MercariTab() {
           <button className="mc-btn-fx" onClick={()=>{setFxInp('');setModal(true);}}>✎ Câmbio</button>
         </div>
       </div>
+
+      {FECHADO && (
+        <div style={{ margin:"16px 0", background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.35)", borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:18 }}>🔒</span>
+          <div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:1, color:"#ff6b6b" }}>TEMPORARIAMENTE FECHADO</div>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.5)", marginTop:2 }}>A caixinha Mercari está pausada no momento. Fique de olho nos avisos para a reabertura.</div>
+          </div>
+        </div>
+      )}
 
       {modal && (
         <div className="mc-modal-bg" onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>
@@ -11719,8 +11731,8 @@ function MercariTab() {
             </a>
 
             {formErr&&<div className="mc-err">{formErr}</div>}
-            <button className="mc-btn-primary" onClick={enviar} disabled={!formOk||sending}>
-              {sending?'Enviando...':'Enviar pedido →'}
+            <button className="mc-btn-primary" onClick={enviar} disabled={FECHADO||!formOk||sending}>
+              {FECHADO?'Caixinha fechada temporariamente':sending?'Enviando...':'Enviar pedido →'}
             </button>
           </div>
         )}
