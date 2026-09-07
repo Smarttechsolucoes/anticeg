@@ -20051,7 +20051,8 @@ function AdminClaimEventos() {
                               <button onClick={() => {
                                 const linhas = [];
                                 if (adminSlots.length > 0) linhas.push(`admin: ${adminSlots.map(r=>r.membro).join(", ")}`);
-                                joiners.forEach(j => linhas.push(`${j.nome} · ${j.membros.join(", ")}`));
+                                Object.entries(claimadosPorJoiner).sort((a,b) => a[1].ts < b[1].ts ? -1 : 1)
+                                  .forEach(([cog, v]) => linhas.push(`@${cog} · ${v.membros.join(", ")}`));
                                 if (livres.length > 0) linhas.push(`livres: ${livres.join(", ")}`);
                                 const texto = `SET ${s.numero} · ${ev.nome}\n${linhas.join("\n")}`;
                                 navigator.clipboard.writeText(texto).then(() => {
