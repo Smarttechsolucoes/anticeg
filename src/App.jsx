@@ -19756,6 +19756,7 @@ function AdminClaimEventos() {
   const [expandido, setExpandido] = useState(new Set());
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
+  const [copiadoSet, setCopiadoSet] = useState(null);
 
   async function fetchTudo() {
     const { data: evData } = await supabase.from("claim_eventos").select("*").order("abertura", { ascending:false });
@@ -20047,6 +20048,19 @@ function AdminClaimEventos() {
                               <span style={{ fontFamily:mono, fontSize:9, color: s.status==="confirmado"?"rgba(201,168,240,.7)":s.status==="fechado"?"var(--lilas)":s.status==="cancelado"?"rgba(245,240,232,.2)":s.status==="a_confirmar"?"#ffb400":"rgba(186,255,57,.7)" }}>
                                 {s.status==="confirmado"?"✓ confirmado":s.status==="fechado"?"✓ fechado":s.status==="cancelado"?"cancelado":s.status==="a_confirmar"?"a confirmar":"aberto"} · {resSet.filter(r=>!r.is_admin).length}/{(ev.membros||SK8).length} claims
                               </span>
+                              <button onClick={() => {
+                                const linhas = [];
+                                if (adminSlots.length > 0) linhas.push(`admin: ${adminSlots.map(r=>r.membro).join(", ")}`);
+                                joiners.forEach(j => linhas.push(`${j.nome} · ${j.membros.join(", ")}`));
+                                if (livres.length > 0) linhas.push(`livres: ${livres.join(", ")}`);
+                                const texto = `SET ${s.numero} · ${ev.nome}\n${linhas.join("\n")}`;
+                                navigator.clipboard.writeText(texto).then(() => {
+                                  setCopiadoSet(s.id);
+                                  setTimeout(() => setCopiadoSet(null), 2000);
+                                });
+                              }} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background: copiadoSet===s.id ? "rgba(186,255,57,.1)" : "rgba(245,240,232,.04)", border:`1px solid ${copiadoSet===s.id ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.12)"}`, borderRadius:4, color: copiadoSet===s.id ? "var(--verde)" : "rgba(245,240,232,.4)", cursor:"pointer", transition:"all .2s" }}>
+                                {copiadoSet===s.id ? "✓ copiado" : "copiar"}
+                              </button>
                               {s.status==="aberto" && <button onClick={() => marcarAConfirmar(s.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:4, color:"#ffb400", cursor:"pointer" }}>a confirmar</button>}
                               {s.status==="a_confirmar" && <button onClick={() => confirmarSet(s.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, color:"#BAFF39", cursor:"pointer" }}>confirmar</button>}
                               {s.status==="fechado" && <button onClick={() => confirmarSetFinal(s.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.35)", borderRadius:4, color:"var(--lilas)", cursor:"pointer", fontWeight:700 }}>✓ CONFIRMAR SET</button>}
