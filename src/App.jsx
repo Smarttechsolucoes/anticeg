@@ -18573,7 +18573,7 @@ function PopupSkzooEaawPage() {
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1, color:"var(--laranja)" }}>ALL AROUND THE WORLD</div>
           <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginTop:6 }}>in Rio de Janeiro · Formulário 03–05/09</div>
           <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(186,255,57,.1)", color:"var(--verde)", border:"1px solid rgba(186,255,57,.3)", letterSpacing:"1px" }}>ABERTO</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", letterSpacing:"1px" }}>ENCERRADO</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>22 ITENS</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS CONFIRMADOS</span>
             <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.35)", letterSpacing:"1px" }}>PAGAMENTO IMEDIATO</span>
@@ -18740,10 +18740,10 @@ function PopupSkzooEaawPage() {
             </div>
           )}
 
-          <div style={{ marginTop:32, display:"flex", justifyContent:"flex-end" }}>
-            <button onClick={() => itensSelecionados.length > 0 && setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: itensSelecionados.length > 0 ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: itensSelecionados.length > 0 ? "#fff" : "rgba(245,240,232,.2)", cursor: itensSelecionados.length > 0 ? "pointer" : "not-allowed" }}>
-              PRÓXIMA ETAPA →
-            </button>
+          <div style={{ marginTop:32 }}>
+            <div style={{ background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"12px 16px", marginBottom:12, fontFamily:mono, fontSize:11, color:"rgba(255,107,107,.8)", textAlign:"center" }}>
+              Formulário encerrado · pedidos não estão mais sendo aceitos
+            </div>
           </div>
         </>}
 
@@ -21172,7 +21172,7 @@ function PrevendaTab({ user }) {
   const [subTabPv, setSubTabPv] = useState("ativos");
 
   const REVISTA_DEADLINE_PV   = new Date("2026-09-04T23:59:59-03:00");
-  const LIGHTSTICK_DEADLINE   = new Date("2026-09-08T23:59:59-03:00");
+  const LIGHTSTICK_DEADLINE   = new Date("2026-09-08T12:00:00-03:00");
   const revistaAberta = now <= REVISTA_DEADLINE_PV;
 
   const popup01Aberta = now <= POPUP_WEEKS[0].deadline;
@@ -21187,7 +21187,7 @@ function PrevendaTab({ user }) {
   const formularios = [
     {
       key: "popup-skzoo-rio",
-      ativo: true,
+      ativo: false,
       titulo: "POP-UP SKZOO EAAW",
       subtitulo: "Rio de Janeiro · Merch Oficial",
       url: "/prevenda/popup-skzoo",
