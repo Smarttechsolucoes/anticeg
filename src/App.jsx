@@ -4795,7 +4795,7 @@ ${compHTML}
                   ].map((r, i) => (
                     <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
                       <span style={{ color:"rgba(255,92,26,.5)", fontSize:11, flexShrink:0, marginTop:1 }}>☆</span>
-                      <span style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{r}</span>
+                      <span style={{ fontSize:11, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, minWidth:0, overflowWrap:"break-word", wordBreak:"break-word" }}>{r}</span>
                     </div>
                   ))}
                 </div>
