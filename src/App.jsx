@@ -5226,7 +5226,7 @@ ${compHTML}
         return (
           <div style={{ paddingBottom: 40 }}>
             <BadgesRow badges={badges} />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {badges.map(b => {
                 const tc = b.tier ? TIER_COLORS[b.tier] : null;
                 const TIERS = ["bronze", "prata", "ouro"];
@@ -5253,7 +5253,7 @@ ${compHTML}
                         <div key={t} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= tierIdx ? TIER_COLORS[t].hex : "rgba(245,240,232,.08)" }} />
                       ))}
                     </div>
-                    <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.detalhe}</div>
+                    <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: "rgba(245,240,232,.4)", lineHeight: 1.5 }}>{b.detalhe}</div>
                   </div>
                 </div>
                 );
