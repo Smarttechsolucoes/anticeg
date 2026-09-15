@@ -2570,6 +2570,16 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   </>
                 )}
               </div>
+              {(linhas.length > 0 || tMulta > 0) && (
+                <div style={{ padding:"12px 24px 20px", borderTop:"1px solid rgba(245,240,232,.07)", flexShrink:0 }}>
+                  <button
+                    onClick={() => { setTotalModal(false); onOpenPagamentos(); }}
+                    style={{ width:"100%", background:"var(--laranja)", color:"#111", border:"none", borderRadius:10, padding:"13px 0", fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:1, cursor:"pointer" }}
+                  >
+                    Enviar pagamento →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );
