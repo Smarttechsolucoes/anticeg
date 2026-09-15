@@ -18338,27 +18338,39 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
 function BottomNav({ tab, setTab, isGuest, isAdmin }) {
   const isClaimPage = window.location.pathname === "/claim";
-  const items = [
-    { id:"masterlist",  icon:"☰",  label:"Lista" },
-    { id:"cegs",        icon:"◈",  label:"CEGs" },
-    { id:"calendario",  icon:"◫",  label:"Datas" },
-    { id:"prevenda",    icon:"✦",  label:"Pré-vendas" },
-    { id:"claim",       icon:"◉",  label:"Claims" },
-    ...(!isGuest ? [{ id:"perfil",      icon:"○",  label:"Perfil" }] : []),
-    ...(!isGuest ? [{ id:"envio",       icon:"▢",  label:"Envio" }] : []),
-    ...(!isGuest ? [{ id:"disponiveis", icon:"◱",  label:"Loja" }] : []),
-    // { id:"mercari",     icon:"🎌", label:"Mercari" }, // temporariamente fechado
-    { id:"regras",      icon:"☆",  label:"Regras" },
+  const [maisOpen, setMaisOpen] = useState(false);
+
+  const pinned = [
+    { id:"masterlist", icon:"☰", label:"Lista" },
+    ...(!isGuest ? [
+      { id:"perfil", icon:"○", label:"Perfil" },
+      { id:"envio",  icon:"▢", label:"Envio"  },
+    ] : [
+      { id:"cegs",      icon:"◈", label:"CEGs"  },
+      { id:"calendario",icon:"◫", label:"Datas" },
+    ]),
+    { id:"claim", icon:"◉", label:"Claims" },
+  ];
+
+  const overflow = [
+    ...(!isGuest ? [{ id:"cegs",       icon:"◈", label:"CEGs"       }] : []),
+    { id:"calendario",  icon:"◫", label:"Datas"       },
+    { id:"prevenda",    icon:"✦", label:"Pré-vendas"  },
+    ...(!isGuest ? [{ id:"disponiveis", icon:"◱", label:"Loja"       }] : []),
+    { id:"regras",      icon:"☆", label:"Regras"      },
     ...(isAdmin ? [{ id:"admin", icon:"⚙", label:"Admin" }] : []),
   ];
+
+  const overflowActive = !isClaimPage && overflow.some(i => i.id === tab);
+
   return (
     <div className="bottom-nav-wrap">
       <nav className="bottom-nav">
-        {items.map(item => {
+        {pinned.map(item => {
           const active = item.id === "claim" ? isClaimPage : (tab === item.id && !isClaimPage);
           const handleClick = item.id === "claim"
             ? () => { window.location.href = "/claim"; }
-            : () => setTab(item.id);
+            : () => { setTab(item.id); setMaisOpen(false); };
           return (
             <button key={item.id} className={`bottom-nav-btn ${active ? "active" : ""}`} onClick={handleClick}>
               <span className="bottom-nav-icon">{item.icon}</span>
@@ -18366,8 +18378,32 @@ function BottomNav({ tab, setTab, isGuest, isAdmin }) {
             </button>
           );
         })}
+        <button className={`bottom-nav-btn ${maisOpen || overflowActive ? "active" : ""}`} onClick={() => setMaisOpen(v => !v)}>
+          <span className="bottom-nav-icon" style={{ fontSize:18, letterSpacing:2 }}>{maisOpen ? "✕" : "•••"}</span>
+          <span className="bottom-nav-label">Mais</span>
+        </button>
       </nav>
-      <div className="bottom-nav-fade-right" />
+
+      {maisOpen && (
+        <>
+          <div className="bottom-nav-mais-overlay" onClick={() => setMaisOpen(false)} />
+          <div className="bottom-nav-mais-sheet">
+            <div className="bottom-nav-mais-handle" />
+            <div className="bottom-nav-mais-grid">
+              {overflow.map(item => {
+                const active = tab === item.id && !isClaimPage;
+                return (
+                  <button key={item.id} className={`bottom-nav-mais-item${active ? " active" : ""}`}
+                    onClick={() => { setTab(item.id); setMaisOpen(false); }}>
+                    <span className="bottom-nav-icon">{item.icon}</span>
+                    <span className="bottom-nav-label">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
