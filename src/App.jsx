@@ -2144,15 +2144,13 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       </div>
 
       <div className="summary-row">
-        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer", background:"var(--laranja)", border:"1px solid var(--laranja)" }}>
-          <div className="sum-label" style={{ color:"rgba(0,0,0,.5)" }}>◎ Pagamentos</div>
-          <div className="sum-value" style={{ color:"#111" }}>ENVIE SEU PAGAMENTO</div>
-          <div className="sum-sub" style={{ color:"rgba(0,0,0,.55)" }}>comprovante · pix · cartão</div>
-          <div className="sum-sub" style={{ color:"rgba(0,0,0,.7)", marginTop:2, fontWeight:700 }}>abrir formulário →</div>
+        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer", background:"var(--laranja)", border:"1px solid var(--laranja)", justifyContent:"center", gap:6 }}>
+          <div className="sum-value" style={{ color:"#111", fontSize:28 }}>ENVIE SEU PAGAMENTO</div>
+          <div className="sum-sub" style={{ color:"rgba(0,0,0,.6)" }}>comprovante · pix · cartão →</div>
         </div>
         {!guest && (
           <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : totalSaldoCashback > 0 ? "rgba(186,255,57,.25)" : undefined, cursor:"pointer" }}>
-            <div className="sum-label">◈ Total a pagar</div>
+            <div className="sum-label">Total a pagar</div>
             <div className="sum-value" style={{ color: tMulta > 0 ? "#ff6b6b" : (tPend + tMulta) === 0 && itens.length > 0 ? "#4ade80" : "var(--lilas)" }}>
               R${fmtBRL(tPend + tMulta)}
             </div>
@@ -2171,7 +2169,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           </div>
         )}
         <div className="sum-card" onClick={() => !guest && nextVenc && setVencModal(true)} style={{ cursor: !guest && nextVenc ? "pointer" : undefined }}>
-          <div className="sum-label">⏱ Próx. vencimento</div>
+          <div className="sum-label">Próx. vencimento</div>
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
           {!guest && nextVenc && <div className="sum-sub" style={{ marginTop:4, color:"rgba(245,240,232,.35)" }}>ver calendário →</div>}
@@ -2180,7 +2178,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           border:`1px solid ${avisos.length > 0 ? "rgba(201,168,240,.3)" : "rgba(245,240,232,.08)"}`, textAlign:"left", cursor:"pointer"
         }}>
           <div className="sum-label" style={{ display:"flex", alignItems:"center", gap:6 }}>
-            ⊛ Avisos
+            Avisos
             {avisos.length > 0 && <span style={{ background:"#C9A8F0", color:"#111", borderRadius:99, fontSize:8, fontWeight:700, padding:"1px 5px", lineHeight:1.5 }}>{avisos.length}</span>}
           </div>
           <div className="sum-value" style={{ color:"#C9A8F0" }}>MURAL DE AVISOS</div>
