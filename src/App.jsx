@@ -2145,7 +2145,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
       <div className="summary-row">
         <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer", display:"flex", flexDirection:"column", justifyContent:"center" }}>
-          <div className="sum-value orange">FORMS DE PAGAMENTO</div>
+          <div className="sum-value orange">ENVIE SEU PAGAMENTO</div>
           <div className="sum-sub" style={{ marginTop:4 }}>clique aqui →</div>
         </div>
         {!guest && (
@@ -2166,6 +2166,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 <div style={{ fontSize:9, color:"rgba(186,255,57,.55)", fontFamily:"'DM Mono',monospace", marginTop:2, lineHeight:1.4 }}>use para abater o valor em aberto ou solicite seu reembolso</div>
               </div>
             )}
+            {(tPend + tMulta) > 0 && (
+              <button onClick={e => { e.stopPropagation(); onOpenPagamentos(); }}
+                style={{ marginTop:10, width:"100%", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, padding:"9px 0", fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
+                Enviar pagamento →
+              </button>
+            )}
           </div>
         )}
         <div className="sum-card" onClick={() => !guest && nextVenc && setVencModal(true)} style={{ cursor: !guest && nextVenc ? "pointer" : undefined }}>
@@ -2173,6 +2179,12 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           <div className="sum-value yellow">{!guest && nextVenc ? `${String(nextVenc.d.getDate()).padStart(2,"0")}/${String(nextVenc.d.getMonth()+1).padStart(2,"0")}` : "—"}</div>
           <div className="sum-sub">{!guest && nextVenc ? nextVenc.label : (!guest ? "sem vencimento" : "—")}</div>
           {!guest && nextVenc && <div className="sum-sub" style={{ marginTop:4, color:"rgba(245,240,232,.35)" }}>ver calendário →</div>}
+          {!guest && nextVenc && (
+            <button onClick={e => { e.stopPropagation(); onOpenPagamentos(); }}
+              style={{ marginTop:10, width:"100%", background:"rgba(255,92,26,.15)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.35)", borderRadius:6, padding:"8px 0", fontSize:10, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
+              Enviar pagamento →
+            </button>
+          )}
         </div>
         <button onClick={() => setAvisosModal(true)} className="sum-card" style={{
           border:`1px solid ${avisos.length > 0 ? "rgba(201,168,240,.3)" : "rgba(245,240,232,.08)"}`, textAlign:"left", cursor:"pointer",
