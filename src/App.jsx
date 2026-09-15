@@ -3543,10 +3543,10 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
               || (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 && !c.rf);
         });
         setItensPendentes(sortPendentes(stillPending));
-        setPagSelecionados(new Map(stillPending.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
+        setPagSelecionados(new Map());
       } else if (pendentes) {
         setItensPendentes(sortPendentes(pendentes));
-        setPagSelecionados(new Map(pendentes.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
+        setPagSelecionados(new Map());
       }
       if (pagamentos) setMeusPagamentos(pagamentos);
       if (itensData) setMeusItens(itensData);
@@ -4161,8 +4161,24 @@ ${p.comprovante_url ? (() => {
                 </button>
               ))}
             </div>
-            <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:16 }}>
-              Selecione os itens que está pagando
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+              <div style={{ fontSize:10, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>
+                Selecione os itens que está pagando
+              </div>
+              {itensPendentes.length > 0 && (() => {
+                const todosSelected = itensPendentes.every(i => pagSelecionados.has(i.id));
+                return (
+                  <button onClick={() => {
+                    if (todosSelected) {
+                      setPagSelecionados(new Map());
+                    } else {
+                      setPagSelecionados(new Map(itensPendentes.map(i => [i.id, { item: !i.pago_item && Number(i.valor_item||0) > 0, frete: !i.pago_frete && Number(i.frete_inter||0) > 0, rf: !i.pago_rf && Number(i.taxa_rf||0) > 0 }])));
+                    }
+                  }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:".5px", padding:"5px 12px", borderRadius:6, cursor:"pointer", border:"1px solid rgba(186,255,57,.3)", background: todosSelected ? "rgba(186,255,57,.1)" : "transparent", color: todosSelected ? "#BAFF39" : "rgba(186,255,57,.6)", whiteSpace:"nowrap" }}>
+                    {todosSelected ? "✓ Desmarcar tudo" : "Selecionar tudo"}
+                  </button>
+                );
+              })()}
             </div>
             {itensPendentes.length === 0 && (
               <div style={{ padding:"16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, marginBottom:8, fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center" }}>
