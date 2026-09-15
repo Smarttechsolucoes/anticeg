@@ -2144,11 +2144,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       </div>
 
       <div className="summary-row">
-        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer" }}>
-          <div className="sum-label">◎ Pagamentos</div>
-          <div className="sum-value orange">ENVIE SEU PAGAMENTO</div>
-          <div className="sum-sub">comprovante · pix · cartão</div>
-          <div className="sum-sub" style={{ color:"var(--laranja)", marginTop:2 }}>abrir formulário →</div>
+        <div className="sum-card sum-card-link" onClick={onOpenPagamentos} style={{ cursor:"pointer", background:"var(--laranja)", border:"1px solid var(--laranja)" }}>
+          <div className="sum-label" style={{ color:"rgba(0,0,0,.5)" }}>◎ Pagamentos</div>
+          <div className="sum-value" style={{ color:"#111" }}>ENVIE SEU PAGAMENTO</div>
+          <div className="sum-sub" style={{ color:"rgba(0,0,0,.55)" }}>comprovante · pix · cartão</div>
+          <div className="sum-sub" style={{ color:"rgba(0,0,0,.7)", marginTop:2, fontWeight:700 }}>abrir formulário →</div>
         </div>
         {!guest && (
           <div className="sum-card" onClick={() => setTotalModal(true)} style={{ borderColor: tMulta > 0 ? "rgba(255,107,107,.25)" : totalSaldoCashback > 0 ? "rgba(186,255,57,.25)" : undefined, cursor:"pointer" }}>
