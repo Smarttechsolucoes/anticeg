@@ -21400,7 +21400,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "this-that-albuns",
-      ativo: true,
+      ativo: false,
       titulo: "THIS & THAT",
       subtitulo: "Álbuns · Stray Kids",
       url: "https://forms.gle/NPLoZDrCq1DMEPfo7",
