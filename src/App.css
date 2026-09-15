@@ -710,7 +710,7 @@ td { padding:10px; vertical-align:middle; }
   .summary-row { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
   .sum-card { padding:12px 12px; border-radius:9px; }
   .sum-label { font-size:9px; letter-spacing:.8px; margin-bottom:2px; }
-  .sum-value { font-size:20px; }
+  .sum-value { font-size:26px; }
   .sum-sub { font-size:10px; }
 
   /* Filters */
