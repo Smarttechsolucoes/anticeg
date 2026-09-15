@@ -4844,7 +4844,12 @@ ${compHTML}
                 <div>
                   <span style={labelSt}>Item(ns) a repassar</span>
                   <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    {meusItens.map(i => {
+                    {meusItens.filter(i => i.status !== "Enviado Nacional").length === 0 && (
+                      <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", padding:"12px 0" }}>
+                        Todos os seus itens já foram enviados para você — não há nada disponível para repasse.
+                      </div>
+                    )}
+                    {meusItens.filter(i => i.status !== "Enviado Nacional").map(i => {
                       const sel = repasseItensSel.has(i.id);
                       return (
                         <button key={i.id} onClick={() => toggleItem(i.id)} style={{
