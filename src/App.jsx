@@ -3599,6 +3599,21 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [fotoLoading, setFotoLoading] = useState(false);
   const [fotoErro, setFotoErro] = useState("");
   const fileInputRef = useRef(null);
+  // endereço
+  const [endNomeEntrega, setEndNomeEntrega] = useState(user.nome_entrega || "");
+  const [endCpf,         setEndCpf]         = useState(user.cpf         || "");
+  const [endTelefone,    setEndTelefone]    = useState(user.telefone    || "");
+  const [endCep,         setEndCep]         = useState(user.cep         || "");
+  const [endRua,         setEndRua]         = useState(user.rua         || "");
+  const [endNumero,      setEndNumero]      = useState(user.numero      || "");
+  const [endComplemento, setEndComplemento] = useState(user.complemento || "");
+  const [endBairro,      setEndBairro]      = useState(user.bairro      || "");
+  const [endCidade,      setEndCidade]      = useState(user.cidade      || "");
+  const [endEstado,      setEndEstado]      = useState(user.estado      || "");
+  const [endCepLoading,  setEndCepLoading]  = useState(false);
+  const [endSaving,      setEndSaving]      = useState(false);
+  const [endSaved,       setEndSaved]       = useState(false);
+  const [endErr,         setEndErr]         = useState("");
 
   async function handleFotoUpload(e) {
     const file = e.target.files[0];
@@ -3709,6 +3724,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
           <div className="admin-sidebar-group">
             <div className="admin-sidebar-group-label">Conta</div>
             {navPerfil("dados",      "○",  "Dados",      0)}
+            {navPerfil("endereco",   "⌂",  "Endereço",   0)}
             {navPerfil("badges",     "✦", "Badges",     0)}
             {navPerfil("pagamentos", "◎", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
             {navPerfil("repasse",    "⇄",  "Repasse",    meusRepassos.filter(r => r.status === "pendente").length)}
@@ -5632,6 +5648,127 @@ ${compHTML}
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {perfilSubTab === "endereco" && (
+        <div className="login-box" style={{ gap:14 }}>
+          <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>
+            Endereço de entrega
+          </div>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, marginBottom:4 }}>
+            Cadastre seu endereço aqui para não precisar preencher toda vez que solicitar um envio.
+          </div>
+
+          {/* Destinatário / CPF / Telefone */}
+          <div>
+            <label className="login-label">Nome completo do destinatário</label>
+            <input className="login-input" style={inputStyle} type="text" placeholder="Nome como está no documento" value={endNomeEntrega} onChange={e => setEndNomeEntrega(e.target.value)} />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:10 }}>
+            <div>
+              <label className="login-label">CPF</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="000.000.000-00" value={endCpf} onChange={e => setEndCpf(e.target.value)} />
+            </div>
+            <div>
+              <label className="login-label">Telefone / WhatsApp</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="(11) 99999-9999" value={endTelefone} onChange={e => setEndTelefone(e.target.value)} />
+            </div>
+          </div>
+
+          {/* CEP */}
+          <div>
+            <label className="login-label">CEP {endCepLoading && <span style={{ color:"rgba(245,240,232,.35)" }}>buscando...</span>}</label>
+            <input className="login-input" style={inputStyle} type="text" placeholder="00000-000" value={endCep}
+              onChange={async e => {
+                const v = e.target.value;
+                setEndCep(v);
+                const clean = v.replace(/\D/g, "");
+                if (clean.length === 8) {
+                  setEndCepLoading(true);
+                  try {
+                    const res  = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+                    const data = await res.json();
+                    if (!data.erro) {
+                      setEndRua(data.logradouro || "");
+                      setEndBairro(data.bairro   || "");
+                      setEndCidade(data.localidade || "");
+                      setEndEstado(data.uf        || "");
+                    }
+                  } catch {}
+                  setEndCepLoading(false);
+                }
+              }}
+            />
+          </div>
+
+          {/* Rua / Número */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 1fr", gap:10 }}>
+            <div>
+              <label className="login-label">Endereço (rua / av.)</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="Rua Exemplo" value={endRua} onChange={e => setEndRua(e.target.value)} />
+            </div>
+            <div>
+              <label className="login-label">Número</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="123" value={endNumero} onChange={e => setEndNumero(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Complemento / Bairro */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:10 }}>
+            <div>
+              <label className="login-label">Complemento <span style={{ fontSize:9, color:"rgba(245,240,232,.25)", marginLeft:4 }}>opcional</span></label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="Apto 42 · Bloco B" value={endComplemento} onChange={e => setEndComplemento(e.target.value)} />
+            </div>
+            <div>
+              <label className="login-label">Bairro</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="Centro" value={endBairro} onChange={e => setEndBairro(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Cidade / Estado */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 1fr", gap:10 }}>
+            <div>
+              <label className="login-label">Cidade</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="São Paulo" value={endCidade} onChange={e => setEndCidade(e.target.value)} />
+            </div>
+            <div>
+              <label className="login-label">Estado (UF)</label>
+              <input className="login-input" style={{ width:"100%", marginTop:6 }} type="text" placeholder="SP" maxLength={2} value={endEstado} onChange={e => setEndEstado(e.target.value.toUpperCase())} />
+            </div>
+          </div>
+
+          {endErr && <div className="login-error">{endErr}</div>}
+          {endSaved && <div style={{ fontSize:12, color:"var(--verde)", padding:"8px 12px", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4 }}>Endereço salvo com sucesso!</div>}
+
+          <button className="login-btn" disabled={endSaving} style={{ marginTop:8 }} onClick={async () => {
+            setEndErr(""); setEndSaved(false);
+            if (!endNomeEntrega || !endCpf || !endCep || !endRua || !endNumero || !endBairro || !endCidade || !endEstado) {
+              setEndErr("Preencha todos os campos obrigatórios."); return;
+            }
+            setEndSaving(true);
+            const payload = {
+              nome_entrega: endNomeEntrega,
+              cpf:          endCpf,
+              telefone:     endTelefone || null,
+              cep:          endCep,
+              rua:          endRua,
+              numero:       endNumero,
+              complemento:  endComplemento || null,
+              bairro:       endBairro,
+              cidade:       endCidade,
+              estado:       endEstado,
+            };
+            const { error: err } = await supabase.from("joiners").update(payload).eq("cog", user.cog);
+            setEndSaving(false);
+            if (err) { setEndErr("Erro ao salvar. Tente novamente."); return; }
+            const updatedUser = { ...user, ...payload };
+            localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
+            onUpdate(updatedUser);
+            setEndSaved(true);
+          }}>
+            {endSaving ? "SALVANDO..." : "SALVAR ENDEREÇO →"}
+          </button>
         </div>
       )}
 
@@ -16930,15 +17067,15 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [nome,        setNome]        = useState(user.nome    || "");
   const [handle,      setHandle]      = useState(user.twitter || "");
   const [whatsapp,    setWhatsapp]    = useState(user.whatsapp || "");
-  const [destinatario,setDestinatario]= useState("");
-  const [cpf,         setCpf]         = useState("");
-  const [cep,         setCep]         = useState("");
-  const [endereco,    setEndereco]    = useState("");
-  const [numero,      setNumero]      = useState("");
-  const [complemento, setComplemento] = useState("");
-  const [bairro,      setBairro]      = useState("");
-  const [cidade,      setCidade]      = useState("");
-  const [estado,      setEstado]      = useState("");
+  const [destinatario,setDestinatario]= useState(user.nome_entrega || "");
+  const [cpf,         setCpf]         = useState(user.cpf         || "");
+  const [cep,         setCep]         = useState(user.cep         || "");
+  const [endereco,    setEndereco]    = useState(user.rua         || "");
+  const [numero,      setNumero]      = useState(user.numero      || "");
+  const [complemento, setComplemento] = useState(user.complemento || "");
+  const [bairro,      setBairro]      = useState(user.bairro      || "");
+  const [cidade,      setCidade]      = useState(user.cidade      || "");
+  const [estado,      setEstado]      = useState(user.estado      || "");
   const [cepLoading,  setCepLoading]  = useState(false);
   const [selecionados,setSelecionados]= useState(() => antigomItens.map(i => i.id));
   const [metodo,      setMetodo]      = useState("");
