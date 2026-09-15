@@ -328,17 +328,17 @@ body { background: var(--preto); color: var(--offwhite); font-family: 'DM Mono',
 .greeting-sub { font-size:var(--fs-xs); color:rgba(245,240,232,.58); margin-top:2px; }
 
 .summary-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
-.sum-card { background:#111; border:1px solid #1e1e1e; border-radius:8px; padding:20px; display:flex; flex-direction:column; gap:6px; }
+.sum-card { background:#111; border:1px solid #1e1e1e; border-radius:10px; padding:20px; display:flex; flex-direction:column; gap:4px; }
 .sum-card-link { text-decoration:none; transition:border-color .15s, background .15s; }
 .sum-card-link:hover { border-color:var(--laranja); background:#161616; }
-.sum-label { font-size:var(--fs-xs); color:rgba(245,240,232,.62); letter-spacing:1px; text-transform:uppercase; }
-.sum-value { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-2xl); line-height:1; }
+.sum-label { font-size:10px; font-weight:600; color:rgba(245,240,232,.42); letter-spacing:1.2px; text-transform:uppercase; font-family:'DM Mono',monospace; margin-bottom:4px; }
+.sum-value { font-family:'Bebas Neue',sans-serif; font-size:var(--fs-2xl); line-height:1.05; }
 .sum-value.white  { color:var(--offwhite); }
 .sum-value.orange { color:var(--laranja); }
 .sum-value.green  { color:var(--verde); }
 .sum-value.lilas  { color:var(--lilas); }
 .sum-value.yellow { color:#FFD166; }
-.sum-sub { font-size:var(--fs-xs); color:rgba(245,240,232,.52); }
+.sum-sub { font-size:11px; color:rgba(245,240,232,.42); font-family:'DM Mono',monospace; }
 
 
 .blocklist-banner { display:flex; align-items:flex-start; gap:14px; background:#1a0a00; border:1px solid #c0392b; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
@@ -708,9 +708,9 @@ td { padding:10px; vertical-align:middle; }
 
   /* Summary cards */
   .summary-row { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-  .sum-card { padding:12px 10px; }
-  .sum-label { font-size:10px; letter-spacing:.5px; }
-  .sum-value { font-size:18px; }
+  .sum-card { padding:12px 12px; border-radius:9px; }
+  .sum-label { font-size:9px; letter-spacing:.8px; margin-bottom:2px; }
+  .sum-value { font-size:20px; }
   .sum-sub { font-size:10px; }
 
   /* Filters */
