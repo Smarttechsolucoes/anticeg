@@ -20158,6 +20158,8 @@ function AdminClaimEventos() {
     if (!rows?.length) return;
     const reservaId = rows[0].id;
     await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("id", reservaId);
+    // Se o set estava fechado, reabre para que o standby possa ser promovido
+    await supabase.from("claim_sets").update({ status:"aberto", closed_at: null }).eq("id", setId).eq("status","fechado");
     fetchTudo();
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoClaim({ reservaId, membro, joinerNome });
