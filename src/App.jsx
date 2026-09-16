@@ -1989,17 +1989,17 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
     if (Number(b.valor_item||0) < 0) return a;
     return a+Number(b.valor_item||0)+Number(b.frete_inter||0)+Number(b.taxa_rf||0);
   }, 0);
-  const tPend  = filtered.reduce((a,b) => {
+  const tPend  = itens.reduce((a,b) => {
     if (Number(b.valor_item||0) < 0) return a;
     const emAnalise = pagDemandaMap[b.id] === "em_analise";
     return a + (isPendente(b.pago_item)  && !pagConfirmMap[b.id]?.item  && !emAnalise ? Number(b.valor_item||0)  : 0)
              + (isPendente(b.pago_frete) && !pagConfirmMap[b.id]?.frete && !emAnalise ? Number(b.frete_inter||0) : 0)
              + (isPendente(b.pago_rf)    && !pagConfirmMap[b.id]?.rf    && !emAnalise ? Number(b.taxa_rf||0)     : 0);
   }, 0);
-  const tMulta = filtered.reduce((a,b) => {
-    return a + (isPendente(b.pago_item)  && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.item  ? diasAtraso(b.venc_item)  : 0)
-             + (isPendente(b.pago_frete) && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.frete ? diasAtraso(b.venc_frete) : 0)
-             + (isPendente(b.pago_rf)    && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.rf    ? diasAtraso(b.venc_rf)    : 0);
+  const tMulta = itens.reduce((a,b) => {
+    return a + (isPendente(b.pago_item)  && Number(b.valor_item||0)  > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.item  ? diasAtraso(b.venc_item)  : 0)
+             + (isPendente(b.pago_frete) && Number(b.frete_inter||0) > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.frete ? diasAtraso(b.venc_frete) : 0)
+             + (isPendente(b.pago_rf)    && Number(b.taxa_rf||0)     > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.rf    ? diasAtraso(b.venc_rf)    : 0);
   }, 0);
 
 
@@ -2917,9 +2917,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr style={item.info_adicionais?.toUpperCase().includes("REEMBOLSO") ? { outline:"2px solid rgba(220,50,50,.55)", outlineOffset:"-2px" } : {}}>
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td>
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         {showEnvio ? (
@@ -3009,9 +3009,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   <tr className="row-finalizado">
                     <td className="td-ceg"><button className="ceg-btn" onClick={() => setCegModal(item.ceg)}>{item.ceg}</button></td>
                     <td><div className="item-title"><InfoContent info={item.nome_do_item} /></div></td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
-                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} />}</td>
-                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} adminPreview={isAdminUser(user)} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /> : <span className="zero-val">—</span>)}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.valor_item} status={item.pago_item} vencimento={item.venc_item} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.item} />}</td>
+                    <td>{guest ? <span className="zero-val">•••</span> : <ValCell val={item.frete_inter} status={item.pago_frete} vencimento={item.venc_frete} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.frete} />}</td>
+                    <td>{guest ? <span className="zero-val">—</span> : (Number(item.taxa_rf) > 0 ? <ValCell val={item.taxa_rf} status={item.pago_rf} vencimento={item.venc_rf} emAnalise={pagDemandaMap[item.id]==="em_analise" || item.status === "Em análise"} confirmado={pagConfirmMap[item.id]?.rf} /> : <span className="zero-val">—</span>)}</td>
                     <td><StatusChip status={item.status} /></td>
                     <td><InfoCell info={item.info_adicionais} isOpen={isOpen} onToggleDrawer={() => setOpenDrawer(isOpen ? null : item.id)} onReport={() => setReportItem(item)} isPending={pendingReportIds.has(item.id)} /></td>
                   </tr>
