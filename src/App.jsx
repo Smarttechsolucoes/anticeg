@@ -20122,6 +20122,12 @@ function AdminClaimEventos() {
     fetchTudo();
   }
 
+  async function cancelarClaimJoiner(setId, joinerCog, joinerNome) {
+    if (!window.confirm(`Remover claim de ${joinerNome} deste set?`)) return;
+    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("set_id", setId).eq("joiner_cog", joinerCog).neq("is_admin", true);
+    fetchTudo();
+  }
+
   async function cancelarTodoStandby(eventoId, total) {
     if (!window.confirm(`Cancelar todos os ${total} standby deste evento?`)) return;
     await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado");
@@ -20274,7 +20280,7 @@ function AdminClaimEventos() {
                       const resSet = reservas[s.id] || [];
                       const claimadosPorJoiner = {};
                       resSet.filter(r=>!r.is_admin).forEach(r => {
-                        if (!claimadosPorJoiner[r.joiner_cog]) claimadosPorJoiner[r.joiner_cog] = { nome: r.joiner_nome, membros: [], ts: r.created_at };
+                        if (!claimadosPorJoiner[r.joiner_cog]) claimadosPorJoiner[r.joiner_cog] = { cog: r.joiner_cog, nome: r.joiner_nome, membros: [], ts: r.created_at };
                         claimadosPorJoiner[r.joiner_cog].membros.push(r.membro);
                         if (r.created_at < claimadosPorJoiner[r.joiner_cog].ts) claimadosPorJoiner[r.joiner_cog].ts = r.created_at;
                       });
@@ -20313,10 +20319,16 @@ function AdminClaimEventos() {
                           <div style={{ padding:"6px 12px 8px" }}>
                             {adminSlots.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(255,92,26,.5)", marginBottom:4 }}>admin: {adminSlots.map(r=>r.membro).join(", ")}</div>}
                             {joiners.map(j => (
-                              <div key={j.nome} style={{ padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
-                                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{j.nome} · </span>
-                                <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)" }}>{j.membros.join(", ")}</span>
-                                {j.membros.length >= 8 && <span style={{ marginLeft:8, fontFamily:mono, fontSize:8, color:"var(--laranja)" }}>OT8</span>}
+                              <div key={j.cog} style={{ padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                                <div>
+                                  <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>{j.nome} · </span>
+                                  <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)" }}>{j.membros.join(", ")}</span>
+                                  {j.membros.length >= 8 && <span style={{ marginLeft:8, fontFamily:mono, fontSize:8, color:"var(--laranja)" }}>OT8</span>}
+                                </div>
+                                {s.status !== "confirmado" && s.status !== "cancelado" && (
+                                  <button onClick={() => cancelarClaimJoiner(s.id, j.cog, j.nome)}
+                                    style={{ background:"none", border:"none", color:"rgba(255,107,107,.45)", fontFamily:mono, fontSize:13, cursor:"pointer", padding:"0 2px", lineHeight:1, flexShrink:0 }}>×</button>
+                                )}
                               </div>
                             ))}
                             {livres.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)", marginTop:4 }}>livres: {livres.join(", ")}</div>}
@@ -20403,7 +20415,7 @@ function AdminClaimEventos() {
                       const resSet = reservas[s.id] || [];
                       const claimadosPorJoiner = {};
                       resSet.filter(r=>!r.is_admin).forEach(r => {
-                        if (!claimadosPorJoiner[r.joiner_cog]) claimadosPorJoiner[r.joiner_cog] = { nome: r.joiner_nome, membros: [], ts: r.created_at };
+                        if (!claimadosPorJoiner[r.joiner_cog]) claimadosPorJoiner[r.joiner_cog] = { cog: r.joiner_cog, nome: r.joiner_nome, membros: [], ts: r.created_at };
                         claimadosPorJoiner[r.joiner_cog].membros.push(r.membro);
                         if (r.created_at < claimadosPorJoiner[r.joiner_cog].ts) claimadosPorJoiner[r.joiner_cog].ts = r.created_at;
                       });
