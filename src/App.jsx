@@ -20037,14 +20037,37 @@ function AdminClaimEventos() {
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
 
-    // Busca dados frescos do banco para evitar state desatualizado
-    const { data: setsAbertos } = await supabase.from("claim_sets")
-      .select("id,numero").eq("evento_id", eventoId).eq("status","aberto").order("numero");
-    if (!setsAbertos?.length) { alert("Nenhum set aberto para redistribuir."); return; }
+    const membros = ev.membros || SK8;
 
-    const setIds = setsAbertos.map(s => s.id);
+    // Busca sets não-cancelados (aberto + fechado) — fechado pode ter vagas por cancelamentos posteriores
+    const { data: todosOsSets } = await supabase.from("claim_sets")
+      .select("id,numero,status").eq("evento_id", eventoId).in("status",["aberto","fechado"]).order("numero");
+    if (!todosOsSets?.length) { alert("Nenhum set ativo para redistribuir."); return; }
+
+    const setIds = todosOsSets.map(s => s.id);
     const { data: resAtivas } = await supabase.from("claim_reservas")
       .select("set_id,membro").in("set_id", setIds).neq("status","cancelado");
+
+    // Mapa de vagas ocupadas por set
+    const ocupado = {};
+    (resAtivas || []).forEach(r => {
+      if (!ocupado[r.set_id]) ocupado[r.set_id] = new Set();
+      ocupado[r.set_id].add(r.membro);
+    });
+
+    // Detecta sets "fechado" com vagas reais (membro cancelado após fechamento) e reabre
+    for (const s of todosOsSets) {
+      if (s.status === "fechado") {
+        const temVaga = membros.some(m => !(ocupado[s.id] || new Set()).has(m));
+        if (temVaga) {
+          await supabase.from("claim_sets").update({ status:"aberto", closed_at: null }).eq("id", s.id);
+          s.status = "aberto";
+        }
+      }
+    }
+
+    const setsValidos = todosOsSets.filter(s => s.status === "aberto");
+    if (!setsValidos.length) { alert("Nenhum set com vaga disponível."); return; }
 
     const { data: sbLista } = await supabase.from("claim_reservas")
       .select("id,joiner_cog,membro").eq("evento_id", eventoId).is("set_id", null)
@@ -20052,18 +20075,10 @@ function AdminClaimEventos() {
 
     if (!sbLista?.length) { alert("Nenhum standby para redistribuir."); return; }
 
-    const membros = ev.membros || SK8;
-    // Mapa de vagas ocupadas por set (atualizado em memória conforme promovemos)
-    const ocupado = {};
-    (resAtivas || []).forEach(r => {
-      if (!ocupado[r.set_id]) ocupado[r.set_id] = new Set();
-      ocupado[r.set_id].add(r.membro);
-    });
-
-    const promovidosIds = new Set(); // evita promover a mesma reserva duas vezes
+    const promovidosIds = new Set();
     let promovidos = 0;
 
-    for (const s of setsAbertos) {
+    for (const s of setsValidos) {
       if (!ocupado[s.id]) ocupado[s.id] = new Set();
       for (const membro of membros) {
         if (ocupado[s.id].has(membro)) continue;
