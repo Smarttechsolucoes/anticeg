@@ -20075,20 +20075,19 @@ function AdminClaimEventos() {
 
     if (!sbLista?.length) { alert("Nenhum standby para redistribuir."); return; }
 
-    const promovidosIds = new Set();
-    let promovidos = 0;
-
     for (const s of setsValidos) {
       if (!ocupado[s.id]) ocupado[s.id] = new Set();
-      for (const membro of membros) {
-        if (ocupado[s.id].has(membro)) continue;
-        const candidato = sbLista.find(r => r.membro === membro && !promovidosIds.has(r.id));
-        if (!candidato) continue;
-        await supabase.from("claim_reservas").update({ set_id: s.id, status:"pendente" }).eq("id", candidato.id);
-        ocupado[s.id].add(membro);
-        promovidosIds.add(candidato.id);
-        promovidos++;
-      }
+    }
+
+    let promovidos = 0;
+
+    // Itera por ordem de horário de claim — quem entrou primeiro vai para o set de menor número
+    for (const r of sbLista) {
+      const destino = setsValidos.find(s => !ocupado[s.id].has(r.membro));
+      if (!destino) continue;
+      await supabase.from("claim_reservas").update({ set_id: destino.id, status:"pendente" }).eq("id", r.id);
+      ocupado[destino.id].add(r.membro);
+      promovidos++;
     }
     fetchTudo();
     if (promovidos === 0) alert("Nenhuma vaga encontrada para preencher.");
