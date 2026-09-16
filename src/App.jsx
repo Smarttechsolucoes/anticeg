@@ -19999,7 +19999,7 @@ function AdminClaimEventos() {
   const [form, setForm] = useState({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
   const [copiadoSet, setCopiadoSet] = useState(null);
   const [undoClaim, setUndoClaim] = useState(null);
-  const undoTimerRef = React.useRef(null);
+  const undoTimerRef = useRef(null);
 
   async function fetchTudo() {
     const { data: evData } = await supabase.from("claim_eventos").select("*").order("abertura", { ascending:false });
