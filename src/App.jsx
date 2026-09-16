@@ -20059,18 +20059,42 @@ function AdminClaimEventos() {
   async function redistribuirStandby(eventoId) {
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
-    const evSets = (sets[eventoId] || []).filter(s => s.status === "aberto");
-    if (!evSets.length) { alert("Nenhum set aberto para redistribuir."); return; }
-    const sbEvento = (standby[eventoId] || []);
-    if (!sbEvento.length) { alert("Nenhum standby para redistribuir."); return; }
+
+    // Busca dados frescos do banco para evitar state desatualizado
+    const { data: setsAbertos } = await supabase.from("claim_sets")
+      .select("id,numero").eq("evento_id", eventoId).eq("status","aberto").order("numero");
+    if (!setsAbertos?.length) { alert("Nenhum set aberto para redistribuir."); return; }
+
+    const setIds = setsAbertos.map(s => s.id);
+    const { data: resAtivas } = await supabase.from("claim_reservas")
+      .select("set_id,membro").in("set_id", setIds).neq("status","cancelado");
+
+    const { data: sbLista } = await supabase.from("claim_reservas")
+      .select("id,joiner_cog,membro").eq("evento_id", eventoId).is("set_id", null)
+      .neq("status","cancelado").order("created_at");
+
+    if (!sbLista?.length) { alert("Nenhum standby para redistribuir."); return; }
+
+    const membros = ev.membros || SK8;
+    // Mapa de vagas ocupadas por set (atualizado em memória conforme promovemos)
+    const ocupado = {};
+    (resAtivas || []).forEach(r => {
+      if (!ocupado[r.set_id]) ocupado[r.set_id] = new Set();
+      ocupado[r.set_id].add(r.membro);
+    });
+
+    const promovidosIds = new Set(); // evita promover a mesma reserva duas vezes
     let promovidos = 0;
-    for (const s of evSets) {
-      const resSet = reservas[s.id] || [];
-      for (const membro of (ev.membros || SK8)) {
-        if (resSet.some(r => r.membro === membro)) continue;
-        const candidato = sbEvento.find(r => r.membro === membro && !resSet.some(x => x.joiner_cog === r.joiner_cog && x.membro === membro));
+
+    for (const s of setsAbertos) {
+      if (!ocupado[s.id]) ocupado[s.id] = new Set();
+      for (const membro of membros) {
+        if (ocupado[s.id].has(membro)) continue;
+        const candidato = sbLista.find(r => r.membro === membro && !promovidosIds.has(r.id));
         if (!candidato) continue;
         await supabase.from("claim_reservas").update({ set_id: s.id, status:"pendente" }).eq("id", candidato.id);
+        ocupado[s.id].add(membro);
+        promovidosIds.add(candidato.id);
         promovidos++;
       }
     }
