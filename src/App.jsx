@@ -20056,6 +20056,28 @@ function AdminClaimEventos() {
     fetchTudo();
   }
 
+  async function redistribuirStandby(eventoId) {
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (!ev) return;
+    const evSets = (sets[eventoId] || []).filter(s => s.status === "aberto");
+    if (!evSets.length) { alert("Nenhum set aberto para redistribuir."); return; }
+    const sbEvento = (standby[eventoId] || []);
+    if (!sbEvento.length) { alert("Nenhum standby para redistribuir."); return; }
+    let promovidos = 0;
+    for (const s of evSets) {
+      const resSet = reservas[s.id] || [];
+      for (const membro of (ev.membros || SK8)) {
+        if (resSet.some(r => r.membro === membro)) continue;
+        const candidato = sbEvento.find(r => r.membro === membro && !resSet.some(x => x.joiner_cog === r.joiner_cog && x.membro === membro));
+        if (!candidato) continue;
+        await supabase.from("claim_reservas").update({ set_id: s.id, status:"pendente" }).eq("id", candidato.id);
+        promovidos++;
+      }
+    }
+    fetchTudo();
+    if (promovidos === 0) alert("Nenhuma vaga encontrada para preencher.");
+  }
+
   async function abrirNovoSet(eventoId) {
     const evSets = sets[eventoId] || [];
     const prox = Math.max(0, ...evSets.map(s => s.numero)) + 1;
@@ -20407,6 +20429,9 @@ function AdminClaimEventos() {
 
                     <div style={{ display:"flex", gap:8, marginTop:4 }}>
                       {ev.status==="ativo" && <button onClick={() => abrirNovoSet(ev.id)} style={{ fontFamily:mono, fontSize:9, fontWeight:700, padding:"6px 14px", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:6, color:"#BAFF39", cursor:"pointer", letterSpacing:"1px" }}>+ ABRIR NOVO SET</button>}
+                      {ev.status==="ativo" && (standby[ev.id]||[]).length > 0 && (sets[ev.id]||[]).some(s=>s.status==="aberto") && (
+                        <button onClick={() => redistribuirStandby(ev.id)} style={{ fontFamily:mono, fontSize:9, fontWeight:700, padding:"6px 14px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.25)", borderRadius:6, color:"#ffb400", cursor:"pointer", letterSpacing:"1px" }}>⟳ REDISTRIBUIR STANDBY</button>
+                      )}
                       <button onClick={() => fecharEvento(ev.id)} style={{ fontFamily:mono, fontSize:9, padding:"6px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:6, color:"rgba(245,240,232,.3)", cursor:"pointer" }}>ENCERRAR EVENTO</button>
                     </div>
                   </div>
