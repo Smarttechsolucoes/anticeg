@@ -13537,11 +13537,11 @@ function ClaimPublicoPage({ user }) {
     await verificarFechamento(eventoId, novoSet.id);
   }
 
-  async function enviarClaims(eventoId) {
+  async function enviarClaims(eventoId, qtdOverride) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
-    const qtds = quantidades[eventoId] || {};
+    const qtds = qtdOverride || quantidades[eventoId] || {};
     const pedidos = Object.entries(qtds).filter(([, q]) => q > 0);
     if (!pedidos.length) return;
     setEnviando(true); setClaimErro(null);
@@ -13670,6 +13670,29 @@ function ClaimPublicoPage({ user }) {
                   );
                 })}
               </div>
+
+              {/* OT8 — reserva um set exclusivo com todos os membros */}
+              {aberto && (() => {
+                const jaTemTodos = (ev.membros || SK8).every(m => {
+                  const noSets = (sets[ev.id] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length), 0);
+                  const noStandby = (standby[ev.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length;
+                  return (noSets + noStandby) > 0;
+                });
+                if (jaTemTodos) return null;
+                return (
+                  <button
+                    onClick={() => {
+                      const qtds = {};
+                      (ev.membros || SK8).forEach(m => { qtds[m] = 1; });
+                      enviarClaims(ev.id, qtds);
+                    }}
+                    disabled={enviando}
+                    style={{ width:"100%", fontFamily:mono, fontSize:11, fontWeight:700, padding:"11px 14px", background:"rgba(255,92,26,.12)", border:"1px solid rgba(255,92,26,.35)", borderRadius:8, color:"var(--laranja)", cursor:"pointer", letterSpacing:"1px" }}
+                  >
+                    {enviando ? "enviando..." : "OT8 — claim completo"}
+                  </button>
+                );
+              })()}
 
               {Object.values(quantidades[ev.id] || {}).some(q => q > 0) && (
                 <div style={{ display:"flex", gap:6 }}>
