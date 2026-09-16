@@ -1903,6 +1903,17 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       .then(({ data }) => { if (data) setStorageGom(data); });
   }, [user.cog, guest]);
 
+  async function deletarStorageJoiner(item) {
+    if (!window.confirm("Confirmar que você recebeu e quer remover esse item da galeria?")) return;
+    await supabase.from("joiner_storage").update({ ativo: false }).eq("id", item.id);
+    try {
+      const url = new URL(item.foto_url);
+      const path = url.pathname.replace(/.*\/storage-itens\//, "");
+      await supabase.storage.from("storage-itens").remove([path]);
+    } catch (_) {}
+    setStorageGom(prev => prev.filter(x => x.id !== item.id));
+  }
+
   useEffect(() => {
     supabase.from("pushes").select("*").eq("active", true)
       .or(`joiner_cog.is.null,joiner_cog.eq.${user.cog}`)
@@ -2259,22 +2270,28 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                   </div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:12 }}>
                     {storageGom.map(s => (
-                      <div key={s.id} onClick={() => setStorageAmpliado(s)}
-                        style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", cursor:"pointer", transition:"border-color .15s" }}
+                      <div key={s.id} style={{ borderRadius:10, overflow:"hidden", background:"#111", border:"1px solid rgba(245,240,232,.08)", transition:"border-color .15s", position:"relative" }}
                         onMouseEnter={e => e.currentTarget.style.borderColor="rgba(201,168,240,.35)"}
                         onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
-                        <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
-                        <div style={{ padding:"8px 10px 10px" }}>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", letterSpacing:"0.5px", marginBottom:2 }}>◧ Storage GOM</div>
-                          {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
-                            <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", lineHeight:1.4 }}>{l.trim()}</div>
-                          ))}
-                          {s.created_at && (
-                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.22)", marginTop:5 }}>
-                              adicionado {new Date(s.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" })}
-                            </div>
-                          )}
+                        <div onClick={() => setStorageAmpliado(s)} style={{ cursor:"pointer" }}>
+                          <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                          <div style={{ padding:"8px 10px 6px" }}>
+                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", letterSpacing:"0.5px", marginBottom:2 }}>◧ Storage GOM</div>
+                            {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
+                              <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--offwhite)", lineHeight:1.4 }}>{l.trim()}</div>
+                            ))}
+                            {s.created_at && (
+                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"rgba(245,240,232,.22)", marginTop:5 }}>
+                                adicionado {new Date(s.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" })}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); deletarStorageJoiner(s); }}
+                          style={{ width:"100%", padding:"7px 0", background:"rgba(186,255,57,.06)", border:"none", borderTop:"1px solid rgba(186,255,57,.12)", color:"rgba(186,255,57,.7)", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", letterSpacing:"0.5px" }}>
+                          ✓ recebi
+                        </button>
                       </div>
                     ))}
                   </div>
