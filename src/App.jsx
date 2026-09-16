@@ -13614,8 +13614,8 @@ function ClaimPublicoPage({ user }) {
           <div key={ev.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
             {/* Header do evento */}
             {ev.foto_url && (
-              <div style={{ width:"100%", height:200, overflow:"hidden" }}>
-                <img src={ev.foto_url} alt="foto" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"top", display:"block" }} />
+              <div style={{ width:"100%", height:140, overflow:"hidden" }}>
+                <img src={ev.foto_url} alt="foto" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }} />
               </div>
             )}
             <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
