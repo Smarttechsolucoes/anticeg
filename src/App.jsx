@@ -19998,6 +19998,8 @@ function AdminClaimEventos() {
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
   const [copiadoSet, setCopiadoSet] = useState(null);
+  const [undoClaim, setUndoClaim] = useState(null);
+  const undoTimerRef = React.useRef(null);
 
   async function fetchTudo() {
     const { data: evData } = await supabase.from("claim_eventos").select("*").order("abertura", { ascending:false });
@@ -20128,8 +20130,22 @@ function AdminClaimEventos() {
     fetchTudo();
   }
 
-  async function cancelarMembroDoSet(setId, joinerCog, membro) {
-    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("set_id", setId).eq("joiner_cog", joinerCog).eq("membro", membro).neq("is_admin", true);
+  async function cancelarMembroDoSet(setId, joinerCog, membro, joinerNome) {
+    const { data: rows } = await supabase.from("claim_reservas").select("id").eq("set_id", setId).eq("joiner_cog", joinerCog).eq("membro", membro).neq("is_admin", true).neq("status","cancelado").limit(1);
+    if (!rows?.length) return;
+    const reservaId = rows[0].id;
+    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("id", reservaId);
+    fetchTudo();
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoClaim({ reservaId, membro, joinerNome });
+    undoTimerRef.current = setTimeout(() => setUndoClaim(null), 8000);
+  }
+
+  async function desfazerCancelamento() {
+    if (!undoClaim) return;
+    await supabase.from("claim_reservas").update({ status:"pendente" }).eq("id", undoClaim.reservaId);
+    setUndoClaim(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     fetchTudo();
   }
 
@@ -20163,6 +20179,19 @@ function AdminClaimEventos() {
 
   return (
     <div>
+      {undoClaim && (
+        <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", zIndex:9999, background:"#1a1a1a", border:"1px solid rgba(255,107,107,.35)", borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 4px 20px rgba(0,0,0,.5)" }}>
+          <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.7)" }}>
+            {undoClaim.membro} removido de {undoClaim.joinerNome}
+          </span>
+          <button onClick={desfazerCancelamento}
+            style={{ fontFamily:mono, fontSize:11, fontWeight:700, padding:"5px 14px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, color:"#BAFF39", cursor:"pointer" }}>
+            ↩ desfazer
+          </button>
+          <button onClick={() => setUndoClaim(null)}
+            style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", fontSize:16, cursor:"pointer", padding:0, lineHeight:1 }}>×</button>
+        </div>
+      )}
       <div style={{ display:"flex", gap:6, marginBottom:16 }}>
         <button style={tabBtn(tab==="eventos")} onClick={() => setTab("eventos")}>ATIVOS</button>
         <button style={tabBtn(tab==="finalizados")} onClick={() => setTab("finalizados")}>FINALIZADOS</button>
@@ -20331,7 +20360,7 @@ function AdminClaimEventos() {
                                     <div key={m} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingLeft:8 }}>
                                       <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)" }}>{m}</span>
                                       {s.status !== "confirmado" && s.status !== "cancelado" && (
-                                        <button onClick={() => cancelarMembroDoSet(s.id, j.cog, m)}
+                                        <button onClick={() => cancelarMembroDoSet(s.id, j.cog, m, j.nome)}
                                           style={{ background:"none", border:"none", color:"rgba(255,107,107,.4)", fontFamily:mono, fontSize:13, cursor:"pointer", padding:"0 2px", lineHeight:1, flexShrink:0 }}>×</button>
                                       )}
                                     </div>
