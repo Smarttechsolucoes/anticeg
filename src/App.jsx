@@ -13562,6 +13562,36 @@ function ClaimPublicoPage({ user }) {
     const pedidos = Object.entries(qtds).filter(([, q]) => q > 0);
     if (!pedidos.length) return;
     setEnviando(true); setClaimErro(null);
+
+    // OT8: joiner marcou todos os membros → cria set exclusivo
+    const todosOsMembros = ev.membros || SK8;
+    const isOT8 = todosOsMembros.every(m => (qtds[m] || 0) >= 1);
+    if (isOT8) {
+      // Busca número mais alto atual no banco para evitar state desatualizado
+      const { data: ultimoSet } = await supabase.from("claim_sets")
+        .select("numero").eq("evento_id", eventoId).neq("status","cancelado").order("numero", { ascending: false }).limit(1);
+      const prox = ((ultimoSet?.[0]?.numero) || 0) + 1;
+      const { data: novoSet, error: errSet } = await supabase.from("claim_sets")
+        .insert([{ evento_id: eventoId, numero: prox, status: "aberto" }]).select().single();
+      if (errSet || !novoSet) { setClaimErro("Erro ao criar set exclusivo. Tente novamente."); setEnviando(false); return; }
+      const rowsOT8 = todosOsMembros.map(m => ({
+        evento_id: eventoId, set_id: novoSet.id,
+        joiner_cog: user.cog, joiner_nome: user.nome || user.cog,
+        membro: m, status: "pendente"
+      }));
+      const { error } = await supabase.from("claim_reservas").insert(rowsOT8);
+      if (error) {
+        await supabase.from("claim_sets").update({ status: "cancelado" }).eq("id", novoSet.id);
+        setClaimErro("Erro ao enviar. Tente novamente.");
+        setEnviando(false); fetchTudo(); return;
+      }
+      await supabase.from("claim_sets").update({ status: "fechado", closed_at: new Date().toISOString() }).eq("id", novoSet.id);
+      setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
+      setClaimOk("Claim OT8 enviado! Você tem um set exclusivo ✓");
+      setTimeout(() => setClaimOk(null), 5000);
+      setEnviando(false); fetchTudo(); return;
+    }
+
     const evSetsAbertos = (sets[eventoId] || []).filter(s => s.status === "aberto");
     const limite = ev.limite_por_joiner || Infinity;
     const rows = [];
@@ -13687,6 +13717,12 @@ function ClaimPublicoPage({ user }) {
               </div>
 
               {Object.values(quantidades[ev.id] || {}).some(q => q > 0) && (
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {(ev.membros||SK8).every(m => (quantidades[ev.id]||{})[m] >= 1) && (
+                    <div style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.25)", borderRadius:6, padding:"8px 12px", letterSpacing:".5px" }}>
+                      OT8 — você vai ganhar um set exclusivo ✓
+                    </div>
+                  )}
                 <div style={{ display:"flex", gap:6 }}>
                   {aberto ? (
                     <button onClick={() => enviarClaims(ev.id)} disabled={enviando}
@@ -13703,6 +13739,7 @@ function ClaimPublicoPage({ user }) {
                     style={{ fontFamily:mono, fontSize:9, padding:"10px 12px", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", cursor:"pointer" }}>
                     limpar
                   </button>
+                </div>
                 </div>
               )}
 
