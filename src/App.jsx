@@ -20389,25 +20389,31 @@ function AdminClaimEventos() {
                               {s.status!=="cancelado" && s.status!=="fechado" && s.status!=="confirmado" && <button onClick={() => cancelarSet(s.id, ev.id)} style={{ fontFamily:mono, fontSize:8, padding:"2px 8px", background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.15)", borderRadius:4, color:"rgba(255,107,107,.7)", cursor:"pointer" }}>cancelar set</button>}
                             </div>
                           </div>
-                          <div style={{ padding:"6px 12px 8px" }}>
-                            {adminSlots.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(255,92,26,.5)", marginBottom:4 }}>admin: {adminSlots.map(r=>r.membro).join(", ")}</div>}
-                            {joiners.map(j => (
-                              <div key={j.cog} style={{ padding:"3px 0 3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
-                                <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)" }}>{j.nome}</span>
-                                <div style={{ display:"flex", flexDirection:"column", gap:1, marginTop:2 }}>
-                                  {j.membros.map(m => (
-                                    <div key={m} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingLeft:8 }}>
-                                      <span style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)" }}>{m}</span>
-                                      {s.status !== "confirmado" && s.status !== "cancelado" && (
-                                        <button onClick={() => cancelarMembroDoSet(s.id, j.cog, m, j.nome)}
-                                          style={{ background:"none", border:"none", color:"rgba(255,107,107,.4)", fontFamily:mono, fontSize:13, cursor:"pointer", padding:"0 2px", lineHeight:1, flexShrink:0 }}>×</button>
-                                      )}
-                                    </div>
-                                  ))}
+                          <div style={{ padding:"6px 12px 8px", display:"flex", flexDirection:"column", gap:1 }}>
+                            {(ev.membros||SK8).map(m => {
+                              const adminR = adminSlots.find(r => r.membro === m);
+                              const joinerR = resSet.find(r => !r.is_admin && r.membro === m);
+                              const temAlguem = adminR || joinerR;
+                              return (
+                                <div key={m} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"3px 0", borderBottom:"1px solid rgba(245,240,232,.04)" }}>
+                                  <span style={{ fontFamily:mono, fontSize:10, color: temAlguem ? "var(--offwhite)" : "rgba(245,240,232,.2)", minWidth:80 }}>{m}</span>
+                                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                    {adminR && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(255,92,26,.7)" }}>GOM</span>}
+                                    {joinerR && (
+                                      <>
+                                        <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)" }}>{joinerR.joiner_nome}</span>
+                                        <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.5)" }}>@{joinerR.joiner_cog}</span>
+                                        {s.status !== "confirmado" && s.status !== "cancelado" && (
+                                          <button onClick={() => cancelarMembroDoSet(s.id, joinerR.joiner_cog, m, joinerR.joiner_nome)}
+                                            style={{ background:"none", border:"none", color:"rgba(255,107,107,.4)", fontFamily:mono, fontSize:13, cursor:"pointer", padding:"0 2px", lineHeight:1, flexShrink:0 }}>×</button>
+                                        )}
+                                      </>
+                                    )}
+                                    {!temAlguem && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)" }}>vaga</span>}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                            {livres.length > 0 && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)", marginTop:4 }}>livres: {livres.join(", ")}</div>}
+                              );
+                            })}
                           </div>
                         </div>
                       );
