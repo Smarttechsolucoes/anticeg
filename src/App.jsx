@@ -1908,8 +1908,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
     await supabase.from("joiner_storage").update({ ativo: false }).eq("id", item.id);
     try {
       const url = new URL(item.foto_url);
-      const path = url.pathname.replace(/.*\/storage-itens\//, "");
-      await supabase.storage.from("storage-itens").remove([path]);
+      const raw = url.pathname;
+      const path = raw.replace(/.*\/storage-itens\//, "");
+      if (path && path !== raw) {
+        await supabase.storage.from("storage-itens").remove([path]);
+      }
     } catch (_) {}
     setStorageGom(prev => prev.filter(x => x.id !== item.id));
   }
@@ -13567,6 +13570,13 @@ function ClaimPublicoPage({ user }) {
     const todosOsMembros = ev.membros || SK8;
     const isOT8 = todosOsMembros.every(m => (qtds[m] || 0) >= 1);
     if (isOT8) {
+      // Bloqueia OT8 se já tem qualquer claim ativo para esse evento
+      const jaTemAlgum = todosOsMembros.some(m => {
+        const noSets = (sets[eventoId] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length), 0);
+        const noStandby = (standby[eventoId]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length;
+        return (noSets + noStandby) > 0;
+      });
+      if (jaTemAlgum) { setClaimErro("Você já tem membros claimados. Cancele antes de fazer OT8."); setEnviando(false); return; }
       // Busca número mais alto atual no banco para evitar state desatualizado
       const { data: ultimoSet } = await supabase.from("claim_sets")
         .select("numero").eq("evento_id", eventoId).neq("status","cancelado").order("numero", { ascending: false }).limit(1);
@@ -13586,6 +13596,8 @@ function ClaimPublicoPage({ user }) {
         setEnviando(false); fetchTudo(); return;
       }
       await supabase.from("claim_sets").update({ status: "fechado", closed_at: new Date().toISOString() }).eq("id", novoSet.id);
+      // Dispara verificação de standby igual ao fluxo normal
+      await verificarFechamento(eventoId, novoSet.id);
       setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
       setClaimOk("Claim OT8 enviado! Você tem um set exclusivo ✓");
       setTimeout(() => setClaimOk(null), 5000);
@@ -20117,13 +20129,23 @@ function AdminClaimEventos() {
     }
 
     let promovidos = 0;
+    const limite = ev.limite_por_joiner || Infinity;
+    // Conta claims já ativos em sets por joiner (para respeitar limite_por_joiner)
+    const claimsNosSets = {};
+    (resAtivas || []).filter(r => !r.is_admin).forEach(r => {
+      claimsNosSets[r.joiner_cog] = (claimsNosSets[r.joiner_cog] || 0) + 1;
+    });
+    const promovPorJoiner = {};
 
     // Itera por ordem de horário de claim — quem entrou primeiro vai para o set de menor número
     for (const r of sbLista) {
+      const jaTemTotal = (claimsNosSets[r.joiner_cog] || 0) + (promovPorJoiner[r.joiner_cog] || 0);
+      if (jaTemTotal >= limite) continue;
       const destino = setsValidos.find(s => !ocupado[s.id].has(r.membro));
       if (!destino) continue;
       await supabase.from("claim_reservas").update({ set_id: destino.id, status:"pendente" }).eq("id", r.id);
       ocupado[destino.id].add(r.membro);
+      promovPorJoiner[r.joiner_cog] = (promovPorJoiner[r.joiner_cog] || 0) + 1;
       promovidos++;
     }
     fetchTudo();
@@ -20213,13 +20235,33 @@ function AdminClaimEventos() {
     await supabase.from("claim_sets").update({ status:"aberto", closed_at: null }).eq("id", setId).eq("status","fechado");
     fetchTudo();
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    setUndoClaim({ reservaId, membro, joinerNome });
+    setUndoClaim({ reservaId, membro, joinerNome, setId });
     undoTimerRef.current = setTimeout(() => setUndoClaim(null), 8000);
   }
 
   async function desfazerCancelamento() {
     if (!undoClaim) return;
-    await supabase.from("claim_reservas").update({ status:"pendente" }).eq("id", undoClaim.reservaId);
+    const { setId, membro, reservaId } = undoClaim;
+    // Verifica se a vaga já foi preenchida por outra pessoa no intervalo
+    const { data: ocupante } = await supabase.from("claim_reservas")
+      .select("id").eq("set_id", setId).eq("membro", membro).neq("status","cancelado").neq("id", reservaId).limit(1);
+    if (ocupante?.length) {
+      setUndoClaim(null);
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      fetchTudo();
+      return;
+    }
+    await supabase.from("claim_reservas").update({ status:"pendente" }).eq("id", reservaId);
+    // Re-fecha o set se agora todos os membros estão presentes
+    const ev = (eventos||[]).find(e => (sets[e.id]||[]).some(s => s.id === setId));
+    if (ev) {
+      const { data: resDoSet } = await supabase.from("claim_reservas")
+        .select("membro").eq("set_id", setId).neq("status","cancelado");
+      const claimados = new Set((resDoSet||[]).map(r => r.membro));
+      if ((ev.membros||SK8).every(m => claimados.has(m))) {
+        await supabase.from("claim_sets").update({ status:"fechado", closed_at: new Date().toISOString() }).eq("id", setId).eq("status","aberto");
+      }
+    }
     setUndoClaim(null);
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     fetchTudo();
