@@ -51,19 +51,24 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   }
 
   async function buscarJoiner(input) {
-    if (isEmail(input)) {
-      const { data } = await supabase.from("joiners").select("*").eq("email", input.toLowerCase()).single();
-      return data;
-    }
     const handle = input.startsWith("@") ? input.slice(1) : input;
-    const { data } = await supabase.from("joiners").select("*")
-      .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`)
-      .single();
-    if (data) return data;
+    // email: busca direto por email, sem passar pelo cog
+    if (isEmail(input)) {
+      const { data: byEmail } = await supabase.from("joiners").select("*")
+        .eq("email", input.toLowerCase())
+        .maybeSingle();
+      return byEmail || null;
+    }
+    // busca por cog exato (eq evita wildcards SQL do ilike)
     const { data: byCog } = await supabase.from("joiners").select("*")
-      .ilike("cog", handle)
+      .eq("cog", handle)
       .maybeSingle();
-    return byCog || null;
+    if (byCog) return byCog;
+    // fallback: twitter handle
+    const { data: byTw } = await supabase.from("joiners").select("*")
+      .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`)
+      .maybeSingle();
+    return byTw || null;
   }
 
   async function handleEntrar() {
@@ -78,17 +83,21 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       return;
     }
 
-    const joiner = await buscarJoiner(input);
-    if (!joiner) { setError("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
+    try {
+      const joiner = await buscarJoiner(input);
+      if (!joiner) { setError("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
 
-    const isOwner = joiner.cog === "nandaverseo_c" || joiner.email === "nandag_medeiros@hotmail.com";
-    if (isOwner && joiner.senha) {
-      setPendingJoiner(joiner);
-      setLoading(false);
-      return;
+      const isOwner = joiner.cog === "nandaverseo_c" || joiner.email === "nandag_medeiros@hotmail.com";
+      if (isOwner && joiner.senha) {
+        setPendingJoiner(joiner);
+        setLoading(false);
+        return;
+      }
+
+      await entrarCom(joiner);
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
     }
-
-    await entrarCom(joiner);
     setLoading(false);
   }
 
@@ -98,7 +107,11 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     if (senha.trim() !== senhaCorreta) {
       setError("Senha incorreta."); setLoading(false); return;
     }
-    await entrarCom(pendingJoiner);
+    try {
+      await entrarCom(pendingJoiner);
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
+    }
     setLoading(false);
   }
 
@@ -132,7 +145,11 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
     if (joiner) {
       // conta existe → loga direto
-      await entrarCom(joiner);
+      try {
+        await entrarCom(joiner);
+      } catch {
+        setCadError("Erro de conexão. Tente novamente.");
+      }
       setCadLoading(false);
       return;
     }
@@ -145,7 +162,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
     // verifica duplicata na tabela de joiners
     const { data: dupJoiner } = await supabase.from("joiners").select("id")
-      .or(`cog.ilike.${cog},email.eq.${eml}`).maybeSingle();
+      .or(`cog.eq.${cog},email.eq.${eml}`).maybeSingle();
     if (dupJoiner) { setCadError("Já existe uma conta com esses dados. Entre em contato com a admin."); setCadLoading(false); return; }
 
     // cria conta diretamente
