@@ -8005,6 +8005,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageFotoQueue,    setStorageFotoQueue]    = useState([]);
   const [storageFotoEnviando, setStorageFotoEnviando] = useState(false);
   const [storageFotoAmpliada, setStorageFotoAmpliada] = useState(null);
+  const [storageCegSel,       setStorageCegSel]       = useState("");
+  const [storageCegFile,      setStorageCegFile]       = useState(null);
+  const [storageCegPreview,   setStorageCegPreview]    = useState(null);
+  const [storageCegDesc,      setStorageCegDesc]       = useState("");
+  const [storageCegEnviando,  setStorageCegEnviando]   = useState(false);
+  const [storageCegProgresso, setStorageCegProgresso]  = useState({ done: 0, total: 0, erros: 0 });
+  const [storageCegCegs,      setStorageCegCegs]       = useState(null);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [roundsSecaoAberta, setRoundsSecaoAberta] = useState(false);
@@ -9450,8 +9457,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   Joiner → Foto
                 </button>
                 <button onClick={() => { setStorageMode("foto"); setStorageFotoJoiner(null); setStorageFotoSearch(""); setStorageMasterlist([]); setStorageDesc(""); setStorageItensCheck(new Set()); setStorageFile(null); setStorageMsg(""); }}
-                  style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: storageMode === "foto" ? "rgba(201,168,240,.2)" : "transparent", color: storageMode === "foto" ? "#C9A8F0" : "rgba(245,240,232,.4)" }}>
+                  style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", borderRight:"1px solid rgba(245,240,232,.1)", cursor:"pointer", background: storageMode === "foto" ? "rgba(201,168,240,.2)" : "transparent", color: storageMode === "foto" ? "#C9A8F0" : "rgba(245,240,232,.4)" }}>
                   Foto → Joiner
+                </button>
+                <button onClick={() => { setStorageMode("ceg"); setStorageCegFile(null); setStorageCegPreview(null); setStorageCegDesc(""); setStorageCegSel(""); setStorageCegProgresso({ done:0, total:0, erros:0 }); if (!storageCegCegs) supabase.from("masterlist").select("ceg").neq("cog","disponivel").then(({ data }) => { if (data) setStorageCegCegs([...new Set(data.map(r => r.ceg))].sort()); }); }}
+                  style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: storageMode === "ceg" ? "rgba(186,255,57,.15)" : "transparent", color: storageMode === "ceg" ? "#BAFF39" : "rgba(245,240,232,.4)" }}>
+                  CEG → Todos
                 </button>
               </div>
               </div>
@@ -9651,6 +9662,106 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {storageMode === "ceg" && (() => {
+              const mono = "'DM Mono',monospace";
+              const inp  = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"var(--offwhite)", fontFamily:mono, fontSize:11, padding:"7px 10px", width:"100%", boxSizing:"border-box", outline:"none" };
+              const concluido = storageCegProgresso.done > 0 && storageCegProgresso.done === storageCegProgresso.total;
+
+              async function enviarParaTodosCeg() {
+                if (!storageCegSel || !storageCegFile) return;
+                setStorageCegEnviando(true);
+                setStorageCegProgresso({ done: 0, total: 0, erros: 0 });
+
+                const { data: items } = await supabase.from("masterlist").select("cog").eq("ceg", storageCegSel).neq("cog", "disponivel");
+                const cogs = [...new Set((items || []).map(i => i.cog))];
+                if (!cogs.length) { alert("Nenhuma joiner encontrada para esta CEG."); setStorageCegEnviando(false); return; }
+
+                setStorageCegProgresso({ done: 0, total: cogs.length, erros: 0 });
+
+                // upload único da foto
+                const ext  = storageCegFile.name.split(".").pop();
+                const slug = storageCegSel.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+                const path = `broadcast/${slug}/${Date.now()}.${ext}`;
+                const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageCegFile, { upsert: true });
+                if (upErr) { alert("Erro ao enviar foto: " + upErr.message); setStorageCegEnviando(false); return; }
+                const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+
+                let erros = 0;
+                for (let i = 0; i < cogs.length; i++) {
+                  const cog = cogs[i];
+                  try {
+                    await supabase.from("joiner_storage").insert([{ joiner_cog: cog, foto_url: publicUrl, descricao: storageCegDesc.trim() || storageCegSel }]);
+                    inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: cog }]);
+                    enviarPushJoiner(cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
+                  } catch { erros++; }
+                  setStorageCegProgresso({ done: i + 1, total: cogs.length, erros });
+                }
+                setStorageCegEnviando(false);
+              }
+
+              return (
+                <div>
+                  {/* Seletor de CEG */}
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:mono, letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>CEG</div>
+                    <select value={storageCegSel} onChange={e => setStorageCegSel(e.target.value)} style={{ ...inp, cursor:"pointer" }}>
+                      <option value="">Selecione a CEG...</option>
+                      {(storageCegCegs || []).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Upload da foto */}
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:mono, letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>Foto</div>
+                    <label style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(245,240,232,.03)", border:`2px dashed ${storageCegFile ? "rgba(186,255,57,.3)" : "rgba(245,240,232,.15)"}`, borderRadius:8, padding:"12px 14px", cursor:"pointer" }}>
+                      <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (storageCegPreview) URL.revokeObjectURL(storageCegPreview);
+                        setStorageCegFile(f);
+                        setStorageCegPreview(URL.createObjectURL(f));
+                      }} />
+                      {storageCegPreview
+                        ? <img src={storageCegPreview} alt="" style={{ width:72, height:72, objectFit:"cover", borderRadius:6, flexShrink:0 }} />
+                        : <span style={{ fontSize:20, color:"rgba(245,240,232,.3)" }}>↑</span>}
+                      <span style={{ fontSize:11, fontFamily:mono, color: storageCegFile ? "#BAFF39" : "rgba(245,240,232,.4)" }}>
+                        {storageCegFile ? storageCegFile.name : "Selecionar foto"}
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Descrição */}
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:mono, letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>Descrição (opcional)</div>
+                    <input style={inp} placeholder={storageCegSel || "ex: STARLIGHT — foto do unboxing"} value={storageCegDesc} onChange={e => setStorageCegDesc(e.target.value)} />
+                  </div>
+
+                  {/* Botão */}
+                  <button onClick={enviarParaTodosCeg} disabled={!storageCegSel || !storageCegFile || storageCegEnviando}
+                    style={{ width:"100%", padding:"10px 0", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:".5px", borderRadius:8, border:"none", cursor: (!storageCegSel || !storageCegFile || storageCegEnviando) ? "default" : "pointer", background: (!storageCegSel || !storageCegFile || storageCegEnviando) ? "rgba(245,240,232,.06)" : "rgba(186,255,57,.15)", color: (!storageCegSel || !storageCegFile || storageCegEnviando) ? "rgba(245,240,232,.25)" : "#BAFF39" }}>
+                    {storageCegEnviando ? `Enviando... ${storageCegProgresso.done}/${storageCegProgresso.total}` : "Enviar para todas →"}
+                  </button>
+
+                  {/* Progresso */}
+                  {storageCegProgresso.total > 0 && (
+                    <div style={{ marginTop:14, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"12px 14px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                        <span style={{ fontSize:10, fontFamily:mono, color: concluido ? "#BAFF39" : "rgba(245,240,232,.5)" }}>
+                          {concluido ? "✓ Enviado para todas!" : `Enviando ${storageCegProgresso.done} de ${storageCegProgresso.total}...`}
+                        </span>
+                        {storageCegProgresso.erros > 0 && (
+                          <span style={{ fontSize:10, fontFamily:mono, color:"var(--laranja)" }}>{storageCegProgresso.erros} erro(s)</span>
+                        )}
+                      </div>
+                      <div style={{ height:4, background:"rgba(245,240,232,.08)", borderRadius:2, overflow:"hidden" }}>
+                        <div style={{ height:"100%", background: concluido ? "#BAFF39" : "var(--laranja)", borderRadius:2, width:`${(storageCegProgresso.done / storageCegProgresso.total) * 100}%`, transition:"width .3s" }} />
+                      </div>
                     </div>
                   )}
                 </div>
