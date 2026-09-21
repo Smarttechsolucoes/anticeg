@@ -295,6 +295,7 @@ const STATUS_STEPS = [
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 const chipMap = {
+  "Escrito":         ["chip-escrito",   "Escrito"],
   "Comprado":        ["chip-prevenda",  "Comprado"],
   "Pré-venda":       ["chip-prevenda",  "Comprado"],
   "A Caminho":       ["chip-caminho",   "A Caminho"],
@@ -8907,6 +8908,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           temAcesso("pagamentos") && { id:"atrasados",  label:"Atrasados",  badge: 0 },
           (temAcesso("blocklist") || owner) && { id:"blocklist",  label:"Blocklist",  badge: 0 },
           owner && { id:"cashback", label:"Reembolso", badge: 0 },
+          owner && { id:"status_itens", label:"Status", badge: 0 },
         ].filter(Boolean);
 
         const tabSt = active => ({
@@ -9073,6 +9075,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               loading
                 ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
                 : <AdminBlocklist data={pendentesData} joiners={joinersData} onUpdate={setJoinersData} />
+            )}
+
+            {adminPagSubTab === "status_itens" && (
+              loading
+                ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
+                : <AdminStatusItens data={pendentesData} onUpdate={setPendentesData} />
             )}
 
             {adminPagSubTab === "cashback" && (() => {
@@ -12230,6 +12238,88 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
           ))}
         </>
       )}
+    </div>
+  );
+}
+
+const STATUS_ITENS_OPTS = ["Escrito", ...STATUS_STEPS.map(s => s.id)];
+
+function AdminStatusItens({ data, onUpdate }) {
+  const [filtroStatus, setFiltroStatus] = useState("Escrito");
+  const [saving, setSaving] = useState({});
+  const mono = "'DM Mono',monospace";
+
+  async function mudarStatus(itemId, novoStatus) {
+    setSaving(prev => ({ ...prev, [itemId]: true }));
+    await supabase.from("masterlist").update({ status: novoStatus }).eq("id", itemId);
+    onUpdate?.(prev => (prev || []).map(i => i.id === itemId ? { ...i, status: novoStatus } : i));
+    setSaving(prev => { const n = { ...prev }; delete n[itemId]; return n; });
+  }
+
+  const todos = data || [];
+  const itensVisiveis = filtroStatus ? todos.filter(i => (i.status || "Escrito") === filtroStatus) : todos;
+
+  const contadores = {};
+  todos.forEach(i => { const s = i.status || "Escrito"; contadores[s] = (contadores[s] || 0) + 1; });
+
+  const byCeg = {};
+  itensVisiveis.forEach(i => {
+    if (!byCeg[i.ceg]) byCeg[i.ceg] = [];
+    byCeg[i.ceg].push(i);
+  });
+  const cegsOrdenadas = Object.keys(byCeg).sort();
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
+        <button
+          onClick={() => setFiltroStatus("")}
+          style={{ padding:"5px 12px", borderRadius:7, fontFamily:mono, fontSize:11, cursor:"pointer", border: filtroStatus === "" ? "1px solid rgba(245,240,232,.3)" : "1px solid rgba(245,240,232,.08)", background: filtroStatus === "" ? "rgba(245,240,232,.08)" : "transparent", color: filtroStatus === "" ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>
+          Todos ({todos.length})
+        </button>
+        {STATUS_ITENS_OPTS.map(s => {
+          const count = contadores[s] || 0;
+          if (!count) return null;
+          const ativo = filtroStatus === s;
+          return (
+            <button key={s} onClick={() => setFiltroStatus(s)}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 10px", borderRadius:7, fontFamily:mono, fontSize:11, cursor:"pointer", border: ativo ? "1px solid rgba(245,240,232,.25)" : "1px solid rgba(245,240,232,.08)", background: ativo ? "rgba(245,240,232,.07)" : "transparent", color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>
+              <StatusChip status={s} />
+              <span style={{ color:"rgba(245,240,232,.4)", fontSize:10 }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {cegsOrdenadas.length === 0 && (
+        <div style={{ color:"rgba(245,240,232,.25)", fontFamily:mono, fontSize:11, padding:"20px 0" }}>
+          Nenhum item com status &ldquo;{filtroStatus || "—"}&rdquo;.
+        </div>
+      )}
+
+      {cegsOrdenadas.map(ceg => (
+        <div key={ceg} style={{ marginBottom:20 }}>
+          <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:mono, letterSpacing:"1px", textTransform:"uppercase", marginBottom:6, paddingBottom:5, borderBottom:"1px solid #1e1e1e" }}>
+            {ceg} <span style={{ color:"rgba(245,240,232,.15)" }}>· {byCeg[ceg].length}</span>
+          </div>
+          {byCeg[ceg].map(item => (
+            <div key={item.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 0", borderBottom:"1px solid rgba(245,240,232,.03)", gap:10 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:11, color:"rgba(245,240,232,.8)", fontFamily:mono, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.nome_do_item}</div>
+                <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:mono, marginTop:1 }}>{item.nome || item.cog}</div>
+              </div>
+              <select
+                value={item.status || "Escrito"}
+                onChange={e => mudarStatus(item.id, e.target.value)}
+                disabled={!!saving[item.id]}
+                style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, padding:"4px 8px", cursor:"pointer", flexShrink:0 }}>
+                {STATUS_ITENS_OPTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              {saving[item.id] && <span style={{ fontSize:9, color:"var(--laranja)", fontFamily:mono, flexShrink:0 }}>...</span>}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
