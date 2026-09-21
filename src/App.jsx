@@ -9461,8 +9461,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   Foto → Joiner
                 </button>
                 <button onClick={() => { setStorageMode("ceg"); setStorageCegFile(null); setStorageCegPreview(null); setStorageCegDesc(""); setStorageCegSel(""); setStorageCegProgresso({ done:0, total:0, erros:0 }); if (!storageCegCegs) supabase.from("masterlist").select("ceg").neq("cog","disponivel").then(({ data }) => { if (data) setStorageCegCegs([...new Set(data.map(r => r.ceg))].sort()); }); }}
-                  style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: storageMode === "ceg" ? "rgba(186,255,57,.15)" : "transparent", color: storageMode === "ceg" ? "#BAFF39" : "rgba(245,240,232,.4)" }}>
+                  style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", borderRight:"1px solid rgba(245,240,232,.1)", cursor:"pointer", background: storageMode === "ceg" ? "rgba(186,255,57,.15)" : "transparent", color: storageMode === "ceg" ? "#BAFF39" : "rgba(245,240,232,.4)" }}>
                   CEG → Todos
+                </button>
+                <button onClick={() => { setStorageMode("galeria"); setStorageJoiner(null); setStorageItens([]); setStorageSearch(""); }}
+                  style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: storageMode === "galeria" ? "rgba(100,181,246,.2)" : "transparent", color: storageMode === "galeria" ? "#64B5F6" : "rgba(245,240,232,.4)" }}>
+                  Galeria
                 </button>
               </div>
               </div>
@@ -9762,6 +9766,76 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       <div style={{ height:4, background:"rgba(245,240,232,.08)", borderRadius:2, overflow:"hidden" }}>
                         <div style={{ height:"100%", background: concluido ? "#BAFF39" : "var(--laranja)", borderRadius:2, width:`${(storageCegProgresso.done / storageCegProgresso.total) * 100}%`, transition:"width .3s" }} />
                       </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {storageMode === "galeria" && (() => {
+              const mono = "'DM Mono',monospace";
+              const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"var(--offwhite)", fontFamily:mono, fontSize:11, padding:"7px 10px", outline:"none" };
+              return (
+                <div>
+                  {storageJoiner ? (
+                    <>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"8px 14px", marginBottom:16 }}>
+                        <span style={{ flex:1, fontSize:12, color:"var(--offwhite)", fontFamily:mono }}>
+                          {storageJoiner.nome} <span style={{ color:"#64B5F6" }}>@{storageJoiner.cog}</span>
+                        </span>
+                        <button onClick={() => buscarStorageJoiner(storageJoiner)} style={{ background:"none", border:"1px solid rgba(100,181,246,.25)", borderRadius:4, color:"rgba(100,181,246,.7)", fontSize:10, fontFamily:mono, cursor:"pointer", padding:"3px 9px", lineHeight:1 }}>↺</button>
+                        <button onClick={() => { setStorageJoiner(null); setStorageItens([]); setStorageSearch(""); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontSize:16, cursor:"pointer", padding:4, lineHeight:1 }}>✕</button>
+                      </div>
+                      {storageItens.length === 0 ? (
+                        <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.3)", fontSize:11, fontFamily:mono }}>Nenhuma foto no storage.</div>
+                      ) : (
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))", gap:6 }}>
+                          {storageItens.map(item => (
+                            <div key={item.id} onClick={() => setStorageFotoAmpliada(item.foto_url)}
+                              style={{ position:"relative", aspectRatio:"1", overflow:"hidden", borderRadius:8, background:"#1a1a1a", cursor:"zoom-in", border:"1px solid rgba(245,240,232,.08)" }}>
+                              <img src={item.foto_url} alt={item.descricao || ""} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                              {item.descricao && (
+                                <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(0,0,0,.75))", padding:"14px 6px 5px" }}>
+                                  <div style={{ fontSize:8, fontFamily:mono, color:"rgba(245,240,232,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.descricao}</div>
+                                </div>
+                              )}
+                              {!item.ativo && (
+                                <div style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,.7)", borderRadius:4, padding:"2px 5px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.4)" }}>inativo</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ marginBottom:16 }}>
+                      <div style={{ position:"relative", marginBottom:16 }}>
+                        <input style={{ ...inp2, width:"100%", boxSizing:"border-box" }}
+                          placeholder="Buscar joiner por nome ou @..."
+                          value={storageSearch}
+                          onChange={e => {
+                            setStorageSearch(e.target.value);
+                            if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
+                          }} />
+                        {storageSearch.trim().length > 0 && storageJoiners && (() => {
+                          const q = storageSearch.toLowerCase();
+                          const filtered = storageJoiners.filter(j => j.nome?.toLowerCase().includes(q) || j.cog?.toLowerCase().includes(q));
+                          return (
+                            <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, zIndex:20, overflow:"hidden", maxHeight:220, overflowY:"auto" }}>
+                              {filtered.length === 0
+                                ? <div style={{ padding:"12px 14px", fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.3)" }}>Nenhum resultado</div>
+                                : filtered.slice(0, 12).map(j => (
+                                  <div key={j.cog} onClick={() => { setStorageSearch(""); buscarStorageJoiner(j); }}
+                                    style={{ padding:"10px 14px", fontSize:11, fontFamily:mono, color:"var(--offwhite)", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                                    {j.nome} <span style={{ color:"rgba(245,240,232,.4)" }}>@{j.cog}</span>
+                                  </div>
+                                ))
+                              }
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <p style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.25)", textAlign:"center", margin:0 }}>Selecione uma joiner para ver o storage</p>
                     </div>
                   )}
                 </div>
