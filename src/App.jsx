@@ -296,9 +296,10 @@ const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","A
 
 const chipMap = {
   "Escrito":         ["chip-escrito",   "Escrito"],
-  "Comprado":        ["chip-prevenda",  "Comprado"],
-  "Pré-venda":       ["chip-prevenda",  "Comprado"],
-  "A Caminho":       ["chip-caminho",   "A Caminho"],
+  "Comprado":        ["chip-prevenda",    "Comprado"],
+  "Pré-venda":       ["chip-prevenda",    "Comprado"],
+  "Na Warehouse":    ["chip-warehouse",   "Na Warehouse"],
+  "A Caminho":       ["chip-caminho",     "A Caminho"],
   "Taxa Liberada":   ["chip-taxa",      "Taxa Liberada"],
   "ANTIGOM":         ["chip-aqui",      "A caminho ANTIGOM"],
   "Chegou Aqui":     ["chip-aqui",      "A caminho ANTIGOM"],
@@ -12446,7 +12447,7 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
   );
 }
 
-const STATUS_ITENS_OPTS = ["Escrito", ...STATUS_STEPS.map(s => s.id)];
+const STATUS_ITENS_OPTS = ["Escrito", "Comprado", "Na Warehouse", "A Caminho", "Taxa Liberada", "ANTIGOM", "Envio Liberado", "Enviado Nacional"];
 
 function AdminStatusItens({ data, onUpdate }) {
   const [filtroStatus, setFiltroStatus] = useState("Escrito");
