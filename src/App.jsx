@@ -8014,6 +8014,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageCegCegs,      setStorageCegCegs]       = useState(null);
   const [storageCegItens,     setStorageCegItens]      = useState([]);
   const [storageCegItemFiltro,setStorageCegItemFiltro] = useState("");
+  const [galeriaFotos,        setGaleriaFotos]         = useState(null);
+  const [galeriaLoading,      setGaleriaLoading]       = useState(false);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [roundsSecaoAberta, setRoundsSecaoAberta] = useState(false);
@@ -9466,7 +9468,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", borderRight:"1px solid rgba(245,240,232,.1)", cursor:"pointer", background: storageMode === "ceg" ? "rgba(186,255,57,.15)" : "transparent", color: storageMode === "ceg" ? "#BAFF39" : "rgba(245,240,232,.4)" }}>
                   CEG → Todos
                 </button>
-                <button onClick={() => { setStorageMode("galeria"); setStorageJoiner(null); setStorageItens([]); setStorageSearch(""); }}
+                <button onClick={() => { setStorageMode("galeria"); setStorageSearch(""); setGaleriaFotos(null); setGaleriaLoading(false); }}
                   style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", cursor:"pointer", background: storageMode === "galeria" ? "rgba(100,181,246,.2)" : "transparent", color: storageMode === "galeria" ? "#64B5F6" : "rgba(245,240,232,.4)" }}>
                   Galeria
                 </button>
@@ -9804,68 +9806,55 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
             {storageMode === "galeria" && (() => {
               const mono = "'DM Mono',monospace";
-              const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"var(--offwhite)", fontFamily:mono, fontSize:11, padding:"7px 10px", outline:"none" };
+              const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"var(--offwhite)", fontFamily:mono, fontSize:11, padding:"7px 10px", outline:"none", width:"100%", boxSizing:"border-box" };
+
+              if (galeriaFotos === null && !galeriaLoading) {
+                setGaleriaLoading(true);
+                supabase.from("joiner_storage").select("id, joiner_cog, foto_url, descricao, ativo").order("id", { ascending: false }).limit(300)
+                  .then(({ data }) => { setGaleriaFotos(data || []); setGaleriaLoading(false); });
+              }
+
+              const q = storageSearch.trim().toLowerCase();
+              const filtradas = (galeriaFotos || []).filter(f => !q || f.joiner_cog?.toLowerCase().includes(q));
+
               return (
                 <div>
-                  {storageJoiner ? (
-                    <>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:"8px 14px", marginBottom:16 }}>
-                        <span style={{ flex:1, fontSize:12, color:"var(--offwhite)", fontFamily:mono }}>
-                          {storageJoiner.nome} <span style={{ color:"#64B5F6" }}>@{storageJoiner.cog}</span>
-                        </span>
-                        <button onClick={() => buscarStorageJoiner(storageJoiner)} style={{ background:"none", border:"1px solid rgba(100,181,246,.25)", borderRadius:4, color:"rgba(100,181,246,.7)", fontSize:10, fontFamily:mono, cursor:"pointer", padding:"3px 9px", lineHeight:1 }}>↺</button>
-                        <button onClick={() => { setStorageJoiner(null); setStorageItens([]); setStorageSearch(""); }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.35)", fontSize:16, cursor:"pointer", padding:4, lineHeight:1 }}>✕</button>
-                      </div>
-                      {storageItens.length === 0 ? (
-                        <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.3)", fontSize:11, fontFamily:mono }}>Nenhuma foto no storage.</div>
-                      ) : (
-                        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))", gap:6 }}>
-                          {storageItens.map(item => (
-                            <div key={item.id} onClick={() => setStorageFotoAmpliada(item.foto_url)}
-                              style={{ position:"relative", aspectRatio:"1", overflow:"hidden", borderRadius:8, background:"#1a1a1a", cursor:"zoom-in", border:"1px solid rgba(245,240,232,.08)" }}>
-                              <img src={item.foto_url} alt={item.descricao || ""} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-                              {item.descricao && (
-                                <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(0,0,0,.75))", padding:"14px 6px 5px" }}>
-                                  <div style={{ fontSize:8, fontFamily:mono, color:"rgba(245,240,232,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.descricao}</div>
-                                </div>
-                              )}
-                              {!item.ativo && (
-                                <div style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,.7)", borderRadius:4, padding:"2px 5px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.4)" }}>inativo</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                  {/* Barra de filtro */}
+                  <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:14 }}>
+                    <input style={inp2} placeholder="Filtrar por @cog..." value={storageSearch} onChange={e => setStorageSearch(e.target.value)} />
+                    {storageSearch && (
+                      <button onClick={() => setStorageSearch("")}
+                        style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.4)", fontSize:13, cursor:"pointer", padding:"5px 10px", lineHeight:1 }}>✕</button>
+                    )}
+                    <button onClick={() => { setGaleriaFotos(null); setGaleriaLoading(false); }}
+                      style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.4)", fontSize:13, cursor:"pointer", padding:"5px 10px", lineHeight:1 }}>↺</button>
+                  </div>
+
+                  {/* Contagem */}
+                  {!galeriaLoading && galeriaFotos !== null && (
+                    <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.25)", marginBottom:10, letterSpacing:".5px" }}>
+                      {q ? `${filtradas.length} foto${filtradas.length !== 1 ? "s" : ""} de @${q}` : `${filtradas.length} foto${filtradas.length !== 1 ? "s" : ""} no total`}
+                    </div>
+                  )}
+
+                  {galeriaLoading ? (
+                    <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.3)", fontSize:11, fontFamily:mono }}>carregando fotos...</div>
+                  ) : filtradas.length === 0 ? (
+                    <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.25)", fontSize:11, fontFamily:mono }}>Nenhuma foto encontrada.</div>
                   ) : (
-                    <div style={{ marginBottom:16 }}>
-                      <div style={{ position:"relative", marginBottom:16 }}>
-                        <input style={{ ...inp2, width:"100%", boxSizing:"border-box" }}
-                          placeholder="Buscar joiner por nome ou @..."
-                          value={storageSearch}
-                          onChange={e => {
-                            setStorageSearch(e.target.value);
-                            if (!storageJoiners) supabase.from("joiners").select("cog,nome").order("nome").then(({ data }) => setStorageJoiners(data || []));
-                          }} />
-                        {storageSearch.trim().length > 0 && storageJoiners && (() => {
-                          const q = storageSearch.toLowerCase();
-                          const filtered = storageJoiners.filter(j => j.nome?.toLowerCase().includes(q) || j.cog?.toLowerCase().includes(q));
-                          return (
-                            <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#111", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, marginTop:4, zIndex:20, overflow:"hidden", maxHeight:220, overflowY:"auto" }}>
-                              {filtered.length === 0
-                                ? <div style={{ padding:"12px 14px", fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.3)" }}>Nenhum resultado</div>
-                                : filtered.slice(0, 12).map(j => (
-                                  <div key={j.cog} onClick={() => { setStorageSearch(""); buscarStorageJoiner(j); }}
-                                    style={{ padding:"10px 14px", fontSize:11, fontFamily:mono, color:"var(--offwhite)", cursor:"pointer", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
-                                    {j.nome} <span style={{ color:"rgba(245,240,232,.4)" }}>@{j.cog}</span>
-                                  </div>
-                                ))
-                              }
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))", gap:6 }}>
+                      {filtradas.map(item => (
+                        <div key={item.id} onClick={() => setStorageFotoAmpliada(item.foto_url)}
+                          style={{ position:"relative", aspectRatio:"1", overflow:"hidden", borderRadius:8, background:"#1a1a1a", cursor:"zoom-in", border:"1px solid rgba(245,240,232,.08)" }}>
+                          <img src={item.foto_url} alt={item.descricao || ""} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                          <div style={{ position:"absolute", top:4, left:4, background:"rgba(0,0,0,.75)", borderRadius:4, padding:"2px 6px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.7)" }}>@{item.joiner_cog}</div>
+                          {item.descricao && (
+                            <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(0,0,0,.75))", padding:"14px 6px 5px" }}>
+                              <div style={{ fontSize:8, fontFamily:mono, color:"rgba(245,240,232,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.descricao}</div>
                             </div>
-                          );
-                        })()}
-                      </div>
-                      <p style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.25)", textAlign:"center", margin:0 }}>Selecione uma joiner para ver o storage</p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
