@@ -8012,6 +8012,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageCegEnviando,  setStorageCegEnviando]   = useState(false);
   const [storageCegProgresso, setStorageCegProgresso]  = useState({ done: 0, total: 0, erros: 0 });
   const [storageCegCegs,      setStorageCegCegs]       = useState(null);
+  const [storageCegItens,     setStorageCegItens]      = useState([]);
+  const [storageCegItemFiltro,setStorageCegItemFiltro] = useState("");
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [roundsSecaoAberta, setRoundsSecaoAberta] = useState(false);
@@ -9460,7 +9462,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", borderRight:"1px solid rgba(245,240,232,.1)", cursor:"pointer", background: storageMode === "foto" ? "rgba(201,168,240,.2)" : "transparent", color: storageMode === "foto" ? "#C9A8F0" : "rgba(245,240,232,.4)" }}>
                   Foto → Joiner
                 </button>
-                <button onClick={() => { setStorageMode("ceg"); setStorageCegFile(null); setStorageCegPreview(null); setStorageCegDesc(""); setStorageCegSel(""); setStorageCegProgresso({ done:0, total:0, erros:0 }); if (!storageCegCegs) supabase.from("masterlist").select("ceg").neq("cog","disponivel").then(({ data }) => { if (data) setStorageCegCegs([...new Set(data.map(r => r.ceg))].sort()); }); }}
+                <button onClick={() => { setStorageMode("ceg"); setStorageCegFile(null); setStorageCegPreview(null); setStorageCegDesc(""); setStorageCegSel(""); setStorageCegItens([]); setStorageCegItemFiltro(""); setStorageCegProgresso({ done:0, total:0, erros:0 }); if (!storageCegCegs) supabase.from("masterlist").select("ceg").neq("cog","disponivel").then(({ data }) => { if (data) setStorageCegCegs([...new Set(data.map(r => r.ceg))].sort()); }); }}
                   style={{ padding:"5px 12px", fontSize:10, fontFamily:"'DM Mono',monospace", fontWeight:700, border:"none", borderRight:"1px solid rgba(245,240,232,.1)", cursor:"pointer", background: storageMode === "ceg" ? "rgba(186,255,57,.15)" : "transparent", color: storageMode === "ceg" ? "#BAFF39" : "rgba(245,240,232,.4)" }}>
                   CEG → Todos
                 </button>
@@ -9682,7 +9684,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 setStorageCegEnviando(true);
                 setStorageCegProgresso({ done: 0, total: 0, erros: 0 });
 
-                const { data: items } = await supabase.from("masterlist").select("cog").eq("ceg", storageCegSel).neq("cog", "disponivel");
+                let itemQuery = supabase.from("masterlist").select("cog").eq("ceg", storageCegSel).neq("cog", "disponivel");
+                if (storageCegItemFiltro) itemQuery = itemQuery.eq("nome_do_item", storageCegItemFiltro);
+                const { data: items } = await itemQuery;
                 const cogs = [...new Set((items || []).map(i => i.cog))];
                 if (!cogs.length) { alert("Nenhuma joiner encontrada para esta CEG."); setStorageCegEnviando(false); return; }
 
@@ -9714,11 +9718,37 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {/* Seletor de CEG */}
                   <div style={{ marginBottom:12 }}>
                     <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:mono, letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>CEG</div>
-                    <select value={storageCegSel} onChange={e => setStorageCegSel(e.target.value)} style={{ ...inp, cursor:"pointer" }}>
+                    <select value={storageCegSel} onChange={e => {
+                      const ceg = e.target.value;
+                      setStorageCegSel(ceg);
+                      setStorageCegItemFiltro("");
+                      setStorageCegItens([]);
+                      if (ceg) {
+                        supabase.from("masterlist").select("nome_do_item").eq("ceg", ceg).neq("cog","disponivel").then(({ data }) => {
+                          if (data) setStorageCegItens([...new Set(data.map(r => r.nome_do_item).filter(Boolean))].sort());
+                        });
+                      }
+                    }} style={{ ...inp, cursor:"pointer" }}>
                       <option value="">Selecione a CEG...</option>
                       {(storageCegCegs || []).map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
+
+                  {/* Filtro por item (opcional) */}
+                  {storageCegSel && storageCegItens.length > 0 && (
+                    <div style={{ marginBottom:12 }}>
+                      <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:mono, letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>Item (opcional)</div>
+                      <select value={storageCegItemFiltro} onChange={e => setStorageCegItemFiltro(e.target.value)} style={{ ...inp, cursor:"pointer" }}>
+                        <option value="">Todos os itens da CEG</option>
+                        {storageCegItens.map(item => <option key={item} value={item}>{item}</option>)}
+                      </select>
+                      {storageCegItemFiltro && (
+                        <div style={{ marginTop:5, fontSize:9, fontFamily:mono, color:"rgba(186,255,57,.6)" }}>
+                          ↳ Enviará apenas para joiners com "{storageCegItemFiltro}"
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Upload da foto */}
                   <div style={{ marginBottom:12 }}>
@@ -9749,7 +9779,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {/* Botão */}
                   <button onClick={enviarParaTodosCeg} disabled={!storageCegSel || !storageCegFile || storageCegEnviando}
                     style={{ width:"100%", padding:"10px 0", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:".5px", borderRadius:8, border:"none", cursor: (!storageCegSel || !storageCegFile || storageCegEnviando) ? "default" : "pointer", background: (!storageCegSel || !storageCegFile || storageCegEnviando) ? "rgba(245,240,232,.06)" : "rgba(186,255,57,.15)", color: (!storageCegSel || !storageCegFile || storageCegEnviando) ? "rgba(245,240,232,.25)" : "#BAFF39" }}>
-                    {storageCegEnviando ? `Enviando... ${storageCegProgresso.done}/${storageCegProgresso.total}` : "Enviar para todas →"}
+                    {storageCegEnviando ? `Enviando... ${storageCegProgresso.done}/${storageCegProgresso.total}` : storageCegItemFiltro ? `Enviar para joiners com este item →` : "Enviar para todas →"}
                   </button>
 
                   {/* Progresso */}
