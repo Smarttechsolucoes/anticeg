@@ -9838,6 +9838,33 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                     </div>
                   )}
 
+                  {/* Botão apagar duplicados */}
+                  {!galeriaLoading && galeriaFotos !== null && (() => {
+                    const vistos = {};
+                    let dupCount = 0;
+                    (galeriaFotos || []).forEach(f => {
+                      const k = f.joiner_cog + "|" + f.foto_url;
+                      if (vistos[k]) dupCount++;
+                      else vistos[k] = true;
+                    });
+                    if (!dupCount) return null;
+                    return (
+                      <button onClick={async () => {
+                        if (!window.confirm(`Apagar ${dupCount} entrada(s) duplicada(s)?`)) return;
+                        const seen = {}; const toDelete = [];
+                        (galeriaFotos || []).forEach(f => {
+                          const k = f.joiner_cog + "|" + f.foto_url;
+                          if (seen[k]) toDelete.push(f.id);
+                          else seen[k] = f.id;
+                        });
+                        for (const id of toDelete) await supabase.from("joiner_storage").delete().eq("id", id);
+                        setGaleriaFotos(prev => prev.filter(f => !toDelete.includes(f.id)));
+                      }} style={{ marginBottom:10, padding:"6px 14px", fontFamily:mono, fontSize:10, fontWeight:700, borderRadius:6, border:"1px solid rgba(239,68,68,.3)", background:"rgba(239,68,68,.08)", color:"#ef4444", cursor:"pointer" }}>
+                        ✕ Apagar {dupCount} duplicado{dupCount !== 1 ? "s" : ""}
+                      </button>
+                    );
+                  })()}
+
                   {galeriaLoading ? (
                     <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.3)", fontSize:11, fontFamily:mono }}>carregando fotos...</div>
                   ) : filtradas.length === 0 ? (
@@ -9845,10 +9872,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   ) : (
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))", gap:6 }}>
                       {filtradas.map(item => (
-                        <div key={item.id} onClick={() => setStorageFotoAmpliada(item.foto_url)}
-                          style={{ position:"relative", aspectRatio:"1", overflow:"hidden", borderRadius:8, background:"#1a1a1a", cursor:"zoom-in", border:"1px solid rgba(245,240,232,.08)" }}>
-                          <img src={item.foto_url} alt={item.descricao || ""} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                        <div key={item.id}
+                          style={{ position:"relative", aspectRatio:"1", overflow:"hidden", borderRadius:8, background:"#1a1a1a", border:"1px solid rgba(245,240,232,.08)" }}>
+                          <img src={item.foto_url} alt={item.descricao || ""} onClick={() => setStorageFotoAmpliada(item.foto_url)}
+                            style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", cursor:"zoom-in" }} />
                           <div style={{ position:"absolute", top:4, left:4, background:"rgba(0,0,0,.75)", borderRadius:4, padding:"2px 6px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.7)" }}>@{item.joiner_cog}</div>
+                          <button onClick={async e => {
+                            e.stopPropagation();
+                            await supabase.from("joiner_storage").delete().eq("id", item.id);
+                            setGaleriaFotos(prev => prev.filter(f => f.id !== item.id));
+                          }} style={{ position:"absolute", top:4, right:4, width:18, height:18, borderRadius:"50%", background:"rgba(0,0,0,.75)", border:"none", color:"rgba(245,240,232,.7)", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 }}>✕</button>
                           {item.descricao && (
                             <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(0,0,0,.75))", padding:"14px 6px 5px" }}>
                               <div style={{ fontSize:8, fontFamily:mono, color:"rgba(245,240,232,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.descricao}</div>
