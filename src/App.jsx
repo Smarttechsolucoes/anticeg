@@ -9809,11 +9809,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const mono = "'DM Mono',monospace";
               const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"var(--offwhite)", fontFamily:mono, fontSize:11, padding:"7px 10px", outline:"none", width:"100%", boxSizing:"border-box" };
 
-              if (galeriaFotos === null && !galeriaLoading) {
-                setGaleriaLoading(true);
+              if (galeriaFotos === null)
                 supabase.from("joiner_storage").select("id, joiner_cog, foto_url, descricao, ativo").order("id", { ascending: false }).limit(300)
-                  .then(({ data }) => { setGaleriaFotos(data || []); setGaleriaLoading(false); });
-              }
+                  .then(({ data, error }) => { if (error) console.error("Galeria:", error.message); setGaleriaFotos(data || []); });
 
               const q = storageSearch.trim().toLowerCase();
               const filtradas = (galeriaFotos || []).filter(f => !q || f.joiner_cog?.toLowerCase().includes(q));
@@ -9827,19 +9825,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       <button onClick={() => setStorageSearch("")}
                         style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.4)", fontSize:13, cursor:"pointer", padding:"5px 10px", lineHeight:1 }}>✕</button>
                     )}
-                    <button onClick={() => { setGaleriaFotos(null); setGaleriaLoading(false); }}
+                    <button onClick={() => setGaleriaFotos(null)}
                       style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.4)", fontSize:13, cursor:"pointer", padding:"5px 10px", lineHeight:1 }}>↺</button>
                   </div>
 
                   {/* Contagem */}
-                  {!galeriaLoading && galeriaFotos !== null && (
+                  {galeriaFotos !== null && (
                     <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.25)", marginBottom:10, letterSpacing:".5px" }}>
                       {q ? `${filtradas.length} foto${filtradas.length !== 1 ? "s" : ""} de @${q}` : `${filtradas.length} foto${filtradas.length !== 1 ? "s" : ""} no total`}
                     </div>
                   )}
 
                   {/* Botão apagar duplicados */}
-                  {!galeriaLoading && galeriaFotos !== null && (() => {
+                  {galeriaFotos !== null && (() => {
                     const vistos = {};
                     let dupCount = 0;
                     (galeriaFotos || []).forEach(f => {
@@ -9857,15 +9855,20 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                           if (seen[k]) toDelete.push(f.id);
                           else seen[k] = f.id;
                         });
-                        for (const id of toDelete) await supabase.from("joiner_storage").delete().eq("id", id);
-                        setGaleriaFotos(prev => prev.filter(f => !toDelete.includes(f.id)));
+                        const deletados = [];
+                        for (const id of toDelete) {
+                          const { error } = await supabase.from("joiner_storage").delete().eq("id", id);
+                          if (!error) deletados.push(id);
+                        }
+                        if (deletados.length < toDelete.length) alert(`${toDelete.length - deletados.length} item(s) não puderam ser removidos.`);
+                        setGaleriaFotos(prev => prev.filter(f => !deletados.includes(f.id)));
                       }} style={{ marginBottom:10, padding:"6px 14px", fontFamily:mono, fontSize:10, fontWeight:700, borderRadius:6, border:"1px solid rgba(239,68,68,.3)", background:"rgba(239,68,68,.08)", color:"#ef4444", cursor:"pointer" }}>
                         ✕ Apagar {dupCount} duplicado{dupCount !== 1 ? "s" : ""}
                       </button>
                     );
                   })()}
 
-                  {galeriaLoading ? (
+                  {galeriaFotos === null ? (
                     <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.3)", fontSize:11, fontFamily:mono }}>carregando fotos...</div>
                   ) : filtradas.length === 0 ? (
                     <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.25)", fontSize:11, fontFamily:mono }}>Nenhuma foto encontrada.</div>
@@ -9879,7 +9882,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                           <div style={{ position:"absolute", top:4, left:4, background:"rgba(0,0,0,.75)", borderRadius:4, padding:"2px 6px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.7)" }}>@{item.joiner_cog}</div>
                           <button onClick={async e => {
                             e.stopPropagation();
-                            await supabase.from("joiner_storage").delete().eq("id", item.id);
+                            const { error } = await supabase.from("joiner_storage").delete().eq("id", item.id);
+                            if (error) { alert("Erro ao apagar foto."); return; }
                             setGaleriaFotos(prev => prev.filter(f => f.id !== item.id));
                           }} style={{ position:"absolute", top:4, right:4, width:18, height:18, borderRadius:"50%", background:"rgba(0,0,0,.75)", border:"none", color:"rgba(245,240,232,.7)", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 }}>✕</button>
                           {item.descricao && (
