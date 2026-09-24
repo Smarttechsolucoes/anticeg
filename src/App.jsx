@@ -22019,6 +22019,7 @@ function PrevendaTab({ user }) {
       key: "mercari",
       ativo: true,
       fechado: false,
+      cor: "verde",
       titulo: "MERCARI",
       subtitulo: "Compras no Japão",
       url: null,
@@ -22081,7 +22082,7 @@ function PrevendaTab({ user }) {
 
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         {listaAtual.map(f => (
-          <div key={f.key} style={{ border:`1px solid ${f.ativo?"rgba(255,92,26,.25)":"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
+          <div key={f.key} style={{ border:`1px solid ${f.ativo?(f.cor==="verde"?"rgba(186,255,57,.25)":"rgba(255,92,26,.25)"):"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
             <div style={{ display:"flex", gap:0 }}>
               {f.img && (
                 <img src={f.img} alt={f.titulo} onError={e=>{e.target.style.display="none"}}
@@ -22090,7 +22091,7 @@ function PrevendaTab({ user }) {
               <div style={{ padding:"16px 18px", flex:1, display:"flex", flexDirection:"column", gap:6, justifyContent:"center" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                   <span style={{ fontWeight:900, fontSize:15, letterSpacing:"-0.3px" }}>{f.titulo}</span>
-                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.fechado?"rgba(255,107,107,.12)":f.ativo?"rgba(255,92,26,.15)":"rgba(245,240,232,.06)", color:f.fechado?"#ff6b6b":f.ativo?"var(--laranja)":"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
+                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.fechado?"rgba(255,107,107,.12)":f.ativo?(f.cor==="verde"?"rgba(186,255,57,.12)":"rgba(255,92,26,.15)"):"rgba(245,240,232,.06)", color:f.fechado?"#ff6b6b":f.ativo?(f.cor==="verde"?"#BAFF39":"var(--laranja)"):"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
                     {f.fechado?"TEMP. FECHADO":f.ativo?"ABERTO":"ENCERRADO"}
                   </span>
                 </div>
@@ -22117,7 +22118,7 @@ function PrevendaTab({ user }) {
                   </a>
                 ) : (
                   <button onClick={()=>{ window.dispatchEvent(new CustomEvent("anticeg:changetab", {detail: f.tab})); }}
-                    style={{ padding:"10px 20px", borderRadius:8, background:"var(--laranja)", color:"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
+                    style={{ padding:"10px 20px", borderRadius:8, background:f.cor==="verde"?"#BAFF39":"var(--laranja)", color:f.cor==="verde"?"#000":"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
                     ACESSAR →
                   </button>
                 )}
