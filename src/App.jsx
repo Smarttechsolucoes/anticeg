@@ -11945,7 +11945,7 @@ function MercariTab() {
     <span key="c3">Estou ciente que a GOM é responsável por <strong>intermediar</strong> o processo de compra.</span>,
   ];
 
-  const FECHADO = true;
+  const FECHADO = false;
 
   return (
     <div className="mc-wrap">
