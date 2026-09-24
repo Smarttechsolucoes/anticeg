@@ -12540,11 +12540,10 @@ function AdminStatusItens({ data, onUpdate }) {
         </button>
         {STATUS_ITENS_OPTS.map(s => {
           const count = contadores[s] || 0;
-          if (!count) return null;
           const ativo = filtroStatus === s;
           return (
-            <button key={s} onClick={() => setFiltroStatus(s)}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 10px", borderRadius:7, fontFamily:mono, fontSize:11, cursor:"pointer", border: ativo ? "1px solid rgba(245,240,232,.25)" : "1px solid rgba(245,240,232,.08)", background: ativo ? "rgba(245,240,232,.07)" : "transparent", color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>
+            <button key={s} onClick={() => setFiltroStatus(s)} disabled={count === 0}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 10px", borderRadius:7, fontFamily:mono, fontSize:11, cursor: count > 0 ? "pointer" : "default", border: ativo ? "1px solid rgba(245,240,232,.25)" : "1px solid rgba(245,240,232,.08)", background: ativo ? "rgba(245,240,232,.07)" : "transparent", color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.35)", opacity: count === 0 ? 0.3 : 1 }}>
               <StatusChip status={s} />
               <span style={{ color:"rgba(245,240,232,.4)", fontSize:10 }}>{count}</span>
             </button>
