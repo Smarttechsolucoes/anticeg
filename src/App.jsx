@@ -285,6 +285,7 @@ function fmtBRL(val, hidden) {
 
 const STATUS_STEPS = [
   { id: "Comprado",         label: "Comprado",         icon: "🛒" },
+  { id: "Na Warehouse",     label: "Na Warehouse",     icon: "📦" },
   { id: "A Caminho",        label: "A Caminho",        icon: "✈︁" },
   { id: "Taxa Liberada",    label: "Taxa Liberada",    icon: "✅" },
   { id: "ANTIGOM",          label: "A caminho ANTIGOM", icon: "🁠" },
@@ -2279,7 +2280,14 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                         onMouseEnter={e => e.currentTarget.style.borderColor="rgba(201,168,240,.35)"}
                         onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
                         <div onClick={() => setStorageAmpliado(s)} style={{ cursor:"pointer" }}>
-                          <img src={s.foto_url} alt={s.descricao} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                          {s.foto_url
+                            ? <img src={s.foto_url} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
+                                onError={e => { e.currentTarget.style.display="none"; }}
+                              />
+                            : <div style={{ width:"100%", aspectRatio:"3/4", background:"rgba(245,240,232,.04)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                <span style={{ color:"rgba(245,240,232,.15)", fontSize:24 }}>📷</span>
+                              </div>
+                          }
                           <div style={{ padding:"8px 10px 6px" }}>
                             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", letterSpacing:"0.5px", marginBottom:2 }}>◧ Storage GOM</div>
                             {(s.descricao || "").split("\n").filter(Boolean).map((l, i) => (
@@ -2368,8 +2376,13 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             style={{ position:"fixed", inset:0, zIndex:10000, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, gap:12 }}>
             {btnSeta(temAnterior, () => setStorageAmpliado(storageGom[idx - 1]), "‹")}
             <div onClick={e => e.stopPropagation()} style={{ maxWidth:420, width:"100%", display:"flex", flexDirection:"column", gap:0 }}>
-              <img src={storageAmpliado.foto_url} alt={storageAmpliado.descricao}
-                style={{ width:"100%", borderRadius:10, display:"block", objectFit:"contain", maxHeight:"70vh" }} />
+              {storageAmpliado.foto_url
+                ? <img src={storageAmpliado.foto_url} alt="" onError={e => { e.currentTarget.style.display="none"; }}
+                    style={{ width:"100%", borderRadius:10, display:"block", objectFit:"contain", maxHeight:"70vh" }} />
+                : <div style={{ width:"100%", aspectRatio:"3/4", background:"rgba(245,240,232,.04)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <span style={{ color:"rgba(245,240,232,.15)", fontSize:40 }}>📷</span>
+                  </div>
+              }
               <div style={{ background:"#111", borderRadius:"0 0 10px 10px", padding:"12px 16px" }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
                   <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:"#C9A8F0", letterSpacing:"0.5px" }}>◧ Storage GOM</div>
@@ -8016,6 +8029,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageCegItens,     setStorageCegItens]      = useState([]);
   const [storageCegItemFiltro,setStorageCegItemFiltro] = useState("");
   const [galeriaFotos,        setGaleriaFotos]         = useState(null);
+  const [galeriaFetchGen,     setGaleriaFetchGen]      = useState(0);
   const [galeriaLoading,      setGaleriaLoading]       = useState(false);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
@@ -9809,9 +9823,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const mono = "'DM Mono',monospace";
               const inp2 = { background:"#0d0d0d", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"var(--offwhite)", fontFamily:mono, fontSize:11, padding:"7px 10px", outline:"none", width:"100%", boxSizing:"border-box" };
 
-              if (galeriaFotos === null)
+              if (galeriaFotos === null) {
+                const gen = galeriaFetchGen;
                 supabase.from("joiner_storage").select("id, joiner_cog, foto_url, descricao, ativo").order("id", { ascending: false }).limit(300)
-                  .then(({ data, error }) => { if (error) console.error("Galeria:", error.message); setGaleriaFotos(data || []); });
+                  .then(({ data, error }) => {
+                    if (error) console.error("Galeria:", error.message);
+                    setGaleriaFetchGen(cur => { if (cur === gen) setGaleriaFotos(data || []); return cur; });
+                  });
+              }
 
               const q = storageSearch.trim().toLowerCase();
               const filtradas = (galeriaFotos || []).filter(f => !q || f.joiner_cog?.toLowerCase().includes(q));
@@ -9825,7 +9844,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                       <button onClick={() => setStorageSearch("")}
                         style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.4)", fontSize:13, cursor:"pointer", padding:"5px 10px", lineHeight:1 }}>✕</button>
                     )}
-                    <button onClick={() => setGaleriaFotos(null)}
+                    <button onClick={() => { setGaleriaFetchGen(g => g + 1); setGaleriaFotos(null); }}
                       style={{ flexShrink:0, background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, color:"rgba(245,240,232,.4)", fontSize:13, cursor:"pointer", padding:"5px 10px", lineHeight:1 }}>↺</button>
                   </div>
 
@@ -12484,7 +12503,7 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
   );
 }
 
-const STATUS_ITENS_OPTS = ["Escrito", "Comprado", "Na Warehouse", "A Caminho", "Taxa Liberada", "ANTIGOM", "Envio Liberado", "Enviado Nacional"];
+const STATUS_ITENS_OPTS = ["Escrito", ...STATUS_STEPS.map(s => s.id)];
 
 function AdminStatusItens({ data, onUpdate }) {
   const [filtroStatus, setFiltroStatus] = useState("Escrito");
@@ -21999,14 +22018,14 @@ function PrevendaTab({ user }) {
     {
       key: "mercari",
       ativo: true,
-      fechado: true,
+      fechado: false,
       titulo: "MERCARI",
       subtitulo: "Compras no Japão",
       url: null,
       tab: "mercari",
       img: null,
-      tags: ["Em pausa"],
-      info: "A caixinha está pausada no momento. Fique de olho nos avisos para a reabertura.",
+      tags: ["Pedidos abertos"],
+      info: "Encontrou algo no Mercari Japão? Manda o link e a gente compra pra você.",
     },
     {
       key: "wmag-hyunjin",
