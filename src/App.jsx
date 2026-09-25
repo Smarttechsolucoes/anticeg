@@ -15140,6 +15140,7 @@ function DisponiveisTab({ user }) {
   const [filtroCategoria, setFiltroCategoria] = useState(null);
   const [isBloqueada, setIsBloqueada] = useState(false);
   const [ordenacao, setOrdenacao] = useState("novidade");
+  const [fotoAmpliada, setFotoAmpliada] = useState(null);
 
   const SKZ_MEMBROS = ["Changbin","Bang Chan","Lee Know","Hyunjin","Seungmin","Jeongin","Jisung","Minho","Felix","Chan","Han","I.N"];
   function extrairMembro(nome) {
@@ -15470,11 +15471,13 @@ function DisponiveisTab({ user }) {
                 onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,180,0,.3)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(245,240,232,.08)"}>
                 {/* foto */}
-                <div style={{ width:"100%", aspectRatio:"1/1", background:"rgba(245,240,232,.04)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <div onClick={() => foto && setFotoAmpliada({ url: foto.foto_url, item })}
+                  style={{ width:"100%", aspectRatio:"1/1", background:"rgba(245,240,232,.04)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, cursor: foto ? "zoom-in" : "default", position:"relative" }}>
                   {foto
                     ? <img src={foto.foto_url} alt={item.nome_do_item} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
                     : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.15)", letterSpacing:".5px" }}>sem foto</span>
                   }
+                  {foto && <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.45)", borderRadius:5, padding:"2px 6px", fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.5)", pointerEvents:"none" }}>🔍</div>}
                 </div>
                 {/* info */}
                 <div style={{ padding:"10px 12px", display:"flex", flexDirection:"column", flex:1 }}>
@@ -15519,6 +15522,28 @@ function DisponiveisTab({ user }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox de foto */}
+      {fotoAmpliada && (
+        <div onClick={() => setFotoAmpliada(null)} style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,.88)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:480, width:"100%", display:"flex", flexDirection:"column", gap:12 }}>
+            <img src={fotoAmpliada.url} alt={fotoAmpliada.item.nome_do_item}
+              style={{ width:"100%", borderRadius:14, objectFit:"contain", maxHeight:"70vh", display:"block" }} />
+            <div style={{ background:"rgba(17,17,17,.95)", borderRadius:12, padding:"14px 16px" }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"var(--lilas)", letterSpacing:"1.5px", marginBottom:4 }}>{fotoAmpliada.item.ceg}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:"var(--offwhite)", marginBottom:8 }}>{fotoAmpliada.item.nome_do_item}</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                {total(fotoAmpliada.item) > 0 && <span style={{ fontFamily:"'DM Mono',monospace", fontSize:15, color:"var(--laranja)", fontWeight:700 }}>R${fmtBRL(total(fotoAmpliada.item))}</span>}
+                <button onClick={() => { setFotoAmpliada(null); abrirConfirmacao(fotoAmpliada.item); }}
+                  style={{ background:"rgba(255,180,0,.12)", border:"1px solid rgba(255,180,0,.4)", color:"#ffb400", borderRadius:8, padding:"8px 18px", fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:700, cursor:"pointer" }}>
+                  Dar claim →
+                </button>
+              </div>
+            </div>
+            <button onClick={() => setFotoAmpliada(null)} style={{ alignSelf:"center", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:8, padding:"6px 20px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>fechar</button>
           </div>
         </div>
       )}
