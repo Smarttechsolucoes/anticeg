@@ -15139,6 +15139,7 @@ function DisponiveisTab({ user }) {
   const [filtroMembro, setFiltroMembro] = useState(null);
   const [filtroCategoria, setFiltroCategoria] = useState(null);
   const [isBloqueada, setIsBloqueada] = useState(false);
+  const [ordenacao, setOrdenacao] = useState("novidade");
 
   const SKZ_MEMBROS = ["Changbin","Bang Chan","Lee Know","Hyunjin","Seungmin","Jeongin","Jisung","Minho","Felix","Chan","Han","I.N"];
   function extrairMembro(nome) {
@@ -15272,6 +15273,9 @@ function DisponiveisTab({ user }) {
     if (filtroMembro && extrairMembro(i.nome_do_item) !== filtroMembro) return false;
     if (filtroCategoria && extrairCategoria(i.nome_do_item) !== filtroCategoria) return false;
     return true;
+  }).slice().sort((a, b) => {
+    if (ordenacao === "menor-preco") return total(a) - total(b);
+    return b.id - a.id; // novidade: id maior = mais recente
   }) : null;
 
   const claimsAtivos    = meusClaims.filter(c => c.status !== "rejeitado");
@@ -15384,6 +15388,17 @@ function DisponiveisTab({ user }) {
           {categorias.map(cat => (
             <button key={cat} onClick={() => setFiltroCategoria(cat === filtroCategoria ? null : cat)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: filtroCategoria === cat ? "1px solid rgba(255,180,0,.7)" : "1px solid rgba(245,240,232,.12)", background: filtroCategoria === cat ? "rgba(255,180,0,.1)" : "transparent", color: filtroCategoria === cat ? "#ffb400" : "rgba(245,240,232,.4)", fontWeight: filtroCategoria === cat ? 700 : 400 }}>
               {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {subTab === "loja" && itensFiltrados && itensFiltrados.length > 1 && (
+        <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:16 }}>
+          <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.3)", letterSpacing:"1px" }}>ordenar</span>
+          {[["novidade","↓ novidade"],["menor-preco","↑ preço"]].map(([val, label]) => (
+            <button key={val} onClick={() => setOrdenacao(val)} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", padding:"4px 12px", borderRadius:20, cursor:"pointer", border: ordenacao === val ? "1px solid rgba(245,240,232,.35)" : "1px solid rgba(245,240,232,.1)", background: ordenacao === val ? "rgba(245,240,232,.08)" : "transparent", color: ordenacao === val ? "var(--offwhite)" : "rgba(245,240,232,.35)", fontWeight: ordenacao === val ? 700 : 400 }}>
+              {label}
             </button>
           ))}
         </div>
