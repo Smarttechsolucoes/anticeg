@@ -15085,30 +15085,30 @@ function LojinhaRepasses({ user }) {
               {user && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(201,168,240,.35)", marginTop:8 }}>Abra "Minha Lojinha" para publicar o seu.</div>}
             </div>
           ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10 }}>
               {repasses.map(r => (
                 <div key={r.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, overflow:"hidden", display:"flex", flexDirection:"column" }}>
                   {r.foto_url
-                    ? <img src={r.foto_url} alt={r.nome_card} style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
-                    : <div style={{ width:"100%", height:72, background:"rgba(245,240,232,.02)", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(245,240,232,.08)", fontSize:28 }}>◱</div>}
-                  <div style={{ padding:"12px 14px", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"var(--lilas)", letterSpacing:"1px" }}>{r.ceg}</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", lineHeight:1.3, flex:1 }}>{r.nome_card}</div>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginTop:6 }}>
-                      <span style={{ fontFamily:mono, fontSize:15, color:"var(--laranja)", fontWeight:700 }}>R${Number(r.valor).toFixed(2).replace(".", ",")}</span>
-                      {r.prazo && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.28)" }}>{r.prazo}</span>}
+                    ? <img src={r.foto_url} alt={r.nome_card} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                    : <div style={{ width:"100%", aspectRatio:"2/3", background:"rgba(245,240,232,.02)", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(245,240,232,.08)", fontSize:32 }}>◱</div>}
+                  <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"var(--lilas)", letterSpacing:"1px" }}>{r.ceg}</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:"var(--offwhite)", lineHeight:1.25, flex:1 }}>{r.nome_card}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginTop:5 }}>
+                      <span style={{ fontFamily:mono, fontSize:12, color:"var(--laranja)", fontWeight:700 }}>R${Number(r.valor).toFixed(2).replace(".", ",")}</span>
+                      {r.prazo && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.28)" }}>{r.prazo}</span>}
                     </div>
-                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:8 }}>por <span style={{ color:"rgba(245,240,232,.55)" }}>@{r.joiner_cog}</span></div>
+                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.35)", marginBottom:6 }}>@{r.joiner_cog}</div>
                     {contatoId === r.id ? (
-                      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"10px 12px" }}>
-                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.55)", marginBottom:6, letterSpacing:"1px" }}>CONTATO DA VENDEDORA</div>
-                        <a href={`https://wa.me/${(r.whatsapp||"").replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:12, color:"var(--verde)", fontWeight:700, textDecoration:"none", display:"block", marginBottom:8 }}>
-                          💬 Abrir WhatsApp →
+                      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"8px 10px" }}>
+                        <div style={{ fontFamily:mono, fontSize:8, color:"rgba(186,255,57,.55)", marginBottom:5, letterSpacing:"1px" }}>CONTATO DA VENDEDORA</div>
+                        <a href={`https://wa.me/${(r.whatsapp||"").replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:11, color:"var(--verde)", fontWeight:700, textDecoration:"none", display:"block", marginBottom:6 }}>
+                          💬 WhatsApp →
                         </a>
-                        <button onClick={() => setContatoId(null)} style={{ background:"none", border:"none", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", cursor:"pointer" }}>fechar</button>
+                        <button onClick={() => setContatoId(null)} style={{ background:"none", border:"none", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", cursor:"pointer" }}>fechar</button>
                       </div>
                     ) : (
-                      <button onClick={() => setContatoId(r.id)} style={{ width:"100%", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.18)", borderRadius:8, padding:"9px", color:"var(--verde)", fontFamily:mono, fontSize:10, cursor:"pointer", fontWeight:700, letterSpacing:"1px" }}>
+                      <button onClick={() => setContatoId(r.id)} style={{ width:"100%", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"7px 0", color:"var(--verde)", fontFamily:mono, fontSize:9, cursor:"pointer", fontWeight:700, letterSpacing:"1px" }}>
                         TENHO INTERESSE →
                       </button>
                     )}
