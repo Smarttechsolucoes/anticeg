@@ -13364,7 +13364,10 @@ function ClaimAoVivo() {
     return { base, sets };
   });
 
-  if (!basesSets.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0", textAlign:"center" }}>Nenhum set publicado.</div>;
+  const BASES_OCULTAS = ["TESTER PC", "NÃO É REAL", "NAO É REAL", "CLAIM TESTE 03", "CLAIM TESTE PARA APRENDER"];
+  const basesSetsVisiveis = basesSets.filter(({ base }) => !BASES_OCULTAS.some(b => base.trim().toUpperCase() === b.toUpperCase()));
+
+  if (!basesSetsVisiveis.length) return <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", padding:"20px 0", textAlign:"center" }}>Nenhum set publicado.</div>;
 
   function renderMembro(item, idx, total) {
     const claimed = !item.na_loja && !!item.claim;
@@ -13397,7 +13400,7 @@ function ClaimAoVivo() {
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
-        {basesSets.map(({ base, sets }) => {
+        {basesSetsVisiveis.map(({ base, sets }) => {
           const fotoUrl = fotos[`${base} · ${Object.keys(porBase[base])[0]}`];
           return (
             <div key={base}>
