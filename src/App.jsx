@@ -22106,6 +22106,14 @@ function PrevendaTab({ user }) {
                 <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:2 }}>{f.info}</div>
               </div>
             </div>
+            {!f.ativo && f.url && !f.external && (
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"10px 18px" }}>
+                <a href={f.url} target="_self"
+                  style={{ display:"inline-block", padding:"8px 16px", borderRadius:8, background:"transparent", color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.12)", fontFamily:mono, fontSize:10, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
+                  VER ITENS →
+                </a>
+              </div>
+            )}
             {f.ativo && !f.fechado && (f.onInline || f.url || f.tab) && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 18px", display:"flex", gap:8, flexWrap:"wrap" }}>
                 {f.onInline ? (
