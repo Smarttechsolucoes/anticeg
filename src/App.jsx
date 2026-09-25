@@ -20385,7 +20385,9 @@ function AdminClaimEventos() {
   async function salvarEdicaoEvento() {
     if (!editEvento) return;
     setEditSalvando(true);
-    await supabase.from("claim_eventos").update({ nome: editEvento.nome, valor: Number(editEvento.valor), prazo: editEvento.prazo }).eq("id", editEvento.id);
+    const updates = { nome: editEvento.nome, valor: Number(editEvento.valor), prazo: editEvento.prazo };
+    if (editEvento.abertura) updates.abertura = new Date(editEvento.abertura).toISOString();
+    await supabase.from("claim_eventos").update(updates).eq("id", editEvento.id);
     await fetchTudo();
     setEditSalvando(false);
     setEditEvento(null);
@@ -20685,6 +20687,11 @@ function AdminClaimEventos() {
                   style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none" }} />
               </div>
             </div>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4 }}>HORÁRIO DE ABERTURA</div>
+              <input type="datetime-local" value={editEvento.abertura} onChange={e => setEditEvento(p => ({ ...p, abertura:e.target.value }))}
+                style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none", colorScheme:"dark" }} />
+            </div>
             <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:4 }}>
               <button onClick={() => setEditEvento(null)}
                 style={{ fontFamily:mono, fontSize:11, padding:"8px 16px", background:"transparent", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
@@ -20967,7 +20974,7 @@ function AdminClaimEventos() {
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                    <button onClick={e => { e.stopPropagation(); setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"" }); }}
+                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(ev.abertura).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
                       EDITAR
                     </button>
