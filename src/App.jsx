@@ -20379,6 +20379,17 @@ function AdminClaimEventos() {
   const [copiadoSet, setCopiadoSet] = useState(null);
   const [undoClaim, setUndoClaim] = useState(null);
   const undoTimerRef = useRef(null);
+  const [editEvento, setEditEvento] = useState(null); // { id, nome, valor, prazo }
+  const [editSalvando, setEditSalvando] = useState(false);
+
+  async function salvarEdicaoEvento() {
+    if (!editEvento) return;
+    setEditSalvando(true);
+    await supabase.from("claim_eventos").update({ nome: editEvento.nome, valor: Number(editEvento.valor), prazo: editEvento.prazo }).eq("id", editEvento.id);
+    await fetchTudo();
+    setEditSalvando(false);
+    setEditEvento(null);
+  }
 
   async function fetchTudo() {
     const { data: evData } = await supabase.from("claim_eventos").select("*").order("abertura", { ascending:false });
@@ -20650,6 +20661,43 @@ function AdminClaimEventos() {
 
   return (
     <div>
+      {editEvento && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          onClick={() => setEditEvento(null)}>
+          <div style={{ background:"#141412", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"24px 22px", width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:14 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px" }}>EDITAR EVENTO</div>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4 }}>NOME</div>
+              <input value={editEvento.nome} onChange={e => setEditEvento(p => ({ ...p, nome:e.target.value }))}
+                style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none" }} />
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4 }}>VALOR (R$)</div>
+                <input type="number" value={editEvento.valor} onChange={e => setEditEvento(p => ({ ...p, valor:e.target.value }))}
+                  style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none" }} />
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4 }}>PRAZO</div>
+                <input value={editEvento.prazo} onChange={e => setEditEvento(p => ({ ...p, prazo:e.target.value }))}
+                  placeholder="ex: 05/10"
+                  style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none" }} />
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:4 }}>
+              <button onClick={() => setEditEvento(null)}
+                style={{ fontFamily:mono, fontSize:11, padding:"8px 16px", background:"transparent", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
+                cancelar
+              </button>
+              <button onClick={salvarEdicaoEvento} disabled={editSalvando}
+                style={{ fontFamily:mono, fontSize:11, fontWeight:700, padding:"8px 20px", background:"rgba(245,240,232,.1)", border:"1px solid rgba(245,240,232,.2)", borderRadius:7, color:"var(--offwhite)", cursor:"pointer", opacity: editSalvando ? 0.5 : 1 }}>
+                {editSalvando ? "salvando..." : "SALVAR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {undoClaim && (
         <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", zIndex:9999, background:"#1a1a1a", border:"1px solid rgba(255,107,107,.35)", borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 4px 20px rgba(0,0,0,.5)" }}>
           <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.7)" }}>
@@ -20918,7 +20966,11 @@ function AdminClaimEventos() {
                       <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>{evSets.length} set(s) · {totalClaims} claim(s)</span>
                     </div>
                   </div>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <button onClick={e => { e.stopPropagation(); setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"" }); }}
+                      style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
+                      EDITAR
+                    </button>
                     <button onClick={e => { e.stopPropagation(); reativarEvento(ev.id); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(186,255,57,.06)", border:"1px solid rgba(186,255,57,.2)", borderRadius:4, color:"rgba(186,255,57,.6)", cursor:"pointer" }}>
                       REATIVAR
