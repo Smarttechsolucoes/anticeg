@@ -15557,6 +15557,7 @@ function DisponiveisTab({ user }) {
         const hoje = new Date().toISOString().split("T")[0];
         const maxD = new Date(); maxD.setDate(maxD.getDate() + 20);
         const maxVenc = maxD.toISOString().split("T")[0];
+        const fotoConfirm = fotos[`${item.ceg}||${item.nome_do_item}`];
         return (
           <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" }}
             onClick={() => setConfirmando(null)}>
@@ -15564,13 +15565,19 @@ function DisponiveisTab({ user }) {
               onClick={e => e.stopPropagation()}>
 
               {/* Item destaque */}
-              <div style={{ padding:"28px 24px 0" }}>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>{item.ceg}</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:.5, lineHeight:1.2, marginBottom:8 }}>{item.nome_do_item}</div>
-                {val > 0
-                  ? <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(val)}</div>
-                  : <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)" }}>valor a definir</div>
-                }
+              <div style={{ padding:"28px 24px 0", display:"flex", gap:14, alignItems:"flex-start" }}>
+                {fotoConfirm && (
+                  <img src={fotoConfirm.foto_url} alt={item.nome_do_item}
+                    style={{ width:72, height:72, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid rgba(245,240,232,.08)" }} />
+                )}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>{item.ceg}</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", letterSpacing:.5, lineHeight:1.2, marginBottom:8 }}>{item.nome_do_item}</div>
+                  {val > 0
+                    ? <div style={{ fontFamily:"'DM Mono',monospace", fontSize:16, fontWeight:700, color:"var(--laranja)" }}>R${fmtBRL(val)}</div>
+                    : <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)" }}>valor a definir</div>
+                  }
+                </div>
               </div>
 
               <div style={{ margin:"16px 24px", height:1, background:"rgba(245,240,232,.07)" }} />
