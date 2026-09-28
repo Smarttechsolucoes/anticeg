@@ -22541,20 +22541,20 @@ function RunItVol2Tab({ user }) {
                   {tipo.preco !== "a definir" && <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", fontWeight:700 }}>{tipo.preco}</span>}
                   {selCount > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)" }}>· {selCount} selecionado{selCount>1?"s":""}</span>}
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(88px,1fr))", gap:8 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px,1fr))", gap:10 }}>
                   {CHARS.map(char => {
                     const key = `${tipo.id} ${char}`;
                     const sel = itensSel.includes(key);
                     return (
-                      <div key={char} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:10, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
+                      <div key={char} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:12, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
                         <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto:`/run-it-vol-2/${encodeURIComponent(key)}.png`, id:key })}>
                           <img src={`/run-it-vol-2/${encodeURIComponent(key)}.png`} alt={key} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.7 }} />
-                          <div style={{ position:"absolute", bottom:3, right:3, background:"rgba(0,0,0,.55)", borderRadius:4, padding:"2px 4px", fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.55)" }}>🔍</div>
+                          <div style={{ position:"absolute", bottom:4, right:4, background:"rgba(0,0,0,.55)", borderRadius:4, padding:"2px 5px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
                         </div>
-                        <div style={{ padding:"6px 7px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.1 }}>{char}</div>
+                        <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.1 }}>{char}</div>
                           <button onClick={() => toggleItem(key)}
-                            style={{ marginTop:3, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:5, padding:"5px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:7, fontWeight:700, letterSpacing:"0.5px", cursor:"pointer", transition:"all .15s" }}>
+                            style={{ marginTop:4, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:6, padding:"7px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"0.5px", cursor:"pointer", transition:"all .15s" }}>
                             {sel ? "✓ SELECIONADO" : "SELECIONAR"}
                           </button>
                         </div>
