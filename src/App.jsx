@@ -22553,8 +22553,8 @@ function RunItVol2Tab({ user }) {
                         <div style={{ padding:"6px 7px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.1 }}>{char}</div>
                           <button onClick={() => toggleItem(key)}
-                            style={{ marginTop:3, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:5, padding:"4px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:8, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
-                            {sel ? "✓" : "+"}
+                            style={{ marginTop:3, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:5, padding:"5px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:7, fontWeight:700, letterSpacing:"0.5px", cursor:"pointer", transition:"all .15s" }}>
+                            {sel ? "✓ SELECIONADO" : "SELECIONAR"}
                           </button>
                         </div>
                       </div>
