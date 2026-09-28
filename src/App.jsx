@@ -7974,6 +7974,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [lightstickCount,   setLightstickCount]   = useState(0);
   const [waveMakerCount,   setWaveMakerCount]   = useState(0);
   const [runItCount,       setRunItCount]       = useState(0);
+  const [dropsStats,       setDropsStats]       = useState({});
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
@@ -8254,6 +8255,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setWaveMakerCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "RUN IT VOL 2").eq("status", "pendente")
       .then(({ count }) => { if (count) setRunItCount(count); });
+    supabase.from("formulario_pedidos").select("evento, status")
+      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2"])
+      .then(({ data }) => {
+        if (!data) return;
+        const stats = {};
+        data.forEach(({ evento, status }) => {
+          if (!stats[evento]) stats[evento] = { pendente:0, confirmado:0, cancelado:0 };
+          if (stats[evento][status] !== undefined) stats[evento][status]++;
+        });
+        setDropsStats(stats);
+      });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8662,6 +8674,53 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 ))}
               </div>
             </>}
+
+            {/* Drops pipeline */}
+            {(() => {
+              const DROPS_LIST = [
+                { evento:"WAVE MAKER - SG JAPAN 2027", label:"WAVE MAKER", tab:"wave-maker-admin", cor:"rgba(201,168,240,.85)", icon:"🌊" },
+                { evento:"RUN IT VOL 2",               label:"RUN IT VOL 2", tab:"run-it-admin",   cor:"rgba(201,168,240,.85)", icon:"◈" },
+              ];
+              const STATUS_COLS = [
+                { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
+                { key:"confirmado", label:"Confirmado", cor:"#4ade80" },
+                { key:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
+              ];
+              return (
+                <div style={{ marginBottom:24 }}>
+                  <div style={{ ...lbl, marginBottom:10 }}>Drops</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {DROPS_LIST.map(drop => {
+                      const s = dropsStats[drop.evento] || { pendente:0, confirmado:0, cancelado:0 };
+                      const total = s.pendente + s.confirmado + s.cancelado;
+                      return (
+                        <div key={drop.evento} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, overflow:"hidden" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:"1px solid rgba(245,240,232,.06)", cursor:"pointer" }}
+                            onClick={() => setAdminMainTab(drop.tab)}>
+                            <span style={{ fontSize:13 }}>{drop.icon}</span>
+                            <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700, color:"rgba(245,240,232,.7)", letterSpacing:"0.5px", flex:1 }}>{drop.label}</span>
+                            <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:"rgba(245,240,232,.25)" }}>{total} total →</span>
+                          </div>
+                          <div style={{ display:"flex" }}>
+                            {STATUS_COLS.map((col, i) => {
+                              const cnt = s[col.key] || 0;
+                              const ativo = cnt > 0;
+                              return (
+                                <div key={col.key} onClick={() => setAdminMainTab(drop.tab)}
+                                  style={{ flex:1, padding:"10px 0", textAlign:"center", borderRight:i<STATUS_COLS.length-1?"1px solid rgba(245,240,232,.06)":"none", cursor:"pointer", opacity:ativo?1:0.4 }}>
+                                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:900, color:ativo?col.cor:"rgba(245,240,232,.2)", lineHeight:1, marginBottom:3 }}>{cnt}</div>
+                                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:7, letterSpacing:"1.2px", textTransform:"uppercase", color:ativo?col.cor:"rgba(245,240,232,.2)" }}>{col.label}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Lista de ação agrupada */}
             {urgentLines.length > 0 ? (
