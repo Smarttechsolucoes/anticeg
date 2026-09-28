@@ -22223,9 +22223,46 @@ function AdminWaveMaker({ onCountChange }) {
     { id:"pendente",   label:"Geral",      cor:"rgba(201,168,240,.8)" },
     { id:"confirmado", label:"Confirmado", cor:"#4ade80" },
     { id:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
+    { id:"resumo",     label:"Resumo",     cor:"var(--laranja)" },
   ];
 
   const visiveis = pedidos.filter(p => p.status === filtro);
+
+  function calcResumo() {
+    const linhas = [];
+    const mods = ["BOX LACRADA","KIT 01","KIT 02","KIT 03"];
+    mods.forEach(mod => {
+      const ps = pedidos.filter(p => p.modalidade === mod);
+      if (ps.length === 0) return;
+      const info = WM_FOTOS[mod];
+      const totalUnid = ps.reduce((s,p) => s + Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1]||1), 0);
+      const totalVal  = totalUnid * (info?.preco || 0);
+      const conf = ps.filter(p=>p.status==="confirmado").reduce((s,p)=>s+Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1]||1),0);
+      const pend = ps.filter(p=>p.status==="pendente").reduce((s,p)=>s+Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1]||1),0);
+      linhas.push({ label:mod, foto:info?.foto, totalUnid, totalVal, conf, pend, preco:info?.preco });
+    });
+    // Itens soltos: por item
+    const soltos = pedidos.filter(p => p.modalidade === "ITENS SOLTOS");
+    if (soltos.length > 0) {
+      const itemMap = {};
+      soltos.forEach(p => {
+        const qtdP = Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1]||1);
+        const itensStr = p.observacoes?.match(/Itens: ([^·]+)/)?.[1]?.trim();
+        if (!itensStr) return;
+        itensStr.split(", ").forEach(nome => {
+          const n = nome.trim();
+          if (!itemMap[n]) itemMap[n] = { total:0, conf:0, pend:0, preco: WM_ITENS_PRECO[n]||0 };
+          itemMap[n].total += qtdP;
+          if (p.status==="confirmado") itemMap[n].conf += qtdP;
+          if (p.status==="pendente")   itemMap[n].pend += qtdP;
+        });
+      });
+      Object.entries(itemMap).forEach(([nome, d]) => {
+        linhas.push({ label:nome, foto:`/wave-maker/${nome}.png`, totalUnid:d.total, totalVal:d.total*d.preco, conf:d.conf, pend:d.pend, preco:d.preco, isItem:true });
+      });
+    }
+    return linhas;
+  }
 
   return (
     <div style={{ padding:"24px 0" }}>
@@ -22243,7 +22280,7 @@ function AdminWaveMaker({ onCountChange }) {
               padding:"7px 16px", fontFamily:mono, fontSize:10, fontWeight:ativo?700:400,
               background:ativo?"rgba(245,240,232,.06)":"transparent",
               color:ativo?a.cor:"rgba(245,240,232,.35)",
-              border:"none", borderRight:i<2?"1px solid rgba(245,240,232,.08)":"none",
+              border:"none", borderRight:i<3?"1px solid rgba(245,240,232,.08)":"none",
               cursor:"pointer", letterSpacing:"0.5px", transition:"all .15s",
             }}>
               {a.label}{qtd > 0 && <span style={{ marginLeft:5, opacity:.7, fontSize:9 }}>({qtd})</span>}
@@ -22252,7 +22289,48 @@ function AdminWaveMaker({ onCountChange }) {
         })}
       </div>
 
-      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      {/* Aba Resumo */}
+      {filtro === "resumo" && (() => {
+        const linhas = calcResumo();
+        const totalGeral = linhas.reduce((s,l) => s + l.totalVal, 0);
+        const totalUnid  = linhas.reduce((s,l) => s + l.totalUnid, 0);
+        return (
+          <div>
+            <div style={{ display:"flex", gap:12, marginBottom:16, flexWrap:"wrap" }}>
+              <div style={{ background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"12px 20px", flex:1, minWidth:120 }}>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", marginBottom:4 }}>TOTAL ARRECADADO</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color:"var(--laranja)" }}>R${totalGeral}</div>
+              </div>
+              <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10, padding:"12px 20px", flex:1, minWidth:120 }}>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", marginBottom:4 }}>UNIDADES PEDIDAS</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color:"var(--lilas)" }}>{totalUnid}</div>
+              </div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              {linhas.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+              {linhas.map((l, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"10px 14px" }}>
+                  {l.foto && <img src={l.foto} alt={l.label} style={{ width:44, height:44, borderRadius:6, objectFit:"cover", flexShrink:0, border:"1px solid rgba(245,240,232,.08)" }} />}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", fontWeight:700, marginBottom:2 }}>{l.label}</div>
+                    <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>pendente: <span style={{ color:"rgba(201,168,240,.8)" }}>{l.pend}</span></span>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>confirmado: <span style={{ color:"#4ade80" }}>{l.conf}</span></span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"right", flexShrink:0 }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--laranja)" }}>{l.totalUnid}×</div>
+                    {l.preco > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>R${l.totalVal}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Lista de pedidos */}
+      {filtro !== "resumo" && <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
         {visiveis.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido aqui.</div>}
         {visiveis.map((p, i) => {
           const qtd = Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || 1);
@@ -22303,7 +22381,7 @@ function AdminWaveMaker({ onCountChange }) {
           </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }
