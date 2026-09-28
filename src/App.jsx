@@ -22536,10 +22536,10 @@ function RunItVol2Tab({ user }) {
             const selCount = CHARS.filter(c => itensSel.includes(`${tipo.id} ${c}`)).length;
             return (
               <div key={tipo.id} style={{ marginBottom:28 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                  <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase" }}>{tipo.id}</div>
-                  {tipo.preco !== "a definir" && <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", fontWeight:700 }}>{tipo.preco}</span>}
-                  {selCount > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)" }}>· {selCount} selecionado{selCount>1?"s":""}</span>}
+                <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1, color:"var(--offwhite)" }}>{tipo.id}</div>
+                  {tipo.preco !== "a definir" && <span style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700 }}>{tipo.preco}</span>}
+                  {selCount > 0 && <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)" }}>· {selCount} selecionado{selCount>1?"s":""}</span>}
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px,1fr))", gap:10 }}>
                   {CHARS.map(char => {
