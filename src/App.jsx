@@ -22392,7 +22392,7 @@ function RunItVol2Tab({ user }) {
   const TIPOS = [
     { id:"BUTTON BADGE POUCH", preco:"a definir" },
     { id:"KEY COVER",          preco:"R$73" },
-    { id:"REVERSIBLE POUCH",   preco:"a definir" },
+    { id:"REVERSIBLE POUCH",   preco:"R$135" },
     { id:"STICKER",            preco:"a definir" },
     { id:"STRAP HOLDER",       preco:"a definir" },
   ];
