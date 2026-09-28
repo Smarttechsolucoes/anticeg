@@ -7972,6 +7972,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [popupCount,        setPopupCount]        = useState(0);
   const [bazaarInCount,     setBazaarInCount]     = useState(0);
   const [lightstickCount,   setLightstickCount]   = useState(0);
+  const [waveMakerCount,   setWaveMakerCount]   = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
@@ -8248,6 +8249,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setBazaarInCount(count); });
     supabase.from("pedidos_lightstick").select("id", { count: "exact", head: true }).eq("status", "aguardando")
       .then(({ count }) => { if (count) setLightstickCount(count); });
+    supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "WAVE MAKER - SG JAPAN 2027").eq("status", "pendente")
+      .then(({ count }) => { if (count) setWaveMakerCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8529,6 +8532,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {nav("bazaar-in", "Bazaar IN", "◈", bazaarInCount)}
                 {nav("skzoo-rio",   "SKZOO Pop-up Rio",   "◈", 0)}
                 {nav("lightstick",  "Lightstick SKZ",     "◈", lightstickCount)}
+                {nav("wave-maker-admin", "WAVE MAKER",     "🌊", waveMakerCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9234,6 +9238,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
       {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
       {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
+      {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -22076,6 +22081,71 @@ function AdminBazaarIn({ onCountChange }) {
                   <div style={{ display:"flex", gap:6 }}>
                     <button onClick={()=>atualizar(p.id,"confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
                     <button onClick={()=>atualizar(p.id,"cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Wave Maker Admin ───────────────────────────────────────────
+function AdminWaveMaker({ onCountChange }) {
+  const mono = "'DM Mono',monospace";
+  const [pedidos, setPedidos] = useState([]);
+
+  useEffect(() => {
+    supabase.from("formulario_pedidos")
+      .select("*")
+      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (data) {
+          setPedidos(data);
+          onCountChange?.(data.filter(p => p.status === "pendente").length);
+        }
+      });
+  }, []);
+
+  async function atualizar(id, novoStatus) {
+    await supabase.from("formulario_pedidos").update({ status: novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, status: novoStatus } : p);
+      onCountChange?.(next.filter(p => p.status === "pendente").length);
+      return next;
+    });
+  }
+
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>WAVE MAKER — SG JAPAN 2027</div>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{pedidos.length} pré-cadastro{pedidos.length !== 1 ? "s" : ""}</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pré-cadastro ainda.</div>}
+        {pedidos.map((p, i) => (
+          <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${p.status === "cancelado" ? "rgba(255,107,107,.15)" : p.status === "confirmado" ? "rgba(74,222,128,.15)" : "rgba(201,168,240,.15)"}`, borderRadius:10, padding:"12px 16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>#{i+1}</span>
+                  <span style={{ fontWeight:700, fontSize:13 }}>{p.joiner_nome}</span>
+                  <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>@{p.joiner_cog}</span>
+                </div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.8)", fontWeight:700 }}>{p.modalidade}</div>
+                {p.observacoes && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.observacoes}</div>}
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}</div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                {p.status === "pendente" && (
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={() => atualizar(p.id, "confirmado")} style={{ padding:"5px 12px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✓</button>
+                    <button onClick={() => atualizar(p.id, "cancelado")}  style={{ padding:"5px 12px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✕</button>
                   </div>
                 )}
               </div>
