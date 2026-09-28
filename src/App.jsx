@@ -22386,6 +22386,237 @@ function AdminWaveMaker({ onCountChange }) {
   );
 }
 
+// ── Run It Vol 2 ───────────────────────────────────────────────
+function RunItVol2Tab({ user }) {
+  const mono = "'DM Mono',monospace";
+  const TIPOS = [
+    { id:"BUTTON BADGE POUCH", preco:"a definir" },
+    { id:"KEY COVER",          preco:"a definir" },
+    { id:"REVERSIBLE POUCH",   preco:"a definir" },
+    { id:"STICKER",            preco:"a definir" },
+    { id:"STRAP HOLDER",       preco:"a definir" },
+  ];
+  const CHARS = ["BBOKARI","DWAEKKI","FOXINY","JINIRET","LEEBIT","PUPPYM","QUOKKA","WOLFCHAN"];
+
+  const [itensSel, setItensSel] = useState([]);
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(null);
+  const [erro, setErro] = useState(null);
+  const [abaRIV2, setAbaRIV2] = useState("forms");
+  const [historico, setHistorico] = useState([]);
+  const [fotoZoom, setFotoZoom] = useState(null);
+
+  useEffect(() => {
+    if (!user?.cog) return;
+    supabase.from("formulario_pedidos")
+      .select("id, modalidade, observacoes, status, created_at")
+      .eq("evento", "RUN IT VOL 2")
+      .eq("joiner_cog", user.cog)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setHistorico(data); });
+  }, [user?.cog]);
+
+  function toggleItem(key) {
+    setItensSel(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]);
+  }
+
+  async function enviar() {
+    if (itensSel.length === 0 || enviando) return;
+    setEnviando(true); setErro(null); setEnviado(null);
+    const { error } = await supabase.from("formulario_pedidos").insert([{
+      evento: "RUN IT VOL 2",
+      joiner_cog: user.cog,
+      joiner_nome: user.nome || user.cog,
+      joiner_email: user.email || null,
+      modalidade: "ITENS SOLTOS",
+      observacoes: `Itens: ${itensSel.join(", ")}`,
+      status: "pendente",
+    }]).select("id");
+    if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
+    setEnviado(true);
+    const { data: hist } = await supabase.from("formulario_pedidos")
+      .select("id, modalidade, observacoes, status, created_at")
+      .eq("evento", "RUN IT VOL 2")
+      .eq("joiner_cog", user.cog)
+      .order("created_at", { ascending: false });
+    if (hist) setHistorico(hist);
+    setEnviando(false);
+  }
+
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
+
+  return (
+    <div style={{ paddingBottom:80 }}>
+      {/* Capa */}
+      <div style={{ position:"relative", height:160, overflow:"hidden", background:"linear-gradient(135deg, #1a0a2e, #0d1a0d)" }}>
+        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", gap:8, opacity:.18 }}>
+          {["STICKER WOLFCHAN","STICKER BBOKARI","STICKER LEEBIT","STICKER DWAEKKI"].map(k => (
+            <img key={k} src={`/run-it-vol-2/${k}.png`} style={{ height:130, objectFit:"cover", borderRadius:8 }} />
+          ))}
+        </div>
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 20%, #0d0d0d)" }} />
+      </div>
+
+      <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px" }}>
+        {/* Header */}
+        <div style={{ marginTop:20, marginBottom:24 }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, letterSpacing:2, lineHeight:1, color:"var(--offwhite)" }}>RUN IT VOL 2</div>
+          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Pré-venda · Goods Oficiais</div>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {[
+              { label:"FORMS 3/NOV",     bg:"rgba(201,168,240,.1)",  color:"var(--lilas)",           border:"rgba(201,168,240,.3)" },
+              { label:"PAGAMENTO 6/NOV", bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)",  border:"rgba(245,240,232,.12)" },
+            ].map(t => (
+              <span key={t.label} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:t.bg, color:t.color, border:`1px solid ${t.border}`, letterSpacing:"1px" }}>{t.label}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Nav segmentado */}
+        <div style={{ display:"flex", gap:0, marginBottom:28, borderRadius:10, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
+          {[["forms","Loja"],["historico","Histórico"]].map(([id, label], i) => (
+            <button key={id} onClick={() => setAbaRIV2(id)} style={{
+              flex:1, padding:"10px 4px", fontFamily:mono, fontSize:10, fontWeight:abaRIV2===id?700:400,
+              background:abaRIV2===id?"rgba(201,168,240,.1)":"transparent",
+              color:abaRIV2===id?"var(--lilas)":"rgba(245,240,232,.35)",
+              border:"none", borderRight:i===0?"1px solid rgba(245,240,232,.08)":"none",
+              cursor:"pointer", letterSpacing:"0.5px", transition:"background .15s",
+            }}>
+              {label}{id==="historico" && historico.length>0 && <span style={{ marginLeft:5, opacity:.6, fontSize:9 }}>({historico.length})</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Aba Histórico */}
+        {abaRIV2 === "historico" && (
+          <div>
+            {historico.length === 0 && <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)", padding:"32px 0", textAlign:"center" }}>Nenhum pedido ainda.</div>}
+            {historico.map((h, i) => {
+              const itensStr = h.observacoes?.replace("Itens: ", "");
+              return (
+                <div key={h.id} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${h.status==="confirmado"?"rgba(74,222,128,.15)":h.status==="cancelado"?"rgba(255,107,107,.1)":"rgba(201,168,240,.15)"}`, borderRadius:12, padding:"14px 16px", marginBottom:8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>#{i+1}</span>
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:"var(--lilas)", letterSpacing:.5 }}>RUN IT VOL 2</span>
+                      </div>
+                      {itensStr && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", lineHeight:1.5 }}>{itensStr}</div>}
+                      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.22)" }}>{new Date(h.created_at).toLocaleDateString("pt-BR")} {new Date(h.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+                    </div>
+                    <span style={{ fontFamily:mono, fontSize:10, color:corStatus(h.status), flexShrink:0 }}>{h.status}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Aba Loja */}
+        {abaRIV2 === "forms" && <>
+          {/* Informações */}
+          <div style={{ marginBottom:24, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>INFORMAÇÕES</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+                》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
+                <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
+              </div>
+              {["Forms aberto: 3 de Novembro","Pagamento: 6 de Novembro"].map((r, i) => (
+                <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+                  <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Itens por tipo com variações de personagem */}
+          {TIPOS.map(tipo => {
+            const selCount = CHARS.filter(c => itensSel.includes(`${tipo.id} ${c}`)).length;
+            return (
+              <div key={tipo.id} style={{ marginBottom:28 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                  <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase" }}>{tipo.id}</div>
+                  {selCount > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)" }}>· {selCount} selecionado{selCount>1?"s":""}</span>}
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(88px,1fr))", gap:8 }}>
+                  {CHARS.map(char => {
+                    const key = `${tipo.id} ${char}`;
+                    const sel = itensSel.includes(key);
+                    return (
+                      <div key={char} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:10, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
+                        <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto:`/run-it-vol-2/${key}.png`, id:key })}>
+                          <img src={`/run-it-vol-2/${key}.png`} alt={key} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.7 }} />
+                          <div style={{ position:"absolute", bottom:3, right:3, background:"rgba(0,0,0,.55)", borderRadius:4, padding:"2px 4px", fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.55)" }}>🔍</div>
+                        </div>
+                        <div style={{ padding:"6px 7px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.1 }}>{char}</div>
+                          <button onClick={() => toggleItem(key)}
+                            style={{ marginTop:3, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:5, padding:"4px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:8, fontWeight:700, cursor:"pointer", transition:"all .15s" }}>
+                            {sel ? "✓" : "+"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Checkout */}
+          {itensSel.length > 0 && (
+            <div style={{ marginBottom:20, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"16px 18px" }}>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Resumo do pedido</div>
+              {itensSel.map(key => (
+                <div key={key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+                  <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{key}</span>
+                  <button onClick={() => toggleItem(key)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:14, padding:"0 4px", lineHeight:1 }}>×</button>
+                </div>
+              ))}
+              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:4 }}>{itensSel.length} item{itensSel.length>1?"s":""} selecionado{itensSel.length>1?"s":""}</div>
+            </div>
+          )}
+
+          {/* Dados */}
+          {itensSel.length > 0 && user && (
+            <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>
+              <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS · </span>
+              @{user.cog} · {user.nome || "—"} · {user.email || "—"}
+            </div>
+          )}
+
+          {erro && <div style={{ color:"var(--laranja)", fontFamily:mono, fontSize:11, marginBottom:12 }}>{erro}</div>}
+
+          {enviado && (
+            <div style={{ marginBottom:16, background:"rgba(74,222,128,.08)", border:"1px solid rgba(74,222,128,.25)", borderRadius:12, padding:"14px 18px" }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#4ade80", marginBottom:4 }}>Pedido confirmado!</div>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)" }}>Acompanhe o status na aba Histórico.</div>
+            </div>
+          )}
+
+          <button onClick={enviar} disabled={itensSel.length===0 || enviando}
+            style={{ width:"100%", background:itensSel.length>0?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:itensSel.length>0?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:itensSel.length>0?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
+            {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
+          </button>
+        </>}
+
+        {/* Zoom */}
+        {fotoZoom && (
+          <div onClick={() => setFotoZoom(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth:380, width:"100%" }}>
+              <img src={fotoZoom.foto} alt={fotoZoom.id} style={{ width:"100%", borderRadius:14, display:"block", marginBottom:10 }} />
+              <div style={{ textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:12 }}>{fotoZoom.id}</div>
+              <button onClick={() => setFotoZoom(null)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:8, padding:"9px", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Lightstick SKZ Form ────────────────────────────────────────
 const LS_CARTAO_URL = "https://linknabio.gg/anticeg-comu";
 
@@ -22693,6 +22924,19 @@ function PrevendaTab({ user }) {
       url: "/prevenda/lightstick",
       tags: ["Pedidos até 08/09", "R$ 450,00"],
       info: "Pagamento imediato via PIX · Reembolso integral em caso de falta de estoque",
+    },
+    {
+      key: "run-it-vol-2",
+      ativo: true,
+      fechado: false,
+      cor: "lilas",
+      titulo: "RUN IT VOL 2",
+      subtitulo: "Stray Kids · Goods Oficiais",
+      url: null,
+      tab: "run-it-vol-2",
+      img: null,
+      tags: ["Forms 3/Nov", "Pagamento 6/Nov"],
+      info: "Button Badge Pouch · Key Cover · Reversible Pouch · Sticker · Strap Holder · 8 personagens",
     },
     {
       key: "wavemaker",
@@ -23628,7 +23872,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -24217,6 +24461,7 @@ export default function App() {
           {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
           {tab === "prevenda" && <PrevendaTab user={user} />}
           {tab === "wave-maker" && <WaveMakerTab user={user} />}
+          {tab === "run-it-vol-2" && <RunItVol2Tab user={user} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
