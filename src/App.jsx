@@ -11890,7 +11890,6 @@ function WaveMakerTab({ user }) {
           <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Seasons Greetings Japan</div>
           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
             {[
-              { label:"PRÉ-CADASTRO ABERTO", bg:"rgba(201,168,240,.1)", color:"var(--lilas)", border:"rgba(201,168,240,.3)" },
               { label:"PEDIDOS ATÉ 5/OUT",   bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
               { label:"ENVIO FEV/2027",       bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
               { label:"PAGAMENTO 20/OUT",     bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
