@@ -22451,7 +22451,7 @@ function RunItVol2Tab({ user }) {
       <div style={{ position:"relative", height:160, overflow:"hidden", background:"linear-gradient(135deg, #1a0a2e, #0d1a0d)" }}>
         <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", gap:8, opacity:.18 }}>
           {["STICKER WOLFCHAN","STICKER BBOKARI","STICKER LEEBIT","STICKER DWAEKKI"].map(k => (
-            <img key={k} src={`/run-it-vol-2/${k}.png`} style={{ height:130, objectFit:"cover", borderRadius:8 }} />
+            <img key={k} src={`/run-it-vol-2/${encodeURIComponent(k)}.png`} style={{ height:130, objectFit:"cover", borderRadius:8 }} />
           ))}
         </div>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 20%, #0d0d0d)" }} />
@@ -22546,8 +22546,8 @@ function RunItVol2Tab({ user }) {
                     const sel = itensSel.includes(key);
                     return (
                       <div key={char} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:10, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
-                        <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto:`/run-it-vol-2/${key}.png`, id:key })}>
-                          <img src={`/run-it-vol-2/${key}.png`} alt={key} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.7 }} />
+                        <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto:`/run-it-vol-2/${encodeURIComponent(key)}.png`, id:key })}>
+                          <img src={`/run-it-vol-2/${encodeURIComponent(key)}.png`} alt={key} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.7 }} />
                           <div style={{ position:"absolute", bottom:3, right:3, background:"rgba(0,0,0,.55)", borderRadius:4, padding:"2px 4px", fontFamily:mono, fontSize:7, color:"rgba(245,240,232,.55)" }}>🔍</div>
                         </div>
                         <div style={{ padding:"6px 7px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
