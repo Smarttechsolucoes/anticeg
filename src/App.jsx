@@ -22257,7 +22257,7 @@ function PrevendaTab({ user }) {
       titulo: "WAVE MAKER",
       subtitulo: "SG Japan 2027",
       url: null,
-      tab: "wavemaker",
+      tab: "wave-maker",
       img: null,
       tags: ["Pré-cadastro aberto", "Vagas limitadas"],
       info: "Registre seu interesse · pedidos mais antigos têm prioridade · preços a definir",
@@ -23183,7 +23183,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -23771,7 +23771,7 @@ export default function App() {
           {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
           {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
           {tab === "prevenda" && <PrevendaTab user={user} />}
-          {tab === "wavemaker" && <WaveMakerTab user={user} />}
+          {tab === "wave-maker" && <WaveMakerTab user={user} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
