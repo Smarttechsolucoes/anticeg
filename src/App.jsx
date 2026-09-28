@@ -8541,6 +8541,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
+                {nav("todos-drops", "Ver tudo", "◫", 0)}
                 {nav("revista", "Revista Nylon", "◈", revistaCount)}
                 {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
                 {nav("popup", "Pop-up This & That", "◉", popupCount)}
@@ -9303,6 +9304,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
       {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
       {adminMainTab === "run-it-admin"     && <AdminRunIt     onCountChange={setRunItCount} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} waveMakerCount={waveMakerCount} runItCount={runItCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -22695,6 +22697,70 @@ function RunItVol2Tab({ user }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Todos os Drops ──────────────────────────────────────
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, waveMakerCount, runItCount, dropsStats }) {
+  const mono = "'DM Mono',monospace";
+  const DROPS = [
+    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
+    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
+  ];
+  const STATUS_COLS = [
+    { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
+    { key:"confirmado", label:"Confirmado", cor:"#4ade80" },
+    { key:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
+  ];
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>TODOS OS DROPS</div>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{DROPS.length} drops cadastrados</div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {DROPS.map(drop => {
+          const s = dropsStats?.[drop.evento] || null;
+          const temPendentes = drop.count > 0;
+          return (
+            <div key={drop.id} onClick={() => onNav(drop.id)}
+              style={{ background: temPendentes ? "rgba(201,168,240,.04)" : "rgba(245,240,232,.02)", border:`1px solid ${temPendentes?"rgba(201,168,240,.2)":"rgba(245,240,232,.07)"}`, borderRadius:12, overflow:"hidden", cursor:"pointer", transition:"border-color .15s" }}>
+              {/* Header */}
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", borderBottom: s ? "1px solid rgba(245,240,232,.06)" : "none" }}>
+                <span style={{ fontSize:14 }}>{drop.icon}</span>
+                <span style={{ fontFamily:mono, fontSize:11, fontWeight:700, color: temPendentes ? drop.cor : "rgba(245,240,232,.5)", flex:1, letterSpacing:"0.3px" }}>{drop.label}</span>
+                {temPendentes
+                  ? <span style={{ fontFamily:mono, fontSize:9, background:"rgba(201,168,240,.15)", color:"var(--lilas)", border:"1px solid rgba(201,168,240,.3)", borderRadius:20, padding:"2px 8px" }}>{drop.count} pendente{drop.count!==1?"s":""}</span>
+                  : <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>sem pendências</span>
+                }
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.2)" }}>→</span>
+              </div>
+              {/* Pipeline counts para drops com formulário */}
+              {s && (
+                <div style={{ display:"flex" }}>
+                  {STATUS_COLS.map((col, i) => {
+                    const cnt = s[col.key] || 0;
+                    const ativo = cnt > 0;
+                    return (
+                      <div key={col.key} style={{ flex:1, padding:"9px 0", textAlign:"center", borderRight:i<STATUS_COLS.length-1?"1px solid rgba(245,240,232,.06)":"none", opacity:ativo?1:0.35 }}>
+                        <div style={{ fontFamily:mono, fontSize:18, fontWeight:900, color:ativo?col.cor:"rgba(245,240,232,.2)", lineHeight:1, marginBottom:2 }}>{cnt}</div>
+                        <div style={{ fontFamily:mono, fontSize:7, letterSpacing:"1.2px", textTransform:"uppercase", color:ativo?col.cor:"rgba(245,240,232,.2)" }}>{col.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
