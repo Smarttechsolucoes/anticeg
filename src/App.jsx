@@ -22186,12 +22186,16 @@ function AdminWaveMaker({ onCountChange }) {
   }, []);
 
   async function atualizar(id, novoStatus) {
-    await supabase.from("formulario_pedidos").update({ status: novoStatus }).eq("id", id);
-    setPedidos(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, status: novoStatus } : p);
-      onCountChange?.(next.filter(p => p.status === "pendente").length);
-      return next;
-    });
+    const { error } = await supabase.from("formulario_pedidos").update({ status: novoStatus }).eq("id", id);
+    if (error) { alert("Erro ao salvar: " + error.message); return; }
+    const { data } = await supabase.from("formulario_pedidos")
+      .select("*")
+      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .order("created_at", { ascending: true });
+    if (data) {
+      setPedidos(data);
+      onCountChange?.(data.filter(p => p.status === "pendente").length);
+    }
   }
 
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
