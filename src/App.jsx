@@ -7464,7 +7464,7 @@ function RastreiosTab() {
                   <div style={{ background:st.bg, border:`1px solid ${st.cor}50`, borderRadius:4, padding:"2px 7px", fontSize:8, color:st.cor, fontWeight:700, letterSpacing:"0.5px", whiteSpace:"nowrap", flexShrink:0 }}>
                     {badgeLabel}
                   </div>
-                  <a href={`https://t.17track.net/en#nums=${encodeURIComponent(r.codigo)}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`https://parcelsapp.com/en/tracking/${encodeURIComponent(r.codigo)}`} target="_blank" rel="noopener noreferrer"
                     onClick={e => e.stopPropagation()}
                     style={{ fontSize:11, color:"var(--laranja)", fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", flexShrink:0 }}>
                     {r.codigo} ↗
