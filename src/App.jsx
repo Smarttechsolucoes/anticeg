@@ -11789,14 +11789,14 @@ function WaveMakerTab({ user }) {
   const [fotoZoom, setFotoZoom] = useState(null);
 
   const ITENS_WM = [
-    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png" },
-    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png" },
-    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png" },
-    { id: "POSTER",               foto: "/wave-maker/POSTER.png" },
-    { id: "STICKER",              foto: "/wave-maker/STICKER.png" },
-    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png" },
-    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png" },
-    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png" },
+    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15" },
+    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25" },
+    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15" },
+    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10" },
+    { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: "R$7"  },
+    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: "R$18" },
+    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: "R$28" },
+    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: "R$5"  },
   ];
 
   const MODALIDADES = [
@@ -11935,7 +11935,7 @@ function WaveMakerTab({ user }) {
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
-                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:2 }}>a definir</div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700, marginTop:2 }}>{it.preco}</div>
               </div>
             </div>
           );
