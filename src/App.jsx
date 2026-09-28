@@ -11875,34 +11875,45 @@ function WaveMakerTab({ user }) {
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
 
   return (
-    <div style={{ paddingBottom:80, paddingLeft:16, paddingRight:16 }}>
-      {/* Header */}
-      <div style={{ marginBottom:20 }}>
-        <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
-        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 6px" }}>WAVE MAKER</h2>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 0", marginBottom:14 }}>
-          {[["Prazo","20 de Outubro"],["Pedidos até","5 de Outubro"],["Envio","Fev 2027"]].map(([label,val],i,arr) => (
-            <span key={label} style={{ fontFamily:mono, fontSize:11 }}>
-              <span style={{ color:"rgba(245,240,232,.35)" }}>{label}: </span>
-              <span style={{ color:"var(--offwhite)", fontWeight:700 }}>{val}</span>
-              {i < arr.length-1 && <span style={{ color:"rgba(245,240,232,.18)", margin:"0 8px" }}>·</span>}
-            </span>
-          ))}
-        </div>
-        <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:10, padding:"10px 14px", fontFamily:mono, fontSize:10.5, color:"rgba(201,168,240,.65)", lineHeight:1.65 }}>
-          ⚡ Pedidos mais antigos têm prioridade. Se não conseguirmos todas as compras, os mais recentes serão cancelados primeiro.
-        </div>
+    <div style={{ paddingBottom:80 }}>
+      {/* Capa */}
+      <div style={{ position:"relative", maxHeight:180, overflow:"hidden", marginBottom:0 }}>
+        <img src="/wave-maker/BOX COMPLETA.jpg" alt="WAVE MAKER" style={{ width:"100%", display:"block", objectFit:"cover", objectPosition:"center 30%" }} />
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 30%, #0d0d0d)" }} />
       </div>
 
-      {/* Abas */}
-      <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-        {["forms","historico"].map(a => (
-          <button key={a} onClick={() => setAbaWM(a)}
-            style={{ padding:"8px 18px", borderRadius:20, border:`1px solid ${abaWM===a?"var(--lilas)":"rgba(245,240,232,.12)"}`, background:abaWM===a?"var(--lilas)":"transparent", color:abaWM===a?"#000":"rgba(245,240,232,.45)", fontFamily:mono, fontSize:11, fontWeight:abaWM===a?700:400, cursor:"pointer", letterSpacing:"1px", transition:"all .15s" }}>
-            {a === "forms" ? "Loja" : "Histórico"}{a==="historico" && historico.length>0 && <span style={{ marginLeft:5, background:abaWM==="historico"?"rgba(0,0,0,.2)":"rgba(201,168,240,.2)", borderRadius:10, padding:"1px 6px", fontSize:9 }}>{historico.length}</span>}
-          </button>
-        ))}
-      </div>
+      <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px" }}>
+        {/* Header */}
+        <div style={{ marginTop:20, marginBottom:24 }}>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS · SG JAPAN 2027</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, letterSpacing:2, lineHeight:1, color:"var(--offwhite)" }}>WAVE MAKER</div>
+          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Seasons Greetings Japan · Pré-cadastro</div>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {[
+              { label:"PRÉ-CADASTRO ABERTO", bg:"rgba(201,168,240,.1)", color:"var(--lilas)", border:"rgba(201,168,240,.3)" },
+              { label:"PEDIDOS ATÉ 5/OUT",   bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
+              { label:"ENVIO FEV/2027",       bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
+              { label:"FIFO",                 bg:"rgba(255,92,26,.1)", color:"var(--laranja)", border:"rgba(255,92,26,.3)" },
+            ].map(t => (
+              <span key={t.label} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:t.bg, color:t.color, border:`1px solid ${t.border}`, letterSpacing:"1px" }}>{t.label}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Nav segmentado */}
+        <div style={{ display:"flex", gap:0, marginBottom:28, borderRadius:10, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
+          {[["forms","Loja"],["historico","Histórico"]].map(([id, label], i) => (
+            <button key={id} onClick={() => setAbaWM(id)} style={{
+              flex:1, padding:"10px 4px", fontFamily:mono, fontSize:10, fontWeight:abaWM===id?700:400,
+              background:abaWM===id?"rgba(201,168,240,.1)":"transparent",
+              color:abaWM===id?"var(--lilas)":"rgba(245,240,232,.35)",
+              border:"none", borderRight:i===0?"1px solid rgba(245,240,232,.08)":"none",
+              cursor:"pointer", letterSpacing:"0.5px", transition:"background .15s",
+            }}>
+              {label}{id==="historico" && historico.length>0 && <span style={{ marginLeft:5, opacity:.6, fontSize:9 }}>({historico.length})</span>}
+            </button>
+          ))}
+        </div>
 
       {/* Aba Histórico */}
       {abaWM === "historico" && (
