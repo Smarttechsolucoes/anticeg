@@ -11777,6 +11777,132 @@ function AdminLinks() {
   );
 }
 
+function WaveMakerTab({ user }) {
+  const mono = "'DM Mono', monospace";
+  const [modalidade, setModalidade] = useState(null);
+  const [obs, setObs] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(null);
+  const [erro, setErro] = useState(null);
+  const [jaEnviou, setJaEnviou] = useState(null); // null=checking, false=não, object=sim
+
+  useEffect(() => {
+    if (!user?.cog) return;
+    supabase.from("formulario_pedidos")
+      .select("id, modalidade, created_at")
+      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("joiner_cog", user.cog)
+      .eq("status", "pendente")
+      .maybeSingle()
+      .then(({ data }) => setJaEnviou(data || false));
+  }, [user?.cog]);
+
+  const MODALIDADES = [
+    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica" },
+    { id: "ITENS SOLTOS",      icone: "◱",  desc: "Itens avulsos à sua escolha" },
+    { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin" },
+  ];
+
+  async function enviar() {
+    if (!modalidade || enviando) return;
+    setEnviando(true); setErro(null);
+    const { data, error } = await supabase.from("formulario_pedidos").insert([{
+      evento: "WAVE MAKER - SG JAPAN 2027",
+      joiner_cog: user.cog,
+      joiner_nome: user.nome || user.cog,
+      joiner_email: user.email || null,
+      modalidade,
+      observacoes: obs.trim() || null,
+      status: "pendente",
+    }]).select("id, created_at");
+    if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
+    const { count } = await supabase.from("formulario_pedidos")
+      .select("id", { count: "exact", head: true })
+      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("status", "pendente");
+    setEnviado({ posicao: count || 1 });
+    setEnviando(false);
+  }
+
+  if (enviado || jaEnviou) {
+    const pedido = enviado || jaEnviou;
+    return (
+      <div style={{ paddingBottom:80 }}>
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
+          <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>WAVE MAKER</h2>
+        </div>
+        <div style={{ background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.3)", borderRadius:14, padding:"28px 24px", textAlign:"center" }}>
+          <div style={{ fontSize:28, marginBottom:12 }}>🌊</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", marginBottom:8 }}>Pré-cadastro registrado!</div>
+          {enviado && <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginBottom:16 }}>
+            Você está na posição <span style={{ color:"var(--lilas)", fontWeight:700 }}>#{enviado.posicao}</span> da fila.
+          </div>}
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.6)", lineHeight:1.8 }}>
+            {jaEnviou && !enviado && <>Modalidade: <strong style={{ color:"var(--lilas)" }}>{jaEnviou.modalidade}</strong><br /></>}
+            Pedidos mais antigos têm prioridade.<br />
+            Em caso de falta de estoque, os mais recentes são cancelados primeiro.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingBottom:80 }}>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
+        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 6px" }}>WAVE MAKER</h2>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:14, lineHeight:1.6 }}>
+          Pré-cadastro de interesse · preços a definir
+        </div>
+        <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:10, padding:"12px 16px", fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.7)", lineHeight:1.7 }}>
+          ⚡ Pedidos mais antigos têm prioridade. Se não conseguirmos todas as compras, os mais recentes serão cancelados primeiro.
+        </div>
+      </div>
+
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Escolha uma modalidade</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+        {MODALIDADES.map(m => (
+          <div key={m.id} onClick={() => setModalidade(m.id === modalidade ? null : m.id)}
+            style={{ border:`1px solid ${modalidade===m.id?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:12, padding:"14px 16px", cursor:"pointer", background:modalidade===m.id?"rgba(201,168,240,.08)":"transparent", display:"flex", alignItems:"center", gap:14, transition:"all .15s" }}>
+            <span style={{ fontSize:22 }}>{m.icone}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:modalidade===m.id?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{m.id}</div>
+              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>{m.desc}</div>
+            </div>
+            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.45)", letterSpacing:"1px" }}>a definir</div>
+            {modalidade===m.id && <div style={{ width:14, height:14, borderRadius:"50%", background:"var(--lilas)", flexShrink:0 }} />}
+          </div>
+        ))}
+      </div>
+
+      {modalidade && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Observações (opcional)</div>
+          <textarea value={obs} onChange={e => setObs(e.target.value)}
+            placeholder="Ex: quais membros tem interesse, quantidade estimada..."
+            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, resize:"vertical", minHeight:80, boxSizing:"border-box", outline:"none" }} />
+        </div>
+      )}
+
+      {modalidade && user && (
+        <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:20, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", lineHeight:2 }}>
+          <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS</span><br />
+          @{user.cog} · {user.nome || "—"} · {user.email || "—"}
+        </div>
+      )}
+
+      {erro && <div style={{ color:"var(--laranja)", fontFamily:mono, fontSize:11, marginBottom:12 }}>{erro}</div>}
+
+      <button onClick={enviar} disabled={!modalidade || enviando}
+        style={{ width:"100%", background:modalidade?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
+        {enviando ? "Enviando..." : "Confirmar pré-cadastro →"}
+      </button>
+    </div>
+  );
+}
+
 function MercariTab() {
 
   const WA   = WHATSAPP_NUM;
@@ -22124,6 +22250,19 @@ function PrevendaTab({ user }) {
       info: "Pagamento imediato via PIX · Reembolso integral em caso de falta de estoque",
     },
     {
+      key: "wavemaker",
+      ativo: true,
+      fechado: false,
+      cor: "lilas",
+      titulo: "WAVE MAKER",
+      subtitulo: "SG Japan 2027",
+      url: null,
+      tab: "wavemaker",
+      img: null,
+      tags: ["Pré-cadastro aberto", "Vagas limitadas"],
+      info: "Registre seu interesse · pedidos mais antigos têm prioridade · preços a definir",
+    },
+    {
       key: "mercari",
       ativo: true,
       fechado: false,
@@ -22190,7 +22329,7 @@ function PrevendaTab({ user }) {
 
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         {listaAtual.map(f => (
-          <div key={f.key} style={{ border:`1px solid ${f.ativo?(f.cor==="verde"?"rgba(186,255,57,.25)":"rgba(255,92,26,.25)"):"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
+          <div key={f.key} style={{ border:`1px solid ${f.ativo?(f.cor==="verde"?"rgba(186,255,57,.25)":f.cor==="lilas"?"rgba(201,168,240,.25)":"rgba(255,92,26,.25)"):"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
             <div style={{ display:"flex", gap:0 }}>
               {f.img && (
                 <img src={f.img} alt={f.titulo} onError={e=>{e.target.style.display="none"}}
@@ -22199,7 +22338,7 @@ function PrevendaTab({ user }) {
               <div style={{ padding:"16px 18px", flex:1, display:"flex", flexDirection:"column", gap:6, justifyContent:"center" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                   <span style={{ fontWeight:900, fontSize:15, letterSpacing:"-0.3px" }}>{f.titulo}</span>
-                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.fechado?"rgba(255,107,107,.12)":f.ativo?(f.cor==="verde"?"rgba(186,255,57,.12)":"rgba(255,92,26,.15)"):"rgba(245,240,232,.06)", color:f.fechado?"#ff6b6b":f.ativo?(f.cor==="verde"?"#BAFF39":"var(--laranja)"):"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
+                  <span style={{ fontFamily:mono, fontSize:9, padding:"2px 7px", borderRadius:20, background:f.fechado?"rgba(255,107,107,.12)":f.ativo?(f.cor==="verde"?"rgba(186,255,57,.12)":f.cor==="lilas"?"rgba(201,168,240,.12)":"rgba(255,92,26,.15)"):"rgba(245,240,232,.06)", color:f.fechado?"#ff6b6b":f.ativo?(f.cor==="verde"?"#BAFF39":f.cor==="lilas"?"var(--lilas)":"var(--laranja)"):"rgba(245,240,232,.35)", letterSpacing:"1px" }}>
                     {f.fechado?"TEMP. FECHADO":f.ativo?"ABERTO":"ENCERRADO"}
                   </span>
                 </div>
@@ -22234,7 +22373,7 @@ function PrevendaTab({ user }) {
                   </a>
                 ) : (
                   <button onClick={()=>{ window.dispatchEvent(new CustomEvent("anticeg:changetab", {detail: f.tab})); }}
-                    style={{ padding:"10px 20px", borderRadius:8, background:f.cor==="verde"?"#BAFF39":"var(--laranja)", color:f.cor==="verde"?"#000":"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
+                    style={{ padding:"10px 20px", borderRadius:8, background:f.cor==="verde"?"#BAFF39":f.cor==="lilas"?"var(--lilas)":"var(--laranja)", color:f.cor==="verde"||f.cor==="lilas"?"#000":"#fff", fontFamily:mono, fontSize:11, fontWeight:700, border:"none", cursor:"pointer", letterSpacing:"1px" }}>
                     ACESSAR →
                   </button>
                 )}
@@ -23632,6 +23771,7 @@ export default function App() {
           {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
           {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
           {tab === "prevenda" && <PrevendaTab user={user} />}
+          {tab === "wavemaker" && <WaveMakerTab user={user} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
