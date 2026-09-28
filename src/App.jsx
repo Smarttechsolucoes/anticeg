@@ -11780,16 +11780,35 @@ function AdminLinks() {
 function WaveMakerTab({ user }) {
   const mono = "'DM Mono', monospace";
   const [modalidade, setModalidade] = useState(null);
+  const [itensSel, setItensSel] = useState([]);
   const [obs, setObs] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(null);
   const [erro, setErro] = useState(null);
-  const [jaEnviou, setJaEnviou] = useState(null); // null=checking, false=não, object=sim
+  const [jaEnviou, setJaEnviou] = useState(null);
+  const [fotoZoom, setFotoZoom] = useState(null);
+
+  const ITENS_WM = [
+    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png" },
+    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png" },
+    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png" },
+    { id: "POSTER",               foto: "/wave-maker/POSTER.png" },
+    { id: "STICKER",              foto: "/wave-maker/STICKER.png" },
+    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png" },
+    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png" },
+    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png" },
+  ];
+
+  const MODALIDADES = [
+    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens" },
+    { id: "ITENS SOLTOS",      icone: "◱",  desc: "Escolha os itens avulsos que quer" },
+    { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin" },
+  ];
 
   useEffect(() => {
     if (!user?.cog) return;
     supabase.from("formulario_pedidos")
-      .select("id, modalidade, created_at")
+      .select("id, modalidade, observacoes, created_at")
       .eq("evento", "WAVE MAKER - SG JAPAN 2027")
       .eq("joiner_cog", user.cog)
       .eq("status", "pendente")
@@ -11797,24 +11816,26 @@ function WaveMakerTab({ user }) {
       .then(({ data }) => setJaEnviou(data || false));
   }, [user?.cog]);
 
-  const MODALIDADES = [
-    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica" },
-    { id: "ITENS SOLTOS",      icone: "◱",  desc: "Itens avulsos à sua escolha" },
-    { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin" },
-  ];
+  function toggleItem(id) {
+    setItensSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
 
   async function enviar() {
     if (!modalidade || enviando) return;
+    if (modalidade === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     setEnviando(true); setErro(null);
-    const { data, error } = await supabase.from("formulario_pedidos").insert([{
+    const obsFinal = modalidade === "ITENS SOLTOS"
+      ? `Itens: ${itensSel.join(", ")}${obs.trim() ? " · " + obs.trim() : ""}`
+      : obs.trim() || null;
+    const { error } = await supabase.from("formulario_pedidos").insert([{
       evento: "WAVE MAKER - SG JAPAN 2027",
       joiner_cog: user.cog,
       joiner_nome: user.nome || user.cog,
       joiner_email: user.email || null,
       modalidade,
-      observacoes: obs.trim() || null,
+      observacoes: obsFinal,
       status: "pendente",
-    }]).select("id, created_at");
+    }]).select("id");
     if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
     const { count } = await supabase.from("formulario_pedidos")
       .select("id", { count: "exact", head: true })
@@ -11825,7 +11846,6 @@ function WaveMakerTab({ user }) {
   }
 
   if (enviado || jaEnviou) {
-    const pedido = enviado || jaEnviou;
     return (
       <div style={{ paddingBottom:80 }}>
         <div style={{ marginBottom:20 }}>
@@ -11850,6 +11870,7 @@ function WaveMakerTab({ user }) {
 
   return (
     <div style={{ paddingBottom:80 }}>
+      {/* Header */}
       <div style={{ marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 6px" }}>WAVE MAKER</h2>
@@ -11861,10 +11882,23 @@ function WaveMakerTab({ user }) {
         </div>
       </div>
 
+      {/* Galeria de itens */}
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Itens do evento</div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(90px,1fr))", gap:8, marginBottom:28 }}>
+        {ITENS_WM.map(it => (
+          <div key={it.id} onClick={() => setFotoZoom(it)}
+            style={{ cursor:"zoom-in", borderRadius:10, overflow:"hidden", border:"1px solid rgba(245,240,232,.07)", background:"rgba(245,240,232,.03)" }}>
+            <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
+            <div style={{ padding:"4px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.4)", textAlign:"center", lineHeight:1.3 }}>{it.id}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modalidades */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Escolha uma modalidade</div>
       <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
         {MODALIDADES.map(m => (
-          <div key={m.id} onClick={() => setModalidade(m.id === modalidade ? null : m.id)}
+          <div key={m.id} onClick={() => { setModalidade(m.id === modalidade ? null : m.id); setItensSel([]); }}
             style={{ border:`1px solid ${modalidade===m.id?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:12, padding:"14px 16px", cursor:"pointer", background:modalidade===m.id?"rgba(201,168,240,.08)":"transparent", display:"flex", alignItems:"center", gap:14, transition:"all .15s" }}>
             <span style={{ fontSize:22 }}>{m.icone}</span>
             <div style={{ flex:1 }}>
@@ -11877,15 +11911,41 @@ function WaveMakerTab({ user }) {
         ))}
       </div>
 
-      {modalidade && (
+      {/* Seleção de itens para ITENS SOLTOS */}
+      {modalidade === "ITENS SOLTOS" && (
         <div style={{ marginBottom:20 }}>
-          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Observações (opcional)</div>
-          <textarea value={obs} onChange={e => setObs(e.target.value)}
-            placeholder="Ex: quais membros tem interesse, quantidade estimada..."
-            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, resize:"vertical", minHeight:80, boxSizing:"border-box", outline:"none" }} />
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>
+            Quais itens você quer? <span style={{ color:"rgba(201,168,240,.5)" }}>{itensSel.length > 0 ? `(${itensSel.length} selecionado${itensSel.length>1?"s":""})` : ""}</span>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px,1fr))", gap:8 }}>
+            {ITENS_WM.map(it => {
+              const sel = itensSel.includes(it.id);
+              return (
+                <div key={it.id} onClick={() => toggleItem(it.id)}
+                  style={{ cursor:"pointer", borderRadius:10, overflow:"hidden", border:`1px solid ${sel?"rgba(201,168,240,.6)":"rgba(245,240,232,.1)"}`, background:sel?"rgba(201,168,240,.1)":"rgba(245,240,232,.03)", transition:"all .15s", position:"relative" }}>
+                  <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block", opacity:sel?1:.6 }} />
+                  {sel && <div style={{ position:"absolute", top:5, right:5, width:18, height:18, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#000" }}>✓</div>}
+                  <div style={{ padding:"4px 6px", fontFamily:mono, fontSize:8, color:sel?"var(--lilas)":"rgba(245,240,232,.4)", textAlign:"center", lineHeight:1.3, fontWeight:sel?700:400 }}>{it.id}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
+      {/* Observações */}
+      {modalidade && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>
+            {modalidade === "ITENS SOLTOS" ? "Observações adicionais (opcional)" : "Observações (opcional)"}
+          </div>
+          <textarea value={obs} onChange={e => setObs(e.target.value)}
+            placeholder={modalidade === "ITENS SOLTOS" ? "Ex: membros de interesse, quantidade..." : "Ex: membros de interesse, dúvidas..."}
+            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, resize:"vertical", minHeight:72, boxSizing:"border-box", outline:"none" }} />
+        </div>
+      )}
+
+      {/* Dados */}
       {modalidade && user && (
         <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:20, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", lineHeight:2 }}>
           <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS</span><br />
@@ -11899,6 +11959,17 @@ function WaveMakerTab({ user }) {
         style={{ width:"100%", background:modalidade?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
         {enviando ? "Enviando..." : "Confirmar pré-cadastro →"}
       </button>
+
+      {/* Zoom de foto */}
+      {fotoZoom && (
+        <div onClick={() => setFotoZoom(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:380, width:"100%" }}>
+            <img src={fotoZoom.foto} alt={fotoZoom.id} style={{ width:"100%", borderRadius:14, display:"block", marginBottom:10 }} />
+            <div style={{ textAlign:"center", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.6)", marginBottom:12 }}>{fotoZoom.id}</div>
+            <button onClick={() => setFotoZoom(null)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:8, padding:"8px", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
