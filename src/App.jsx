@@ -11843,7 +11843,7 @@ function WaveMakerTab({ user }) {
     const modalFinal = itensSel.length > 0 ? "ITENS SOLTOS" : modalidade;
     if (!modalFinal || enviando) return;
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
-    setEnviando(true); setErro(null);
+    setEnviando(true); setErro(null); setEnviado(null);
     const obsFinal = modalFinal === "ITENS SOLTOS"
       ? `Itens: ${itensSel.join(", ")} · Qtd: ${quantidade}`
       : `Qtd: ${quantidade}`;
@@ -12100,9 +12100,16 @@ function WaveMakerTab({ user }) {
 
       {erro && <div style={{ color:"var(--laranja)", fontFamily:mono, fontSize:11, marginBottom:12 }}>{erro}</div>}
 
+      {enviado && (
+        <div style={{ marginBottom:16, background:"rgba(74,222,128,.08)", border:"1px solid rgba(74,222,128,.25)", borderRadius:12, padding:"14px 18px" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#4ade80", marginBottom:4 }}>Pedido confirmado!</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)" }}>Seu pré-cadastro foi registrado. Acompanhe o status na aba Histórico.</div>
+        </div>
+      )}
+
       <button onClick={enviar} disabled={!modalidade || enviando}
         style={{ width:"100%", background:modalidade?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
-        {enviando ? "Enviando..." : "Confirmar pré-cadastro →"}
+        {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Confirmar pré-cadastro →"}
       </button>
       </>}
 
