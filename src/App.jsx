@@ -11944,6 +11944,26 @@ function WaveMakerTab({ user }) {
       )}
 
       {abaWM === "forms" && <>
+      {/* Informações */}
+      <div style={{ marginBottom:24, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>INFORMAÇÕES</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+            》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
+            <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
+          </div>
+          {[
+            "Pagamento: 20 de Outubro",
+            "Pedidos aceitos até: 5 de Outubro",
+            "Envios previsto para Fevereiro de 2027",
+          ].map((r, i) => (
+            <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
+              <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Seção LACRADO */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Lacrado</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
