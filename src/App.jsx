@@ -11871,70 +11871,7 @@ function WaveMakerTab({ user }) {
     setEnviando(false);
   }
 
-  if (enviado || jaEnviou) {
-    const pedidoAtual = enviado
-      ? { modalidade, observacoes: `Qtd: ${quantidade}`, status: "pendente" }
-      : jaEnviou;
-    const qtdMatch = pedidoAtual?.observacoes?.match(/Qtd:\s*(\d+)/);
-    const qtd = qtdMatch ? parseInt(qtdMatch[1]) : 1;
-    const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
-    return (
-      <div style={{ paddingBottom:80, paddingLeft:16, paddingRight:16 }}>
-        <div style={{ marginBottom:20 }}>
-          <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
-          <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>WAVE MAKER</h2>
-        </div>
-
-        {/* Pedido atual */}
-        <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"20px 18px", marginBottom:20 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(201,168,240,.5)", textTransform:"uppercase" }}>🌊 Pré-cadastro registrado</div>
-            <span style={{ fontFamily:mono, fontSize:10, color:corStatus(pedidoAtual?.status) }}>{pedidoAtual?.status}</span>
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"rgba(245,240,232,.03)", borderRadius:10, border:"1px solid rgba(245,240,232,.07)" }}>
-              <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>Modalidade</span>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:"var(--lilas)", letterSpacing:.5 }}>{pedidoAtual?.modalidade}</span>
-            </div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"rgba(245,240,232,.03)", borderRadius:10, border:"1px solid rgba(245,240,232,.07)" }}>
-              <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>Quantidade</span>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:"var(--offwhite)" }}>{qtd}</span>
-            </div>
-            {enviado?.posicao && (
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"rgba(245,240,232,.03)", borderRadius:10, border:"1px solid rgba(245,240,232,.07)" }}>
-                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>Posição na fila</span>
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:"var(--lilas)" }}>#{enviado.posicao}</span>
-              </div>
-            )}
-          </div>
-          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(201,168,240,.45)", lineHeight:1.7, marginTop:14, borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:12 }}>
-            ⚡ Pedidos mais antigos têm prioridade. Em caso de falta de estoque, os mais recentes são cancelados primeiro.
-          </div>
-        </div>
-
-        {/* Histórico */}
-        {historico.length > 0 && (
-          <div>
-            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Histórico de pedidos</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              {historico.map((h, i) => {
-                const hQtd = h.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1";
-                return (
-                  <div key={h.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"rgba(245,240,232,.02)", borderRadius:10, border:"1px solid rgba(245,240,232,.06)" }}>
-                    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                      <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{h.modalidade} · {hQtd}x</span>
-                      <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(h.created_at).toLocaleDateString("pt-BR")}</span>
-                    </div>
-                    <span style={{ fontFamily:mono, fontSize:10, color:corStatus(h.status) }}>{h.status}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
 
   return (
     <div style={{ paddingBottom:80, paddingLeft:16, paddingRight:16 }}>
@@ -11955,6 +11892,54 @@ function WaveMakerTab({ user }) {
           ⚡ Pedidos mais antigos têm prioridade. Se não conseguirmos todas as compras, os mais recentes serão cancelados primeiro.
         </div>
       </div>
+
+      {/* Banner pedidos */}
+      {(enviado || jaEnviou || historico.length > 0) && (() => {
+        const pedidoAtual = enviado
+          ? { modalidade, observacoes: `Qtd: ${quantidade}`, status: "pendente" }
+          : jaEnviou;
+        return (
+          <div style={{ marginBottom:24 }}>
+            {pedidoAtual && (
+              <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"14px 16px", marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <span style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(201,168,240,.5)", textTransform:"uppercase" }}>🌊 Seu pré-cadastro</span>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(pedidoAtual.status) }}>{pedidoAtual.status}</span>
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <div style={{ flex:1, minWidth:100, padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.07)" }}>
+                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>MODALIDADE</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{pedidoAtual.modalidade}</div>
+                  </div>
+                  <div style={{ padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.07)" }}>
+                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>QTD</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--offwhite)" }}>{pedidoAtual.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1"}</div>
+                  </div>
+                  {enviado?.posicao && (
+                    <div style={{ padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.07)" }}>
+                      <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>FILA</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>#{enviado.posicao}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {historico.length > 0 && (
+              <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Histórico</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {historico.map(h => (
+                    <div key={h.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{h.modalidade} · {h.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1"}x <span style={{ fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(h.created_at).toLocaleDateString("pt-BR")}</span></span>
+                      <span style={{ fontFamily:mono, fontSize:10, color:corStatus(h.status) }}>{h.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Seção LACRADO */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Lacrado</div>
