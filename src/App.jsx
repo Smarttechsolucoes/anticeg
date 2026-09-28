@@ -11800,7 +11800,7 @@ function WaveMakerTab({ user }) {
   ];
 
   const MODALIDADES = [
-    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens", foto: "/wave-maker/BOX COMPLETA.jpg" },
+    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens", foto: "/wave-maker/BOX COMPLETA.jpg", preco: "R$260" },
     { id: "ITENS SOLTOS",      icone: "◱",  desc: "Escolha os itens avulsos que quer" },
     { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin" },
   ];
@@ -11909,7 +11909,7 @@ function WaveMakerTab({ user }) {
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:modalidade===m.id?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{m.id}</div>
                 <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>{m.desc}</div>
               </div>
-              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.45)", letterSpacing:"1px" }}>a definir</div>
+              <div style={{ fontFamily:mono, fontSize:9, color: m.preco ? "var(--laranja)" : "rgba(201,168,240,.45)", letterSpacing:"1px", fontWeight: m.preco ? 700 : 400 }}>{m.preco || "a definir"}</div>
               {modalidade===m.id && <div style={{ width:14, height:14, borderRadius:"50%", background:"var(--lilas)", flexShrink:0 }} />}
             </div>
           </div>
