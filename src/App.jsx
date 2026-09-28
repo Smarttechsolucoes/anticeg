@@ -22462,7 +22462,7 @@ function RunItVol2Tab({ user }) {
         <div style={{ marginTop:20, marginBottom:24 }}>
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, letterSpacing:2, lineHeight:1, color:"var(--offwhite)" }}>RUN IT VOL 2</div>
-          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Pré-venda · Goods Oficiais</div>
+          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Pré-venda</div>
           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
             {[
               { label:"FORMS 3/NOV",     bg:"rgba(201,168,240,.1)",  color:"var(--lilas)",           border:"rgba(201,168,240,.3)" },
