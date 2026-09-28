@@ -11946,7 +11946,7 @@ function WaveMakerTab({ user }) {
 
       {/* Seção KITS */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Kits</div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
+      <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
         {[
           { id: "KIT 01", foto: "/wave-maker/KIT 01.png" },
           { id: "KIT 02", foto: "/wave-maker/KIT 02.png" },
@@ -11954,16 +11954,18 @@ function WaveMakerTab({ user }) {
         ].map(kit => {
           const ativo = modalidade === "3 KIT PRÉ MONTADO" && itensSel.length === 0;
           return (
-            <div key={kit.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
+            <div key={kit.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: kit.foto, id: kit.id })}>
-                <img src={kit.foto} alt={kit.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                <img src={kit.foto} alt={kit.id} style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", display:"block" }} />
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
-              <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{kit.id}</div>
-                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px" }}>a definir</div>
+              <div style={{ padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                <div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{kit.id}</div>
+                  <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px" }}>a definir</div>
+                </div>
                 <button onClick={() => { setModalidade(ativo ? null : "3 KIT PRÉ MONTADO"); setItensSel([]); }}
-                  style={{ marginTop:6, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
+                  style={{ flexShrink:0, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"7px 16px", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
                   {ativo ? "✓ SELECIONADO" : "SELECIONAR"}
                 </button>
               </div>
