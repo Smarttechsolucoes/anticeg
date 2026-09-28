@@ -11792,6 +11792,7 @@ function WaveMakerTab({ user }) {
   const [enviado, setEnviado] = useState(null);
   const [erro, setErro] = useState(null);
   const [jaEnviou, setJaEnviou] = useState(null);
+  const [abaWM, setAbaWM] = useState("forms");
   const [historico, setHistorico] = useState([]);
   const [fotoZoom, setFotoZoom] = useState(null);
 
@@ -11893,54 +11894,46 @@ function WaveMakerTab({ user }) {
         </div>
       </div>
 
-      {/* Banner pedidos */}
-      {(enviado || jaEnviou || historico.length > 0) && (() => {
-        const pedidoAtual = enviado
-          ? { modalidade, observacoes: `Qtd: ${quantidade}`, status: "pendente" }
-          : jaEnviou;
-        return (
-          <div style={{ marginBottom:24 }}>
-            {pedidoAtual && (
-              <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"14px 16px", marginBottom:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <span style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(201,168,240,.5)", textTransform:"uppercase" }}>🌊 Seu pré-cadastro</span>
-                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(pedidoAtual.status) }}>{pedidoAtual.status}</span>
-                </div>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  <div style={{ flex:1, minWidth:100, padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.07)" }}>
-                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>MODALIDADE</div>
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>{pedidoAtual.modalidade}</div>
-                  </div>
-                  <div style={{ padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.07)" }}>
-                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>QTD</div>
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--offwhite)" }}>{pedidoAtual.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1"}</div>
-                  </div>
-                  {enviado?.posicao && (
-                    <div style={{ padding:"8px 12px", background:"rgba(245,240,232,.03)", borderRadius:8, border:"1px solid rgba(245,240,232,.07)" }}>
-                      <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>FILA</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"var(--lilas)" }}>#{enviado.posicao}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {historico.length > 0 && (
-              <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Histórico</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                  {historico.map(h => (
-                    <div key={h.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{h.modalidade} · {h.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1"}x <span style={{ fontSize:9, color:"rgba(245,240,232,.25)" }}>{new Date(h.created_at).toLocaleDateString("pt-BR")}</span></span>
-                      <span style={{ fontFamily:mono, fontSize:10, color:corStatus(h.status) }}>{h.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {/* Abas */}
+      <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+        {["forms","historico"].map(a => (
+          <button key={a} onClick={() => setAbaWM(a)}
+            style={{ padding:"8px 18px", borderRadius:20, border:`1px solid ${abaWM===a?"var(--lilas)":"rgba(245,240,232,.12)"}`, background:abaWM===a?"var(--lilas)":"transparent", color:abaWM===a?"#000":"rgba(245,240,232,.45)", fontFamily:mono, fontSize:11, fontWeight:abaWM===a?700:400, cursor:"pointer", letterSpacing:"1px", transition:"all .15s" }}>
+            {a === "forms" ? "Loja" : "Histórico"}{a==="historico" && historico.length>0 && <span style={{ marginLeft:5, background:abaWM==="historico"?"rgba(0,0,0,.2)":"rgba(201,168,240,.2)", borderRadius:10, padding:"1px 6px", fontSize:9 }}>{historico.length}</span>}
+          </button>
+        ))}
+      </div>
 
+      {/* Aba Histórico */}
+      {abaWM === "historico" && (
+        <div>
+          {historico.length === 0 && jaEnviou === false && (
+            <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)", padding:"32px 0", textAlign:"center" }}>Nenhum pedido ainda.</div>
+          )}
+          {historico.map((h, i) => {
+            const hQtd = h.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1";
+            const itensStr = h.observacoes?.match(/Itens: ([^·]+)/)?.[1]?.trim();
+            return (
+              <div key={h.id} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${h.status==="confirmado"?"rgba(74,222,128,.15)":h.status==="cancelado"?"rgba(255,107,107,.1)":"rgba(201,168,240,.15)"}`, borderRadius:12, padding:"14px 16px", marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>#{i+1}</span>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:"var(--lilas)", letterSpacing:.5 }}>{h.modalidade}</span>
+                      <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>{hQtd}x</span>
+                    </div>
+                    {itensStr && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{itensStr}</div>}
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.22)" }}>{new Date(h.created_at).toLocaleDateString("pt-BR")} {new Date(h.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+                  </div>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(h.status), flexShrink:0 }}>{h.status}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {abaWM === "forms" && <>
       {/* Seção LACRADO */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Lacrado</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
@@ -12081,6 +12074,7 @@ function WaveMakerTab({ user }) {
         style={{ width:"100%", background:modalidade?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
         {enviando ? "Enviando..." : "Confirmar pré-cadastro →"}
       </button>
+      </>}
 
       {/* Zoom de foto */}
       {fotoZoom && (
