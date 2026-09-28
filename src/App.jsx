@@ -11800,7 +11800,7 @@ function WaveMakerTab({ user }) {
   ];
 
   const MODALIDADES = [
-    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens" },
+    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens", foto: "/wave-maker/BOX COMPLETA.jpg" },
     { id: "ITENS SOLTOS",      icone: "◱",  desc: "Escolha os itens avulsos que quer" },
     { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin" },
   ];
@@ -11899,14 +11899,19 @@ function WaveMakerTab({ user }) {
       <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
         {MODALIDADES.map(m => (
           <div key={m.id} onClick={() => { setModalidade(m.id === modalidade ? null : m.id); setItensSel([]); }}
-            style={{ border:`1px solid ${modalidade===m.id?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:12, padding:"14px 16px", cursor:"pointer", background:modalidade===m.id?"rgba(201,168,240,.08)":"transparent", display:"flex", alignItems:"center", gap:14, transition:"all .15s" }}>
-            <span style={{ fontSize:22 }}>{m.icone}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:modalidade===m.id?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{m.id}</div>
-              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>{m.desc}</div>
+            style={{ border:`1px solid ${modalidade===m.id?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:12, overflow:"hidden", cursor:"pointer", background:modalidade===m.id?"rgba(201,168,240,.08)":"transparent", transition:"all .15s" }}>
+            {m.foto && (
+              <img src={m.foto} alt={m.id} style={{ width:"100%", maxHeight:180, objectFit:"cover", display:"block" }} />
+            )}
+            <div style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 16px" }}>
+              <span style={{ fontSize:22 }}>{m.icone}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:modalidade===m.id?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{m.id}</div>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>{m.desc}</div>
+              </div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.45)", letterSpacing:"1px" }}>a definir</div>
+              {modalidade===m.id && <div style={{ width:14, height:14, borderRadius:"50%", background:"var(--lilas)", flexShrink:0 }} />}
             </div>
-            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.45)", letterSpacing:"1px" }}>a definir</div>
-            {modalidade===m.id && <div style={{ width:14, height:14, borderRadius:"50%", background:"var(--lilas)", flexShrink:0 }} />}
           </div>
         ))}
       </div>
