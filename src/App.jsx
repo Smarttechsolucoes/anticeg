@@ -11817,14 +11817,19 @@ function WaveMakerTab({ user }) {
   }, [user?.cog]);
 
   function toggleItem(id) {
-    setItensSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setItensSel(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      if (next.length === 0) setModalidade(null);
+      return next;
+    });
   }
 
   async function enviar() {
-    if (!modalidade || enviando) return;
-    if (modalidade === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
+    const modalFinal = itensSel.length > 0 ? "ITENS SOLTOS" : modalidade;
+    if (!modalFinal || enviando) return;
+    if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     setEnviando(true); setErro(null);
-    const obsFinal = modalidade === "ITENS SOLTOS"
+    const obsFinal = modalFinal === "ITENS SOLTOS"
       ? `Itens: ${itensSel.join(", ")}${obs.trim() ? " · " + obs.trim() : ""}`
       : obs.trim() || null;
     const { error } = await supabase.from("formulario_pedidos").insert([{
@@ -11832,7 +11837,7 @@ function WaveMakerTab({ user }) {
       joiner_cog: user.cog,
       joiner_nome: user.nome || user.cog,
       joiner_email: user.email || null,
-      modalidade,
+      modalidade: modalFinal,
       observacoes: obsFinal,
       status: "pendente",
     }]).select("id");
@@ -11882,75 +11887,57 @@ function WaveMakerTab({ user }) {
         </div>
       </div>
 
-      {/* Produtos — grade de cards tipo photocard */}
-      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:14 }}>Modalidades</div>
+      {/* Grade única: modalidades + itens soltos */}
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:14 }}>
+        Escolha{itensSel.length > 0 ? <span style={{ color:"var(--lilas)", marginLeft:6 }}>· {itensSel.length} item{itensSel.length>1?"ns":""} solto{itensSel.length>1?"s":""} selecionado{itensSel.length>1?"s":""}</span> : ""}
+      </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:28 }}>
-        {MODALIDADES.map(m => {
-          const ativo = modalidade === m.id;
+        {/* Cards de modalidade (BOX e KIT) */}
+        {MODALIDADES.filter(m => m.id !== "ITENS SOLTOS").map(m => {
+          const ativo = modalidade === m.id && itensSel.length === 0;
           return (
-            <div key={m.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
-              {/* Foto clicável para zoom */}
+            <div key={m.id} onClick={() => { setModalidade(ativo ? null : m.id); setItensSel([]); }}
+              style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer" }}>
               {m.foto
-                ? <div style={{ position:"relative", cursor:"zoom-in", flexShrink:0 }} onClick={() => setFotoZoom({ foto: m.foto, id: m.id })}>
+                ? <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom({ foto: m.foto, id: m.id }); }}>
                     <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
-                    <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 7px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.6)" }}>🔍</div>
+                    <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
                   </div>
-                : <div style={{ width:"100%", aspectRatio:"2/3", background:"rgba(245,240,232,.03)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, flexShrink:0 }}>{m.icone}</div>
+                : <div style={{ width:"100%", aspectRatio:"2/3", background:"rgba(245,240,232,.03)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>{m.icone}</div>
               }
-              {/* Info */}
-              <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+              <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{m.id}</div>
-                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", lineHeight:1.35, flex:1 }}>{m.desc}</div>
+                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", lineHeight:1.35, flex:1 }}>{m.desc}</div>
                 {m.preco
-                  ? <div style={{ fontFamily:mono, fontSize:14, color:"var(--laranja)", fontWeight:700, marginTop:2 }}>{m.preco}</div>
-                  : <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:2 }}>a definir</div>
+                  ? <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>{m.preco}</div>
+                  : <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:3 }}>a definir</div>
                 }
-                <button onClick={() => { setModalidade(ativo ? null : m.id); setItensSel([]); }}
-                  style={{ width:"100%", padding:"8px 0", borderRadius:8, border: ativo?"none":"1px solid rgba(201,168,240,.3)", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"var(--lilas)", fontFamily:mono, fontSize:10, fontWeight:700, cursor:"pointer", letterSpacing:"1px", transition:"all .15s", marginTop:6 }}>
-                  {ativo ? "✓ Selecionado" : "Selecionar →"}
-                </button>
+                <div style={{ fontFamily:mono, fontSize:9, color:ativo?"var(--lilas)":"rgba(201,168,240,.5)", textAlign:"center", marginTop:6, fontWeight:ativo?700:400 }}>
+                  {ativo ? "✓ selecionado" : "selecionar →"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Cards de itens soltos */}
+        {ITENS_WM.map(it => {
+          const sel = itensSel.includes(it.id);
+          return (
+            <div key={it.id} onClick={() => { setModalidade("ITENS SOLTOS"); toggleItem(it.id); }}
+              style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer", position:"relative" }}>
+              {/* Badge ITEM SOLTO */}
+              <div style={{ position:"absolute", top:7, left:7, zIndex:2, background:"rgba(0,0,0,.6)", borderRadius:5, padding:"2px 7px", fontFamily:mono, fontSize:7.5, color:"rgba(201,168,240,.8)", letterSpacing:"1px", fontWeight:700 }}>ITEM SOLTO</div>
+              {sel && <div style={{ position:"absolute", top:7, right:7, zIndex:2, width:18, height:18, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:"#000" }}>✓</div>}
+              <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75 }} />
+              <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
+                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:2 }}>a definir</div>
               </div>
             </div>
           );
         })}
       </div>
-
-      {/* Seleção de itens soltos (expande abaixo da grade) */}
-      {modalidade === "ITENS SOLTOS" && (
-        <div style={{ marginBottom:20, background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.15)", borderRadius:14, padding:"16px" }}>
-          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>
-            Quais itens você quer?{" "}
-            {itensSel.length > 0 && <span style={{ color:"var(--lilas)" }}>({itensSel.length} selecionado{itensSel.length>1?"s":""})</span>}
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(80px,1fr))", gap:8 }}>
-            {ITENS_WM.map(it => {
-              const sel = itensSel.includes(it.id);
-              return (
-                <div key={it.id} onClick={() => toggleItem(it.id)}
-                  style={{ cursor:"pointer", borderRadius:10, overflow:"hidden", border:`1px solid ${sel?"rgba(201,168,240,.6)":"rgba(245,240,232,.1)"}`, background:sel?"rgba(201,168,240,.12)":"rgba(245,240,232,.03)", transition:"all .15s", position:"relative" }}>
-                  <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block", opacity:sel?1:.55 }} />
-                  {sel && <div style={{ position:"absolute", top:4, right:4, width:17, height:17, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:900, color:"#000" }}>✓</div>}
-                  <div style={{ padding:"4px 5px", fontFamily:mono, fontSize:7.5, color:sel?"var(--lilas)":"rgba(245,240,232,.4)", textAlign:"center", lineHeight:1.3, fontWeight:sel?700:400 }}>{it.id}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Mini galeria de itens incluídos na BOX */}
-      {modalidade === "BOX LACRADA" && (
-        <div style={{ marginBottom:20, background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.15)", borderRadius:14, padding:"14px 16px" }}>
-          <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:10 }}>Itens incluídos na box</div>
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-            {ITENS_WM.map(it => (
-              <div key={it.id} onClick={() => setFotoZoom(it)} style={{ cursor:"zoom-in", width:44, height:44, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.1)" }}>
-                <img src={it.foto} alt={it.id} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Observações */}
       {modalidade && (
