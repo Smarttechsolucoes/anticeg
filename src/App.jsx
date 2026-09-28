@@ -22523,7 +22523,7 @@ function RunItVol2Tab({ user }) {
                 》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
                 <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
               </div>
-              {["Forms aberto: 3 de Novembro","Pagamento: 6 de Novembro"].map((r, i) => (
+              {["Forms aberto: 3 de Novembro","Pagamento: 6 de Novembro","Envios previsto para Fevereiro de 2027, podendo variar de acordo com a logística de importação"].map((r, i) => (
                 <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
                   <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
                 </div>
