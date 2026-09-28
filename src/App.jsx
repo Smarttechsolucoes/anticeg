@@ -22393,7 +22393,7 @@ function RunItVol2Tab({ user }) {
     { id:"BUTTON BADGE POUCH", preco:"R$108" },
     { id:"KEY COVER",          preco:"R$73" },
     { id:"REVERSIBLE POUCH",   preco:"R$135" },
-    { id:"STICKER",            preco:"a definir" },
+    { id:"STICKER",            preco:"R$53" },
     { id:"STRAP HOLDER",       preco:"R$95" },
   ];
   const CHARS = ["BBOKARI","DWAEKKI","FOXINY","JINIRET","LEEBIT","PUPPYM","QUOKKA","WOLFCHAN"];
