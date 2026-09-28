@@ -11887,47 +11887,41 @@ function WaveMakerTab({ user }) {
         </div>
       </div>
 
-      {/* Grade única: modalidades + itens soltos */}
-      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:14 }}>
-        Escolha{itensSel.length > 0 ? <span style={{ color:"var(--lilas)", marginLeft:6 }}>· {itensSel.length} item{itensSel.length>1?"ns":""} solto{itensSel.length>1?"s":""} selecionado{itensSel.length>1?"s":""}</span> : ""}
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:28 }}>
-        {/* Cards de modalidade (BOX e KIT) */}
-        {MODALIDADES.filter(m => m.id !== "ITENS SOLTOS").map(m => {
-          const ativo = modalidade === m.id && itensSel.length === 0;
+      {/* Seção LACRADO */}
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Lacrado</div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
+        {(() => {
+          const m = MODALIDADES.find(x => x.id === "BOX LACRADA");
+          const ativo = modalidade === "BOX LACRADA" && itensSel.length === 0;
           return (
-            <div key={m.id} onClick={() => { setModalidade(ativo ? null : m.id); setItensSel([]); }}
+            <div onClick={() => { setModalidade(ativo ? null : "BOX LACRADA"); setItensSel([]); }}
               style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer" }}>
-              {m.foto
-                ? <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom({ foto: m.foto, id: m.id }); }}>
-                    <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
-                    <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
-                  </div>
-                : <div style={{ width:"100%", aspectRatio:"2/3", background:"rgba(245,240,232,.03)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>{m.icone}</div>
-              }
+              <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom({ foto: m.foto, id: m.id }); }}>
+                <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
+              </div>
               <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{m.id}</div>
-                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", lineHeight:1.35, flex:1 }}>{m.desc}</div>
-                {m.preco
-                  ? <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>{m.preco}</div>
-                  : <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:3 }}>a definir</div>
-                }
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>BOX LACRADA</div>
+                <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>R$260</div>
                 <div style={{ fontFamily:mono, fontSize:9, color:ativo?"var(--lilas)":"rgba(201,168,240,.5)", textAlign:"center", marginTop:6, fontWeight:ativo?700:400 }}>
                   {ativo ? "✓ selecionado" : "selecionar →"}
                 </div>
               </div>
             </div>
           );
-        })}
+        })()}
+      </div>
 
-        {/* Cards de itens soltos */}
+      {/* Seção ITENS SOLTOS */}
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>
+        Itens Soltos{itensSel.length > 0 && <span style={{ color:"var(--lilas)", marginLeft:6 }}>· {itensSel.length} selecionado{itensSel.length>1?"s":""}</span>}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {ITENS_WM.map(it => {
           const sel = itensSel.includes(it.id);
           return (
             <div key={it.id} onClick={() => { setModalidade("ITENS SOLTOS"); toggleItem(it.id); }}
               style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer", position:"relative" }}>
-              {/* Badge ITEM SOLTO */}
-              <div style={{ position:"absolute", top:7, left:7, zIndex:2, background:"rgba(0,0,0,.6)", borderRadius:5, padding:"2px 7px", fontFamily:mono, fontSize:7.5, color:"rgba(201,168,240,.8)", letterSpacing:"1px", fontWeight:700 }}>ITEM SOLTO</div>
               {sel && <div style={{ position:"absolute", top:7, right:7, zIndex:2, width:18, height:18, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:"#000" }}>✓</div>}
               <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom(it); }}>
                 <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75, cursor:"zoom-in" }} />
@@ -11942,9 +11936,34 @@ function WaveMakerTab({ user }) {
         })}
       </div>
 
+      {/* Seção KITS */}
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Kits</div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:12 }}>
+        {(() => {
+          const m = MODALIDADES.find(x => x.id === "3 KIT PRÉ MONTADO");
+          const ativo = modalidade === "3 KIT PRÉ MONTADO" && itensSel.length === 0;
+          return (
+            <div onClick={() => { setModalidade(ativo ? null : "3 KIT PRÉ MONTADO"); setItensSel([]); }}
+              style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer" }}>
+              <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom({ foto: m.foto, id: m.id }); }}>
+                <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
+              </div>
+              <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>3 KIT PRÉ MONTADO</div>
+                <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:3 }}>a definir</div>
+                <div style={{ fontFamily:mono, fontSize:9, color:ativo?"var(--lilas)":"rgba(201,168,240,.5)", textAlign:"center", marginTop:6, fontWeight:ativo?700:400 }}>
+                  {ativo ? "✓ selecionado" : "selecionar →"}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Galeria dos 3 kits */}
       {modalidade === "3 KIT PRÉ MONTADO" && itensSel.length === 0 && (
-        <div style={{ marginBottom:20, background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.15)", borderRadius:14, padding:"14px 16px" }}>
+        <div style={{ marginBottom:24, background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.15)", borderRadius:14, padding:"14px 16px" }}>
           <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:10 }}>Os 3 kits incluídos</div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
             {["/wave-maker/KIT 01.png","/wave-maker/KIT 02.png","/wave-maker/KIT 03.png"].map((src,i) => (
