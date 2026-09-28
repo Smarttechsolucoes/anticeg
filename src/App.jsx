@@ -22390,7 +22390,7 @@ function AdminWaveMaker({ onCountChange }) {
 function RunItVol2Tab({ user }) {
   const mono = "'DM Mono',monospace";
   const TIPOS = [
-    { id:"BUTTON BADGE POUCH", preco:"a definir" },
+    { id:"BUTTON BADGE POUCH", preco:"R$108" },
     { id:"KEY COVER",          preco:"R$73" },
     { id:"REVERSIBLE POUCH",   preco:"R$135" },
     { id:"STICKER",            preco:"a definir" },
