@@ -22171,6 +22171,7 @@ function AdminWaveMaker({ onCountChange }) {
   const mono = "'DM Mono',monospace";
   const [pedidos, setPedidos] = useState([]);
   const [filtro, setFiltro] = useState("pendente");
+  const [erroAdmin, setErroAdmin] = useState(null);
 
   useEffect(() => {
     supabase.from("formulario_pedidos")
@@ -22186,14 +22187,13 @@ function AdminWaveMaker({ onCountChange }) {
   }, []);
 
   async function atualizar(id, novoStatus) {
-    setPedidos(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, status: novoStatus } : p);
-      onCountChange?.(next.filter(p => p.status === "pendente").length);
-      return next;
-    });
-    const { error } = await supabase.from("formulario_pedidos").update({ status: novoStatus }).eq("id", id);
-    if (error) {
-      console.error("Erro ao salvar status:", error);
+    setErroAdmin(null);
+    const { error, count } = await supabase
+      .from("formulario_pedidos")
+      .update({ status: novoStatus }, { count: "exact" })
+      .eq("id", id);
+    if (error || count === 0) {
+      setErroAdmin(`Falha ao salvar${error ? ": " + error.message : " (sem permissão — verifique RLS no Supabase)"}`);
       return;
     }
     const { data } = await supabase.from("formulario_pedidos")
@@ -22220,6 +22220,7 @@ function AdminWaveMaker({ onCountChange }) {
     <div style={{ padding:"24px 0" }}>
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>WAVE MAKER — SG JAPAN 2027</div>
       <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16 }}>{pedidos.length} pré-cadastro{pedidos.length !== 1 ? "s" : ""}</div>
+      {erroAdmin && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"10px 14px", marginBottom:16 }}>{erroAdmin}</div>}
 
       {/* Abas filtro */}
       <div style={{ display:"flex", gap:0, marginBottom:20, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)", width:"fit-content" }}>
