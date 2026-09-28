@@ -7973,6 +7973,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [bazaarInCount,     setBazaarInCount]     = useState(0);
   const [lightstickCount,   setLightstickCount]   = useState(0);
   const [waveMakerCount,   setWaveMakerCount]   = useState(0);
+  const [runItCount,       setRunItCount]       = useState(0);
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
   const [staffAcessos,      setStaffAcessos]      = useState(null);
@@ -8251,6 +8252,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setLightstickCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "WAVE MAKER - SG JAPAN 2027").eq("status", "pendente")
       .then(({ count }) => { if (count) setWaveMakerCount(count); });
+    supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "RUN IT VOL 2").eq("status", "pendente")
+      .then(({ count }) => { if (count) setRunItCount(count); });
     supabase.from("claims").select("*").eq("status", "pendente").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setClaimsPendentes(data); });
   }, []);
@@ -8533,6 +8536,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {nav("skzoo-rio",   "SKZOO Pop-up Rio",   "◈", 0)}
                 {nav("lightstick",  "Lightstick SKZ",     "◈", lightstickCount)}
                 {nav("wave-maker-admin", "WAVE MAKER",     "🌊", waveMakerCount)}
+                {nav("run-it-admin",    "RUN IT VOL 2",   "◈", runItCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9239,6 +9243,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
       {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
       {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
+      {adminMainTab === "run-it-admin"     && <AdminRunIt     onCountChange={setRunItCount} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -22632,6 +22637,99 @@ function RunItVol2Tab({ user }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Admin Run It Vol 2 ────────────────────────────────────────
+function AdminRunIt({ onCountChange }) {
+  const mono = "'DM Mono',monospace";
+  const [pedidos, setPedidos] = useState([]);
+  const [filtro, setFiltro] = useState("pendente");
+  const [erroAdmin, setErroAdmin] = useState(null);
+
+  const ABAS = [
+    { id:"pendente",   label:"Geral",      cor:"rgba(201,168,240,.8)" },
+    { id:"confirmado", label:"Confirmado", cor:"#4ade80" },
+    { id:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
+  ];
+
+  useEffect(() => {
+    supabase.from("formulario_pedidos").select("*").eq("evento", "RUN IT VOL 2")
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status==="pendente").length); }
+      });
+  }, []);
+
+  async function atualizar(id, novoStatus) {
+    setErroAdmin(null);
+    const { error, count } = await supabase.from("formulario_pedidos")
+      .update({ status: novoStatus }, { count: "exact" }).eq("id", id);
+    if (error || count === 0) {
+      setErroAdmin(`Falha ao salvar${error ? ": " + error.message : " (sem permissão — verifique RLS no Supabase)"}`);
+      return;
+    }
+    const { data } = await supabase.from("formulario_pedidos").select("*").eq("evento", "RUN IT VOL 2")
+      .order("created_at", { ascending: true });
+    if (data) { setPedidos(data); onCountChange?.(data.filter(p=>p.status==="pendente").length); }
+  }
+
+  const lista = pedidos.filter(p => p.status === filtro);
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>RUN IT VOL 2</div>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16 }}>{pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}</div>
+      {erroAdmin && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"10px 14px", marginBottom:16 }}>{erroAdmin}</div>}
+
+      {/* Abas */}
+      <div style={{ display:"flex", gap:0, marginBottom:20, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)" }}>
+        {ABAS.map((a, i) => (
+          <button key={a.id} onClick={() => setFiltro(a.id)} style={{
+            flex:1, padding:"8px 4px", fontFamily:mono, fontSize:9, fontWeight:filtro===a.id?700:400,
+            background:filtro===a.id?"rgba(245,240,232,.06)":"transparent",
+            color:filtro===a.id?a.cor:"rgba(245,240,232,.3)",
+            border:"none", borderRight:i<ABAS.length-1?"1px solid rgba(245,240,232,.08)":"none",
+            cursor:"pointer", letterSpacing:"1px",
+          }}>
+            {a.label}
+            {a.id==="pendente" && pedidos.filter(p=>p.status==="pendente").length > 0 &&
+              <span style={{ marginLeft:4, opacity:.7 }}>({pedidos.filter(p=>p.status==="pendente").length})</span>}
+          </button>
+        ))}
+      </div>
+
+      {lista.length === 0 && <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.25)", padding:"24px 0", textAlign:"center" }}>Nenhum pedido aqui.</div>}
+
+      {lista.map((p, idx) => {
+        const itensStr = p.observacoes?.replace("Itens: ", "") || "—";
+        return (
+          <div key={p.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:12, padding:"14px 16px", marginBottom:10 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+              <div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginBottom:3 }}>#{idx+1} · {new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"var(--lilas)", letterSpacing:.5 }}>@{p.joiner_cog}</div>
+                {p.joiner_nome && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.joiner_nome}</div>}
+              </div>
+              <span style={{ fontFamily:mono, fontSize:9, color:filtro==="confirmado"?"#4ade80":filtro==="cancelado"?"#ff6b6b":"rgba(201,168,240,.7)", flexShrink:0 }}>{p.status}</span>
+            </div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", lineHeight:1.5, marginBottom:10 }}>{itensStr}</div>
+            {filtro === "pendente" && (
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => atualizar(p.id, "confirmado")} style={{ flex:1, padding:"7px", borderRadius:7, border:"1px solid rgba(74,222,128,.3)", background:"rgba(74,222,128,.06)", color:"#4ade80", fontFamily:mono, fontSize:9, cursor:"pointer", letterSpacing:"1px" }}>CONFIRMAR</button>
+                <button onClick={() => atualizar(p.id, "cancelado")} style={{ flex:1, padding:"7px", borderRadius:7, border:"1px solid rgba(255,107,107,.2)", background:"rgba(255,107,107,.04)", color:"#ff6b6b", fontFamily:mono, fontSize:9, cursor:"pointer", letterSpacing:"1px" }}>CANCELAR</button>
+              </div>
+            )}
+            {filtro === "confirmado" && (
+              <button onClick={() => atualizar(p.id, "pendente")} style={{ padding:"6px 14px", borderRadius:7, border:"1px solid rgba(245,240,232,.12)", background:"transparent", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:9, cursor:"pointer" }}>← Voltar para Geral</button>
+            )}
+            {filtro === "cancelado" && (
+              <button onClick={() => atualizar(p.id, "pendente")} style={{ padding:"6px 14px", borderRadius:7, border:"1px solid rgba(245,240,232,.12)", background:"transparent", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:9, cursor:"pointer" }}>← Restaurar</button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
