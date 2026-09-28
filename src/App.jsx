@@ -12097,6 +12097,7 @@ function WaveMakerTab({ user }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
