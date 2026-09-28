@@ -11882,78 +11882,98 @@ function WaveMakerTab({ user }) {
         </div>
       </div>
 
-      {/* Galeria de itens */}
-      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Itens do evento</div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(90px,1fr))", gap:8, marginBottom:28 }}>
-        {ITENS_WM.map(it => (
-          <div key={it.id} onClick={() => setFotoZoom(it)}
-            style={{ cursor:"zoom-in", borderRadius:10, overflow:"hidden", border:"1px solid rgba(245,240,232,.07)", background:"rgba(245,240,232,.03)" }}>
-            <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
-            <div style={{ padding:"4px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.4)", textAlign:"center", lineHeight:1.3 }}>{it.id}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Modalidades */}
-      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Escolha uma modalidade</div>
-      <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-        {MODALIDADES.map(m => (
-          <div key={m.id} onClick={() => { setModalidade(m.id === modalidade ? null : m.id); setItensSel([]); }}
-            style={{ border:`1px solid ${modalidade===m.id?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:12, overflow:"hidden", cursor:"pointer", background:modalidade===m.id?"rgba(201,168,240,.08)":"transparent", transition:"all .15s" }}>
-            {m.foto && (
-              <img src={m.foto} alt={m.id} style={{ width:"100%", maxHeight:180, objectFit:"cover", display:"block" }} />
-            )}
-            <div style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 16px" }}>
-              <span style={{ fontSize:22 }}>{m.icone}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:modalidade===m.id?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{m.id}</div>
-                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:2 }}>{m.desc}</div>
-              </div>
-              <div style={{ fontFamily:mono, fontSize:9, color: m.preco ? "var(--laranja)" : "rgba(201,168,240,.45)", letterSpacing:"1px", fontWeight: m.preco ? 700 : 400 }}>{m.preco || "a definir"}</div>
-              {modalidade===m.id && <div style={{ width:14, height:14, borderRadius:"50%", background:"var(--lilas)", flexShrink:0 }} />}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Seleção de itens para ITENS SOLTOS */}
-      {modalidade === "ITENS SOLTOS" && (
-        <div style={{ marginBottom:20 }}>
-          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>
-            Quais itens você quer? <span style={{ color:"rgba(201,168,240,.5)" }}>{itensSel.length > 0 ? `(${itensSel.length} selecionado${itensSel.length>1?"s":""})` : ""}</span>
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px,1fr))", gap:8 }}>
-            {ITENS_WM.map(it => {
-              const sel = itensSel.includes(it.id);
-              return (
-                <div key={it.id} onClick={() => toggleItem(it.id)}
-                  style={{ cursor:"pointer", borderRadius:10, overflow:"hidden", border:`1px solid ${sel?"rgba(201,168,240,.6)":"rgba(245,240,232,.1)"}`, background:sel?"rgba(201,168,240,.1)":"rgba(245,240,232,.03)", transition:"all .15s", position:"relative" }}>
-                  <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block", opacity:sel?1:.6 }} />
-                  {sel && <div style={{ position:"absolute", top:5, right:5, width:18, height:18, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#000" }}>✓</div>}
-                  <div style={{ padding:"4px 6px", fontFamily:mono, fontSize:8, color:sel?"var(--lilas)":"rgba(245,240,232,.4)", textAlign:"center", lineHeight:1.3, fontWeight:sel?700:400 }}>{it.id}</div>
+      {/* Produtos — layout de loja */}
+      <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:14 }}>Modalidades</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:28 }}>
+        {MODALIDADES.map(m => {
+          const ativo = modalidade === m.id;
+          return (
+            <div key={m.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:16, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"border-color .15s" }}>
+              {/* Foto clicável para zoom */}
+              {m.foto && (
+                <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: m.foto, id: m.id })}>
+                  <img src={m.foto} alt={m.id} style={{ width:"100%", maxHeight:220, objectFit:"cover", display:"block" }} />
+                  <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,.5)", borderRadius:6, padding:"3px 8px", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.6)" }}>🔍 ampliar</div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              )}
+              {/* Info do produto */}
+              <div style={{ padding:"16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                  <div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1 }}>{m.id}</div>
+                    <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:4 }}>{m.desc}</div>
+                  </div>
+                  <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
+                    {m.preco
+                      ? <div style={{ fontFamily:mono, fontSize:18, color:"var(--laranja)", fontWeight:700 }}>{m.preco}</div>
+                      : <div style={{ fontFamily:mono, fontSize:10, color:"rgba(201,168,240,.4)", letterSpacing:"1px" }}>a definir</div>
+                    }
+                  </div>
+                </div>
+
+                {/* Itens incluídos — mini galeria para BOX LACRADA */}
+                {m.id === "BOX LACRADA" && (
+                  <div style={{ marginTop:10, marginBottom:12 }}>
+                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:6 }}>Inclui</div>
+                    <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                      {ITENS_WM.map(it => (
+                        <div key={it.id} onClick={e => { e.stopPropagation(); setFotoZoom(it); }}
+                          style={{ cursor:"zoom-in", width:42, height:42, borderRadius:7, overflow:"hidden", border:"1px solid rgba(245,240,232,.1)", flexShrink:0 }}>
+                          <img src={it.foto} alt={it.id} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Botão de selecionar */}
+                <button onClick={() => { setModalidade(ativo ? null : m.id); setItensSel([]); }}
+                  style={{ width:"100%", padding:"11px", borderRadius:10, border: ativo ? "none" : "1px solid rgba(201,168,240,.3)", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"var(--lilas)", fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:"1px", transition:"all .15s", marginTop:4 }}>
+                  {ativo ? "✓ Selecionado" : "Selecionar →"}
+                </button>
+
+                {/* Seleção de itens soltos (expande dentro do card) */}
+                {ativo && m.id === "ITENS SOLTOS" && (
+                  <div style={{ marginTop:16, borderTop:"1px solid rgba(245,240,232,.07)", paddingTop:14 }}>
+                    <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>
+                      Quais itens você quer?{" "}
+                      {itensSel.length > 0 && <span style={{ color:"var(--lilas)" }}>({itensSel.length} selecionado{itensSel.length>1?"s":""})</span>}
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(80px,1fr))", gap:8 }}>
+                      {ITENS_WM.map(it => {
+                        const sel = itensSel.includes(it.id);
+                        return (
+                          <div key={it.id} onClick={() => toggleItem(it.id)}
+                            style={{ cursor:"pointer", borderRadius:10, overflow:"hidden", border:`1px solid ${sel?"rgba(201,168,240,.6)":"rgba(245,240,232,.1)"}`, background:sel?"rgba(201,168,240,.12)":"rgba(245,240,232,.03)", transition:"all .15s", position:"relative" }}>
+                            <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block", opacity:sel?1:.55 }} />
+                            {sel && <div style={{ position:"absolute", top:4, right:4, width:17, height:17, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:900, color:"#000" }}>✓</div>}
+                            <div style={{ padding:"4px 5px", fontFamily:mono, fontSize:7.5, color:sel?"var(--lilas)":"rgba(245,240,232,.4)", textAlign:"center", lineHeight:1.3, fontWeight:sel?700:400 }}>{it.id}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Observações */}
       {modalidade && (
-        <div style={{ marginBottom:20 }}>
-          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>
-            {modalidade === "ITENS SOLTOS" ? "Observações adicionais (opcional)" : "Observações (opcional)"}
-          </div>
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Observações (opcional)</div>
           <textarea value={obs} onChange={e => setObs(e.target.value)}
-            placeholder={modalidade === "ITENS SOLTOS" ? "Ex: membros de interesse, quantidade..." : "Ex: membros de interesse, dúvidas..."}
+            placeholder="Ex: membros de interesse, quantidade estimada..."
             style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, resize:"vertical", minHeight:72, boxSizing:"border-box", outline:"none" }} />
         </div>
       )}
 
       {/* Dados */}
       {modalidade && user && (
-        <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:20, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", lineHeight:2 }}>
-          <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS</span><br />
+        <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>
+          <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS · </span>
           @{user.cog} · {user.nome || "—"} · {user.email || "—"}
         </div>
       )}
@@ -11967,11 +11987,11 @@ function WaveMakerTab({ user }) {
 
       {/* Zoom de foto */}
       {fotoZoom && (
-        <div onClick={() => setFotoZoom(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth:380, width:"100%" }}>
+        <div onClick={() => setFotoZoom(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:440, width:"100%" }}>
             <img src={fotoZoom.foto} alt={fotoZoom.id} style={{ width:"100%", borderRadius:14, display:"block", marginBottom:10 }} />
-            <div style={{ textAlign:"center", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.6)", marginBottom:12 }}>{fotoZoom.id}</div>
-            <button onClick={() => setFotoZoom(null)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:8, padding:"8px", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar</button>
+            <div style={{ textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:12 }}>{fotoZoom.id}</div>
+            <button onClick={() => setFotoZoom(null)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:8, padding:"9px", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar</button>
           </div>
         </div>
       )}
