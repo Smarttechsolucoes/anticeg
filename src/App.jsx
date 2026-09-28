@@ -22391,7 +22391,7 @@ function RunItVol2Tab({ user }) {
   const mono = "'DM Mono',monospace";
   const TIPOS = [
     { id:"BUTTON BADGE POUCH", preco:"a definir" },
-    { id:"KEY COVER",          preco:"a definir" },
+    { id:"KEY COVER",          preco:"R$73" },
     { id:"REVERSIBLE POUCH",   preco:"a definir" },
     { id:"STICKER",            preco:"a definir" },
     { id:"STRAP HOLDER",       preco:"a definir" },
@@ -22538,6 +22538,7 @@ function RunItVol2Tab({ user }) {
               <div key={tipo.id} style={{ marginBottom:28 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                   <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase" }}>{tipo.id}</div>
+                  {tipo.preco !== "a definir" && <span style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", fontWeight:700 }}>{tipo.preco}</span>}
                   {selCount > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)" }}>· {selCount} selecionado{selCount>1?"s":""}</span>}
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(88px,1fr))", gap:8 }}>
