@@ -11952,7 +11952,7 @@ function WaveMakerTab({ user }) {
           { id: "KIT 02", foto: "/wave-maker/KIT 02.png", preco: "R$38" },
           { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: "R$40" },
         ].map(kit => {
-          const ativo = modalidade === "3 KIT PRÉ MONTADO" && itensSel.length === 0;
+          const ativo = modalidade === kit.id && itensSel.length === 0;
           return (
             <div key={kit.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: kit.foto, id: kit.id })}>
@@ -11961,11 +11961,8 @@ function WaveMakerTab({ user }) {
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{kit.id}</div>
-                {kit.preco
-                  ? <div style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700, marginTop:2 }}>{kit.preco}</div>
-                  : <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px" }}>a definir</div>
-                }
-                <button onClick={() => { setModalidade(ativo ? null : "3 KIT PRÉ MONTADO"); setItensSel([]); }}
+                <div style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700, marginTop:2 }}>{kit.preco}</div>
+                <button onClick={() => { setModalidade(ativo ? null : kit.id); setItensSel([]); }}
                   style={{ marginTop:6, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
                   {ativo ? "✓ SELECIONADO" : "SELECIONAR"}
                 </button>
@@ -11997,23 +11994,12 @@ function WaveMakerTab({ user }) {
                 </span>
               </div>
             </>
-          ) : modalidade === "3 KIT PRÉ MONTADO" ? (
-            <>
-              {[{ id:"KIT 01", preco:"R$35" },{ id:"KIT 02", preco:"R$38" },{ id:"KIT 03", preco:"R$40" }].map(k => (
-                <div key={k.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
-                  <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{k.id}</span>
-                  <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>{k.preco}</span>
-                </div>
-              ))}
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:4 }}>
-                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>TOTAL</span>
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--lilas)" }}>R$113</span>
-              </div>
-            </>
           ) : (
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{modalidade}</span>
-              <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>R$260</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>
+                {modalidade==="BOX LACRADA"?"R$260":modalidade==="KIT 01"?"R$35":modalidade==="KIT 02"?"R$38":modalidade==="KIT 03"?"R$40":"a definir"}
+              </span>
             </div>
           )}
         </div>
