@@ -11852,7 +11852,7 @@ function WaveMakerTab({ user }) {
 
   if (enviado || jaEnviou) {
     return (
-      <div style={{ paddingBottom:80 }}>
+      <div style={{ paddingBottom:80, paddingLeft:16, paddingRight:16 }}>
         <div style={{ marginBottom:20 }}>
           <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
           <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 4px" }}>WAVE MAKER</h2>
@@ -11874,7 +11874,7 @@ function WaveMakerTab({ user }) {
   }
 
   return (
-    <div style={{ paddingBottom:80 }}>
+    <div style={{ paddingBottom:80, paddingLeft:16, paddingRight:16 }}>
       {/* Header */}
       <div style={{ marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
