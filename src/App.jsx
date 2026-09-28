@@ -8541,15 +8541,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Ver tudo", "◫", 0)}
-                {nav("revista", "Revista Nylon", "◈", revistaCount)}
-                {nav("wmag", "W Magazine Hyunjin", "◈", wmagCount)}
-                {nav("popup", "Pop-up This & That", "◉", popupCount)}
-                {nav("bazaar-in", "Bazaar IN", "◈", bazaarInCount)}
-                {nav("skzoo-rio",   "SKZOO Pop-up Rio",   "◈", 0)}
-                {nav("lightstick",  "Lightstick SKZ",     "◈", lightstickCount)}
-                {nav("wave-maker-admin", "WAVE MAKER",     "🌊", waveMakerCount)}
-                {nav("run-it-admin",    "RUN IT VOL 2",   "◈", runItCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + waveMakerCount + runItCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9296,6 +9288,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
+      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","wave-maker-admin","run-it-admin"].includes(adminMainTab) && (
+        <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:4, padding:"4px 0", letterSpacing:".04em" }}>
+          ← Todos os drops
+        </button>
+      )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
       {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
