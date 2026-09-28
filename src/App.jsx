@@ -11892,7 +11892,7 @@ function WaveMakerTab({ user }) {
               {/* Foto clicável para zoom */}
               {m.foto && (
                 <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: m.foto, id: m.id })}>
-                  <img src={m.foto} alt={m.id} style={{ width:"100%", maxHeight:220, objectFit:"cover", display:"block" }} />
+                  <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
                   <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,.5)", borderRadius:6, padding:"3px 8px", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.6)" }}>🔍 ampliar</div>
                 </div>
               )}
