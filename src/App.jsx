@@ -12109,7 +12109,7 @@ function WaveMakerTab({ user }) {
 
       <button onClick={enviar} disabled={!modalidade || enviando}
         style={{ width:"100%", background:modalidade?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
-        {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Confirmar pré-cadastro →"}
+        {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
       </button>
       </>}
 
