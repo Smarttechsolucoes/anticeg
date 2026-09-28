@@ -22398,13 +22398,15 @@ function RunItVol2Tab({ user }) {
   ];
   const CHARS = ["BBOKARI","DWAEKKI","FOXINY","JINIRET","LEEBIT","PUPPYM","QUOKKA","WOLFCHAN"];
 
-  const [itensSel, setItensSel] = useState([]);
+  const [qtdMap, setQtdMap] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(null);
   const [erro, setErro] = useState(null);
   const [abaRIV2, setAbaRIV2] = useState("forms");
   const [historico, setHistorico] = useState([]);
   const [fotoZoom, setFotoZoom] = useState(null);
+
+  const itensSelecionados = Object.entries(qtdMap).filter(([,q]) => q > 0);
 
   useEffect(() => {
     if (!user?.cog) return;
@@ -22416,20 +22418,25 @@ function RunItVol2Tab({ user }) {
       .then(({ data }) => { if (data) setHistorico(data); });
   }, [user?.cog]);
 
-  function toggleItem(key) {
-    setItensSel(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]);
+  function setQtd(key, delta) {
+    setQtdMap(prev => {
+      const next = Math.max(0, (prev[key] || 0) + delta);
+      if (next === 0) { const r = {...prev}; delete r[key]; return r; }
+      return { ...prev, [key]: next };
+    });
   }
 
   async function enviar() {
-    if (itensSel.length === 0 || enviando) return;
+    if (itensSelecionados.length === 0 || enviando) return;
     setEnviando(true); setErro(null); setEnviado(null);
+    const obsItens = itensSelecionados.map(([k,q]) => q > 1 ? `${k} (x${q})` : k).join(", ");
     const { error } = await supabase.from("formulario_pedidos").insert([{
       evento: "RUN IT VOL 2",
       joiner_cog: user.cog,
       joiner_nome: user.nome || user.cog,
       joiner_email: user.email || null,
       modalidade: "ITENS SOLTOS",
-      observacoes: `Itens: ${itensSel.join(", ")}`,
+      observacoes: `Itens: ${obsItens}`,
       status: "pendente",
     }]).select("id");
     if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
@@ -22533,7 +22540,7 @@ function RunItVol2Tab({ user }) {
 
           {/* Itens por tipo com variações de personagem */}
           {TIPOS.map(tipo => {
-            const selCount = CHARS.filter(c => itensSel.includes(`${tipo.id} ${c}`)).length;
+            const selCount = CHARS.filter(c => (qtdMap[`${tipo.id} ${c}`] || 0) > 0).length;
             return (
               <div key={tipo.id} style={{ marginBottom:28 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
@@ -22544,7 +22551,8 @@ function RunItVol2Tab({ user }) {
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px,1fr))", gap:10 }}>
                   {CHARS.map(char => {
                     const key = `${tipo.id} ${char}`;
-                    const sel = itensSel.includes(key);
+                    const qtd = qtdMap[key] || 0;
+                    const sel = qtd > 0;
                     return (
                       <div key={char} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:12, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
                         <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto:`/run-it-vol-2/${encodeURIComponent(key)}.png`, id:key })}>
@@ -22553,10 +22561,18 @@ function RunItVol2Tab({ user }) {
                         </div>
                         <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
                           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.1 }}>{char}</div>
-                          <button onClick={() => toggleItem(key)}
-                            style={{ marginTop:4, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:6, padding:"7px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"0.5px", cursor:"pointer", transition:"all .15s" }}>
-                            {sel ? "✓ SELECIONADO" : "SELECIONAR"}
-                          </button>
+                          {!sel ? (
+                            <button onClick={() => setQtd(key, 1)}
+                              style={{ marginTop:4, border:"1px solid rgba(201,168,240,.35)", borderRadius:6, padding:"7px 0", background:"transparent", color:"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"0.5px", cursor:"pointer", transition:"all .15s" }}>
+                              SELECIONAR
+                            </button>
+                          ) : (
+                            <div style={{ marginTop:4, display:"flex", alignItems:"center", justifyContent:"space-between", border:"1px solid var(--lilas)", borderRadius:6, overflow:"hidden" }}>
+                              <button onClick={() => setQtd(key, -1)} style={{ flex:1, padding:"6px 0", background:"transparent", border:"none", color:"var(--lilas)", fontFamily:mono, fontSize:14, cursor:"pointer", fontWeight:300 }}>−</button>
+                              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:"var(--lilas)", minWidth:22, textAlign:"center" }}>{qtd}</span>
+                              <button onClick={() => setQtd(key, 1)}  style={{ flex:1, padding:"6px 0", background:"transparent", border:"none", color:"var(--lilas)", fontFamily:mono, fontSize:14, cursor:"pointer", fontWeight:300 }}>+</button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -22567,21 +22583,23 @@ function RunItVol2Tab({ user }) {
           })}
 
           {/* Checkout */}
-          {itensSel.length > 0 && (
+          {itensSelecionados.length > 0 && (
             <div style={{ marginBottom:20, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"16px 18px" }}>
               <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Resumo do pedido</div>
-              {itensSel.map(key => (
+              {itensSelecionados.map(([key, qtd]) => (
                 <div key={key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
-                  <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{key}</span>
-                  <button onClick={() => toggleItem(key)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:14, padding:"0 4px", lineHeight:1 }}>×</button>
+                  <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{key}{qtd > 1 ? <span style={{ color:"var(--lilas)", marginLeft:6 }}>×{qtd}</span> : null}</span>
+                  <button onClick={() => setQtd(key, -(qtdMap[key]||0))} style={{ background:"none", border:"none", color:"rgba(245,240,232,.3)", cursor:"pointer", fontSize:14, padding:"0 4px", lineHeight:1 }}>×</button>
                 </div>
               ))}
-              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:4 }}>{itensSel.length} item{itensSel.length>1?"s":""} selecionado{itensSel.length>1?"s":""}</div>
+              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:4 }}>
+                {itensSelecionados.reduce((acc,[,q])=>acc+q,0)} unidade{itensSelecionados.reduce((acc,[,q])=>acc+q,0)!==1?"s":""} selecionada{itensSelecionados.reduce((acc,[,q])=>acc+q,0)!==1?"s":""}
+              </div>
             </div>
           )}
 
           {/* Dados */}
-          {itensSel.length > 0 && user && (
+          {itensSelecionados.length > 0 && user && (
             <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>
               <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS · </span>
               @{user.cog} · {user.nome || "—"} · {user.email || "—"}
@@ -22597,8 +22615,8 @@ function RunItVol2Tab({ user }) {
             </div>
           )}
 
-          <button onClick={enviar} disabled={itensSel.length===0 || enviando}
-            style={{ width:"100%", background:itensSel.length>0?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:itensSel.length>0?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:itensSel.length>0?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
+          <button onClick={enviar} disabled={itensSelecionados.length===0 || enviando}
+            style={{ width:"100%", background:itensSelecionados.length>0?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:itensSelecionados.length>0?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:itensSelecionados.length>0?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
             {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
           </button>
         </>}
