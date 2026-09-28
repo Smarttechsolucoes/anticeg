@@ -11802,7 +11802,7 @@ function WaveMakerTab({ user }) {
   const MODALIDADES = [
     { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens", foto: "/wave-maker/BOX COMPLETA.jpg", preco: "R$260" },
     { id: "ITENS SOLTOS",      icone: "◱",  desc: "Escolha os itens avulsos que quer" },
-    { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin" },
+    { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin", foto: "/wave-maker/KIT 01.png" },
   ];
 
   useEffect(() => {
@@ -11941,6 +11941,21 @@ function WaveMakerTab({ user }) {
           );
         })}
       </div>
+
+      {/* Galeria dos 3 kits */}
+      {modalidade === "3 KIT PRÉ MONTADO" && itensSel.length === 0 && (
+        <div style={{ marginBottom:20, background:"rgba(201,168,240,.04)", border:"1px solid rgba(201,168,240,.15)", borderRadius:14, padding:"14px 16px" }}>
+          <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:10 }}>Os 3 kits incluídos</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+            {["/wave-maker/KIT 01.png","/wave-maker/KIT 02.png","/wave-maker/KIT 03.png"].map((src,i) => (
+              <div key={i} onClick={() => setFotoZoom({ foto: src, id: `KIT 0${i+1}` })} style={{ cursor:"zoom-in", borderRadius:10, overflow:"hidden", border:"1px solid rgba(245,240,232,.1)", position:"relative" }}>
+                <img src={src} alt={`Kit ${i+1}`} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                <div style={{ position:"absolute", bottom:5, right:5, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 5px", fontFamily:mono, fontSize:7.5, color:"rgba(245,240,232,.55)" }}>🔍</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Observações */}
       {modalidade && (
