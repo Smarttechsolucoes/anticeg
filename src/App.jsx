@@ -11956,7 +11956,7 @@ function WaveMakerTab({ user }) {
           return (
             <div key={kit.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: kit.foto, id: kit.id })}>
-                <img src={kit.foto} alt={kit.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                <img src={kit.foto} alt={kit.id} style={{ width:"100%", aspectRatio:"3/2", objectFit:"cover", display:"block" }} />
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
