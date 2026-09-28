@@ -11879,12 +11879,16 @@ function WaveMakerTab({ user }) {
       <div style={{ marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 6px" }}>WAVE MAKER</h2>
-        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)", lineHeight:1.9, marginBottom:12 }}>
-          Prazo: <span style={{ color:"var(--offwhite)" }}>20 de Outubro</span><br />
-          Pedidos aceitos até: <span style={{ color:"var(--offwhite)" }}>5 de Outubro</span><br />
-          Envio previsto: <span style={{ color:"var(--offwhite)" }}>Fevereiro de 2027</span>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 0", marginBottom:14 }}>
+          {[["Prazo","20 de Outubro"],["Pedidos até","5 de Outubro"],["Envio","Fev 2027"]].map(([label,val],i,arr) => (
+            <span key={label} style={{ fontFamily:mono, fontSize:11 }}>
+              <span style={{ color:"rgba(245,240,232,.35)" }}>{label}: </span>
+              <span style={{ color:"var(--offwhite)", fontWeight:700 }}>{val}</span>
+              {i < arr.length-1 && <span style={{ color:"rgba(245,240,232,.18)", margin:"0 8px" }}>·</span>}
+            </span>
+          ))}
         </div>
-        <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:10, padding:"12px 16px", fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.7)", lineHeight:1.7 }}>
+        <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:10, padding:"10px 14px", fontFamily:mono, fontSize:10.5, color:"rgba(201,168,240,.65)", lineHeight:1.65 }}>
           ⚡ Pedidos mais antigos têm prioridade. Se não conseguirmos todas as compras, os mais recentes serão cancelados primeiro.
         </div>
       </div>
