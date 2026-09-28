@@ -11893,7 +11893,6 @@ function WaveMakerTab({ user }) {
               { label:"PRÉ-CADASTRO ABERTO", bg:"rgba(201,168,240,.1)", color:"var(--lilas)", border:"rgba(201,168,240,.3)" },
               { label:"PEDIDOS ATÉ 5/OUT",   bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
               { label:"ENVIO FEV/2027",       bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
-              { label:"FIFO",                 bg:"rgba(255,92,26,.1)", color:"var(--laranja)", border:"rgba(255,92,26,.3)" },
             ].map(t => (
               <span key={t.label} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:t.bg, color:t.color, border:`1px solid ${t.border}`, letterSpacing:"1px" }}>{t.label}</span>
             ))}
