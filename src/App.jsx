@@ -22167,6 +22167,17 @@ function AdminBazaarIn({ onCountChange }) {
 }
 
 // ── Wave Maker Admin ───────────────────────────────────────────
+const WM_FOTOS = {
+  "BOX LACRADA": { foto:"/wave-maker/BOX COMPLETA.jpg", preco:260 },
+  "KIT 01":      { foto:"/wave-maker/KIT 01.png",       preco:35  },
+  "KIT 02":      { foto:"/wave-maker/KIT 02.png",       preco:38  },
+  "KIT 03":      { foto:"/wave-maker/KIT 03.png",       preco:40  },
+};
+const WM_ITENS_PRECO = {
+  "OUTBOX":16, "HARD COVER DIARY":25, "DESK CALENDAR":15, "POSTER":10,
+  "STICKER":7, "ID HOLDER":18, "KNAPSACK":28, "MAKING VIDEO QR CARD":5,
+};
+
 function AdminWaveMaker({ onCountChange }) {
   const mono = "'DM Mono',monospace";
   const [pedidos, setPedidos] = useState([]);
@@ -22243,18 +22254,38 @@ function AdminWaveMaker({ onCountChange }) {
 
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
         {visiveis.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido aqui.</div>}
-        {visiveis.map((p, i) => (
+        {visiveis.map((p, i) => {
+          const qtd = Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || 1);
+          const itensStr = p.observacoes?.match(/Itens: ([^·]+)/)?.[1]?.trim();
+          const itensList = itensStr ? itensStr.split(", ").map(s => s.trim()) : [];
+          const wmInfo = WM_FOTOS[p.modalidade];
+          const valorUnit = wmInfo ? wmInfo.preco
+            : itensList.reduce((s, nome) => s + (WM_ITENS_PRECO[nome] || 0), 0);
+          const valorTotal = valorUnit * qtd;
+          const fotoUrl = wmInfo?.foto || (itensList[0] ? `/wave-maker/${itensList[0]}.png` : null);
+
+          return (
           <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${p.status === "cancelado" ? "rgba(255,107,107,.15)" : p.status === "confirmado" ? "rgba(74,222,128,.15)" : "rgba(201,168,240,.15)"}`, borderRadius:10, padding:"12px 16px" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
-              <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>#{i+1}</span>
-                  <span style={{ fontWeight:700, fontSize:13 }}>{p.joiner_nome}</span>
-                  <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>@{p.joiner_cog}</span>
+              <div style={{ display:"flex", gap:12, flex:1, minWidth:0 }}>
+                {/* Foto */}
+                {fotoUrl && (
+                  <img src={fotoUrl} alt={p.modalidade} style={{ width:56, height:56, borderRadius:8, objectFit:"cover", flexShrink:0, border:"1px solid rgba(245,240,232,.08)" }} />
+                )}
+                <div style={{ display:"flex", flexDirection:"column", gap:3, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>#{i+1}</span>
+                    <span style={{ fontWeight:700, fontSize:13 }}>{p.joiner_nome}</span>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>@{p.joiner_cog}</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.8)", fontWeight:700 }}>{p.modalidade}</span>
+                    {qtd > 1 && <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>{qtd}×</span>}
+                    {valorTotal > 0 && <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>R${valorTotal}</span>}
+                  </div>
+                  {itensList.length > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{itensList.join(", ")}</div>}
+                  <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}</div>
                 </div>
-                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.8)", fontWeight:700 }}>{p.modalidade}</div>
-                {p.observacoes && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.observacoes}</div>}
-                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}</div>
               </div>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
                 <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
@@ -22270,7 +22301,8 @@ function AdminWaveMaker({ onCountChange }) {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
