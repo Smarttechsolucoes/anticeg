@@ -11879,8 +11879,19 @@ function WaveMakerTab({ user }) {
       <div style={{ marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:9, color:"var(--lilas)", letterSpacing:"2px", textTransform:"uppercase", marginBottom:6 }}>SG JAPAN 2027</div>
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", letterSpacing:1, margin:"0 0 6px" }}>WAVE MAKER</h2>
-        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:14, lineHeight:1.6 }}>
-          Pré-cadastro de interesse · preços a definir
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"10px 12px" }}>
+            <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:3 }}>Prazo</div>
+            <div style={{ fontFamily:mono, fontSize:12, color:"var(--offwhite)", fontWeight:700 }}>20 de Outubro</div>
+          </div>
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"10px 12px" }}>
+            <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:3 }}>Pedidos até</div>
+            <div style={{ fontFamily:mono, fontSize:12, color:"var(--offwhite)", fontWeight:700 }}>5 de Outubro</div>
+          </div>
+          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"10px 12px", gridColumn:"1 / -1" }}>
+            <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.25)", letterSpacing:"1px", textTransform:"uppercase", marginBottom:3 }}>Envio previsto</div>
+            <div style={{ fontFamily:mono, fontSize:12, color:"var(--offwhite)", fontWeight:700 }}>Fevereiro de 2027</div>
+          </div>
         </div>
         <div style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.2)", borderRadius:10, padding:"12px 16px", fontFamily:mono, fontSize:11, color:"rgba(201,168,240,.7)", lineHeight:1.7 }}>
           ⚡ Pedidos mais antigos têm prioridade. Se não conseguirmos todas as compras, os mais recentes serão cancelados primeiro.
