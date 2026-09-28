@@ -22170,6 +22170,7 @@ function AdminBazaarIn({ onCountChange }) {
 function AdminWaveMaker({ onCountChange }) {
   const mono = "'DM Mono',monospace";
   const [pedidos, setPedidos] = useState([]);
+  const [filtro, setFiltro] = useState("pendente");
 
   useEffect(() => {
     supabase.from("formulario_pedidos")
@@ -22195,13 +22196,41 @@ function AdminWaveMaker({ onCountChange }) {
 
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(201,168,240,.8)";
 
+  const ABAS = [
+    { id:"pendente",   label:"Geral",      cor:"rgba(201,168,240,.8)" },
+    { id:"confirmado", label:"Confirmado", cor:"#4ade80" },
+    { id:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
+  ];
+
+  const visiveis = pedidos.filter(p => p.status === filtro);
+
   return (
     <div style={{ padding:"24px 0" }}>
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>WAVE MAKER — SG JAPAN 2027</div>
-      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{pedidos.length} pré-cadastro{pedidos.length !== 1 ? "s" : ""}</div>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16 }}>{pedidos.length} pré-cadastro{pedidos.length !== 1 ? "s" : ""}</div>
+
+      {/* Abas filtro */}
+      <div style={{ display:"flex", gap:0, marginBottom:20, borderRadius:8, overflow:"hidden", border:"1px solid rgba(245,240,232,.08)", width:"fit-content" }}>
+        {ABAS.map((a, i) => {
+          const qtd = pedidos.filter(p => p.status === a.id).length;
+          const ativo = filtro === a.id;
+          return (
+            <button key={a.id} onClick={() => setFiltro(a.id)} style={{
+              padding:"7px 16px", fontFamily:mono, fontSize:10, fontWeight:ativo?700:400,
+              background:ativo?"rgba(245,240,232,.06)":"transparent",
+              color:ativo?a.cor:"rgba(245,240,232,.35)",
+              border:"none", borderRight:i<2?"1px solid rgba(245,240,232,.08)":"none",
+              cursor:"pointer", letterSpacing:"0.5px", transition:"all .15s",
+            }}>
+              {a.label}{qtd > 0 && <span style={{ marginLeft:5, opacity:.7, fontSize:9 }}>({qtd})</span>}
+            </button>
+          );
+        })}
+      </div>
+
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pré-cadastro ainda.</div>}
-        {pedidos.map((p, i) => (
+        {visiveis.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido aqui.</div>}
+        {visiveis.map((p, i) => (
           <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${p.status === "cancelado" ? "rgba(255,107,107,.15)" : p.status === "confirmado" ? "rgba(74,222,128,.15)" : "rgba(201,168,240,.15)"}`, borderRadius:10, padding:"12px 16px" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
               <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
@@ -22221,6 +22250,9 @@ function AdminWaveMaker({ onCountChange }) {
                     <button onClick={() => atualizar(p.id, "confirmado")} style={{ padding:"5px 12px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✓</button>
                     <button onClick={() => atualizar(p.id, "cancelado")}  style={{ padding:"5px 12px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b", fontFamily:mono, fontSize:10, cursor:"pointer" }}>✕</button>
                   </div>
+                )}
+                {p.status !== "pendente" && (
+                  <button onClick={() => atualizar(p.id, "pendente")} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"rgba(245,240,232,.35)", fontFamily:mono, fontSize:9, cursor:"pointer" }}>↩ desfazer</button>
                 )}
               </div>
             </div>
