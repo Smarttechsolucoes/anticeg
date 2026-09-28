@@ -11781,6 +11781,7 @@ function WaveMakerTab({ user }) {
   const mono = "'DM Mono', monospace";
   const [modalidade, setModalidade] = useState(null);
   const [itensSel, setItensSel] = useState([]);
+  const [quantidade, setQuantidade] = useState(1);
   const [obs, setObs] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(null);
@@ -11830,8 +11831,8 @@ function WaveMakerTab({ user }) {
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     setEnviando(true); setErro(null);
     const obsFinal = modalFinal === "ITENS SOLTOS"
-      ? `Itens: ${itensSel.join(", ")}${obs.trim() ? " · " + obs.trim() : ""}`
-      : obs.trim() || null;
+      ? `Itens: ${itensSel.join(", ")} · Qtd: ${quantidade}`
+      : `Qtd: ${quantidade}`;
     const { error } = await supabase.from("formulario_pedidos").insert([{
       evento: "WAVE MAKER - SG JAPAN 2027",
       joiner_cog: user.cog,
@@ -12005,13 +12006,17 @@ function WaveMakerTab({ user }) {
         </div>
       )}
 
-      {/* Observações */}
+      {/* Quantidade */}
       {modalidade && (
         <div style={{ marginBottom:16 }}>
-          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Observações (opcional)</div>
-          <textarea value={obs} onChange={e => setObs(e.target.value)}
-            placeholder="Ex: membros de interesse, quantidade estimada..."
-            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, resize:"vertical", minHeight:72, boxSizing:"border-box", outline:"none" }} />
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Quantidade</div>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            <button onClick={() => setQuantidade(q => Math.max(1, q-1))}
+              style={{ width:36, height:36, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontSize:18, fontWeight:300, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", minWidth:32, textAlign:"center" }}>{quantidade}</span>
+            <button onClick={() => setQuantidade(q => q+1)}
+              style={{ width:36, height:36, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontSize:18, fontWeight:300, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+          </div>
         </div>
       )}
 
