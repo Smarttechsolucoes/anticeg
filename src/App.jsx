@@ -11894,18 +11894,18 @@ function WaveMakerTab({ user }) {
           const m = MODALIDADES.find(x => x.id === "BOX LACRADA");
           const ativo = modalidade === "BOX LACRADA" && itensSel.length === 0;
           return (
-            <div onClick={() => { setModalidade(ativo ? null : "BOX LACRADA"); setItensSel([]); }}
-              style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer" }}>
-              <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom({ foto: m.foto, id: m.id }); }}>
+            <div style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
+              <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: m.foto, id: m.id })}>
                 <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>BOX LACRADA</div>
                 <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>R$260</div>
-                <div style={{ fontFamily:mono, fontSize:9, color:ativo?"var(--lilas)":"rgba(201,168,240,.5)", textAlign:"center", marginTop:6, fontWeight:ativo?700:400 }}>
-                  {ativo ? "✓ selecionado" : "selecionar →"}
-                </div>
+                <button onClick={() => { setModalidade(ativo ? null : "BOX LACRADA"); setItensSel([]); }}
+                  style={{ marginTop:8, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
+                  {ativo ? "✓ SELECIONADO" : "SELECIONAR"}
+                </button>
               </div>
             </div>
           );
@@ -11920,16 +11920,18 @@ function WaveMakerTab({ user }) {
         {ITENS_WM.map(it => {
           const sel = itensSel.includes(it.id);
           return (
-            <div key={it.id} onClick={() => { setModalidade("ITENS SOLTOS"); toggleItem(it.id); }}
-              style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer", position:"relative" }}>
-              {sel && <div style={{ position:"absolute", top:7, right:7, zIndex:2, width:18, height:18, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:"#000" }}>✓</div>}
-              <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom(it); }}>
-                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75, cursor:"zoom-in" }} />
+            <div key={it.id} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
+              <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom(it)}>
+                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75 }} />
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
                 <div style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700, marginTop:2 }}>{it.preco}</div>
+                <button onClick={() => { setModalidade("ITENS SOLTOS"); toggleItem(it.id); }}
+                  style={{ marginTop:6, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
+                  {sel ? "✓ SELECIONADO" : "SELECIONAR"}
+                </button>
               </div>
             </div>
           );
@@ -11943,18 +11945,18 @@ function WaveMakerTab({ user }) {
           const m = MODALIDADES.find(x => x.id === "3 KIT PRÉ MONTADO");
           const ativo = modalidade === "3 KIT PRÉ MONTADO" && itensSel.length === 0;
           return (
-            <div onClick={() => { setModalidade(ativo ? null : "3 KIT PRÉ MONTADO"); setItensSel([]); }}
-              style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column", cursor:"pointer" }}>
-              <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom({ foto: m.foto, id: m.id }); }}>
+            <div style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
+              <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: m.foto, id: m.id })}>
                 <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>3 KIT PRÉ MONTADO</div>
                 <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:3 }}>a definir</div>
-                <div style={{ fontFamily:mono, fontSize:9, color:ativo?"var(--lilas)":"rgba(201,168,240,.5)", textAlign:"center", marginTop:6, fontWeight:ativo?700:400 }}>
-                  {ativo ? "✓ selecionado" : "selecionar →"}
-                </div>
+                <button onClick={() => { setModalidade(ativo ? null : "3 KIT PRÉ MONTADO"); setItensSel([]); }}
+                  style={{ marginTop:8, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
+                  {ativo ? "✓ SELECIONADO" : "SELECIONAR"}
+                </button>
               </div>
             </div>
           );
@@ -11973,6 +11975,39 @@ function WaveMakerTab({ user }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Checkout */}
+      {modalidade && (
+        <div style={{ marginBottom:20, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"16px 18px" }}>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Resumo do pedido</div>
+          {modalidade === "ITENS SOLTOS" && itensSel.length > 0 ? (
+            <>
+              {itensSel.map(id => {
+                const it = ITENS_WM.find(x => x.id === id);
+                return it ? (
+                  <div key={id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{it.id}</span>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>{it.preco}</span>
+                  </div>
+                ) : null;
+              })}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:4 }}>
+                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>TOTAL</span>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--lilas)" }}>
+                  R${itensSel.reduce((s,id) => { const it = ITENS_WM.find(x => x.id === id); return s + (it ? parseInt(it.preco.replace("R$","")) : 0); }, 0)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{modalidade}</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:modalidade==="BOX LACRADA"?"var(--laranja)":"rgba(201,168,240,.5)", fontWeight:700 }}>
+                {modalidade === "BOX LACRADA" ? "R$260" : "a definir"}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
