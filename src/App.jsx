@@ -11929,7 +11929,10 @@ function WaveMakerTab({ user }) {
               {/* Badge ITEM SOLTO */}
               <div style={{ position:"absolute", top:7, left:7, zIndex:2, background:"rgba(0,0,0,.6)", borderRadius:5, padding:"2px 7px", fontFamily:mono, fontSize:7.5, color:"rgba(201,168,240,.8)", letterSpacing:"1px", fontWeight:700 }}>ITEM SOLTO</div>
               {sel && <div style={{ position:"absolute", top:7, right:7, zIndex:2, width:18, height:18, borderRadius:"50%", background:"var(--lilas)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:"#000" }}>✓</div>}
-              <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75 }} />
+              <div style={{ position:"relative" }} onClick={e => { e.stopPropagation(); setFotoZoom(it); }}>
+                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75, cursor:"zoom-in" }} />
+                <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
+              </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
                 <div style={{ fontFamily:mono, fontSize:8, color:"rgba(201,168,240,.4)", letterSpacing:"1px", marginTop:2 }}>a definir</div>
