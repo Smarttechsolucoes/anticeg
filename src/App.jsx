@@ -20850,6 +20850,10 @@ function AdminClaimEventos() {
   const undoTimerRef = useRef(null);
   const [editEvento, setEditEvento] = useState(null); // { id, nome, valor, prazo }
   const [editSalvando, setEditSalvando] = useState(false);
+  const [addClaimModal, setAddClaimModal] = useState(null); // { setId, membro, eventoId }
+  const [addClaimCog, setAddClaimCog] = useState("");
+  const [addClaimSalvando, setAddClaimSalvando] = useState(false);
+  const [addClaimErro, setAddClaimErro] = useState("");
 
   async function salvarEdicaoEvento() {
     if (!editEvento) return;
@@ -21102,6 +21106,26 @@ function AdminClaimEventos() {
     fetchTudo();
   }
 
+  async function salvarClaimManual() {
+    if (!addClaimModal || !addClaimCog.trim()) return;
+    setAddClaimSalvando(true); setAddClaimErro("");
+    const cog = addClaimCog.trim().replace(/^@/, "");
+    const { data: joiner } = await supabase.from("joiners").select("cog,nome").eq("cog", cog).single();
+    if (!joiner) { setAddClaimErro("Joiner não encontrado."); setAddClaimSalvando(false); return; }
+    const { error } = await supabase.from("claim_reservas").insert([{
+      evento_id: addClaimModal.eventoId,
+      set_id: addClaimModal.setId,
+      joiner_cog: joiner.cog,
+      joiner_nome: joiner.nome || joiner.cog,
+      membro: addClaimModal.membro,
+      status: "pendente",
+      is_admin: false,
+    }]);
+    if (error) { setAddClaimErro("Erro: " + error.message); setAddClaimSalvando(false); return; }
+    setAddClaimModal(null); setAddClaimCog(""); setAddClaimSalvando(false);
+    fetchTudo();
+  }
+
   async function cancelarTodoStandby(eventoId, total) {
     if (!window.confirm(`Cancelar todos os ${total} standby deste evento?`)) return;
     await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado");
@@ -21169,6 +21193,39 @@ function AdminClaimEventos() {
               <button onClick={salvarEdicaoEvento} disabled={editSalvando}
                 style={{ fontFamily:mono, fontSize:11, fontWeight:700, padding:"8px 20px", background:"rgba(245,240,232,.1)", border:"1px solid rgba(245,240,232,.2)", borderRadius:7, color:"var(--offwhite)", cursor:"pointer", opacity: editSalvando ? 0.5 : 1 }}>
                 {editSalvando ? "salvando..." : "SALVAR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {addClaimModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          onClick={() => { setAddClaimModal(null); setAddClaimCog(""); setAddClaimErro(""); }}>
+          <div style={{ background:"#141412", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"24px 22px", width:"100%", maxWidth:360, display:"flex", flexDirection:"column", gap:14 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px" }}>ADICIONAR CLAIM MANUAL</div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)" }}>
+              Membro: <span style={{ color:"var(--lilas)", fontWeight:700 }}>{addClaimModal.membro}</span>
+            </div>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:6 }}>@COG DO JOINER</div>
+              <input
+                value={addClaimCog}
+                onChange={e => { setAddClaimCog(e.target.value); setAddClaimErro(""); }}
+                placeholder="ex: isas_ ou @isas_"
+                autoFocus
+                style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none" }}
+              />
+              {addClaimErro && <div style={{ fontFamily:mono, fontSize:10, color:"#ff6b6b", marginTop:6 }}>{addClaimErro}</div>}
+            </div>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <button onClick={() => { setAddClaimModal(null); setAddClaimCog(""); setAddClaimErro(""); }}
+                style={{ fontFamily:mono, fontSize:11, padding:"8px 16px", background:"transparent", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
+                cancelar
+              </button>
+              <button onClick={salvarClaimManual} disabled={!addClaimCog.trim() || addClaimSalvando}
+                style={{ fontFamily:mono, fontSize:11, fontWeight:700, padding:"8px 20px", background:"rgba(201,168,240,.12)", border:"1px solid rgba(201,168,240,.3)", borderRadius:7, color:"var(--lilas)", cursor:"pointer", opacity:(!addClaimCog.trim()||addClaimSalvando)?.5:1 }}>
+                {addClaimSalvando ? "salvando..." : "ADICIONAR"}
               </button>
             </div>
           </div>
@@ -21299,6 +21356,10 @@ function AdminClaimEventos() {
                   </div>
                   <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                     {sbEvento.length > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"#ffb400", padding:"3px 8px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:4 }}>{sbEvento.length} standby</span>}
+                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(ev.abertura).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
+                      style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
+                      EDITAR
+                    </button>
                     <span style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)" }}>{aberto?"▲":"▼"}</span>
                   </div>
                 </div>
@@ -21365,7 +21426,15 @@ function AdminClaimEventos() {
                                         )}
                                       </>
                                     )}
-                                    {!temAlguem && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)" }}>vaga</span>}
+                                    {!temAlguem && s.status !== "cancelado" && s.status !== "confirmado" && (
+                                      <button onClick={() => { setAddClaimModal({ setId:s.id, membro:m, eventoId:ev.id }); setAddClaimCog(""); setAddClaimErro(""); }}
+                                        style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.5)", background:"none", border:"1px dashed rgba(186,255,57,.2)", borderRadius:4, padding:"1px 7px", cursor:"pointer", letterSpacing:"0.3px" }}>
+                                        + vaga
+                                      </button>
+                                    )}
+                                    {!temAlguem && (s.status === "cancelado" || s.status === "confirmado") && (
+                                      <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.3)" }}>vaga</span>
+                                    )}
                                   </div>
                                 </div>
                               );
