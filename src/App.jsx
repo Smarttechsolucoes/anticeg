@@ -14418,8 +14418,16 @@ function ClaimPublicoPage({ user }) {
   );
 
   if (!eventos.length) return (
-    <div style={{ padding:"40px 0", textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>
-      Nenhum evento de claim ativo no momento.
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:12, padding:"20px 18px" }}>
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.25)", marginBottom:16 }}>NENHUM EVENTO ATIVO</div>
+        <button disabled style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px", color:"rgba(245,240,232,.2)", fontFamily:mono, fontSize:12, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed", opacity:.5 }}>
+          FAZER CLAIM
+        </button>
+        <div style={{ marginTop:10, textAlign:"center", fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>
+          Aguardando abertura de um evento de claim
+        </div>
+      </div>
     </div>
   );
 
