@@ -24685,6 +24685,9 @@ export default function App() {
                 ))}
               </div>
             </div>
+            <div style={{ marginBottom:20, background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.3)", borderRadius:10, padding:"14px 16px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"#ef4444", lineHeight:1.7 }}>
+              <span style={{ fontWeight:700, marginRight:6 }}>⚠</span>Ao marcar sua claim você está ciente da compra do item, erros de marcação não serão aceitos. Caso aconteça, você pode pagar o item e realizar o repasse dentro da comunidade antigom.
+            </div>
             <ClaimPublicoPage user={user} />
           </>}
           {claimPageTab === "ao-vivo" && <ClaimScoreboard />}
