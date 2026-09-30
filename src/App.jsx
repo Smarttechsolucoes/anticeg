@@ -14503,32 +14503,36 @@ function ClaimPublicoPage({ user }) {
                 })}
               </div>
 
-              {Object.values(quantidades[ev.id] || {}).some(q => q > 0) && (
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {(ev.membros||SK8).every(m => (quantidades[ev.id]||{})[m] >= 1) && (
-                    <div style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.25)", borderRadius:6, padding:"8px 12px", letterSpacing:".5px" }}>
-                      OT8 — você vai ganhar um set exclusivo ✓
+              {(() => {
+                const temSelecionado = Object.values(quantidades[ev.id] || {}).some(q => q > 0);
+                const isOT8selecionado = (ev.membros||SK8).every(m => (quantidades[ev.id]||{})[m] >= 1);
+                return (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {temSelecionado && isOT8selecionado && (
+                      <div style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)", background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.25)", borderRadius:6, padding:"8px 12px", letterSpacing:".5px" }}>
+                        OT8 — você vai ganhar um set exclusivo ✓
+                      </div>
+                    )}
+                    <div style={{ display:"flex", gap:6 }}>
+                      {aberto ? (
+                        <button onClick={() => temSelecionado && enviarClaims(ev.id)} disabled={enviando || !temSelecionado}
+                          style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background: temSelecionado?"rgba(186,255,57,.1)":"rgba(245,240,232,.04)", border:`1px solid ${temSelecionado?"rgba(186,255,57,.3)":"rgba(245,240,232,.08)"}`, borderRadius:6, color: temSelecionado?"#BAFF39":"rgba(245,240,232,.2)", cursor: temSelecionado&&!enviando?"pointer":"default", letterSpacing:".5px", transition:"all .15s" }}>
+                          {enviando ? "enviando..." : temSelecionado ? "Enviar claim" : "Selecione membros"}
+                        </button>
+                      ) : (
+                        <div style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                          <span>🔒 abre em</span>
+                          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:2, color:"var(--offwhite)" }}>{hh}:{mm}:{ss}</span>
+                        </div>
+                      )}
+                      <button onClick={() => setQuantidades(prev => ({ ...prev, [ev.id]: {} }))} disabled={!temSelecionado}
+                        style={{ fontFamily:mono, fontSize:9, padding:"10px 12px", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color: temSelecionado?"rgba(245,240,232,.3)":"rgba(245,240,232,.12)", cursor: temSelecionado?"pointer":"default" }}>
+                        limpar
+                      </button>
                     </div>
-                  )}
-                <div style={{ display:"flex", gap:6 }}>
-                  {aberto ? (
-                    <button onClick={() => enviarClaims(ev.id)} disabled={enviando}
-                      style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, color:"#BAFF39", cursor:"pointer", letterSpacing:".5px" }}>
-                      {enviando ? "enviando..." : "Enviar claim"}
-                    </button>
-                  ) : (
-                    <div style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-                      <span>🔒 abre em</span>
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:2, color:"var(--offwhite)" }}>{hh}:{mm}:{ss}</span>
-                    </div>
-                  )}
-                  <button onClick={() => setQuantidades(prev => ({ ...prev, [ev.id]: {} }))}
-                    style={{ fontFamily:mono, fontSize:9, padding:"10px 12px", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", cursor:"pointer" }}>
-                    limpar
-                  </button>
-                </div>
-                </div>
-              )}
+                  </div>
+                );
+              })()}
 
               {sbEvento.length > 0 && (
                 <div style={{ background:"rgba(255,180,0,.04)", border:"1px solid rgba(255,180,0,.15)", borderRadius:10, padding:"10px 14px" }}>
