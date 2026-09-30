@@ -4727,7 +4727,7 @@ ${p.comprovante_url ? (() => {
                 A notificação foi enviada para {r.novo_dono_nome}. A admin irá processar o repasse em breve.
               </div>
 
-              <button onClick={() => { setRepasseRecibo(null); setRepasseItem(null); setRepasseNovoDono(null); setRepasseNovoDonoSearch(""); setRepasseQuitado(null); setRepasseCustos(new Set()); setRepassePendDesc(""); setRepasseValor(""); setRepasseComprovante(null); setRepasseObs(""); setRepasseStatus("idle"); setRepasseCiente(false); }}
+              <button onClick={() => { setRepasseRecibo(null); setRepasseItensSel(new Set()); setRepasseNovoDono(null); setRepasseNovoDonoSearch(""); setRepasseQuitado(null); setRepasseCustos(new Set()); setRepassePendDesc(""); setRepasseValor(""); setRepasseComprovante(null); setRepasseObs(""); setRepasseStatus("idle"); setRepasseCiente(false); }}
                 style={{ background:"transparent", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.6)", borderRadius:8, padding:"9px 18px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
                 Novo repasse
               </button>
@@ -14175,6 +14175,7 @@ function ClaimScoreboard() {
 function ClaimPublicoPage({ user }) {
   const mono = "'DM Mono',monospace";
   const SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+  const membrosDe = (ev) => (Array.isArray(ev?.membros) && ev.membros.length ? ev.membros : SK8);
   const [eventos, setEventos] = useState(null);
   const [sets, setSets] = useState({});
   const [reservas, setReservas] = useState({});
@@ -14255,7 +14256,7 @@ function ClaimPublicoPage({ user }) {
       const membrosPromovidos = new Set();
       for (const r of sbEvento) {
         if (membrosPromovidos.has(r.membro)) continue;
-        if (!Array.isArray(ev.membros) || !ev.membros.includes(r.membro)) continue;
+        if (!membrosDe(ev).includes(r.membro)) continue;
         await supabase.from("claim_reservas")
           .update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
         membrosPromovidos.add(r.membro);
@@ -14287,7 +14288,7 @@ function ClaimPublicoPage({ user }) {
     const { data: resDoSet } = await supabase.from("claim_reservas")
       .select("membro").eq("set_id", setId).neq("status","cancelado");
     const claimados = new Set((resDoSet || []).map(r => r.membro));
-    if (!ev.membros.every(m => claimados.has(m))) return;
+    if (!membrosDe(ev).every(m => claimados.has(m))) return;
 
     await supabase.from("claim_sets").update({ status:"fechado", closed_at: new Date().toISOString() }).eq("id", setId);
 
@@ -14315,7 +14316,7 @@ function ClaimPublicoPage({ user }) {
     const membrosPromovidos = new Set();
     for (const r of (sbAll || [])) {
       if (membrosPromovidos.has(r.membro)) continue;
-      if (!ev.membros.includes(r.membro)) continue;
+      if (!membrosDe(ev).includes(r.membro)) continue;
       await supabase.from("claim_reservas").update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
       membrosPromovidos.add(r.membro);
     }
@@ -14324,7 +14325,37 @@ function ClaimPublicoPage({ user }) {
     await verificarFechamento(eventoId, novoSet.id);
   }
 
+  async function lerEstadoFresco(eventoId) {
+    const { data: setsData, error: e1 } = await supabase.from("claim_sets")
+      .select("*").eq("evento_id", eventoId).neq("status","cancelado").order("numero");
+    if (e1) throw e1;
+    const setIds = (setsData || []).map(x => x.id);
+    const resMap = {};
+    if (setIds.length) {
+      const { data: resData, error: e2 } = await supabase.from("claim_reservas")
+        .select("*").in("set_id", setIds).neq("status","cancelado");
+      if (e2) throw e2;
+      (resData || []).forEach(r => { (resMap[r.set_id] = resMap[r.set_id] || []).push(r); });
+    }
+    const { data: sbData, error: e3 } = await supabase.from("claim_reservas")
+      .select("*").eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado");
+    if (e3) throw e3;
+    return { sets: setsData || [], reservas: resMap, standby: sbData || [] };
+  }
+
   async function enviarClaims(eventoId, qtdOverride) {
+    try {
+      await enviarClaimsInterno(eventoId, qtdOverride);
+    } catch (e) {
+      console.error("enviarClaims", e);
+      setClaimErro("Não foi possível enviar agora. Verifique sua conexão e tente novamente." + (e?.code ? " (cód. " + e.code + ")" : ""));
+      fetchTudo(false).catch(() => {});
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function enviarClaimsInterno(eventoId, qtdOverride) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
@@ -14333,23 +14364,34 @@ function ClaimPublicoPage({ user }) {
     if (!pedidos.length) return;
     setEnviando(true); setClaimErro(null);
 
+    // Bloqueio e estado sempre lidos do banco no momento do envio (evita dados antigos de até 30s)
+    const { data: jb } = await supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle();
+    if (jb?.bloqueado) { setIsBloqueada(true); setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
+    const fresco = await lerEstadoFresco(eventoId);
+    let setsEv = fresco.sets, resMap = fresco.reservas, sbEv = fresco.standby;
+
     // OT8: joiner marcou todos os membros → cria set exclusivo
-    const todosOsMembros = ev.membros || SK8;
+    const todosOsMembros = membrosDe(ev);
     const isOT8 = todosOsMembros.every(m => (qtds[m] || 0) >= 1);
     if (isOT8) {
       // Bloqueia OT8 se já tem qualquer claim ativo para esse evento
       const jaTemAlgum = todosOsMembros.some(m => {
-        const noSets = (sets[eventoId] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length), 0);
-        const noStandby = (standby[eventoId]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length;
+        const noSets = setsEv.reduce((acc, s) => acc + ((resMap[s.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length), 0);
+        const noStandby = sbEv.filter(r=>r.membro===m&&r.joiner_cog===user.cog).length;
         return (noSets + noStandby) > 0;
       });
       if (jaTemAlgum) { setClaimErro("Você já tem membros claimados. Cancele antes de fazer OT8."); setEnviando(false); return; }
       // Busca número mais alto atual no banco para evitar state desatualizado
-      const { data: ultimoSet } = await supabase.from("claim_sets")
-        .select("numero").eq("evento_id", eventoId).neq("status","cancelado").order("numero", { ascending: false }).limit(1);
-      const prox = ((ultimoSet?.[0]?.numero) || 0) + 1;
-      const { data: novoSet, error: errSet } = await supabase.from("claim_sets")
-        .insert([{ evento_id: eventoId, numero: prox, status: "aberto" }]).select().single();
+      let novoSet = null, errSet = null;
+      for (let t = 0; t < 4 && !novoSet; t++) {
+        const { data: ultimoSet } = await supabase.from("claim_sets")
+          .select("numero").eq("evento_id", eventoId).order("numero", { ascending: false }).limit(1);
+        const prox = ((ultimoSet?.[0]?.numero) || 0) + 1;
+        const r = await supabase.from("claim_sets")
+          .insert([{ evento_id: eventoId, numero: prox, status: "aberto" }]).select().single();
+        novoSet = r.data; errSet = r.error;
+        if (errSet && errSet.code !== "23505") break;
+      }
       if (errSet || !novoSet) { setClaimErro("Erro ao criar set exclusivo. Tente novamente."); setEnviando(false); return; }
       const rowsOT8 = todosOsMembros.map(m => ({
         evento_id: eventoId, set_id: novoSet.id,
@@ -14371,19 +14413,19 @@ function ClaimPublicoPage({ user }) {
       setEnviando(false); fetchTudo(); return;
     }
 
-    const evSetsAbertos = (sets[eventoId] || []).filter(s => s.status === "aberto");
     const limite = ev.limite_por_joiner || Infinity;
+    const evSetsAbertos = setsEv.filter(s => s.status === "aberto");
     const rows = [];
     for (const [membro, qtd] of pedidos) {
-      const jaTemNoSets = (sets[eventoId] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
-      const jaTemStandby = (standby[eventoId]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
+      const jaTemNoSets = setsEv.reduce((acc, s) => acc + ((resMap[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
+      const jaTemStandby = sbEv.filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
       const jaTem = jaTemNoSets + jaTemStandby;
       const qtdPermitida = Math.min(qtd, Math.max(0, limite - jaTem));
       if (qtdPermitida === 0) continue;
       let adicionados = 0;
       for (const s of evSetsAbertos) {
         if (adicionados >= qtdPermitida) break;
-        const resSet = reservas[s.id] || [];
+        const resSet = resMap[s.id] || [];
         const jaMeu = resSet.some(r => r.membro === membro && r.joiner_cog === user.cog);
         const ocupado = resSet.some(r => r.membro === membro);
         if (!jaMeu && !ocupado) {
@@ -14395,16 +14437,46 @@ function ClaimPublicoPage({ user }) {
         rows.push({ evento_id: eventoId, set_id: null, joiner_cog: user.cog, joiner_nome: user.nome || user.cog, membro, status: "standby" });
       }
     }
-    if (!rows.length) { setClaimErro("Você já fez claim desses membros."); setEnviando(false); return; }
-    const { error } = await supabase.from("claim_reservas").insert(rows);
-    if (error) {
-      setClaimErro(error.code === "23505" ? "Alguém acabou de pegar esse membro. Recarregue e tente novamente." : "Erro ao enviar. Tente novamente.");
-      setEnviando(false); fetchTudo(); return;
+    if (!rows.length) { setClaimErro("Você já fez claim desses membros."); fetchTudo(false); return; }
+
+    // Tenta tudo de uma vez. Se houver conflito (alguém pegou a vaga no mesmo instante),
+    // envia item por item e o que não estiver disponível vai automaticamente para o standby.
+    let gravados = [], viraramStandby = [], falhas = [];
+    const { error: errLote } = await supabase.from("claim_reservas").insert(rows);
+    if (!errLote) {
+      gravados = rows;
+    } else if (errLote.code !== "23505") {
+      console.error("claim insert", errLote);
+      setClaimErro("Erro ao enviar. Tente novamente." + (errLote.code ? " (cód. " + errLote.code + ")" : ""));
+      fetchTudo(); return;
+    } else {
+      for (const row of rows) {
+        const r1 = await supabase.from("claim_reservas").insert([row]);
+        if (!r1.error) { gravados.push(row); continue; }
+        if (r1.error.code === "23505" && row.set_id) {
+          const rowSb = { ...row, set_id: null, status: "standby" };
+          const r2 = await supabase.from("claim_reservas").insert([rowSb]);
+          if (!r2.error) { gravados.push(rowSb); viraramStandby.push(row.membro); continue; }
+          console.error("claim standby", r2.error);
+        } else {
+          console.error("claim insert item", r1.error);
+        }
+        falhas.push(row.membro);
+      }
+    }
+    if (!gravados.length) {
+      setClaimErro("Não foi possível registrar seu claim" + (falhas.length ? " de " + [...new Set(falhas)].join(", ") : "") + ". Você já pode ter esse membro na lista.");
+      fetchTudo(); return;
     }
     for (const s of evSetsAbertos) await verificarFechamento(eventoId, s.id);
     setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
-    const todosStandby = rows.every(r => r.status === "standby");
-    setClaimOk(todosStandby ? "Você está no standby! Será notificada se uma vaga abrir." : "Claim enviado com sucesso!");
+    const todosStandby = gravados.every(r => r.status === "standby");
+    const nomesSb = [...new Set(viraramStandby)];
+    const nomesFalha = [...new Set(falhas)];
+    setClaimOk(
+      nomesFalha.length ? "Claim enviado, exceto: " + nomesFalha.join(", ") + " (já estão na sua lista)."
+      : nomesSb.length ? "Claim enviado! " + nomesSb.join(", ") + " já tinha(m) sido pego(s) e você entrou no standby automático."
+      : todosStandby ? "Você está no standby! Será notificada se uma vaga abrir." : "Claim enviado com sucesso!");
     setTimeout(() => setClaimOk(null), 4000);
     setEnviando(false);
     fetchTudo();
@@ -14474,7 +14546,7 @@ function ClaimPublicoPage({ user }) {
             {/* Membros + quantidade — sempre visível para preparar antes do horário */}
             <div style={{ padding:"12px 18px 16px", display:"flex", flexDirection:"column", gap:12 }}>
               <div style={{ display:"flex", flexDirection:"column" }}>
-                {(ev.membros || SK8).map(membro => {
+                {membrosDe(ev).map(membro => {
                   const slotsAbertos = evSets.filter(s => s.status === "aberto");
                   const meuNoSets = (sets[ev.id] || []).reduce((acc, s) => acc + ((reservas[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
                   const meuStandby = (standby[ev.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
@@ -14505,7 +14577,7 @@ function ClaimPublicoPage({ user }) {
 
               {(() => {
                 const temSelecionado = Object.values(quantidades[ev.id] || {}).some(q => q > 0);
-                const isOT8selecionado = (ev.membros||SK8).every(m => (quantidades[ev.id]||{})[m] >= 1);
+                const isOT8selecionado = membrosDe(ev).every(m => (quantidades[ev.id]||{})[m] >= 1);
                 return (
                   <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                     {temSelecionado && isOT8selecionado && (
@@ -24361,6 +24433,36 @@ export default function App() {
     if (user) setPage("portal");
   }, []);
 
+  async function carregarAvisos(u) {
+    if (!u || u.guest || u.pre_cadastro || !u.cog) return;
+    try {
+      const { data: notifs } = await supabase.from("notifications")
+        .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
+      setNotificacoes(notifs || []);
+
+      const { data: myReports } = await supabase.from("reports")
+        .select("item_id, status").eq("joiner_cog", u.cog);
+      if (myReports) setPendingReportIds(new Set(myReports.filter(r => r.status === "pendente").map(r => r.item_id)));
+
+      const { data: allPushes } = await supabase.from("pushes").select("*").eq("active", true)
+        .or(`joiner_cog.is.null,joiner_cog.eq.${u.cog}`)
+        .order("created_at", { ascending: false });
+      const { data: lidos } = await supabase.from("push_reads").select("push_id").eq("joiner_cog", u.cog);
+      const lidosIds = new Set((lidos || []).map(r => r.push_id));
+      setPushAtivos((allPushes || []).filter(p => !lidosIds.has(p.id)));
+    } catch (e) { console.error("carregarAvisos", e); }
+  }
+
+  // Avisos: ao restaurar sessão, a cada 2 min e ao voltar para a aba
+  useEffect(() => {
+    if (!user || user.guest || user.pre_cadastro) return;
+    carregarAvisos(user);
+    const iv = setInterval(() => carregarAvisos(user), 2 * 60 * 1000);
+    const onVis = () => { if (document.visibilityState === "visible") carregarAvisos(user); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
+  }, [user?.cog]);
+
   async function handleLogin(u, itensData) {
     localStorage.setItem("anticeg_user_v2", JSON.stringify(u));
     localStorage.setItem("anticeg_session_at_v2", String(Date.now()));
@@ -24380,22 +24482,7 @@ export default function App() {
       if (isMobile && !isStandalone && !localStorage.getItem("anticeg_a2hs_asked")) {
         setTimeout(() => setShowA2HS(true), 2000);
       }
-      const { data: notifs } = await supabase.from("notifications")
-        .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
-      if (notifs?.length > 0) setNotificacoes(notifs);
-
-      const { data: myReports } = await supabase.from("reports")
-        .select("item_id, status").eq("joiner_cog", u.cog);
-      if (myReports) setPendingReportIds(new Set(myReports.filter(r => r.status === "pendente").map(r => r.item_id)));
-
-      const { data: allPushes } = await supabase.from("pushes").select("*").eq("active", true)
-        .or(`joiner_cog.is.null,joiner_cog.eq.${u.cog}`)
-        .order("created_at", { ascending: false });
-      if (allPushes?.length > 0) {
-        const { data: lidos } = await supabase.from("push_reads").select("push_id").eq("joiner_cog", u.cog);
-        const lidosIds = new Set((lidos || []).map(r => r.push_id));
-        setPushAtivos(allPushes.filter(p => !lidosIds.has(p.id)));
-      }
+      carregarAvisos(u);
     }
   }
 
@@ -24640,6 +24727,25 @@ export default function App() {
             setNotificacoes(prev => prev.filter(x => x.id !== n.id));
           }}
         />
+      ))}
+      {notificacoes.filter(n => n.type !== "report_resolved").slice(0, 1).map(n => (
+        <div key={n.id} style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", zIndex:900, width:"calc(100% - 48px)", maxWidth:520, background:"var(--card-bg)", border:"1px solid rgba(186,255,57,.3)", borderRadius:12, padding:"16px 18px", boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            <span style={{ fontSize:20 }}>🔔</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, color:"rgba(245,240,232,.75)", lineHeight:1.5 }}>{n.message}</div>
+              <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                {n.type === "envio_address_request" && (
+                  <button onClick={() => setTab("envio")} style={{ background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.3)", color:"#BAFF39", borderRadius:6, padding:"6px 14px", fontSize:11, cursor:"pointer" }}>Ir para Envios →</button>
+                )}
+                <button onClick={async () => {
+                  await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", n.id);
+                  setNotificacoes(prev => prev.filter(x => x.id !== n.id));
+                }} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.35)", borderRadius:6, padding:"6px 14px", fontSize:11, cursor:"pointer" }}>OK, entendi</button>
+              </div>
+            </div>
+          </div>
+        </div>
       ))}
       {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
       {showPerfilModal && !user.guest && (
