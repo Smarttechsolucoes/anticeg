@@ -3991,7 +3991,8 @@ ${p.comprovante_url ? (() => {
           } catch (emailErr) {
             const motivo = emailErr.message === "sem_email"
               ? "⚠ Adicione seu e-mail no perfil para receber confirmações"
-              : `⚠ Erro ao enviar e-mail: ${emailErr.message}`;
+              : "⚠ O e-mail dessa vez não será enviado por limite do plano do site, mas seu pagamento foi computado.";
+            console.error("email confirmacao pagamento", emailErr);
             setPagEmailMsg({ ok: false, txt: motivo });
           }
           if (cashbackVal > 0 && saldoCashback > 0) {
