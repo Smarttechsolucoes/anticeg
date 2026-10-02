@@ -11866,7 +11866,7 @@ function WaveMakerTab({ user }) {
 
   const ITENS_WM = [
     { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15" },
-    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25" },
+    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25", indisponivel: true },
     { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15" },
     { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10" },
     { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: "R$7"  },
@@ -12064,19 +12064,27 @@ function WaveMakerTab({ user }) {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {ITENS_WM.map(it => {
           const sel = itensSel.includes(it.id);
+          const indisp = !!it.indisponivel;
           return (
             <div key={it.id} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom(it)}>
-                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity:sel?1:.75 }} />
+                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity: indisp ? .3 : sel?1:.75, filter: indisp ? "grayscale(1)" : "none" }} />
+                {indisp && <div style={{ position:"absolute", top:"50%", left:0, right:0, transform:"translateY(-50%)", textAlign:"center", background:"rgba(0,0,0,.7)", padding:"6px 0", fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"2px", color:"#ff6b6b" }}>INDISPONÍVEL</div>}
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
-                <div style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700, marginTop:2 }}>{it.preco}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
+                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{it.preco}</div>
+                {indisp ? (
+                  <button disabled style={{ marginTop:6, border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"6px 0", background:"rgba(245,240,232,.04)", color:"rgba(255,107,107,.7)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed" }}>
+                    INDISPONÍVEL
+                  </button>
+                ) : (
                 <button onClick={() => { setModalidade("ITENS SOLTOS"); toggleItem(it.id); }}
                   style={{ marginTop:6, border:`1px solid ${sel?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:sel?"var(--lilas)":"transparent", color:sel?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
                   {sel ? "✓ SELECIONADO" : "SELECIONAR"}
                 </button>
+                )}
               </div>
             </div>
           );
