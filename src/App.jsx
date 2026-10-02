@@ -7973,6 +7973,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [popupCount,        setPopupCount]        = useState(0);
   const [bazaarInCount,     setBazaarInCount]     = useState(0);
   const [lightstickCount,   setLightstickCount]   = useState(0);
+  const [popcornSleeveCount, setPopcornSleeveCount] = useState(0);
   const [waveMakerCount,   setWaveMakerCount]   = useState(0);
   const [runItCount,       setRunItCount]       = useState(0);
   const [dropsStats,       setDropsStats]       = useState({});
@@ -8252,6 +8253,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setBazaarInCount(count); });
     supabase.from("pedidos_lightstick").select("id", { count: "exact", head: true }).eq("status", "aguardando")
       .then(({ count }) => { if (count) setLightstickCount(count); });
+    supabase.from("pedidos_popcorn_sleeve").select("id", { count: "exact", head: true }).eq("status", "aguardando")
+      .then(({ count }) => { if (count) setPopcornSleeveCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "WAVE MAKER - SG JAPAN 2027").eq("status", "pendente")
       .then(({ count }) => { if (count) setWaveMakerCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "RUN IT VOL 2").eq("status", "pendente")
@@ -8542,7 +8545,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + waveMakerCount + runItCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + waveMakerCount + runItCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9289,7 +9292,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","wave-maker-admin","run-it-admin"].includes(adminMainTab) && (
+      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","wave-maker-admin","run-it-admin"].includes(adminMainTab) && (
         <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:4, padding:"4px 0", letterSpacing:".04em" }}>
           ← Todos os drops
         </button>
@@ -9300,9 +9303,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
       {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
       {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
+      {adminMainTab === "popcorn-sleeve" && <AdminPopcornSleeve onCountChange={setPopcornSleeveCount} />}
       {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
       {adminMainTab === "run-it-admin"     && <AdminRunIt     onCountChange={setRunItCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} waveMakerCount={waveMakerCount} runItCount={runItCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} waveMakerCount={waveMakerCount} runItCount={runItCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -22854,7 +22858,7 @@ function RunItVol2Tab({ user }) {
 }
 
 // ── Admin Todos os Drops ──────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, waveMakerCount, runItCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, waveMakerCount, runItCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const DROPS = [
     { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
@@ -22863,6 +22867,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" },
     { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
     { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
   ];
@@ -23235,6 +23240,283 @@ function LightstickForm({ onVoltar }) {
   );
 }
 
+// ── POP-CORN SLEEVE Form ───────────────────────────────────────
+const POPCORN_SLEEVE_DEADLINE = new Date("2026-10-15T23:59:59-03:00");
+const POPCORN_SLEEVE_IMG = "https://popcontr2632.cdn-nhncommerce.com/data/goods/25/10/40/97309/97309_magnify_032.jpg";
+
+function PopcornSleeveForm({ onVoltar }) {
+  const mono = "'DM Mono',monospace";
+  const [joiner, setJoiner]   = useState(null);
+  const [idInp, setIdInp]     = useState('');
+  const [idSt, setIdSt]       = useState('');
+  const [idMsg, setIdMsg]     = useState('');
+  const [comprovante, setComprovante] = useState(null);
+  const [ciente, setCiente]   = useState(false);
+  const [sending, setSending] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [err, setErr]         = useState('');
+  const [copiado, setCopiado] = useState(false);
+  const fileRef = useRef(null);
+  const tmrRef  = useRef(null);
+  const idRef   = useRef('');
+  const jRef    = useRef(null);
+
+  const encerrado = new Date() > POPCORN_SLEEVE_DEADLINE;
+  const formOk = idInp.trim().length >= 3 && !!comprovante && ciente && !encerrado;
+
+  const copiarPix = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const buscar = async () => {
+    clearTimeout(tmrRef.current);
+    const v = idRef.current.trim();
+    if (!v) return;
+    setIdSt('loading'); setIdMsg('Buscando...');
+    const isEml = v.includes('@') && v.indexOf('@') > 0;
+    let q = supabase.from('joiners').select('cog,nome,email').limit(1);
+    q = isEml ? q.eq('email', v.toLowerCase()) : q.ilike('twitter', `@${v.replace(/^@/, '')}`);
+    try {
+      const { data } = await q;
+      if (data?.length) {
+        const j = data[0]; setJoiner(j); jRef.current = j;
+        setIdSt('found'); setIdMsg(`✦ ${j.nome || j.cog} · @${j.cog}`);
+      } else {
+        setJoiner(null); jRef.current = null;
+        setIdSt('notfound'); setIdMsg('Não encontrado no cadastro — pode enviar assim mesmo.');
+      }
+    } catch {
+      setJoiner(null); jRef.current = null;
+      setIdSt('notfound'); setIdMsg('Erro de conexão — pode enviar assim mesmo.');
+    }
+  };
+
+  const onId = (v) => {
+    idRef.current = v; setIdInp(v);
+    setIdSt(''); setIdMsg(''); setJoiner(null); jRef.current = null;
+    clearTimeout(tmrRef.current);
+    if (v.trim().length >= 3) tmrRef.current = setTimeout(buscar, 600);
+  };
+
+  const enviar = async () => {
+    if (!formOk || sending) return;
+    setSending(true); setErr('');
+    const j = jRef.current;
+    const contato = j ? j.cog : idInp.trim();
+    const nome    = j ? (j.nome || j.cog) : idInp.trim();
+    let comprovanteUrl = null;
+    try {
+      const slug = contato.replace(/[^a-z0-9]/gi, '_');
+      const ext = comprovante.name.split('.').pop() || 'jpg';
+      const path = `popcorn-sleeve/${slug}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        contentType: comprovante.type || 'application/octet-stream', upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(path);
+      comprovanteUrl = pub.publicUrl;
+    } catch {
+      setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
+    }
+    const { error } = await supabase.from('pedidos_popcorn_sleeve').insert([{
+      nome, contato, joiner_cog: j?.cog || null,
+      comprovante_url: comprovanteUrl, status: 'aguardando',
+    }]);
+    if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
+    setDone(true); setSending(false);
+  };
+
+  if (done) return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer", marginBottom:20, padding:0 }}>← voltar</button>
+      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.25)", borderRadius:14, padding:"32px 24px", textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>✦</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1, color:"#BAFF39", marginBottom:8 }}>PEDIDO REGISTRADO!</div>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.7 }}>
+          Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.
+        </div>
+        <div style={{ marginTop:20, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>Envio internacional somente em novembro.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer", marginBottom:20, padding:0 }}>← voltar</button>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, marginBottom:4 }}>POP-CORN SLEEVE</div>
+      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginBottom:20 }}>Pré-venda · formulário de 02 a 15/10</div>
+
+      <img src={POPCORN_SLEEVE_IMG} alt="Pop-corn sleeve" style={{ width:"100%", maxHeight:340, objectFit:"contain", borderRadius:12, background:"rgba(245,240,232,.04)", marginBottom:18 }} />
+
+      {/* Preço */}
+      <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between", alignItems:"center", gap:8, marginBottom:18 }}>
+        <div>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"#BAFF39", letterSpacing:0.5 }}>R$ 45,00</div>
+        </div>
+        <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", background:"rgba(186,255,57,.1)", borderRadius:6, padding:"4px 10px", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>PAGAMENTO IMEDIATO</span>
+      </div>
+
+      {/* Informações do item */}
+      <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px", marginBottom:16, display:"flex", flexDirection:"column", gap:8 }}>
+        {[
+          ["📦", "Sleeve de 100 un. · 56x87 mm"],
+          ["💰", "R$ 45,00 = item + taxa + frete. Nenhum valor a mais será adicionado."],
+          ["🗓️", "Formulário aberto de 02 a 15 de outubro"],
+        ].map(([icon, text]) => (
+          <div key={text} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+            <span style={{ fontSize:13, flexShrink:0 }}>{icon}</span>
+            <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>{text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Aviso envio */}
+      <div style={{ background:"rgba(240,192,64,.04)", border:"1px solid rgba(240,192,64,.15)", borderRadius:10, padding:"10px 14px", marginBottom:16, display:"flex", gap:10, alignItems:"flex-start" }}>
+        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(240,192,64,.7)", lineHeight:1.6 }}>
+          <strong>Envio internacional somente em NOVEMBRO</strong>, compre ciente do prazo.
+        </div>
+      </div>
+
+      {/* Bloco PIX */}
+      <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX</div>
+        <div style={{ display:"flex", gap:8, alignItems:"stretch" }}>
+          <div style={{ flex:1, minWidth:0, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"10px 11px", fontSize:11, fontFamily:mono, color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
+          <button onClick={copiarPix} style={{ flexShrink:0, padding:"10px 16px", background: copiado ? "rgba(186,255,57,.25)" : "rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+            {copiado ? "✓" : "Copiar"}
+          </button>
+        </div>
+      </div>
+
+      {encerrado && (
+        <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", marginBottom:16 }}>Pré-venda encerrada.</div>
+      )}
+
+      {/* Identificação */}
+      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <div>
+          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>SEU @ OU E-MAIL</label>
+          <input value={idInp} onChange={e => onId(e.target.value)} placeholder="@usuario ou email@exemplo.com"
+            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:`1px solid ${idSt==='found'?"rgba(186,255,57,.4)":idSt==='notfound'?"rgba(240,192,64,.35)":"rgba(245,240,232,.12)"}`, borderRadius:8, padding:"10px 12px", color:"#F5F0E8", fontFamily:mono, fontSize:12, outline:"none", boxSizing:"border-box" }} />
+          {idMsg && (
+            <div style={{ fontFamily:mono, fontSize:10, marginTop:5, color: idSt==='found'?"#BAFF39":idSt==='loading'?"rgba(245,240,232,.4)":"rgba(240,192,64,.8)" }}>{idMsg}</div>
+          )}
+        </div>
+
+        <div>
+          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>COMPROVANTE DE PAGAMENTO *</label>
+          <div onClick={() => fileRef.current?.click()} style={{ border:"1px dashed rgba(245,240,232,.18)", borderRadius:8, padding:"20px 16px", textAlign:"center", cursor:"pointer", background: comprovante ? "rgba(186,255,57,.04)" : "rgba(245,240,232,.02)" }}>
+            {comprovante ? (
+              <div style={{ fontFamily:mono, fontSize:11, color:"#BAFF39" }}>✓ {comprovante.name}</div>
+            ) : (
+              <>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:4 }}>Clique para anexar</div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>JPG, PNG ou PDF</div>
+              </>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files?.[0] || null)} style={{ display:"none" }} />
+        </div>
+
+        <label style={{ display:"flex", gap:10, alignItems:"flex-start", cursor:"pointer" }}>
+          <input type="checkbox" checked={ciente} onChange={e => setCiente(e.target.checked)} style={{ marginTop:2 }} />
+          <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>
+            Estou ciente de que o envio internacional será somente em novembro.
+          </span>
+        </label>
+
+        {err && <div style={{ fontFamily:mono, fontSize:10, color:"#ff6b6b" }}>{err}</div>}
+
+        <button onClick={enviar} disabled={!formOk || sending}
+          style={{ padding:"14px", borderRadius:10, background: formOk && !sending ? "var(--laranja)" : "rgba(245,240,232,.06)", color: formOk && !sending ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:12, fontWeight:700, border:"none", cursor: formOk && !sending ? "pointer" : "default", letterSpacing:"1px", marginTop:4 }}>
+          {sending ? "Enviando..." : "CONFIRMAR PEDIDO →"}
+        </button>
+
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", textAlign:"center", lineHeight:1.6 }}>
+          Realize o PIX antes de enviar · Formulário disponível até 15/10
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Admin POP-CORN SLEEVE ──────────────────────────────────────
+function AdminPopcornSleeve({ onCountChange }) {
+  const [pedidos, setPedidos] = useState(null);
+  const mono = "'DM Mono',monospace";
+
+  useEffect(() => {
+    supabase.from("pedidos_popcorn_sleeve").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => setPedidos(data || []));
+  }, []);
+
+  const atualizar = async (id, novoStatus) => {
+    await supabase.from("pedidos_popcorn_sleeve").update({ status: novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, status: novoStatus } : p);
+      onCountChange?.(next.filter(p => p.status === "aguardando").length);
+      return next;
+    });
+  };
+
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>POP-CORN SLEEVE — PEDIDOS</div>
+      {pedidos === null ? <div style={{ fontFamily:mono, fontSize:12, opacity:.4 }}>carregando...</div> : <>
+        <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap" }}>
+          {[
+            ["Total",       pedidos.length],
+            ["Aguardando",  pedidos.filter(p => p.status === "aguardando").length],
+            ["Confirmados", pedidos.filter(p => p.status === "confirmado").length],
+            ["Arrecadado",  `R$ ${(pedidos.filter(p => p.status === "confirmado").length * 45).toLocaleString("pt-BR")}`],
+          ].map(([l, v]) => (
+            <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 16px", minWidth:100 }}>
+              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>{l}</div>
+              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+          {pedidos.map(p => (
+            <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="aguardando"?"rgba(255,92,26,.2)":p.status==="confirmado"?"rgba(74,222,128,.15)":"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:4, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                    {p.contato && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>@{p.contato}</span>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ 45,00</span>
+                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
+                  </div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                  {p.status === "aguardando" && (
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={() => atualizar(p.id, "confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                      <button onClick={() => atualizar(p.id, "cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b",  fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
+}
+
 // ── Aba Pré-vendas ─────────────────────────────────────────────
 function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
@@ -23255,7 +23537,19 @@ function PrevendaTab({ user }) {
   const bazaarInAberta    = now <= new Date("2026-08-27T23:59:59-03:00");
   const lightstickAberto  = now <= LIGHTSTICK_DEADLINE;
 
+  const popcornSleeveAberto = now <= POPCORN_SLEEVE_DEADLINE;
+
   const formularios = [
+    {
+      key: "popcorn-sleeve",
+      ativo: popcornSleeveAberto,
+      titulo: "POP-CORN SLEEVE",
+      subtitulo: "Sleeve 100 un. · 56x87 mm",
+      url: "/prevenda/popcorn-sleeve",
+      img: POPCORN_SLEEVE_IMG,
+      tags: ["Formulário 02–15/10", "R$ 45,00"],
+      info: "Pagamento imediato via PIX · Envio internacional somente em novembro",
+    },
     {
       key: "popup-skzoo-rio",
       ativo: false,
@@ -24571,6 +24865,7 @@ export default function App() {
   if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
   if (window.location.pathname === "/prevenda/lightstick") return <LightstickForm onVoltar={() => window.location.href = "/"} />;
+  if (window.location.pathname === "/prevenda/popcorn-sleeve") return <PopcornSleeveForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) {
