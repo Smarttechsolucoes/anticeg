@@ -12095,9 +12095,9 @@ function WaveMakerTab({ user }) {
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Kits</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {[
-          { id: "KIT 01", foto: "/wave-maker/KIT 01.png", preco: "R$35" },
+          { id: "KIT 01", foto: "/wave-maker/KIT 01.png", preco: "R$35", estoque: 2 },
           { id: "KIT 02", foto: "/wave-maker/KIT 02.png", preco: "R$38", indisponivel: true },
-          { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: "R$40" },
+          { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: "R$40", estoque: 2 },
         ].map(kit => {
           const ativo = modalidade === kit.id && itensSel.length === 0;
           const indisp = !!kit.indisponivel;
@@ -12111,6 +12111,9 @@ function WaveMakerTab({ user }) {
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color: indisp ? "rgba(245,240,232,.35)" : ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{kit.id}</div>
                 <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{kit.preco}</div>
+                {!indisp && kit.estoque && (
+                  <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ Apenas {kit.estoque} unidades em estoque</div>
+                )}
                 {indisp ? (
                   <button disabled style={{ marginTop:6, border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"6px 0", background:"rgba(245,240,232,.04)", color:"rgba(255,107,107,.7)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed" }}>
                     INDISPONÍVEL
