@@ -23243,6 +23243,7 @@ function LightstickForm({ onVoltar }) {
 // ── POP-CORN SLEEVE Form ───────────────────────────────────────
 const POPCORN_SLEEVE_DEADLINE = new Date("2026-10-15T23:59:59-03:00");
 const POPCORN_SLEEVE_WHATSAPP = "https://chat.whatsapp.com/GLEIpfHqOLr7yX70mGVwoV";
+const POPCORN_SLEEVE_CARTAO_URL = "https://linknabio.gg/anticeg-comu";
 const POPCORN_SLEEVE_VALOR = 45;
 const POPCORN_SLEEVE_MAX = 10;
 const POPCORN_SLEEVE_IMG ="https://popcontr2632.cdn-nhncommerce.com/data/goods/25/10/40/97309/97309_magnify_032.jpg";
@@ -23256,6 +23257,7 @@ function PopcornSleeveForm({ onVoltar }) {
   const [comprovante, setComprovante] = useState(null);
   const [ciente, setCiente]   = useState(false);
   const [quantidade, setQuantidade] = useState(1);
+  const [metodo, setMetodo]   = useState('pix');
   const [sending, setSending] = useState(false);
   const [done, setDone]       = useState(false);
   const [err, setErr]         = useState('');
@@ -23268,7 +23270,7 @@ function PopcornSleeveForm({ onVoltar }) {
   const valorTotal = POPCORN_SLEEVE_VALOR * quantidade;
   const fmtBRL = (n) => n.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
   const encerrado = new Date() > POPCORN_SLEEVE_DEADLINE;
-  const formOk = idInp.trim().length >= 3 && !!comprovante && ciente && !encerrado;
+  const formOk = idInp.trim().length >= 3 && (metodo === 'cartao' || !!comprovante) && ciente && !encerrado;
 
   const copiarPix = () => {
     navigator.clipboard.writeText(PIX_KEY);
@@ -23313,23 +23315,25 @@ function PopcornSleeveForm({ onVoltar }) {
     const contato = j ? j.cog : idInp.trim();
     const nome    = j ? (j.nome || j.cog) : idInp.trim();
     let comprovanteUrl = null;
-    try {
-      const slug = contato.replace(/[^a-z0-9]/gi, '_');
-      const ext = comprovante.name.split('.').pop() || 'jpg';
-      const path = `popcorn-sleeve/${slug}_${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
-        contentType: comprovante.type || 'application/octet-stream', upsert: false,
-      });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(path);
-      comprovanteUrl = pub.publicUrl;
-    } catch {
-      setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
+    if (comprovante) {
+      try {
+        const slug = contato.replace(/[^a-z0-9]/gi, '_');
+        const ext = comprovante.name.split('.').pop() || 'jpg';
+        const path = `popcorn-sleeve/${slug}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+          contentType: comprovante.type || 'application/octet-stream', upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(path);
+        comprovanteUrl = pub.publicUrl;
+      } catch {
+        setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
+      }
     }
     const { error } = await supabase.from('pedidos_popcorn_sleeve').insert([{
       nome, contato, joiner_cog: j?.cog || null,
       comprovante_url: comprovanteUrl, status: 'aguardando',
-      quantidade, valor_total: valorTotal,
+      metodo_pagamento: metodo, quantidade, valor_total: valorTotal,
     }]);
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
@@ -23343,7 +23347,9 @@ function PopcornSleeveForm({ onVoltar }) {
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1, color:"#BAFF39", marginBottom:8 }}>PEDIDO REGISTRADO!</div>
         <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.7 }}>
           {quantidade} {quantidade === 1 ? "sleeve" : "sleeves"} · {fmtBRL(valorTotal)}<br/>
-          Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.
+          {metodo === 'cartao'
+            ? <>Recebemos seu pedido.<br/>Vamos confirmar o pagamento no cartão em breve.</>
+            : <>Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.</>}
         </div>
         <a href={POPCORN_SLEEVE_WHATSAPP} target="_blank" rel="noopener noreferrer"
           style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:8, marginTop:22, padding:"13px 16px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.4)", color:"#4ade80", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px", boxSizing:"border-box" }}>
@@ -23413,7 +23419,37 @@ function PopcornSleeveForm({ onVoltar }) {
         </div>
       </div>
 
+      {/* Seletor de método */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>FORMA DE PAGAMENTO</div>
+        <div style={{ display:"flex", gap:8 }}>
+          {[{ id:"pix", label:"PIX", icon:"⚡" }, { id:"cartao", label:"Cartão", icon:"💳" }].map(({ id, label, icon }) => (
+            <button key={id} onClick={() => setMetodo(id)} style={{
+              flex:1, padding:"12px 8px", borderRadius:8, fontFamily:mono, fontSize:12, fontWeight:700,
+              cursor:"pointer", letterSpacing:"0.5px",
+              background: metodo === id ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.04)",
+              border: metodo === id ? "1px solid rgba(255,92,26,.5)" : "1px solid rgba(245,240,232,.1)",
+              color: metodo === id ? "var(--laranja)" : "rgba(245,240,232,.5)",
+            }}>{icon} {label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bloco Cartão */}
+      {metodo === 'cartao' && (
+        <div style={{ background:"rgba(66,133,244,.04)", border:"1px solid rgba(66,133,244,.2)", borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", marginBottom:12, lineHeight:1.6 }}>
+            Valor a pagar: <strong style={{ color:"#7aaff7" }}>{fmtBRL(valorTotal)}</strong>. Clique no botão abaixo para acessar o link de pagamento. Após pagar, preencha o formulário e envie.
+          </div>
+          <a href={POPCORN_SLEEVE_CARTAO_URL} target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:6, padding:"12px 16px", borderRadius:7, background:"rgba(66,133,244,.2)", border:"1px solid rgba(66,133,244,.4)", color:"#7aaff7", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px", boxSizing:"border-box" }}>
+            💳 Ir para o link de pagamento →
+          </a>
+        </div>
+      )}
+
       {/* Bloco PIX */}
+      {metodo === 'pix' && (
       <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX · PAGAR {fmtBRL(valorTotal)}</div>
         <div style={{ display:"flex", gap:8, alignItems:"stretch" }}>
@@ -23423,6 +23459,7 @@ function PopcornSleeveForm({ onVoltar }) {
           </button>
         </div>
       </div>
+      )}
 
       {encerrado && (
         <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", marginBottom:16 }}>Pré-venda encerrada.</div>
@@ -23440,7 +23477,7 @@ function PopcornSleeveForm({ onVoltar }) {
         </div>
 
         <div>
-          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>COMPROVANTE DE PAGAMENTO *</label>
+          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>COMPROVANTE DE PAGAMENTO {metodo === 'pix' ? '*' : '(opcional)'}</label>
           <div onClick={() => fileRef.current?.click()} style={{ border:"1px dashed rgba(245,240,232,.18)", borderRadius:8, padding:"20px 16px", textAlign:"center", cursor:"pointer", background: comprovante ? "rgba(186,255,57,.04)" : "rgba(245,240,232,.02)" }}>
             {comprovante ? (
               <div style={{ fontFamily:mono, fontSize:11, color:"#BAFF39" }}>✓ {comprovante.name}</div>
@@ -23469,7 +23506,7 @@ function PopcornSleeveForm({ onVoltar }) {
         </button>
 
         <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", textAlign:"center", lineHeight:1.6 }}>
-          Realize o PIX antes de enviar · Formulário disponível até 15/10
+          Realize o pagamento antes de enviar · Formulário disponível até 15/10
         </div>
       </div>
     </div>
@@ -23531,6 +23568,7 @@ function AdminPopcornSleeve({ onCountChange }) {
                   <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
                     <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 1}x sleeve</span>
+                    <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "cartao" ? "💳 Cartão" : "⚡ PIX"}</span>
                     {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
