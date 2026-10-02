@@ -11894,7 +11894,7 @@ function WaveMakerTab({ user }) {
 
   // unidades restantes de um item/kit; null = sem controle de estoque
   const restante = (id) => (estoqueMap && id in estoqueMap) ? estoqueMap[id] : null;
-  const rotuloEstoque = (n) => `Apenas ${n} ${n === 1 ? "unidade" : "unidades"} em estoque`;
+  const rotuloEstoque = (n) => `${n} ${n === 1 ? "unidade disponível" : "unidades disponíveis"}`;
 
   const ITENS_WM = [
     { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15" },
