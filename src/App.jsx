@@ -11865,14 +11865,14 @@ function WaveMakerTab({ user }) {
   const [fotoZoom, setFotoZoom] = useState(null);
 
   const ITENS_WM = [
-    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15" },
+    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15", estoque: 5 },
     { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25", indisponivel: true },
-    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15" },
-    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10" },
+    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15", estoque: 5 },
+    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10", estoque: 3 },
     { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: "R$7", estoque: 1 },
-    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: "R$18" },
-    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: "R$28" },
-    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: "R$5"  },
+    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: "R$18", estoque: 1 },
+    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: "R$28", estoque: 5 },
+    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: "R$5", estoque: 4 },
   ];
 
   const MODALIDADES = [
