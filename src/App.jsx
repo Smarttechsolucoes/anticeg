@@ -23242,7 +23242,9 @@ function LightstickForm({ onVoltar }) {
 
 // ── POP-CORN SLEEVE Form ───────────────────────────────────────
 const POPCORN_SLEEVE_DEADLINE = new Date("2026-10-15T23:59:59-03:00");
-const POPCORN_SLEEVE_IMG = "https://popcontr2632.cdn-nhncommerce.com/data/goods/25/10/40/97309/97309_magnify_032.jpg";
+const POPCORN_SLEEVE_VALOR = 45;
+const POPCORN_SLEEVE_MAX = 10;
+const POPCORN_SLEEVE_IMG ="https://popcontr2632.cdn-nhncommerce.com/data/goods/25/10/40/97309/97309_magnify_032.jpg";
 
 function PopcornSleeveForm({ onVoltar }) {
   const mono = "'DM Mono',monospace";
@@ -23252,6 +23254,7 @@ function PopcornSleeveForm({ onVoltar }) {
   const [idMsg, setIdMsg]     = useState('');
   const [comprovante, setComprovante] = useState(null);
   const [ciente, setCiente]   = useState(false);
+  const [quantidade, setQuantidade] = useState(1);
   const [sending, setSending] = useState(false);
   const [done, setDone]       = useState(false);
   const [err, setErr]         = useState('');
@@ -23261,6 +23264,8 @@ function PopcornSleeveForm({ onVoltar }) {
   const idRef   = useRef('');
   const jRef    = useRef(null);
 
+  const valorTotal = POPCORN_SLEEVE_VALOR * quantidade;
+  const fmtBRL = (n) => n.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
   const encerrado = new Date() > POPCORN_SLEEVE_DEADLINE;
   const formOk = idInp.trim().length >= 3 && !!comprovante && ciente && !encerrado;
 
@@ -23323,6 +23328,7 @@ function PopcornSleeveForm({ onVoltar }) {
     const { error } = await supabase.from('pedidos_popcorn_sleeve').insert([{
       nome, contato, joiner_cog: j?.cog || null,
       comprovante_url: comprovanteUrl, status: 'aguardando',
+      quantidade, valor_total: valorTotal,
     }]);
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
@@ -23335,6 +23341,7 @@ function PopcornSleeveForm({ onVoltar }) {
         <div style={{ fontSize:28, marginBottom:12 }}>✦</div>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1, color:"#BAFF39", marginBottom:8 }}>PEDIDO REGISTRADO!</div>
         <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.7 }}>
+          {quantidade} {quantidade === 1 ? "sleeve" : "sleeves"} · {fmtBRL(valorTotal)}<br/>
           Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.
         </div>
         <div style={{ marginTop:20, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>Envio internacional somente em novembro.</div>
@@ -23353,10 +23360,29 @@ function PopcornSleeveForm({ onVoltar }) {
       {/* Preço */}
       <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between", alignItems:"center", gap:8, marginBottom:18 }}>
         <div>
-          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR</div>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR POR UNIDADE</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"#BAFF39", letterSpacing:0.5 }}>R$ 45,00</div>
         </div>
         <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", background:"rgba(186,255,57,.1)", borderRadius:6, padding:"4px 10px", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>PAGAMENTO IMEDIATO</span>
+      </div>
+
+      {/* Quantidade e valor final */}
+      <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>QUANTIDADE</div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={() => setQuantidade(q => Math.max(1, q - 1))} disabled={quantidade <= 1}
+              style={{ width:38, height:38, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"rgba(245,240,232,.05)", color:"#F5F0E8", fontFamily:mono, fontSize:18, cursor: quantidade <= 1 ? "default" : "pointer", opacity: quantidade <= 1 ? .35 : 1 }}>−</button>
+            <div style={{ minWidth:36, textAlign:"center", fontFamily:mono, fontSize:18, fontWeight:700 }}>{quantidade}</div>
+            <button onClick={() => setQuantidade(q => Math.min(POPCORN_SLEEVE_MAX, q + 1))} disabled={quantidade >= POPCORN_SLEEVE_MAX}
+              style={{ width:38, height:38, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"rgba(245,240,232,.05)", color:"#F5F0E8", fontFamily:mono, fontSize:18, cursor: quantidade >= POPCORN_SLEEVE_MAX ? "default" : "pointer", opacity: quantidade >= POPCORN_SLEEVE_MAX ? .35 : 1 }}>+</button>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR FINAL</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:30, color:"#BAFF39", letterSpacing:0.5, lineHeight:1 }}>{fmtBRL(valorTotal)}</div>
+          </div>
+        </div>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:8 }}>Máximo de {POPCORN_SLEEVE_MAX} por pedido</div>
       </div>
 
       {/* Informações do item */}
@@ -23383,7 +23409,7 @@ function PopcornSleeveForm({ onVoltar }) {
 
       {/* Bloco PIX */}
       <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
-        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX</div>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX · PAGAR {fmtBRL(valorTotal)}</div>
         <div style={{ display:"flex", gap:8, alignItems:"stretch" }}>
           <div style={{ flex:1, minWidth:0, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"10px 11px", fontSize:11, fontFamily:mono, color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
           <button onClick={copiarPix} style={{ flexShrink:0, padding:"10px 16px", background: copiado ? "rgba(186,255,57,.25)" : "rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer" }}>
@@ -23433,7 +23459,7 @@ function PopcornSleeveForm({ onVoltar }) {
 
         <button onClick={enviar} disabled={!formOk || sending}
           style={{ padding:"14px", borderRadius:10, background: formOk && !sending ? "var(--laranja)" : "rgba(245,240,232,.06)", color: formOk && !sending ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:12, fontWeight:700, border:"none", cursor: formOk && !sending ? "pointer" : "default", letterSpacing:"1px", marginTop:4 }}>
-          {sending ? "Enviando..." : "CONFIRMAR PEDIDO →"}
+          {sending ? "Enviando..." : `CONFIRMAR PEDIDO · ${fmtBRL(valorTotal)} →`}
         </button>
 
         <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", textAlign:"center", lineHeight:1.6 }}>
@@ -23464,6 +23490,8 @@ function AdminPopcornSleeve({ onCountChange }) {
   };
 
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+  const valorPedido = p => Number(p.valor_total) || POPCORN_SLEEVE_VALOR * (p.quantidade || 1);
+  const fmtBRL = n => n.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
 
   return (
     <div style={{ padding:"24px 0" }}>
@@ -23474,7 +23502,8 @@ function AdminPopcornSleeve({ onCountChange }) {
             ["Total",       pedidos.length],
             ["Aguardando",  pedidos.filter(p => p.status === "aguardando").length],
             ["Confirmados", pedidos.filter(p => p.status === "confirmado").length],
-            ["Arrecadado",  `R$ ${(pedidos.filter(p => p.status === "confirmado").length * 45).toLocaleString("pt-BR")}`],
+            ["Unidades",    pedidos.filter(p => p.status !== "cancelado").reduce((s, p) => s + (p.quantidade || 1), 0)],
+            ["Arrecadado",  fmtBRL(pedidos.filter(p => p.status === "confirmado").reduce((s, p) => s + valorPedido(p), 0))],
           ].map(([l, v]) => (
             <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 16px", minWidth:100 }}>
               <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>{l}</div>
@@ -23494,7 +23523,8 @@ function AdminPopcornSleeve({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
-                    <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ 45,00</span>
+                    <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 1}x sleeve</span>
                     {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
