@@ -11850,6 +11850,33 @@ function AdminLinks() {
   );
 }
 
+// Estoque restante do Wave Maker: estoque da tabela menos os pedidos
+// (pendente + confirmado) criados depois de "contar_desde". Cancelado devolve a unidade.
+async function carregarEstoqueWM() {
+  const [{ data: rows, error: e1 }, { data: pedidos, error: e2 }] = await Promise.all([
+    supabase.from("wave_maker_estoque").select("item_id, estoque, contar_desde"),
+    supabase.from("formulario_pedidos").select("modalidade, observacoes, status, created_at").eq("evento", "WAVE MAKER - SG JAPAN 2027"),
+  ]);
+  if (e1 || e2 || !rows) return null;
+  const mapa = {};
+  rows.forEach(r => {
+    const desde = new Date(r.contar_desde).getTime();
+    let usado = 0;
+    (pedidos || []).forEach(p => {
+      if (p.status === "cancelado" || new Date(p.created_at).getTime() < desde) return;
+      const qtd = parseInt((p.observacoes || "").match(/Qtd:\s*(\d+)/)?.[1] || "1", 10);
+      if (p.modalidade === "ITENS SOLTOS") {
+        const itens = (p.observacoes || "").match(/Itens:\s*(.*?)\s*·/)?.[1]?.split(",").map(s => s.trim()) || [];
+        if (itens.includes(r.item_id)) usado += qtd;
+      } else if (p.modalidade === r.item_id) {
+        usado += qtd;
+      }
+    });
+    mapa[r.item_id] = Math.max(0, r.estoque - usado);
+  });
+  return mapa;
+}
+
 function WaveMakerTab({ user }) {
   const mono = "'DM Mono', monospace";
   const [modalidade, setModalidade] = useState(null);
@@ -11863,16 +11890,21 @@ function WaveMakerTab({ user }) {
   const [abaWM, setAbaWM] = useState("forms");
   const [historico, setHistorico] = useState([]);
   const [fotoZoom, setFotoZoom] = useState(null);
+  const [estoqueMap, setEstoqueMap] = useState(null);
+
+  // unidades restantes de um item/kit; null = sem controle de estoque
+  const restante = (id) => (estoqueMap && id in estoqueMap) ? estoqueMap[id] : null;
+  const rotuloEstoque = (n) => `Apenas ${n} ${n === 1 ? "unidade" : "unidades"} em estoque`;
 
   const ITENS_WM = [
-    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15", estoque: 5 },
-    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25", indisponivel: true },
-    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15", estoque: 5 },
-    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10", estoque: 3 },
-    { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: "R$7", estoque: 1 },
-    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: "R$18", estoque: 1 },
-    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: "R$28", estoque: 5 },
-    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: "R$5", estoque: 4 },
+    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15" },
+    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25" },
+    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15" },
+    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10" },
+    { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: "R$7" },
+    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: "R$18" },
+    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: "R$28" },
+    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: "R$5" },
   ];
 
   const MODALIDADES = [
@@ -11880,6 +11912,10 @@ function WaveMakerTab({ user }) {
     { id: "ITENS SOLTOS",      icone: "◱",  desc: "Escolha os itens avulsos que quer" },
     { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin", foto: "/wave-maker/KIT 01.png" },
   ];
+
+  useEffect(() => {
+    carregarEstoqueWM().then(setEstoqueMap);
+  }, []);
 
   useEffect(() => {
     if (!user?.cog) return;
@@ -11907,14 +11943,29 @@ function WaveMakerTab({ user }) {
     });
   }
 
+  // quantidade máxima = menor estoque restante entre o que está selecionado
+  const idsSelecionados = itensSel.length > 0 ? itensSel : (modalidade ? [modalidade] : []);
+  const qtdMax = idsSelecionados.reduce((m, id) => { const r = restante(id); return r === null ? m : Math.min(m, r); }, Infinity);
+  const qtdEf  = Math.min(quantidade, Math.max(1, qtdMax));
+
   async function enviar() {
     const modalFinal = itensSel.length > 0 ? "ITENS SOLTOS" : modalidade;
     if (!modalFinal || enviando) return;
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     setEnviando(true); setErro(null); setEnviado(null);
+    // confere o estoque de novo na hora de enviar (outra pessoa pode ter pedido antes)
+    const mapaAtual = await carregarEstoqueWM();
+    if (mapaAtual) {
+      setEstoqueMap(mapaAtual);
+      const faltando = idsSelecionados.filter(id => id in mapaAtual && mapaAtual[id] < qtdEf);
+      if (faltando.length > 0) {
+        setErro(`Sem estoque suficiente para: ${faltando.join(", ")}. Atualizamos a lista, confira e tente de novo.`);
+        setEnviando(false); return;
+      }
+    }
     const obsFinal = modalFinal === "ITENS SOLTOS"
-      ? `Itens: ${itensSel.join(", ")} · Qtd: ${quantidade}`
-      : `Qtd: ${quantidade}`;
+      ? `Itens: ${itensSel.join(", ")} · Qtd: ${qtdEf}`
+      : `Qtd: ${qtdEf}`;
     const { error } = await supabase.from("formulario_pedidos").insert([{
       evento: "WAVE MAKER - SG JAPAN 2027",
       joiner_cog: user.cog,
@@ -11931,6 +11982,7 @@ function WaveMakerTab({ user }) {
       .eq("status", "pendente");
     const posicao = count || 1;
     setEnviado({ posicao });
+    carregarEstoqueWM().then(m => { if (m) setEstoqueMap(m); });
     const { data: hist } = await supabase.from("formulario_pedidos")
       .select("id, modalidade, observacoes, status, created_at")
       .eq("evento", "WAVE MAKER - SG JAPAN 2027")
@@ -12064,7 +12116,8 @@ function WaveMakerTab({ user }) {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {ITENS_WM.map(it => {
           const sel = itensSel.includes(it.id);
-          const indisp = !!it.indisponivel;
+          const rest = restante(it.id);
+          const indisp = rest !== null && rest <= 0;
           return (
             <div key={it.id} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom(it)}>
@@ -12075,8 +12128,8 @@ function WaveMakerTab({ user }) {
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
                 <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{it.preco}</div>
-                {!indisp && it.estoque && (
-                  <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ Apenas {it.estoque} {it.estoque === 1 ? "unidade" : "unidades"} em estoque</div>
+                {!indisp && rest !== null && (
+                  <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
                 )}
                 {indisp ? (
                   <button disabled style={{ marginTop:6, border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"6px 0", background:"rgba(245,240,232,.04)", color:"rgba(255,107,107,.7)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed" }}>
@@ -12098,12 +12151,13 @@ function WaveMakerTab({ user }) {
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Kits</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {[
-          { id: "KIT 01", foto: "/wave-maker/KIT 01.png", preco: "R$35", estoque: 2 },
-          { id: "KIT 02", foto: "/wave-maker/KIT 02.png", preco: "R$38", indisponivel: true },
-          { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: "R$40", estoque: 2 },
+          { id: "KIT 01", foto: "/wave-maker/KIT 01.png", preco: "R$35" },
+          { id: "KIT 02", foto: "/wave-maker/KIT 02.png", preco: "R$38" },
+          { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: "R$40" },
         ].map(kit => {
           const ativo = modalidade === kit.id && itensSel.length === 0;
-          const indisp = !!kit.indisponivel;
+          const rest = restante(kit.id);
+          const indisp = rest !== null && rest <= 0;
           return (
             <div key={kit.id} style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: kit.foto, id: kit.id })}>
@@ -12114,8 +12168,8 @@ function WaveMakerTab({ user }) {
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color: indisp ? "rgba(245,240,232,.35)" : ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{kit.id}</div>
                 <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{kit.preco}</div>
-                {!indisp && kit.estoque && (
-                  <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ Apenas {kit.estoque} unidades em estoque</div>
+                {!indisp && rest !== null && (
+                  <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
                 )}
                 {indisp ? (
                   <button disabled style={{ marginTop:6, border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"6px 0", background:"rgba(245,240,232,.04)", color:"rgba(255,107,107,.7)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed" }}>
@@ -12171,11 +12225,12 @@ function WaveMakerTab({ user }) {
         <div style={{ marginBottom:16 }}>
           <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Quantidade</div>
           <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-            <button onClick={() => setQuantidade(q => Math.max(1, q-1))}
+            <button onClick={() => setQuantidade(Math.max(1, qtdEf - 1))}
               style={{ width:36, height:36, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontSize:18, fontWeight:300, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", minWidth:32, textAlign:"center" }}>{quantidade}</span>
-            <button onClick={() => setQuantidade(q => q+1)}
-              style={{ width:36, height:36, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontSize:18, fontWeight:300, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"var(--offwhite)", minWidth:32, textAlign:"center" }}>{qtdEf}</span>
+            <button onClick={() => setQuantidade(Math.min(qtdEf + 1, qtdMax))} disabled={qtdEf >= qtdMax}
+              style={{ width:36, height:36, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontSize:18, fontWeight:300, cursor: qtdEf >= qtdMax ? "default" : "pointer", opacity: qtdEf >= qtdMax ? .35 : 1, display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+            {qtdMax !== Infinity && <span style={{ fontFamily:mono, fontSize:9, color:"#f0c040" }}>máx. {qtdMax} (estoque)</span>}
           </div>
         </div>
       )}
