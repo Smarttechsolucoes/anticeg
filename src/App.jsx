@@ -23242,6 +23242,7 @@ function LightstickForm({ onVoltar }) {
 
 // ── POP-CORN SLEEVE Form ───────────────────────────────────────
 const POPCORN_SLEEVE_DEADLINE = new Date("2026-10-15T23:59:59-03:00");
+const POPCORN_SLEEVE_WHATSAPP = "https://chat.whatsapp.com/GLEIpfHqOLr7yX70mGVwoV";
 const POPCORN_SLEEVE_VALOR = 45;
 const POPCORN_SLEEVE_MAX = 10;
 const POPCORN_SLEEVE_IMG ="https://popcontr2632.cdn-nhncommerce.com/data/goods/25/10/40/97309/97309_magnify_032.jpg";
@@ -23344,7 +23345,12 @@ function PopcornSleeveForm({ onVoltar }) {
           {quantidade} {quantidade === 1 ? "sleeve" : "sleeves"} · {fmtBRL(valorTotal)}<br/>
           Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.
         </div>
-        <div style={{ marginTop:20, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>Envio internacional somente em novembro.</div>
+        <a href={POPCORN_SLEEVE_WHATSAPP} target="_blank" rel="noopener noreferrer"
+          style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:8, marginTop:22, padding:"13px 16px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.4)", color:"#4ade80", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px", boxSizing:"border-box" }}>
+          💬 Entrar no grupo do WhatsApp →
+        </a>
+        <div style={{ marginTop:10, fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>Entre no grupo para acompanhar os avisos do pedido.</div>
+        <div style={{ marginTop:16, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>Envio internacional somente em novembro.</div>
       </div>
     </div>
   );
