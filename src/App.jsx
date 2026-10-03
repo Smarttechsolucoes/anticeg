@@ -23859,6 +23859,14 @@ function SingbaForm({ onVoltar }) {
         ))}
       </div>
 
+      {/* Aviso modelo específico */}
+      <div style={{ background:"rgba(240,192,64,.04)", border:"1px solid rgba(240,192,64,.15)", borderRadius:10, padding:"10px 14px", marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(240,192,64,.7)", lineHeight:1.6 }}>
+          Caso você queira um modelo de folha específico, me mande foto no privado para verificar a disponibilidade.
+        </div>
+      </div>
+
       {/* Opções */}
       <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>ESCOLHA OS PACOTES</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(2, minmax(0, 1fr))", gap:12, marginBottom:16 }}>
