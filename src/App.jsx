@@ -23676,7 +23676,7 @@ function AdminPopcornSleeve({ onCountChange }) {
 // ── SINGBA Form ────────────────────────────────────────────────
 const SINGBA_OPEN = new Date("2026-10-03T00:00:00-03:00");
 const SINGBA_DEADLINE = new Date("2026-10-10T23:59:59-03:00");
-const SINGBA_WHATSAPP = ""; // preencher quando o grupo existir
+const SINGBA_WHATSAPP = "https://chat.whatsapp.com/J452yxJ0Gkd4jAVwA9362X";
 const SINGBA_CARTAO_URL = "https://linknabio.gg/anticeg-comu";
 const SINGBA_VALOR = 15;
 const SINGBA_TAMANHOS = ["A4", "A5"];
