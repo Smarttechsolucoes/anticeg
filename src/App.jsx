@@ -23849,7 +23849,7 @@ function SingbaForm({ onVoltar }) {
           `${fmtBRL(SINGBA_VALOR)} por pacote de 10 folhas`,
           "Valor inclui: item + frete internacional",
           "A taxa será cobrada A PARTE!",
-          "Frete: 03 a 10 de outubro",
+          "Forms aberto: 03 a 10 de outubro",
           "Envio internacional ainda esse mês (outubro)",
         ].map(text => (
           <div key={text} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
