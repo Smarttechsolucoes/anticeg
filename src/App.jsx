@@ -7974,6 +7974,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [bazaarInCount,     setBazaarInCount]     = useState(0);
   const [lightstickCount,   setLightstickCount]   = useState(0);
   const [popcornSleeveCount, setPopcornSleeveCount] = useState(0);
+  const [singbaCount, setSingbaCount] = useState(0);
   const [waveMakerCount,   setWaveMakerCount]   = useState(0);
   const [runItCount,       setRunItCount]       = useState(0);
   const [dropsStats,       setDropsStats]       = useState({});
@@ -8255,6 +8256,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setLightstickCount(count); });
     supabase.from("pedidos_popcorn_sleeve").select("id", { count: "exact", head: true }).eq("status", "aguardando")
       .then(({ count }) => { if (count) setPopcornSleeveCount(count); });
+    supabase.from("pedidos_singba").select("id", { count: "exact", head: true }).eq("status", "aguardando")
+      .then(({ count }) => { if (count) setSingbaCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "WAVE MAKER - SG JAPAN 2027").eq("status", "pendente")
       .then(({ count }) => { if (count) setWaveMakerCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "RUN IT VOL 2").eq("status", "pendente")
@@ -8545,7 +8548,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + waveMakerCount + runItCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9292,7 +9295,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","wave-maker-admin","run-it-admin"].includes(adminMainTab) && (
+      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin"].includes(adminMainTab) && (
         <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:4, padding:"4px 0", letterSpacing:".04em" }}>
           ← Todos os drops
         </button>
@@ -9304,9 +9307,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
       {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
       {adminMainTab === "popcorn-sleeve" && <AdminPopcornSleeve onCountChange={setPopcornSleeveCount} />}
+      {adminMainTab === "singba" && <AdminSingba onCountChange={setSingbaCount} />}
       {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
       {adminMainTab === "run-it-admin"     && <AdminRunIt     onCountChange={setRunItCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} waveMakerCount={waveMakerCount} runItCount={runItCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -22935,7 +22939,7 @@ function RunItVol2Tab({ user }) {
 }
 
 // ── Admin Todos os Drops ──────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, waveMakerCount, runItCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const DROPS = [
     { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
@@ -22945,6 +22949,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" },
+    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
     { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
   ];
@@ -23668,6 +23673,416 @@ function AdminPopcornSleeve({ onCountChange }) {
   );
 }
 
+// ── SINGBA Form ────────────────────────────────────────────────
+const SINGBA_OPEN = new Date("2026-10-03T00:00:00-03:00");
+const SINGBA_DEADLINE = new Date("2026-10-10T23:59:59-03:00");
+const SINGBA_WHATSAPP = ""; // preencher quando o grupo existir
+const SINGBA_CARTAO_URL = "https://linknabio.gg/anticeg-comu";
+const SINGBA_VALOR = 15;
+const SINGBA_TAMANHOS = ["A4", "A5"];
+const SINGBA_ACABAMENTOS = ["Clear", "Matte"];
+// Tamanhos/acabamentos podem ser sobrescritos por opção (aqui o tamanho já é fixo em cada uma).
+const SINGBA_OPCOES = [
+  { id: "a4-9-bolsos",      nome: "9 BOLSOS",      tamanhos: ["A4"], img: "/singba/A4%209%20BOLSOS.png" },
+  { id: "a4-9-bolsos-wide", nome: "9 BOLSOS WIDE", tamanhos: ["A4"], img: "/singba/A4%209%20BOLSOS%20WIDE.png" },
+  { id: "a5-4-bolsos",      nome: "4 BOLSOS",      tamanhos: ["A5"], img: "/singba/A5%204%20BOLSOS.png" },
+  { id: "a5-4-bolsos-wide", nome: "4 BOLSOS WIDE", tamanhos: ["A5"], img: "/singba/A5%204%20BOLSOS%20WIDE.png" },
+];
+const SINGBA_CAPA = null;
+
+function SingbaForm({ onVoltar }) {
+  const mono = "'DM Mono',monospace";
+  const [joiner, setJoiner]   = useState(null);
+  const [idInp, setIdInp]     = useState('');
+  const [idSt, setIdSt]       = useState('');
+  const [idMsg, setIdMsg]     = useState('');
+  const [comprovante, setComprovante] = useState(null);
+  const [ciente, setCiente]   = useState(false);
+  const [qtds, setQtds]       = useState({});
+  const [metodo, setMetodo]   = useState('pix');
+  const [sending, setSending] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [err, setErr]         = useState('');
+  const [copiado, setCopiado] = useState(false);
+  const fileRef = useRef(null);
+  const tmrRef  = useRef(null);
+  const idRef   = useRef('');
+  const jRef    = useRef(null);
+
+  const fmtBRL = (n) => n.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+  const chave = (op, tam, acab) => `${op.id}|${tam}|${acab}`;
+  const itens = [];
+  SINGBA_OPCOES.forEach(op => {
+    (op.tamanhos || SINGBA_TAMANHOS).forEach(tam => {
+      (op.acabamentos || SINGBA_ACABAMENTOS).forEach(acab => {
+        const qtd = qtds[chave(op, tam, acab)] || 0;
+        if (qtd > 0) itens.push({ opcao: op.nome, tamanho: tam, acabamento: acab, qtd });
+      });
+    });
+  });
+  const quantidade = itens.reduce((s, i) => s + i.qtd, 0);
+  const valorTotal = SINGBA_VALOR * quantidade;
+  const agora = new Date();
+  const naoAbriu  = agora < SINGBA_OPEN;
+  const encerrado = agora > SINGBA_DEADLINE;
+  const formOk = idInp.trim().length >= 3 && quantidade > 0 && (metodo === 'cartao' || !!comprovante) && ciente && !encerrado && !naoAbriu;
+
+  const mudarQtd = (k, delta) => setQtds(prev => ({ ...prev, [k]: Math.max(0, (prev[k] || 0) + delta) }));
+
+  const copiarPix = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const buscar = async () => {
+    clearTimeout(tmrRef.current);
+    const v = idRef.current.trim();
+    if (!v) return;
+    setIdSt('loading'); setIdMsg('Buscando...');
+    const isEml = v.includes('@') && v.indexOf('@') > 0;
+    let q = supabase.from('joiners').select('cog,nome,email').limit(1);
+    q = isEml ? q.eq('email', v.toLowerCase()) : q.ilike('twitter', `@${v.replace(/^@/, '')}`);
+    try {
+      const { data } = await q;
+      if (data?.length) {
+        const j = data[0]; setJoiner(j); jRef.current = j;
+        setIdSt('found'); setIdMsg(`✦ ${j.nome || j.cog} · @${j.cog}`);
+      } else {
+        setJoiner(null); jRef.current = null;
+        setIdSt('notfound'); setIdMsg('Não encontrado no cadastro — pode enviar assim mesmo.');
+      }
+    } catch {
+      setJoiner(null); jRef.current = null;
+      setIdSt('notfound'); setIdMsg('Erro de conexão — pode enviar assim mesmo.');
+    }
+  };
+
+  const onId = (v) => {
+    idRef.current = v; setIdInp(v);
+    setIdSt(''); setIdMsg(''); setJoiner(null); jRef.current = null;
+    clearTimeout(tmrRef.current);
+    if (v.trim().length >= 3) tmrRef.current = setTimeout(buscar, 600);
+  };
+
+  const enviar = async () => {
+    if (!formOk || sending) return;
+    setSending(true); setErr('');
+    const j = jRef.current;
+    const contato = j ? j.cog : idInp.trim();
+    const nome    = j ? (j.nome || j.cog) : idInp.trim();
+    let comprovanteUrl = null;
+    if (comprovante) {
+      try {
+        const slug = contato.replace(/[^a-z0-9]/gi, '_');
+        const ext = comprovante.name.split('.').pop() || 'jpg';
+        const path = `singba/${slug}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+          contentType: comprovante.type || 'application/octet-stream', upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(path);
+        comprovanteUrl = pub.publicUrl;
+      } catch {
+        setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
+      }
+    }
+    const { error } = await supabase.from('pedidos_singba').insert([{
+      nome, contato, joiner_cog: j?.cog || null,
+      comprovante_url: comprovanteUrl, status: 'aguardando',
+      metodo_pagamento: metodo, itens, quantidade, valor_total: valorTotal,
+    }]);
+    if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
+    setDone(true); setSending(false);
+  };
+
+  const stepBtn = (disabled) => ({ width:34, height:34, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"rgba(245,240,232,.05)", color:"#F5F0E8", fontFamily:mono, fontSize:16, cursor: disabled ? "default" : "pointer", opacity: disabled ? .35 : 1 });
+
+  if (done) return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer", marginBottom:20, padding:0 }}>← voltar</button>
+      <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.25)", borderRadius:14, padding:"32px 24px", textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>✦</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1, color:"#BAFF39", marginBottom:8 }}>PEDIDO REGISTRADO!</div>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.7 }}>
+          {quantidade} {quantidade === 1 ? "pacote" : "pacotes"} · {fmtBRL(valorTotal)}<br/>
+          {metodo === 'cartao'
+            ? <>Recebemos seu pedido.<br/>Vamos confirmar o pagamento no cartão em breve.</>
+            : <>Recebemos seu pedido e comprovante.<br/>Vamos confirmar em breve.</>}
+        </div>
+        {SINGBA_WHATSAPP && (
+          <>
+            <a href={SINGBA_WHATSAPP} target="_blank" rel="noopener noreferrer"
+              style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:8, marginTop:22, padding:"13px 16px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.4)", color:"#4ade80", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px", boxSizing:"border-box" }}>
+              💬 Entrar no grupo do WhatsApp →
+            </a>
+            <div style={{ marginTop:10, fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", lineHeight:1.6 }}>Entre no grupo para acompanhar os avisos do pedido.</div>
+          </>
+        )}
+        <div style={{ marginTop:16, fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>A taxa da Receita Federal ainda será cobrada à parte.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
+      <button onClick={onVoltar} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontFamily:mono, fontSize:11, cursor:"pointer", marginBottom:20, padding:0 }}>← voltar</button>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, marginBottom:4 }}>SINGBA</div>
+      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginBottom:20 }}>Pré-venda · formulário de 03 a 10/10</div>
+
+      {SINGBA_CAPA && <img src={SINGBA_CAPA} alt="SINGBA" style={{ width:"100%", maxHeight:340, objectFit:"contain", borderRadius:12, background:"rgba(245,240,232,.04)", marginBottom:18 }} />}
+
+      {/* Preço */}
+      <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between", alignItems:"center", gap:8, marginBottom:18 }}>
+        <div>
+          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR POR PACOTE (10 FOLHAS)</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"#BAFF39", letterSpacing:0.5 }}>{fmtBRL(SINGBA_VALOR)}</div>
+        </div>
+        <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", background:"rgba(186,255,57,.1)", borderRadius:6, padding:"4px 10px", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>PAGAMENTO IMEDIATO</span>
+      </div>
+
+      {/* Informações */}
+      <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px", marginBottom:16, display:"flex", flexDirection:"column", gap:8 }}>
+        {[
+          ["📦", "Pacotes com 10 folhas para binder · A4 e A5 · acabamento Clear ou Matte"],
+          ["💰", `${fmtBRL(SINGBA_VALOR)} por pacote de 10 folhas = item + frete internacional, qualquer tamanho ou variação.`],
+          ["🗓️", "Formulário aberto de 03 a 10 de outubro"],
+        ].map(([icon, text]) => (
+          <div key={text} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+            <span style={{ fontSize:13, flexShrink:0 }}>{icon}</span>
+            <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>{text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Aviso taxa RF */}
+      <div style={{ background:"rgba(240,192,64,.04)", border:"1px solid rgba(240,192,64,.15)", borderRadius:10, padding:"10px 14px", marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(240,192,64,.7)", lineHeight:1.6 }}>
+          O valor <strong>não inclui a taxa da Receita Federal</strong>, que ainda será cobrada.
+        </div>
+      </div>
+
+      {/* Opções */}
+      <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>ESCOLHA OS PACOTES</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:16 }}>
+        {SINGBA_OPCOES.map(op => (
+          <div key={op.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:12 }}>
+              {op.img && <img src={op.img} alt={op.nome} style={{ width:64, height:64, objectFit:"cover", borderRadius:8, background:"rgba(245,240,232,.04)", flexShrink:0 }} />}
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:1 }}>{(op.tamanhos || SINGBA_TAMANHOS).length === 1 ? `${op.tamanhos[0]} · ${op.nome}` : op.nome}</div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {(op.tamanhos || SINGBA_TAMANHOS).map(tam => (op.acabamentos || SINGBA_ACABAMENTOS).map(acab => {
+                const k = chave(op, tam, acab);
+                const q = qtds[k] || 0;
+                return (
+                  <div key={k} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                    <span style={{ fontFamily:mono, fontSize:11, color: q > 0 ? "#BAFF39" : "rgba(245,240,232,.6)" }}>{tam} · {acab}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <button onClick={() => mudarQtd(k, -1)} disabled={q <= 0} style={stepBtn(q <= 0)}>−</button>
+                      <div style={{ minWidth:28, textAlign:"center", fontFamily:mono, fontSize:15, fontWeight:700 }}>{q}</div>
+                      <button onClick={() => mudarQtd(k, 1)} style={stepBtn(false)}>+</button>
+                    </div>
+                  </div>
+                );
+              }))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Resumo */}
+      <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{quantidade} {quantidade === 1 ? "pacote" : "pacotes"}</div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:2 }}>VALOR FINAL</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:30, color:"#BAFF39", letterSpacing:0.5, lineHeight:1 }}>{fmtBRL(valorTotal)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Seletor de método */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>FORMA DE PAGAMENTO</div>
+        <div style={{ display:"flex", gap:8 }}>
+          {[{ id:"pix", label:"PIX", icon:"⚡" }, { id:"cartao", label:"Cartão", icon:"💳" }].map(({ id, label, icon }) => (
+            <button key={id} onClick={() => setMetodo(id)} style={{
+              flex:1, padding:"12px 8px", borderRadius:8, fontFamily:mono, fontSize:12, fontWeight:700,
+              cursor:"pointer", letterSpacing:"0.5px",
+              background: metodo === id ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.04)",
+              border: metodo === id ? "1px solid rgba(255,92,26,.5)" : "1px solid rgba(245,240,232,.1)",
+              color: metodo === id ? "var(--laranja)" : "rgba(245,240,232,.5)",
+            }}>{icon} {label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bloco Cartão */}
+      {metodo === 'cartao' && (
+        <div style={{ background:"rgba(66,133,244,.04)", border:"1px solid rgba(66,133,244,.2)", borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", marginBottom:12, lineHeight:1.6 }}>
+            Valor a pagar: <strong style={{ color:"#7aaff7" }}>{fmtBRL(valorTotal)}</strong>. Clique no botão abaixo para acessar o link de pagamento. Após pagar, preencha o formulário e envie.
+          </div>
+          <a href={SINGBA_CARTAO_URL} target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:6, padding:"12px 16px", borderRadius:7, background:"rgba(66,133,244,.2)", border:"1px solid rgba(66,133,244,.4)", color:"#7aaff7", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px", boxSizing:"border-box" }}>
+            💳 Ir para o link de pagamento →
+          </a>
+        </div>
+      )}
+
+      {/* Bloco PIX */}
+      {metodo === 'pix' && (
+      <div style={{ background:"rgba(186,255,57,.04)", border:"1px solid rgba(186,255,57,.15)", borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", marginBottom:8 }}>CHAVE PIX · PAGAR {fmtBRL(valorTotal)}</div>
+        <div style={{ display:"flex", gap:8, alignItems:"stretch" }}>
+          <div style={{ flex:1, minWidth:0, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, padding:"10px 11px", fontSize:11, fontFamily:mono, color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{PIX_KEY}</div>
+          <button onClick={copiarPix} style={{ flexShrink:0, padding:"10px 16px", background: copiado ? "rgba(186,255,57,.25)" : "rgba(186,255,57,.14)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+            {copiado ? "✓" : "Copiar"}
+          </button>
+        </div>
+      </div>
+      )}
+
+      {naoAbriu && (
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(240,192,64,.8)", marginBottom:16 }}>O formulário abre em 03/10.</div>
+      )}
+      {encerrado && (
+        <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", marginBottom:16 }}>Pré-venda encerrada.</div>
+      )}
+
+      {/* Identificação */}
+      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <div>
+          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>SEU @ OU E-MAIL</label>
+          <input value={idInp} onChange={e => onId(e.target.value)} placeholder="@usuario ou email@exemplo.com"
+            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:`1px solid ${idSt==='found'?"rgba(186,255,57,.4)":idSt==='notfound'?"rgba(240,192,64,.35)":"rgba(245,240,232,.12)"}`, borderRadius:8, padding:"10px 12px", color:"#F5F0E8", fontFamily:mono, fontSize:12, outline:"none", boxSizing:"border-box" }} />
+          {idMsg && (
+            <div style={{ fontFamily:mono, fontSize:10, marginTop:5, color: idSt==='found'?"#BAFF39":idSt==='loading'?"rgba(245,240,232,.4)":"rgba(240,192,64,.8)" }}>{idMsg}</div>
+          )}
+        </div>
+
+        <div>
+          <label style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", display:"block", marginBottom:6 }}>COMPROVANTE DE PAGAMENTO {metodo === 'pix' ? '*' : '(opcional)'}</label>
+          <div onClick={() => fileRef.current?.click()} style={{ border:"1px dashed rgba(245,240,232,.18)", borderRadius:8, padding:"20px 16px", textAlign:"center", cursor:"pointer", background: comprovante ? "rgba(186,255,57,.04)" : "rgba(245,240,232,.02)" }}>
+            {comprovante ? (
+              <div style={{ fontFamily:mono, fontSize:11, color:"#BAFF39" }}>✓ {comprovante.name}</div>
+            ) : (
+              <>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:4 }}>Clique para anexar</div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>JPG, PNG ou PDF</div>
+              </>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files?.[0] || null)} style={{ display:"none" }} />
+        </div>
+
+        <label style={{ display:"flex", gap:10, alignItems:"flex-start", cursor:"pointer" }}>
+          <input type="checkbox" checked={ciente} onChange={e => setCiente(e.target.checked)} style={{ marginTop:2 }} />
+          <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>
+            Estou ciente de que o valor não inclui a taxa da Receita Federal, que será cobrada à parte.
+          </span>
+        </label>
+
+        {err && <div style={{ fontFamily:mono, fontSize:10, color:"#ff6b6b" }}>{err}</div>}
+
+        <button onClick={enviar} disabled={!formOk || sending}
+          style={{ padding:"14px", borderRadius:10, background: formOk && !sending ? "var(--laranja)" : "rgba(245,240,232,.06)", color: formOk && !sending ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:12, fontWeight:700, border:"none", cursor: formOk && !sending ? "pointer" : "default", letterSpacing:"1px", marginTop:4 }}>
+          {sending ? "Enviando..." : `CONFIRMAR PEDIDO · ${fmtBRL(valorTotal)} →`}
+        </button>
+
+        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", textAlign:"center", lineHeight:1.6 }}>
+          Realize o pagamento antes de enviar · Formulário disponível até 10/10
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Admin SINGBA ───────────────────────────────────────────────
+function AdminSingba({ onCountChange }) {
+  const [pedidos, setPedidos] = useState(null);
+  const mono = "'DM Mono',monospace";
+
+  useEffect(() => {
+    supabase.from("pedidos_singba").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => setPedidos(data || []));
+  }, []);
+
+  const atualizar = async (id, novoStatus) => {
+    await supabase.from("pedidos_singba").update({ status: novoStatus }).eq("id", id);
+    setPedidos(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, status: novoStatus } : p);
+      onCountChange?.(next.filter(p => p.status === "aguardando").length);
+      return next;
+    });
+  };
+
+  const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
+  const valorPedido = p => Number(p.valor_total) || SINGBA_VALOR * (p.quantidade || 1);
+  const fmtBRL = n => n.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:16 }}>SINGBA — PEDIDOS</div>
+      {pedidos === null ? <div style={{ fontFamily:mono, fontSize:12, opacity:.4 }}>carregando...</div> : <>
+        <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap" }}>
+          {[
+            ["Total",       pedidos.length],
+            ["Aguardando",  pedidos.filter(p => p.status === "aguardando").length],
+            ["Confirmados", pedidos.filter(p => p.status === "confirmado").length],
+            ["Pacotes",     pedidos.filter(p => p.status !== "cancelado").reduce((s, p) => s + (p.quantidade || 0), 0)],
+            ["Arrecadado",  fmtBRL(pedidos.filter(p => p.status === "confirmado").reduce((s, p) => s + valorPedido(p), 0))],
+          ].map(([l, v]) => (
+            <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 16px", minWidth:100 }}>
+              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>{l}</div>
+              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {pedidos.length === 0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
+          {pedidos.map(p => (
+            <div key={p.id} style={{ background:"rgba(245,240,232,.04)", border:`1px solid ${p.status==="aguardando"?"rgba(255,92,26,.2)":p.status==="confirmado"?"rgba(74,222,128,.15)":"rgba(245,240,232,.08)"}`, borderRadius:10, padding:"14px 16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:4, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontWeight:700, fontSize:14 }}>{p.nome}</span>
+                    {p.contato && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>@{p.contato}</span>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>#{p.id}</span>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:2, marginTop:4 }}>
+                    {(p.itens || []).map((i, idx) => (
+                      <span key={idx} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.7)" }}>{i.qtd}x {i.opcao} · {i.tamanho} · {i.acabamento}</span>
+                    ))}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 0} pacotes</span>
+                    <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "cartao" ? "💳 Cartão" : "⚡ PIX"}</span>
+                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
+                  </div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                  <span style={{ fontFamily:mono, fontSize:10, color:corStatus(p.status) }}>{p.status}</span>
+                  {p.status === "aguardando" && (
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button onClick={() => atualizar(p.id, "confirmado")} style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(74,222,128,.4)", background:"transparent", color:"#4ade80", fontFamily:mono, fontSize:11, cursor:"pointer" }}>✓ confirmar</button>
+                      <button onClick={() => atualizar(p.id, "cancelado")}  style={{ padding:"6px 14px", borderRadius:6, border:"1px solid rgba(255,107,107,.4)", background:"transparent", color:"#ff6b6b",  fontFamily:mono, fontSize:11, cursor:"pointer" }}>✕ cancelar</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
+}
+
 // ── Aba Pré-vendas ─────────────────────────────────────────────
 function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
@@ -23690,7 +24105,19 @@ function PrevendaTab({ user }) {
 
   const popcornSleeveAberto = now <= POPCORN_SLEEVE_DEADLINE;
 
+  const singbaAberto = now <= SINGBA_DEADLINE;
+
   const formularios = [
+    {
+      key: "singba",
+      ativo: singbaAberto,
+      titulo: "SINGBA",
+      subtitulo: "Folhas para binder · A4 e A5",
+      url: "/prevenda/singba",
+      img: "/singba/A4%209%20BOLSOS.png",
+      tags: ["Formulário 03–10/10", "R$ 15,00 por pacote"],
+      info: "Clear ou Matte · Pagamento imediato via PIX ou cartão · Taxa da Receita Federal à parte",
+    },
     {
       key: "popcorn-sleeve",
       ativo: popcornSleeveAberto,
@@ -25016,6 +25443,7 @@ export default function App() {
   if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
   if (window.location.pathname === "/prevenda/lightstick") return <LightstickForm onVoltar={() => window.location.href = "/"} />;
+  if (window.location.pathname === "/prevenda/singba") return <SingbaForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/prevenda/popcorn-sleeve") return <PopcornSleeveForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
