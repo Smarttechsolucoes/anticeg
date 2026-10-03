@@ -23704,6 +23704,7 @@ function SingbaForm({ onVoltar }) {
   const [done, setDone]       = useState(false);
   const [err, setErr]         = useState('');
   const [copiado, setCopiado] = useState(false);
+  const [fotoZoom, setFotoZoom] = useState(null);
   const fileRef = useRef(null);
   const tmrRef  = useRef(null);
   const idRef   = useRef('');
@@ -23869,8 +23870,20 @@ function SingbaForm({ onVoltar }) {
         {SINGBA_OPCOES.map(op => (
           <div key={op.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px" }}>
             <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:12 }}>
-              {op.img && <img src={op.img} alt={op.nome} style={{ width:64, height:64, objectFit:"cover", borderRadius:8, background:"rgba(245,240,232,.04)", flexShrink:0 }} />}
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:1 }}>{(op.tamanhos || SINGBA_TAMANHOS).length === 1 ? `${op.tamanhos[0]} · ${op.nome}` : op.nome}</div>
+              {(() => {
+                const titulo = (op.tamanhos || SINGBA_TAMANHOS).length === 1 ? `${op.tamanhos[0]} · ${op.nome}` : op.nome;
+                return (
+                  <>
+                    {op.img && (
+                      <div style={{ position:"relative", cursor:"zoom-in", flexShrink:0 }} onClick={() => setFotoZoom({ foto: op.img, id: titulo })}>
+                        <img src={op.img} alt={titulo} style={{ width:84, height:84, objectFit:"cover", borderRadius:8, background:"rgba(245,240,232,.04)", display:"block" }} />
+                        <span style={{ position:"absolute", right:4, bottom:4, fontSize:11, background:"rgba(0,0,0,.65)", borderRadius:5, padding:"1px 5px" }}>🔍</span>
+                      </div>
+                    )}
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:1 }}>{titulo}</div>
+                  </>
+                );
+              })()}
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {(op.tamanhos || SINGBA_TAMANHOS).map(tam => (op.acabamentos || SINGBA_ACABAMENTOS).map(acab => {
@@ -23996,6 +24009,17 @@ function SingbaForm({ onVoltar }) {
           Realize o pagamento antes de enviar · Formulário disponível até 10/10
         </div>
       </div>
+
+      {/* Zoom */}
+      {fotoZoom && (
+        <div onClick={() => setFotoZoom(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:420, width:"100%" }}>
+            <img src={fotoZoom.foto} alt={fotoZoom.id} style={{ width:"100%", maxHeight:"75vh", objectFit:"contain", borderRadius:14, display:"block", marginBottom:10, background:"rgba(245,240,232,.04)" }} />
+            <div style={{ textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginBottom:12 }}>{fotoZoom.id}</div>
+            <button onClick={() => setFotoZoom(null)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.4)", borderRadius:8, padding:"9px", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
