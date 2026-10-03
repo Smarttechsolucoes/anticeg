@@ -23845,23 +23845,18 @@ function SingbaForm({ onVoltar }) {
       {/* Informações */}
       <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px", marginBottom:16, display:"flex", flexDirection:"column", gap:8 }}>
         {[
-          ["📦", "Pacotes com 10 folhas para binder · A4 e A5 · acabamento Clear ou Matte"],
-          ["💰", `${fmtBRL(SINGBA_VALOR)} por pacote de 10 folhas = item + frete internacional, qualquer tamanho ou variação.`],
-          ["🗓️", "Formulário aberto de 03 a 10 de outubro"],
-        ].map(([icon, text]) => (
+          "Pacotes com 10 folhas para binder",
+          `${fmtBRL(SINGBA_VALOR)} por pacote de 10 folhas`,
+          "Valor inclui: item + frete internacional",
+          "A taxa será cobrada A PARTE!",
+          "Frete: 03 a 10 de outubro",
+          "Envio internacional ainda esse mês (outubro)",
+        ].map(text => (
           <div key={text} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-            <span style={{ fontSize:13, flexShrink:0 }}>{icon}</span>
-            <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.6 }}>{text}</span>
+            <span style={{ fontSize:13, flexShrink:0, color:"#BAFF39" }}>☆</span>
+            <span style={{ fontFamily:mono, fontSize:11, color: text.startsWith("A taxa") ? "rgba(240,192,64,.85)" : "rgba(245,240,232,.7)", fontWeight: text.startsWith("A taxa") ? 700 : 400, lineHeight:1.6 }}>{text}</span>
           </div>
         ))}
-      </div>
-
-      {/* Aviso taxa RF */}
-      <div style={{ background:"rgba(240,192,64,.04)", border:"1px solid rgba(240,192,64,.15)", borderRadius:10, padding:"10px 14px", marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
-        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
-        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(240,192,64,.7)", lineHeight:1.6 }}>
-          O valor <strong>não inclui a taxa da Receita Federal</strong>, que ainda será cobrada.
-        </div>
       </div>
 
       {/* Opções */}
