@@ -23797,7 +23797,7 @@ function SingbaForm({ onVoltar }) {
     setDone(true); setSending(false);
   };
 
-  const stepBtn = (disabled) => ({ width:34, height:34, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"rgba(245,240,232,.05)", color:"#F5F0E8", fontFamily:mono, fontSize:16, cursor: disabled ? "default" : "pointer", opacity: disabled ? .35 : 1 });
+  const stepBtn = (disabled) => ({ width:32, height:32, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"rgba(245,240,232,.05)", color:"#F5F0E8", fontFamily:mono, fontSize:16, cursor: disabled ? "default" : "pointer", opacity: disabled ? .35 : 1 });
 
   if (done) return (
     <div style={{ padding:"24px 16px", maxWidth:600, margin:"0 auto" }}>
@@ -23866,43 +23866,37 @@ function SingbaForm({ onVoltar }) {
 
       {/* Opções */}
       <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", letterSpacing:"1px", marginBottom:8 }}>ESCOLHA OS PACOTES</div>
-      <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:16 }}>
-        {SINGBA_OPCOES.map(op => (
-          <div key={op.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:10, padding:"14px 16px" }}>
-            <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:12 }}>
-              {(() => {
-                const titulo = (op.tamanhos || SINGBA_TAMANHOS).length === 1 ? `${op.tamanhos[0]} · ${op.nome}` : op.nome;
-                return (
-                  <>
-                    {op.img && (
-                      <div style={{ position:"relative", cursor:"zoom-in", flexShrink:0 }} onClick={() => setFotoZoom({ foto: op.img, id: titulo })}>
-                        <img src={op.img} alt={titulo} style={{ width:84, height:84, objectFit:"cover", borderRadius:8, background:"rgba(245,240,232,.04)", display:"block" }} />
-                        <span style={{ position:"absolute", right:4, bottom:4, fontSize:11, background:"rgba(0,0,0,.65)", borderRadius:5, padding:"1px 5px" }}>🔍</span>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(2, minmax(0, 1fr))", gap:12, marginBottom:16 }}>
+        {SINGBA_OPCOES.map(op => {
+          const titulo = (op.tamanhos || SINGBA_TAMANHOS).length === 1 ? `${op.tamanhos[0]} · ${op.nome}` : op.nome;
+          return (
+            <div key={op.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.09)", borderRadius:12, padding:10, display:"flex", flexDirection:"column", gap:10, minWidth:0 }}>
+              {op.img && (
+                <div style={{ position:"relative", cursor:"zoom-in", background:"#fff", borderRadius:8, overflow:"hidden" }} onClick={() => setFotoZoom({ foto: op.img, id: titulo })}>
+                  <img src={op.img} alt={titulo} style={{ width:"100%", aspectRatio:"1 / 1", objectFit:"contain", display:"block" }} />
+                  <span style={{ position:"absolute", right:6, bottom:6, fontSize:11, background:"rgba(0,0,0,.65)", borderRadius:5, padding:"1px 5px" }}>🔍</span>
+                </div>
+              )}
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:17, letterSpacing:1, lineHeight:1.1 }}>{titulo}</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:"auto" }}>
+                {(op.tamanhos || SINGBA_TAMANHOS).map(tam => (op.acabamentos || SINGBA_ACABAMENTOS).map(acab => {
+                  const k = chave(op, tam, acab);
+                  const q = qtds[k] || 0;
+                  return (
+                    <div key={k} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
+                      <span style={{ fontFamily:mono, fontSize:10, color: q > 0 ? "#BAFF39" : "rgba(245,240,232,.6)" }}>{acab}</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                        <button onClick={() => mudarQtd(k, -1)} disabled={q <= 0} style={stepBtn(q <= 0)}>−</button>
+                        <div style={{ minWidth:20, textAlign:"center", fontFamily:mono, fontSize:14, fontWeight:700 }}>{q}</div>
+                        <button onClick={() => mudarQtd(k, 1)} style={stepBtn(false)}>+</button>
                       </div>
-                    )}
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:1 }}>{titulo}</div>
-                  </>
-                );
-              })()}
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {(op.tamanhos || SINGBA_TAMANHOS).map(tam => (op.acabamentos || SINGBA_ACABAMENTOS).map(acab => {
-                const k = chave(op, tam, acab);
-                const q = qtds[k] || 0;
-                return (
-                  <div key={k} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
-                    <span style={{ fontFamily:mono, fontSize:11, color: q > 0 ? "#BAFF39" : "rgba(245,240,232,.6)" }}>{tam} · {acab}</span>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <button onClick={() => mudarQtd(k, -1)} disabled={q <= 0} style={stepBtn(q <= 0)}>−</button>
-                      <div style={{ minWidth:28, textAlign:"center", fontFamily:mono, fontSize:15, fontWeight:700 }}>{q}</div>
-                      <button onClick={() => mudarQtd(k, 1)} style={stepBtn(false)}>+</button>
                     </div>
-                  </div>
-                );
-              }))}
+                  );
+                }))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Resumo */}
