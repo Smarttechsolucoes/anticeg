@@ -796,6 +796,12 @@ function fotoCombinaComItem(f, i) {
   return mFoto.some(m => mItem.includes(m));
 }
 
+const MEMBROS_SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+// evento de "item avulso" (fita, álbum...): as vagas não são os membros do Stray Kids
+function eventoEhItem(ev) {
+  return Array.isArray(ev?.membros) && ev.membros.length > 0 && ev.membros.some(m => !MEMBROS_SK8.includes(m));
+}
+
 function slugify(str) {
   return (str || "").toLowerCase()
     .replace(/&/g, "and").replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").trim();
@@ -14462,7 +14468,7 @@ function ClaimPublicoPage({ user }) {
 
     // OT8: joiner marcou todos os membros → cria set exclusivo
     const todosOsMembros = membrosDe(ev);
-    const isOT8 = todosOsMembros.every(m => (qtds[m] || 0) >= 1);
+    const isOT8 = !eventoEhItem(ev) && todosOsMembros.every(m => (qtds[m] || 0) >= 1);
     if (isOT8) {
       // Bloqueia OT8 se já tem qualquer claim ativo para esse evento
       const jaTemAlgum = todosOsMembros.some(m => {
@@ -14667,7 +14673,7 @@ function ClaimPublicoPage({ user }) {
 
               {(() => {
                 const temSelecionado = Object.values(quantidades[ev.id] || {}).some(q => q > 0);
-                const isOT8selecionado = membrosDe(ev).every(m => (quantidades[ev.id]||{})[m] >= 1);
+                const isOT8selecionado = !eventoEhItem(ev) && membrosDe(ev).every(m => (quantidades[ev.id]||{})[m] >= 1);
                 return (
                   <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                     {temSelecionado && isOT8selecionado && (
@@ -21297,7 +21303,7 @@ function AdminClaimEventos() {
   const [standby, setStandby] = useState({});
   const [expandido, setExpandido] = useState(new Set());
   const [salvando, setSalvando] = useState(false);
-  const [form, setForm] = useState({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
+  const [form, setForm] = useState({ tipo:"photocard", vaga:"Unidade", nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
   const [copiadoSet, setCopiadoSet] = useState(null);
   const [undoClaim, setUndoClaim] = useState(null);
   const undoTimerRef = useRef(null);
@@ -21343,12 +21349,16 @@ function AdminClaimEventos() {
 
   useEffect(() => { fetchTudo(); }, []);
 
+  const ehItemForm = form.tipo === "item";
+  const membrosForm = ehItemForm ? [(form.vaga || "").trim() || "Unidade"] : form.membros;
+
   async function criarEvento() {
-    if (!form.nome.trim() || !form.valor || !form.abertura || !form.membros.length) { alert("Preencha nome, valor, abertura e membros."); return; }
+    if (!form.nome.trim() || !form.valor || !form.abertura || !membrosForm.length) { alert(ehItemForm ? "Preencha nome, valor, abertura e quantidade." : "Preencha nome, valor, abertura e membros."); return; }
+    if (ehItemForm && MEMBROS_SK8.includes(membrosForm[0])) { alert("O nome da vaga não pode ser o nome de um membro. Use, por exemplo, \"Unidade\"."); return; }
     setSalvando(true);
     const { data: ev, error } = await supabase.from("claim_eventos").insert([{
       nome: form.nome.trim(), valor: Number(form.valor), prazo: form.prazo || null,
-      abertura: form.abertura ? form.abertura + ":00-03:00" : form.abertura, membros: form.membros, sets_iniciais: Number(form.sets_iniciais) || 2, limite_por_joiner: form.limite_por_joiner ? Number(form.limite_por_joiner) : null,
+      abertura: form.abertura ? form.abertura + ":00-03:00" : form.abertura, membros: membrosForm, sets_iniciais: Number(form.sets_iniciais) || (ehItemForm ? 1 : 2), limite_por_joiner: form.limite_por_joiner ? Number(form.limite_por_joiner) : null,
     }]).select().single();
     if (error || !ev) { alert("Erro: " + error?.message); setSalvando(false); return; }
     if (form.foto) {
@@ -21360,7 +21370,7 @@ function AdminClaimEventos() {
         await supabase.from("claim_eventos").update({ foto_url: publicUrl }).eq("id", ev.id);
       }
     }
-    const setsRows = Array.from({ length: Number(form.sets_iniciais) || 2 }, (_, i) => ({ evento_id: ev.id, numero: i+1, status:"aberto" }));
+    const setsRows = Array.from({ length: Number(form.sets_iniciais) || (ehItemForm ? 1 : 2) }, (_, i) => ({ evento_id: ev.id, numero: i+1, status:"aberto" }));
     const { data: createdSets } = await supabase.from("claim_sets").insert(setsRows).select();
     const adminRows = [];
     (createdSets || []).forEach((s, si) => {
@@ -21369,7 +21379,7 @@ function AdminClaimEventos() {
     });
     if (adminRows.length) await supabase.from("claim_reservas").insert(adminRows);
     setSalvando(false);
-    setForm({ nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
+    setForm({ tipo:"photocard", vaga:"Unidade", nome:"", valor:"", prazo:"", abertura:"", membros:[...SK8], sets_iniciais:2, adminReservas:{}, foto:null, fotoPreview:null, limite_por_joiner:"" });
     setTab("eventos");
     fetchTudo();
   }
@@ -21707,23 +21717,30 @@ function AdminClaimEventos() {
         <div style={{ background:"var(--card-bg)", border:"1px solid rgba(255,92,26,.2)", borderRadius:12, padding:"20px 16px", display:"flex", flexDirection:"column", gap:14 }}>
           <div style={{ fontSize:9, fontFamily:mono, color:"var(--laranja)", letterSpacing:"1.5px", fontWeight:700 }}>NOVO EVENTO DE CLAIM</div>
 
+          <div style={{ display:"flex", gap:0, border:"1px solid rgba(245,240,232,.12)", borderRadius:8, overflow:"hidden", width:"fit-content" }}>
+            {[["photocard", "Photocard (8 membros)"], ["item", "Item (fita, álbum...)"]].map(([id, label]) => (
+              <button key={id} onClick={() => setForm(p => ({ ...p, tipo:id }))} style={{ padding:"7px 16px", fontSize:11, fontFamily:mono, fontWeight:700, border:"none", cursor:"pointer",
+                background: form.tipo === id ? "rgba(255,92,26,.18)" : "transparent", color: form.tipo === id ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>{label}</button>
+            ))}
+          </div>
+
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>NOME DO EVENTO *</div>
-              <input value={form.nome} onChange={e=>setForm(p=>({...p,nome:e.target.value}))} placeholder="ex: NAGOYA SHOW 06-09 | SUIATSU" style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>{ehItemForm ? "NOME DO ITEM *" : "NOME DO EVENTO *"}</div>
+              <input value={form.nome} onChange={e=>setForm(p=>({...p,nome:e.target.value}))} placeholder={ehItemForm ? "ex: Álbum NOEASY (versão STANDARD)" : "ex: NAGOYA SHOW 06-09 | SUIATSU"} style={inputS} /></div>
             <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>VALOR *</div>
               <input type="number" value={form.valor} onChange={e=>setForm(p=>({...p,valor:e.target.value}))} placeholder="0.00" style={inputS} /></div>
             <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>PRAZO</div>
               <input value={form.prazo} onChange={e=>setForm(p=>({...p,prazo:e.target.value}))} placeholder="ex: 08/set" style={inputS} /></div>
             <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>ABERTURA *</div>
               <input type="datetime-local" value={form.abertura} onChange={e=>setForm(p=>({...p,abertura:e.target.value}))} style={inputS} /></div>
-            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>SETS INICIAIS</div>
-              <input type="number" min={1} max={10} value={form.sets_iniciais} onChange={e=>setForm(p=>({...p,sets_iniciais:e.target.value}))} style={inputS} /></div>
+            <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>{ehItemForm ? "QUANTIDADE (unidades) *" : "SETS INICIAIS"}</div>
+              <input type="number" min={1} max={ehItemForm ? 99 : 10} value={form.sets_iniciais} onChange={e=>setForm(p=>({...p,sets_iniciais:e.target.value}))} style={inputS} /></div>
             <div><div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>LIMITE POR JOINER <span style={{ color:"rgba(245,240,232,.2)" }}>(opcional)</span></div>
               <input type="number" min={1} value={form.limite_por_joiner} onChange={e=>setForm(p=>({...p,limite_por_joiner:e.target.value}))} placeholder="sem limite" style={inputS} /></div>
           </div>
 
           <div>
-            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>FOTO DO PHOTOCARD</div>
+            <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>{ehItemForm ? "FOTO DO ITEM" : "FOTO DO PHOTOCARD"}</div>
             <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
               <div style={{ width:80, height:80, borderRadius:8, border:`1px dashed ${form.fotoPreview?"rgba(186,255,57,.3)":"rgba(245,240,232,.12)"}`, background:"rgba(245,240,232,.03)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 {form.fotoPreview
@@ -21743,6 +21760,13 @@ function AdminClaimEventos() {
             </label>
           </div>
 
+          {ehItemForm ? (
+            <div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>NOME DA VAGA <span style={{ color:"rgba(245,240,232,.2)" }}>(o que o joiner vê para marcar)</span></div>
+              <input value={form.vaga} onChange={e => setForm(p => ({ ...p, vaga:e.target.value }))} placeholder="Unidade" style={{ ...inputS, maxWidth:260 }} />
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:6 }}>cada unidade é um set com 1 vaga · {Number(form.sets_iniciais) || 1} unidade(s) no total</div>
+            </div>
+          ) : (
           <div>
             <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>MEMBROS</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
@@ -21756,15 +21780,17 @@ function AdminClaimEventos() {
             </div>
           </div>
 
+          )}
+
           {/* Admin reservas por set */}
-          {form.membros.length > 0 && Number(form.sets_iniciais) >= 1 && (
+          {membrosForm.length > 0 && Number(form.sets_iniciais) >= 1 && (
             <div>
               <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>SLOTS RESERVADOS PELA ADMIN (por set)</div>
               {Array.from({ length: Number(form.sets_iniciais) || 2 }, (_, si) => (
                 <div key={si} style={{ marginBottom:8 }}>
                   <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4, letterSpacing:"1px" }}>SET {si+1}</div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
-                    {form.membros.map(m => {
+                    {membrosForm.map(m => {
                       const sel = (form.adminReservas[si] || new Set()).has(m);
                       return <button key={m} onClick={() => toggleAdminReserva(si, m)} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:6, border:"1px solid", cursor:"pointer",
                         background: sel?"rgba(255,92,26,.15)":"rgba(245,240,232,.03)",
