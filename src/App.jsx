@@ -17196,6 +17196,29 @@ function AdminGaleria() {
   const trocarRef = useRef(null);
   const [detalheBusy, setDetalheBusy] = useState(false);
   const compartilhadaCom = f => (todas || []).filter(x => x.id !== f.id && x.foto_url === f.foto_url);
+  const [vincAberto, setVincAberto] = useState(false);
+  const [vincItens,  setVincItens]  = useState(null);
+  const [vincBusca,  setVincBusca]  = useState("");
+
+  async function abrirVincular(f) {
+    setVincAberto(true); setVincBusca(""); setVincItens(null);
+    const { data } = await supabase.from("masterlist").select("nome_do_item").eq("ceg", f.ceg).not("nome", "ilike", "disponivel");
+    setVincItens([...new Set((data || []).map(r => r.nome_do_item).filter(Boolean))].sort());
+  }
+
+  async function vincularItemT(f, item) {
+    if (!window.confirm(`Vincular a foto #${f.id} ao item:
+${item}?`)) return;
+    setDetalheBusy(true);
+    const { error } = await supabase.from("item_fotos").update({ nome_do_item: item }).eq("id", f.id);
+    setDetalheBusy(false);
+    if (error) { alert("Erro ao vincular: " + error.message); return; }
+    const troca = x => x.id === f.id ? { ...x, nome_do_item: item } : x;
+    setTodas(prev => (prev || []).map(troca));
+    setFotos(prev => (prev || []).map(troca));
+    setDetalheT(d => d && d.id === f.id ? troca(d) : d);
+    setVincAberto(false);
+  }
 
   async function excluirFotoT(f) {
     const outras = compartilhadaCom(f);
@@ -17284,7 +17307,7 @@ O mesmo arquivo também é usado em: ${outras.map(x => "#" + x.id).join(", ")} (
               const item = itemDaFoto(f);
               const capa = f.ordem < 0;
               return (
-                <div key={f.id} onClick={() => setDetalheT(f)} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in" }}>
+                <div key={f.id} onClick={() => { setDetalheT(f); setVincAberto(false); }} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in" }}>
                   <div style={{ position:"relative", aspectRatio:"1", background:"rgba(245,240,232,.03)" }}>
                     <img src={f.foto_url} alt={item || f.ceg} loading="lazy" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
                     {capa && <div style={{ position:"absolute", top:5, left:5, fontSize:8, fontFamily:mono, background:"rgba(255,92,26,.9)", color:"#fff", borderRadius:3, padding:"2px 7px" }}>★ CAPA</div>}
@@ -17331,10 +17354,28 @@ O mesmo arquivo também é usado em: ${outras.map(x => "#" + x.id).join(", ")} (
                   <div style={{ color:"#F5F0E8", wordBreak:"break-all", lineHeight:1.5 }}>{v}</div>
                 </div>
               ))}
+              {vincAberto && detalheT.ordem >= 0 && (
+                <div style={{ border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:10, display:"flex", flexDirection:"column", gap:8 }}>
+                  <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)" }}>ESCOLHA O ITEM DESTA FOTO ({detalheT.ceg})</div>
+                  <input value={vincBusca} onChange={e => setVincBusca(e.target.value)} placeholder="buscar item ou membro…" style={{ ...selT, cursor:"text" }} />
+                  <div style={{ maxHeight:180, overflowY:"auto", display:"flex", flexDirection:"column", gap:4 }}>
+                    {vincItens === null ? (
+                      <div style={{ color:"rgba(245,240,232,.35)" }}>carregando…</div>
+                    ) : vincItens.filter(i => !vincBusca.trim() || i.toLowerCase().includes(vincBusca.trim().toLowerCase())).map(i => (
+                      <button key={i} disabled={detalheBusy} onClick={() => vincularItemT(detalheT, i)}
+                        style={{ ...selT, textAlign:"left", fontSize:10, padding:"6px 8px", background: i === detalheT.nome_do_item ? "rgba(100,181,246,.15)" : "#1a1a18" }}>{i}</button>
+                    ))}
+                    {vincItens && vincItens.length === 0 && <div style={{ color:"rgba(245,240,232,.35)" }}>nenhum item na masterlist para essa CEG</div>}
+                  </div>
+                </div>
+              )}
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
                 <a href={detalheT.foto_url} target="_blank" rel="noopener noreferrer" style={{ ...selT, textDecoration:"none", color:"var(--laranja)" }}>abrir original ↗</a>
                 <input ref={trocarRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e => trocarFotoT(detalheT, e.target.files?.[0])} />
                 <button disabled={detalheBusy} onClick={() => trocarRef.current?.click()} style={{ ...selT, color:"#BAFF39", opacity: detalheBusy ? .5 : 1 }}>{detalheBusy ? "aguarde…" : "trocar foto"}</button>
+                {detalheT.ordem >= 0 && (
+                  <button disabled={detalheBusy} onClick={() => vincAberto ? setVincAberto(false) : abrirVincular(detalheT)} style={{ ...selT, color:"#64B5F6", opacity: detalheBusy ? .5 : 1 }}>vincular item</button>
+                )}
                 <button disabled={detalheBusy} onClick={() => excluirFotoT(detalheT)} style={{ ...selT, color:"#ff6b6b", opacity: detalheBusy ? .5 : 1 }}>excluir foto</button>
                 <button onClick={() => { setCegSelecionada(detalheT.ceg); setModo("ceg"); setDetalheT(null); }} style={{ ...selT, color:"#C9A8F0" }}>gerenciar essa CEG →</button>
                 <button onClick={() => setDetalheT(null)} style={{ ...selT, color:"rgba(245,240,232,.5)" }}>fechar</button>
