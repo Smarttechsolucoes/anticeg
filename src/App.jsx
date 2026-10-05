@@ -776,6 +776,26 @@ function parseMembro(nomeItem) {
   };
 }
 
+function membrosNormalizados(membro) {
+  return (membro || "").split("+")
+    .map(m => m.trim().toUpperCase().replace(/[ÈÉÊ]/g, "E").replace(/[.\s]/g, ""))
+    .filter(Boolean);
+}
+
+// a foto vale para o item quando o tipo bate e, se a foto é de um membro, o item é do mesmo membro
+function fotoCombinaComItem(f, i) {
+  if (f.ceg !== i.ceg) return false;
+  const pf = parseMembro(f.nome_do_item);
+  const pi = parseMembro(i.nome_do_item);
+  const fTipo = pf.tipo.toLowerCase();
+  const iTipo = pi.tipo.toLowerCase();
+  if (!(iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo))) return false;
+  const mFoto = membrosNormalizados(pf.membro);
+  if (mFoto.length === 0) return true;
+  const mItem = membrosNormalizados(pi.membro);
+  return mFoto.some(m => mItem.includes(m));
+}
+
 function slugify(str) {
   return (str || "").toLowerCase()
     .replace(/&/g, "and").replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").trim();
@@ -2033,12 +2053,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   useEffect(() => {
     if (!fotoAmpliada || !minhasFotos?.length) return;
     function ir(f) {
-      const itemDoJoiner = itens.find(i => {
-        if (i.ceg !== f.ceg) return false;
-        const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
-        const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
-        return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
-      });
+      const itemDoJoiner = itens.find(i => fotoCombinaComItem(f, i));
       const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
       setFotoAmpliada({ foto: f, membro });
     }
@@ -2142,12 +2157,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
               const meusCegs = [...new Set(itens.map(i => i.ceg))];
               const { data } = await supabase.from("item_fotos").select("*").in("ceg", meusCegs).gte("ordem", 0).order("ceg").order("ordem").order("id");
               if (!data) { setMinhasFotos([]); return; }
-              const meusTipos = itens.map(i => ({ ceg: i.ceg, tipo: parseMembro(i.nome_do_item).tipo.toLowerCase() }));
               const vistos = new Set();
               const filtradas = data.filter(f => {
-                const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
-                if (!meusTipos.some(m => m.ceg === f.ceg && (m.tipo === fTipo || m.tipo.includes(fTipo) || fTipo.includes(m.tipo)))) return false;
-                const chave = `${f.ceg}::${fTipo}`;
+                if (!itens.some(i => fotoCombinaComItem(f, i))) return false;
+                const { membro, tipo } = parseMembro(f.nome_do_item);
+                const chave = `${f.ceg}::${tipo.toLowerCase()}::${membrosNormalizados(membro).join("+")}`;
                 if (vistos.has(chave)) return false;
                 vistos.add(chave);
                 return true;
@@ -2241,12 +2255,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:12 }}>
                       {minhasFotos.map(f => {
-                        const itemDoJoiner = itens.find(i => {
-                          if (i.ceg !== f.ceg) return false;
-                          const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
-                          const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
-                          return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
-                        });
+                        const itemDoJoiner = itens.find(i => fotoCombinaComItem(f, i));
                         const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
                         return (
                           <div key={f.id} onClick={() => setFotoAmpliada({ foto: f, membro })}
@@ -2321,12 +2330,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         const temAnterior = idxAtual > 0;
         const temProxima  = minhasFotos && idxAtual < minhasFotos.length - 1;
         function ir(f) {
-          const itemDoJoiner = itens.find(i => {
-            if (i.ceg !== f.ceg) return false;
-            const fTipo = parseMembro(f.nome_do_item).tipo.toLowerCase();
-            const iTipo = parseMembro(i.nome_do_item).tipo.toLowerCase();
-            return iTipo === fTipo || iTipo.includes(fTipo) || fTipo.includes(iTipo);
-          });
+          const itemDoJoiner = itens.find(i => fotoCombinaComItem(f, i));
           const { membro } = itemDoJoiner ? parseMembro(itemDoJoiner.nome_do_item) : {};
           setFotoAmpliada({ foto: f, membro });
         }
