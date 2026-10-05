@@ -17193,6 +17193,46 @@ function AdminGaleria() {
   const arquivoT = f => { try { return decodeURIComponent((f.foto_url || "").split("/").pop() || ""); } catch { return f.foto_url || ""; } };
   const selT = { background:"#1a1a18", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"8px 12px", color:"#F5F0E8", fontFamily:mono, fontSize:11, outline:"none", cursor:"pointer" };
 
+  const trocarRef = useRef(null);
+  const [detalheBusy, setDetalheBusy] = useState(false);
+  const compartilhadaCom = f => (todas || []).filter(x => x.id !== f.id && x.foto_url === f.foto_url);
+
+  async function excluirFotoT(f) {
+    const outras = compartilhadaCom(f);
+    const aviso = outras.length
+      ? `Excluir a foto #${f.id}?
+
+O mesmo arquivo também é usado em: ${outras.map(x => "#" + x.id).join(", ")} (esses continuam).`
+      : `Excluir a foto #${f.id}?`;
+    if (!window.confirm(aviso)) return;
+    setDetalheBusy(true);
+    const { error } = await supabase.from("item_fotos").delete().eq("id", f.id);
+    setDetalheBusy(false);
+    if (error) { alert("Erro ao excluir foto: " + error.message); return; }
+    setTodas(prev => (prev || []).filter(x => x.id !== f.id));
+    setFotos(prev => (prev || []).filter(x => x.id !== f.id));
+    setDetalheT(null);
+  }
+
+  async function trocarFotoT(f, file) {
+    if (!file) return;
+    setDetalheBusy(true);
+    const slug = (f.ceg || "fotos").replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${slug}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, file, { upsert: true });
+    if (upErr) { alert("Erro ao enviar: " + upErr.message); setDetalheBusy(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+    const { error } = await supabase.from("item_fotos").update({ foto_url: publicUrl, config: null }).eq("id", f.id);
+    setDetalheBusy(false);
+    if (error) { alert("Erro ao salvar a nova foto: " + error.message); return; }
+    const troca = x => x.id === f.id ? { ...x, foto_url: publicUrl, config: null } : x;
+    setTodas(prev => (prev || []).map(troca));
+    setFotos(prev => (prev || []).map(troca));
+    setDetalheT(d => d && d.id === f.id ? troca(d) : d);
+    if (trocarRef.current) trocarRef.current.value = "";
+  }
+
   const viewTodas = (
     <div>
       {todas === null ? (
@@ -17283,6 +17323,7 @@ function AdminGaleria() {
                 ["Descrição", detalheT.descricao || "—"],
                 ["Enviada em", fmtDataT(detalheT.created_at)],
                 ["Arquivo", arquivoT(detalheT)],
+                ...(compartilhadaCom(detalheT).length ? [["⚠ Mesmo arquivo em outras fotos", compartilhadaCom(detalheT).map(x => `#${x.id} ${itemDaFoto(x)}`).join(" · ")]] : []),
                 ["Ajuste (zoom/posição)", detalheT.config ? (typeof detalheT.config === "string" ? detalheT.config : JSON.stringify(detalheT.config)) : (detalheT.ordem < 0 && (detalheT.nome_do_item || "").startsWith("{") ? detalheT.nome_do_item : "—")],
               ].map(([k, v]) => (
                 <div key={k}>
@@ -17292,6 +17333,9 @@ function AdminGaleria() {
               ))}
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
                 <a href={detalheT.foto_url} target="_blank" rel="noopener noreferrer" style={{ ...selT, textDecoration:"none", color:"var(--laranja)" }}>abrir original ↗</a>
+                <input ref={trocarRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e => trocarFotoT(detalheT, e.target.files?.[0])} />
+                <button disabled={detalheBusy} onClick={() => trocarRef.current?.click()} style={{ ...selT, color:"#BAFF39", opacity: detalheBusy ? .5 : 1 }}>{detalheBusy ? "aguarde…" : "trocar foto"}</button>
+                <button disabled={detalheBusy} onClick={() => excluirFotoT(detalheT)} style={{ ...selT, color:"#ff6b6b", opacity: detalheBusy ? .5 : 1 }}>excluir foto</button>
                 <button onClick={() => { setCegSelecionada(detalheT.ceg); setModo("ceg"); setDetalheT(null); }} style={{ ...selT, color:"#C9A8F0" }}>gerenciar essa CEG →</button>
                 <button onClick={() => setDetalheT(null)} style={{ ...selT, color:"rgba(245,240,232,.5)" }}>fechar</button>
               </div>
