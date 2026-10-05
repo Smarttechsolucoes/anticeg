@@ -21313,6 +21313,7 @@ function AdminClaimEventos() {
   const [addClaimCog, setAddClaimCog] = useState("");
   const [addClaimSalvando, setAddClaimSalvando] = useState(false);
   const [addClaimErro, setAddClaimErro] = useState("");
+  const [novaTag, setNovaTag] = useState("");
 
   async function salvarEdicaoEvento() {
     if (!editEvento) return;
@@ -21350,11 +21351,12 @@ function AdminClaimEventos() {
   useEffect(() => { fetchTudo(); }, []);
 
   const ehItemForm = form.tipo === "item";
-  const membrosForm = ehItemForm ? [(form.vaga || "").trim() || "Unidade"] : form.membros;
+  const membrosForm = ehItemForm ? ((form.vaga || "").split(",").map(t => t.trim()).filter(Boolean).filter((t, i, a) => a.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i)) : form.membros;
+  if (ehItemForm && !membrosForm.length) membrosForm.push("Unidade");
 
   async function criarEvento() {
     if (!form.nome.trim() || !form.valor || !form.abertura || !membrosForm.length) { alert(ehItemForm ? "Preencha nome, valor, abertura e quantidade." : "Preencha nome, valor, abertura e membros."); return; }
-    if (ehItemForm && MEMBROS_SK8.includes(membrosForm[0])) { alert("O nome da vaga não pode ser o nome de um membro. Use, por exemplo, \"Unidade\"."); return; }
+    if (ehItemForm && membrosForm.some(m => MEMBROS_SK8.includes(m))) { alert("O nome da vaga não pode ser o nome de um membro. Use, por exemplo, \"Unidade\"."); return; }
     setSalvando(true);
     const { data: ev, error } = await supabase.from("claim_eventos").insert([{
       nome: form.nome.trim(), valor: Number(form.valor), prazo: form.prazo || null,
@@ -21603,8 +21605,19 @@ function AdminClaimEventos() {
     setForm(p => {
       const cur = new Set(p.membros);
       cur.has(membro) ? cur.delete(membro) : cur.add(membro);
-      return { ...p, membros: SK8.filter(m => cur.has(m)) };
+      return { ...p, membros: [...SK8.filter(m => cur.has(m)), ...p.membros.filter(m => !SK8.includes(m) && cur.has(m))] };
     });
+  }
+
+  function adicionarTags() {
+    const novas = novaTag.split(",").map(t => t.trim()).filter(Boolean);
+    if (!novas.length) return;
+    setForm(p => {
+      const ja = new Set(p.membros.map(m => m.toLowerCase()));
+      const unicas = novas.filter((t, i) => !ja.has(t.toLowerCase()) && novas.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i);
+      return { ...p, membros: [...p.membros, ...unicas] };
+    });
+    setNovaTag("");
   }
 
   function toggleAdminReserva(setIdx, membro) {
@@ -21762,21 +21775,26 @@ function AdminClaimEventos() {
 
           {ehItemForm ? (
             <div>
-              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>NOME DA VAGA <span style={{ color:"rgba(245,240,232,.2)" }}>(o que o joiner vê para marcar)</span></div>
+              <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:4 }}>NOME DA VAGA <span style={{ color:"rgba(245,240,232,.2)" }}>(o que o joiner vê para marcar · separe por vírgula para ter várias)</span></div>
               <input value={form.vaga} onChange={e => setForm(p => ({ ...p, vaga:e.target.value }))} placeholder="Unidade" style={{ ...inputS, maxWidth:260 }} />
-              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:6 }}>cada unidade é um set com 1 vaga · {Number(form.sets_iniciais) || 1} unidade(s) no total</div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)", marginTop:6 }}>cada unidade é um set com {membrosForm.length || 1} vaga(s) · {Number(form.sets_iniciais) || 1} unidade(s) no total</div>
             </div>
           ) : (
           <div>
             <div style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:mono, marginBottom:8 }}>MEMBROS</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-              {SK8.map(m => {
+              {[...SK8, ...form.membros.filter(m => !SK8.includes(m))].map(m => {
                 const sel = form.membros.includes(m);
                 return <button key={m} onClick={() => toggleMembroForm(m)} style={{ fontFamily:mono, fontSize:10, padding:"5px 12px", borderRadius:6, border:"1px solid", cursor:"pointer",
                   background: sel?"rgba(186,255,57,.15)":"rgba(245,240,232,.03)",
                   borderColor: sel?"rgba(186,255,57,.4)":"rgba(245,240,232,.1)",
-                  color: sel?"#BAFF39":"rgba(245,240,232,.35)" }}>{m}</button>;
+                  color: sel?"#BAFF39":"rgba(245,240,232,.35)" }}>{SK8.includes(m) ? m : `${m} ✕`}</button>;
               })}
+            </div>
+            <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+              <input value={novaTag} onChange={e => setNovaTag(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); adicionarTags(); } }}
+                placeholder="escrever uma tag (separe por vírgula para várias)" style={{ ...inputS, flex:"1 1 240px", width:"auto" }} />
+              <button onClick={adicionarTags} disabled={!novaTag.trim()} style={{ fontFamily:mono, fontSize:10, fontWeight:700, padding:"6px 14px", borderRadius:6, cursor:"pointer", border:"1px solid rgba(201,168,240,.4)", background:"rgba(201,168,240,.12)", color:"#C9A8F0", opacity: novaTag.trim() ? 1 : .5 }}>+ adicionar tag</button>
             </div>
           </div>
 
