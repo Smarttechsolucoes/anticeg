@@ -17206,6 +17206,27 @@ function AdminGaleria() {
     setVincItens([...new Set((data || []).map(r => r.nome_do_item).filter(Boolean))].sort());
   }
 
+  const MEMBROS_TAG = ["Bang Chan", "Lee Know", "Changbin", "Hyunjin", "Han", "Felix", "Seungmin", "I.N"];
+
+  // troca só o membro no começo do nome da foto, mantendo o tipo do item
+  async function aplicarMembroT(f, membro) {
+    const nome = (f.nome_do_item || "").trim();
+    const p = parseMembro(nome);
+    const tipo = p.membro && nome === p.membro ? "" : p.tipo;
+    if (!tipo) { alert("Esta foto não tem o tipo do item no nome (ex.: T-SHIRT POB ...). Use \"vincular item\" para escolher o item completo."); return; }
+    const atuais = membrosNormalizados(p.membro);
+    const novo = membro && atuais.length === 1 && atuais[0] === membrosNormalizados(membro)[0] ? null : membro;
+    const novoNome = novo ? `${novo} ${tipo}${p.versao ? " | " + p.versao : ""}` : `${tipo}${p.versao ? " | " + p.versao : ""}`;
+    setDetalheBusy(true);
+    const { error } = await supabase.from("item_fotos").update({ nome_do_item: novoNome }).eq("id", f.id);
+    setDetalheBusy(false);
+    if (error) { alert("Erro ao salvar o membro: " + error.message); return; }
+    const troca = x => x.id === f.id ? { ...x, nome_do_item: novoNome } : x;
+    setTodas(prev => (prev || []).map(troca));
+    setFotos(prev => (prev || []).map(troca));
+    setDetalheT(d => d && d.id === f.id ? troca(d) : d);
+  }
+
   async function vincularItemT(f, item) {
     if (!window.confirm(`Vincular a foto #${f.id} ao item:
 ${item}?`)) return;
@@ -17354,6 +17375,22 @@ O mesmo arquivo também é usado em: ${outras.map(x => "#" + x.id).join(", ")} (
                   <div style={{ color:"#F5F0E8", wordBreak:"break-all", lineHeight:1.5 }}>{v}</div>
                 </div>
               ))}
+              {detalheT.ordem >= 0 && (
+                <div>
+                  <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:6 }}>MEMBRO (clique para marcar, clique de novo para tirar)</div>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {MEMBROS_TAG.map(m => {
+                      const ativo = membrosNormalizados(parseMembro(detalheT.nome_do_item).membro).includes(membrosNormalizados(m)[0]);
+                      return (
+                        <button key={m} disabled={detalheBusy} onClick={() => aplicarMembroT(detalheT, m)}
+                          style={{ ...selT, padding:"5px 11px", borderRadius:20, fontSize:10, opacity: detalheBusy ? .5 : 1,
+                            background: ativo ? "rgba(201,168,240,.18)" : "#1a1a18", color: ativo ? "#C9A8F0" : "rgba(245,240,232,.6)",
+                            border: ativo ? "1px solid rgba(201,168,240,.6)" : "1px solid rgba(245,240,232,.15)", fontWeight: ativo ? 700 : 400 }}>{m}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {vincAberto && detalheT.ordem >= 0 && (
                 <div style={{ border:"1px solid rgba(100,181,246,.25)", borderRadius:8, padding:10, display:"flex", flexDirection:"column", gap:8 }}>
                   <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)" }}>ESCOLHA O ITEM DESTA FOTO ({detalheT.ceg})</div>
