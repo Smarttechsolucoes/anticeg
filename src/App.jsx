@@ -16943,7 +16943,50 @@ function AdminGaleria() {
   const [replicando,      setReplicando]      = useState(null);
   const [capaZoom,        setCapaZoom]        = useState(1);
   const [capaPosY,        setCapaPosY]        = useState(50);
+  const [modo,            setModo]            = useState("todas");
+  const [todas,           setTodas]           = useState(null);
+  const [buscaT,          setBuscaT]          = useState("");
+  const [cegT,            setCegT]            = useState("");
+  const [tipoT,           setTipoT]           = useState("todos");
+  const [ordemT,          setOrdemT]          = useState("recentes");
+  const [limiteT,         setLimiteT]         = useState(60);
+  const [detalheT,        setDetalheT]        = useState(null);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (modo !== "todas" || todas !== null) return;
+    (async () => {
+      let all = [], from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("item_fotos").select("*").order("id").range(from, from + 999);
+        if (error) { console.error("Todas as fotos:", error.message); break; }
+        if (!data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setTodas(all);
+    })();
+  }, [modo, todas]);
+
+  const itemDaFoto = f => (f.ordem < 0 || (f.nome_do_item || "").trim().startsWith("{")) ? "" : (f.nome_do_item || "");
+  const todasCegsFoto = useMemo(() => [...new Set((todas || []).map(f => f.ceg).filter(Boolean))].sort(), [todas]);
+  const todasFiltradas = useMemo(() => {
+    if (!todas) return null;
+    const q = buscaT.trim().toLowerCase();
+    let l = todas.filter(f => {
+      if (cegT && f.ceg !== cegT) return false;
+      if (tipoT === "capa" && !(f.ordem < 0)) return false;
+      if (tipoT === "galeria" && f.ordem < 0) return false;
+      if (q && !(`${f.id} ${f.ceg || ""} ${itemDaFoto(f)} ${f.descricao || ""}`.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    l = [...l].sort((a, b) => ordemT === "recentes"
+      ? new Date(b.created_at) - new Date(a.created_at)
+      : ordemT === "antigas" ? new Date(a.created_at) - new Date(b.created_at)
+      : (a.ceg || "").localeCompare(b.ceg || "") || (a.ordem - b.ordem));
+    return l;
+  }, [todas, buscaT, cegT, tipoT, ordemT]);
 
   useEffect(() => {
     const capa = (fotos || []).find(f => f.ordem < 0);
@@ -17141,8 +17184,129 @@ function AdminGaleria() {
 
   const pillBase = { fontSize:10, fontFamily:"'DM Mono',monospace", padding:"5px 12px", borderRadius:20, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .12s" };
 
+  const mono = "'DM Mono',monospace";
+  const fmtDataT = d => d ? new Date(d).toLocaleDateString("pt-BR") + " " + new Date(d).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" }) : "—";
+  const arquivoT = f => { try { return decodeURIComponent((f.foto_url || "").split("/").pop() || ""); } catch { return f.foto_url || ""; } };
+  const selT = { background:"#1a1a18", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"8px 12px", color:"#F5F0E8", fontFamily:mono, fontSize:11, outline:"none", cursor:"pointer" };
+
+  const viewTodas = (
+    <div>
+      {todas === null ? (
+        <div style={{ fontSize:11, fontFamily:mono, color:"rgba(245,240,232,.3)", padding:"48px 0", textAlign:"center" }}>carregando...</div>
+      ) : (<>
+        <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
+          {[
+            ["Fotos", todas.length],
+            ["Capas", todas.filter(f => f.ordem < 0).length],
+            ["Na galeria", todas.filter(f => f.ordem >= 0).length],
+            ["CEGs com foto", todasCegsFoto.length],
+          ].map(([l, v]) => (
+            <div key={l} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"8px 14px", minWidth:90 }}>
+              <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:3 }}>{l.toUpperCase()}</div>
+              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+          <input value={buscaT} onChange={e => { setBuscaT(e.target.value); setLimiteT(60); }} placeholder="buscar por CEG, item, descrição ou id…"
+            style={{ ...selT, flex:"1 1 220px", cursor:"text" }} />
+          <select value={cegT} onChange={e => { setCegT(e.target.value); setLimiteT(60); }} style={selT}>
+            <option value="">todas as CEGs</option>
+            {todasCegsFoto.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={tipoT} onChange={e => { setTipoT(e.target.value); setLimiteT(60); }} style={selT}>
+            <option value="todos">capas + galeria</option>
+            <option value="capa">só capas</option>
+            <option value="galeria">só galeria</option>
+          </select>
+          <select value={ordemT} onChange={e => setOrdemT(e.target.value)} style={selT}>
+            <option value="recentes">mais recentes</option>
+            <option value="antigas">mais antigas</option>
+            <option value="ceg">por CEG</option>
+          </select>
+          <button onClick={() => setTodas(null)} title="recarregar" style={{ ...selT, color:"rgba(245,240,232,.6)" }}>↻</button>
+        </div>
+
+        <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginBottom:10 }}>
+          {todasFiltradas.length} de {todas.length} foto{todas.length !== 1 ? "s" : ""}
+        </div>
+
+        {todasFiltradas.length === 0 ? (
+          <div style={{ border:"2px dashed rgba(245,240,232,.08)", borderRadius:12, padding:"40px 20px", textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>nenhuma foto com esses filtros</div>
+        ) : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(170px, 1fr))", gap:10 }}>
+            {todasFiltradas.slice(0, limiteT).map(f => {
+              const item = itemDaFoto(f);
+              const capa = f.ordem < 0;
+              return (
+                <div key={f.id} onClick={() => setDetalheT(f)} style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in" }}>
+                  <div style={{ position:"relative", aspectRatio:"1", background:"rgba(245,240,232,.03)" }}>
+                    <img src={f.foto_url} alt={item || f.ceg} loading="lazy" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                    {capa && <div style={{ position:"absolute", top:5, left:5, fontSize:8, fontFamily:mono, background:"rgba(255,92,26,.9)", color:"#fff", borderRadius:3, padding:"2px 7px" }}>★ CAPA</div>}
+                    <div style={{ position:"absolute", top:5, right:5, fontSize:8, fontFamily:mono, background:"rgba(0,0,0,.6)", color:"rgba(245,240,232,.7)", borderRadius:3, padding:"2px 6px" }}>#{f.id}</div>
+                  </div>
+                  <div style={{ padding:"8px 10px", display:"flex", flexDirection:"column", gap:3 }}>
+                    <div style={{ fontFamily:mono, fontSize:10, fontWeight:700, color:"#F5F0E8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.ceg || "sem CEG"}</div>
+                    <div style={{ fontFamily:mono, fontSize:9, color: item ? "rgba(245,240,232,.55)" : "rgba(245,240,232,.25)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item || (capa ? "foto de capa" : "sem item vinculado")}</div>
+                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)" }}>{fmtDataT(f.created_at)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {todasFiltradas.length > limiteT && (
+          <button onClick={() => setLimiteT(l => l + 60)} style={{ display:"block", margin:"18px auto 0", ...selT, padding:"9px 22px", fontWeight:700 }}>
+            mostrar mais ({todasFiltradas.length - limiteT} restantes)
+          </button>
+        )}
+      </>)}
+
+      {detalheT && (
+        <div onClick={() => setDetalheT(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, overflowY:"auto" }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:760, width:"100%", display:"flex", gap:18, flexWrap:"wrap", background:"#161614", border:"1px solid rgba(245,240,232,.1)", borderRadius:14, padding:18 }}>
+            <img src={detalheT.foto_url} alt={detalheT.ceg} style={{ flex:"1 1 280px", maxWidth:"100%", maxHeight:"70vh", objectFit:"contain", borderRadius:10, background:"rgba(245,240,232,.04)" }} />
+            <div style={{ flex:"1 1 240px", display:"flex", flexDirection:"column", gap:9, fontFamily:mono, fontSize:11 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:1 }}>CADASTRO DA FOTO</div>
+              {[
+                ["ID", `#${detalheT.id}`],
+                ["CEG", detalheT.ceg || "—"],
+                ["Item vinculado", itemDaFoto(detalheT) || (detalheT.ordem < 0 ? "— (foto de capa)" : "—")],
+                ["Tipo", detalheT.ordem < 0 ? "Capa do card" : "Galeria de itens"],
+                ["Ordem", String(detalheT.ordem)],
+                ["Descrição", detalheT.descricao || "—"],
+                ["Enviada em", fmtDataT(detalheT.created_at)],
+                ["Arquivo", arquivoT(detalheT)],
+                ["Ajuste (zoom/posição)", detalheT.config ? (typeof detalheT.config === "string" ? detalheT.config : JSON.stringify(detalheT.config)) : (detalheT.ordem < 0 && (detalheT.nome_do_item || "").startsWith("{") ? detalheT.nome_do_item : "—")],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div style={{ fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:2 }}>{k.toUpperCase()}</div>
+                  <div style={{ color:"#F5F0E8", wordBreak:"break-all", lineHeight:1.5 }}>{v}</div>
+                </div>
+              ))}
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
+                <a href={detalheT.foto_url} target="_blank" rel="noopener noreferrer" style={{ ...selT, textDecoration:"none", color:"var(--laranja)" }}>abrir original ↗</a>
+                <button onClick={() => { setCegSelecionada(detalheT.ceg); setModo("ceg"); setDetalheT(null); }} style={{ ...selT, color:"#C9A8F0" }}>gerenciar essa CEG →</button>
+                <button onClick={() => setDetalheT(null)} style={{ ...selT, color:"rgba(245,240,232,.5)" }}>fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div>
+      {/* Alternar entre todas as fotos e gestão por CEG */}
+      <div style={{ display:"flex", gap:0, marginBottom:14, border:"1px solid rgba(245,240,232,.12)", borderRadius:8, overflow:"hidden", width:"fit-content" }}>
+        {[["todas", "Todas as fotos"], ["ceg", "Gerenciar por CEG"]].map(([id, label]) => (
+          <button key={id} onClick={() => setModo(id)} style={{ padding:"7px 16px", fontSize:11, fontFamily:mono, fontWeight:700, border:"none", cursor:"pointer", background: modo === id ? "rgba(201,168,240,.18)" : "transparent", color: modo === id ? "#C9A8F0" : "rgba(245,240,232,.45)" }}>{label}</button>
+        ))}
+      </div>
+      {modo === "todas" ? viewTodas : (<>
       {/* Linha 1: CEG select */}
       <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center" }}>
         <select value={cegSelecionada} onChange={e => setCegSelecionada(e.target.value)}
@@ -17330,6 +17494,7 @@ function AdminGaleria() {
           />
         );
       })()}
+      </>)}
     </div>
   );
 }
