@@ -12754,7 +12754,7 @@ function MercariTab() {
               </div>
             )}
 
-            <a href={waHref} target="_blank" rel="noopener noreferrer" className="mc-btn-cartao-wa">
+            <a href="https://linknabio.gg/anticeg-comu" target="_blank" rel="noopener noreferrer" className="mc-btn-cartao-wa">
               💳 Prefiro pagar no cartão de crédito →
             </a>
 
