@@ -12566,17 +12566,6 @@ function MercariTab() {
     return !!(joiner&&io&&checks.every(c=>c)&&po);
   }, [joiner,items,checks,semComp,idPix,fileComp]);
 
-  const waHref = useMemo(() => {
-    if(!joiner) return '#';
-    let j=0,b=0,lines='';
-    items.forEach((it,i)=>{
-      const v=calcBRL(it.jpy||0);
-      if(it.link||it.jpy>0){j+=it.jpy||0;b+=v;lines+=`\nItem ${i+1}${it.nome?' — '+it.nome:''}: ¥${(it.jpy||0).toLocaleString('pt-BR')} → R$ ${fBRL(v)}${it.link?'\n'+it.link:''}`;}
-    });
-    const vt=j>0?`\n\nValor total: ¥${Math.round(j).toLocaleString('pt-BR')} · R$ ${fBRL(b)}`:'';
-    return `https://wa.me/${WA}?text=${encodeURIComponent(`Olá! Gostaria de pagar por cartão o meu pedido da Caixinha Mercari. Sou ${joiner.nome||joiner.cog} (@${joiner.cog}).`+(lines?`\n${lines}`:'')+vt+`\n\nPode me enviar o link de pagamento?`)}`;
-  }, [joiner,items,fxVal]);
-
   const buscar = async () => {
     clearTimeout(tmrRef.current);
     const v=idRef.current.trim();
