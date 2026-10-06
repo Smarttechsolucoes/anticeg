@@ -399,6 +399,12 @@ function diasAtraso(vencimento) {
   return diff > 0 ? diff : 0;
 }
 
+// multa por dia de atraso, por item (R$)
+const MULTA_POR_DIA = 3;
+function multaAtraso(vencimento) {
+  return diasAtraso(vencimento) * MULTA_POR_DIA;
+}
+
 function diasParaVencer(vencimento) {
   if (!vencimento) return null;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -596,7 +602,7 @@ function ValCell({ val, status, vencimento, emAnalise, confirmado }) {
   if (!Number(val)) return <span className="zero-val">—</span>;
   const pendente = isPendente(status) && !confirmado;
   const dias = pendente && !emAnalise ? diasAtraso(vencimento) : 0;
-  const multa = dias * 1;
+  const multa = dias * MULTA_POR_DIA;
   const numStyle = emAnalise && pendente
     ? { color: "#A78BFA", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700 }
     : undefined;
@@ -2040,9 +2046,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
              + (isPendente(b.pago_rf)    && !pagConfirmMap[b.id]?.rf    && !emAnalise ? Number(b.taxa_rf||0)     : 0);
   }, 0);
   const tMulta = itens.reduce((a,b) => {
-    return a + (isPendente(b.pago_item)  && Number(b.valor_item||0)  > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.item  ? diasAtraso(b.venc_item)  : 0)
-             + (isPendente(b.pago_frete) && Number(b.frete_inter||0) > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.frete ? diasAtraso(b.venc_frete) : 0)
-             + (isPendente(b.pago_rf)    && Number(b.taxa_rf||0)     > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.rf    ? diasAtraso(b.venc_rf)    : 0);
+    return a + (isPendente(b.pago_item)  && Number(b.valor_item||0)  > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.item  ? multaAtraso(b.venc_item)  : 0)
+             + (isPendente(b.pago_frete) && Number(b.frete_inter||0) > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.frete ? multaAtraso(b.venc_frete) : 0)
+             + (isPendente(b.pago_rf)    && Number(b.taxa_rf||0)     > 0 && pagDemandaMap[b.id] !== "em_analise" && !pagConfirmMap[b.id]?.rf    ? multaAtraso(b.venc_rf)    : 0);
   }, 0);
 
 
@@ -2418,9 +2424,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           const vItem  = isPendente(i.pago_item)  && !pagConfirmMap[i.id]?.item  && !emAnalise ? Number(i.valor_item  || 0) : 0;
           const vFrete = isPendente(i.pago_frete) && !pagConfirmMap[i.id]?.frete && !emAnalise ? Number(i.frete_inter || 0) : 0;
           const vRf    = isPendente(i.pago_rf)    && !pagConfirmMap[i.id]?.rf    && !emAnalise ? Number(i.taxa_rf     || 0) : 0;
-          const mItem  = vItem  > 0 ? diasAtraso(i.venc_item)  : 0;
-          const mFrete = vFrete > 0 ? diasAtraso(i.venc_frete) : 0;
-          const mRf    = vRf    > 0 ? diasAtraso(i.venc_rf)    : 0;
+          const mItem  = vItem  > 0 ? multaAtraso(i.venc_item)  : 0;
+          const mFrete = vFrete > 0 ? multaAtraso(i.venc_frete) : 0;
+          const mRf    = vRf    > 0 ? multaAtraso(i.venc_rf)    : 0;
           const diasMax = Math.max(mItem > 0 ? diasAtraso(i.venc_item) : 0, mFrete > 0 ? diasAtraso(i.venc_frete) : 0, mRf > 0 ? diasAtraso(i.venc_rf) : 0);
           const total  = vItem + vFrete + vRf + mItem + mFrete + mRf;
           return total > 0 ? { i, vItem, vFrete, vRf, mItem, mFrete, mRf, diasMax, total } : null;
@@ -3103,9 +3109,9 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                           + (pendFrete ? Number(item.frete_inter||0) : 0)
                           + (pendRf    ? Number(item.taxa_rf||0)     : 0);
           const emAnalise = pagDemandaMap[item.id] === "em_analise";
-          const multaItem = (!emAnalise && pendItem  ? diasAtraso(item.venc_item)  : 0)
-                          + (!emAnalise && pendFrete ? diasAtraso(item.venc_frete) : 0)
-                          + (!emAnalise && pendRf    ? diasAtraso(item.venc_rf)    : 0);
+          const multaItem = (!emAnalise && pendItem  ? multaAtraso(item.venc_item)  : 0)
+                          + (!emAnalise && pendFrete ? multaAtraso(item.venc_frete) : 0)
+                          + (!emAnalise && pendRf    ? multaAtraso(item.venc_rf)    : 0);
           const envioSolicCard = envioByItem[item.id];
           const envioStatusCard = envioSolicCard?.status;
           const showEnvioCard = envioStatusCard && envioStatusCard !== "cancelado" && item.status !== "Enviado Nacional";
@@ -3930,9 +3936,9 @@ ${p.comprovante_url ? (() => {
         const itensSel = itensPendentes.filter(i => pagSelecionados.has(i.id));
         const multaItem = i => {
           if (emAnaliseIds.has(i.id)) return 0;
-          return (!i.pago_item  && Number(i.valor_item ||0) > 0 ? diasAtraso(i.venc_item)  : 0)
-               + (!i.pago_frete && Number(i.frete_inter||0) > 0 ? diasAtraso(i.venc_frete) : 0)
-               + (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 ? diasAtraso(i.venc_rf)    : 0);
+          return (!i.pago_item  && Number(i.valor_item ||0) > 0 ? multaAtraso(i.venc_item)  : 0)
+               + (!i.pago_frete && Number(i.frete_inter||0) > 0 ? multaAtraso(i.venc_frete) : 0)
+               + (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 ? multaAtraso(i.venc_rf)    : 0);
         };
         const subtotalItem = i => {
           const f = pagSelecionados.get(i.id);
@@ -6340,7 +6346,7 @@ function RegrasTab() {
     { titulo: "⋆ Infos Gerais", color: "lilas", fixed: true, itens: ["Menores de idade não são permitidos.","Você pode convidar amigxs confiáveis, mas evitem pessoas totalmente desconhecidas.","Ao participar da CEG, você declara estar ciente e de acordo com todas as regras.","O não cumprimento das regras pode resultar em bloqueio na comunidade.","Compradores que se incomodam com pequenos defeitos estéticos (amassados leves, pressmarks, sinais de manuseio) não devem participar das CEGs."] },
     { titulo: "⋆ Regra de Claim", color: "lilas", itens: ["É permitida apenas UMA pessoa te ajudando a dar claims nos itens.","No momento da claim, deve estar claramente sinalizado para quem é o photocard.","Caso não esteja claramente sinalizado no momento da claim, o item será automaticamente considerado seu, sem possibilidade de contestação posterior, inclusive em caso de erro de interpretação ou falta de identificação clara.","Itens considerados seus só poderão ser repassados mediante pagamento integral."] },
     { titulo: "⋆ Atualizações", color: "lilas", itens: ["As atualizações e informações de CEG se encontram sempre nas planilhas e nos respectivos grupos.","Caso o participante não esteja nos grupos ou não acompanhe as atualizações, a GOM não se responsabiliza por perdas de prazo, multas ou falta de informação.","Se não tem atualização recente, é porque não houve novidade."] },
-    { titulo: "⋆ Pagamentos & Taxas", color: "verde", itens: ["A taxa de R$1 por dia por item é aplicada automaticamente após o vencimento, sem necessidade de aviso.","Não é necessário comunicar atrasos individuais. Todas as situações seguem as mesmas regras.","Exceções por motivos pessoais não serão consideradas para prazos de pagamento — a multa continua sendo aplicada.","O comprovante de pagamento deve ser enviado no formulário de pagamento — comprovantes enviados no privado não serão considerados.","Reembolso só ocorre em caso de cancelamento da CEG inteira — e integral."] },
+    { titulo: "⋆ Pagamentos & Taxas", color: "verde", itens: ["A taxa de R$3 por dia por item é aplicada automaticamente após o vencimento, sem necessidade de aviso.","Não é necessário comunicar atrasos individuais. Todas as situações seguem as mesmas regras.","Exceções por motivos pessoais não serão consideradas para prazos de pagamento — a multa continua sendo aplicada.","O comprovante de pagamento deve ser enviado no formulário de pagamento — comprovantes enviados no privado não serão considerados.","Reembolso só ocorre em caso de cancelamento da CEG inteira — e integral."] },
     { titulo: "⋆ Repasse & Atraso", color: "lilas", itens: ["Repasses são permitidos dentro da comunidade ANTIGOM, inclusive no grupo V&T, desde que o item esteja totalmente pago à Nanda e com o formulário de pagamento devidamente preenchido.","Não é necessário solicitar autorização prévia para repasses realizados dentro da comunidade.","Repasses para pessoas fora da comunidade não são permitidos e serão cancelados.","CEGs que não permitem repasse: itens fanmade, revistas e caixas Mercari.","O repasse de qualquer item só será realizado após pagamento integral.","O joiner original é totalmente responsável por repassar todas as informações e regras ao novo dono do item.","O joiner deve preencher o formulário de repasse após a finalização. Repasses não informados via formulário não serão considerados pela GOM.","A GOM não se responsabiliza por falhas de comunicação entre as partes."] },
     { titulo: "⋆ Envio Nacional", color: "lilas", itens: ["Os envios nacionais são realizados em rounds mensais, com avisos prévios no grupo. Não é necessário um novo grupo para isso.","O formulário de envio ficará aberto durante períodos do mês. O prazo de envio após o preenchimento é de 15 dias.","Entrarei em contato individualmente para finalizar cada solicitação.","O pagamento do frete nacional + taxa de embalagem é imediato após a confirmação.","O envio só será realizado após a confirmação do pagamento de todas as taxas pendentes relacionadas aos itens solicitados.","Endereços preenchidos incorretamente ou incompletos podem resultar em atrasos, devoluções ou cobranças adicionais — sendo de responsabilidade do joiner.","O valor da declaração será sempre o valor integral do produto para cobertura do seguro.","Após a postagem, não nos responsabilizamos por atrasos ou falhas da transportadora. A responsabilidade da GOM se encerra no momento da postagem.","Condições de abandono relacionadas ao envio estão descritas na seção Abandono de Item.","Taxa de embalagem: Mini envio R$3,00 · Caixas 1kg–3kg R$4,00 · Caixas 3kg–7kg R$6,00 · Caixas +7kg R$10,00 — calculada conforme o peso final, cobrindo os materiais de proteção e preparo do envio."] },
     { titulo: "⋆ Abandono de Item", color: "laranja", itens: ["Itens com mais de 15 dias corridos de atraso no pagamento serão considerados abandono e poderão ser repassados sem reembolso.","Itens sem solicitação de envio após 60 dias do recebimento no Brasil serão considerados abandono e poderão ser repassados sem reembolso.","Pagamentos realizados após a caracterização de abandono não garantem a recuperação do item.","Não é necessário aviso individual para caracterização de abandono.","Ao participar da CEG, você declara estar ciente dos prazos e condições para evitar o abandono."] },
@@ -13204,9 +13210,9 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
     const pend = (isPendente(item.pago_item)  ? Number(item.valor_item||0)  : 0)
                + (isPendente(item.pago_frete) ? Number(item.frete_inter||0) : 0)
                + (isPendente(item.pago_rf)    ? Number(item.taxa_rf||0)     : 0);
-    const multa = (isPendente(item.pago_item)  ? diasAtraso(item.venc_item)  : 0)
-                + (isPendente(item.pago_frete) ? diasAtraso(item.venc_frete) : 0)
-                + (isPendente(item.pago_rf)    ? diasAtraso(item.venc_rf)    : 0);
+    const multa = (isPendente(item.pago_item)  ? multaAtraso(item.venc_item)  : 0)
+                + (isPendente(item.pago_frete) ? multaAtraso(item.venc_frete) : 0)
+                + (isPendente(item.pago_rf)    ? multaAtraso(item.venc_rf)    : 0);
     if (pend > 0) byJoiner[cog].itens.push({ ...item, pend, multa });
   });
   const sortPend = (a, b) => b.itens.reduce((s,i)=>s+i.pend,0) - a.itens.reduce((s,i)=>s+i.pend,0);
@@ -15465,7 +15471,7 @@ function LojinhaRepasses({ user }) {
   }
 
   async function abrirTransferencia(repasse) {
-    setTransferindo({ repasseId: repasse.id, masterlistId: repasse.masterlist_id });
+    setTransferindo({ repasseId: repasse.id, masterlistId: repasse.masterlist_id, repasse });
     setBuscaJoiner(""); setJoinerSelecionado(null);
     if (joiners.length === 0) {
       const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
@@ -15476,8 +15482,35 @@ function LojinhaRepasses({ user }) {
   async function confirmarTransferencia() {
     if (!joinerSelecionado || !transferindo) return;
     setTransferindo2(true);
+    // Vira um repasse pendente no painel do admin; o dono só muda na masterlist quando a admin aprovar.
+    const rl = transferindo.repasse;
+    let itemStatus = "outros";
     if (transferindo.masterlistId) {
-      await supabase.from("masterlist").update({ cog: joinerSelecionado.cog }).eq("id", transferindo.masterlistId);
+      const { data: ml } = await supabase.from("masterlist").select("status").eq("id", transferindo.masterlistId).maybeSingle();
+      itemStatus = ml?.status || "outros";
+    }
+    const { error: errRep } = await supabase.from("repassos").insert([{
+      joiner_cog: rl?.joiner_cog || user.cog,
+      joiner_nome: rl?.joiner_nome || user.nome_site || user.nome || user.cog,
+      joiner_twitter: user.twitter || null,
+      novo_dono_cog: joinerSelecionado.cog,
+      novo_dono_nome: joinerSelecionado.nome,
+      novo_dono_twitter: joinerSelecionado.twitter || null,
+      item_id: transferindo.masterlistId || null,
+      ceg: rl?.ceg || "",
+      nome_do_item: rl?.nome_card || "",
+      item_status: itemStatus,
+      item_quitado: false,
+      custos_pagos: [],
+      valor_pendente_descricao: null,
+      valor_acordado: Number(rl?.valor || 0),
+      comprovacao_url: null,
+      obs: "Via lojinha antijoiner",
+    }]);
+    if (errRep) {
+      setTransferindo2(false);
+      window.alert("Não foi possível enviar o repasse para a admin: " + errRep.message);
+      return;
     }
     await supabase.from("lojinha_repasses").update({ status: "transferido" }).eq("id", transferindo.repasseId);
     setTransferindo(null); setJoinerSelecionado(null); setBuscaJoiner("");
@@ -15853,7 +15886,7 @@ function LojinhaRepasses({ user }) {
                     {joinerSelecionado && (
                       <div style={{ fontFamily:mono, fontSize:10, color:"rgba(186,255,57,.7)", marginBottom:8 }}>
                         ✓ transferindo para <strong>{joinerSelecionado.nome || joinerSelecionado.cog}</strong>
-                        {transferindo.masterlistId && <span style={{ color:"rgba(245,240,232,.35)", marginLeft:6 }}>— card será movido na masterlist</span>}
+                        {transferindo.masterlistId && <span style={{ color:"rgba(245,240,232,.35)", marginLeft:6 }}>— a admin aprova e o card é movido na masterlist</span>}
                       </div>
                     )}
                     <div style={{ display:"flex", gap:6 }}>
