@@ -11910,8 +11910,8 @@ const PT_CFG = {
   grupo: "STRAY KIDS",
   subtitulo: "Paper Tale",
   capa: PT_BOX,
-  tags: ["PEDIDOS A DEFINIR", "ENVIO A DEFINIR", "PAGAMENTO A DEFINIR"],
-  infos: ["Pagamento: a definir", "Pedidos aceitos até: a definir", "Envios previsto: a definir"],
+  tags: ["PEDIDOS ATÉ 10/OUT", "ENVIO DEZ/2026", "PAGAMENTO 13/OUT"],
+  infos: ["Pagamento: 13 de outubro", "Pedidos aceitos até: 10 de outubro", "Envios previsto para Dezembro/2026 via FEDEX.", "Nenhum item acompanha POB de pré-venda, apenas o que está anunciado na imagem"],
   box: { id: "BOX LACRADA", foto: PT_BOX, preco: 220 },
   itens: [
     { id: "AGENDA", foto: "/paper-tale/agenda.png", preco: 20 },
