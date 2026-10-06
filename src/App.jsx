@@ -11915,17 +11915,13 @@ const PT_CFG = {
   box: { id: "BOX LACRADA", foto: PT_BOX, preco: 220 },
   itens: [
     { id: "AGENDA", foto: "/paper-tale/agenda.png", preco: 20 },
-    { id: "CAPA DE CADERNO", foto: "/paper-tale/capa de caderno.png", preco: 15 },
+    { id: "CAPA DE CADERNO", foto: "/paper-tale/capa de caderno.png", preco: 18 },
     { id: "DESK CALENDAR", foto: "/paper-tale/desk calendar.png", preco: 15 },
     { id: "MASKING TAPE", foto: "/paper-tale/masking tape.png", preco: 10 },
-    { id: "OUTBOX", foto: "/paper-tale/outbox.png", preco: 15 },
-    { id: "PHOTOBOOK", foto: "/paper-tale/photobook.png", preco: 25 },
+    { id: "OUTBOX", foto: "/paper-tale/outbox.png", preco: 10 },
+    { id: "PHOTOBOOK", foto: "/paper-tale/photobook.png", preco: 15 },
   ],
-  kits: [
-    { id: "KIT 01", foto: PT_FOTO, preco: 30 },
-    { id: "KIT 02", foto: PT_FOTO, preco: 35 },
-    { id: "KIT 03", foto: PT_FOTO, preco: 40 },
-  ],
+  kits: [],
 };
 
 // Estoque restante do Wave Maker: estoque da tabela menos os pedidos
@@ -12208,6 +12204,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       </div>
 
       {/* Seção KITS */}
+      {KITS_WM.length > 0 && <>
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Kits</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {KITS_WM.map(kit => {
@@ -12242,6 +12239,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
           );
         })}
       </div>
+      </>}
 
       {/* Checkout */}
       {modalidade && (
