@@ -11912,7 +11912,7 @@ const PT_CFG = {
   capa: PT_BOX,
   tags: ["PEDIDOS A DEFINIR", "ENVIO A DEFINIR", "PAGAMENTO A DEFINIR"],
   infos: ["Pagamento: a definir", "Pedidos aceitos até: a definir", "Envios previsto: a definir"],
-  box: { id: "BOX LACRADA", foto: PT_BOX, preco: 200 },
+  box: { id: "BOX LACRADA", foto: PT_BOX, preco: 220 },
   itens: [
     { id: "AGENDA", foto: "/paper-tale/agenda.png", preco: 20 },
     { id: "CAPA DE CADERNO", foto: "/paper-tale/capa de caderno.png", preco: 15 },
