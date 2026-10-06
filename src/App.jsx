@@ -11912,6 +11912,7 @@ const PT_CFG = {
   capa: PT_BOX,
   tags: ["PEDIDOS ATÉ 10/OUT", "ENVIO DEZ/2026", "PAGAMENTO 13/OUT"],
   infos: ["Pagamento: 13 de outubro", "Pedidos aceitos até: 10 de outubro", "Envios previsto para Dezembro/2026 via FEDEX.", "Nenhum item acompanha POB de pré-venda, apenas o que está anunciado na imagem"],
+  aviso: "Importante: caso o estoque esteja indisponível, mais rounds serão anunciados dentro da comunidade.",
   box: { id: "BOX LACRADA", foto: PT_BOX, preco: 220 },
   itens: [
     { id: "AGENDA", foto: "/paper-tale/agenda.png", preco: 20 },
@@ -12139,6 +12140,12 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
           ))}
         </div>
       </div>
+
+      {cfg.aviso && (
+        <div style={{ marginBottom:24, background:"rgba(96,165,250,.08)", border:"1px solid rgba(96,165,250,.35)", borderRadius:10, padding:"12px 16px", fontFamily:mono, fontSize:11, color:"#93c5fd", lineHeight:1.5 }}>
+          <span style={{ marginRight:6 }}>ⓘ</span>{cfg.aviso}
+        </div>
+      )}
 
       {/* Seção LACRADO */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Lacrado</div>
