@@ -7987,6 +7987,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [singbaCount, setSingbaCount] = useState(0);
   const [waveMakerCount,   setWaveMakerCount]   = useState(0);
   const [runItCount,       setRunItCount]       = useState(0);
+  const [paperTalesCount,  setPaperTalesCount]  = useState(0);
   const [dropsStats,       setDropsStats]       = useState({});
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
@@ -8272,8 +8273,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setWaveMakerCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", "RUN IT VOL 2").eq("status", "pendente")
       .then(({ count }) => { if (count) setRunItCount(count); });
+    supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", PT_CFG.evento).eq("status", "pendente")
+      .then(({ count }) => { if (count) setPaperTalesCount(count); });
     supabase.from("formulario_pedidos").select("evento, status")
-      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2"])
+      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2", PT_CFG.evento])
       .then(({ data }) => {
         if (!data) return;
         const stats = {};
@@ -8558,7 +8561,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -8690,6 +8693,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const DROPS_LIST = [
                 { evento:"WAVE MAKER - SG JAPAN 2027", label:"WAVE MAKER", tab:"wave-maker-admin", cor:"rgba(201,168,240,.85)", icon:"🌊" },
                 { evento:"RUN IT VOL 2",               label:"RUN IT VOL 2", tab:"run-it-admin",   cor:"rgba(201,168,240,.85)", icon:"◈" },
+                { evento:PT_CFG.evento,                label:PT_CFG.titulo,  tab:"paper-tales-admin", cor:"rgba(201,168,240,.85)", icon:"📜" },
               ];
               const STATUS_COLS = [
                 { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -9305,7 +9309,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin"].includes(adminMainTab) && (
+      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin"].includes(adminMainTab) && (
         <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:4, padding:"4px 0", letterSpacing:".04em" }}>
           ← Todos os drops
         </button>
@@ -9320,7 +9324,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "singba" && <AdminSingba onCountChange={setSingbaCount} />}
       {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
       {adminMainTab === "run-it-admin"     && <AdminRunIt     onCountChange={setRunItCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} dropsStats={dropsStats} />}
+      {adminMainTab === "paper-tales-admin" && <AdminWaveMaker cfg={PT_CFG} onCountChange={setPaperTalesCount} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -11864,12 +11869,71 @@ function AdminLinks() {
   );
 }
 
+// Configuração dos drops no formato Wave Maker (box lacrada + itens soltos + kits).
+// Preços em número (R$). Os componentes WaveMakerTab/AdminWaveMaker leem tudo daqui.
+const WM_CFG = {
+  slug: "wave-maker",
+  evento: "WAVE MAKER - SG JAPAN 2027",
+  tabelaEstoque: "wave_maker_estoque",
+  titulo: "WAVE MAKER",
+  grupo: "STRAY KIDS · SG JAPAN 2027",
+  subtitulo: "Seasons Greetings Japan",
+  capa: "/wave-maker/BOX COMPLETA.jpg",
+  tags: ["PEDIDOS ATÉ 5/OUT", "ENVIO FEV/2027", "PAGAMENTO 20/OUT"],
+  infos: ["Pagamento: 20 de Outubro", "Pedidos aceitos até: 5 de Outubro", "Envios previsto para Fevereiro de 2027"],
+  box: { id: "BOX LACRADA", foto: "/wave-maker/BOX COMPLETA.jpg", preco: 260 },
+  itens: [
+    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: 15 },
+    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: 25 },
+    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: 15 },
+    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: 10 },
+    { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: 7 },
+    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: 18 },
+    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: 28 },
+    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: 5 },
+  ],
+  kits: [
+    { id: "KIT 01", foto: "/wave-maker/KIT 01.png", preco: 35 },
+    { id: "KIT 02", foto: "/wave-maker/KIT 02.png", preco: 38 },
+    { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: 40 },
+  ],
+};
+
+// PAPER TALE — itens, preços, fotos e datas são PLACEHOLDERS: trocar aqui quando definir.
+const PT_FOTO = "/paper-tale/placeholder.svg";
+const PT_BOX = "/paper-tale/box lacrada.jpg";
+const PT_CFG = {
+  slug: "paper-tales",
+  evento: "PAPER TALE",
+  tabelaEstoque: "paper_tales_estoque",
+  titulo: "PAPER TALE",
+  grupo: "STRAY KIDS",
+  subtitulo: "Paper Tale",
+  capa: PT_BOX,
+  tags: ["PEDIDOS A DEFINIR", "ENVIO A DEFINIR", "PAGAMENTO A DEFINIR"],
+  infos: ["Pagamento: a definir", "Pedidos aceitos até: a definir", "Envios previsto: a definir"],
+  box: { id: "BOX LACRADA", foto: PT_BOX, preco: 200 },
+  itens: [
+    { id: "AGENDA", foto: "/paper-tale/agenda.png", preco: 20 },
+    { id: "CAPA DE CADERNO", foto: "/paper-tale/capa de caderno.png", preco: 15 },
+    { id: "DESK CALENDAR", foto: "/paper-tale/desk calendar.png", preco: 15 },
+    { id: "MASKING TAPE", foto: "/paper-tale/masking tape.png", preco: 10 },
+    { id: "OUTBOX", foto: "/paper-tale/outbox.png", preco: 15 },
+    { id: "PHOTOBOOK", foto: "/paper-tale/photobook.png", preco: 25 },
+  ],
+  kits: [
+    { id: "KIT 01", foto: PT_FOTO, preco: 30 },
+    { id: "KIT 02", foto: PT_FOTO, preco: 35 },
+    { id: "KIT 03", foto: PT_FOTO, preco: 40 },
+  ],
+};
+
 // Estoque restante do Wave Maker: estoque da tabela menos os pedidos
 // (pendente + confirmado) criados depois de "contar_desde". Cancelado devolve a unidade.
-async function carregarEstoqueWM() {
+async function carregarEstoqueWM(cfg) {
   const [{ data: rows, error: e1 }, { data: pedidos, error: e2 }] = await Promise.all([
-    supabase.from("wave_maker_estoque").select("item_id, estoque, contar_desde"),
-    supabase.from("formulario_pedidos").select("modalidade, observacoes, status, created_at").eq("evento", "WAVE MAKER - SG JAPAN 2027"),
+    supabase.from(cfg.tabelaEstoque).select("item_id, estoque, contar_desde"),
+    supabase.from("formulario_pedidos").select("modalidade, observacoes, status, created_at").eq("evento", cfg.evento),
   ]);
   if (e1 || e2 || !rows) return null;
   const mapa = {};
@@ -11891,8 +11955,9 @@ async function carregarEstoqueWM() {
   return mapa;
 }
 
-function WaveMakerTab({ user }) {
+function WaveMakerTab({ user, cfg = WM_CFG }) {
   const mono = "'DM Mono', monospace";
+  const fmtPreco = n => `R$${n}`;
   const [modalidade, setModalidade] = useState(null);
   const [itensSel, setItensSel] = useState([]);
   const [quantidade, setQuantidade] = useState(1);
@@ -11910,32 +11975,19 @@ function WaveMakerTab({ user }) {
   const restante = (id) => (estoqueMap && id in estoqueMap) ? estoqueMap[id] : null;
   const rotuloEstoque = (n) => `${n} ${n === 1 ? "unidade disponível" : "unidades disponíveis"}`;
 
-  const ITENS_WM = [
-    { id: "OUTBOX",               foto: "/wave-maker/OUTBOX.png",               preco: "R$15" },
-    { id: "HARD COVER DIARY",     foto: "/wave-maker/HARD COVER DIARY.png",     preco: "R$25" },
-    { id: "DESK CALENDAR",        foto: "/wave-maker/DESK CALENDAR.png",        preco: "R$15" },
-    { id: "POSTER",               foto: "/wave-maker/POSTER.png",               preco: "R$10" },
-    { id: "STICKER",              foto: "/wave-maker/STICKER.png",              preco: "R$7" },
-    { id: "ID HOLDER",            foto: "/wave-maker/ID HOLDER.png",            preco: "R$18" },
-    { id: "KNAPSACK",             foto: "/wave-maker/KNAPSACK.png",             preco: "R$28" },
-    { id: "MAKING VIDEO QR CARD", foto: "/wave-maker/MAKING VIDEO QR CARD.png", preco: "R$5" },
-  ];
-
-  const MODALIDADES = [
-    { id: "BOX LACRADA",       icone: "📦", desc: "Box completa lacrada de fábrica com todos os itens", foto: "/wave-maker/BOX COMPLETA.jpg", preco: "R$260" },
-    { id: "ITENS SOLTOS",      icone: "◱",  desc: "Escolha os itens avulsos que quer" },
-    { id: "3 KIT PRÉ MONTADO", icone: "◈",  desc: "3 kits pré-selecionados pela admin", foto: "/wave-maker/KIT 01.png" },
-  ];
+  const ITENS_WM = cfg.itens;
+  const KITS_WM = cfg.kits;
+  const BOX_WM = cfg.box;
 
   useEffect(() => {
-    carregarEstoqueWM().then(setEstoqueMap);
-  }, []);
+    carregarEstoqueWM(cfg).then(setEstoqueMap);
+  }, [cfg]);
 
   useEffect(() => {
     if (!user?.cog) return;
     supabase.from("formulario_pedidos")
       .select("id, modalidade, observacoes, status, created_at")
-      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("evento", cfg.evento)
       .eq("joiner_cog", user.cog)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -11968,7 +12020,7 @@ function WaveMakerTab({ user }) {
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     setEnviando(true); setErro(null); setEnviado(null);
     // confere o estoque de novo na hora de enviar (outra pessoa pode ter pedido antes)
-    const mapaAtual = await carregarEstoqueWM();
+    const mapaAtual = await carregarEstoqueWM(cfg);
     if (mapaAtual) {
       setEstoqueMap(mapaAtual);
       const faltando = idsSelecionados.filter(id => id in mapaAtual && mapaAtual[id] < qtdEf);
@@ -11981,7 +12033,7 @@ function WaveMakerTab({ user }) {
       ? `Itens: ${itensSel.join(", ")} · Qtd: ${qtdEf}`
       : `Qtd: ${qtdEf}`;
     const { error } = await supabase.from("formulario_pedidos").insert([{
-      evento: "WAVE MAKER - SG JAPAN 2027",
+      evento: cfg.evento,
       joiner_cog: user.cog,
       joiner_nome: user.nome || user.cog,
       joiner_email: user.email || null,
@@ -11992,14 +12044,14 @@ function WaveMakerTab({ user }) {
     if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
     const { count } = await supabase.from("formulario_pedidos")
       .select("id", { count: "exact", head: true })
-      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("evento", cfg.evento)
       .eq("status", "pendente");
     const posicao = count || 1;
     setEnviado({ posicao });
-    carregarEstoqueWM().then(m => { if (m) setEstoqueMap(m); });
+    carregarEstoqueWM(cfg).then(m => { if (m) setEstoqueMap(m); });
     const { data: hist } = await supabase.from("formulario_pedidos")
       .select("id, modalidade, observacoes, status, created_at")
-      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("evento", cfg.evento)
       .eq("joiner_cog", user.cog)
       .order("created_at", { ascending: false });
     if (hist) setHistorico(hist);
@@ -12012,22 +12064,20 @@ function WaveMakerTab({ user }) {
     <div style={{ paddingBottom:80 }}>
       {/* Capa */}
       <div style={{ position:"relative", maxHeight:180, overflow:"hidden", marginBottom:0 }}>
-        <img src="/wave-maker/BOX COMPLETA.jpg" alt="WAVE MAKER" style={{ width:"100%", display:"block", objectFit:"cover", objectPosition:"center 30%" }} />
+        <img src={cfg.capa} alt={cfg.titulo} style={{ width:"100%", display:"block", objectFit:"cover", objectPosition:"center 30%" }} />
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 30%, #0d0d0d)" }} />
       </div>
 
       <div style={{ maxWidth:720, margin:"0 auto", padding:"0 16px" }}>
         {/* Header */}
         <div style={{ marginTop:20, marginBottom:24 }}>
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS · SG JAPAN 2027</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, letterSpacing:2, lineHeight:1, color:"var(--offwhite)" }}>WAVE MAKER</div>
-          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Seasons Greetings Japan</div>
+          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>{cfg.grupo}</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, letterSpacing:2, lineHeight:1, color:"var(--offwhite)" }}>{cfg.titulo}</div>
+          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>{cfg.subtitulo}</div>
           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-            {[
-              { label:"PEDIDOS ATÉ 5/OUT",   bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
-              { label:"ENVIO FEV/2027",       bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
-              { label:"PAGAMENTO 20/OUT",     bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" },
-            ].map(t => (
+            {cfg.tags.map(label => (
+              { label, bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"rgba(245,240,232,.12)" }
+            )).map(t => (
               <span key={t.label} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:t.bg, color:t.color, border:`1px solid ${t.border}`, letterSpacing:"1px" }}>{t.label}</span>
             ))}
           </div>
@@ -12086,11 +12136,7 @@ function WaveMakerTab({ user }) {
             》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
             <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
           </div>
-          {[
-            "Pagamento: 20 de Outubro",
-            "Pedidos aceitos até: 5 de Outubro",
-            "Envios previsto para Fevereiro de 2027",
-          ].map((r, i) => (
+          {cfg.infos.map((r, i) => (
             <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
               <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
             </div>
@@ -12102,7 +12148,7 @@ function WaveMakerTab({ user }) {
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Lacrado</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {(() => {
-          const m = MODALIDADES.find(x => x.id === "BOX LACRADA");
+          const m = BOX_WM;
           const ativo = modalidade === "BOX LACRADA" && itensSel.length === 0;
           return (
             <div style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
@@ -12112,7 +12158,7 @@ function WaveMakerTab({ user }) {
               </div>
               <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>BOX LACRADA</div>
-                <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>R$260</div>
+                <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>{fmtPreco(m.preco)}</div>
                 <button onClick={() => { setModalidade(ativo ? null : "BOX LACRADA"); setItensSel([]); }}
                   style={{ marginTop:8, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
                   {ativo ? "✓ SELECIONADO" : "SELECIONAR"}
@@ -12141,7 +12187,7 @@ function WaveMakerTab({ user }) {
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
-                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{it.preco}</div>
+                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(it.preco)}</div>
                 {!indisp && rest !== null && (
                   <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
                 )}
@@ -12164,11 +12210,7 @@ function WaveMakerTab({ user }) {
       {/* Seção KITS */}
       <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Kits</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
-        {[
-          { id: "KIT 01", foto: "/wave-maker/KIT 01.png", preco: "R$35" },
-          { id: "KIT 02", foto: "/wave-maker/KIT 02.png", preco: "R$38" },
-          { id: "KIT 03", foto: "/wave-maker/KIT 03.png", preco: "R$40" },
-        ].map(kit => {
+        {KITS_WM.map(kit => {
           const ativo = modalidade === kit.id && itensSel.length === 0;
           const rest = restante(kit.id);
           const indisp = rest !== null && rest <= 0;
@@ -12181,7 +12223,7 @@ function WaveMakerTab({ user }) {
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color: indisp ? "rgba(245,240,232,.35)" : ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5 }}>{kit.id}</div>
-                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{kit.preco}</div>
+                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(kit.preco)}</div>
                 {!indisp && rest !== null && (
                   <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
                 )}
@@ -12212,14 +12254,14 @@ function WaveMakerTab({ user }) {
                 return it ? (
                   <div key={id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
                     <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{it.id}</span>
-                    <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>{it.preco}</span>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>{fmtPreco(it.preco)}</span>
                   </div>
                 ) : null;
               })}
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:4 }}>
                 <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>TOTAL</span>
                 <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--lilas)" }}>
-                  R${itensSel.reduce((s,id) => { const it = ITENS_WM.find(x => x.id === id); return s + (it ? parseInt(it.preco.replace("R$","")) : 0); }, 0)}
+                  R${itensSel.reduce((s,id) => { const it = ITENS_WM.find(x => x.id === id); return s + (it ? it.preco : 0); }, 0)}
                 </span>
               </div>
             </>
@@ -12227,7 +12269,7 @@ function WaveMakerTab({ user }) {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{modalidade}</span>
               <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>
-                {modalidade==="BOX LACRADA"?"R$260":modalidade==="KIT 01"?"R$35":modalidade==="KIT 02"?"R$38":modalidade==="KIT 03"?"R$40":"a definir"}
+                {(() => { const p = [BOX_WM, ...KITS_WM].find(x => x.id === modalidade)?.preco; return p != null ? fmtPreco(p) : "a definir"; })()}
               </span>
             </div>
           )}
@@ -22804,19 +22846,11 @@ function AdminBazaarIn({ onCountChange }) {
 }
 
 // ── Wave Maker Admin ───────────────────────────────────────────
-const WM_FOTOS = {
-  "BOX LACRADA": { foto:"/wave-maker/BOX COMPLETA.jpg", preco:260 },
-  "KIT 01":      { foto:"/wave-maker/KIT 01.png",       preco:35  },
-  "KIT 02":      { foto:"/wave-maker/KIT 02.png",       preco:38  },
-  "KIT 03":      { foto:"/wave-maker/KIT 03.png",       preco:40  },
-};
-const WM_ITENS_PRECO = {
-  "OUTBOX":16, "HARD COVER DIARY":25, "DESK CALENDAR":15, "POSTER":10,
-  "STICKER":7, "ID HOLDER":18, "KNAPSACK":28, "MAKING VIDEO QR CARD":5,
-};
-
-function AdminWaveMaker({ onCountChange }) {
+function AdminWaveMaker({ onCountChange, cfg = WM_CFG }) {
   const mono = "'DM Mono',monospace";
+  // modalidade -> {foto, preco} (box e kits) e item -> {foto, preco} (itens soltos)
+  const WM_FOTOS = Object.fromEntries([cfg.box, ...cfg.kits].map(x => [x.id, x]));
+  const WM_ITENS = Object.fromEntries(cfg.itens.map(x => [x.id, x]));
   const [pedidos, setPedidos] = useState([]);
   const [filtro, setFiltro] = useState("pendente");
   const [erroAdmin, setErroAdmin] = useState(null);
@@ -22824,7 +22858,7 @@ function AdminWaveMaker({ onCountChange }) {
   useEffect(() => {
     supabase.from("formulario_pedidos")
       .select("*")
-      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("evento", cfg.evento)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
         if (data) {
@@ -22846,7 +22880,7 @@ function AdminWaveMaker({ onCountChange }) {
     }
     const { data } = await supabase.from("formulario_pedidos")
       .select("*")
-      .eq("evento", "WAVE MAKER - SG JAPAN 2027")
+      .eq("evento", cfg.evento)
       .order("created_at", { ascending: true });
     if (data) {
       setPedidos(data);
@@ -22867,7 +22901,7 @@ function AdminWaveMaker({ onCountChange }) {
 
   function calcResumo() {
     const linhas = [];
-    const mods = ["BOX LACRADA","KIT 01","KIT 02","KIT 03"];
+    const mods = Object.keys(WM_FOTOS);
     mods.forEach(mod => {
       const ps = pedidos.filter(p => p.modalidade === mod);
       if (ps.length === 0) return;
@@ -22888,14 +22922,14 @@ function AdminWaveMaker({ onCountChange }) {
         if (!itensStr) return;
         itensStr.split(", ").forEach(nome => {
           const n = nome.trim();
-          if (!itemMap[n]) itemMap[n] = { total:0, conf:0, pend:0, preco: WM_ITENS_PRECO[n]||0 };
+          if (!itemMap[n]) itemMap[n] = { total:0, conf:0, pend:0, preco: WM_ITENS[n]?.preco||0 };
           itemMap[n].total += qtdP;
           if (p.status==="confirmado") itemMap[n].conf += qtdP;
           if (p.status==="pendente")   itemMap[n].pend += qtdP;
         });
       });
       Object.entries(itemMap).forEach(([nome, d]) => {
-        linhas.push({ label:nome, foto:`/wave-maker/${nome}.png`, totalUnid:d.total, totalVal:d.total*d.preco, conf:d.conf, pend:d.pend, preco:d.preco, isItem:true });
+        linhas.push({ label:nome, foto:WM_ITENS[nome]?.foto, totalUnid:d.total, totalVal:d.total*d.preco, conf:d.conf, pend:d.pend, preco:d.preco, isItem:true });
       });
     }
     return linhas;
@@ -22903,7 +22937,7 @@ function AdminWaveMaker({ onCountChange }) {
 
   return (
     <div style={{ padding:"24px 0" }}>
-      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>WAVE MAKER — SG JAPAN 2027</div>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>{cfg.titulo} — {cfg.grupo}</div>
       <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16 }}>{pedidos.length} pré-cadastro{pedidos.length !== 1 ? "s" : ""}</div>
       {erroAdmin && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"10px 14px", marginBottom:16 }}>{erroAdmin}</div>}
 
@@ -22975,9 +23009,9 @@ function AdminWaveMaker({ onCountChange }) {
           const itensList = itensStr ? itensStr.split(", ").map(s => s.trim()) : [];
           const wmInfo = WM_FOTOS[p.modalidade];
           const valorUnit = wmInfo ? wmInfo.preco
-            : itensList.reduce((s, nome) => s + (WM_ITENS_PRECO[nome] || 0), 0);
+            : itensList.reduce((s, nome) => s + (WM_ITENS[nome]?.preco || 0), 0);
           const valorTotal = valorUnit * qtd;
-          const fotoUrl = wmInfo?.foto || (itensList[0] ? `/wave-maker/${itensList[0]}.png` : null);
+          const fotoUrl = wmInfo?.foto || WM_ITENS[itensList[0]]?.foto;
 
           return (
           <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:`1px solid ${p.status === "cancelado" ? "rgba(255,107,107,.15)" : p.status === "confirmado" ? "rgba(74,222,128,.15)" : "rgba(201,168,240,.15)"}`, borderRadius:10, padding:"12px 16px" }}>
@@ -23274,7 +23308,7 @@ function RunItVol2Tab({ user }) {
 }
 
 // ── Admin Todos os Drops ──────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const DROPS = [
     { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
@@ -23287,6 +23321,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
     { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
+    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento },
   ];
   const STATUS_COLS = [
     { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -24573,6 +24608,19 @@ function PrevendaTab({ user }) {
       info: "Registre seu interesse · pedidos mais antigos têm prioridade · preços a definir",
     },
     {
+      key: "papertales",
+      ativo: true,
+      fechado: false,
+      cor: "lilas",
+      titulo: "PAPER TALE",
+      subtitulo: "Stray Kids",
+      url: null,
+      tab: "paper-tales",
+      img: null,
+      tags: ["Pré-cadastro aberto", "Vagas limitadas"],
+      info: "Registre seu interesse · pedidos mais antigos têm prioridade · preços a definir",
+    },
+    {
       key: "mercari",
       ativo: true,
       fechado: false,
@@ -25493,7 +25541,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2","paper-tales"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -26122,6 +26170,7 @@ export default function App() {
           {tab === "prevenda" && <PrevendaTab user={user} />}
           {tab === "wave-maker" && <WaveMakerTab user={user} />}
           {tab === "run-it-vol-2" && <RunItVol2Tab user={user} />}
+          {tab === "paper-tales" && <WaveMakerTab user={user} cfg={PT_CFG} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
