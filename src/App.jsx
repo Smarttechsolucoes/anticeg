@@ -15352,6 +15352,7 @@ function LojinhaRepasses({ user }) {
   const [salvando, setSalvando] = useState(false);
   const [contatoId, setContatoId] = useState(null);
   const [abaMinhaLojinha, setAbaMinhaLojinha] = useState(false);
+  const [filtroLojinha, setFiltroLojinha] = useState("todos");
   const [form, setForm] = useState({
     masterlistId: "", nomeCard: "", ceg: "",
     valorItem: null, frete: null, taxaRf: null,
@@ -15501,6 +15502,8 @@ function LojinhaRepasses({ user }) {
   }
 
   const corStatus = { disponivel: "#BAFF39", reservado: "#ffb400", vendido: "var(--lilas)", retirado: "rgba(245,240,232,.3)", transferido: "rgba(186,255,57,.4)" };
+  const STATUS_LOJINHA = ["disponivel", "reservado", "vendido", "transferido", "retirado"];
+  const repassesFiltrados = filtroLojinha === "todos" ? minhosRepasses : minhosRepasses.filter(r => r.status === filtroLojinha);
 
   const inp = { width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"9px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, boxSizing:"border-box", outline:"none" };
   const lbl = { fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", display:"block", marginBottom:5 };
@@ -15719,10 +15722,29 @@ function LojinhaRepasses({ user }) {
             );
           })()}
 
+          {/* Filtro por status */}
+          {minhosRepasses.length > 0 && (
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
+              {["todos", ...STATUS_LOJINHA].map(st => {
+                const qtd = st === "todos" ? minhosRepasses.length : minhosRepasses.filter(r => r.status === st).length;
+                const ativo = filtroLojinha === st;
+                const cor = st === "todos" ? "var(--lilas)" : corStatus[st];
+                return (
+                  <button key={st} onClick={() => setFiltroLojinha(st)}
+                    style={{ fontFamily:mono, fontSize:10, letterSpacing:".5px", padding:"5px 12px", borderRadius:20, cursor:"pointer", background: ativo ? "rgba(245,240,232,.08)" : "transparent", border:`1px solid ${ativo ? cor : "rgba(245,240,232,.1)"}`, color: ativo ? cor : "rgba(245,240,232,.4)", fontWeight: ativo ? 700 : 400 }}>
+                    {st}<span style={{ marginLeft:5, fontSize:9, opacity:.6 }}>{qtd}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Lista dos meus repasses */}
           {minhosRepasses.length === 0 ? (
             <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.2)", fontFamily:mono, fontSize:11 }}>Nenhum repasse publicado ainda.</div>
-          ) : minhosRepasses.map(r => (
+          ) : repassesFiltrados.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"32px 0", color:"rgba(245,240,232,.2)", fontFamily:mono, fontSize:11 }}>Nenhum repasse com status "{filtroLojinha}".</div>
+          ) : repassesFiltrados.map(r => (
             <div key={r.id} style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 14px", marginBottom:8, display:"flex", gap:12, alignItems:"flex-start" }}>
               {r.foto_url && <img src={r.foto_url} alt={r.nome_card} style={{ width:52, height:66, objectFit:"cover", borderRadius:6, flexShrink:0 }} />}
               <div style={{ flex:1, minWidth:0 }}>
