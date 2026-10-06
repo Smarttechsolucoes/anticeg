@@ -11874,6 +11874,7 @@ function AdminLinks() {
 const WM_CFG = {
   slug: "wave-maker",
   evento: "WAVE MAKER - SG JAPAN 2027",
+  fechado: true,
   tabelaEstoque: "wave_maker_estoque",
   titulo: "WAVE MAKER",
   grupo: "STRAY KIDS · SG JAPAN 2027",
@@ -12013,7 +12014,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
 
   async function enviar() {
     const modalFinal = itensSel.length > 0 ? "ITENS SOLTOS" : modalidade;
-    if (!modalFinal || enviando) return;
+    if (cfg.fechado || !modalFinal || enviando) return;
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     setEnviando(true); setErro(null); setEnviado(null);
     // confere o estoque de novo na hora de enviar (outra pessoa pode ter pedido antes)
@@ -12125,6 +12126,15 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       )}
 
       {abaWM === "forms" && <>
+      {cfg.fechado && (
+        <div style={{ marginBottom:20, background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.35)", borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:18 }}>🔒</span>
+          <div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:1, color:"#ff6b6b" }}>PEDIDOS ENCERRADOS</div>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:2 }}>O formulário não está mais aceitando pedidos. Você ainda pode ver seus pedidos na aba Histórico.</div>
+          </div>
+        </div>
+      )}
       {/* Informações */}
       <div style={{ marginBottom:24, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
         <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>INFORMAÇÕES</div>
@@ -12323,9 +12333,9 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
         </div>
       )}
 
-      <button onClick={enviar} disabled={!modalidade || enviando}
-        style={{ width:"100%", background:modalidade?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
-        {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
+      <button onClick={enviar} disabled={!modalidade || enviando || cfg.fechado}
+        style={{ width:"100%", background:modalidade&&!cfg.fechado?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade&&!cfg.fechado?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade&&!cfg.fechado?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
+        {cfg.fechado ? "Pedidos encerrados" : enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
       </button>
       </>}
 
@@ -24806,7 +24816,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "wavemaker",
-      ativo: true,
+      ativo: false,
       fechado: false,
       cor: "lilas",
       titulo: "WAVE MAKER",
@@ -24814,8 +24824,8 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "wave-maker",
       img: null,
-      tags: ["Pré-cadastro aberto", "Vagas limitadas"],
-      info: "Registre seu interesse · pedidos mais antigos têm prioridade · preços a definir",
+      tags: ["Pedidos encerrados"],
+      info: "Pedidos encerrados em 5 de outubro",
     },
     {
       key: "papertales",
