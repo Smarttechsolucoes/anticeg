@@ -14066,6 +14066,179 @@ function ClaimGuestPage({ onLogin }) {
   );
 }
 
+// ── Área de teste: simulação de claim para joiners novos (nada é gravado no banco) ──
+const CLAIM_TESTE_MEMBROS = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
+// quem já "pegou" cada slot antes de você chegar (dados fictícios)
+const CLAIM_TESTE_INICIAL = {
+  1: { "Hyunjin":"@exemplo1", "Felix":"@exemplo2", "Han":"@exemplo3" },
+  2: { "Felix":"@exemplo4" },
+};
+
+function ClaimAreaTeste() {
+  const mono = "'DM Mono',monospace";
+  const [qtds, setQtds] = useState({});
+  const [ocupado, setOcupado] = useState(CLAIM_TESTE_INICIAL);
+  const [standby, setStandby] = useState([]);
+  const [resultado, setResultado] = useState(null);
+
+  const MEU = "@voce";
+  const meusNosSets = Object.entries(ocupado).flatMap(([set, slots]) => Object.entries(slots).filter(([, dono]) => dono === MEU).map(([membro]) => ({ set, membro })));
+  const temSelecionado = Object.values(qtds).some(q => q > 0);
+  const totalSel = Object.values(qtds).reduce((a, b) => a + b, 0);
+
+  function mudarQtd(membro, delta) {
+    setQtds(prev => ({ ...prev, [membro]: Math.max(0, Math.min(3, (prev[membro] || 0) + delta)) }));
+  }
+
+  function enviar() {
+    if (!temSelecionado) return;
+    const novo = { 1: { ...ocupado[1] }, 2: { ...ocupado[2] } };
+    const novosStandby = [...standby];
+    const confirmados = [];
+    const viraramStandby = [];
+    CLAIM_TESTE_MEMBROS.forEach(membro => {
+      for (let i = 0; i < (qtds[membro] || 0); i++) {
+        const setLivre = [1, 2].find(n => !novo[n][membro]);
+        if (setLivre) { novo[setLivre][membro] = MEU; confirmados.push(`${membro} (set ${setLivre})`); }
+        else { novosStandby.push(membro); viraramStandby.push(membro); }
+      }
+    });
+    setOcupado(novo);
+    setStandby(novosStandby);
+    setQtds({});
+    setResultado({ confirmados, viraramStandby });
+  }
+
+  function reiniciar() {
+    setQtds({}); setOcupado(CLAIM_TESTE_INICIAL); setStandby([]); setResultado(null);
+  }
+
+  const passos = [
+    "Escolha quantas unidades de cada membro você quer com o + e o −.",
+    "Clique em \"Enviar claim\". O sistema coloca você no primeiro set que ainda tem aquele membro livre.",
+    "Se o membro já foi pego em todos os sets abertos, você entra no standby e é chamada(o) se uma vaga abrir.",
+    "Quando o set fecha, o pagamento é liberado. Aqui nada disso é real, é só para treinar.",
+  ];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      <div style={{ background:"rgba(96,165,250,.08)", border:"1px solid rgba(96,165,250,.35)", borderRadius:10, padding:"12px 16px", fontFamily:mono, fontSize:11, color:"#93c5fd", lineHeight:1.6 }}>
+        <span style={{ fontWeight:700, marginRight:6 }}>ⓘ AMBIENTE DE TESTE</span>
+        Aqui você treina como funciona uma claim. Nenhum pedido é criado e nada fica salvo: pode clicar à vontade.
+      </div>
+
+      <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>COMO FUNCIONA</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {passos.map((p, i) => (
+            <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
+              <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{p}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {resultado && (
+        <div style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.3)", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, color:"#BAFF39", lineHeight:1.6 }}>
+          {resultado.confirmados.length > 0 && <div>Claim enviado: {resultado.confirmados.join(", ")}.</div>}
+          {resultado.viraramStandby.length > 0 && <div>{[...new Set(resultado.viraramStandby)].join(", ")} já tinha(m) sido pego(s) em todos os sets e você entrou no standby automático.</div>}
+        </div>
+      )}
+
+      <div style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:14, overflow:"hidden" }}>
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1 }}>PHOTOCARD DE EXEMPLO</div>
+            <span style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", padding:"2px 8px", borderRadius:20, background:"rgba(96,165,250,.12)", color:"#93c5fd", border:"1px solid rgba(96,165,250,.35)" }}>TESTE</span>
+          </div>
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+            <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>R$ 10,00</span>
+            <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.35)" }}>prazo de exemplo</span>
+            <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.25)" }}>2 sets abertos</span>
+          </div>
+        </div>
+
+        <div style={{ padding:"12px 18px 16px", display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ display:"flex", flexDirection:"column" }}>
+            {CLAIM_TESTE_MEMBROS.map(membro => {
+              const qtd = qtds[membro] || 0;
+              const meuTotal = meusNosSets.filter(m => m.membro === membro).length + standby.filter(m => m === membro).length;
+              const livres = [1, 2].filter(n => !ocupado[n][membro]).length;
+              return (
+                <div key={membro} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                  <span style={{ fontFamily:mono, fontSize:12, color: meuTotal>0?"var(--lilas)":"var(--offwhite)", flex:1 }}>
+                    {membro}
+                    {meuTotal > 0 && <span style={{ marginLeft:8, fontSize:9, color:"var(--lilas)" }}>✓ {meuTotal}x</span>}
+                  </span>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontFamily:mono, fontSize:8, color: livres===0?"rgba(255,180,0,.7)":"rgba(245,240,232,.2)" }}>{livres===0 ? "esgotado" : `${livres} livre${livres>1?"s":""}`}</span>
+                    <button onClick={() => mudarQtd(membro, -1)} disabled={qtd===0}
+                      style={{ width:28, height:28, borderRadius:6, border:"1px solid rgba(245,240,232,.12)", background:"rgba(245,240,232,.03)", color:qtd===0?"rgba(245,240,232,.15)":"rgba(245,240,232,.6)", fontFamily:mono, fontSize:14, cursor:qtd===0?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+                    <span style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", minWidth:16, textAlign:"center" }}>{qtd}</span>
+                    <button onClick={() => mudarQtd(membro, 1)} disabled={qtd>=3}
+                      style={{ width:28, height:28, borderRadius:6, border:`1px solid ${qtd>0?"rgba(186,255,57,.4)":"rgba(245,240,232,.12)"}`, background:qtd>0?"rgba(186,255,57,.1)":"rgba(245,240,232,.03)", color:qtd>0?"#BAFF39":"rgba(245,240,232,.4)", fontFamily:mono, fontSize:14, cursor:qtd>=3?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display:"flex", gap:6 }}>
+            <button onClick={enviar} disabled={!temSelecionado}
+              style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background: temSelecionado?"rgba(186,255,57,.1)":"rgba(245,240,232,.04)", border:`1px solid ${temSelecionado?"rgba(186,255,57,.3)":"rgba(245,240,232,.08)"}`, borderRadius:6, color: temSelecionado?"#BAFF39":"rgba(245,240,232,.2)", cursor: temSelecionado?"pointer":"default", letterSpacing:".5px", transition:"all .15s" }}>
+              {temSelecionado ? `Enviar claim (${totalSel})` : "Selecione membros"}
+            </button>
+            <button onClick={() => setQtds({})} disabled={!temSelecionado}
+              style={{ fontFamily:mono, fontSize:9, padding:"10px 12px", background:"none", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color: temSelecionado?"rgba(245,240,232,.3)":"rgba(245,240,232,.12)", cursor: temSelecionado?"pointer":"default" }}>
+              limpar
+            </button>
+          </div>
+
+          {standby.length > 0 && (
+            <div style={{ background:"rgba(255,180,0,.04)", border:"1px solid rgba(255,180,0,.15)", borderRadius:10, padding:"10px 14px" }}>
+              <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"#ffb400", marginBottom:6 }}>STANDBY — aguardando vaga</div>
+              {standby.map((membro, i) => (
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"3px 0", fontFamily:mono, fontSize:11 }}>
+                  <span style={{ color:"var(--offwhite)" }}>{membro}</span>
+                  <span style={{ color:"rgba(245,240,232,.3)", fontSize:9 }}>posição {standby.slice(0, i + 1).filter(m => m === membro).length}ª na fila</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>SETS DO EXEMPLO</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px,1fr))", gap:12 }}>
+          {[1, 2].map(n => (
+            <div key={n} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, padding:"12px 14px" }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"var(--offwhite)", letterSpacing:1, marginBottom:8 }}>SET {n}</div>
+              {CLAIM_TESTE_MEMBROS.map(membro => {
+                const dono = ocupado[n][membro];
+                const meu = dono === MEU;
+                return (
+                  <div key={membro} style={{ display:"flex", justifyContent:"space-between", padding:"3px 0", fontFamily:mono, fontSize:11 }}>
+                    <span style={{ color: dono ? "rgba(245,240,232,.45)" : "var(--offwhite)" }}>{membro}</span>
+                    <span style={{ fontSize:10, color: meu ? "var(--lilas)" : dono ? "rgba(245,240,232,.3)" : "#BAFF39" }}>
+                      {meu ? "✓ você" : dono ? dono : "livre"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={reiniciar}
+        style={{ alignSelf:"flex-start", fontFamily:mono, fontSize:10, padding:"8px 16px", background:"none", border:"1px solid rgba(245,240,232,.15)", borderRadius:20, color:"rgba(245,240,232,.45)", cursor:"pointer", letterSpacing:".5px" }}>
+        ↺ reiniciar teste
+      </button>
+    </div>
+  );
+}
+
 function ClaimHistorico() {
   const mono = "'DM Mono',monospace";
   const [eventos, setEventos] = useState(null);
@@ -26149,7 +26322,7 @@ export default function App() {
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
           {/* Abas */}
           <div style={{ display:"flex", gap:6, marginBottom:24 }}>
-            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"],["historico","HISTÓRICO"]].map(([v,l]) => (
+            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"],["historico","HISTÓRICO"],["teste","ÁREA DE TESTE"]].map(([v,l]) => (
               <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
                 {l}
               </button>
@@ -26173,6 +26346,7 @@ export default function App() {
           </>}
           {claimPageTab === "ao-vivo" && <ClaimScoreboard />}
           {claimPageTab === "historico" && <ClaimHistorico />}
+          {claimPageTab === "teste" && <ClaimAreaTeste />}
         </div>
       ) : (
         <>
