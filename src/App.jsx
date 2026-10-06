@@ -12153,19 +12153,29 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
         {(() => {
           const m = BOX_WM;
           const ativo = modalidade === "BOX LACRADA" && itensSel.length === 0;
+          const rest = restante("BOX LACRADA");
+          const indisp = rest !== null && rest <= 0;
           return (
             <div style={{ border:`1px solid ${ativo?"rgba(201,168,240,.5)":"rgba(245,240,232,.1)"}`, borderRadius:14, overflow:"hidden", background:ativo?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom({ foto: m.foto, id: m.id })}>
-                <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
+                <img src={m.foto} alt={m.id} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block", opacity: indisp ? .3 : 1, filter: indisp ? "grayscale(1)" : "none" }} />
+                {indisp && <div style={{ position:"absolute", top:"50%", left:0, right:0, transform:"translateY(-50%)", textAlign:"center", background:"rgba(0,0,0,.7)", padding:"6px 0", fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"2px", color:"#ff6b6b" }}>INDISPONÍVEL</div>}
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:3 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:ativo?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>BOX LACRADA</div>
-                <div style={{ fontFamily:mono, fontSize:13, color:"var(--laranja)", fontWeight:700, marginTop:3 }}>{fmtPreco(m.preco)}</div>
+                <div style={{ fontFamily:mono, fontSize:13, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:3, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(m.preco)}</div>
+                {!indisp && rest !== null && (
+                  <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
+                )}
+                {indisp ? (
+                  <button disabled style={{ marginTop:8, border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"6px 0", background:"rgba(245,240,232,.04)", color:"rgba(255,107,107,.7)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed" }}>INDISPONÍVEL</button>
+                ) : (
                 <button onClick={() => { setModalidade(ativo ? null : "BOX LACRADA"); setItensSel([]); }}
                   style={{ marginTop:8, border:`1px solid ${ativo?"var(--lilas)":"rgba(201,168,240,.35)"}`, borderRadius:8, padding:"6px 0", background:ativo?"var(--lilas)":"transparent", color:ativo?"#000":"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"pointer", transition:"all .15s" }}>
                   {ativo ? "✓ SELECIONADO" : "SELECIONAR"}
                 </button>
+                )}
               </div>
             </div>
           );

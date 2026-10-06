@@ -189,11 +189,6 @@ body.font-xl {
 }
 body.font-xl #root { zoom: 1.35; }
 
-/* ── VLibras — forçar abaixo dos modais ─────────────────── */
-[vw] { z-index: 400 !important; }
-[vw-access-button] { z-index: 400 !important; }
-[vw-plugin-wrapper] { z-index: 400 !important; }
-
 /* ── Widget acessibilidade ───────────────────────────────── */
 .a11y-btn {
   position: fixed; bottom: 80px; left: 16px; z-index: 490;
