@@ -7166,6 +7166,164 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
 }
 
 const REPASSE_CUSTOS_MAP = { item:"Item", frete:"Frete", rf:"Taxa RF" };
+// Aprova um repasse: marca aprovado, muda o dono na masterlist, atualiza a planilha e avisa os dois joiners
+async function executarAprovacaoRepasse(r, { notificar = true } = {}) {
+  await supabase.from("repassos").update({ status: "aprovado" }).eq("id", r.id);
+  // Atualiza dono na masterlist
+  if (r.item_id) {
+    await supabase.from("masterlist").update({ cog: r.novo_dono_cog, nome: r.novo_dono_nome }).eq("id", r.item_id);
+    // Busca id_linha para atualizar planilha
+    const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", r.item_id).single();
+    if (mlItem?.id_linha) {
+      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
+        method: "POST", redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ acao: "repassar", token: "anticeg-pag-2026", id_linha: mlItem.id_linha, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }),
+      }).catch(() => {});
+    }
+  }
+  if (notificar) {
+    await inserirPush([{ message:`Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`, active:true, joiner_cog:r.joiner_cog }]);
+    await inserirPush([{ message:`Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`, active:true, joiner_cog:r.novo_dono_cog }]);
+  }
+}
+
+// ── Admin: repasses vindos da lojinha antijoiner ───────────────
+const ehRepasseLojinha = r => (r.obs || "").toLowerCase().includes("lojinha antijoiner");
+
+function AdminLojinhaRepasses({ repassos, setRepassos }) {
+  const mono = "'DM Mono',monospace";
+  const [aba, setAba] = useState("pendentes");
+  const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState(null);
+  const [joiners, setJoiners] = useState([]);
+  const [buscaDono, setBuscaDono] = useState({});
+  const [erro, setErro] = useState(null);
+
+  useEffect(() => {
+    supabase.from("joiners").select("cog, nome, twitter").order("nome").then(({ data }) => { if (data) setJoiners(data); });
+  }, []);
+
+  const todos = (repassos || []).filter(ehRepasseLojinha);
+  const q = busca.trim().toLowerCase();
+  const base = todos.filter(r =>
+    !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) ||
+          r.novo_dono_nome?.toLowerCase().includes(q) || r.nome_do_item?.toLowerCase().includes(q)
+  );
+  const pendentes  = base.filter(r => r.status === "pendente");
+  const resolvidos = base.filter(r => r.status !== "pendente");
+  const lista = aba === "pendentes" ? pendentes : resolvidos;
+
+  const porVendedor = {};
+  lista.forEach(r => {
+    const key = r.joiner_cog || "—";
+    if (!porVendedor[key]) porVendedor[key] = { nome: r.joiner_nome, cog: r.joiner_cog, repassos: [] };
+    porVendedor[key].repassos.push(r);
+  });
+  const grupos = Object.values(porVendedor).sort((a, b) => b.repassos.length - a.repassos.length);
+
+  const atualizarLocal = (id, campos) => setRepassos(prev => (prev || []).map(x => x.id === id ? { ...x, ...campos } : x));
+  const semDono = r => r.novo_dono_cog === "nao_registrado";
+
+  async function aprovar(r) {
+    setErro(null);
+    if (semDono(r)) { setErro(`Defina o novo dono de "${r.nome_do_item}" antes de aprovar.`); return; }
+    await executarAprovacaoRepasse(r, { notificar: false });
+    atualizarLocal(r.id, { status: "aprovado" });
+  }
+  async function recusar(r) {
+    setErro(null);
+    await supabase.from("repassos").update({ status: "recusado" }).eq("id", r.id);
+    atualizarLocal(r.id, { status: "recusado" });
+  }
+  async function reabrir(id) {
+    setErro(null);
+    await supabase.from("repassos").update({ status: "pendente" }).eq("id", id);
+    atualizarLocal(id, { status: "pendente" });
+  }
+  async function definirDono(r, j) {
+    setErro(null);
+    const campos = { novo_dono_cog: j.cog, novo_dono_nome: j.nome, novo_dono_twitter: j.twitter || null };
+    const { error } = await supabase.from("repassos").update(campos).eq("id", r.id);
+    if (error) { setErro("Não foi possível definir o novo dono: " + error.message); return; }
+    atualizarLocal(r.id, campos);
+    setBuscaDono(prev => ({ ...prev, [r.id]: "" }));
+  }
+
+  const tabBtn = ativo => ({
+    background: ativo ? "rgba(245,240,232,.08)" : "none",
+    border: `1px solid ${ativo ? "rgba(245,240,232,.2)" : "rgba(245,240,232,.07)"}`,
+    color: ativo ? "var(--offwhite)" : "rgba(245,240,232,.35)",
+    borderRadius: 8, padding: "6px 16px", fontSize: 12, fontFamily: mono, fontWeight: ativo ? 700 : 400,
+    cursor: "pointer", display: "flex", alignItems: "center", gap: 7, textTransform: "uppercase", letterSpacing: ".08em",
+  });
+
+  return (
+    <div style={{ padding:"24px 0" }}>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>LOJINHA ANTIJOINER</div>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:16 }}>
+        {todos.length} repasse{todos.length !== 1 ? "s" : ""} vindo{todos.length !== 1 ? "s" : ""} da lojinha · aprovar muda o dono na masterlist e atualiza a planilha, sem notificar ninguém
+      </div>
+      {erro && <div style={{ fontFamily:mono, fontSize:11, color:"#ff6b6b", background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"10px 14px", marginBottom:14 }}>{erro}</div>}
+      <input value={busca} onChange={e => { setBusca(e.target.value); setAberto(null); }} placeholder="Buscar joiner ou item..."
+        style={{ width:"100%", marginBottom:12, background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"8px 12px", color:"#F5F0E8", fontSize:11, fontFamily:mono, boxSizing:"border-box", outline:"none" }} />
+      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+        <button style={tabBtn(aba === "pendentes")} onClick={() => { setAba("pendentes"); setAberto(null); }}>
+          Pendentes {pendentes.length > 0 && <span style={{ background:"var(--laranja)", color:"#000", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{pendentes.length}</span>}
+        </button>
+        <button style={tabBtn(aba === "resolvidos")} onClick={() => { setAba("resolvidos"); setAberto(null); }}>
+          Resolvidos {resolvidos.length > 0 && <span style={{ background:"rgba(74,222,128,.2)", color:"#4ade80", borderRadius:99, padding:"1px 7px", fontSize:10, fontWeight:700 }}>{resolvidos.length}</span>}
+        </button>
+      </div>
+      {grupos.length === 0 && <div style={{ fontSize:12, color:"rgba(245,240,232,.3)", padding:"16px 0" }}>Nenhum repasse{q ? ` para "${busca}"` : ""}.</div>}
+      {grupos.map(g => {
+        const isOpen = aberto === g.cog;
+        const pend = g.repassos.filter(r => r.status === "pendente").length;
+        return (
+          <div key={g.cog} style={{ background:"var(--card-bg)", border:`1px solid ${pend > 0 ? "rgba(167,139,250,.25)" : "rgba(74,222,128,.1)"}`, borderRadius:10, marginBottom:6, overflow:"hidden" }}>
+            <div onClick={() => setAberto(isOpen ? null : g.cog)} style={{ display:"flex", alignItems:"center", padding:"12px 16px", cursor:"pointer", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:"var(--offwhite)" }}>{g.nome}</span>
+                <span style={{ fontSize:10, color:"rgba(245,240,232,.35)", marginLeft:8 }}>@{g.cog}</span>
+              </div>
+              <span style={{ fontSize:10, background: pend > 0 ? "rgba(167,139,250,.15)" : "rgba(74,222,128,.12)", color: pend > 0 ? "#A78BFA" : "#4ade80", border:`1px solid ${pend > 0 ? "rgba(167,139,250,.3)" : "rgba(74,222,128,.25)"}`, borderRadius:99, padding:"2px 10px", fontFamily:mono }}>
+                {g.repassos.length} repasse{g.repassos.length > 1 ? "s" : ""}
+              </span>
+              <span style={{ fontSize:12, color:"rgba(245,240,232,.4)", transition:"transform .15s", display:"inline-block", transform: isOpen ? "rotate(180deg)" : "none" }}>▾</span>
+            </div>
+            {isOpen && (
+              <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"4px 16px 12px" }}>
+                {g.repassos.map(r => {
+                  const termo = (buscaDono[r.id] || "").trim().toLowerCase();
+                  const sugestoes = termo ? joiners.filter(j => (j.nome || "").toLowerCase().includes(termo) || (j.cog || "").toLowerCase().includes(termo) || (j.twitter || "").toLowerCase().includes(termo)).slice(0, 5) : [];
+                  return (
+                    <div key={r.id}>
+                      <AdminRepasseCard r={r} onAprovar={aprovar} onRecusar={recusar} onReabrir={reabrir} />
+                      {semDono(r) && r.status === "pendente" && (
+                        <div style={{ background:"rgba(255,180,0,.05)", border:"1px solid rgba(255,180,0,.2)", borderRadius:8, padding:"10px 12px", marginBottom:8 }}>
+                          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"#ffb400", marginBottom:6 }}>NOVO DONO NÃO REGISTRADO — escolha para quem foi</div>
+                          <input value={buscaDono[r.id] || ""} onChange={e => setBuscaDono(prev => ({ ...prev, [r.id]: e.target.value }))} placeholder="buscar joiner por nome, cog ou @..."
+                            style={{ width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:mono, boxSizing:"border-box", outline:"none" }} />
+                          {sugestoes.map(j => (
+                            <button key={j.cog} onClick={() => definirDono(r, j)}
+                              style={{ display:"flex", width:"100%", gap:8, alignItems:"center", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid rgba(245,240,232,.05)", padding:"6px 4px", cursor:"pointer", fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>
+                              {j.nome} <span style={{ color:"rgba(245,240,232,.35)", fontSize:10 }}>{j.twitter || `@${j.cog}`}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
   return (
     <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"12px 0" }}>
@@ -8560,7 +8718,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Pedidos</div>
                 {temAcesso("reports")  && nav("reports",      "Reports",  "⚑", reports.filter(r => r.status !== "resolvido").length || 0)}
-                {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente").length || 0)}
+                {temAcesso("demandas") && nav("repassos",     "Repassos", "⇄", (adminRepassos || []).filter(r => r.status === "pendente" && !ehRepasseLojinha(r)).length || 0)}
+                {temAcesso("demandas") && nav("lojinha-repasses", "Lojinha", "⬟", (adminRepassos || []).filter(r => r.status === "pendente" && ehRepasseLojinha(r)).length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.filter(c => c.ceg !== "CLAIM").length || 0)}
                 {nav("claims-admin", "Claims", "◈", claimsAdminPendentes.length || 0)}
@@ -11564,28 +11723,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       })()}
 
       {/* ── REPASSOS ── */}
+      {adminMainTab === "lojinha-repasses" && <AdminLojinhaRepasses repassos={adminRepassos} setRepassos={setAdminRepassos} />}
       {adminMainTab === "repassos" && (() => {
         const [searchRepasse,     setSearchRepasse]     = [adminRepasseSearch,     setAdminRepasseSearch];
         const [repasseAdminTab,   setRepasseAdminTab]   = [adminRepasseTab,        setAdminRepasseTab];
         const [openRepasseJoiner, setOpenRepasseJoiner] = [adminRepasseOpenJoiner, setAdminRepasseOpenJoiner];
 
         async function aprovarRepasse(r) {
-          await supabase.from("repassos").update({ status: "aprovado" }).eq("id", r.id);
-          // Atualiza dono na masterlist
-          if (r.item_id) {
-            await supabase.from("masterlist").update({ cog: r.novo_dono_cog, nome: r.novo_dono_nome }).eq("id", r.item_id);
-            // Busca id_linha para atualizar planilha
-            const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", r.item_id).single();
-            if (mlItem?.id_linha) {
-              fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-                method: "POST", redirect: "follow",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({ acao: "repassar", token: "anticeg-pag-2026", id_linha: mlItem.id_linha, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }),
-              }).catch(() => {});
-            }
-          }
-          await inserirPush([{ message:`Seu repasse de "${r.nome_do_item}" para ${r.novo_dono_nome} foi aprovado pela admin!`, active:true, joiner_cog:r.joiner_cog }]);
-          await inserirPush([{ message:`Repasse aprovado! O item "${r.nome_do_item}" (${r.ceg}) agora é seu. Fale com a admin para mais detalhes.`, active:true, joiner_cog:r.novo_dono_cog }]);
+          await executarAprovacaoRepasse(r);
           setAdminRepassos(prev => prev.map(x => x.id === r.id ? { ...x, status:"aprovado" } : x));
         }
         async function recusarRepasse(r) {
@@ -11599,7 +11744,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         }
 
         const q    = (searchRepasse||"").trim().toLowerCase();
-        const base = (adminRepassos||[]).filter(r =>
+        const base = (adminRepassos||[]).filter(r => !ehRepasseLojinha(r)).filter(r =>
           !q || r.joiner_nome?.toLowerCase().includes(q) || r.joiner_cog?.toLowerCase().includes(q) ||
                 r.novo_dono_nome?.toLowerCase().includes(q) || r.nome_do_item?.toLowerCase().includes(q)
         );
