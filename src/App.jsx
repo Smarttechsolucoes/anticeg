@@ -23688,33 +23688,33 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
   ];
 
   const [exportando, setExportando] = useState(false);
-  const [cegsLista, setCegsLista] = useState([]);
-  const [cegSel,    setCegSel]    = useState("");
-
-  useEffect(() => {
-    (async () => {
-      const set = new Set();
-      let from = 0;
-      while (true) {
-        const { data } = await supabase.from("masterlist").select("ceg").neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").range(from, from + 999);
-        if (!data || data.length === 0) break;
-        data.forEach(r => { if (r.ceg && r.ceg !== "CLAIM") set.add(r.ceg); });
-        if (data.length < 1000) break;
-        from += 1000;
-      }
-      setCegsLista([...set].sort((a, b) => a.localeCompare(b, "pt-BR")));
-    })();
-  }, []);
+  const [cegSel, setCegSel] = useState("");
+  // CEG(s) da masterlist de cada drop (vazio = ainda sem CEG vinculado)
+  const CEGS_DO_DROP = {
+    "revista":        ["NYLON JAPAN"],
+    "wmag":           ["W MAGAZINE"],
+    "popup":          ["THIS & THAT POP-UP"],
+    "bazaar-in":      ["HARPER'S BAZAAR"],
+    "skzoo-rio":      ["SKZOO EAAW · RIO"],
+    "lightstick":     [],
+    "popcorn-sleeve": ["SLEEVES", "SLEEVES P2"],
+    "singba":         ["SINGBA FOLHAS"],
+    "wave-maker-admin": ["WAVE MAKER"],
+    "run-it-admin":   [],
+    "paper-tales-admin": [],
+  };
 
   async function exportarPedidosJoiners() {
     if (!cegSel) return;
+    const cegs = CEGS_DO_DROP[cegSel] || [];
+    if (cegs.length === 0) { alert("Esse drop ainda não tem CEG da masterlist vinculado."); return; }
     setExportando(true);
     try {
       let itens = [], from = 0;
       while (true) {
         const { data, error } = await supabase.from("masterlist")
           .select("cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
-          .eq("ceg", cegSel).neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").order("nome").range(from, from + 999);
+          .in("ceg", cegs).neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").order("nome").range(from, from + 999);
         if (error) throw error;
         if (!data || data.length === 0) break;
         itens = itens.concat(data);
@@ -23760,8 +23760,8 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <select value={cegSel} onChange={e => setCegSel(e.target.value)}
             style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"5px 8px", fontSize:10, fontFamily:mono, color:"var(--offwhite)", maxWidth:200 }}>
-            <option value="" style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{cegsLista.length ? "escolha o CEG / drop" : "carregando…"}</option>
-            {cegsLista.map(c => <option key={c} value={c} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{c}</option>)}
+            <option value="" style={{ background:"#1a1a1a", color:"#f5f0e8" }}>escolha o drop</option>
+            {DROPS.map(d => <option key={d.id} value={d.id} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{d.label}</option>)}
           </select>
           <button onClick={exportarPedidosJoiners} disabled={exportando || !cegSel}
             style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:(exportando||!cegSel)?"default":"pointer", letterSpacing:".04em", opacity:(exportando||!cegSel)?.4:1 }}>
