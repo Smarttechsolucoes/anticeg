@@ -23692,6 +23692,14 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
 
   // Tabela de pedidos de cada drop + como resumir o pedido em "nome do item"
   const resumo = (...partes) => partes.filter(Boolean).join(", ");
+  // preço de um pedido de formulário (valor não fica salvo): box/kit ou soma dos itens soltos, × quantidade
+  const precoForm = (cfg, p) => {
+    const qtd = Number(p.observacoes?.match(/Qtd:s*(d+)/)?.[1] || 1);
+    const info = [cfg.box, ...cfg.kits].find(x => x.id === p.modalidade);
+    const itens = (p.observacoes?.match(/Itens: ([^·]+)/)?.[1] || "").split(",").map(x => x.trim()).filter(Boolean);
+    const unit = info ? info.preco : itens.reduce((t, n) => t + (cfg.itens.find(i => i.id === n)?.preco || 0), 0);
+    return unit * qtd;
+  };
   const EXPORT_DROP = {
     "revista":        { tabela:"pedidos_revista",        item:p => resumo(p.versao_regular > 0 && `Regular x${p.versao_regular}`, p.versao_guys > 0 && `Guys x${p.versao_guys}`) },
     "wmag":           { tabela:"pedidos_wmag",           item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`) },
@@ -23700,9 +23708,9 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     "lightstick":     { tabela:"pedidos_lightstick",     item:() => "Lightstick SKZ" },
     "popcorn-sleeve": { tabela:"pedidos_popcorn_sleeve", item:p => `Pop-corn Sleeve x${p.quantidade || 1}` },
     "singba":         { tabela:"pedidos_singba",         item:p => (p.itens || []).map(i => resumo(i.opcao, i.tamanho, i.acabamento) + ` x${i.qtd}`).join(" | ") },
-    "wave-maker-admin":  { tabela:"formulario_pedidos", evento:"WAVE MAKER - SG JAPAN 2027", item:p => resumo(p.modalidade, p.observacoes) },
+    "wave-maker-admin":  { tabela:"formulario_pedidos", evento:"WAVE MAKER - SG JAPAN 2027", preco:p => precoForm(WM_CFG, p), item:p => resumo(p.modalidade, p.observacoes) },
     "run-it-admin":      { tabela:"formulario_pedidos", evento:"RUN IT VOL 2",               item:p => resumo(p.modalidade, p.observacoes) },
-    "paper-tales-admin": { tabela:"formulario_pedidos", evento:PT_CFG.evento,               item:p => resumo(p.modalidade, p.observacoes) },
+    "paper-tales-admin": { tabela:"formulario_pedidos", evento:PT_CFG.evento,               preco:p => precoForm(PT_CFG, p), item:p => resumo(p.modalidade, p.observacoes) },
   };
 
   async function exportarPedidosJoiners() {
@@ -23713,7 +23721,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     try {
       let pedidos = [], from = 0;
       while (true) {
-        let q = supabase.from(cfgDrop.tabela).select("*");
+        let q = supabase.from(cfgDrop.tabela).select("*").eq("status", "confirmado");
         if (cfgDrop.evento) q = q.eq("evento", cfgDrop.evento);
         const { data, error } = await q.order("created_at").range(from, from + 999);
         if (error) throw error;
@@ -23736,7 +23744,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
         rows.push([
           p.status || "", drop.label, p.nome || p.joiner_nome || j.nome || "",
           arroba(p.social || p.contato || p.claim || p.joiner_cog),
-          cfgDrop.item(p), fmtData(p.created_at), "", fmtN(p.valor_total),
+          cfgDrop.item(p), fmtData(p.created_at), "", fmtN(cfgDrop.preco ? cfgDrop.preco(p) : p.valor_total),
           "", "", "", "", "", "", "", "",
           p.email || p.joiner_email || j.email || "",
         ]);
