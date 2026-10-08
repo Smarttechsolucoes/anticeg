@@ -23674,33 +23674,35 @@ function ExportarPedidosDrop({ dropId, label }) {
   const [exportando, setExportando] = useState(false);
 
 
-  // Tabela de pedidos de cada drop + como resumir o pedido em "nome do item"
-  const resumo = (...partes) => partes.filter(Boolean).join(", ");
-  // preço de um pedido de formulário (valor não fica salvo): box/kit ou soma dos itens soltos, × quantidade
-  const precoForm = (cfg, p) => {
-    const qtd = Number(p.observacoes?.match(/Qtd:s*(d+)/)?.[1] || 1);
-    const info = [cfg.box, ...cfg.kits].find(x => x.id === p.modalidade);
+  // Cada drop devolve as linhas do pedido: { item, preco } — uma linha por item (e por unidade)
+  const rep = (n, item, preco) => Array.from({ length: Math.max(0, Number(n) || 0) }, () => ({ item, preco }));
+  const linhasForm = (cfg, p) => {
+    const qtd   = Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || 1);
+    const info  = [cfg.box, ...cfg.kits].find(x => x.id === p.modalidade);
+    if (info) return rep(qtd, info.id, info.preco);
     const itens = (p.observacoes?.match(/Itens: ([^·]+)/)?.[1] || "").split(",").map(x => x.trim()).filter(Boolean);
-    const unit = info ? info.preco : itens.reduce((t, n) => t + (cfg.itens.find(i => i.id === n)?.preco || 0), 0);
-    return unit * qtd;
+    const lista = itens.length ? itens : [p.modalidade || ""];
+    return lista.flatMap(n => rep(qtd, n, cfg.itens.find(i => i.id === n)?.preco ?? null));
   };
+  // pedidos que só guardam o total: divide o total pelas unidades
+  const dividir = (p, unidades) => unidades.map(item => ({ item, preco: unidades.length ? Number(p.valor_total || 0) / unidades.length : null }));
   const EXPORT_DROP = {
-    "revista":        { tabela:"pedidos_revista",        item:p => resumo(p.versao_regular > 0 && `Regular x${p.versao_regular}`, p.versao_guys > 0 && `Guys x${p.versao_guys}`) },
-    "wmag":           { tabela:"pedidos_wmag",           item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`) },
-    "popup":          { tabela:"pedidos_popup",          preco:p => (p.itens || []).reduce((t, i) => t + (POPUP_ITEMS.find(x => x.id === i.item_id)?.preco || 0) * (i.qtd || 1), 0), item:p => (p.itens || []).map(i => `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} x${i.qtd} [wk ${i.week}]`).join(" | ") },
-    "bazaar-in":      { tabela:"pedidos_bazaar_in",      item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`, p.caixa_f > 0 && `Caixa F x${p.caixa_f}`, p.caixa_g > 0 && `Caixa G x${p.caixa_g}`) },
-    "lightstick":     { tabela:"pedidos_lightstick",     preco:() => 450, item:() => "Lightstick SKZ" },
-    "popcorn-sleeve": { tabela:"pedidos_popcorn_sleeve", item:p => `Pop-corn Sleeve x${p.quantidade || 1}` },
-    "singba":         { tabela:"pedidos_singba",         item:p => (p.itens || []).map(i => resumo(i.opcao, i.tamanho, i.acabamento) + ` x${i.qtd}`).join(" | ") },
-    "wave-maker-admin":  { tabela:"formulario_pedidos", evento:"WAVE MAKER - SG JAPAN 2027", preco:p => precoForm(WM_CFG, p), item:p => resumo(p.modalidade, p.observacoes) },
-    "run-it-admin":      { tabela:"formulario_pedidos", evento:"RUN IT VOL 2",               item:p => resumo(p.modalidade, p.observacoes) },
-    "paper-tales-admin": { tabela:"formulario_pedidos", evento:PT_CFG.evento,               preco:p => precoForm(PT_CFG, p), item:p => resumo(p.modalidade, p.observacoes) },
+    "revista": { tabela:"pedidos_revista", linhas:p => [...rep(p.versao_regular, "Revista Nylon — Regular", REVISTA_PRECO), ...rep(p.versao_guys, "Revista Nylon — Guys", REVISTA_PRECO)] },
+    "wmag":    { tabela:"pedidos_wmag",    linhas:p => [["Capa A", p.capa_a], ["Capa B", p.capa_b], ["Capa C", p.capa_c]].flatMap(([n, q]) => rep(q, `W Magazine Hyunjin — ${n}`, WMAG_PRECO)) },
+    "popup":   { tabela:"pedidos_popup",   linhas:p => (p.itens || []).flatMap(i => rep(i.qtd || 1, `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} [wk ${i.week}]`, POPUP_ITEMS.find(x => x.id === i.item_id)?.preco ?? null)) },
+    "bazaar-in": { tabela:"pedidos_bazaar_in", linhas:p => [["capaA", p.capa_a], ["capaB", p.capa_b], ["capaC", p.capa_c], ["caixaF", p.caixa_f], ["caixaG", p.caixa_g]].flatMap(([id, q]) => { const b = BAZAAR_IN_TODOS.find(x => x.id === id); return rep(q, b.label, b.preco); }) },
+    "lightstick":     { tabela:"pedidos_lightstick",     linhas:() => [{ item:"Lightstick SKZ", preco:450 }] },
+    "popcorn-sleeve": { tabela:"pedidos_popcorn_sleeve", linhas:p => rep(p.quantidade || 1, "Pop-corn Sleeve", POPCORN_SLEEVE_VALOR) },
+    "singba":         { tabela:"pedidos_singba",         linhas:p => dividir(p, (p.itens || []).flatMap(i => rep(i.qtd || 1, [i.opcao, i.tamanho, i.acabamento].filter(Boolean).join(" · ")))) },
+    "wave-maker-admin":  { tabela:"formulario_pedidos", evento:"WAVE MAKER - SG JAPAN 2027", linhas:p => linhasForm(WM_CFG, p) },
+    "run-it-admin":      { tabela:"formulario_pedidos", evento:"RUN IT VOL 2",               linhas:p => (p.observacoes?.replace(/^Itens:\s*/, "") || p.modalidade || "").split(",").map(x => x.trim()).filter(Boolean).map(item => ({ item, preco:null })) },
+    "paper-tales-admin": { tabela:"formulario_pedidos", evento:PT_CFG.evento,               linhas:p => linhasForm(PT_CFG, p) },
   };
 
   async function exportarPedidosJoiners() {
     const cfgDrop = EXPORT_DROP[dropId];
     if (!cfgDrop) return;
-        setExportando(true);
+    setExportando(true);
     try {
       let pedidos = [], from = 0;
       while (true) {
@@ -23724,13 +23726,15 @@ function ExportarPedidosDrop({ dropId, label }) {
       const rows = [["STATUS","ABA / CEG","NOME","@","NOME DO ITEM","ITEM DATA","ITEM","PREÇO ITEM","FRETE DATA","PREÇO FRETE","FRETE","RF DATA","PREÇO RF","RF","NACIONAL","CHEGOU?","EMAIL"]];
       for (const p of pedidos) {
         const j = jMap[p.joiner_cog] || {};
-        rows.push([
-          p.status || "", label, p.nome || p.joiner_nome || j.nome || "",
-          arroba(p.social || p.contato || p.claim || p.joiner_cog),
-          cfgDrop.item(p), fmtData(p.created_at), "", fmtN(cfgDrop.preco ? cfgDrop.preco(p) : p.valor_total),
-          "", "", "", "", "", "", "", "",
-          p.email || p.joiner_email || j.email || "",
-        ]);
+        for (const l of cfgDrop.linhas(p)) {
+          rows.push([
+            p.status || "", label, p.nome || p.joiner_nome || j.nome || "",
+            arroba(p.social || p.contato || p.claim || p.joiner_cog),
+            l.item, fmtData(p.created_at), "", fmtN(l.preco),
+            "", "", "", "", "", "", "", "",
+            p.email || p.joiner_email || j.email || "",
+          ]);
+        }
       }
       const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
       const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
