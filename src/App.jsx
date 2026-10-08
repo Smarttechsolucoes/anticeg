@@ -23688,15 +23688,33 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
   ];
 
   const [exportando, setExportando] = useState(false);
+  const [cegsLista, setCegsLista] = useState([]);
+  const [cegSel,    setCegSel]    = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const set = new Set();
+      let from = 0;
+      while (true) {
+        const { data } = await supabase.from("masterlist").select("ceg").neq("cog", "disponivel").range(from, from + 999);
+        if (!data || data.length === 0) break;
+        data.forEach(r => { if (r.ceg && r.ceg !== "CLAIM") set.add(r.ceg); });
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setCegsLista([...set].sort((a, b) => a.localeCompare(b, "pt-BR")));
+    })();
+  }, []);
 
   async function exportarPedidosJoiners() {
+    if (!cegSel) return;
     setExportando(true);
     try {
       let itens = [], from = 0;
       while (true) {
         const { data, error } = await supabase.from("masterlist")
           .select("cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
-          .neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").order("ceg").range(from, from + 999);
+          .eq("ceg", cegSel).neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").order("nome").range(from, from + 999);
         if (error) throw error;
         if (!data || data.length === 0) break;
         itens = itens.concat(data);
@@ -23726,7 +23744,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
       const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
       const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
       const url  = URL.createObjectURL(blob);
-      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_joiners_${new Date().toISOString().slice(0,10)}.csv` });
+      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_${cegSel.replace(/[^\w-]+/g, "_")}_${new Date().toISOString().slice(0,10)}.csv` });
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     } catch (e) {
       alert("Erro ao exportar: " + (e.message || e));
@@ -23739,10 +23757,17 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>TODOS OS DROPS</div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>{DROPS.length} drops cadastrados</div>
-        <button onClick={exportarPedidosJoiners} disabled={exportando}
-          style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:exportando?"default":"pointer", letterSpacing:".04em", opacity:exportando?.5:1 }}>
-          {exportando ? "exportando…" : "↓ exportar pedidos dos joiners"}
-        </button>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <select value={cegSel} onChange={e => setCegSel(e.target.value)}
+            style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"5px 8px", fontSize:10, fontFamily:mono, color:"var(--offwhite)", maxWidth:200 }}>
+            <option value="">{cegsLista.length ? "escolha o CEG / drop" : "carregando…"}</option>
+            {cegsLista.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button onClick={exportarPedidosJoiners} disabled={exportando || !cegSel}
+            style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:(exportando||!cegSel)?"default":"pointer", letterSpacing:".04em", opacity:(exportando||!cegSel)?.4:1 }}>
+            {exportando ? "exportando…" : "↓ exportar planilha"}
+          </button>
+        </div>
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
