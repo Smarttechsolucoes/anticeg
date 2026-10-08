@@ -85,7 +85,7 @@ async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
     try {
       const ctx = await error.context?.json();
       if (ctx?.error) detail = ctx.error;
-    } catch (_) {}
+    } catch {}
     throw new Error(detail);
   }
 }
@@ -398,6 +398,9 @@ function diasAtraso(vencimento) {
   const diff = Math.floor((hoje - venc) / 86400000);
   return diff > 0 ? diff : 0;
 }
+
+// multas pagas contam para o badge Jiniret a partir desta data
+const BADGE_MULTAS_DESDE = "2026-09-01";
 
 // multa por dia de atraso, por item (R$): R$3 para prazos a partir de 01/10/2026, R$1 para os anteriores
 const MULTA_NOVA_DESDE = "2026-10-01";
@@ -846,7 +849,6 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
     setCapaPosY(cfg.posY);
   }, [capaFotoAtual?.id]);
 
-  const owner = isOwner(user);
   const adminUser = isAdminUser(user);
 
   async function salvarCapaCfg(id, zoom, posY) {
@@ -1550,7 +1552,7 @@ function ReportCheckRow({ checked, onChange, label }) {
 function ReportModal({ user, item, onClose, onReported }) {
   const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, repassado: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
-  const [motivoItem, setMotivoItem] = useState(null);
+  const [motivoItem] = useState(null);
   const [pagInfo, setPagInfo] = useState({ dataPag: "", dataForms: "", valorPago: "", metodo: null });
   const [obs, setObs] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1951,7 +1953,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
       if (path && path !== raw) {
         await supabase.storage.from("storage-itens").remove([path]);
       }
-    } catch (_) {}
+    } catch {}
     setStorageGom(prev => prev.filter(x => x.id !== item.id));
   }
 
@@ -2055,7 +2057,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
   }, 0);
 
 
-  const temPendente = !guest && pendV > 0;
   const temAntigomEmAberto = !guest && itens.some(i =>
     i.status === "ANTIGOM" && (
       (i.pago_item  === false && Number(i.valor_item  || 0) > 0) ||
@@ -2817,7 +2818,6 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                 {acoes === null ? (
                   <button onClick={async () => {
                     setLoadingAcoes(true);
-                    const fmtDt = s => new Date(s).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
                     const ev = [];
                     const [reps, envios, mercs, fbs] = await Promise.all([
                       supabase.from("reports").select("id,created_at,nome_item,ceg").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
@@ -3512,8 +3512,6 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [fbReplicaTexto,      setFbReplicaTexto]      = useState("");
   const [fbReplicaEnv,        setFbReplicaEnv]        = useState(false);
   const [expandedReports, setExpandedReports] = useState(new Set());
-  const [reportRespostas, setReportRespostas] = useState({});
-  const [reportSaving,    setReportSaving]    = useState(new Set());
   // ── repasse ──
   const [meusItens,           setMeusItens]           = useState([]);
   const [repasseItensSel,     setRepasseItensSel]     = useState(new Set());
@@ -3578,7 +3576,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
           .eq("cog", dataCog(user.cog)).order("ceg").order("nome_do_item"),
         supabase.from("repassos").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
-        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)).gte("created_at", "2026-09-01"),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)).gte("created_at", BADGE_MULTAS_DESDE),
         supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single(),
         supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", dataCog(user.cog)),
       ]);
@@ -3647,7 +3645,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     setFeedbackTipo("bug");
     setPerfilSubTab("feedback");
   }
-  const [nome, setNome] = useState(user.nome || "");
+  const [nome] = useState(user.nome || "");
   const [nomeSite, setNomeSite] = useState(user.nome_site || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
@@ -3744,7 +3742,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
 
     const camposAlterados = {};
     const mapa = { twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
-    for (const [campo, valorNovo] of Object.entries(mapa)) {
+    for (const campo of Object.keys(mapa)) {
       const valorAntigo = mapa[campo] || "";
       const valorNovoCampo = updates[campo] || "";
       if (valorNovoCampo !== (valorAntigo || "")) {
@@ -7725,9 +7723,6 @@ function ControleEstoqueTab() {
   const [ecDia, setEcDia] = useState("");
   const [ecChegada, setEcChegada] = useState("");
   const [savingCompra, setSavingCompra] = useState(false);
-  const [editLink, setEditLink] = useState(false);
-  const [editLinkVal, setEditLinkVal] = useState("");
-  const [savingLink, setSavingLink] = useState(false);
   const [editando, setEditando] = useState(false);
   const [editNome, setEditNome] = useState("");
   const [editLinkE, setEditLinkE] = useState("");
@@ -8198,8 +8193,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageMode,          setStorageMode]          = useState("joiner");
   const [storageRecortando,    setStorageRecortando]    = useState(false);
   const [storageRecortandoProg,setStorageRecortandoProg]= useState({ done: 0, total: 0, erros: 0 });
-  const [storageFotoJoiner, setStorageFotoJoiner] = useState(null);
-  const [storageFotoSearch, setStorageFotoSearch] = useState("");
+  const [, setStorageFotoJoiner] = useState(null);
+  const [, setStorageFotoSearch] = useState("");
   const [storageFotoQueue,    setStorageFotoQueue]    = useState([]);
   const [storageFotoEnviando, setStorageFotoEnviando] = useState(false);
   const [storageFotoAmpliada, setStorageFotoAmpliada] = useState(null);
@@ -8214,7 +8209,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [storageCegItemFiltro,setStorageCegItemFiltro] = useState("");
   const [galeriaFotos,        setGaleriaFotos]         = useState(null);
   const [galeriaFetchGen,     setGaleriaFetchGen]      = useState(0);
-  const [galeriaLoading,      setGaleriaLoading]       = useState(false);
+  const [, setGaleriaLoading]       = useState(false);
   const [roundsList,        setRoundsList]        = useState(null);
   const [roundsLoading,     setRoundsLoading]     = useState(false);
   const [roundsSecaoAberta, setRoundsSecaoAberta] = useState(false);
@@ -8574,7 +8569,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       const { data: subs } = await query;
       if (!subs?.length) { setPmStatus({ ok: false, txt: "Nenhum dispositivo inscrito." }); setPmSending(false); return; }
       const results = await Promise.allSettled(subs.map(async s => {
-        const { data, error } = await supabase.functions.invoke("send-push", {
+        const { error } = await supabase.functions.invoke("send-push", {
           body: { subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, title: pmTitulo.trim() || "ANTICEG", body: pmCorpo.trim(), url: "/" },
         });
         if (error) throw Object.assign(new Error(error.message || JSON.stringify(error)), { joiner_cog: s.joiner_cog });
@@ -8652,7 +8647,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", joiner.cog),
       supabase.from("reports").select("id").eq("joiner_cog", joiner.cog),
       supabase.from("pagamento_demandas").select("id").eq("joiner_cog", joiner.cog),
-      supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", joiner.cog).gte("created_at", "2026-09-01"),
+      supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", joiner.cog).gte("created_at", BADGE_MULTAS_DESDE),
     ]);
 
     setBadgesJoiner({
@@ -12113,7 +12108,6 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   const [modalidade, setModalidade] = useState(null);
   const [itensSel, setItensSel] = useState([]);
   const [quantidade, setQuantidade] = useState(1);
-  const [obs, setObs] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(null);
   const [erro, setErro] = useState(null);
@@ -12622,12 +12616,14 @@ function MercariTab() {
     let totJ=0,totB=0; itens.forEach(it=>{totJ+=it.valor_jpy;totB+=it.valor_brl;});
     let comp=null;
     if(fileComp&&!semComp){
+      let compOk=false;
       try{
         const ext=fileComp.name.split('.').pop()||'jpg';
         const path=`${jRef.current.cog}_${Date.now()}.${ext}`;
         const { error: upErr } = await supabase.storage.from('mercari-comprovantes').upload(path, fileComp, { contentType: fileComp.type || 'application/octet-stream', upsert: false });
-        if (!upErr) { const { data: pub } = supabase.storage.from('mercari-comprovantes').getPublicUrl(path); comp = pub.publicUrl; }
-      }catch{}
+        if (!upErr) { const { data: pub } = supabase.storage.from('mercari-comprovantes').getPublicUrl(path); comp = pub.publicUrl; compOk = true; }
+      }catch{ compOk=false; }
+      if(!compOk){ setFormErr('Não foi possível enviar o comprovante. Tente novamente ou use "Não consigo anexar o comprovante".'); setSending(false); return; }
     }
     const j=jRef.current;
     const {error}=await supabase.from('mercari_pedidos').insert([{joiner_cog:j.cog,joiner_nome:j.nome||j.cog,itens,valor_jpy_total:Math.round(totJ),valor_brl_total:parseFloat(totB.toFixed(2)),taxa_cambio:fxRef.current,comprovante_url:comp,metodo_pagamento:'pix',id_transacao:idPix||null,status:'pendente'}]);
@@ -13077,20 +13073,8 @@ function AdminMercari({ pedidos = [], onUpdate }) {
 
 function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre }) {
   const [aprovando, setAprovando] = useState(null);
-  const [copiado, setCopiado] = useState(null); // id ou "todos"
 
-  function linhaJoiner(p) {
-    return [
-      "MEMBRO NOVO", p.nome, "PERFIL NOVO", "", "TRUE", "R$ 0,00", "", "", "",
-      "FALSE", "", "", "FALSE", "FALSE", "FALSE", p.email || "", p.cog || "",
-    ].join("\t");
-  }
 
-  function copiar(texto, key) {
-    navigator.clipboard.writeText(texto);
-    setCopiado(key);
-    setTimeout(() => setCopiado(null), 2000);
-  }
 
   async function aprovarCadastro(p) {
     setAprovando(p.id);
@@ -15465,7 +15449,6 @@ function CustomSelect({ value, onChange, options, placeholder, style }) {
     document.addEventListener("mousedown", outside);
     return () => document.removeEventListener("mousedown", outside);
   }, []);
-  const selected = options.find(o => o === value);
   return (
     <div ref={ref} style={{ position:"relative", ...style }}>
       <button onClick={() => setOpen(p => !p)} style={{ width:"100%", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.12)", borderRadius:7, padding:"6px 10px", color: value ? "var(--offwhite)" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:11, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:4 }}>
@@ -15686,8 +15669,6 @@ function LojinhaRepasses({ user }) {
   const repassesFiltrados = filtroLojinha === "todos" ? minhosRepasses : minhosRepasses.filter(r => r.status === filtroLojinha);
 
   const inp = { width:"100%", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"9px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, boxSizing:"border-box", outline:"none" };
-  const lbl = { fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", letterSpacing:"1px", display:"block", marginBottom:5 };
-  const fieldWrap = { marginBottom:14 };
 
   const totalCalculado = totalForm();
   const itensFiltrados = buscaItem.trim()
@@ -15787,12 +15768,10 @@ function LojinhaRepasses({ user }) {
           {showForm && (() => {
             const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
             const anoAtual = new Date().getFullYear();
-            const anos = [anoAtual, anoAtual + 1, anoAtual + 2];
             const dias = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
             const partes = (form.prazo || "").split(" ");
-            const dia = partes[0] || ""; const mes = partes[1] || ""; const ano = partes[2] || "";
+            const dia = partes[0] || ""; const mes = partes[1] || "";
             const setPrazo = (d, m, a) => setForm(p => ({ ...p, prazo: [d, m, a].filter(Boolean).join(" ") }));
-            const sel = {}; // unused, kept for reference
             const roBox = { fontFamily:mono, fontSize:11, padding:"7px 10px", borderRadius:7, background:"rgba(245,240,232,.03)", color:"rgba(245,240,232,.45)", border:"1px solid rgba(245,240,232,.07)" };
             const fldLbl = { fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)", display:"block", marginBottom:4 };
             return (
@@ -16759,7 +16738,6 @@ const TUTORIAL_STEPS = [
 ];
 
 function ProfileConfirmModal({ user, onSave, onSkip }) {
-  const isNew = !user.nome || user.nome.trim() === "";
   const [nome, setNome] = useState(user.nome || "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
   const [social, setSocial] = useState(user.twitter || "");
@@ -17002,7 +16980,6 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
                 {/* Grid de joiners desse grupo */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
                   {gItens.map(item => {
-                    const ai = getStepIdx(item.status);
                     return (
                       <div key={item.id} style={{ background: "#181614", border: "1px solid rgba(245,240,232,.07)", borderRadius: 10, overflow: "hidden" }}>
                         {cat && <div style={{ height: 90, overflow: "hidden" }}>
@@ -18871,9 +18848,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [unlocked,    setUnlocked]    = useState(false);
   const [senha,       setSenha]       = useState("");
   const [senhaErr,    setSenhaErr]    = useState(false);
-  const [nome,        setNome]        = useState(user.nome    || "");
-  const [handle,      setHandle]      = useState(user.twitter || "");
-  const [whatsapp,    setWhatsapp]    = useState(user.whatsapp || "");
+  const [nome]        = useState(user.nome    || "");
+  const [handle]      = useState(user.twitter || "");
+  const [whatsapp]    = useState(user.whatsapp || "");
   const [destinatario,setDestinatario]= useState(user.nome_entrega || "");
   const [cpf,         setCpf]         = useState(user.cpf         || "");
   const [cep,         setCep]         = useState(user.cep         || "");
@@ -18884,7 +18861,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [cidade,      setCidade]      = useState(user.cidade      || "");
   const [estado,      setEstado]      = useState(user.estado      || "");
   const [cepLoading,  setCepLoading]  = useState(false);
-  const [selecionados,setSelecionados]= useState(() => antigomItens.map(i => i.id));
+  const [, setSelecionados]= useState(() => antigomItens.map(i => i.id));
   const [metodo,      setMetodo]      = useState("");
   const [seguro,      setSeguro]      = useState("");
   const [valorSeguro, setValorSeguro] = useState("");
@@ -19033,9 +19010,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     setCepLoading(false);
   }
 
-  function toggleItem(id) {
-    setSelecionados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  }
 
   async function handleSubmit() {
     setErro("");
@@ -20351,7 +20325,7 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
     const qty = qtds[key] || 0;
     return (
       <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, overflow:"hidden" }}>
-        <Foto />
+        {Foto()}
         <Info>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <button type="button" onClick={()=>setQtd(key,qty-1)} style={{ width:28,height:28,borderRadius:"50%",border:"1px solid rgba(245,240,232,.15)",background:"transparent",color:"var(--offwhite)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
@@ -20365,7 +20339,7 @@ function PopupItemCard({ item, qtds, setQtd, mono }) {
 
   return (
     <div style={{ background:bg, border:`1px solid ${borderColor}`, borderRadius:10, overflow:"hidden" }}>
-      <Foto />
+      {Foto()}
       <div style={{ cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
         <Info>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
@@ -21042,8 +21016,8 @@ function PopupThisAndThatPage() {
             <div style={{ fontSize:20, fontWeight:900 }}>POP-UP THIS & THAT</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", marginTop:4 }}>{nome} · {email}</div>
           </div>
-          <ResumoWeek label="WEEK 01 · 08/08 — 11/08" qtds={qtds1} brl={brl1} krw={krw1} pc={pc1} />
-          <ResumoWeek label="WEEK 02 · 13/08 — 19/08" qtds={qtds2} brl={brl2} krw={krw2} pc={pc2} />
+          {ResumoWeek({ label: "WEEK 01 · 08/08 — 11/08", qtds: qtds1, brl: brl1, krw: krw1, pc: pc1 })}
+          {ResumoWeek({ label: "WEEK 02 · 13/08 — 19/08", qtds: qtds2, brl: brl2, krw: krw2, pc: pc2 })}
           <div style={{ background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total geral</span>
             <span style={{ fontFamily:mono, fontSize:20, fontWeight:900, color:"var(--laranja)" }}>R$ {totalBRL},00</span>
@@ -21956,11 +21930,6 @@ function AdminClaimEventos() {
     fetchTudo();
   }
 
-  async function cancelarClaimJoiner(setId, joinerCog, joinerNome) {
-    if (!window.confirm(`Remover claim de ${joinerNome} deste set?`)) return;
-    await supabase.from("claim_reservas").update({ status:"cancelado" }).eq("set_id", setId).eq("joiner_cog", joinerCog).neq("is_admin", true);
-    fetchTudo();
-  }
 
   async function cancelarMembroDoSet(setId, joinerCog, membro, joinerNome) {
     const { data: rows } = await supabase.from("claim_reservas").select("id").eq("set_id", setId).eq("joiner_cog", joinerCog).eq("membro", membro).neq("is_admin", true).neq("status","cancelado").limit(1);
@@ -22303,7 +22272,6 @@ function AdminClaimEventos() {
                         claimadosPorJoiner[r.joiner_cog].membros.push(r.membro);
                         if (r.created_at < claimadosPorJoiner[r.joiner_cog].ts) claimadosPorJoiner[r.joiner_cog].ts = r.created_at;
                       });
-                      const joiners = Object.values(claimadosPorJoiner).sort((a,b) => a.ts < b.ts ? -1 : 1);
                       const adminSlots = resSet.filter(r=>r.is_admin);
                       const livres = (ev.membros||SK8).filter(m => !resSet.some(r => r.membro === m));
                       return (
@@ -23044,9 +23012,9 @@ function AdminSkzooRio() {
       {!loading && (
         <>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:16 }}>
-            <Stat label="TOTAL DE PEDIDOS"  val={ativos.length} sub={`${pedidos.length} total incl. cancelados`} />
-            <Stat label="VALOR TOTAL"        val={fmtR(totalValor)} color="var(--laranja)" sub="apenas confirmados" />
-            <Stat label="PHOTOCARDS TOTAIS"  val={`🃏 ${pcsTotal}`} color="var(--lilas)" sub="apenas confirmados" />
+            {Stat({ label: "TOTAL DE PEDIDOS", val: ativos.length, sub: `${pedidos.length} total incl. cancelados` })}
+            {Stat({ label: "VALOR TOTAL", val: fmtR(totalValor), color: "var(--laranja)", sub: "apenas confirmados" })}
+            {Stat({ label: "PHOTOCARDS TOTAIS", val: `🃏 ${pcsTotal}`, color: "var(--lilas)", sub: "apenas confirmados" })}
           </div>
 
           {/* Breakdown de photocards por joiner — colapsível */}
@@ -23719,10 +23687,63 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     { key:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
   ];
 
+  const [exportando, setExportando] = useState(false);
+
+  async function exportarPedidosJoiners() {
+    setExportando(true);
+    try {
+      let itens = [], from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("masterlist")
+          .select("cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
+          .neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").order("ceg").range(from, from + 999);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        itens = itens.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      const { data: joiners } = await supabase.from("joiners").select("cog, email");
+      const emailMap = Object.fromEntries((joiners || []).map(j => [j.cog, j.email || ""]));
+
+      const fmtData = s => { if (!s) return ""; const [y, m, d] = String(s).slice(0, 10).split("-"); return d ? `${d}/${m}/${y}` : ""; };
+      const fmtN    = v => Number(v || 0) > 0 ? Number(v).toFixed(2).replace(".", ",") : "";
+      const fmtPago = (pago, valor) => Number(valor || 0) <= 0 ? "" : (pago === "N/A" ? "N/A" : (isPendente(pago) ? "Pendente" : "Pago"));
+      const CHEGOU  = ["Chegou Aqui", "ANTIGOM", "Envio Liberado", "Enviado Nacional"];
+
+      const rows = [["STATUS","ABA / CEG","NOME","@","NOME DO ITEM","ITEM DATA","ITEM","PREÇO ITEM","FRETE DATA","PREÇO FRETE","FRETE","RF DATA","PREÇO RF","RF","NACIONAL","CHEGOU?","EMAIL"]];
+      for (const i of itens) {
+        rows.push([
+          i.status || "", i.ceg || "", i.nome || "", i.cog ? `@${i.cog}` : "", i.nome_do_item || "",
+          fmtData(i.venc_item),  fmtPago(i.pago_item,  i.valor_item),  fmtN(i.valor_item),
+          fmtData(i.venc_frete), fmtN(i.frete_inter), fmtPago(i.pago_frete, i.frete_inter),
+          fmtData(i.venc_rf),    fmtN(i.taxa_rf),     fmtPago(i.pago_rf,    i.taxa_rf),
+          i.status === "Enviado Nacional" ? "Sim" : "Não",
+          CHEGOU.includes(i.status) ? "Sim" : "Não",
+          emailMap[i.cog] || "",
+        ]);
+      }
+      const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+      const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_joiners_${new Date().toISOString().slice(0,10)}.csv` });
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Erro ao exportar: " + (e.message || e));
+    }
+    setExportando(false);
+  }
+
   return (
     <div style={{ padding:"24px 0" }}>
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>TODOS OS DROPS</div>
-      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{DROPS.length} drops cadastrados</div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:20 }}>
+        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>{DROPS.length} drops cadastrados</div>
+        <button onClick={exportarPedidosJoiners} disabled={exportando}
+          style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:exportando?"default":"pointer", letterSpacing:".04em", opacity:exportando?.5:1 }}>
+          {exportando ? "exportando…" : "↓ exportar pedidos dos joiners"}
+        </button>
+      </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         {DROPS.map(drop => {
@@ -23862,7 +23883,7 @@ const LS_CARTAO_URL = "https://linknabio.gg/anticeg-comu";
 
 function LightstickForm({ onVoltar }) {
   const mono = "'DM Mono',monospace";
-  const [joiner, setJoiner]   = useState(null);
+  const [, setJoiner]   = useState(null);
   const [idInp, setIdInp]     = useState('');
   const [idSt, setIdSt]       = useState('');
   const [idMsg, setIdMsg]     = useState('');
@@ -24092,7 +24113,7 @@ const POPCORN_SLEEVE_IMG ="https://popcontr2632.cdn-nhncommerce.com/data/goods/2
 
 function PopcornSleeveForm({ onVoltar }) {
   const mono = "'DM Mono',monospace";
-  const [joiner, setJoiner]   = useState(null);
+  const [, setJoiner]   = useState(null);
   const [idInp, setIdInp]     = useState('');
   const [idSt, setIdSt]       = useState('');
   const [idMsg, setIdMsg]     = useState('');
@@ -24452,7 +24473,7 @@ const SINGBA_CAPA = null;
 
 function SingbaForm({ onVoltar }) {
   const mono = "'DM Mono',monospace";
-  const [joiner, setJoiner]   = useState(null);
+  const [, setJoiner]   = useState(null);
   const [idInp, setIdInp]     = useState('');
   const [idSt, setIdSt]       = useState('');
   const [idMsg, setIdMsg]     = useState('');
@@ -25099,12 +25120,19 @@ function PrevendaTab({ user }) {
                 <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:2 }}>{f.info}</div>
               </div>
             </div>
-            {!f.ativo && f.url && !f.external && (
+            {(!f.ativo || f.fechado) && (f.url || f.tab) && (
               <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"10px 18px" }}>
-                <a href={f.url} target="_self"
-                  style={{ display:"inline-block", padding:"8px 16px", borderRadius:8, background:"transparent", color:"rgba(245,240,232,.35)", border:"1px solid rgba(245,240,232,.12)", fontFamily:mono, fontSize:10, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
-                  VER ITENS →
-                </a>
+                {f.url ? (
+                  <a href={f.url} target={f.external ? "_blank" : "_self"} rel={f.external ? "noopener noreferrer" : undefined}
+                    style={{ display:"inline-block", padding:"8px 16px", borderRadius:8, background:"transparent", color:"rgba(245,240,232,.55)", border:"1px solid rgba(245,240,232,.18)", fontFamily:mono, fontSize:10, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>
+                    VER FORMULÁRIO →
+                  </a>
+                ) : (
+                  <button onClick={()=>{ window.dispatchEvent(new CustomEvent("anticeg:changetab", {detail: f.tab})); }}
+                    style={{ padding:"8px 16px", borderRadius:8, background:"transparent", color:"rgba(245,240,232,.55)", border:"1px solid rgba(245,240,232,.18)", fontFamily:mono, fontSize:10, fontWeight:700, cursor:"pointer", letterSpacing:"1px" }}>
+                    VER FORMULÁRIO →
+                  </button>
+                )}
               </div>
             )}
             {f.ativo && !f.fechado && (f.onInline || f.url || f.tab) && (
@@ -25158,7 +25186,6 @@ function AdminRevista({ onCountChange }) {
     setPedidos(prev => { const next = prev.map(p => p.id === id ? { ...p, status: "cancelado" } : p); onCountChange?.(next.filter(p=>p.status==="aguardando").length); return next; });
   }
 
-  const total = (pedidos || []).reduce((s,p) => s + Number(p.valor_total||0), 0);
   const aguardando = (pedidos || []).filter(p => p.status === "aguardando").length;
 
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
@@ -25849,7 +25876,7 @@ function RevistaFormPage() {
                   <div style={{ fontWeight:600, fontSize:13 }}>NYLON JAPAN — HAN</div>
                   <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>capa frente e verso · outubro 2026</div>
                 </div>
-                <Qty val={qtd} set={setQtd} />
+                {Qty({ val: qtd, set: setQtd })}
               </div>
               {total > 0 && (
                 <div style={{ marginTop:14, fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)", textAlign:"right" }}>
@@ -25943,7 +25970,7 @@ export default function App() {
   const [tab, setTab] = useState(() => parseUrlParts().tab);
   const [initAdminSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "admin"  ? p.sub : null; });
   const [initPerfilSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "perfil" ? p.sub : null; });
-  const [initCegSlug] = useState(() => { const parts = window.location.pathname.split("/").filter(Boolean); return parts[0] === "cegs" && parts[1] ? parts[1] : null; });
+  const [initCegSlug, setInitCegSlug] = useState(() => { const parts = window.location.pathname.split("/").filter(Boolean); return parts[0] === "cegs" && parts[1] ? parts[1] : null; });
   const [adminReset, setAdminReset] = useState(0);
   const [openPagamentosSignal, setOpenPagamentosSignal] = useState(0);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -25970,10 +25997,9 @@ export default function App() {
   );
   const [inputSenhaManut, setInputSenhaManut] = useState("");
   const [erroSenhaManut,  setErroSenhaManut]  = useState(false);
-  const [adminPortalInput, setAdminPortalInput] = useState("");
-  const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [, setShowAdminPortal] = useState(false);
   const [showPerfilModal, setShowPerfilModal] = useState(false);
-  const [perfilPushAtivo, setPerfilPushAtivo] = useState(true);
+  const [, setPerfilPushAtivo] = useState(true);
   const [calEventos, setCalEventos] = useState(null);
   const [badgePopupQueue, setBadgePopupQueue] = useState([]);
   const [proximoEnvio,        setProximoEnvio]        = useState("");
@@ -26040,6 +26066,7 @@ export default function App() {
 
   function changeTab(newTab) {
     setTab(newTab);
+    setInitCegSlug(null);
     history.pushState(null, "", "/" + newTab);
   }
 
@@ -26047,6 +26074,8 @@ export default function App() {
     const handler = () => {
       const { tab: slug } = parseUrlParts();
       if (TAB_SLUGS.includes(slug)) setTab(slug);
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      setInitCegSlug(parts[0] === "cegs" && parts[1] ? parts[1] : null);
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
@@ -26190,7 +26219,7 @@ export default function App() {
         supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", user.cog),
         supabase.from("reports").select("id").eq("joiner_cog", user.cog),
         supabase.from("pagamento_demandas").select("id").eq("joiner_cog", user.cog),
-        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog).gte("created_at", "2026-09-01"),
+        supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog).gte("created_at", BADGE_MULTAS_DESDE),
       ]);
       if (cancelled) return;
       const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0, cog: user.cog });
