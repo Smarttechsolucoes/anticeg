@@ -9473,9 +9473,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       )}
 
       {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin"].includes(adminMainTab) && (
-        <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:4, padding:"4px 0", letterSpacing:".04em" }}>
-          ← Todos os drops
-        </button>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
+          <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
+            ← Todos os drops
+          </button>
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo }[adminMainTab]} />
+        </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
       {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
@@ -23665,30 +23668,11 @@ function RunItVol2Tab({ user }) {
   );
 }
 
-// ── Admin Todos os Drops ──────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, dropsStats }) {
+// ── Botão de exportar planilha dos pedidos confirmados de um drop ──
+function ExportarPedidosDrop({ dropId, label }) {
   const mono = "'DM Mono',monospace";
-  const DROPS = [
-    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" },
-    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
-    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
-    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento },
-  ];
-  const STATUS_COLS = [
-    { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
-    { key:"confirmado", label:"Confirmado", cor:"#4ade80" },
-    { key:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
-  ];
-
   const [exportando, setExportando] = useState(false);
-  const [dropSel, setDropSel] = useState("");
+
 
   // Tabela de pedidos de cada drop + como resumir o pedido em "nome do item"
   const resumo = (...partes) => partes.filter(Boolean).join(", ");
@@ -23703,9 +23687,9 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
   const EXPORT_DROP = {
     "revista":        { tabela:"pedidos_revista",        item:p => resumo(p.versao_regular > 0 && `Regular x${p.versao_regular}`, p.versao_guys > 0 && `Guys x${p.versao_guys}`) },
     "wmag":           { tabela:"pedidos_wmag",           item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`) },
-    "popup":          { tabela:"pedidos_popup",          item:p => (p.itens || []).map(i => `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} x${i.qtd} [wk ${i.week}]`).join(" | ") },
+    "popup":          { tabela:"pedidos_popup",          preco:p => (p.itens || []).reduce((t, i) => t + (POPUP_ITEMS.find(x => x.id === i.item_id)?.preco || 0) * (i.qtd || 1), 0), item:p => (p.itens || []).map(i => `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} x${i.qtd} [wk ${i.week}]`).join(" | ") },
     "bazaar-in":      { tabela:"pedidos_bazaar_in",      item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`, p.caixa_f > 0 && `Caixa F x${p.caixa_f}`, p.caixa_g > 0 && `Caixa G x${p.caixa_g}`) },
-    "lightstick":     { tabela:"pedidos_lightstick",     item:() => "Lightstick SKZ" },
+    "lightstick":     { tabela:"pedidos_lightstick",     preco:() => 450, item:() => "Lightstick SKZ" },
     "popcorn-sleeve": { tabela:"pedidos_popcorn_sleeve", item:p => `Pop-corn Sleeve x${p.quantidade || 1}` },
     "singba":         { tabela:"pedidos_singba",         item:p => (p.itens || []).map(i => resumo(i.opcao, i.tamanho, i.acabamento) + ` x${i.qtd}`).join(" | ") },
     "wave-maker-admin":  { tabela:"formulario_pedidos", evento:"WAVE MAKER - SG JAPAN 2027", preco:p => precoForm(WM_CFG, p), item:p => resumo(p.modalidade, p.observacoes) },
@@ -23714,10 +23698,9 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
   };
 
   async function exportarPedidosJoiners() {
-    const cfgDrop = EXPORT_DROP[dropSel];
+    const cfgDrop = EXPORT_DROP[dropId];
     if (!cfgDrop) return;
-    const drop = DROPS.find(d => d.id === dropSel);
-    setExportando(true);
+        setExportando(true);
     try {
       let pedidos = [], from = 0;
       while (true) {
@@ -23742,7 +23725,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
       for (const p of pedidos) {
         const j = jMap[p.joiner_cog] || {};
         rows.push([
-          p.status || "", drop.label, p.nome || p.joiner_nome || j.nome || "",
+          p.status || "", label, p.nome || p.joiner_nome || j.nome || "",
           arroba(p.social || p.contato || p.claim || p.joiner_cog),
           cfgDrop.item(p), fmtData(p.created_at), "", fmtN(cfgDrop.preco ? cfgDrop.preco(p) : p.valor_total),
           "", "", "", "", "", "", "", "",
@@ -23752,7 +23735,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
       const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
       const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
       const url  = URL.createObjectURL(blob);
-      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_${dropSel}_${new Date().toISOString().slice(0,10)}.csv` });
+      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_${dropId}_${new Date().toISOString().slice(0,10)}.csv` });
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     } catch (e) {
       alert("Erro ao exportar: " + (e.message || e));
@@ -23760,23 +23743,41 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
     setExportando(false);
   }
 
+  if (!EXPORT_DROP[dropId]) return null;
+  return (
+    <button onClick={exportarPedidosJoiners} disabled={exportando}
+      style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:exportando?"default":"pointer", letterSpacing:".04em", opacity:exportando?.5:1 }}>
+      {exportando ? "exportando…" : "↓ exportar planilha (confirmados)"}
+    </button>
+  );
+}
+
+// ── Admin Todos os Drops ──────────────────────────────────────
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, dropsStats }) {
+  const mono = "'DM Mono',monospace";
+  const DROPS = [
+    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" },
+    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
+    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
+    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento },
+  ];
+  const STATUS_COLS = [
+    { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
+    { key:"confirmado", label:"Confirmado", cor:"#4ade80" },
+    { key:"cancelado",  label:"Cancelado",  cor:"#ff6b6b" },
+  ];
+
   return (
     <div style={{ padding:"24px 0" }}>
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>TODOS OS DROPS</div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:20 }}>
-        <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>{DROPS.length} drops cadastrados</div>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <select value={dropSel} onChange={e => setDropSel(e.target.value)}
-            style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"5px 8px", fontSize:10, fontFamily:mono, color:"var(--offwhite)", maxWidth:200 }}>
-            <option value="" style={{ background:"#1a1a1a", color:"#f5f0e8" }}>escolha o drop</option>
-            {DROPS.map(d => <option key={d.id} value={d.id} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{d.label}</option>)}
-          </select>
-          <button onClick={exportarPedidosJoiners} disabled={exportando || !dropSel}
-            style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:(exportando||!dropSel)?"default":"pointer", letterSpacing:".04em", opacity:(exportando||!dropSel)?.4:1 }}>
-            {exportando ? "exportando…" : "↓ exportar planilha"}
-          </button>
-        </div>
-      </div>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{DROPS.length} drops cadastrados</div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         {DROPS.map(drop => {
