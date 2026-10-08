@@ -23696,7 +23696,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
       const set = new Set();
       let from = 0;
       while (true) {
-        const { data } = await supabase.from("masterlist").select("ceg").neq("cog", "disponivel").range(from, from + 999);
+        const { data } = await supabase.from("masterlist").select("ceg").neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").range(from, from + 999);
         if (!data || data.length === 0) break;
         data.forEach(r => { if (r.ceg && r.ceg !== "CLAIM") set.add(r.ceg); });
         if (data.length < 1000) break;
@@ -23760,8 +23760,8 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <select value={cegSel} onChange={e => setCegSel(e.target.value)}
             style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"5px 8px", fontSize:10, fontFamily:mono, color:"var(--offwhite)", maxWidth:200 }}>
-            <option value="">{cegsLista.length ? "escolha o CEG / drop" : "carregando…"}</option>
-            {cegsLista.map(c => <option key={c} value={c}>{c}</option>)}
+            <option value="" style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{cegsLista.length ? "escolha o CEG / drop" : "carregando…"}</option>
+            {cegsLista.map(c => <option key={c} value={c} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{c}</option>)}
           </select>
           <button onClick={exportarPedidosJoiners} disabled={exportando || !cegSel}
             style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:(exportando||!cegSel)?"default":"pointer", letterSpacing:".04em", opacity:(exportando||!cegSel)?.4:1 }}>
