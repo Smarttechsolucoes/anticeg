@@ -23688,63 +23688,63 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
   ];
 
   const [exportando, setExportando] = useState(false);
-  const [cegSel, setCegSel] = useState("");
-  // CEG(s) da masterlist de cada drop (vazio = ainda sem CEG vinculado)
-  const CEGS_DO_DROP = {
-    "revista":        ["NYLON JAPAN"],
-    "wmag":           ["W MAGAZINE"],
-    "popup":          ["THIS & THAT POP-UP"],
-    "bazaar-in":      ["HARPER'S BAZAAR"],
-    "skzoo-rio":      ["SKZOO EAAW · RIO"],
-    "lightstick":     [],
-    "popcorn-sleeve": ["SLEEVES", "SLEEVES P2"],
-    "singba":         ["SINGBA FOLHAS"],
-    "wave-maker-admin": ["WAVE MAKER"],
-    "run-it-admin":   [],
-    "paper-tales-admin": [],
+  const [dropSel, setDropSel] = useState("");
+
+  // Tabela de pedidos de cada drop + como resumir o pedido em "nome do item"
+  const resumo = (...partes) => partes.filter(Boolean).join(", ");
+  const EXPORT_DROP = {
+    "revista":        { tabela:"pedidos_revista",        item:p => resumo(p.versao_regular > 0 && `Regular x${p.versao_regular}`, p.versao_guys > 0 && `Guys x${p.versao_guys}`) },
+    "wmag":           { tabela:"pedidos_wmag",           item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`) },
+    "popup":          { tabela:"pedidos_popup",          item:p => (p.itens || []).map(i => `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} x${i.qtd} [wk ${i.week}]`).join(" | ") },
+    "bazaar-in":      { tabela:"pedidos_bazaar_in",      item:p => resumo(p.capa_a > 0 && `Capa A x${p.capa_a}`, p.capa_b > 0 && `Capa B x${p.capa_b}`, p.capa_c > 0 && `Capa C x${p.capa_c}`, p.caixa_f > 0 && `Caixa F x${p.caixa_f}`, p.caixa_g > 0 && `Caixa G x${p.caixa_g}`) },
+    "lightstick":     { tabela:"pedidos_lightstick",     item:() => "Lightstick SKZ" },
+    "popcorn-sleeve": { tabela:"pedidos_popcorn_sleeve", item:p => `Pop-corn Sleeve x${p.quantidade || 1}` },
+    "singba":         { tabela:"pedidos_singba",         item:p => (p.itens || []).map(i => resumo(i.opcao, i.tamanho, i.acabamento) + ` x${i.qtd}`).join(" | ") },
+    "wave-maker-admin":  { tabela:"formulario_pedidos", evento:"WAVE MAKER - SG JAPAN 2027", item:p => resumo(p.modalidade, p.observacoes) },
+    "run-it-admin":      { tabela:"formulario_pedidos", evento:"RUN IT VOL 2",               item:p => resumo(p.modalidade, p.observacoes) },
+    "paper-tales-admin": { tabela:"formulario_pedidos", evento:PT_CFG.evento,               item:p => resumo(p.modalidade, p.observacoes) },
   };
 
   async function exportarPedidosJoiners() {
-    if (!cegSel) return;
-    const cegs = CEGS_DO_DROP[cegSel] || [];
-    if (cegs.length === 0) { alert("Esse drop ainda não tem CEG da masterlist vinculado."); return; }
+    const cfgDrop = EXPORT_DROP[dropSel];
+    if (!cfgDrop) return;
+    const drop = DROPS.find(d => d.id === dropSel);
     setExportando(true);
     try {
-      let itens = [], from = 0;
+      let pedidos = [], from = 0;
       while (true) {
-        const { data, error } = await supabase.from("masterlist")
-          .select("cog, nome, ceg, nome_do_item, status, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
-          .in("ceg", cegs).neq("cog", "disponivel").not("nome", "ilike", "dispon%vel").order("nome").range(from, from + 999);
+        let q = supabase.from(cfgDrop.tabela).select("*");
+        if (cfgDrop.evento) q = q.eq("evento", cfgDrop.evento);
+        const { data, error } = await q.order("created_at").range(from, from + 999);
         if (error) throw error;
         if (!data || data.length === 0) break;
-        itens = itens.concat(data);
+        pedidos = pedidos.concat(data);
         if (data.length < 1000) break;
         from += 1000;
       }
-      const { data: joiners } = await supabase.from("joiners").select("cog, email");
-      const emailMap = Object.fromEntries((joiners || []).map(j => [j.cog, j.email || ""]));
+      const { data: joiners } = await supabase.from("joiners").select("cog, nome, email");
+      const jMap = Object.fromEntries((joiners || []).map(j => [j.cog, j]));
 
-      const fmtData = s => { if (!s) return ""; const [y, m, d] = String(s).slice(0, 10).split("-"); return d ? `${d}/${m}/${y}` : ""; };
+      const fmtData = s => s ? new Date(s).toLocaleDateString("pt-BR") : "";
       const fmtN    = v => Number(v || 0) > 0 ? Number(v).toFixed(2).replace(".", ",") : "";
-      const fmtPago = (pago, valor) => Number(valor || 0) <= 0 ? "" : (pago === "N/A" ? "N/A" : (isPendente(pago) ? "Pendente" : "Pago"));
-      const CHEGOU  = ["Chegou Aqui", "ANTIGOM", "Envio Liberado", "Enviado Nacional"];
+      const arroba  = v => { const t = String(v || "").trim(); return t ? (t.startsWith("@") ? t : "@" + t) : ""; };
 
+      // colunas de frete, RF, nacional e chegou? ficam em branco: a planilha principal é preenchida manualmente
       const rows = [["STATUS","ABA / CEG","NOME","@","NOME DO ITEM","ITEM DATA","ITEM","PREÇO ITEM","FRETE DATA","PREÇO FRETE","FRETE","RF DATA","PREÇO RF","RF","NACIONAL","CHEGOU?","EMAIL"]];
-      for (const i of itens) {
+      for (const p of pedidos) {
+        const j = jMap[p.joiner_cog] || {};
         rows.push([
-          i.status || "", i.ceg || "", i.nome || "", i.cog ? `@${i.cog}` : "", i.nome_do_item || "",
-          fmtData(i.venc_item),  fmtPago(i.pago_item,  i.valor_item),  fmtN(i.valor_item),
-          fmtData(i.venc_frete), fmtN(i.frete_inter), fmtPago(i.pago_frete, i.frete_inter),
-          fmtData(i.venc_rf),    fmtN(i.taxa_rf),     fmtPago(i.pago_rf,    i.taxa_rf),
-          i.status === "Enviado Nacional" ? "Sim" : "Não",
-          CHEGOU.includes(i.status) ? "Sim" : "Não",
-          emailMap[i.cog] || "",
+          p.status || "", drop.label, p.nome || p.joiner_nome || j.nome || "",
+          arroba(p.social || p.contato || p.claim || p.joiner_cog),
+          cfgDrop.item(p), fmtData(p.created_at), "", fmtN(p.valor_total),
+          "", "", "", "", "", "", "", "",
+          p.email || p.joiner_email || j.email || "",
         ]);
       }
       const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
       const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
       const url  = URL.createObjectURL(blob);
-      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_${cegSel.replace(/[^\w-]+/g, "_")}_${new Date().toISOString().slice(0,10)}.csv` });
+      const a    = Object.assign(document.createElement("a"), { href:url, download:`pedidos_${dropSel}_${new Date().toISOString().slice(0,10)}.csv` });
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     } catch (e) {
       alert("Erro ao exportar: " + (e.message || e));
@@ -23758,13 +23758,13 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInC
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:20 }}>
         <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>{DROPS.length} drops cadastrados</div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <select value={cegSel} onChange={e => setCegSel(e.target.value)}
+          <select value={dropSel} onChange={e => setDropSel(e.target.value)}
             style={{ background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, padding:"5px 8px", fontSize:10, fontFamily:mono, color:"var(--offwhite)", maxWidth:200 }}>
             <option value="" style={{ background:"#1a1a1a", color:"#f5f0e8" }}>escolha o drop</option>
             {DROPS.map(d => <option key={d.id} value={d.id} style={{ background:"#1a1a1a", color:"#f5f0e8" }}>{d.label}</option>)}
           </select>
-          <button onClick={exportarPedidosJoiners} disabled={exportando || !cegSel}
-            style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:(exportando||!cegSel)?"default":"pointer", letterSpacing:".04em", opacity:(exportando||!cegSel)?.4:1 }}>
+          <button onClick={exportarPedidosJoiners} disabled={exportando || !dropSel}
+            style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:mono, color:"#BAFF39", cursor:(exportando||!dropSel)?"default":"pointer", letterSpacing:".04em", opacity:(exportando||!dropSel)?.4:1 }}>
             {exportando ? "exportando…" : "↓ exportar planilha"}
           </button>
         </div>
