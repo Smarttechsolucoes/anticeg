@@ -21989,9 +21989,45 @@ function AdminClaimEventos() {
 
   useEffect(() => { fetchTudo(); }, []);
 
-  // o painel admin avisa quando entra claim novo; aqui só atualiza a lista
+  // Marca em cada evento os claims novos desde a última vez que a admin abriu aquele evento.
+  // Guarda por evento o último id visto; sem registro, vale o id que existia no primeiro acesso.
+  const [novosPorEvento, setNovosPorEvento] = useState({});
+  const evVistoRef = useRef((() => { try { return JSON.parse(localStorage.getItem("anticeg_claims_ev_visto")) || {}; } catch { return {}; } })());
+  const expandidoRef = useRef(expandido);
+  expandidoRef.current = expandido;
+  const maxIdRef = useRef(0);
+
+  function salvarEvVisto() {
+    try { localStorage.setItem("anticeg_claims_ev_visto", JSON.stringify(evVistoRef.current)); } catch { /* sem storage */ }
+  }
+  function marcarEventoVisto(eventoId) {
+    evVistoRef.current[eventoId] = maxIdRef.current;
+    salvarEvVisto();
+    setNovosPorEvento(prev => ({ ...prev, [eventoId]: 0 }));
+  }
+  async function contarNovosPorEvento() {
+    const { data: mx } = await supabase.from("claim_reservas").select("id").order("id", { ascending: false }).limit(1);
+    maxIdRef.current = mx?.[0]?.id ?? 0;
+    const v = evVistoRef.current;
+    if (v.__base === undefined) { v.__base = maxIdRef.current; salvarEvVisto(); }
+    const { data, error } = await supabase.from("claim_reservas").select("id, evento_id, is_admin")
+      .gt("id", v.__base).neq("status", "cancelado").limit(2000);
+    if (error) { console.error("claims novos por evento", error); return; }
+    const cont = {};
+    (data || []).filter(r => !r.is_admin).forEach(r => {
+      const visto = v[r.evento_id] ?? v.__base;
+      if (r.id > visto) cont[r.evento_id] = (cont[r.evento_id] || 0) + 1;
+    });
+    // evento aberto na tela já está sendo visto
+    Object.keys(cont).forEach(id => { if (expandidoRef.current.has(Number(id)) || expandidoRef.current.has(id)) { v[id] = maxIdRef.current; delete cont[id]; } });
+    salvarEvVisto();
+    setNovosPorEvento(cont);
+  }
+
+  // o painel admin avisa quando entra claim novo; aqui atualiza a lista e as marcas por evento
   useEffect(() => {
-    const h = () => fetchTudo();
+    contarNovosPorEvento();
+    const h = () => { fetchTudo(); contarNovosPorEvento(); };
     window.addEventListener("anticeg:claim-novo", h);
     return () => window.removeEventListener("anticeg:claim-novo", h);
   }, []);
@@ -22250,6 +22286,7 @@ function AdminClaimEventos() {
   }
 
   function toggleExpandido(id) {
+    if (!expandido.has(id)) marcarEventoVisto(id);
     setExpandido(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
@@ -22504,6 +22541,7 @@ function AdminClaimEventos() {
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    {novosPorEvento[ev.id] > 0 && <span style={{ fontFamily:mono, fontSize:9, fontWeight:700, color:"#111", padding:"3px 9px", background:"var(--verde)", borderRadius:10, letterSpacing:".5px" }}>● {novosPorEvento[ev.id]} {novosPorEvento[ev.id] === 1 ? "novo claim" : "novos claims"}</span>}
                     {sbEvento.length > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"#ffb400", padding:"3px 8px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:4 }}>{sbEvento.length} standby</span>}
                     <button onClick={e => { e.stopPropagation(); alternarSemNovosSets(ev); }}
                       title={ev.sem_novos_sets ? "Voltar a abrir novos sets e aceitar standby" : "Só fechar os sets em aberto: não abre novos sets nem aceita standby"}
