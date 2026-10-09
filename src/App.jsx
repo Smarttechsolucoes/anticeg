@@ -21857,6 +21857,10 @@ function AdminClaimEventos() {
   const [copiadoSet, setCopiadoSet] = useState(null);
   const [undoClaim, setUndoClaim] = useState(null);
   const undoTimerRef = useRef(null);
+  const [avisosClaim, setAvisosClaim] = useState([]); // toasts de claims novos
+  const [permNotif, setPermNotif] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
+  const ultimoClaimRef = useRef(new Date().toISOString());
+  const eventosRef = useRef([]);
   const [editEvento, setEditEvento] = useState(null); // { id, nome, valor, prazo }
   const [editSalvando, setEditSalvando] = useState(false);
   const [addClaimModal, setAddClaimModal] = useState(null); // { setId, membro, eventoId }
@@ -21899,6 +21903,39 @@ function AdminClaimEventos() {
   }
 
   useEffect(() => { fetchTudo(); }, []);
+
+  eventosRef.current = eventos || [];
+
+  // Avisa quando entra claim novo (consulta a cada 15s enquanto esta tela está aberta)
+  useEffect(() => {
+    const t = setInterval(async () => {
+      const { data } = await supabase.from("claim_reservas")
+        .select("id, joiner_cog, joiner_nome, membro, evento_id, set_id, status, is_admin, created_at")
+        .gt("created_at", ultimoClaimRef.current).neq("status", "cancelado").order("created_at");
+      if (!data?.length) return;
+      ultimoClaimRef.current = data[data.length - 1].created_at;
+      const novos = data.filter(r => !r.is_admin);
+      if (!novos.length) return;
+      const grupos = {};
+      novos.forEach(r => {
+        const k = `${r.joiner_cog}|${r.evento_id}`;
+        (grupos[k] = grupos[k] || { cog: r.joiner_cog, nome: r.joiner_nome, evento_id: r.evento_id, membros: [], standby: 0 }).membros.push(r.membro);
+        if (!r.set_id) grupos[k].standby++;
+      });
+      const avisos = Object.values(grupos).map((g, i) => {
+        const ev = eventosRef.current.find(e => e.id === g.evento_id);
+        const texto = `@${g.cog} pegou ${g.membros.join(", ")}${g.standby ? ` (${g.standby} no standby)` : ""}`;
+        return { id: `${Date.now()}-${i}`, titulo: ev?.nome || "Evento de claim", texto };
+      });
+      setAvisosClaim(prev => [...prev, ...avisos].slice(-5));
+      avisos.forEach(a => setTimeout(() => setAvisosClaim(prev => prev.filter(x => x.id !== a.id)), 10000));
+      if ("Notification" in window && Notification.permission === "granted") {
+        avisos.forEach(a => { try { new Notification("Novo claim · " + a.titulo, { body: a.texto }); } catch { /* sem suporte */ } });
+      }
+      fetchTudo();
+    }, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   const ehItemForm = form.tipo === "item";
   const membrosForm = ehItemForm ? ((form.vaga || "").split(",").map(t => t.trim()).filter(Boolean).filter((t, i, a) => a.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i)) : form.membros;
@@ -22261,6 +22298,23 @@ function AdminClaimEventos() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {(avisosClaim.length > 0 || permNotif === "default") && (
+        <div style={{ position:"fixed", top:70, right:16, zIndex:9999, display:"flex", flexDirection:"column", gap:8, maxWidth:320 }}>
+          {avisosClaim.map(a => (
+            <div key={a.id} onClick={() => setAvisosClaim(prev => prev.filter(x => x.id !== a.id))}
+              style={{ background:"#1a1a1a", border:"1px solid rgba(186,255,57,.35)", borderRadius:10, padding:"10px 14px", boxShadow:"0 4px 20px rgba(0,0,0,.5)", cursor:"pointer" }}>
+              <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(186,255,57,.8)", marginBottom:3 }}>◈ NOVO CLAIM · {a.titulo}</div>
+              <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", lineHeight:1.5 }}>{a.texto}</div>
+            </div>
+          ))}
+          {permNotif === "default" && (
+            <button onClick={() => Notification.requestPermission().then(setPermNotif)}
+              style={{ fontFamily:mono, fontSize:9, padding:"6px 12px", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, color:"rgba(245,240,232,.5)", cursor:"pointer", alignSelf:"flex-end" }}>
+              🔔 ativar avisos do navegador
+            </button>
+          )}
         </div>
       )}
       {undoClaim && (
