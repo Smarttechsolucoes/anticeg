@@ -26318,6 +26318,7 @@ export default function App() {
   const [pushAtivos, setPushAtivos] = useState([]);
   const [pendingReportIds, setPendingReportIds] = useState(new Set());
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [showOnlineLista, setShowOnlineLista] = useState(false);
   const [manutencao, setManutencao] = useState(false);
   const [senhaManutencao, setSenhaManutencao] = useState("");
   const [avisoMasterlist, setAvisoMasterlist] = useState("");
@@ -26797,7 +26798,7 @@ export default function App() {
         </div>
         <div className="topbar-right">
           {onlineUsers.length > 0 && (
-            <div className="online-avatars">
+            <div className="online-avatars" onClick={() => setShowOnlineLista(true)} style={{ cursor:"pointer" }} title="Ver quem está online">
               {onlineUsers.slice(0, 6).map(u => (
                 <div key={u.cog} className="online-avatar" title={u.nome || u.cog}>
                   <img src={u.foto_perfil || bonequinha} alt={u.cog} />
@@ -26807,6 +26808,30 @@ export default function App() {
               {onlineUsers.length > 6 && (
                 <div className="online-avatar-more">+{onlineUsers.length - 6}</div>
               )}
+            </div>
+          )}
+          {showOnlineLista && (
+            <div className="modal-overlay" onClick={() => setShowOnlineLista(false)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth:360, maxHeight:"80vh", display:"flex", flexDirection:"column" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, letterSpacing:"1.5px", color:"var(--verde)" }}>● ONLINE AGORA ({onlineUsers.length})</div>
+                  <button onClick={() => setShowOnlineLista(false)} style={{ background:"none", border:"none", color:"rgba(245,240,232,.4)", fontSize:16, cursor:"pointer" }}>✕</button>
+                </div>
+                <div style={{ overflowY:"auto", display:"flex", flexDirection:"column", gap:2 }}>
+                  {onlineUsers.map(u => (
+                    <div key={u.cog} style={{ display:"flex", alignItems:"center", gap:12, padding:"8px 4px", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
+                      <div style={{ position:"relative", width:34, height:34, flexShrink:0 }}>
+                        <img src={u.foto_perfil || bonequinha} alt={u.cog} style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", display:"block" }} />
+                        <div className="online-dot" />
+                      </div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:13, color:"var(--offwhite)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.nome || u.cog}</div>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:"rgba(245,240,232,.4)" }}>@{u.cog}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
           {user.guest ? (
