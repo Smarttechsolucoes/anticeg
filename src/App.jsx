@@ -15492,6 +15492,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
   const [contatoId, setContatoId] = useState(null);
   const [abaMinhaLojinha, setAbaMinhaLojinha] = useState(false);
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [perfis, setPerfis] = useState({});
   const [filtroLojinha, setFiltroLojinha] = useState("todos");
   const [form, setForm] = useState({
     masterlistId: "", nomeCard: "", ceg: "",
@@ -15509,6 +15510,13 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
       user ? supabase.from("masterlist").select("id, nome_do_item, ceg, valor_item, frete_inter, taxa_rf, status, info_adicionais").eq("cog", user.cog).not("status", "in", '("Cancelado","Repassado")').order("ceg").order("nome_do_item") : { data: [] },
     ]);
     setRepasses(pub || []);
+    const cogsAtivos = [...new Set((pub || []).map(r => r.joiner_cog).filter(Boolean))];
+    if (cogsAtivos.length) {
+      const { data: js } = await supabase.from("joiners").select("cog, foto_perfil").in("cog", cogsAtivos);
+      const mapa = {};
+      (js || []).forEach(j => { mapa[(j.cog || "").toLowerCase()] = j.foto_perfil; });
+      setPerfis(mapa);
+    }
     setMinhosRepasses(meus || []);
     setMeusItens(itens || []);
   }
@@ -16105,6 +16113,29 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
             </div>
           ) : (
             <>
+            {onHandle && (() => {
+              const lojas = [];
+              const vistos = new Set();
+              repasses.forEach(r => {
+                const c = (r.joiner_cog || "").toLowerCase();
+                if (c && !vistos.has(c)) { vistos.add(c); lojas.push({ cog: c, qtd: repasses.filter(x => (x.joiner_cog || "").toLowerCase() === c).length }); }
+              });
+              return (
+                <div style={{ display:"flex", gap:14, overflowX:"auto", padding:"2px 2px 14px", marginBottom:8 }}>
+                  {lojas.map(l => {
+                    const sel = handle === l.cog;
+                    return (
+                      <button key={l.cog} onClick={() => onHandle(sel ? null : l.cog)} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:"0 0 auto", maxWidth:76, padding:0 }}>
+                        <span style={{ width:60, height:60, borderRadius:"50%", padding:3, boxSizing:"border-box", background: sel ? "var(--laranja)" : "rgba(245,240,232,.18)", display:"block" }}>
+                          <img src={perfis[l.cog] || bonequinha} alt={l.cog} style={{ width:"100%", height:"100%", borderRadius:"50%", objectFit:"cover", display:"block", border:"2px solid var(--bg, #0e0e0c)", boxSizing:"border-box" }} />
+                        </span>
+                        <span style={{ fontFamily:mono, fontSize:9, color: sel ? "var(--laranja)" : "rgba(245,240,232,.6)", fontWeight: sel ? 700 : 400, maxWidth:76, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>@{l.cog} ({l.qtd})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             {handle && (
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, fontFamily:mono, fontSize:11, color:"var(--lilas)" }}>
                 <span>Lojinha de @{handle}</span>
