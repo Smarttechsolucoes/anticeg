@@ -1549,7 +1549,7 @@ function ReportCheckRow({ checked, onChange, label }) {
   );
 }
 
-function ReportModal({ user, item, onClose, onReported }) {
+function ReportModal({ user, item, onClose, onReported, replyTo = null }) {
   const [erros, setErros] = useState({ item: false, valor: false, frete: false, taxa: false, pagamento: false, recebido: false, repassado: false, outro: false });
   const [correcoes, setCorrecoes] = useState({ valor: "", frete: "", taxa: "" });
   const [motivoItem] = useState(null);
@@ -1563,12 +1563,7 @@ function ReportModal({ user, item, onClose, onReported }) {
 
   async function handleEnviar() {
     setLoading(true);
-    const { error } = await supabase.from("reports").insert([{
-      joiner_cog:      user.cog,
-      joiner_nome:     user.nome_site || user.nome || user.cog,
-      item_id:         item.id,
-      item_nome:       item.nome_do_item,
-      ceg:             item.ceg,
+    const campos = {
       status:          "pendente",
       erro_item:       erros.item,
       erro_valor:      erros.valor,
@@ -1587,7 +1582,24 @@ function ReportModal({ user, item, onClose, onReported }) {
       pag_valor:       erros.pagamento ? pagInfo.valorPago : null,
       pag_metodo:      erros.pagamento ? pagInfo.metodo    : null,
       observacao:      obs.trim() || null,
-    }]);
+    };
+    let error;
+    if (replyTo) {
+      // resposta a uma devolutiva da admin: atualiza o report existente e mantém o histórico na observação
+      const data = new Date().toLocaleDateString("pt-BR");
+      const nova = `↩ Resposta da joiner (${data})${obs.trim() ? `: ${obs.trim()}` : ""}`;
+      campos.observacao = [replyTo.observacao, nova].filter(Boolean).join("\n");
+      ({ error } = await supabase.from("reports").update(campos).eq("id", replyTo.id));
+    } else {
+      ({ error } = await supabase.from("reports").insert([{
+        joiner_cog:  user.cog,
+        joiner_nome: user.nome_site || user.nome || user.cog,
+        item_id:     item.id,
+        item_nome:   item.nome_do_item,
+        ceg:         item.ceg,
+        ...campos,
+      }]));
+    }
     setLoading(false);
     if (error) { alert("Erro ao enviar: " + error.message); return; }
     if (erros.recebido && item.id_linha) {
@@ -1597,7 +1609,7 @@ function ReportModal({ user, item, onClose, onReported }) {
         body: JSON.stringify({ acao: "recebido", token: "anticeg-pag-2026", id_linha: item.id_linha }),
       }).catch(() => {});
     }
-    onReported?.(item.id);
+    onReported?.(replyTo ? { ...replyTo, ...campos } : item.id);
     setSent(true);
   }
 
@@ -1607,7 +1619,7 @@ function ReportModal({ user, item, onClose, onReported }) {
         {sent ? (
           <>
             <div style={{ fontSize: 28, marginBottom: 10 }}>✓</div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Report enviado!</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{replyTo ? "Resposta enviada!" : "Report enviado!"}</div>
             <div style={{ fontSize: 12, color: "rgba(245,240,232,.45)", marginBottom: 20 }}>A admin vai revisar e atualizar em breve.</div>
             <button className="lp-card-btn" onClick={onClose}>Fechar</button>
           </>
@@ -1615,6 +1627,12 @@ function ReportModal({ user, item, onClose, onReported }) {
           <>
             <div style={{ fontSize: 12, color: "rgba(245,240,232,.35)", marginBottom: 2, letterSpacing: 1 }}>{item.ceg}</div>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}><InfoContent info={item.nome_do_item} /></div>
+            {replyTo?.resposta && (
+              <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.2)", borderRadius:8, padding:"10px 12px", marginBottom:16 }}>
+                <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>↩ Resposta da admin</div>
+                <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", lineHeight:1.65 }}>{replyTo.resposta}</div>
+              </div>
+            )}
 
             <div style={{ ...labelStyle, display: "flex", justifyContent: "space-between" }}>
               <span>O que está errado? <span style={{ color: "var(--laranja)" }}>*</span></span>
@@ -1690,7 +1708,7 @@ function ReportModal({ user, item, onClose, onReported }) {
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, background: "none", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "10px", color: "rgba(245,240,232,.4)", fontFamily: "'DM Mono',monospace", fontSize: 12, cursor: "pointer" }}>Cancelar</button>
               <button onClick={handleEnviar} disabled={loading || !Object.values(erros).some(Boolean)} className="lp-card-btn" style={{ flex: 2, margin: 0, cursor: Object.values(erros).some(Boolean) ? "pointer" : "default", opacity: Object.values(erros).some(Boolean) ? 1 : 0.4 }}>
-                {loading ? "..." : "Enviar report →"}
+                {loading ? "..." : replyTo ? "Enviar resposta →" : "Enviar report →"}
               </button>
             </div>
           </>
@@ -3495,7 +3513,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
-  const [pagRecibo,        setPagRecibo]        = useState(null);
+  const [respostaReport,   setRespostaReport]   = useState(null); // { report, item } — joiner respondendo a devolutiva da admin
+  const [pagRecibo,       setPagRecibo]        = useState(null);
   const [pagSubTab,        setPagSubTab]        = useState("pendentes"); // pendentes | enviar | historico
   // "outros" no pagamento
   const [pagOutros,         setPagOutros]       = useState(false);
@@ -3566,7 +3585,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: antivBadgesData },
       ] = await Promise.all([
         supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
-        supabase.from("reports").select("id, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("reports").select("id, item_id, erro_repassado, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, id_linha, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
@@ -4611,6 +4630,18 @@ ${p.comprovante_url ? (() => {
           item={reportItem}
           onClose={() => setReportItem(null)}
           onReported={() => setReportItem(null)}
+        />
+      )}
+
+      {respostaReport && (
+        <ReportModal
+          user={user}
+          item={respostaReport.item}
+          replyTo={respostaReport.report}
+          onClose={() => setRespostaReport(null)}
+          onReported={atualizado => {
+            if (atualizado?.id) setMeuReports(prev => (prev || []).map(x => x.id === atualizado.id ? { ...x, ...atualizado } : x));
+          }}
         />
       )}
 
@@ -5962,7 +5993,7 @@ ${compHTML}
       {perfilSubTab === "suporte" && (() => {
         const toggleReport = id => setExpandedReports(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-        const ERRO_LABELS = { erro_item:"Nome do item", erro_valor:"Valor do item", erro_frete:"Frete", erro_taxa:"Taxa RF", erro_pagamento:"Pagamento", erro_recebido:"Item recebido", erro_outro:"Outro" };
+        const ERRO_LABELS = { erro_item:"Nome do item", erro_valor:"Valor do item", erro_frete:"Frete", erro_taxa:"Taxa RF", erro_pagamento:"Pagamento", erro_recebido:"Item recebido", erro_repassado:"Repassado", erro_outro:"Outro" };
 
         return (
           <div>
@@ -6018,11 +6049,19 @@ ${compHTML}
                       {r.correcao_frete && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Frete correto</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.correcao_frete}</div></div>}
                       {r.correcao_taxa  && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Taxa correta</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>{r.correcao_taxa}</div></div>}
                       {r.pag_valor      && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Pagamento informado</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace" }}>R$ {r.pag_valor}{r.pag_metodo ? ` · ${r.pag_metodo}` : ""}{r.pag_data ? ` · ${r.pag_data}` : ""}</div></div>}
-                      {r.observacao     && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Observação</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, fontStyle:"italic" }}>{r.observacao}</div></div>}
+                      {r.observacao     && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Observação</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, fontStyle:"italic", whiteSpace:"pre-wrap" }}>{r.observacao}</div></div>}
                       {r.resposta && (
                         <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.2)", borderRadius:8, padding:"10px 12px" }}>
                           <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>↩ Resposta da admin</div>
                           <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", lineHeight:1.65 }}>{r.resposta}</div>
+                          {!resolvido && (
+                            <button onClick={async () => {
+                              const { data: mi } = await supabase.from("masterlist").select("id, nome_do_item, ceg, valor_item, frete_inter, taxa_rf, id_linha").eq("id", r.item_id).maybeSingle();
+                              setRespostaReport({ report: r, item: mi || { id: r.item_id, nome_do_item: r.item_nome, ceg: r.ceg } });
+                            }} style={{ marginTop:10, background:"rgba(167,139,250,.12)", border:"1px solid rgba(167,139,250,.35)", borderRadius:6, padding:"7px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"var(--lilas)", cursor:"pointer", fontWeight:700 }}>
+                              ↩ Responder com o problema
+                            </button>
+                          )}
                         </div>
                       )}
                       {resolvido && (
@@ -7020,7 +7059,7 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
           {r.pag_metodo && <span>Método: {r.pag_metodo}</span>}
         </div>
       )}
-      {r.observacao && <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.45)", fontStyle:"italic" }}>"{r.observacao}"</div>}
+      {r.observacao && <div style={{ marginTop:4, fontSize:10, color:"rgba(245,240,232,.45)", fontStyle:"italic", whiteSpace:"pre-wrap" }}>"{r.observacao}"</div>}
       <div style={{ marginTop:10 }}>
         {r.resposta && !(r.id in reportRespostas) && (
           <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:6, padding:"8px 10px", marginBottom:6 }}>
