@@ -15073,6 +15073,7 @@ function ClaimPublicoPage({ user }) {
                   const livres = slotsAbertos.filter(s => !(reservas[s.id]||[]).some(r=>r.membro===membro)).length;
                   const limiteEfetivo = ev.limite_por_joiner || Math.max(slotsAbertos.length, 1);
                   const qtdAtual = (quantidades[ev.id] || {})[membro] || 0;
+                  const indisponivel = !!ev.sem_novos_sets && livres === 0; // sem novos sets e nenhum set aberto com vaga desse membro
                   const atingiuLimite = aberto && meuTotal + qtdAtual >= limiteEfetivo;
                   return (
                     <div key={membro} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, padding:"8px 0", borderBottom:"1px solid rgba(245,240,232,.05)" }}>
@@ -15082,11 +15083,12 @@ function ClaimPublicoPage({ user }) {
                       </span>
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                         {aberto && ev.limite_por_joiner && <span style={{ fontFamily:mono, fontSize:8, color: meuTotal>=ev.limite_por_joiner?"rgba(255,107,107,.5)":"rgba(245,240,232,.2)" }}>{meuTotal}/{ev.limite_por_joiner}</span>}
+                        {indisponivel && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(255,107,107,.7)", letterSpacing:".5px" }}>indisponível</span>}
                         {aberto && !ev.limite_por_joiner && livres > 0 && livres < slotsAbertos.length && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.2)" }}>{livres} livre{livres>1?"s":""}</span>}
                         <button onClick={() => setQtd(ev.id, membro, qtdAtual - 1)} disabled={qtdAtual===0||enviando}
                           style={{ width:28, height:28, borderRadius:6, border:"1px solid rgba(245,240,232,.12)", background:"rgba(245,240,232,.03)", color:qtdAtual===0?"rgba(245,240,232,.15)":"rgba(245,240,232,.6)", fontFamily:mono, fontSize:14, cursor:qtdAtual===0?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
                         <span style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", minWidth:16, textAlign:"center" }}>{qtdAtual}</span>
-                        <button onClick={() => setQtd(ev.id, membro, qtdAtual + 1)} disabled={enviando||atingiuLimite}
+                        <button onClick={() => setQtd(ev.id, membro, qtdAtual + 1)} disabled={enviando||atingiuLimite||indisponivel}
                           style={{ width:28, height:28, borderRadius:6, border:`1px solid ${atingiuLimite?"rgba(255,107,107,.25)":qtdAtual>0?"rgba(186,255,57,.4)":"rgba(245,240,232,.12)"}`, background:atingiuLimite?"rgba(255,107,107,.06)":qtdAtual>0?"rgba(186,255,57,.1)":"rgba(245,240,232,.03)", color:atingiuLimite?"rgba(255,107,107,.4)":qtdAtual>0?"#BAFF39":"rgba(245,240,232,.4)", fontFamily:mono, fontSize:14, cursor:atingiuLimite?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
                       </div>
                     </div>
