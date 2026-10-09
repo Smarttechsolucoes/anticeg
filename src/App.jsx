@@ -12193,7 +12193,6 @@ const PT_CFG = {
   capa: PT_BOX,
   tags: ["PEDIDOS ATÉ 10/OUT", "ENVIO DEZ/2026", "PAGAMENTO 13/OUT"],
   infos: ["Pagamento: 13 de outubro", "Pedidos aceitos até: 10 de outubro", "Envios previsto para Dezembro/2026 via FEDEX.", "Nenhum item acompanha POB de pré-venda, apenas o que está anunciado na imagem"],
-  aviso: "Importante: caso o estoque esteja indisponível, mais rounds serão anunciados dentro da comunidade.",
   box: { id: "BOX LACRADA", foto: PT_BOX, preco: 220 },
   itens: [
     { id: "AGENDA", foto: "/paper-tale/agenda.png", preco: 20 },
