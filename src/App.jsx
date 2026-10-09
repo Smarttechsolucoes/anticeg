@@ -8196,29 +8196,48 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [novosClaims, setNovosClaims] = useState(0);
   const [avisosClaim, setAvisosClaim] = useState([]);
   const [permNotif, setPermNotif] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
-  const claimsVistoRef = useRef((() => { try { return localStorage.getItem("anticeg_claims_visto") || new Date().toISOString(); } catch { return new Date().toISOString(); } })());
-  const claimsToastDesdeRef = useRef(new Date().toISOString());
+  // baseia-se no id do claim (cresce sempre), sem depender do relógio do aparelho
+  const claimsVistoRef = useRef((() => { try { const v = parseInt(localStorage.getItem("anticeg_claims_visto_id"), 10); return Number.isFinite(v) ? v : null; } catch { return null; } })());
+  const claimsToastIdRef = useRef(null);
   const adminTabRef = useRef(adminMainTab);
   adminTabRef.current = adminMainTab;
 
+  async function maxClaimId() {
+    const { data } = await supabase.from("claim_reservas").select("id").order("id", { ascending: false }).limit(1);
+    return data?.[0]?.id ?? 0;
+  }
+  function salvarClaimsVisto(id) {
+    claimsVistoRef.current = id;
+    try { localStorage.setItem("anticeg_claims_visto_id", String(id)); } catch { /* sem storage */ }
+  }
+
   useEffect(() => {
     if (adminMainTab !== "claims-admin") return;
-    const agora = new Date().toISOString();
-    claimsVistoRef.current = agora;
-    try { localStorage.setItem("anticeg_claims_visto", agora); } catch { /* sem storage */ }
     setNovosClaims(0);
+    maxClaimId().then(id => { if (id > (claimsVistoRef.current ?? 0)) salvarClaimsVisto(id); });
   }, [adminMainTab]);
 
   useEffect(() => {
     async function checar() {
-      const { data } = await supabase.from("claim_reservas")
-        .select("id, joiner_cog, membro, evento_id, set_id, is_admin, created_at")
-        .gt("created_at", claimsVistoRef.current).neq("status", "cancelado").order("created_at").limit(500);
+      if (claimsToastIdRef.current === null) {
+        const base = await maxClaimId();
+        claimsToastIdRef.current = base;
+        if (claimsVistoRef.current === null) salvarClaimsVisto(base);
+      }
+      const { data, error } = await supabase.from("claim_reservas")
+        .select("id, joiner_cog, membro, evento_id, set_id, is_admin")
+        .gt("id", claimsVistoRef.current ?? 0).neq("status", "cancelado").order("id").limit(500);
+      if (error) { console.error("avisos de claim", error); return; }
       const novos = (data || []).filter(r => !r.is_admin);
-      setNovosClaims(adminTabRef.current === "claims-admin" ? 0 : novos.length);
-      const paraAviso = novos.filter(r => r.created_at > claimsToastDesdeRef.current);
+      if (adminTabRef.current === "claims-admin") {
+        setNovosClaims(0);
+        if (data?.length) salvarClaimsVisto(data[data.length - 1].id);
+      } else {
+        setNovosClaims(novos.length);
+      }
+      const paraAviso = novos.filter(r => r.id > claimsToastIdRef.current);
       if (!paraAviso.length) return;
-      claimsToastDesdeRef.current = paraAviso[paraAviso.length - 1].created_at;
+      claimsToastIdRef.current = paraAviso[paraAviso.length - 1].id;
       window.dispatchEvent(new Event("anticeg:claim-novo"));
       const grupos = {};
       paraAviso.forEach(r => {
@@ -8241,7 +8260,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       }
     }
     checar();
-    const t = setInterval(checar, 15000);
+    const t = setInterval(checar, 10000);
     return () => clearInterval(t);
   }, []);
   const [staffAcessos,     setStaffAcessos]      = useState(null);
