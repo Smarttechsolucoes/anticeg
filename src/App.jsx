@@ -14739,6 +14739,7 @@ function ClaimPublicoPage({ user }) {
     for (const ev of evData) {
       if (ev.status !== "ativo") continue;
       if (new Date() < new Date(ev.abertura)) continue;
+      if (ev.sem_novos_sets) continue; // admin parou a abertura de novos sets
 
       const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
       if (evSets.length >= 10) continue; // limite máximo de sets
@@ -14796,6 +14797,10 @@ function ClaimPublicoPage({ user }) {
     if (!membrosDe(ev).every(m => claimados.has(m))) return;
 
     await supabase.from("claim_sets").update({ status:"fechado", closed_at: new Date().toISOString() }).eq("id", setId);
+
+    // Admin parou novos sets: só fecha este, sem abrir o próximo (lido do banco, o estado local pode estar antigo)
+    const { data: evFlag } = await supabase.from("claim_eventos").select("sem_novos_sets").eq("id", eventoId).maybeSingle();
+    if (evFlag?.sem_novos_sets) return;
 
     // Verifica se há standby aguardando
     const { data: sbCheck } = await supabase.from("claim_reservas")
@@ -14874,11 +14879,14 @@ function ClaimPublicoPage({ user }) {
     if (jb?.bloqueado) { setIsBloqueada(true); setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const fresco = await lerEstadoFresco(eventoId);
     let setsEv = fresco.sets, resMap = fresco.reservas, sbEv = fresco.standby;
+    const { data: evFlag } = await supabase.from("claim_eventos").select("sem_novos_sets").eq("id", eventoId).maybeSingle();
+    const semNovosSets = !!evFlag?.sem_novos_sets;
 
     // OT8: joiner marcou todos os membros → cria set exclusivo
     const todosOsMembros = membrosDe(ev);
     const isOT8 = !eventoEhItem(ev) && todosOsMembros.every(m => (qtds[m] || 0) >= 1);
     if (isOT8) {
+      if (semNovosSets) { setClaimErro("Não abriremos mais sets neste evento — o OT8 exclusivo não está disponível. Escolha membros dos sets que ainda estão abertos."); setEnviando(false); return; }
       // Bloqueia OT8 se já tem qualquer claim ativo para esse evento
       const jaTemAlgum = todosOsMembros.some(m => {
         const noSets = setsEv.reduce((acc, s) => acc + ((resMap[s.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length), 0);
@@ -14921,6 +14929,7 @@ function ClaimPublicoPage({ user }) {
     const limite = ev.limite_por_joiner || Infinity;
     const evSetsAbertos = setsEv.filter(s => s.status === "aberto");
     const rows = [];
+    let semVaga = false;
     for (const [membro, qtd] of pedidos) {
       const jaTemNoSets = setsEv.reduce((acc, s) => acc + ((resMap[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
       const jaTemStandby = sbEv.filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
@@ -14938,11 +14947,15 @@ function ClaimPublicoPage({ user }) {
           adicionados++;
         }
       }
+      if (semNovosSets) { semVaga = semVaga || adicionados < qtdPermitida; continue; } // sem novos sets: não entra em standby
       for (let i = adicionados; i < qtdPermitida; i++) {
         rows.push({ evento_id: eventoId, set_id: null, joiner_cog: user.cog, joiner_nome: user.nome || user.cog, membro, status: "standby" });
       }
     }
-    if (!rows.length) { setClaimErro("Você já fez claim desses membros."); fetchTudo(false); return; }
+    if (!rows.length) {
+      setClaimErro(semVaga ? "Não há mais vagas: os sets em aberto já foram preenchidos e não abriremos novos sets neste evento." : "Você já fez claim desses membros.");
+      fetchTudo(false); return;
+    }
 
     // Tenta tudo de uma vez. Se houver conflito (alguém pegou a vaga no mesmo instante),
     // envia item por item e o que não estiver disponível vai automaticamente para o standby.
@@ -14958,7 +14971,7 @@ function ClaimPublicoPage({ user }) {
       for (const row of rows) {
         const r1 = await supabase.from("claim_reservas").insert([row]);
         if (!r1.error) { gravados.push(row); continue; }
-        if (r1.error.code === "23505" && row.set_id) {
+        if (r1.error.code === "23505" && row.set_id && !semNovosSets) {
           const rowSb = { ...row, set_id: null, status: "standby" };
           const r2 = await supabase.from("claim_reservas").insert([rowSb]);
           if (!r2.error) { gravados.push(rowSb); viraramStandby.push(row.membro); continue; }
@@ -15029,6 +15042,7 @@ function ClaimPublicoPage({ user }) {
             )}
             <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(245,240,232,.06)" }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:"var(--offwhite)", letterSpacing:1, marginBottom:4 }}>{ev.nome}</div>
+              {ev.sem_novos_sets && <div style={{ fontFamily:mono, fontSize:10, color:"#ffb400", marginBottom:6, lineHeight:1.5 }}>⏸ Não abriremos mais sets neste evento — só os que já estão abertos.</div>}
               <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
                 <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)" }}>R$ {Number(ev.valor).toFixed(2).replace(".",",")}</span>
                 {ev.prazo && <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.35)" }}>prazo {ev.prazo}</span>}
@@ -22040,6 +22054,17 @@ function AdminClaimEventos() {
     fetchTudo();
   }
 
+  async function alternarSemNovosSets(ev) {
+    const parar = !ev.sem_novos_sets;
+    const msg = parar
+      ? "Parar novos sets? Os sets já abertos continuam e podem ser fechados, mas nenhum set novo será aberto e ninguém mais entra no standby."
+      : "Voltar a abrir novos sets automaticamente e aceitar standby?";
+    if (!window.confirm(msg)) return;
+    const { error } = await supabase.from("claim_eventos").update({ sem_novos_sets: parar }).eq("id", ev.id);
+    if (error) { alert("Erro: " + error.message + "\n\nRode o SQL supabase/sql/claim_eventos_sem_novos_sets.sql no Supabase."); return; }
+    fetchTudo();
+  }
+
   async function fecharEvento(eventoId) {
     if (!window.confirm("Encerrar evento? Não abrirá novos sets.")) return;
     await supabase.from("claim_eventos").update({ status:"encerrado" }).eq("id", eventoId);
@@ -22381,6 +22406,11 @@ function AdminClaimEventos() {
                   </div>
                   <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                     {sbEvento.length > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"#ffb400", padding:"3px 8px", background:"rgba(255,180,0,.08)", border:"1px solid rgba(255,180,0,.2)", borderRadius:4 }}>{sbEvento.length} standby</span>}
+                    <button onClick={e => { e.stopPropagation(); alternarSemNovosSets(ev); }}
+                      title={ev.sem_novos_sets ? "Voltar a abrir novos sets e aceitar standby" : "Só fechar os sets em aberto: não abre novos sets nem aceita standby"}
+                      style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background: ev.sem_novos_sets ? "rgba(255,107,107,.1)" : "rgba(245,240,232,.04)", border:`1px solid ${ev.sem_novos_sets ? "rgba(255,107,107,.35)" : "rgba(245,240,232,.12)"}`, borderRadius:4, color: ev.sem_novos_sets ? "rgba(255,107,107,.85)" : "rgba(245,240,232,.4)", cursor:"pointer", fontWeight: ev.sem_novos_sets ? 700 : 400 }}>
+                      {ev.sem_novos_sets ? "⏸ SEM NOVOS SETS · retomar" : "⏸ PARAR NOVOS SETS"}
+                    </button>
                     <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(ev.abertura).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
                       EDITAR
