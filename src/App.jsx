@@ -15471,7 +15471,7 @@ function CustomSelect({ value, onChange, options, placeholder, style }) {
   );
 }
 
-function LojinhaRepasses({ user }) {
+function LojinhaRepasses({ user, handle = null, onHandle = null }) {
   const mono = "'DM Mono',monospace";
   const [repasses, setRepasses] = useState(null);
   const [minhosRepasses, setMinhosRepasses] = useState([]);
@@ -15491,6 +15491,7 @@ function LojinhaRepasses({ user }) {
   const [salvando, setSalvando] = useState(false);
   const [contatoId, setContatoId] = useState(null);
   const [abaMinhaLojinha, setAbaMinhaLojinha] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const [filtroLojinha, setFiltroLojinha] = useState("todos");
   const [form, setForm] = useState({
     masterlistId: "", nomeCard: "", ceg: "",
@@ -15750,7 +15751,17 @@ function LojinhaRepasses({ user }) {
       {abaMinhaLojinha && user && (
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-            <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", letterSpacing:"1.5px" }}>MINHA LOJINHA</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", letterSpacing:"1.5px" }}>MINHA LOJINHA</div>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/disponiveis/antijoiner/${encodeURIComponent(String(user.cog).toLowerCase())}`;
+                  navigator.clipboard?.writeText(url).then(() => { setLinkCopiado(true); setTimeout(() => setLinkCopiado(false), 2500); }).catch(() => window.prompt("Copie o link da sua lojinha:", url));
+                }}
+                style={{ background:"none", border:"1px solid rgba(201,168,240,.25)", borderRadius:6, padding:"3px 10px", color: linkCopiado ? "var(--verde)" : "rgba(201,168,240,.7)", fontFamily:mono, fontSize:9, cursor:"pointer", letterSpacing:"1px" }}>
+                {linkCopiado ? "✓ LINK COPIADO" : "⎘ COMPARTILHAR"}
+              </button>
+            </div>
             <button
               onClick={() => { if (!user.whatsapp && !showForm) return; setShowForm(p => !p); if (!showForm) setForm(p => ({ ...p, whatsapp: p.whatsapp || user.whatsapp || "" })); else limparForm(); }}
               disabled={!user.whatsapp && !showForm}
@@ -16093,8 +16104,18 @@ function LojinhaRepasses({ user }) {
               {user && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(201,168,240,.35)", marginTop:8 }}>Abra "Minha Lojinha" para publicar o seu.</div>}
             </div>
           ) : (
+            <>
+            {handle && (
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, fontFamily:mono, fontSize:11, color:"var(--lilas)" }}>
+                <span>Lojinha de @{handle}</span>
+                {onHandle && <button onClick={() => onHandle(null)} style={{ background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"2px 8px", color:"rgba(245,240,232,.45)", fontFamily:mono, fontSize:9, cursor:"pointer" }}>✕ ver todas</button>}
+              </div>
+            )}
+            {handle && !repasses.some(r => (r.joiner_cog || "").toLowerCase() === handle) && (
+              <div style={{ textAlign:"center", padding:"32px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>@{handle} não tem itens disponíveis no momento.</div>
+            )}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10 }}>
-              {repasses.map(r => (
+              {repasses.filter(r => !handle || (r.joiner_cog || "").toLowerCase() === handle).map(r => (
                 <div key={r.id} style={{ background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, overflow:"hidden", display:"flex", flexDirection:"column" }}>
                   {r.foto_url
                     ? <img src={r.foto_url} alt={r.nome_card} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} />
@@ -16106,7 +16127,7 @@ function LojinhaRepasses({ user }) {
                       <span style={{ fontFamily:mono, fontSize:12, color:"var(--laranja)", fontWeight:700 }}>R${Number(r.valor).toFixed(2).replace(".", ",")}</span>
                       {r.prazo && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.28)" }}>{r.prazo}</span>}
                     </div>
-                    <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.35)", marginBottom:6 }}>@{r.joiner_cog}</div>
+                    <div onClick={onHandle ? () => onHandle(r.joiner_cog.toLowerCase()) : undefined} style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.35)", marginBottom:6, cursor: onHandle ? "pointer" : "default" }}>@{r.joiner_cog}</div>
                     {contatoId === r.id ? (
                       <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"8px 10px" }}>
                         <div style={{ fontFamily:mono, fontSize:8, color:"rgba(186,255,57,.55)", marginBottom:5, letterSpacing:"1px" }}>CONTATO DA VENDEDORA</div>
@@ -16124,11 +16145,24 @@ function LojinhaRepasses({ user }) {
                 </div>
               ))}
             </div>
+            </>
           )}
         </div>
       )}
     </div>
   );
+}
+
+// /disponiveis/anticeg · /disponiveis/antijoiner · /disponiveis/antijoiner/<@ do joiner> · /disponiveis/historico
+function parseDisponiveisUrl() {
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  if (parts[0] !== "disponiveis") return { subTab: "loja", handle: null };
+  if (parts[1] === "antijoiner") {
+    const h = parts[2] ? decodeURIComponent(parts[2]).replace(/^@/, "").toLowerCase() : null;
+    return { subTab: "repasses", handle: h || null };
+  }
+  if (parts[1] === "historico") return { subTab: "historico", handle: null };
+  return { subTab: "loja", handle: null };
 }
 
 function DisponiveisTab({ user }) {
@@ -16143,7 +16177,8 @@ function DisponiveisTab({ user }) {
   const [claimWaLink, setClaimWaLink] = useState(null);
   const [meusClaims, setMeusClaims] = useState([]);
   const [vendidos, setVendidos] = useState([]);
-  const [subTab, setSubTab] = useState("loja");
+  const [subTab, setSubTab] = useState(() => parseDisponiveisUrl().subTab);
+  const [handleJoiner, setHandleJoiner] = useState(() => parseDisponiveisUrl().handle);
   const [filtroMembro, setFiltroMembro] = useState(null);
   const [filtroCategoria, setFiltroCategoria] = useState(null);
   const [isBloqueada, setIsBloqueada] = useState(false);
@@ -16218,6 +16253,25 @@ function DisponiveisTab({ user }) {
   }
 
   useEffect(() => { carregarItens(); }, [user.cog]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function irParaSub(novoSub, handle = null) {
+    const slug = novoSub === "repasses" ? "antijoiner" : novoSub === "historico" ? "historico" : "anticeg";
+    const h = novoSub === "repasses" && handle ? `/${encodeURIComponent(handle)}` : "";
+    history.pushState(null, "", `/disponiveis/${slug}${h}`);
+    setSubTab(novoSub);
+    setHandleJoiner(novoSub === "repasses" ? (handle || null) : null);
+  }
+
+  useEffect(() => {
+    const onPop = () => {
+      if (window.location.pathname.split("/").filter(Boolean)[0] !== "disponiveis") return;
+      const p = parseDisponiveisUrl();
+      setSubTab(p.subTab);
+      setHandleJoiner(p.handle);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") carregarItens(); };
@@ -16306,7 +16360,7 @@ function DisponiveisTab({ user }) {
           { id:"repasses",  label:"⇄ ANTIJOINERS" },
           { id:"historico", label:"◎ Histórico", count: claimsHistorico.length },
         ].map(({ id, label, count }) => (
-          <button key={id} onClick={() => setSubTab(id)} style={{
+          <button key={id} onClick={() => irParaSub(id)} style={{
             background: subTab === id ? "rgba(255,92,26,.1)" : "transparent",
             border: subTab === id ? "1px solid rgba(255,92,26,.35)" : "1px solid transparent",
             color: subTab === id ? "var(--laranja)" : "rgba(245,240,232,.4)",
@@ -16320,7 +16374,7 @@ function DisponiveisTab({ user }) {
       </div>
 
       {subTab === "repasses" && (
-        <LojinhaRepasses user={user} />
+        <LojinhaRepasses user={user} handle={handleJoiner} onHandle={h => irParaSub("repasses", h)} />
       )}
 
       {subTab === "historico" && (
