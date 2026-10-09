@@ -8192,7 +8192,59 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [dropsStats,       setDropsStats]       = useState({});
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
-  const [staffAcessos,      setStaffAcessos]      = useState(null);
+  // ── aviso de claims novos (eventos de claim) — badge no menu + toast em qualquer aba do admin ──
+  const [novosClaims, setNovosClaims] = useState(0);
+  const [avisosClaim, setAvisosClaim] = useState([]);
+  const [permNotif, setPermNotif] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
+  const claimsVistoRef = useRef((() => { try { return localStorage.getItem("anticeg_claims_visto") || new Date().toISOString(); } catch { return new Date().toISOString(); } })());
+  const claimsToastDesdeRef = useRef(new Date().toISOString());
+  const adminTabRef = useRef(adminMainTab);
+  adminTabRef.current = adminMainTab;
+
+  useEffect(() => {
+    if (adminMainTab !== "claims-admin") return;
+    const agora = new Date().toISOString();
+    claimsVistoRef.current = agora;
+    try { localStorage.setItem("anticeg_claims_visto", agora); } catch { /* sem storage */ }
+    setNovosClaims(0);
+  }, [adminMainTab]);
+
+  useEffect(() => {
+    async function checar() {
+      const { data } = await supabase.from("claim_reservas")
+        .select("id, joiner_cog, membro, evento_id, set_id, is_admin, created_at")
+        .gt("created_at", claimsVistoRef.current).neq("status", "cancelado").order("created_at").limit(500);
+      const novos = (data || []).filter(r => !r.is_admin);
+      setNovosClaims(adminTabRef.current === "claims-admin" ? 0 : novos.length);
+      const paraAviso = novos.filter(r => r.created_at > claimsToastDesdeRef.current);
+      if (!paraAviso.length) return;
+      claimsToastDesdeRef.current = paraAviso[paraAviso.length - 1].created_at;
+      window.dispatchEvent(new Event("anticeg:claim-novo"));
+      const grupos = {};
+      paraAviso.forEach(r => {
+        const k = `${r.joiner_cog}|${r.evento_id}`;
+        (grupos[k] = grupos[k] || { cog: r.joiner_cog, evento_id: r.evento_id, membros: [], standby: 0 }).membros.push(r.membro);
+        if (!r.set_id) grupos[k].standby++;
+      });
+      const lista = Object.values(grupos);
+      const { data: evs } = await supabase.from("claim_eventos").select("id, nome").in("id", [...new Set(lista.map(g => g.evento_id))]);
+      const nomes = Object.fromEntries((evs || []).map(e => [e.id, e.nome]));
+      const avisos = lista.map((g, i) => ({
+        id: `${Date.now()}-${i}`,
+        titulo: nomes[g.evento_id] || "Evento de claim",
+        texto: `@${g.cog} pegou ${g.membros.join(", ")}${g.standby ? ` (${g.standby} no standby)` : ""}`,
+      }));
+      setAvisosClaim(prev => [...prev, ...avisos].slice(-5));
+      avisos.forEach(a => setTimeout(() => setAvisosClaim(prev => prev.filter(x => x.id !== a.id)), 10000));
+      if ("Notification" in window && Notification.permission === "granted") {
+        avisos.forEach(a => { try { new Notification("Novo claim · " + a.titulo, { body: a.texto }); } catch { /* sem suporte */ } });
+      }
+    }
+    checar();
+    const t = setInterval(checar, 15000);
+    return () => clearInterval(t);
+  }, []);
+  const [staffAcessos,     setStaffAcessos]      = useState(null);
   const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
   const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
   const [envioSolic,        setEnvioSolic]        = useState([]);
@@ -8733,6 +8785,24 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <span className="admin-greeting-msg">{greetMsg}</span>
       </div>
 
+      {(avisosClaim.length > 0 || permNotif === "default") && (
+        <div style={{ position:"fixed", top:70, right:16, zIndex:9999, display:"flex", flexDirection:"column", gap:8, maxWidth:320 }}>
+          {avisosClaim.map(a => (
+            <div key={a.id} onClick={() => { setAvisosClaim(prev => prev.filter(x => x.id !== a.id)); setAdminMainTab("claims-admin"); }}
+              style={{ background:"#1a1a1a", border:"1px solid rgba(186,255,57,.35)", borderRadius:10, padding:"10px 14px", boxShadow:"0 4px 20px rgba(0,0,0,.5)", cursor:"pointer" }}>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"1px", color:"rgba(186,255,57,.8)", marginBottom:3 }}>◈ NOVO CLAIM · {a.titulo}</div>
+              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"var(--offwhite)", lineHeight:1.5 }}>{a.texto}</div>
+            </div>
+          ))}
+          {permNotif === "default" && (
+            <button onClick={() => Notification.requestPermission().then(setPermNotif)}
+              style={{ fontFamily:"'DM Mono',monospace", fontSize:9, padding:"6px 12px", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, color:"rgba(245,240,232,.5)", cursor:"pointer", alignSelf:"flex-end" }}>
+              🔔 ativar avisos do navegador
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="admin-layout">
         {/* Sidebar */}
         {(() => {
@@ -8759,7 +8829,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("demandas") && nav("lojinha-repasses", "Lojinha", "⬟", (adminRepassos || []).filter(r => r.status === "pendente" && ehRepasseLojinha(r)).length || 0)}
                 {nav("mercari", "Mercari", "⊕", mercariPedidos.filter(p => p.status === "pendente").length || 0)}
                 {temAcesso("disponiveis") && nav("disponiveis", "Loja", "◱", claimsPendentes.filter(c => c.ceg !== "CLAIM").length || 0)}
-                {nav("claims-admin", "Claims", "◈", claimsAdminPendentes.length || 0)}
+                {nav("claims-admin", "Claims", "◈", (claimsAdminPendentes.length || 0) + novosClaims)}
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
@@ -21857,10 +21927,6 @@ function AdminClaimEventos() {
   const [copiadoSet, setCopiadoSet] = useState(null);
   const [undoClaim, setUndoClaim] = useState(null);
   const undoTimerRef = useRef(null);
-  const [avisosClaim, setAvisosClaim] = useState([]); // toasts de claims novos
-  const [permNotif, setPermNotif] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
-  const ultimoClaimRef = useRef(new Date().toISOString());
-  const eventosRef = useRef([]);
   const [editEvento, setEditEvento] = useState(null); // { id, nome, valor, prazo }
   const [editSalvando, setEditSalvando] = useState(false);
   const [addClaimModal, setAddClaimModal] = useState(null); // { setId, membro, eventoId }
@@ -21904,37 +21970,11 @@ function AdminClaimEventos() {
 
   useEffect(() => { fetchTudo(); }, []);
 
-  eventosRef.current = eventos || [];
-
-  // Avisa quando entra claim novo (consulta a cada 15s enquanto esta tela está aberta)
+  // o painel admin avisa quando entra claim novo; aqui só atualiza a lista
   useEffect(() => {
-    const t = setInterval(async () => {
-      const { data } = await supabase.from("claim_reservas")
-        .select("id, joiner_cog, joiner_nome, membro, evento_id, set_id, status, is_admin, created_at")
-        .gt("created_at", ultimoClaimRef.current).neq("status", "cancelado").order("created_at");
-      if (!data?.length) return;
-      ultimoClaimRef.current = data[data.length - 1].created_at;
-      const novos = data.filter(r => !r.is_admin);
-      if (!novos.length) return;
-      const grupos = {};
-      novos.forEach(r => {
-        const k = `${r.joiner_cog}|${r.evento_id}`;
-        (grupos[k] = grupos[k] || { cog: r.joiner_cog, nome: r.joiner_nome, evento_id: r.evento_id, membros: [], standby: 0 }).membros.push(r.membro);
-        if (!r.set_id) grupos[k].standby++;
-      });
-      const avisos = Object.values(grupos).map((g, i) => {
-        const ev = eventosRef.current.find(e => e.id === g.evento_id);
-        const texto = `@${g.cog} pegou ${g.membros.join(", ")}${g.standby ? ` (${g.standby} no standby)` : ""}`;
-        return { id: `${Date.now()}-${i}`, titulo: ev?.nome || "Evento de claim", texto };
-      });
-      setAvisosClaim(prev => [...prev, ...avisos].slice(-5));
-      avisos.forEach(a => setTimeout(() => setAvisosClaim(prev => prev.filter(x => x.id !== a.id)), 10000));
-      if ("Notification" in window && Notification.permission === "granted") {
-        avisos.forEach(a => { try { new Notification("Novo claim · " + a.titulo, { body: a.texto }); } catch { /* sem suporte */ } });
-      }
-      fetchTudo();
-    }, 15000);
-    return () => clearInterval(t);
+    const h = () => fetchTudo();
+    window.addEventListener("anticeg:claim-novo", h);
+    return () => window.removeEventListener("anticeg:claim-novo", h);
   }, []);
 
   const ehItemForm = form.tipo === "item";
@@ -22298,23 +22338,6 @@ function AdminClaimEventos() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      {(avisosClaim.length > 0 || permNotif === "default") && (
-        <div style={{ position:"fixed", top:70, right:16, zIndex:9999, display:"flex", flexDirection:"column", gap:8, maxWidth:320 }}>
-          {avisosClaim.map(a => (
-            <div key={a.id} onClick={() => setAvisosClaim(prev => prev.filter(x => x.id !== a.id))}
-              style={{ background:"#1a1a1a", border:"1px solid rgba(186,255,57,.35)", borderRadius:10, padding:"10px 14px", boxShadow:"0 4px 20px rgba(0,0,0,.5)", cursor:"pointer" }}>
-              <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(186,255,57,.8)", marginBottom:3 }}>◈ NOVO CLAIM · {a.titulo}</div>
-              <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", lineHeight:1.5 }}>{a.texto}</div>
-            </div>
-          ))}
-          {permNotif === "default" && (
-            <button onClick={() => Notification.requestPermission().then(setPermNotif)}
-              style={{ fontFamily:mono, fontSize:9, padding:"6px 12px", background:"rgba(245,240,232,.05)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, color:"rgba(245,240,232,.5)", cursor:"pointer", alignSelf:"flex-end" }}>
-              🔔 ativar avisos do navegador
-            </button>
-          )}
         </div>
       )}
       {undoClaim && (
