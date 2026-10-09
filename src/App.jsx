@@ -15084,7 +15084,8 @@ function ClaimPublicoPage({ user }) {
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                         {aberto && ev.limite_por_joiner && <span style={{ fontFamily:mono, fontSize:8, color: meuTotal>=ev.limite_por_joiner?"rgba(255,107,107,.5)":"rgba(245,240,232,.2)" }}>{meuTotal}/{ev.limite_por_joiner}</span>}
                         {indisponivel && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(255,107,107,.7)", letterSpacing:".5px" }}>indisponível</span>}
-                        {aberto && !ev.limite_por_joiner && livres > 0 && livres < slotsAbertos.length && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.2)" }}>{livres} livre{livres>1?"s":""}</span>}
+                        {aberto && ev.sem_novos_sets && livres > 0 && <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", letterSpacing:".5px" }}>{livres} disponíve{livres>1?"is":"l"}</span>}
+                        {aberto && !ev.sem_novos_sets && !ev.limite_por_joiner && livres > 0 && livres < slotsAbertos.length && <span style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.2)" }}>{livres} livre{livres>1?"s":""}</span>}
                         <button onClick={() => setQtd(ev.id, membro, qtdAtual - 1)} disabled={qtdAtual===0||enviando}
                           style={{ width:28, height:28, borderRadius:6, border:"1px solid rgba(245,240,232,.12)", background:"rgba(245,240,232,.03)", color:qtdAtual===0?"rgba(245,240,232,.15)":"rgba(245,240,232,.6)", fontFamily:mono, fontSize:14, cursor:qtdAtual===0?"default":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
                         <span style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", minWidth:16, textAlign:"center" }}>{qtdAtual}</span>
