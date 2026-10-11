@@ -12186,6 +12186,7 @@ const PT_BOX = "/paper-tale/box lacrada.jpg";
 const PT_CFG = {
   slug: "paper-tales",
   evento: "PAPER TALE",
+  fechado: true,
   tabelaEstoque: "paper_tales_estoque",
   titulo: "PAPER TALE",
   grupo: "STRAY KIDS",
