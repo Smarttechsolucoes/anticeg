@@ -25349,7 +25349,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "papertales",
-      ativo: true,
+      ativo: false,
       fechado: false,
       cor: "lilas",
       titulo: "PAPER TALE",
@@ -25357,8 +25357,8 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "paper-tales",
       img: null,
-      tags: ["Pré-cadastro aberto", "Vagas limitadas"],
-      info: "Registre seu interesse · pedidos mais antigos têm prioridade · preços a definir",
+      tags: ["Pedidos encerrados"],
+      info: "Pedidos encerrados em 10 de outubro",
     },
     {
       key: "mercari",
