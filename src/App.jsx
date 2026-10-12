@@ -3559,6 +3559,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   // ── badges ──
   const [multasPagasCount, setMultasPagasCount] = useState(0);
   const [recrutadosCount,  setRecrutadosCount]  = useState(0);
+  const [meusRecrutados,   setMeusRecrutados]   = useState([]);
+  const [linkCopiado,      setLinkCopiado]      = useState(false);
   const [badgesAntiv, setBadgesAntiv] = useState([]);
 
   const sortPendentes = arr => [...arr].sort((a, b) => {
@@ -3650,6 +3652,13 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   }, [perfilSubTab, user.cog]);
 
   const [meusFormularios, setMeusFormularios] = useState(null);
+  // aba Recrutador: quem esta pessoa já indicou
+  useEffect(() => {
+    if (perfilSubTab !== "recrutador" || !user.cog || user.guest) return;
+    supabase.from("joiners").select("cog, nome, nome_site").eq("recrutador", user.cog)
+      .then(({ data }) => { if (data) { setMeusRecrutados(data); setRecrutadosCount(data.length); } });
+  }, [perfilSubTab, user.cog]);
+
   useEffect(() => {
     if (perfilSubTab !== "formularios" || user.guest) return;
     if (meusFormularios !== null) return;
@@ -3821,6 +3830,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
             {navPerfil("dados",      "○",  "Dados",      0)}
             {navPerfil("endereco",   "⌂",  "Endereço",   0)}
             {navPerfil("badges",     "✦", "Badges",     0)}
+            {!user.guest && navPerfil("recrutador", "◈", "Recrutador", 0)}
             {navPerfil("pagamentos", "◎", "Pagamentos", meusPagamentos.filter(p => p.status === "em_analise").length)}
             {navPerfil("repasse",    "⇄",  "Repasse",    meusRepassos.filter(r => r.status === "pendente").length)}
             {navPerfil("suporte",    "⚑",  "Suporte",    (meuReports || []).filter(r => r.status === "pendente").length)}
@@ -5349,6 +5359,77 @@ ${compHTML}
               </div>
             );
           })}</div>);})()}
+
+      {perfilSubTab === "recrutador" && !user.guest && (() => {
+        const mono = "'DM Mono',monospace";
+        const n = recrutadosCount;
+        const tier = n >= 6 ? "ouro" : n >= 1 ? "prata" : "bronze";
+        const fox = BADGES_DEF.find(b => b.id === "foxiny");
+        const cor = TIER_COLORS[tier].text;
+        const meta = tier === "bronze" ? 1 : tier === "prata" ? 6 : null;
+        const pct = meta ? Math.min(100, Math.round((n / meta) * 100)) : 100;
+        const link = `${window.location.origin}/recrutador?ref=${encodeURIComponent(user.cog)}`;
+        const msgWpp = `Vem pra comunidade ANTICEG! Entra pelo meu link: ${link}`;
+        async function copiar() {
+          try { await navigator.clipboard.writeText(link); setLinkCopiado(true); setTimeout(() => setLinkCopiado(false), 2000); } catch { /* sem permissão */ }
+        }
+        return (
+          <div style={{ maxWidth:560 }}>
+            <h3 className="admin-title" style={{ fontSize:16, marginBottom:6 }}>Recrutador</h3>
+            <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.45)", lineHeight:1.6, marginBottom:18 }}>
+              Chame stays pra comunidade com o seu link. Quem se cadastrar por ele já entra indicada por você, e o seu título cresce no perfil.
+            </div>
+
+            <div style={{ display:"flex", alignItems:"center", gap:16, padding:"16px 18px", background:"var(--card-bg)", border:`1px solid ${cor}55`, borderRadius:12, marginBottom:16 }}>
+              <img src={badgeImg(fox, tier)} alt={fox.titulos[tier]} style={{ width:72, height:72, objectFit:"contain", filter:TIER_COLORS[tier].glow }} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:.5, color:cor }}>{fox.titulos[tier]}</div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)", marginBottom:8 }}>
+                  {n} {n === 1 ? "pessoa recrutada" : "pessoas recrutadas"}
+                </div>
+                <div style={{ height:6, background:"rgba(245,240,232,.08)", borderRadius:3, overflow:"hidden" }}>
+                  <div style={{ width:`${pct}%`, height:"100%", background:cor, transition:"width .3s" }} />
+                </div>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", marginTop:6 }}>
+                  {tier === "bronze" ? "Recrute 1 pessoa pra chegar na Prata (Recrutador)."
+                    : tier === "prata" ? `Faltam ${6 - n} pra chegar no Ouro (Embaixador).`
+                    : "Nível máximo! Você é embaixadora."}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", marginBottom:8 }}>SEU LINK DE CONVITE</div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+              <input readOnly value={link} onFocus={e => e.target.select()}
+                style={{ flex:1, minWidth:220, background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"10px 12px", color:"var(--offwhite)", fontFamily:mono, fontSize:12, outline:"none" }} />
+              <button onClick={copiar}
+                style={{ flexShrink:0, background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.35)", color: linkCopiado ? "#4ade80" : "#BAFF39", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                {linkCopiado ? "✓ copiado" : "Copiar link"}
+              </button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(msgWpp)}`} target="_blank" rel="noopener noreferrer"
+                style={{ flexShrink:0, textDecoration:"none", background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", borderRadius:8, padding:"10px 16px", fontFamily:mono, fontSize:11, fontWeight:700 }}>
+                Enviar no WhatsApp
+              </a>
+            </div>
+            <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", lineHeight:1.6, marginBottom:22 }}>
+              Apenas stays com +18 anos. Menores de idade serão banidos.
+            </div>
+
+            <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1.5px", color:"rgba(245,240,232,.35)", marginBottom:8 }}>QUEM VOCÊ RECRUTOU</div>
+            {meusRecrutados.length === 0 ? (
+              <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)", padding:"16px 0" }}>Ninguém ainda. Manda o seu link!</div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {meusRecrutados.map(j => (
+                  <div key={j.cog} style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.6)", padding:"8px 12px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.06)", borderRadius:8 }}>
+                    <span style={{ color:"var(--offwhite)" }}>{j.nome_site || j.nome || j.cog}</span> · @{j.cog}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {perfilSubTab === "badges" && (() => {
         const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount, recrutados: recrutadosCount, cog: user.cog });

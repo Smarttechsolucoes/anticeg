@@ -42,6 +42,12 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
   useEffect(() => { buscarLinkComunidade().then(setLinkComunidade); }, []);
 
+  // link de convite (?ref=cog): já preenche quem indicou
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) setCadRecrutador("@" + ref.replace(/^@/, ""));
+  }, []);
+
   // confirma o recrutador enquanto a pessoa digita o @
   useEffect(() => {
     if (!cadRecrutador.trim()) { setRecStatus(null); return; }
