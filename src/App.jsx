@@ -12708,9 +12708,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
-                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>
-                  {cfg.desconto ? <><span style={{ color:"rgba(245,240,232,.35)", fontWeight:400, textDecoration:"line-through", marginRight:6 }}>{fmtPreco(it.preco)}</span>{fmtReais(comDesconto(cfg, it.preco))}</> : fmtPreco(it.preco)}
-                </div>
+                <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(it.preco)}</div>
                 {!indisp && rest !== null && (
                   <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
                 )}
