@@ -201,7 +201,11 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     }
   }
 
+  // página /primeiro-acesso: só o formulário de primeiro acesso, sem o resto da landing
+  const soPrimeiroAcesso = window.location.pathname === "/primeiro-acesso";
+
   function resetPrimeiroAcesso() {
+    if (soPrimeiroAcesso) { window.location.href = "/"; return; }
     setPrimeiroAcesso(false);
     setCadNome(""); setCadCog(""); setCadEmail(""); setCadWhats("");
     setCadError(""); setCadOk(false);
@@ -287,6 +291,16 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       </>
     );
   }
+
+  if (soPrimeiroAcesso) return (
+    <div className="lp">
+      <div className="lp-cursor" ref={cursorRef} />
+      <div className="lp-cursor-ring" ref={ringRef} />
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+        <div className="lp-hero-card">{renderCard()}</div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="lp">
