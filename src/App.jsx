@@ -25277,6 +25277,16 @@ function PrevendaTab({ user }) {
 
   const formularios = [
     {
+      key: "wmag-leeknow",
+      ativo: true,
+      titulo: "W MAGAZINE",
+      subtitulo: "Lee Know — 3 capas",
+      url: "/wmag-leeknow",
+      img: WMAG_LK_CAPAS[0].img,
+      tags: ["Pedidos abertos"],
+      info: "R$ 48,00 por unidade · PIX ou cartão · prazo a definir",
+    },
+    {
       key: "singba",
       ativo: singbaAberto,
       titulo: "SINGBA",
@@ -25409,16 +25419,6 @@ function PrevendaTab({ user }) {
       img: null,
       tags: ["Pedidos abertos"],
       info: "Encontrou algo no Mercari Japão? Manda o link e a gente compra pra você.",
-    },
-    {
-      key: "wmag-leeknow",
-      ativo: true,
-      titulo: "W MAGAZINE",
-      subtitulo: "Lee Know — 3 capas",
-      url: "/wmag-leeknow",
-      img: null,
-      tags: ["Pedidos abertos"],
-      info: "R$ 48,00 por unidade · PIX ou cartão · prazo a definir",
     },
     {
       key: "wmag-hyunjin",
