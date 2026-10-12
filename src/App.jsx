@@ -21618,6 +21618,7 @@ const WMAG_LK_CFG = {
     <>O prazo de pagamento e o frete internacional serão <strong>avisados em breve</strong>.</>,
   ],
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
+  aviso: "REVISTA AINDA NÃO DISPONÍVEL PARA A VENDA",
 };
 
 function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
@@ -21724,6 +21725,12 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
             </div>
           )}
         </div>
+
+        {cfg.aviso && (
+          <div style={{ background:"rgba(255,209,102,.1)", border:"1px solid rgba(255,209,102,.4)", borderRadius:10, padding:"12px 16px", marginBottom:20, textAlign:"center", fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1px", color:"#FFD166" }}>
+            ⚠ {cfg.aviso}
+          </div>
+        )}
 
         {/* Capas */}
         <div style={{ display:"flex", gap:8, marginBottom:28, justifyContent:"center" }}>
@@ -25284,6 +25291,7 @@ function PrevendaTab({ user }) {
       url: "/wmag-leeknow",
       img: WMAG_LK_CAPAS[0].img,
       tags: ["Pedidos abertos"],
+      aviso: WMAG_LK_CFG.aviso,
       info: "R$ 48,00 por unidade · PIX ou cartão · prazo a definir",
     },
     {
@@ -25493,6 +25501,9 @@ function PrevendaTab({ user }) {
                     <span key={i} style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.4)", background:"rgba(245,240,232,.05)", borderRadius:6, padding:"3px 8px" }}>{t}</span>
                   ))}
                 </div>
+                {f.aviso && (
+                  <div style={{ fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"0.5px", color:"#FFD166", background:"rgba(255,209,102,.1)", border:"1px solid rgba(255,209,102,.35)", borderRadius:6, padding:"4px 8px", marginTop:2 }}>⚠ {f.aviso}</div>
+                )}
                 <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginTop:2 }}>{f.info}</div>
               </div>
             </div>
