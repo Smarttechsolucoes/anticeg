@@ -18,7 +18,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [senha, setSenha] = useState("");
 
   // primeiro acesso unificado (encontrar conta existente OU cadastrar)
-  const [primeiroAcesso, setPrimeiroAcesso]   = useState(false);
+  const [primeiroAcesso, setPrimeiroAcesso]   = useState(() => window.location.pathname === "/primeiro-acesso");
   const [cadNome,        setCadNome]           = useState("");
   const [cadCog,         setCadCog]            = useState("");
   const [cadEmail,       setCadEmail]          = useState("");
