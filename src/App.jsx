@@ -12403,7 +12403,14 @@ const PROMO13_CFG = {
   capa: null,
   desconto: 13,
   tags: ["13% OFF", "ESTOQUE LIMITADO"],
-  infos: ["Desconto de 13% aplicado na compra de 1 ou mais itens", "Estoque limitado"],
+  infos: [
+    "Desconto de 13% aplicado na compra de 1 ou mais itens",
+    "Estoque limitado",
+    { texto: "Itens em pré-venda", links: [
+      { label: "WAVE MAKER CEG", url: "https://chat.whatsapp.com/LoJCNp8htV31x9oeYvPqyc" },
+      { label: "PAPER TALE CEG", url: "https://chat.whatsapp.com/Icf1kgyrwbpEvoWHxxuZqb" },
+    ] },
+  ],
   box: null,
   itens: [
     { id: "AGENDA PAPER TALE",               foto: "/promo-13/agenda paper tale.png",        preco: 20 },
@@ -12641,7 +12648,17 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
           </div>
           {cfg.infos.map((r, i) => (
             <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
-              <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+              <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{typeof r === "string" ? r : r.texto}
+              {typeof r !== "string" && r.links && (
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
+                  {r.links.map(l => (
+                    <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                      style={{ textDecoration:"none", padding:"6px 12px", borderRadius:6, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontSize:10, fontWeight:700, letterSpacing:".5px" }}>
+                      {l.label} →
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
