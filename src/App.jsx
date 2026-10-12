@@ -26773,6 +26773,8 @@ export default function App() {
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/wmag-leeknow") return <WMagFormPage cfg={WMAG_LK_CFG} />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
+  // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
+  if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
   if (page === "landing" || !user) {
     if (window.location.pathname === "/claim") {
       return <ClaimGuestPage onLogin={handleLogin} />;
