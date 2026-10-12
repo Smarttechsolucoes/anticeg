@@ -196,7 +196,16 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     }
 
     if (joiner) {
-      // conta existe → loga direto
+      // conta existe → se informou recrutador e ainda não tinha um, grava (só vale uma vez)
+      if (cadRecrutador.trim() && !joiner.recrutador) {
+        const rec = await resolverRecrutador(cadRecrutador);
+        if (!rec) { setCadError("Recrutador não encontrado. Confira o @ ou deixe em branco."); setCadLoading(false); return; }
+        if (rec === joiner.cog) { setCadError("Você não pode ser seu próprio recrutador."); setCadLoading(false); return; }
+        const { error: recErr } = await supabase.from("joiners").update({ recrutador: rec }).eq("cog", joiner.cog);
+        if (recErr) { setCadError("Não consegui salvar o recrutador. Tente de novo."); setCadLoading(false); return; }
+        joiner = { ...joiner, recrutador: rec };
+      }
+      // loga direto
       try {
         await entrarCom(joiner);
       } catch {
