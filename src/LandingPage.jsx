@@ -287,7 +287,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         {error && <div className="lp-card-error">{error}</div>}
         <button className="lp-card-btn" onClick={handleEntrar} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
         <div className="lp-card-divider" />
-        <button className="lp-card-secondary" onClick={() => setPrimeiroAcesso(true)}>Primeiro acesso →</button>
+        <button className="lp-card-secondary" onClick={() => { window.location.href = "/primeiro-acesso"; }}>Primeiro acesso →</button>
       </>
     );
   }
