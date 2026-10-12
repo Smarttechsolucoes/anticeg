@@ -32,6 +32,19 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
   useEffect(() => { buscarLinkComunidade().then(setLinkComunidade); }, []);
 
+  // quem já tem conta (logada neste aparelho) vê os dados do primeiro acesso preenchidos
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("anticeg_user_v2"));
+      if (!u?.cog) return;
+      setCadNome(u.nome || u.nome_site || "");
+      setCadCog((u.twitter || u.cog || "").replace(/^@/, ""));
+      setCadEmail(u.email || "");
+      setCadWhats(u.whatsapp || "");
+      if (u.recrutador) setCadRecrutador("@" + u.recrutador);
+    } catch { /* sem dados salvos */ }
+  }, []);
+
   useEffect(() => {
     const cursor = cursorRef.current;
     const ring = ringRef.current;
