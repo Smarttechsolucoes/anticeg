@@ -12228,7 +12228,7 @@ const ODD_CFG = {
   capaAltura: 320,
   proporcao: "1/1",
   tags: ["PEDIDOS ATÉ 16/OUT", "PAGAMENTO 23/OUT", "R$185 CADA"],
-  infos: ["Pedidos aceitos até: 16 de outubro", "Pagamento até: 23 de outubro", "Demais itens da ODD & FRESH serão adicionados em breve"],
+  infos: ["Pedidos aceitos até: 16 de outubro", "Pagamento até: 23 de outubro", "Haverá frete internacional + taxa RF adicionado ao valor", "Demais itens da ODD & FRESH serão adicionados em breve"],
   box: null,
   itens: [
     { id: "WOLF CHAN", foto: ODD_FOTO, preco: 185 },
