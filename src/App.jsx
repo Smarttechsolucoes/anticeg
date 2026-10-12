@@ -2,7 +2,7 @@
 import supabase from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
-import { resolverRecrutador, contarRecrutados } from "./recrutador.js";
+import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
 import badgeFoxinyBronze  from "./assets/badges/foxiny_bronze.jpg.png";
 import badgeFoxinyPrata   from "./assets/badges/foxiny_prata.jpg.png";
@@ -6781,6 +6781,44 @@ function BannerPagamentosBlock() {
   );
 }
 
+function LinkComunidadeBlock() {
+  const [link,    setLink]    = useState("");
+  const [saving,  setSaving]  = useState(false);
+  const [ok,      setOk]      = useState(false);
+  const [erro,    setErro]    = useState("");
+
+  useEffect(() => { buscarLinkComunidade().then(setLink); }, []);
+
+  async function salvar() {
+    const v = link.trim();
+    if (!/^https:\/\/chat\.whatsapp\.com\/\S+$/.test(v)) { setErro("Cole um link de grupo do WhatsApp (https://chat.whatsapp.com/...)."); return; }
+    setSaving(true); setErro(""); setOk(false);
+    const { error } = await supabase.from("config").upsert({ key: "link_comunidade_wpp", value: v }, { onConflict: "key" });
+    setSaving(false);
+    if (error) { setErro("Erro ao salvar. Tente de novo."); return; }
+    setOk(true);
+  }
+
+  return (
+    <div style={{ marginBottom:16, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:3 }}>Link do grupo da comunidade (WhatsApp)</div>
+      <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>
+        Aparece como botão na página /primeiro-acesso. Ao trocar o link do grupo, atualize aqui.
+      </div>
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+        <input value={link} onChange={e => { setLink(e.target.value); setOk(false); setErro(""); }} placeholder="https://chat.whatsapp.com/..."
+          style={{ flex:1, minWidth:220, background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, padding:"9px 12px", color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", fontSize:12, outline:"none" }} />
+        <button onClick={salvar} disabled={saving}
+          style={{ flexShrink:0, background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.35)", color:"#BAFF39", borderRadius:8, padding:"9px 16px", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+          {saving ? "..." : "Salvar"}
+        </button>
+      </div>
+      {ok && <div style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginTop:8 }}>✓ Link salvo</div>}
+      {erro && <div style={{ fontSize:11, color:"#ff6b6b", fontFamily:"'DM Mono',monospace", marginTop:8 }}>{erro}</div>}
+    </div>
+  );
+}
+
 function ProximoEnvioBlock() {
   const [texto,  setTexto]  = useState("");
   const [inicio, setInicio] = useState("");
@@ -10587,6 +10625,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <div>
           <PushGlobalToggle />
           <ProximoEnvioBlock />
+          <LinkComunidadeBlock />
           <BannerPagamentosBlock />
           <AvisoMasterlistBlock />
 

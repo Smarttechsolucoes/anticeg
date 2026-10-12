@@ -16,3 +16,12 @@ export async function contarRecrutados(cog) {
   const { count } = await supabase.from("joiners").select("id", { count: "exact", head: true }).eq("recrutador", cog);
   return count || 0;
 }
+
+// Link do grupo de WhatsApp da comunidade. O valor atual fica na tabela config (editável no admin);
+// o padrão abaixo vale enquanto nada tiver sido salvo lá.
+export const LINK_COMUNIDADE_PADRAO = "https://chat.whatsapp.com/BUSX3go4re09fddJMNRex4";
+
+export async function buscarLinkComunidade() {
+  const { data } = await supabase.from("config").select("value").eq("key", "link_comunidade_wpp").maybeSingle();
+  return data?.value?.trim() || LINK_COMUNIDADE_PADRAO;
+}

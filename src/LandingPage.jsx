@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
 import bonequinha from "./assets/bonequinha.png";
-import { resolverRecrutador } from "./recrutador.js";
+import { resolverRecrutador, buscarLinkComunidade, LINK_COMUNIDADE_PADRAO } from "./recrutador.js";
 
 
 const WA = "5524992782023";
@@ -25,9 +25,12 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [cadEmail,       setCadEmail]          = useState("");
   const [cadWhats,       setCadWhats]          = useState("");
   const [cadRecrutador,  setCadRecrutador]     = useState("");
+  const [linkComunidade, setLinkComunidade]    = useState(LINK_COMUNIDADE_PADRAO);
   const [cadError,       setCadError]          = useState("");
   const [cadLoading,     setCadLoading]        = useState(false);
   const [cadOk,          setCadOk]             = useState(false);
+
+  useEffect(() => { buscarLinkComunidade().then(setLinkComunidade); }, []);
 
   useEffect(() => {
     const cursor = cursorRef.current;
@@ -261,8 +264,12 @@ export default function LandingPage({ onLogin, onVerCegs }) {
           </>
         ) : (
           <>
+            <a href={linkComunidade} target="_blank" rel="noopener noreferrer"
+              style={{ display:"block", textAlign:"center", textDecoration:"none", marginBottom:14, padding:"11px 12px", borderRadius:6, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, letterSpacing:".5px" }}>
+              1 · Entrar na comunidade (WhatsApp) →
+            </a>
             <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:14, lineHeight:1.6 }}>
-              Preencha seus dados. Se você já tiver conta, entrará direto — senão, seu cadastro será enviado para aprovação.
+              2 · Preencha seus dados. Se você já tiver conta, entrará direto — senão, seu cadastro será enviado para aprovação.
             </div>
             <input className="lp-card-input" type="text" placeholder="nome para a claim" value={cadNome}
               onChange={e => { setCadNome(e.target.value); setCadError(""); }} autoFocus />
