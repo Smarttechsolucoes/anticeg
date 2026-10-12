@@ -27336,7 +27336,7 @@ export default function App() {
             <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {["Pagamento será liberado quando fechar o set.","Aceito cartão com juros.","Repasse dos itens apenas após pagamento.","Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!","Um amigo pode te ajudar na claim :)"].map((r, i) => (
+                {["Pagamento será liberado quando fechar o set.","Aceito cartão com juros.","Repasse dos itens apenas após pagamento.","Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!"].map((r, i) => (
                   <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
                     <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
                   </div>
