@@ -12227,8 +12227,8 @@ const ODD_CFG = {
   capa: "/odd-fresh/capa.jpg",
   capaAltura: 320,
   proporcao: "1/1",
-  tags: ["PEDIDOS ATÉ 23/OUT", "R$185 CADA"],
-  infos: ["Pedidos aceitos até: 23 de outubro", "Demais itens da ODD & FRESH serão adicionados em breve"],
+  tags: ["PEDIDOS ATÉ 16/OUT", "PAGAMENTO 23/OUT", "R$185 CADA"],
+  infos: ["Pedidos aceitos até: 16 de outubro", "Pagamento até: 23 de outubro", "Demais itens da ODD & FRESH serão adicionados em breve"],
   box: null,
   itens: [
     { id: "WOLF CHAN", foto: ODD_FOTO, preco: 185 },
@@ -25333,7 +25333,7 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "odd-fresh",
       img: ODD_CFG.capa,
-      tags: ["Pedidos até 23/10", "R$ 185,00"],
+      tags: ["Pedidos até 16/10", "Pagamento até 23/10", "R$ 185,00"],
       info: "9 opções de personagem · escolha a sua no formulário",
     },
     {
