@@ -5,7 +5,7 @@ import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
 import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
 import foxinyOuro   from "./assets/badges/foxiny_ouro.jpg.png";
-import { resolverRecrutador, buscarLinkComunidade, LINK_COMUNIDADE_PADRAO } from "./recrutador.js";
+import { resolverRecrutador, buscarRecrutador, buscarLinkComunidade, LINK_COMUNIDADE_PADRAO } from "./recrutador.js";
 
 
 const WA = "5524992782023";
@@ -35,11 +35,24 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [cadWhats,       setCadWhats]          = useState("");
   const [cadRecrutador,  setCadRecrutador]     = useState("");
   const [linkComunidade, setLinkComunidade]    = useState(LINK_COMUNIDADE_PADRAO);
+  const [recStatus,      setRecStatus]          = useState(null); // null | "buscando" | { ok, cog, nome }
   const [cadError,       setCadError]          = useState("");
   const [cadLoading,     setCadLoading]        = useState(false);
   const [cadOk,          setCadOk]             = useState(false);
 
   useEffect(() => { buscarLinkComunidade().then(setLinkComunidade); }, []);
+
+  // confirma o recrutador enquanto a pessoa digita o @
+  useEffect(() => {
+    if (!cadRecrutador.trim()) { setRecStatus(null); return; }
+    setRecStatus("buscando");
+    let cancelado = false;
+    const t = setTimeout(async () => {
+      const r = await buscarRecrutador(cadRecrutador);
+      if (!cancelado) setRecStatus(r ? { ok: true, ...r } : { ok: false });
+    }, 500);
+    return () => { cancelado = true; clearTimeout(t); };
+  }, [cadRecrutador]);
 
   // quem já tem conta (logada neste aparelho) vê os dados do primeiro acesso preenchidos
   useEffect(() => {
@@ -142,9 +155,15 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     setLoading(false);
   }
 
+  // nas páginas /primeiro-acesso e /recrutador, volta pra raiz antes de entrar (senão a página continuaria aberta)
+  function sairDaPaginaPublica() {
+    if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) window.history.replaceState(null, "", "/");
+  }
+
   async function entrarCom(joiner) {
     const cogReal = joiner.cog === "ADMMODE" ? "nandaverseo_c" : joiner.cog;
     const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", cogReal);
+    sairDaPaginaPublica();
     onLogin(joiner, itens || []);
   }
 
@@ -233,6 +252,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     if (novoJoiner) {
       await entrarCom(novoJoiner);
     } else {
+      sairDaPaginaPublica();
       onLogin({ nome, cog, email: eml, whatsapp: whats || null }, []);
     }
   }
@@ -306,6 +326,14 @@ export default function LandingPage({ onLogin, onVerCegs }) {
             <input className="lp-card-input" type="text" placeholder={modoConvite ? "@ de quem te indicou" : "@ de quem te indicou (opcional)"} value={cadRecrutador}
               onChange={e => { setCadRecrutador(e.target.value); setCadError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()} />
+            {recStatus && (
+              <div style={{ fontSize:11, fontFamily:"'DM Mono',monospace", marginTop:-4, marginBottom:10, lineHeight:1.5,
+                color: recStatus === "buscando" ? "rgba(245,240,232,.4)" : recStatus.ok ? "#BAFF39" : "#ff6b6b" }}>
+                {recStatus === "buscando" ? "buscando..."
+                  : recStatus.ok ? `✓ Recrutador confirmado: @${recStatus.cog}${recStatus.nome && recStatus.nome !== recStatus.cog ? ` · ${recStatus.nome}` : ""}`
+                  : "✕ Recrutador não encontrado. Confira o @."}
+              </div>
+            )}
             {cadError && <div className="lp-card-error">{cadError}</div>}
             <button className="lp-card-btn" onClick={handlePrimeiroAcesso} disabled={cadLoading}>
               {cadLoading ? "..." : "CONTINUAR →"}

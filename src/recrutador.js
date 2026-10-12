@@ -1,14 +1,21 @@
 import supabase from "./supabase.js";
 
-// Descobre o cog de um joiner a partir do @ digitado (cog ou twitter). Retorna null se não achar.
-export async function resolverRecrutador(texto) {
+// Procura um joiner a partir do @ digitado (cog ou twitter). Retorna { cog, nome } ou null.
+export async function buscarRecrutador(texto) {
   const handle = (texto || "").trim().replace(/^@/, "");
   if (!handle) return null;
-  const { data: porCog } = await supabase.from("joiners").select("cog").eq("cog", handle).maybeSingle();
-  if (porCog) return porCog.cog;
-  const { data: porTw } = await supabase.from("joiners").select("cog")
-    .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`).limit(1).maybeSingle();
-  return porTw?.cog || null;
+  const campos = "cog, nome, nome_site";
+  let { data } = await supabase.from("joiners").select(campos).eq("cog", handle).maybeSingle();
+  if (!data) {
+    ({ data } = await supabase.from("joiners").select(campos)
+      .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`).limit(1).maybeSingle());
+  }
+  return data ? { cog: data.cog, nome: data.nome_site || data.nome || data.cog } : null;
+}
+
+// Mesma busca, devolvendo só o cog (ou null se não achar)
+export async function resolverRecrutador(texto) {
+  return (await buscarRecrutador(texto))?.cog || null;
 }
 
 // Quantos joiners têm este cog como recrutador (0 se a coluna ainda não existir)
