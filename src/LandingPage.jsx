@@ -2,10 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
 import bonequinha from "./assets/bonequinha.png";
+import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
+import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
+import foxinyOuro   from "./assets/badges/foxiny_ouro.jpg.png";
 import { resolverRecrutador, buscarLinkComunidade, LINK_COMUNIDADE_PADRAO } from "./recrutador.js";
 
 
 const WA = "5524992782023";
+
+const NIVEIS_RECRUTADOR = [
+  { id:"bronze", img:foxinyBronze, cor:"#CD7F32", titulo:"MAKNAE ON TOP", regra:"Entrou na comunidade" },
+  { id:"prata",  img:foxinyPrata,  cor:"#C0C0C0", titulo:"RECRUTADOR",    regra:"Recrutou de 1 a 5 membros" },
+  { id:"ouro",   img:foxinyOuro,   cor:"#D4AF37", titulo:"EMBAIXADOR",    regra:"Recrutou 6 ou mais membros" },
+];
 
 export default function LandingPage({ onLogin, onVerCegs }) {
   const cursorRef = useRef(null);
@@ -324,6 +333,63 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         <div className="lp-card-divider" />
         <button className="lp-card-secondary" onClick={() => { window.location.href = "/primeiro-acesso"; }}>Primeiro acesso →</button>
       </>
+    );
+  }
+
+  if (modoConvite) {
+    const mono = "'DM Mono',monospace";
+    const bebas = "'Bebas Neue',sans-serif";
+    return (
+      <div className="lp">
+        <div className="lp-cursor" ref={cursorRef} />
+        <div className="lp-cursor-ring" ref={ringRef} />
+        <div style={{ flex:1, width:"100%", maxWidth:720, margin:"0 auto", boxSizing:"border-box", padding:"36px 20px 56px" }}>
+          <div style={{ textAlign:"center", marginBottom:28 }}>
+            <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"3px", color:"#C9A8F0", marginBottom:12 }}>// ANTICEG · CONVITE</div>
+            <h1 style={{ fontFamily:bebas, fontSize:"clamp(30px,6vw,46px)", lineHeight:1, letterSpacing:".02em", margin:0, color:"#F5F0E8" }}>
+              RECRUTE E <span style={{ color:"#BAFF39" }}>SUBA DE NÍVEL</span>
+            </h1>
+            <p style={{ fontFamily:mono, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.55)", maxWidth:460, margin:"12px auto 0" }}>
+              Chame stays pra comunidade e suba de nível. Quanto mais gente você traz, mais o seu título cresce no perfil.
+            </p>
+            <p style={{ fontFamily:mono, fontSize:11, lineHeight:1.6, color:"#FFD166", maxWidth:460, margin:"12px auto 0", padding:"8px 12px", background:"rgba(255,209,102,.08)", border:"1px solid rgba(255,209,102,.3)", borderRadius:8 }}>
+              <strong>Importante:</strong> apenas stays com +18 anos. Menores de idade serão banidos.
+            </p>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:10, marginBottom:28 }}>
+            {NIVEIS_RECRUTADOR.map((n, i) => (
+              <div key={n.id} style={{ position:"relative", background:"#141414", border:`1px solid ${n.cor}55`, borderRadius:14, padding:"14px 10px 12px", textAlign:"center", boxShadow:`0 0 28px ${n.cor}14` }}>
+                <div style={{ position:"absolute", top:8, left:10, fontFamily:mono, fontSize:8, color:n.cor, letterSpacing:"1.5px" }}>NÍVEL {i + 1}</div>
+                <img src={n.img} alt={n.titulo} style={{ width:64, height:64, objectFit:"contain", margin:"10px auto 8px", display:"block", filter:`drop-shadow(0 0 14px ${n.cor}88)` }} />
+                <div style={{ fontFamily:bebas, fontSize:16, letterSpacing:".06em", color:n.cor }}>{n.titulo}</div>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.55)", marginTop:3, lineHeight:1.4 }}>{n.regra}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:12, marginBottom:32 }}>
+            {[
+              ["1", "Entre na comunidade", "Pelo grupo do WhatsApp, é onde a gente avisa tudo."],
+              ["2", "Faça seu cadastro", "Rapidinho, é só preencher o formulário aqui embaixo."],
+              ["3", "Diga quem te indicou", "Coloque o @ de quem te convidou. É assim que ela sobe de nível!"],
+              ["4", "Recrutador premiado", "Recrutadores ganham tickets a cada cadastro para concorrer a prêmios/campanhas especiais, como: desconto, presentes, oportunidades exclusivas."],
+            ].map(([num, t, d]) => (
+              <div key={num} style={{ display:"flex", gap:14, alignItems:"flex-start", padding:"12px 14px", border:"1px solid rgba(245,240,232,.08)", borderRadius:12, background:"rgba(245,240,232,.02)" }}>
+                <div style={{ fontFamily:bebas, fontSize:24, lineHeight:1, color:"#FF5C1A" }}>{num}</div>
+                <div>
+                  <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"#F5F0E8", marginBottom:3 }}>{t}</div>
+                  <div style={{ fontFamily:mono, fontSize:10, lineHeight:1.6, color:"rgba(245,240,232,.45)" }}>{d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:"flex", justifyContent:"center" }}>
+            <div className="lp-hero-card">{renderCard()}</div>
+          </div>
+        </div>
+      </div>
     );
   }
 
