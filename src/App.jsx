@@ -12400,8 +12400,8 @@ const PROMO13_CFG = {
   titulo: "PROMO 13",
   grupo: "STRAY KIDS",
   subtitulo: "Itens Paper Tale e Wave Maker com 13% OFF",
-  capa: "/promo-13/capa.jpg",
-  capaAltura: 220,
+  capa: null,
+  miniatura: "/promo-13/capa.jpg", // só no card da lista de pré-vendas
   desconto: 13,
   tags: ["13% OFF", "ESTOQUE LIMITADO"],
   infos: [
@@ -25621,7 +25621,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Itens Paper Tale e Wave Maker · Stray Kids",
       url: null,
       tab: "promo-13",
-      img: PROMO13_CFG.itens[0].foto,
+      img: PROMO13_CFG.miniatura,
       tags: ["13% OFF", "Estoque limitado"],
       info: "Desconto de 13% na compra de 1 ou mais itens",
     },
