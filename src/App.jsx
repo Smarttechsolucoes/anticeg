@@ -21619,6 +21619,7 @@ const WMAG_LK_CFG = {
   ],
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
   aviso: "REVISTA AINDA NÃO DISPONÍVEL PARA A VENDA",
+  bloqueado: true, // remover quando a venda abrir
 };
 
 function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
@@ -21669,6 +21670,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (cfg.bloqueado) return;
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e selecione ao menos 1 capa."); return; }
     if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
@@ -21872,9 +21874,9 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
             </div>
 
             {erro && <div style={{ color:"#ff6b6b", fontFamily:mono, fontSize:11, marginBottom:16 }}>{erro}</div>}
-            <button type="submit" disabled={status==="enviando" || !qtdTotal}
-              style={{ width:"100%", padding:"14px 0", borderRadius:10, background: qtdTotal ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:13, fontWeight:700, border:"none", cursor: qtdTotal ? "pointer" : "not-allowed", letterSpacing:"1px", transition:"all .15s" }}>
-              {status==="enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
+            <button type="submit" disabled={status==="enviando" || !qtdTotal || cfg.bloqueado}
+              style={{ width:"100%", padding:"14px 0", borderRadius:10, background: qtdTotal && !cfg.bloqueado ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado ? "#fff" : "rgba(245,240,232,.3)", fontFamily:mono, fontSize:13, fontWeight:700, border:"none", cursor: qtdTotal && !cfg.bloqueado ? "pointer" : "not-allowed", letterSpacing:"1px", transition:"all .15s" }}>
+              {cfg.bloqueado ? "AINDA NÃO DISPONÍVEL" : status==="enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
             </button>
           </form>
         )}
