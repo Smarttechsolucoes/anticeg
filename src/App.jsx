@@ -12228,7 +12228,7 @@ const ODD_CFG = {
   capaAltura: 320,
   proporcao: "1/1",
   tags: ["PEDIDOS ATÉ 23/OUT", "R$185 CADA"],
-  infos: ["Pedidos aceitos até: 23 de outubro", "Escolha o(s) personagem(ns) em Itens Soltos: cada opção custa R$185"],
+  infos: ["Pedidos aceitos até: 23 de outubro", "Demais itens da ODD & FRESH serão adicionados em breve"],
   box: null,
   itens: [
     { id: "WOLF CHAN", foto: ODD_FOTO, preco: 185 },
