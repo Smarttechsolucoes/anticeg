@@ -8903,6 +8903,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "◉", confirmacoes.length || 0)}
                 {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
+                {temAcesso("badges")       && nav("recrutadores", "Recrutadores", "◈", 0)}
               </div>
               )}
               <div className="admin-sidebar-group">
@@ -9637,6 +9638,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           ? <div style={{ color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:11, padding:"20px 0" }}>carregando...</div>
           : <AdminDisponivel data={disponiveisData} claimsInit={claimsPendentes} onClaimsChange={setClaimsPendentes} onRefresh={refreshDisponiveis} />
       )}
+
+      {adminMainTab === "recrutadores" && temAcesso("badges") && <AdminRecrutadores />}
 
       {adminMainTab === "badges" && (
         <div>
@@ -24188,7 +24191,78 @@ function ExportarPedidosDrop({ dropId, label }) {
   );
 }
 
-// ── Admin Todos os Drops ──────────────────────────────────────
+// ── Admin Recrutadores ────────────────────────────────────────
+// Ranking de quem indicou joiners (coluna joiners.recrutador). Níveis do badge Foxiny: 1-5 prata, 6+ ouro.
+function AdminRecrutadores() {
+  const mono = "'DM Mono',monospace";
+  const [grupos,  setGrupos]  = useState(null);
+  const [aberto,  setAberto]  = useState(null);
+  const [busca,   setBusca]   = useState("");
+  const [erro,    setErro]    = useState("");
+
+  useEffect(() => {
+    async function carregar() {
+      const { data: recrutados, error } = await supabase.from("joiners").select("cog, nome, nome_site, recrutador").not("recrutador", "is", null);
+      if (error) { setErro("Não consegui carregar. A coluna 'recrutador' já foi criada no Supabase?"); setGrupos([]); return; }
+      const porRec = {};
+      (recrutados || []).filter(j => j.recrutador).forEach(j => { (porRec[j.recrutador] ||= []).push(j); });
+      const cogs = Object.keys(porRec);
+      const { data: recs } = cogs.length ? await supabase.from("joiners").select("cog, nome, nome_site").in("cog", cogs) : { data: [] };
+      const nomes = Object.fromEntries((recs || []).map(r => [r.cog, r.nome_site || r.nome || r.cog]));
+      setGrupos(cogs.map(c => ({ cog: c, nome: nomes[c] || c, lista: porRec[c] })).sort((a, b) => b.lista.length - a.lista.length));
+    }
+    carregar();
+  }, []);
+
+  const nivel = n => n >= 6 ? { txt: "Ouro · Embaixador", cor: "#D4AF37" } : { txt: "Prata · Recrutador", cor: "#C0C0C0" };
+  const filtrados = (grupos || []).filter(g => !busca.trim() || `${g.cog} ${g.nome}`.toLowerCase().includes(busca.trim().toLowerCase().replace(/^@/, "")));
+  const total = (grupos || []).reduce((s, g) => s + g.lista.length, 0);
+
+  return (
+    <div>
+      <h3 className="admin-title" style={{ fontSize:16, marginBottom:6 }}>Recrutadores</h3>
+      <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", marginBottom:16 }}>
+        {grupos === null ? "carregando..." : `${grupos.length} recrutador${grupos.length !== 1 ? "es" : ""} · ${total} joiner${total !== 1 ? "s" : ""} indicado${total !== 1 ? "s" : ""}`}
+      </div>
+      <input className="login-input" type="text" placeholder="buscar recrutador (@ ou nome)" value={busca} onChange={e => setBusca(e.target.value)} style={{ marginBottom:14 }} />
+      {erro && <div className="login-error">{erro}</div>}
+      {grupos !== null && !erro && filtrados.length === 0 && (
+        <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.3)", padding:"24px 0", textAlign:"center" }}>Nenhum recrutador ainda.</div>
+      )}
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {filtrados.map((g, i) => {
+          const n = nivel(g.lista.length);
+          const open = aberto === g.cog;
+          return (
+            <div key={g.cog} style={{ background:"var(--card-bg)", border:`1px solid ${n.cor}44`, borderRadius:10, overflow:"hidden" }}>
+              <div onClick={() => setAberto(open ? null : g.cog)} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", cursor:"pointer" }}>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:n.cor, minWidth:28 }}>{i + 1}º</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)" }}>{g.nome}</div>
+                  <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>@{g.cog}</div>
+                </div>
+                <span style={{ fontFamily:mono, fontSize:9, padding:"3px 8px", borderRadius:20, color:n.cor, border:`1px solid ${n.cor}66`, letterSpacing:".5px", whiteSpace:"nowrap" }}>{n.txt}</span>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"var(--offwhite)", minWidth:24, textAlign:"right" }}>{g.lista.length}</span>
+                <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>{open ? "▴" : "▾"}</span>
+              </div>
+              {open && (
+                <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", padding:"10px 16px", display:"flex", flexDirection:"column", gap:6 }}>
+                  {g.lista.map(j => (
+                    <div key={j.cog} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>
+                      <span style={{ color:"var(--offwhite)" }}>{j.nome_site || j.nome || j.cog}</span> · @{j.cog}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Todos os Drops ────────────────────────────────────────
 function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const DROPS = [
