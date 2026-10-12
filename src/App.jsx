@@ -12403,10 +12403,11 @@ const PROMO13_CFG = {
   capa: null,
   miniatura: "/promo-13/capa.jpg", // só no card da lista de pré-vendas
   desconto: 13,
-  tags: ["13% OFF", "ESTOQUE LIMITADO"],
+  tags: ["13% OFF", "ESTOQUE LIMITADO", "PAGAMENTO 31/OUT"],
   infos: [
     "Desconto de 13% aplicado na compra de 1 ou mais itens",
     "Estoque limitado",
+    "Pagamento: 31 de outubro",
     { texto: "Itens em pré-venda", links: [
       { label: "WAVE MAKER CEG", url: "https://chat.whatsapp.com/LoJCNp8htV31x9oeYvPqyc" },
       { label: "PAPER TALE CEG", url: "https://chat.whatsapp.com/Icf1kgyrwbpEvoWHxxuZqb" },
@@ -25622,7 +25623,7 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "promo-13",
       img: PROMO13_CFG.miniatura,
-      tags: ["13% OFF", "Estoque limitado"],
+      tags: ["13% OFF", "Estoque limitado", "Pagamento 31/10"],
       info: "Desconto de 13% na compra de 1 ou mais itens",
     },
     {
