@@ -12400,7 +12400,8 @@ const PROMO13_CFG = {
   titulo: "PROMO 13",
   grupo: "STRAY KIDS",
   subtitulo: "Itens Paper Tale e Wave Maker com 13% OFF",
-  capa: null,
+  capa: "/promo-13/capa.jpg",
+  capaAltura: 220,
   desconto: 13,
   tags: ["13% OFF", "ESTOQUE LIMITADO"],
   infos: [
