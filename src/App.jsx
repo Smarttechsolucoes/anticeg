@@ -6803,7 +6803,7 @@ function LinkComunidadeBlock() {
     <div style={{ marginBottom:16, padding:"14px 16px", background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10 }}>
       <div style={{ fontSize:13, fontWeight:700, color:"var(--offwhite)", marginBottom:3 }}>Link do grupo da comunidade (WhatsApp)</div>
       <div style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", marginBottom:10 }}>
-        Aparece como botão na página /primeiro-acesso. Ao trocar o link do grupo, atualize aqui.
+        Aparece como botão na página de convite /recrutador. Ao trocar o link do grupo, atualize aqui.
       </div>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
         <input value={link} onChange={e => { setLink(e.target.value); setOk(false); setErro(""); }} placeholder="https://chat.whatsapp.com/..."

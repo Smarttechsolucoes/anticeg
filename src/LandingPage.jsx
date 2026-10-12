@@ -19,7 +19,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [senha, setSenha] = useState("");
 
   // primeiro acesso unificado (encontrar conta existente OU cadastrar)
-  const [primeiroAcesso, setPrimeiroAcesso]   = useState(() => window.location.pathname === "/primeiro-acesso");
+  const [primeiroAcesso, setPrimeiroAcesso]   = useState(() => ["/primeiro-acesso", "/recrutador"].includes(window.location.pathname));
   const [cadNome,        setCadNome]           = useState("");
   const [cadCog,         setCadCog]            = useState("");
   const [cadEmail,       setCadEmail]          = useState("");
@@ -216,7 +216,9 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   }
 
   // página /primeiro-acesso: só o formulário de primeiro acesso, sem o resto da landing
-  const soPrimeiroAcesso = window.location.pathname === "/primeiro-acesso";
+  // /recrutador é a página de convite: igual ao primeiro acesso, com o botão do grupo da comunidade
+  const modoConvite = window.location.pathname === "/recrutador";
+  const soPrimeiroAcesso = modoConvite || window.location.pathname === "/primeiro-acesso";
 
   function resetPrimeiroAcesso() {
     if (soPrimeiroAcesso) { window.location.href = "/"; return; }
@@ -264,12 +266,12 @@ export default function LandingPage({ onLogin, onVerCegs }) {
           </>
         ) : (
           <>
-            <a href={linkComunidade} target="_blank" rel="noopener noreferrer"
+            {modoConvite && <a href={linkComunidade} target="_blank" rel="noopener noreferrer"
               style={{ display:"block", textAlign:"center", textDecoration:"none", marginBottom:14, padding:"11px 12px", borderRadius:6, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, letterSpacing:".5px" }}>
               1 · Entrar na comunidade (WhatsApp) →
-            </a>
+            </a>}
             <div style={{ fontSize:11, color:"rgba(245,240,232,.35)", fontFamily:"'DM Mono',monospace", marginBottom:14, lineHeight:1.6 }}>
-              2 · Preencha seus dados. Se você já tiver conta, entrará direto — senão, seu cadastro será enviado para aprovação.
+              {modoConvite && "2 · "}Preencha seus dados. Se você já tiver conta, entrará direto — senão, seu cadastro será enviado para aprovação.
             </div>
             <input className="lp-card-input" type="text" placeholder="nome para a claim" value={cadNome}
               onChange={e => { setCadNome(e.target.value); setCadError(""); }} autoFocus />
@@ -279,7 +281,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
               onChange={e => { setCadEmail(e.target.value); setCadError(""); }} />
             <input className="lp-card-input" type="text" placeholder="whatsapp (pra te localizar nas claims)" value={cadWhats}
               onChange={e => { setCadWhats(e.target.value); setCadError(""); }} />
-            <input className="lp-card-input" type="text" placeholder="@ de quem te indicou (opcional)" value={cadRecrutador}
+            <input className="lp-card-input" type="text" placeholder={modoConvite ? "@ de quem te indicou" : "@ de quem te indicou (opcional)"} value={cadRecrutador}
               onChange={e => { setCadRecrutador(e.target.value); setCadError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()} />
             {cadError && <div className="lp-card-error">{cadError}</div>}
