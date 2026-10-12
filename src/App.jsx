@@ -8181,6 +8181,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [mercariPedidos, setMercariPedidos] = useState([]);
   const [revistaCount,      setRevistaCount]      = useState(0);
   const [wmagCount,         setWmagCount]         = useState(0);
+  const [wmagLkCount,       setWmagLkCount]       = useState(0);
   const [popupCount,        setPopupCount]        = useState(0);
   const [bazaarInCount,     setBazaarInCount]     = useState(0);
   const [lightstickCount,   setLightstickCount]   = useState(0);
@@ -8533,6 +8534,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setPopupCount(count); });
     supabase.from("pedidos_wmag").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setWmagCount(count); });
+    supabase.from("pedidos_wmag_leeknow").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setWmagLkCount(count); });
     supabase.from("pedidos_bazaar_in").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setBazaarInCount(count); });
     supabase.from("pedidos_lightstick").select("id", { count: "exact", head: true }).eq("status", "aguardando")
@@ -8852,7 +8855,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9600,16 +9603,17 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin"].includes(adminMainTab) && (
+      {["revista","wmag","wmag-leeknow","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin"].includes(adminMainTab) && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
             ← Todos os drops
           </button>
-            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo }[adminMainTab]} />
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo }[adminMainTab]} />
         </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
       {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
+      {adminMainTab === "wmag-leeknow" && <AdminWMag  cfg={WMAG_LK_CFG} onCountChange={setWmagLkCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
       {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
@@ -9619,7 +9623,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "wave-maker-admin" && <AdminWaveMaker onCountChange={setWaveMakerCount} />}
       {adminMainTab === "run-it-admin"     && <AdminRunIt     onCountChange={setRunItCount} />}
       {adminMainTab === "paper-tales-admin" && <AdminWaveMaker cfg={PT_CFG} onCountChange={setPaperTalesCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -21586,8 +21590,39 @@ const WMAG_CAPAS = [
   { id:"c", label:"Capa C", img:"https://image.aladin.co.kr/product/40016/43/cover500/k452130232_1.jpg" },
 ];
 
-function WMagFormPage() {
-  const encerrado = new Date() > WMAG_DEADLINE;
+const WMAG_HJ_CFG = {
+  tabela: "pedidos_wmag", pasta: "wmag", produto: "W MAGAZINE HYUNJIN",
+  titulo: "W MAGAZINE", sub: "HYUNJIN", deadline: WMAG_DEADLINE, pedidosAte: "14/08/2026",
+  preco: WMAG_PRECO, capas: WMAG_CAPAS, pagarAte: "21/08",
+  avisos: [
+    <>O formulário ficará aberto até <strong>sexta-feira (14/08)</strong>.</>,
+    <>Pagamento até <strong>sexta-feira (21/08)</strong>.</>,
+    <>O frete internacional será liberado <strong>ainda esse mês</strong>.</>,
+    <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
+  ],
+  dica: <>Tenha em mente que a revista pode ser pesada — o frete pode custar até <strong>R$100</strong>.</>,
+};
+
+// W MAGAZINE LEE KNOW — prazo ainda a definir (sem deadline = sempre aberto)
+const WMAG_LK_CAPAS = [
+  { id:"a", label:"Capa A", img:"https://www.wkorea.com//wp_data/w/2026/10/style_6acc37bd30686-1056x1400.jpg" },
+  { id:"b", label:"Capa B", img:"https://www.wkorea.com//wp_data/w/2026/10/style_6acc37c826110-1056x1400.jpg" },
+  { id:"c", label:"Capa C", img:"https://www.wkorea.com//wp_data/w/2026/10/style_6acc37d5c0603-1056x1400.jpg" },
+];
+const WMAG_LK_CFG = {
+  tabela: "pedidos_wmag_leeknow", pasta: "wmag-leeknow", produto: "W MAGAZINE LEE KNOW",
+  titulo: "W MAGAZINE", sub: "LEE KNOW", deadline: null, pedidosAte: null,
+  preco: 48, capas: WMAG_LK_CAPAS, pagarAte: null,
+  avisos: [
+    <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
+    <>O prazo de pagamento e o frete internacional serão <strong>avisados em breve</strong>.</>,
+  ],
+  dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
+};
+
+function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
+  const { capas: WMAG_CAPAS, preco: WMAG_PRECO } = cfg;
+  const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
   const mono = "'DM Mono',monospace";
   const [claim,      setClaim]      = useState("");
   const [nome,       setNome]       = useState("");
@@ -21640,7 +21675,7 @@ function WMagFormPage() {
     let comprovanteUrl = null;
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
-      const path = `wmag/${Date.now()}.${ext}`;
+      const path = `${cfg.pasta}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
@@ -21648,7 +21683,7 @@ function WMagFormPage() {
     }
 
     const statusPedido = pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao_whatsapp";
-    const { data, error } = await supabase.from("pedidos_wmag").insert([{
+    const { data, error } = await supabase.from(cfg.tabela).insert([{
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       capa_a: qtds.a, capa_b: qtds.b, capa_c: qtds.c,
       qtd_total: qtdTotal, valor_total: total,
@@ -21661,7 +21696,7 @@ function WMagFormPage() {
 
     if (pagamento === "cartao") {
       const linhas = WMAG_CAPAS.filter(c => qtds[c.id] > 0).map(c => `${c.label}: ${qtds[c.id]}x`).join("\n");
-      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da W MAGAZINE HYUNJIN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\n${linhas}\nTotal: R$${total.toFixed(2).replace(".",",")}`);
+      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da ${cfg.produto} via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\n${linhas}\nTotal: R$${total.toFixed(2).replace(".",",")}`);
       const waWin = window.open("", "_blank");
       if (waWin) waWin.location = `https://wa.me/${WA_WMAG}?text=${msg}`;
     }
@@ -21681,11 +21716,11 @@ function WMagFormPage() {
       <div style={{ width:"100%", maxWidth:520 }}>
         <div style={{ marginBottom:32, textAlign:"center" }}>
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"4px", color:"rgba(245,240,232,.3)", marginBottom:8 }}>ANTI CEGS × PRÉ-VENDA</div>
-          <div style={{ fontSize:"clamp(22px,6vw,32px)", fontWeight:900, letterSpacing:"-1px", lineHeight:1.1 }}>W MAGAZINE</div>
-          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:6 }}>HYUNJIN</div>
-          {!encerrado && (
+          <div style={{ fontSize:"clamp(22px,6vw,32px)", fontWeight:900, letterSpacing:"-1px", lineHeight:1.1 }}>{cfg.titulo}</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:6 }}>{cfg.sub}</div>
+          {!encerrado && cfg.pedidosAte && (
             <div style={{ marginTop:10, fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", letterSpacing:"1px" }}>
-              PEDIDOS ATÉ 14/08/2026
+              PEDIDOS ATÉ {cfg.pedidosAte}
             </div>
           )}
         </div>
@@ -21702,19 +21737,16 @@ function WMagFormPage() {
 
         <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
-          <div>• O formulário ficará aberto até <strong>sexta-feira (14/08)</strong>.</div>
-          <div>• Pagamento até <strong>sexta-feira (21/08)</strong>.</div>
-          <div>• O frete internacional será liberado <strong>ainda esse mês</strong>.</div>
-          <div>• Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</div>
+          {cfg.avisos.map((a, i) => <div key={i}>• {a}</div>)}
           <div style={{ marginTop:8, padding:"8px 10px", background:"rgba(245,240,232,.05)", borderRadius:6 }}>
-            💡 Tenha em mente que a revista pode ser pesada — o frete pode custar até <strong>R$100</strong>.
+            💡 {cfg.dica}
           </div>
         </div>
 
         {encerrado ? (
           <div style={{ textAlign:"center", padding:"40px 0" }}>
             <div style={{ fontSize:32, marginBottom:12 }}>🔒</div>
-            <div style={{ fontFamily:mono, fontSize:13, color:"rgba(245,240,232,.5)" }}>Pedidos encerrados em 14/08/2026.</div>
+            <div style={{ fontFamily:mono, fontSize:13, color:"rgba(245,240,232,.5)" }}>Pedidos encerrados em {cfg.pedidosAte}.</div>
           </div>
         ) : status === "sucesso" ? (
           <div style={{ textAlign:"center", padding:"40px 0" }}>
@@ -21788,7 +21820,9 @@ function WMagFormPage() {
 
               {pagamento === "depois" && (
                 <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.7 }}>
-                  Seu pedido será registrado sem pagamento agora. O prazo para pagar é <strong style={{ color:"var(--offwhite)" }}>21/08</strong> — após isso o pedido será cancelado automaticamente.
+                  Seu pedido será registrado sem pagamento agora. {cfg.pagarAte
+                    ? <>O prazo para pagar é <strong style={{ color:"var(--offwhite)" }}>{cfg.pagarAte}</strong> — após isso o pedido será cancelado automaticamente.</>
+                    : "O prazo de pagamento será informado em breve."}
                 </div>
               )}
 
@@ -21842,17 +21876,18 @@ function WMagFormPage() {
   );
 }
 
-function AdminWMag({ onCountChange }) {
+function AdminWMag({ onCountChange, cfg = WMAG_HJ_CFG }) {
+  const { capas: WMAG_CAPAS } = cfg;
   const mono = "'DM Mono',monospace";
   const [pedidos, setPedidos] = useState([]);
 
   useEffect(() => {
-    supabase.from("pedidos_wmag").select("*").order("created_at", { ascending:false })
+    supabase.from(cfg.tabela).select("*").order("created_at", { ascending:false })
       .then(({ data }) => { if (data) setPedidos(data); });
   }, []);
 
   async function atualizar(id, novoStatus) {
-    await supabase.from("pedidos_wmag").update({ status:novoStatus }).eq("id", id);
+    await supabase.from(cfg.tabela).update({ status:novoStatus }).eq("id", id);
     setPedidos(prev => {
       const next = prev.map(p => p.id===id ? {...p,status:novoStatus} : p);
       onCountChange?.(next.filter(p=>p.status!=="confirmado"&&p.status!=="cancelado").length);
@@ -21865,7 +21900,7 @@ function AdminWMag({ onCountChange }) {
 
   return (
     <div style={{ padding:"24px 0" }}>
-      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:20 }}>W MAGAZINE — HYUNJIN</div>
+      <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:20 }}>{cfg.titulo} — {cfg.sub}</div>
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         {pedidos.length===0 && <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"20px 0" }}>Nenhum pedido ainda.</div>}
         {pedidos.map(p => (
@@ -23980,6 +24015,7 @@ function ExportarPedidosDrop({ dropId, label }) {
   const EXPORT_DROP = {
     "revista": { tabela:"pedidos_revista", linhas:p => [...rep(p.versao_regular, "Revista Nylon — Regular", REVISTA_PRECO), ...rep(p.versao_guys, "Revista Nylon — Guys", REVISTA_PRECO)] },
     "wmag":    { tabela:"pedidos_wmag",    linhas:p => [["Capa A", p.capa_a], ["Capa B", p.capa_b], ["Capa C", p.capa_c]].flatMap(([n, q]) => rep(q, `W Magazine Hyunjin — ${n}`, WMAG_PRECO)) },
+    "wmag-leeknow": { tabela:"pedidos_wmag_leeknow", linhas:p => [["Capa A", p.capa_a], ["Capa B", p.capa_b], ["Capa C", p.capa_c]].flatMap(([n, q]) => rep(q, `W Magazine Lee Know — ${n}`, WMAG_LK_CFG.preco)) },
     "popup":   { tabela:"pedidos_popup",   linhas:p => (p.itens || []).flatMap(i => rep(i.qtd || 1, `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} [wk ${i.week}]`, POPUP_ITEMS.find(x => x.id === i.item_id)?.preco ?? null)) },
     "bazaar-in": { tabela:"pedidos_bazaar_in", linhas:p => [["capaA", p.capa_a], ["capaB", p.capa_b], ["capaC", p.capa_c], ["caixaF", p.caixa_f], ["caixaG", p.caixa_g]].flatMap(([id, q]) => { const b = BAZAAR_IN_TODOS.find(x => x.id === id); return rep(q, b.label, b.preco); }) },
     "lightstick":     { tabela:"pedidos_lightstick",     linhas:() => [{ item:"Lightstick SKZ", preco:450 }] },
@@ -24048,11 +24084,12 @@ function ExportarPedidosDrop({ dropId, label }) {
 }
 
 // ── Admin Todos os Drops ──────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const DROPS = [
     { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" },
+    { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
     { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
@@ -25374,6 +25411,16 @@ function PrevendaTab({ user }) {
       info: "Encontrou algo no Mercari Japão? Manda o link e a gente compra pra você.",
     },
     {
+      key: "wmag-leeknow",
+      ativo: true,
+      titulo: "W MAGAZINE",
+      subtitulo: "Lee Know — 3 capas",
+      url: "/wmag-leeknow",
+      img: null,
+      tags: ["Pedidos abertos"],
+      info: "R$ 48,00 por unidade · PIX ou cartão · prazo a definir",
+    },
+    {
       key: "wmag-hyunjin",
       ativo: false,
       titulo: "W MAGAZINE",
@@ -26599,6 +26646,7 @@ export default function App() {
   if (window.location.pathname === "/prevenda/singba") return <SingbaForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/prevenda/popcorn-sleeve") return <PopcornSleeveForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
+  if (window.location.pathname === "/wmag-leeknow") return <WMagFormPage cfg={WMAG_LK_CFG} />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   if (page === "landing" || !user) {
     if (window.location.pathname === "/claim") {
