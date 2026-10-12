@@ -2,6 +2,7 @@
 import supabase from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
+import { resolverRecrutador, contarRecrutados } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
 import badgeFoxinyBronze  from "./assets/badges/foxiny_bronze.jpg.png";
 import badgeFoxinyPrata   from "./assets/badges/foxiny_prata.jpg.png";
@@ -434,7 +435,7 @@ const CEG_GRUPO = {
 const BADGES_MANUAIS = {};
 
 const BADGES_DEF = [
-  { id: "foxiny",   img: badgeFoxinyBronze,  imgBronze: badgeFoxinyBronze,  imgPrata: badgeFoxinyPrata,  imgOuro: badgeFoxinyOuro,   label: "Foxiny",   titulo: "Novo Membro",      desc: "Novo membro — 1ª CEG vinculada" },
+  { id: "foxiny",   img: badgeFoxinyBronze,  imgBronze: badgeFoxinyBronze,  imgPrata: badgeFoxinyPrata,  imgOuro: badgeFoxinyOuro,   label: "Foxiny",   titulo: "Maknae on Top",   titulos: { bronze: "Maknae on Top", prata: "Recrutador", ouro: "Embaixador" }, desc: "Maknae on Top — entrou na comu · Prata recrutou 1-5 · Ouro recrutou 6+" },
   { id: "puppym",   img: badgePuppymBronze,  imgBronze: badgePuppymBronze,  imgPrata: badgePuppymPrata,  imgOuro: badgePuppymOuro,   label: "Puppym",   titulo: "Joiner Fiel",       desc: "Joiner fiel — Bronze 5+ · Prata 15+ · Ouro 30+ CEGs" },
   { id: "wolfchan", img: badgeWolfchanBronze, imgBronze: badgeWolfchanBronze, imgPrata: badgeWolfchanPrata, imgOuro: badgeWolfchanOuro, label: "Wolfchan", titulo: "Polivalente",        desc: "Polivalente — Bronze 1-4 · Prata 5-9 · Ouro 10+ interações" },
   { id: "bbokari",  img: badgeBbokari,       imgBronze: badgeBbokari,       imgPrata: badgeBbokariPrata, imgOuro: badgeBbokariOuro,  label: "Bbokari",  titulo: "Veterana do Envio", desc: "Veterana do envio — Bronze 1+ · Prata 3+ · Ouro 5+ envios" },
@@ -457,7 +458,7 @@ function badgeImg(b, tier) {
   return b.img;
 }
 
-function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [], multasPagas = 0, cog = null }) {
+function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [], multasPagas = 0, recrutados = 0, cog = null }) {
   const cegsDistintos  = new Set(itens.map(i => i.ceg)).size;
   const gruposDistintos = new Set(itens.map(i => CEG_GRUPO[i.ceg]).filter(Boolean)).size;
   const totalPago = itens.reduce((a, i) =>
@@ -472,7 +473,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
 
   function calcTier(id) {
     switch (id) {
-      case "foxiny":   return itens.length > 0 ? "bronze" : null;
+      case "foxiny":   return recrutados >= 6 ? "ouro" : recrutados >= 1 ? "prata" : "bronze";
       case "puppym":   return cegsDistintos >= 30 ? "ouro" : cegsDistintos >= 15 ? "prata" : cegsDistintos >= 5 ? "bronze" : null;
       case "wolfchan": return totalInteracoes >= 10 ? "ouro" : totalInteracoes >= 5 ? "prata" : totalInteracoes >= 1 ? "bronze" : null;
       case "bbokari":  return enviosFeitos >= 5 ? "ouro" : enviosFeitos >= 3 ? "prata" : enviosFeitos >= 1 ? "bronze" : null;
@@ -488,7 +489,9 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
   function calcDetalhe(id, tier) {
     switch (id) {
       case "foxiny":
-        return tier ? "Bem-vinda à comunidade! Participando de ao menos 1 CEG." : "Adicione pelo menos 1 item na masterlist.";
+        return tier === "ouro"   ? `🥇 ${recrutados} membros recrutados — você é embaixadora!`
+             : tier === "prata"  ? `🥈 ${recrutados} recrutado(s) — faltam ${6 - recrutados} pra Ouro (6).`
+             : "🥉 Bem-vinda à comunidade! Peça pra quem você convidar colocar seu @ como recrutador — com 1 você chega na Prata.";
       case "puppym":
         return tier === "ouro"   ? `🥇 ${cegsDistintos} CEGs — você é joiner veterana!`
              : tier === "prata"  ? `🥈 ${cegsDistintos} CEGs — faltam ${30 - cegsDistintos} pra Ouro (30).`
@@ -531,6 +534,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
     const tier = manuais[b.id] || calcTier(b.id);
     return {
       ...b,
+      titulo: (tier && b.titulos?.[tier]) || b.titulo,
       tier,
       earned: tier !== null,
       detalhe: manuais[b.id] ? "Conquistado — concedido pela equipe ANTICEG." : calcDetalhe(b.id, tier),
@@ -3554,6 +3558,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [repasseCiente,       setRepasseCiente]       = useState(false);
   // ── badges ──
   const [multasPagasCount, setMultasPagasCount] = useState(0);
+  const [recrutadosCount,  setRecrutadosCount]  = useState(0);
   const [badgesAntiv, setBadgesAntiv] = useState([]);
 
   const sortPendentes = arr => [...arr].sort((a, b) => {
@@ -3632,6 +3637,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       if (itensData) setMeusItens(itensData);
       if (repassosData) setMeusRepassos(repassosData);
       setMultasPagasCount(multasCount || 0);
+      contarRecrutados(user.cog).then(n => { if (!cancelled) setRecrutadosCount(n); });
     }
     load();
     return () => { cancelled = true; };
@@ -3667,6 +3673,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [nome] = useState(user.nome || "");
   const [nomeSite, setNomeSite] = useState(user.nome_site || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
+  const [recrutadorInp, setRecrutadorInp] = useState(user.recrutador ? "@" + user.recrutador : "");
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || "");
   const [email, setEmail] = useState(user.email || "");
   const [loading, setLoading] = useState(false);
@@ -3755,6 +3762,14 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     setLoading(true); setError(""); setSuccess("");
 
     const updates = { nome_site: nomeSite, twitter, whatsapp, email };
+
+    // recrutador: só pode ser definido uma vez
+    if (!user.recrutador && recrutadorInp.trim()) {
+      const cogRec = await resolverRecrutador(recrutadorInp);
+      if (!cogRec) { setError("Recrutador não encontrado. Confira o @."); setLoading(false); return; }
+      if (cogRec === user.cog) { setError("Você não pode ser seu próprio recrutador."); setLoading(false); return; }
+      updates.recrutador = cogRec;
+    }
 
     const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
     if (err) { setError("Erro ao salvar."); setLoading(false); return; }
@@ -5336,7 +5351,7 @@ ${compHTML}
           })}</div>);})()}
 
       {perfilSubTab === "badges" && (() => {
-        const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount, cog: user.cog });
+        const badges = computeBadges({ itens: meusItens, envios: meuEnvios, pagamentos: meusPagamentos, reports: meuReports, multasPagas: multasPagasCount, recrutados: recrutadosCount, cog: user.cog });
         return (
           <div style={{ paddingBottom: 40 }}>
             <BadgesRow badges={badges} />
@@ -5711,6 +5726,10 @@ ${compHTML}
           <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
           <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
           <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+          <div>
+            <label className="login-label">Quem te indicou <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>@ do recrutador · {user.recrutador ? "não editável" : "só pode ser definido uma vez"}</span></label>
+            <input className="login-input" style={{ ...inputStyle, ...(user.recrutador ? { opacity:0.45, cursor:"default" } : {}) }} type="text" placeholder="@recrutador (opcional)" value={recrutadorInp} readOnly={!!user.recrutador} onChange={e => setRecrutadorInp(e.target.value)} />
+          </div>
           {error && <div className="login-error">{error}</div>}
           {success && <div style={{ fontSize: "var(--fs-xs)", color: "var(--verde)", padding: "8px 12px", background: "rgba(186,255,57,.08)", border: "1px solid rgba(186,255,57,.2)", borderRadius: 4 }}>{success}</div>}
           <button className="login-btn" onClick={handleSalvar} disabled={loading} style={{ marginTop: 8 }}>{loading ? "SALVANDO..." : "SALVAR ALTERAÇÕES →"}</button>
@@ -8758,6 +8777,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .or(`cog.ilike.%${termo}%,nome.ilike.%${termo}%`).limit(1).single();
     if (!joiner) { setBadgesErro("Joiner não encontrado."); setBadgesLoading(false); return; }
 
+    const recrutadosJoiner = await contarRecrutados(joiner.cog);
     const [{ data: itens }, { data: envios }, { data: reports }, { data: pagamentos }, { count: multasPagas }] = await Promise.all([
       supabase.from("masterlist").select("ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf").eq("cog", joiner.cog),
       supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", joiner.cog),
@@ -8768,7 +8788,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     setBadgesJoiner({
       joiner,
-      badges: computeBadges({ itens: itens || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasPagas || 0, cog: joiner.cog }),
+      badges: computeBadges({ itens: itens || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasPagas || 0, recrutados: recrutadosJoiner, cog: joiner.cog }),
     });
     setBadgesLoading(false);
   }
@@ -26663,7 +26683,9 @@ export default function App() {
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog).gte("created_at", BADGE_MULTAS_DESDE),
       ]);
       if (cancelled) return;
-      const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0, cog: user.cog });
+      const recrutadosUser = await contarRecrutados(user.cog);
+      if (cancelled) return;
+      const computed = computeBadges({ itens: itensData || [], envios: envios || [], pagamentos: pagamentos || [], reports: reports || [], multasPagas: multasCount || 0, recrutados: recrutadosUser, cog: user.cog });
       const earnedIds = computed.filter(b => b.earned).map(b => b.id);
       const storeKey = `anticeg_badges_${user.cog}`;
       let prevSeen = null;

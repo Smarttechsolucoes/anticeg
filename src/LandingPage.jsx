@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
 import bonequinha from "./assets/bonequinha.png";
+import { resolverRecrutador } from "./recrutador.js";
 
 
 const WA = "5524992782023";
@@ -23,6 +24,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [cadCog,         setCadCog]            = useState("");
   const [cadEmail,       setCadEmail]          = useState("");
   const [cadWhats,       setCadWhats]          = useState("");
+  const [cadRecrutador,  setCadRecrutador]     = useState("");
   const [cadError,       setCadError]          = useState("");
   const [cadLoading,     setCadLoading]        = useState(false);
   const [cadOk,          setCadOk]             = useState(false);
@@ -160,6 +162,14 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       setCadLoading(false); return;
     }
 
+    // recrutador (opcional): precisa existir
+    let recrutador = null;
+    if (cadRecrutador.trim()) {
+      recrutador = await resolverRecrutador(cadRecrutador);
+      if (!recrutador) { setCadError("Recrutador não encontrado. Confira o @ ou deixe em branco."); setCadLoading(false); return; }
+      if (recrutador === cog) { setCadError("Você não pode ser seu próprio recrutador."); setCadLoading(false); return; }
+    }
+
     // verifica duplicata na tabela de joiners
     const { data: dupJoiner } = await supabase.from("joiners").select("id")
       .or(`cog.eq.${cog},email.eq.${eml}`).maybeSingle();
@@ -168,6 +178,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     // cria conta diretamente
     const { error: joinErr } = await supabase.from("joiners").insert([{
       cog, nome, email: eml, twitter: "@" + cog, whatsapp: whats || null, confirmado: false,
+      ...(recrutador ? { recrutador } : {}),
     }]);
     if (joinErr) { setCadError("Erro ao criar conta. Tente novamente."); setCadLoading(false); return; }
 
@@ -207,7 +218,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   function resetPrimeiroAcesso() {
     if (soPrimeiroAcesso) { window.location.href = "/"; return; }
     setPrimeiroAcesso(false);
-    setCadNome(""); setCadCog(""); setCadEmail(""); setCadWhats("");
+    setCadNome(""); setCadCog(""); setCadEmail(""); setCadWhats(""); setCadRecrutador("");
     setCadError(""); setCadOk(false);
   }
 
@@ -260,7 +271,9 @@ export default function LandingPage({ onLogin, onVerCegs }) {
             <input className="lp-card-input" type="email" placeholder="e-mail" value={cadEmail}
               onChange={e => { setCadEmail(e.target.value); setCadError(""); }} />
             <input className="lp-card-input" type="text" placeholder="whatsapp (pra te localizar nas claims)" value={cadWhats}
-              onChange={e => { setCadWhats(e.target.value); setCadError(""); }}
+              onChange={e => { setCadWhats(e.target.value); setCadError(""); }} />
+            <input className="lp-card-input" type="text" placeholder="@ de quem te indicou (opcional)" value={cadRecrutador}
+              onChange={e => { setCadRecrutador(e.target.value); setCadError(""); }}
               onKeyDown={e => e.key === "Enter" && handlePrimeiroAcesso()} />
             {cadError && <div className="lp-card-error">{cadError}</div>}
             <button className="lp-card-btn" onClick={handlePrimeiroAcesso} disabled={cadLoading}>
