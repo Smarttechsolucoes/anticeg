@@ -104,7 +104,7 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
 
   if (estado === "ok") {
     return (
-      <div data-testid="admin-auth-ok" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px", padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.ok }}>
+      <div data-testid="admin-auth-ok" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0", padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.ok }}>
         <span>🔒 Sessão segura verificada (MFA)</span>
         <span style={{ color: C.mudo }}>{email}</span>
         <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setTrocando(v => !v)}>Trocar senha</button>
@@ -115,14 +115,14 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
   }
   if (!bloqueante && !aberto) {
     return (
-      <div data-testid="admin-auth-aviso" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px", padding: "8px 12px", borderRadius: 8, border: `1px dashed ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.mudo }}>
+      <div data-testid="admin-auth-aviso" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0", padding: "8px 12px", borderRadius: 8, border: `1px dashed ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.mudo }}>
         <span>🔓 Acesso seguro (MFA) ainda não verificado nesta sessão.</span>
         <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setAberto(true)}>Entrar com MFA</button>
       </div>
     );
   }
   return (
-    <div data-testid="admin-auth-card" style={{ maxWidth: 420, margin: bloqueante ? "40px auto" : "0 0 12px", padding: 16, borderRadius: 12, border: `1px solid ${C.borda}`, background: C.bg, color: C.texto }}>
+    <div data-testid="admin-auth-card" style={{ maxWidth: 420, width: "100%", boxSizing: "border-box", margin: bloqueante ? "24px auto" : "0 0 12px", padding: 16, borderRadius: 12, border: `1px solid ${C.borda}`, background: C.bg, color: C.texto }}>
       {estado === "carregando" && <div style={{ color: C.mudo, fontFamily: mono, fontSize: 12 }}>Verificando acesso…</div>}
       {estado === "sair" && <FormEntrar auth={auth} />}
       {estado === "verificar_mfa" && (
@@ -135,12 +135,13 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
       {estado === "cadastrar_mfa" && (
         <div style={{ display: "grid", gap: 10 }}>
           <Titulo>Ative a verificação em duas etapas</Titulo>
-          <div style={{ color: C.mudo, fontSize: 12 }}>1. Instale um app autenticador no celular (Google Authenticator, Authy ou similar).<br />2. Gere o QR Code abaixo e leia com o app.<br />3. Digite o código de 6 números que o app mostrar.</div>
+          <div style={{ color: C.mudo, fontSize: 12 }}>1. Instale um app autenticador no celular (Google Authenticator, Authy ou similar).<br />2. Toque em gerar e leia o QR Code com o app (ou use a chave escrita).<br />3. Digite o código de 6 números que o app mostrar.</div>
           {!auth.cadastro && <><Aviso texto={auth.mensagem} /><button style={botao} onClick={auth.gerarQr} disabled={auth.ocupado}>{auth.ocupado ? "Gerando…" : "Gerar QR Code"}</button></>}
           {auth.cadastro && (
             <>
               <img src={auth.cadastro.qrCode} alt="QR Code para o app autenticador" style={{ width: 180, height: 180, background: "#fff", borderRadius: 8, padding: 6, justifySelf: "center" }} />
-              <div style={{ color: C.mudo, fontSize: 11, fontFamily: mono, wordBreak: "break-all" }}>Sem câmera? Digite esta chave no app: <b style={{ color: C.texto }}>{auth.cadastro.segredo}</b></div>
+              <div style={{ color: C.mudo, fontSize: 11, fontFamily: mono, wordBreak: "break-all" }}>Sem câmera ou está no celular? No app, escolha "inserir chave" e digite: <b style={{ color: C.texto }}>{auth.cadastro.segredo}</b></div>
+              {auth.cadastro.uri && <a href={auth.cadastro.uri} style={{ ...botaoSec, textAlign: "center", textDecoration: "none", fontSize: 12 }}>Estou no celular: abrir direto no app</a>}
               <FormCodigo auth={auth} fatorId={auth.cadastro.fatorId} rotulo="Ativar" />
             </>
           )}
@@ -169,10 +170,10 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
 export function AdminAuthGate({ children }) {
   const auth = useAdminAuth();
   const liberado = auth.info.estado === "ok";
-  if (ADMIN_AUTH_OBRIGATORIA && !liberado) return <AdminAuthCard auth={auth} bloqueante />;
+  if (ADMIN_AUTH_OBRIGATORIA && !liberado) return <div className="admin-auth-wrap"><AdminAuthCard auth={auth} bloqueante /></div>;
   return (
     <>
-      <AdminAuthCard auth={auth} />
+      <div className="admin-auth-wrap"><AdminAuthCard auth={auth} /></div>
       {children}
     </>
   );

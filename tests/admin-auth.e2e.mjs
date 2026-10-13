@@ -1,5 +1,6 @@
 // Teste de navegador do login de administrador (Playwright, API de autenticação simulada). Não toca no Supabase real.
 // Uso: em dois terminais -> `npx vite --port 5199 --strictPort` e `VITE_ADMIN_AUTH_OBRIGATORIA=true npx vite --port 5198 --strictPort`; depois `node tests/admin-auth.e2e.mjs`.
+// Para ver o layout: VP=390x800 SHOTS=<pasta> node tests/admin-auth.e2e.mjs
 import { chromium } from "playwright";
 let falhas = 0; const ok = (c, m) => { console.log((c ? "OK   " : "FALHA ") + m); if (!c) falhas++; };
 const SHOTS = process.env.SHOTS;
@@ -15,7 +16,7 @@ const FATOR_OK = { id: "f-ok", factor_type: "totp", status: "verified", friendly
 
 // cenário: { senhaCerta, fatores (do usuário), codigoCerto, ehAdmin }
 async function nova(porta, cen) {
-  const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: (() => { const [w, h] = (process.env.VP || "1100x1000").split("x").map(Number); return { width: w, height: h }; })() });
   await ctx.addInitScript(u => { localStorage.setItem("anticeg_user_v2", JSON.stringify(u)); localStorage.setItem("anticeg_session_v", "4"); localStorage.setItem("anticeg_session_at_v2", String(Date.now())); localStorage.setItem("anticeg_tutorial_v1", "1"); localStorage.setItem("anticeg_push_asked", "1"); localStorage.setItem("anticeg_a2hs_asked", "1"); }, USER);
   const reg = { rpc: [], restAuth: [], logout: 0, enrolls: 0, unenrolls: 0 };
   const est = { fatores: cen.fatores.slice(), aal: "aal1", logado: false };
@@ -49,6 +50,7 @@ async function nova(porta, cen) {
     if (u.includes("supabase.co/rest/v1/")) {
       if (req.method() === "GET") reg.restAuth.push(req.headers()["authorization"] || "");
       const objeto = (req.headers()["accept"] || "").includes("pgrst.object");
+      if (u.includes("/rest/v1/config") && u.includes("admin_pin") && objeto) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ value: "123456" }) });
       if (u.includes("/rest/v1/joiners") && objeto) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(USER) });
       return route.fulfill({ status: 200, contentType: "application/json", body: objeto ? "{}" : "[]", headers: { "content-range": "*/0" } });
     }
@@ -70,6 +72,7 @@ const shot = async (page, n) => { if (SHOTS) await page.screenshot({ path: `${SH
   await shot(page, "1-aviso");
   await page.getByRole("button", { name: "Entrar com MFA" }).click();
   ok(await page.getByLabel("E-mail do administrador").count() === 1, "clicar em 'Entrar com MFA' abre o formulário");
+  await shot(page, "1b-form");
   // senha errada
   await page.getByLabel("E-mail do administrador").fill("dona@exemplo.com"); await page.getByLabel("Senha").fill("errada");
   await page.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(500);
@@ -81,6 +84,7 @@ const shot = async (page, n) => { if (SHOTS) await page.screenshot({ path: `${SH
   ok(reg.rpc.length === 0, "aal1: o painel ainda NÃO considera a pessoa admin (nenhuma consulta is_admin antes do MFA)");
   await page.getByRole("button", { name: "Gerar QR Code" }).click(); await page.waitForTimeout(600);
   ok(await page.getByAltText("QR Code para o app autenticador").count() === 1 && (await corpo(page)).includes("SEGREDOTESTE123"), "mostra o QR Code e a chave para digitar à mão");
+  ok(await page.getByRole("link", { name: /Estou no celular/ }).getAttribute("href") === "otpauth://totp/x", "mostra o atalho \"abrir direto no app\" (otpauth) para quem está no celular");
   await shot(page, "2-qr");
   await page.getByLabel("Código de 6 dígitos").fill("000000"); await page.getByRole("button", { name: "Ativar" }).click(); await page.waitForTimeout(500);
   ok((await corpo(page)).includes("Código inválido ou expirado"), "código errado: mensagem clara");
@@ -170,6 +174,17 @@ const shot = async (page, n) => { if (SHOTS) await page.screenshot({ path: `${SH
   await page.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(500);
   await page.getByLabel("Código de 6 dígitos").fill("654321"); await page.getByRole("button", { name: "Confirmar" }).click(); await page.waitForTimeout(900);
   ok(!(await corpo(page)).includes("Pagamentos") && (await corpo(page)).includes("Conta sem permissão"), "modo obrigatório: conta que não é admin NÃO abre o painel, mesmo com MFA");
+  await T.browser.close();
+}
+
+// ── 5) o PIN: com o login seguro desligado ele continua; ligado, some (e-mail + senha + código é a única porta) ──
+for (const [porta, obrigatorio] of [[5199, false], [5198, true]]) {
+  const T = await nova(porta, { senhaCerta: "s", fatores: [FATOR_OK], codigoCerto: "654321", ehAdmin: true }); const { page } = T;
+  await page.goto(`http://localhost:${porta}/`, { waitUntil: "networkidle" }); await page.waitForTimeout(600);
+  await page.locator(".tab-btn", { hasText: "Admin" }).first().click(); await page.waitForTimeout(500);
+  const t = await corpo(page);
+  if (obrigatorio) ok(!t.includes("insira o PIN de acesso") && await page.getByTestId("admin-auth-card").count() === 1, "modo obrigatório: NÃO pede PIN; vai direto para e-mail + senha + código");
+  else ok(t.includes("insira o PIN de acesso"), "modo aviso: o PIN continua como hoje (nada muda até ligar o login seguro)");
   await T.browser.close();
 }
 

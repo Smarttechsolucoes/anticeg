@@ -75,7 +75,7 @@ export function criarAdminAuth(client) {
     }
     const { data, error } = await client.auth.mfa.enroll({ factorType: "totp", friendlyName: "Anti CEG admin " + Date.now().toString(36) });
     if (error || !data?.totp) return { erro: mensagemAmigavel(error, "cadastro") };
-    return { fatorId: data.id, qrCode: data.totp.qr_code, segredo: data.totp.secret };
+    return { fatorId: data.id, qrCode: data.totp.qr_code, segredo: data.totp.secret, uri: data.totp.uri || "" };
   }
 
   async function confirmar(fatorId, codigo) {

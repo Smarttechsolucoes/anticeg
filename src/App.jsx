@@ -4,6 +4,7 @@ import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
+import { ADMIN_AUTH_OBRIGATORIA } from "./adminAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -27329,7 +27330,8 @@ export default function App() {
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
-            if (adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
+            // com o login seguro obrigatório (e-mail + senha + MFA) o PIN deixa de existir: ele fica legível por qualquer visitante e não protege nada
+            if (!ADMIN_AUTH_OBRIGATORIA && adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
             else { setAdminReset(v => v + 1); changeTab("admin"); }
           }}>⚙ Admin</button>
         )}
