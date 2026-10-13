@@ -280,15 +280,18 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
   const rotulo = s => ({ confirmado: "confirmado", cancelado: "cancelado", cartao: "cartão — confirmar no linknabio", pendente: "pagamento pendente", aguardando: "aguardando confirmação do PIX" }[s] || s);
 
   // resumo por item (para fazer a compra): tudo que não foi cancelado, e quanto já está confirmado
-  const resumo = SMOLMERCH_OPCOES.map(o => {
-    let pedido = 0, confirmado = 0;
-    pedidos.forEach(p => (p.itens || []).forEach(i => {
-      if (i.id !== o.id || p.status === "cancelado") return;
-      pedido += Number(i.qtd) || 0;
-      if (p.status === "confirmado") confirmado += Number(i.qtd) || 0;
-    }));
-    return { ...o, pedido, confirmado };
-  }).filter(r => r.pedido > 0);
+  const porId = new Map(SMOLMERCH_OPCOES.map(o => [o.id, { ...o, pedido: 0, confirmado: 0 }]));
+  pedidos.forEach(p => {
+    if (p.status === "cancelado") return;
+    (p.itens || []).forEach(i => {
+      // opção que saiu do catálogo depois do pedido: usa o nome gravado no próprio pedido
+      if (!porId.has(i.id)) porId.set(i.id, { id: i.id, produto: i.produto || "(item antigo)", label: i.opcao || i.id, preco: i.preco, pedido: 0, confirmado: 0 });
+      const r = porId.get(i.id);
+      r.pedido += Number(i.qtd) || 0;
+      if (p.status === "confirmado") r.confirmado += Number(i.qtd) || 0;
+    });
+  });
+  const resumo = [...porId.values()].filter(r => r.pedido > 0);
 
   const lista = pedidos.filter(p => filtro === "todos" ? true : filtro === "abertos" ? emAberto(p) : p.status === filtro);
   const tab = (id, texto) => (
