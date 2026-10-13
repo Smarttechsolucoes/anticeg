@@ -7244,6 +7244,7 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
 // Para reativar: trocar para false (depois que a nova proteção de pagamentos estiver no ar).
 const PAGAMENTOS_SUSPENSO = true;
 const PAGAMENTOS_SUSPENSO_MSG = "Confirmar, Reabrir e Rejeitar estão suspensos temporariamente por manutenção de segurança.";
+const PAGAMENTOS_MANUAL_SUSPENSO_MSG = "Marcar pagamentos como pagos (item, frete e taxa RF) está suspenso temporariamente por manutenção de segurança.";
 
 function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarMotivo, setRejeitarMotivo, onConfirmar, onReabrir, onRejeitar }) {
   const isPend = d.status === "em_analise";
@@ -13706,22 +13707,31 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
   const [saving, setSaving] = useState({});
 
   async function marcarPago(itemId, tipo) {
+    if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_MANUAL_SUSPENSO_MSG); return; }
     const key = `${itemId}_${tipo}`;
     setSaving(prev => ({ ...prev, [key]: true }));
     const campo = tipo === "item" ? "pago_item" : tipo === "frete" ? "pago_frete" : "pago_rf";
-    await supabase.from("masterlist").update({ [campo]: true }).eq("id", itemId);
+    const { error } = await supabase.from("masterlist").update({ [campo]: true }).eq("id", itemId);
+    if (error) {
+      alert("Não foi possível marcar como pago: " + error.message);
+      setSaving(prev => { const n = { ...prev }; delete n[key]; return n; });
+      return;
+    }
     onUpdate?.(prev => (prev || []).map(i => i.id === itemId ? { ...i, [campo]: true } : i));
     setSaving(prev => { const n = { ...prev }; delete n[key]; return n; });
   }
 
   async function marcarTudoPago(joinerCog, itens) {
+    if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_MANUAL_SUSPENSO_MSG); return; }
     for (const it of itens) {
       const updates = {};
       if (isPendente(it.pago_item)  && Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
       if (isPendente(it.pago_frete) && Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
       if (isPendente(it.pago_rf)    && Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
-      if (Object.keys(updates).length > 0)
-        await supabase.from("masterlist").update(updates).eq("id", it.id);
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase.from("masterlist").update(updates).eq("id", it.id);
+        if (error) { alert("Não foi possível marcar todos como pagos: " + error.message + "\nA tela não foi alterada; recarregue para ver o estado real."); return; }
+      }
     }
     onUpdate?.(prev => (prev || []).map(i => {
       if (i.cog !== joinerCog) return i;
@@ -13783,6 +13793,12 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
 
   return (
     <div>
+      {PAGAMENTOS_SUSPENSO && (
+        <div role="alert" style={{ background:"rgba(255,209,102,.1)", border:"1px solid rgba(255,209,102,.4)", borderRadius:10, padding:"12px 16px", marginBottom:14, fontFamily:"'DM Mono',monospace", fontSize:11, lineHeight:1.6, color:"#FFD166" }}>
+          <strong>⏸ Manutenção de segurança.</strong> Marcar pagamentos como pagos está suspenso temporariamente. Você ainda pode consultar o que está em aberto.
+          Não marque pagamentos por outro caminho sem combinar com a equipe técnica.
+        </div>
+      )}
       {subtab === "atrasados" && atrasados.length > 0 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
           {[
@@ -13847,8 +13863,8 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
                     const key = `${itemId}_${tipo}`;
                     const isSaving = !!saving[key];
                     return (
-                      <button key={tipo} onClick={e => { e.stopPropagation(); marcarPago(itemId, tipo); }} disabled={isSaving}
-                        style={{ fontSize:9, padding:"2px 7px", borderRadius:4, border:"1px solid rgba(186,255,57,.25)", background:"rgba(186,255,57,.07)", color:"#BAFF39", cursor: isSaving ? "default" : "pointer", fontFamily:"'DM Mono',monospace", whiteSpace:"nowrap", letterSpacing:".02em" }}>
+                      <button key={tipo} onClick={e => { e.stopPropagation(); marcarPago(itemId, tipo); }} disabled={isSaving || PAGAMENTOS_SUSPENSO} title={PAGAMENTOS_SUSPENSO ? PAGAMENTOS_MANUAL_SUSPENSO_MSG : undefined}
+                        style={{ fontSize:9, padding:"2px 7px", borderRadius:4, border:"1px solid rgba(186,255,57,.25)", background:"rgba(186,255,57,.07)", color:"#BAFF39", cursor: (isSaving || PAGAMENTOS_SUSPENSO) ? "not-allowed" : "pointer", opacity: PAGAMENTOS_SUSPENSO ? .35 : 1, fontFamily:"'DM Mono',monospace", whiteSpace:"nowrap", letterSpacing:".02em" }}>
                         {isSaving ? "..." : `✓ ${tipo}`}
                       </button>
                     );
@@ -13937,7 +13953,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
                   const corpo = joinerInfo?.email ? buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(total)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table></td></tr>`) : null;
                   return (
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
-                      <button onClick={e => { e.stopPropagation(); if (window.confirm(`Marcar TODOS os pagamentos pendentes de ${j.nome || j.cog} como pagos?`)) marcarTudoPago(j.cog, j.itens); }} style={{
+                      <button onClick={e => { e.stopPropagation(); if (window.confirm(`Marcar TODOS os pagamentos pendentes de ${j.nome || j.cog} como pagos?`)) marcarTudoPago(j.cog, j.itens); }} disabled={PAGAMENTOS_SUSPENSO} title={PAGAMENTOS_SUSPENSO ? PAGAMENTOS_MANUAL_SUSPENSO_MSG : undefined} style={{ opacity: PAGAMENTOS_SUSPENSO ? .35 : 1,
                         background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)",
                         color:"#BAFF39", borderRadius:6, padding:"5px 14px",
                         fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700, letterSpacing:".05em"
