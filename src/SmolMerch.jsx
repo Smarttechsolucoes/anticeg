@@ -61,7 +61,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;

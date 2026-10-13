@@ -4022,7 +4022,7 @@ ${p.comprovante_url ? (() => {
           } else {
             const ext  = pagComprovante.name.split(".").pop();
             const path = `${user.cog}/${Date.now()}.${ext}`;
-            const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: true });
+            const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: false });
             if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
             const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
             comprovanteUrl = publicUrl;
@@ -4693,7 +4693,7 @@ ${p.comprovante_url ? (() => {
           setRepasseStatus("enviando"); setRepasseErro("");
           const ext  = repasseComprovante.name.split(".").pop();
           const path = `repassos/${user.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, repasseComprovante, { upsert: true });
+          const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, repasseComprovante, { upsert: false });
           if (upErr) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const custosPagosArr = [...repasseCustos];
@@ -20535,7 +20535,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                                     setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: true } }));
                                                     const ext = cf.file.name.split(".").pop();
                                                     const path = `envio/${s.id}/comprovante_${Date.now()}.${ext}`;
-                                                    const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, cf.file, { upsert: true });
+                                                    const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, cf.file, { upsert: false });
                                                     if (upErr) { alert("Erro no upload: " + upErr.message); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
                                                     const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
                                                     await supabase.from("envio_solicitacoes").update({ comprovante_url: publicUrl }).eq("id", s.id);
@@ -21973,7 +21973,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
@@ -26266,7 +26266,7 @@ function RevistaBazaarInPage({ onVoltar }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `bazaar-in/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
@@ -26560,7 +26560,7 @@ function RevistaFormPage() {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `revista/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: true });
+      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
