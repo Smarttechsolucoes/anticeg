@@ -268,7 +268,7 @@ function useWindowWidth() {
 const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
-const STAFF_COGS   = ["nathy_mrnd"];
+const STAFF_COGS   = ["nathy_mrnd", "lyrichangbin"];
 const SESSION_VERSION = "4";
 // Cogs de demonstração: mapeiam para o cog real cujos dados serão exibidos
 const DEMO_COG_MAP = { "ADMMODE": "nandaverseo_c" };
