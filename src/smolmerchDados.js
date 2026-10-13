@@ -58,7 +58,7 @@ export const SMOLMERCH_CFG = {
   // **texto** = negrito
   avisos: [
     "O formulário fica aberto até **16 de outubro**.",
-    "O pagamento é feito **depois**, até **20 de outubro**. Avisaremos como pagar.",
+    "O pagamento será **liberado em breve**.",
     "Ao fechar o pedido, ele **não poderá ser cancelado**.",
     "O frete e a previsão de envio serão **avisados em breve**.",
   ],
