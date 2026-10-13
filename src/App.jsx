@@ -21870,7 +21870,8 @@ const WMAG_LK_CFG = {
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
     <>Envio previsto para o dia <strong>28 de outubro</strong>.</>,
     <>Frete internacional previsto entre <strong>R$60 e R$70</strong>, a depender da quantidade de pedidos.</>,
-    <>O prazo de pagamento será <strong>avisado em breve</strong>.</>,
+    <>O frete internacional será <strong>adicionado ainda esse mês</strong> no valor final.</>,
+    <>Não terá <strong>taxa da Receita Federal</strong> nesse item.</>,
   ],
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
 };
