@@ -7239,6 +7239,12 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
   );
 }
 
+// ── SUSPENSÃO TEMPORÁRIA (contenção de segurança do C0) ───────────────────────────────────────────────
+// Enquanto true, Confirmar / Reabrir / Rejeitar ficam desabilitados e nada é enviado ao banco.
+// Para reativar: trocar para false (depois que a nova proteção de pagamentos estiver no ar).
+const PAGAMENTOS_SUSPENSO = true;
+const PAGAMENTOS_SUSPENSO_MSG = "Confirmar, Reabrir e Rejeitar estão suspensos temporariamente por manutenção de segurança.";
+
 function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarMotivo, setRejeitarMotivo, onConfirmar, onReabrir, onRejeitar }) {
   const isPend = d.status === "em_analise";
   const nome = (joinersData || []).find(j => j.cog === d.joiner_cog)?.nome || null;
@@ -7301,7 +7307,8 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
           {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
         </div>
       )}
-      <div style={{ marginTop:12 }}>
+      <fieldset disabled={PAGAMENTOS_SUSPENSO} title={PAGAMENTOS_SUSPENSO ? PAGAMENTOS_SUSPENSO_MSG : undefined}
+        style={{ border:"none", padding:0, margin:"12px 0 0", minWidth:0, opacity: PAGAMENTOS_SUSPENSO ? .35 : 1, cursor: PAGAMENTOS_SUSPENSO ? "not-allowed" : "auto" }}>
         {isPend ? (
           rejeitarId === d.id ? (
             <div style={{ border:"1px solid rgba(255,107,107,.2)", borderRadius:7, padding:"12px", background:"rgba(255,107,107,.04)" }}>
@@ -7340,7 +7347,7 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
         ) : (
           <button onClick={() => onReabrir(d.id)} style={{ width:"100%", padding:"8px", background:"transparent", color:"rgba(245,240,232,.3)", border:"1px solid rgba(245,240,232,.1)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↩ Reabrir</button>
         )}
-      </div>
+      </fieldset>
     </div>
   );
 }
@@ -9498,6 +9505,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const rejeitados = pagDemandas.filter(d => d.status === "rejeitado");
 
               async function confirmar(id) {
+                if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
                 const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago", motivo_rejeicao: null });
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
@@ -9519,11 +9527,15 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
               async function reabrir(id) {
-                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise", motivo_rejeicao: null });
+                if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
+                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise", motivo_rejeicao: null });
+                if (error) { alert("Não foi possível reabrir: " + error.message); return; }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
-                await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado", motivo_rejeicao: motivo.trim() || null });
+                if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
+                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado", motivo_rejeicao: motivo.trim() || null });
+                if (error) { alert("Não foi possível rejeitar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const msg = motivo.trim()
@@ -9552,6 +9564,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               const listaAtiva = formularioFiltro === "analise" ? pendentes : formularioFiltro === "confirmados" ? resolvidas : rejeitados;
               return (
                 <div>
+                  {PAGAMENTOS_SUSPENSO && (
+                    <div role="alert" style={{ background:"rgba(255,209,102,.1)", border:"1px solid rgba(255,209,102,.4)", borderRadius:10, padding:"12px 16px", marginBottom:14, fontFamily:"'DM Mono',monospace", fontSize:11, lineHeight:1.6, color:"#FFD166" }}>
+                      <strong>⏸ Manutenção de segurança.</strong> Confirmar, Reabrir e Rejeitar estão suspensos temporariamente. Você ainda pode consultar os pagamentos e os comprovantes.
+                      Não confirme pagamentos por outro caminho sem combinar com a equipe técnica.
+                    </div>
+                  )}
                   {/* mini filtro */}
                   <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
                     <button onClick={() => setFormularioFiltro("analise")}
