@@ -21951,12 +21951,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
 
-    if (pagamento === "cartao") {
-      const linhas = WMAG_CAPAS.filter(c => qtds[c.id] > 0).map(c => `${c.label}: ${qtds[c.id]}x`).join("\n");
-      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da ${cfg.produto} via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\n${linhas}\nTotal: R$${total.toFixed(2).replace(".",",")}`);
-      const waWin = window.open("", "_blank");
-      if (waWin) waWin.location = `https://wa.me/${WA_WMAG}?text=${msg}`;
-    }
+    if (pagamento === "cartao") window.open("https://linknabio.gg/anticeg-comu", "_blank");
     setStatus("sucesso");
   }
 
@@ -22016,7 +22011,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
             <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
             <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
-              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
             <a href="https://chat.whatsapp.com/CGHeelexfjp7ckWfWwEjz5" target="_blank" rel="noopener noreferrer"
@@ -22120,7 +22115,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
                   )}
                   {pagamento === "cartao" && (
                     <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)", lineHeight:1.7 }}>
-                      Após confirmar, você será redirecionada para o WhatsApp para combinar o pagamento no cartão.
+                      Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.
                     </div>
                   )}
                 </>
