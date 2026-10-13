@@ -123,7 +123,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
                 : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop: 8, fontSize: 10, opacity: .5 }}>#{pedidoId}</div>}
             </div>
-            <a href="https://chat.whatsapp.com/CGHeelexfjp7ckWfWwEjz5" target="_blank" rel="noopener noreferrer"
+            <a href="https://chat.whatsapp.com/FqcEhq1039j3ZH0YntnCHD" target="_blank" rel="noopener noreferrer"
               style={{ display: "inline-block", padding: "12px 24px", borderRadius: 10, background: "rgba(37,211,102,.15)", border: "1px solid rgba(37,211,102,.35)", color: "#25d366", fontFamily: mono, fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: "0.5px" }}>
               Entrar no grupo de atualizações
             </a>
