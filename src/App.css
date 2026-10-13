@@ -556,6 +556,9 @@ td { padding:10px; vertical-align:middle; }
 
 /* Admin */
 .admin-wrap { max-width:1040px; margin:0 auto; padding:32px 24px 60px; }
+/* barra/cartão de acesso seguro do admin: mesma largura e margens laterais do painel */
+.admin-auth-wrap { max-width:1040px; margin:0 auto; padding:20px 24px 0; box-sizing:border-box; }
+.admin-auth-wrap + .admin-wrap { padding-top:12px; }
 .admin-layout { display:flex; gap:0; align-items:flex-start; }
 .admin-sidebar { width:176px; flex-shrink:0; position:sticky; top:24px; border-right:1px solid rgba(245,240,232,.07); padding-right:16px; margin-right:24px; }
 .admin-sidebar-group { margin-bottom:20px; }
@@ -759,6 +762,7 @@ td { padding:10px; vertical-align:middle; }
 
   /* Admin */
   .admin-wrap { padding:20px 14px 40px; }
+  .admin-auth-wrap { padding:14px 14px 0; }
   .admin-money-row { grid-template-columns:1fr 1fr; }
   .admin-foto-row { flex-direction:column; }
   .admin-foto-preview,.admin-foto-placeholder { width:80px; height:80px; }
