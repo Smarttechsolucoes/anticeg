@@ -6,6 +6,7 @@ const mono = "'DM Mono',monospace";
 const campo = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borda}`, background: "rgba(0,0,0,0.25)", color: C.texto, fontSize: 14, fontFamily: mono };
 const botao = { padding: "10px 16px", borderRadius: 8, border: "none", background: C.destaque, color: "#111", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: mono };
 const botaoSec = { ...botao, background: "transparent", color: C.texto, border: `1px solid ${C.borda}`, fontWeight: 500 };
+const barra = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: 0, padding: "8px 12px", borderRadius: 8, background: C.bg, fontFamily: mono, fontSize: 12 };
 
 // Todos os hooks ficam aqui, no topo do componente (nunca dentro de funções internas ou callbacks).
 function useAdminAuth() {
@@ -13,7 +14,6 @@ function useAdminAuth() {
   const [info, setInfo] = useState({ estado: "carregando" });
   const [ocupado, setOcupado] = useState(false);
   const [mensagem, setMensagem] = useState("");
-  const [cadastro, setCadastro] = useState(null);
 
   useEffect(() => {
     let vivo = true;
@@ -24,21 +24,18 @@ function useAdminAuth() {
   }, [api]);
 
   function aplicar(r) {
-    if (r?.erro) { setMensagem(r.erro); return; }
     setMensagem(r?.mensagem || "");
-    if (r?.estado) { setInfo(r); if (r.estado !== "cadastrar_mfa") setCadastro(null); }
+    if (r?.estado) setInfo(r);
   }
   async function executar(fn) {
     setOcupado(true); setMensagem("");
     try { return await fn(); } finally { setOcupado(false); }
   }
   return {
-    info, ocupado, mensagem, cadastro,
+    info, ocupado, mensagem,
     entrar: (email, senha) => executar(async () => aplicar(await api.entrar(email, senha))),
-    gerarQr: () => executar(async () => { const r = await api.iniciarCadastro(); if (r.erro) setMensagem(r.erro); else setCadastro(r); }),
-    confirmar: (fatorId, codigo) => executar(async () => aplicar(await api.confirmar(fatorId, codigo))),
-    sair: () => executar(async () => { aplicar(await api.sair()); setCadastro(null); }),
     trocarSenha: (nova, repetir) => executar(() => api.trocarSenha(nova, repetir)),
+    sair: () => executar(async () => aplicar(await api.sair())),
     recarregar: () => executar(async () => aplicar(await api.avaliar())),
   };
 }
@@ -55,24 +52,12 @@ function FormEntrar({ auth }) {
   const [senha, setSenha] = useState("");
   return (
     <form onSubmit={e => { e.preventDefault(); auth.entrar(email, senha); }} style={{ display: "grid", gap: 10 }}>
-      <Titulo>🔒 Acesso seguro do administrador</Titulo>
-      <div style={{ color: C.mudo, fontSize: 12 }}>Entre com a conta de administrador. Em seguida você confirma com o código do app autenticador.</div>
+      <Titulo>🔒 Acesso do administrador</Titulo>
+      <div style={{ color: C.mudo, fontSize: 12 }}>Entre com o e-mail e a senha da sua conta de administrador.</div>
       <input style={campo} type="email" autoComplete="username" placeholder="e-mail" value={email} onChange={e => setEmail(e.target.value)} aria-label="E-mail do administrador" required />
       <input style={campo} type="password" autoComplete="current-password" placeholder="senha" value={senha} onChange={e => setSenha(e.target.value)} aria-label="Senha" required />
       <Aviso texto={auth.mensagem} />
       <button style={botao} type="submit" disabled={auth.ocupado}>{auth.ocupado ? "Entrando…" : "Entrar"}</button>
-    </form>
-  );
-}
-
-function FormCodigo({ auth, fatorId, rotulo }) {
-  const [codigo, setCodigo] = useState("");
-  return (
-    <form onSubmit={e => { e.preventDefault(); auth.confirmar(fatorId, codigo); }} style={{ display: "grid", gap: 10 }}>
-      <input style={{ ...campo, letterSpacing: 6, textAlign: "center", fontSize: 18 }} inputMode="numeric" autoComplete="one-time-code" maxLength={7}
-        placeholder="000000" value={codigo} onChange={e => setCodigo(e.target.value)} aria-label="Código de 6 dígitos" />
-      <Aviso texto={auth.mensagem} />
-      <button style={botao} type="submit" disabled={auth.ocupado}>{auth.ocupado ? "Conferindo…" : rotulo}</button>
     </form>
   );
 }
@@ -83,7 +68,7 @@ function FormSenha({ auth, onFechar }) {
   const [aviso, setAviso] = useState("");
   const [feito, setFeito] = useState(false);
   return (
-    <form data-testid="admin-auth-senha" onSubmit={async e => { e.preventDefault(); setAviso(""); const r = await auth.trocarSenha(nova, repetir); if (r.erro) setAviso(r.erro); else { setFeito(true); setNova(""); setRepetir(""); } }}
+    <form data-testid="admin-auth-senha" onSubmit={async e => { e.preventDefault(); setAviso(""); setFeito(false); const r = await auth.trocarSenha(nova, repetir); if (r.erro) setAviso(r.erro); else { setFeito(true); setNova(""); setRepetir(""); } }}
       style={{ display: "grid", gap: 8, flexBasis: "100%", marginTop: 6 }}>
       <input style={campo} type="password" autoComplete="new-password" placeholder="nova senha (mínimo 12 caracteres)" value={nova} onChange={e => setNova(e.target.value)} aria-label="Nova senha" />
       <input style={campo} type="password" autoComplete="new-password" placeholder="repita a nova senha" value={repetir} onChange={e => setRepetir(e.target.value)} aria-label="Repita a nova senha" />
@@ -104,8 +89,8 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
 
   if (estado === "ok") {
     return (
-      <div data-testid="admin-auth-ok" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0", padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.ok }}>
-        <span>🔒 Sessão segura verificada (MFA)</span>
+      <div data-testid="admin-auth-ok" style={{ ...barra, border: `1px solid ${C.borda}`, color: C.ok }}>
+        <span>🔒 Acesso de administrador verificado</span>
         <span style={{ color: C.mudo }}>{email}</span>
         <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setTrocando(v => !v)}>Trocar senha</button>
         <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11 }} onClick={auth.sair} disabled={auth.ocupado}>Sair</button>
@@ -115,9 +100,9 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
   }
   if (!bloqueante && !aberto) {
     return (
-      <div data-testid="admin-auth-aviso" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0", padding: "8px 12px", borderRadius: 8, border: `1px dashed ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.mudo }}>
-        <span>🔓 Acesso seguro (MFA) ainda não verificado nesta sessão.</span>
-        <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setAberto(true)}>Entrar com MFA</button>
+      <div data-testid="admin-auth-aviso" style={{ ...barra, border: `1px dashed ${C.borda}`, color: C.mudo }}>
+        <span>🔓 Acesso de administrador ainda não verificado nesta sessão.</span>
+        <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setAberto(true)}>Entrar</button>
       </div>
     );
   }
@@ -125,28 +110,6 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
     <div data-testid="admin-auth-card" style={{ maxWidth: 420, width: "100%", boxSizing: "border-box", margin: bloqueante ? "24px auto" : "0 0 12px", padding: 16, borderRadius: 12, border: `1px solid ${C.borda}`, background: C.bg, color: C.texto }}>
       {estado === "carregando" && <div style={{ color: C.mudo, fontFamily: mono, fontSize: 12 }}>Verificando acesso…</div>}
       {estado === "sair" && <FormEntrar auth={auth} />}
-      {estado === "verificar_mfa" && (
-        <div style={{ display: "grid", gap: 10 }}>
-          <Titulo>Confirme com o app autenticador</Titulo>
-          <div style={{ color: C.mudo, fontSize: 12 }}>Digite o código de 6 números que aparece no app para {email}.</div>
-          <FormCodigo auth={auth} fatorId={auth.info.fatorId} rotulo="Confirmar" />
-        </div>
-      )}
-      {estado === "cadastrar_mfa" && (
-        <div style={{ display: "grid", gap: 10 }}>
-          <Titulo>Ative a verificação em duas etapas</Titulo>
-          <div style={{ color: C.mudo, fontSize: 12 }}>1. Instale um app autenticador no celular (Google Authenticator, Authy ou similar).<br />2. Toque em gerar e leia o QR Code com o app (ou use a chave escrita).<br />3. Digite o código de 6 números que o app mostrar.</div>
-          {!auth.cadastro && <><Aviso texto={auth.mensagem} /><button style={botao} onClick={auth.gerarQr} disabled={auth.ocupado}>{auth.ocupado ? "Gerando…" : "Gerar QR Code"}</button></>}
-          {auth.cadastro && (
-            <>
-              <img src={auth.cadastro.qrCode} alt="QR Code para o app autenticador" style={{ width: 180, height: 180, background: "#fff", borderRadius: 8, padding: 6, justifySelf: "center" }} />
-              <div style={{ color: C.mudo, fontSize: 11, fontFamily: mono, wordBreak: "break-all" }}>Sem câmera ou está no celular? No app, escolha "inserir chave" e digite: <b style={{ color: C.texto }}>{auth.cadastro.segredo}</b></div>
-              {auth.cadastro.uri && <a href={auth.cadastro.uri} style={{ ...botaoSec, textAlign: "center", textDecoration: "none", fontSize: 12 }}>Estou no celular: abrir direto no app</a>}
-              <FormCodigo auth={auth} fatorId={auth.cadastro.fatorId} rotulo="Ativar" />
-            </>
-          )}
-        </div>
-      )}
       {estado === "sem_permissao" && (
         <div style={{ display: "grid", gap: 10 }}>
           <Titulo>Conta sem permissão</Titulo>
@@ -166,7 +129,7 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
   );
 }
 
-// Em volta do painel de admin. Com ADMIN_AUTH_OBRIGATORIA = false só mostra o aviso e o painel segue como hoje.
+// Em volta do painel de admin. Com ADMIN_AUTH_OBRIGATORIA o painel só abre depois do login.
 export function AdminAuthGate({ children }) {
   const auth = useAdminAuth();
   const liberado = auth.info.estado === "ok";

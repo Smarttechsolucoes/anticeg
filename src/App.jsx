@@ -27330,7 +27330,7 @@ export default function App() {
         <button className={`tab-btn ${tab === "regras" ? "active" : ""}`} onClick={() => changeTab("regras")}>☆ Regras</button>
         {isAdminUser(user) && (
           <button className={`tab-btn ${tab === "admin" ? "active" : ""}`} onClick={() => {
-            // com o login seguro obrigatório (e-mail + senha + MFA) o PIN deixa de existir: ele fica legível por qualquer visitante e não protege nada
+            // com o login de admin obrigatório (e-mail + senha) o PIN deixa de existir: ele fica legível por qualquer visitante e não protege nada
             if (!ADMIN_AUTH_OBRIGATORIA && adminPinStored && !adminUnlocked) { setAdminPinModal(true); setAdminPinInput(""); setAdminPinError(false); }
             else { setAdminReset(v => v + 1); changeTab("admin"); }
           }}>⚙ Admin</button>
