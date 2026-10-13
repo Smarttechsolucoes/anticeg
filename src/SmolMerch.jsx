@@ -186,16 +186,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
               )}
             </div>
 
-            {cfg.pagamentoAgora === false ? (
-              <div style={{ marginBottom: 24 }}>
-                <div style={labelStyle}>Pagamento</div>
-                <div style={caixa}>
-                  O pagamento é feito <strong style={{ color: "var(--offwhite)" }}>depois do pedido</strong>
-                  {cfg.pagarAte ? <>, até <strong style={{ color: "var(--offwhite)" }}>{cfg.pagarAte}</strong></> : null}. Avisaremos como pagar.
-                  Pedidos sem pagamento até o prazo serão cancelados.
-                </div>
-              </div>
-            ) : (
+            {cfg.pagamentoAgora === false ? null : (
             <div style={{ marginBottom: 24 }}>
               <div style={labelStyle}>Pagamento</div>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
