@@ -22000,7 +22000,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
 
         <div style={{ background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.2)", borderRadius:10, padding:"14px 16px", marginBottom:28, fontSize:12, lineHeight:1.7, color:"rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--laranja)", marginBottom:8 }}>⚠ AVISOS IMPORTANTES</div>
-          {cfg.avisos.map((a, i) => <div key={i}>• {a}</div>)}
+          {cfg.avisos.map((a, i) => <div key={i}>☆ {a}</div>)}
           <div style={{ marginTop:8, padding:"8px 10px", background:"rgba(245,240,232,.05)", borderRadius:6 }}>
             💡 {cfg.dica}
           </div>
