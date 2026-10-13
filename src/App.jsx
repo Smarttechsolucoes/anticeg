@@ -21869,7 +21869,8 @@ const WMAG_LK_CFG = {
   avisos: [
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
     <>Envio previsto para o dia <strong>28 de outubro</strong>.</>,
-    <>O prazo de pagamento e o frete internacional serão <strong>avisados em breve</strong>.</>,
+    <>Frete internacional previsto entre <strong>R$60 e R$70</strong>, a depender da quantidade de pedidos.</>,
+    <>O prazo de pagamento será <strong>avisado em breve</strong>.</>,
   ],
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
 };
