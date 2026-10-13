@@ -21856,7 +21856,7 @@ const WMAG_HJ_CFG = {
   dica: <>Tenha em mente que a revista pode ser pesada — o frete pode custar até <strong>R$100</strong>.</>,
 };
 
-// W MAGAZINE LEE KNOW — prazo ainda a definir (sem deadline = sempre aberto)
+// W MAGAZINE LEE KNOW — pedidos até 16/10, pagamento até 25/10
 const WMAG_LK_CAPAS = [
   { id:"a", label:"Capa A", img:"https://www.wkorea.com//wp_data/w/2026/10/style_6acc37bd30686-1056x1400.jpg" },
   { id:"b", label:"Capa B", img:"https://www.wkorea.com//wp_data/w/2026/10/style_6acc37c826110-1056x1400.jpg" },
@@ -21864,8 +21864,8 @@ const WMAG_LK_CAPAS = [
 ];
 const WMAG_LK_CFG = {
   tabela: "pedidos_wmag_leeknow", pasta: "wmag-leeknow", produto: "W MAGAZINE LEE KNOW",
-  titulo: "W MAGAZINE", sub: "LEE KNOW", deadline: null, pedidosAte: null,
-  preco: 50, capas: WMAG_LK_CAPAS, pagarAte: null,
+  titulo: "W MAGAZINE", sub: "LEE KNOW", deadline: new Date("2026-10-16T23:59:59-03:00"), pedidosAte: "16/10/2026",
+  preco: 50, capas: WMAG_LK_CAPAS, pagarAte: "25/10",
   avisos: [
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
     <>Envio previsto para o dia <strong>28 de outubro</strong>.</>,
@@ -25647,7 +25647,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Lee Know — 3 capas",
       url: "/wmag-leeknow",
       img: WMAG_LK_CAPAS[0].img,
-      tags: ["Pedidos abertos"],
+      tags: ["Pedidos até 16/10", "Pagamento até 25/10"],
       info: "R$ 50,00 por unidade · PIX ou cartão · envio previsto 28/10",
     },
     {
