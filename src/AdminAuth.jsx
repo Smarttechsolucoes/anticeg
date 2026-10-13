@@ -38,6 +38,7 @@ function useAdminAuth() {
     gerarQr: () => executar(async () => { const r = await api.iniciarCadastro(); if (r.erro) setMensagem(r.erro); else setCadastro(r); }),
     confirmar: (fatorId, codigo) => executar(async () => aplicar(await api.confirmar(fatorId, codigo))),
     sair: () => executar(async () => { aplicar(await api.sair()); setCadastro(null); }),
+    trocarSenha: (nova, repetir) => executar(() => api.trocarSenha(nova, repetir)),
     recarregar: () => executar(async () => aplicar(await api.avaliar())),
   };
 }
@@ -76,8 +77,29 @@ function FormCodigo({ auth, fatorId, rotulo }) {
   );
 }
 
+function FormSenha({ auth, onFechar }) {
+  const [nova, setNova] = useState("");
+  const [repetir, setRepetir] = useState("");
+  const [aviso, setAviso] = useState("");
+  const [feito, setFeito] = useState(false);
+  return (
+    <form data-testid="admin-auth-senha" onSubmit={async e => { e.preventDefault(); setAviso(""); const r = await auth.trocarSenha(nova, repetir); if (r.erro) setAviso(r.erro); else { setFeito(true); setNova(""); setRepetir(""); } }}
+      style={{ display: "grid", gap: 8, flexBasis: "100%", marginTop: 6 }}>
+      <input style={campo} type="password" autoComplete="new-password" placeholder="nova senha (mínimo 12 caracteres)" value={nova} onChange={e => setNova(e.target.value)} aria-label="Nova senha" />
+      <input style={campo} type="password" autoComplete="new-password" placeholder="repita a nova senha" value={repetir} onChange={e => setRepetir(e.target.value)} aria-label="Repita a nova senha" />
+      <Aviso texto={aviso} />
+      {feito && <div role="status" style={{ color: C.ok, fontSize: 12, fontFamily: mono }}>Senha alterada.</div>}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button style={botao} type="submit" disabled={auth.ocupado}>{auth.ocupado ? "Salvando…" : "Salvar nova senha"}</button>
+        <button style={botaoSec} type="button" onClick={onFechar}>Fechar</button>
+      </div>
+    </form>
+  );
+}
+
 export function AdminAuthCard({ auth, bloqueante = false }) {
   const [aberto, setAberto] = useState(false);
+  const [trocando, setTrocando] = useState(false);
   const { estado, email } = auth.info;
 
   if (estado === "ok") {
@@ -85,7 +107,9 @@ export function AdminAuthCard({ auth, bloqueante = false }) {
       <div data-testid="admin-auth-ok" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px", padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.borda}`, background: C.bg, fontFamily: mono, fontSize: 12, color: C.ok }}>
         <span>🔒 Sessão segura verificada (MFA)</span>
         <span style={{ color: C.mudo }}>{email}</span>
-        <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={auth.sair} disabled={auth.ocupado}>Sair</button>
+        <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setTrocando(v => !v)}>Trocar senha</button>
+        <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11 }} onClick={auth.sair} disabled={auth.ocupado}>Sair</button>
+        {trocando && <FormSenha auth={auth} onFechar={() => setTrocando(false)} />}
       </div>
     );
   }

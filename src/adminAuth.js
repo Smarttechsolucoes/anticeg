@@ -29,6 +29,12 @@ function mensagemAmigavel(err, contexto) {
     return "Não foi possível entrar. Tente de novo.";
   }
   if (contexto === "codigo") return "Código inválido ou expirado. Confira o app autenticador e tente de novo.";
+  if (contexto === "senha") {
+    if (/same_password|different from the old/i.test(code + msg)) return "A nova senha precisa ser diferente da atual.";
+    if (/weak_password|weak|pwned|compromised/i.test(code + msg)) return "Senha fraca demais. Use uma senha longa e única.";
+    if (/reauth/i.test(code + msg)) return "Por segurança, saia, entre de novo e tente outra vez.";
+    return "Não foi possível trocar a senha. Tente de novo.";
+  }
   if (contexto === "cadastro") return "Não foi possível preparar o app autenticador. Tente de novo.";
   return "Algo deu errado. Tente de novo.";
 }
@@ -80,10 +86,19 @@ export function criarAdminAuth(client) {
     return avaliar();
   }
 
+  // Troca a senha da conta já logada (sessão MFA). Mínimo de 12 caracteres.
+  async function trocarSenha(nova, repetir) {
+    if (String(nova || "").length < 12) return { erro: "A nova senha precisa ter pelo menos 12 caracteres." };
+    if (nova !== repetir) return { erro: "As duas senhas digitadas são diferentes." };
+    const { error } = await client.auth.updateUser({ password: nova });
+    if (error) return { erro: mensagemAmigavel(error, "senha") };
+    return { ok: true };
+  }
+
   async function sair() {
     await client.auth.signOut({ scope: "local" });
     return { estado: "sair" };
   }
 
-  return { avaliar, entrar, iniciarCadastro, confirmar, sair };
+  return { avaliar, entrar, iniciarCadastro, confirmar, trocarSenha, sair };
 }

@@ -31,6 +31,7 @@ async function nova(porta, cen) {
         est.logado = true; est.aal = "aal1"; return json(200, sessao("aal1", est.fatores));
       }
       if (p === "/user" && m === "GET") return json(200, sessao(est.aal, est.fatores).user);
+      if (p === "/user" && m === "PUT") { const c = JSON.parse(req.postData() || "{}"); reg.putSenha = (reg.putSenha || []).concat([c.password]); if (c.password === "mesma-senha-atual-1") return json(422, { code: 422, error_code: "same_password", msg: "New password should be different from the old password." }); return json(200, sessao(est.aal, est.fatores).user); }
       if (p === "/factors" && m === "POST") { reg.enrolls++; est.fatores = est.fatores.concat([{ id: "f-novo", factor_type: "totp", status: "unverified", friendly_name: "novo" }]);
         return json(200, { id: "f-novo", type: "totp", friendly_name: "novo", totp: { qr_code: "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10'/></svg>", secret: "SEGREDOTESTE123", uri: "otpauth://totp/x" } }); }
       if (/^\/factors\/[^/]+$/.test(p) && m === "DELETE") { reg.unenrolls++; est.fatores = est.fatores.filter(f => f.id !== p.split("/")[2]); return json(200, { id: p.split("/")[2] }); }
@@ -90,6 +91,18 @@ const shot = async (page, n) => { if (SHOTS) await page.screenshot({ path: `${SH
   ok(await page.getByTestId("admin-auth-ok").count() === 1 && (await corpo(page)).includes("Sessão segura verificada (MFA)"), "código certo: 'Sessão segura verificada (MFA)'");
   ok(reg.rpc.length >= 1 && reg.rpc.every(a => a.includes("assinatura-aal2")), "is_admin() só foi chamado com o token aal2 (depois do MFA)");
   await shot(page, "3-ok");
+  // trocar a própria senha
+  await page.getByTestId("admin-auth-ok").getByRole("button", { name: "Trocar senha" }).click();
+  await page.getByLabel("Nova senha", { exact: true }).fill("curta"); await page.getByLabel("Repita a nova senha").fill("curta"); await page.getByRole("button", { name: "Salvar nova senha" }).click(); await page.waitForTimeout(300);
+  ok((await corpo(page)).includes("pelo menos 12 caracteres") && !reg.putSenha, "trocar senha: senha curta é recusada sem chamar o servidor");
+  await page.getByLabel("Nova senha", { exact: true }).fill("uma-senha-bem-longa-1"); await page.getByLabel("Repita a nova senha").fill("outra-senha-bem-longa-2"); await page.getByRole("button", { name: "Salvar nova senha" }).click(); await page.waitForTimeout(300);
+  ok((await corpo(page)).includes("diferentes") && !reg.putSenha, "trocar senha: as duas digitações diferentes são recusadas sem chamar o servidor");
+  await page.getByLabel("Nova senha", { exact: true }).fill("mesma-senha-atual-1"); await page.getByLabel("Repita a nova senha").fill("mesma-senha-atual-1"); await page.getByRole("button", { name: "Salvar nova senha" }).click(); await page.waitForTimeout(500);
+  ok((await corpo(page)).includes("precisa ser diferente da atual"), "trocar senha: o servidor recusa senha igual à atual e a mensagem é clara");
+  await page.getByLabel("Nova senha", { exact: true }).fill("uma-senha-bem-longa-1"); await page.getByLabel("Repita a nova senha").fill("uma-senha-bem-longa-1"); await page.getByRole("button", { name: "Salvar nova senha" }).click(); await page.waitForTimeout(600);
+  ok((await corpo(page)).includes("Senha alterada.") && reg.putSenha.at(-1) === "uma-senha-bem-longa-1", "trocar senha: senha válida é enviada e aparece \"Senha alterada.\"");
+  ok(await page.getByTestId("admin-auth-ok").count() === 1, "trocar senha: a sessão segura continua ativa depois da troca");
+  await page.getByRole("button", { name: "Fechar" }).click(); await page.waitForTimeout(200);
   // isolamento: o site continua usando só a chave anônima
   await page.waitForTimeout(300); const antes = reg.restAuth.length;
   await page.getByText("Pagamentos", { exact: false }).first().click().catch(() => {}); await page.waitForTimeout(600);
