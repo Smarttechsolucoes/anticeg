@@ -19,7 +19,7 @@ async function nova(porta, cen) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: (() => { const [w, h] = (process.env.VP || "1100x1000").split("x").map(Number); return { width: w, height: h }; })() });
   await ctx.addInitScript(u => { localStorage.setItem("anticeg_user_v2", JSON.stringify(u)); localStorage.setItem("anticeg_session_v", "4"); localStorage.setItem("anticeg_session_at_v2", String(Date.now())); localStorage.setItem("anticeg_tutorial_v1", "1"); localStorage.setItem("anticeg_push_asked", "1"); localStorage.setItem("anticeg_a2hs_asked", "1"); }, USER);
-  const reg = { rpc: [], restAuth: [], logout: 0, putSenha: [] };
+  const reg = { rpc: [], restAuth: [], escritas: [], logout: 0, putSenha: [] };
   await ctx.route("**/*", route => {
     const req = route.request(), u = req.url(), m = req.method();
     if (u.startsWith(`http://localhost:${porta}`)) return route.continue();
@@ -43,6 +43,7 @@ async function nova(porta, cen) {
     if (u.includes("supabase.co/rest/v1/rpc/is_admin")) { reg.rpc.push(req.headers()["authorization"] || ""); return json(200, cen.ehAdmin); }
     if (u.includes("supabase.co/rest/v1/")) {
       if (m === "GET") reg.restAuth.push(req.headers()["authorization"] || "");
+      else reg.escritas.push({ m, url: u, auth: req.headers()["authorization"] || "" });
       const objeto = (req.headers()["accept"] || "").includes("pgrst.object");
       if (u.includes("/rest/v1/config") && u.includes("admin_pin") && objeto) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ value: "123456" }) });
       if (u.includes("/rest/v1/joiners") && objeto) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(USER) });
@@ -118,6 +119,15 @@ const entrar = async (page, email, senha) => { await page.getByLabel("E-mail do 
   ok(!(await corpo(page)).includes("Pagamentos"), "senha errada: o painel continua fechado");
   await entrar(page, "dona@exemplo.com", "s");
   ok((await corpo(page)).includes("Pagamentos") && await page.getByTestId("admin-auth-ok").count() === 1, "senha certa de admin: o painel abre");
+  // gravar a config (modo manutenção) pelo painel: tem que sair com a conta de admin, nunca com a chave anônima
+  await page.locator(".admin-sidebar-item", { hasText: "Geral" }).first().click().catch(() => {}); await page.waitForTimeout(500);
+  const ligar = page.getByText("Modo Manutenção").locator("xpath=ancestor::div[2]").getByRole("button", { name: /^(ON|OFF)$/ });
+  ok(await ligar.count() === 1, "a tela Geral do painel mostra o botão do Modo Manutenção");
+  await ligar.click(); await page.waitForTimeout(600);
+  const cfg = T.reg.escritas.filter(e => e.url.includes("/rest/v1/config"));
+  const manut = cfg.filter(e => e.m === "PATCH" && e.url.includes("key=eq.manutencao"));
+  ok(manut.length === 1 && manut[0].auth.includes("assinatura-admin"), "CONFIG: a gravação do painel saiu com o token da conta de admin (não com a chave anônima)");
+  ok(T.reg.escritas.every(e => !e.url.includes("/rest/v1/config") || e.auth.includes("assinatura-admin")), "CONFIG: nenhuma gravação na config usou a chave anônima");
   await T.browser.close();
 }
 {

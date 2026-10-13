@@ -4,7 +4,7 @@ import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
-import { ADMIN_AUTH_OBRIGATORIA } from "./adminAuth.js";
+import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -3325,7 +3325,7 @@ function StaffPanel() {
           const defaults = {};
           STAFF_MEMBERS.forEach(s => { defaults[s.cog] = [...DEFAULT_STAFF_ACESSOS]; });
           setAcessos(defaults);
-          await supabase.from("config").insert({ key: "staff_acessos", value: JSON.stringify(defaults) });
+          await clienteAdmin().from("config").insert({ key: "staff_acessos", value: JSON.stringify(defaults) });
         }
       });
     supabase.from("config").select("value").eq("key", "staff_members_extra").single()
@@ -3345,8 +3345,8 @@ function StaffPanel() {
 
   async function salvarExtraStaff(novaLista) {
     const { data: ex } = await supabase.from("config").select("id").eq("key", "staff_members_extra").single();
-    if (ex) await supabase.from("config").update({ value: JSON.stringify(novaLista) }).eq("key", "staff_members_extra");
-    else     await supabase.from("config").insert({ key: "staff_members_extra", value: JSON.stringify(novaLista) });
+    if (ex) await clienteAdmin().from("config").update({ value: JSON.stringify(novaLista) }).eq("key", "staff_members_extra");
+    else     await clienteAdmin().from("config").insert({ key: "staff_members_extra", value: JSON.stringify(novaLista) });
   }
 
   async function toggle(cog, acessoId) {
@@ -3355,7 +3355,7 @@ function StaffPanel() {
     const novo  = atual.includes(acessoId) ? atual.filter(a => a !== acessoId) : [...atual, acessoId];
     const novoAcessos = { ...acessos, [cog]: novo };
     setAcessos(novoAcessos);
-    await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
+    await clienteAdmin().from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
     setSaving(false);
   }
 
@@ -3368,7 +3368,7 @@ function StaffPanel() {
     if (!acessos?.[joiner.cog]) {
       const novoAcessos = { ...acessos, [joiner.cog]: [...DEFAULT_STAFF_ACESSOS] };
       setAcessos(novoAcessos);
-      await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
+      await clienteAdmin().from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
     }
     setAddMode(false); setAddSearch(""); setAddResults(null);
   }
@@ -3382,7 +3382,7 @@ function StaffPanel() {
     const novoAcessos = { ...acessos };
     delete novoAcessos[cog];
     setAcessos(novoAcessos);
-    await supabase.from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
+    await clienteAdmin().from("config").update({ value: JSON.stringify(novoAcessos) }).eq("key", "staff_acessos");
   }
 
   const todosStaff = [...STAFF_MEMBERS, ...extraStaff];
@@ -6813,7 +6813,7 @@ function PushGlobalToggle() {
     const novo = !ativo;
     setAtivo(novo);
     _pushGlobalAtivo = novo;
-    await supabase.from("config").upsert({ key: "perfil_push_ativo", value: novo ? "true" : "false" }, { onConflict: "key" });
+    await clienteAdmin().from("config").upsert({ key: "perfil_push_ativo", value: novo ? "true" : "false" }, { onConflict: "key" });
     setSalvando(false);
   }
 
@@ -6846,7 +6846,7 @@ function BannerPagamentosBlock() {
     setSalvando(true);
     const novo = !ativo;
     setAtivo(novo);
-    await supabase.from("config").upsert({ key: "banner_pagamentos_ativo", value: novo ? "true" : "false" }, { onConflict: "key" });
+    await clienteAdmin().from("config").upsert({ key: "banner_pagamentos_ativo", value: novo ? "true" : "false" }, { onConflict: "key" });
     setSalvando(false);
   }
 
@@ -6878,7 +6878,7 @@ function LinkComunidadeBlock() {
     const v = link.trim();
     if (!/^https:\/\/chat\.whatsapp\.com\/\S+$/.test(v)) { setErro("Cole um link de grupo do WhatsApp (https://chat.whatsapp.com/...)."); return; }
     setSaving(true); setErro(""); setOk(false);
-    const { error } = await supabase.from("config").upsert({ key: "link_comunidade_wpp", value: v }, { onConflict: "key" });
+    const { error } = await clienteAdmin().from("config").upsert({ key: "link_comunidade_wpp", value: v }, { onConflict: "key" });
     setSaving(false);
     if (error) { setErro("Erro ao salvar. Tente de novo."); return; }
     setOk(true);
@@ -6935,9 +6935,9 @@ function ProximoEnvioBlock() {
     setSaving(true);
     const textoFinal = texto.trim() || (inicio && fim ? `${fmtDate(inicio)} a ${fmtDate(fim)}` : "");
     await Promise.all([
-      supabase.from("config").upsert({ key:"proximo_envio",         value: textoFinal }, { onConflict:"key" }),
-      supabase.from("config").upsert({ key:"envio_abertura_inicio", value: inicio     }, { onConflict:"key" }),
-      supabase.from("config").upsert({ key:"envio_abertura_fim",    value: fim        }, { onConflict:"key" }),
+      clienteAdmin().from("config").upsert({ key:"proximo_envio",         value: textoFinal }, { onConflict:"key" }),
+      clienteAdmin().from("config").upsert({ key:"envio_abertura_inicio", value: inicio     }, { onConflict:"key" }),
+      clienteAdmin().from("config").upsert({ key:"envio_abertura_fim",    value: fim        }, { onConflict:"key" }),
     ]);
     if (!texto.trim() && textoFinal) setTexto(textoFinal);
     setSaving(false); setOk(true); setTimeout(() => setOk(false), 2500);
@@ -6946,16 +6946,16 @@ function ProximoEnvioBlock() {
   async function limpar() {
     setTexto(""); setInicio(""); setFim("");
     await Promise.all([
-      supabase.from("config").upsert({ key:"proximo_envio",         value:"" }, { onConflict:"key" }),
-      supabase.from("config").upsert({ key:"envio_abertura_inicio", value:"" }, { onConflict:"key" }),
-      supabase.from("config").upsert({ key:"envio_abertura_fim",    value:"" }, { onConflict:"key" }),
+      clienteAdmin().from("config").upsert({ key:"proximo_envio",         value:"" }, { onConflict:"key" }),
+      clienteAdmin().from("config").upsert({ key:"envio_abertura_inicio", value:"" }, { onConflict:"key" }),
+      clienteAdmin().from("config").upsert({ key:"envio_abertura_fim",    value:"" }, { onConflict:"key" }),
     ]);
   }
 
   async function toggleBanner() {
     const novoValor = !bannerOn;
     setBannerOn(novoValor);
-    await supabase.from("config").upsert({ key:"banner_envio_visivel", value: novoValor ? "true" : "false" }, { onConflict:"key" });
+    await clienteAdmin().from("config").upsert({ key:"banner_envio_visivel", value: novoValor ? "true" : "false" }, { onConflict:"key" });
   }
 
   const hoje = new Date().toISOString().slice(0, 10);
@@ -7017,13 +7017,13 @@ function AvisoMasterlistBlock() {
 
   async function salvar() {
     setSaving(true);
-    await supabase.from("config").upsert({ key:"aviso_masterlist", value: texto.trim() }, { onConflict:"key" });
+    await clienteAdmin().from("config").upsert({ key:"aviso_masterlist", value: texto.trim() }, { onConflict:"key" });
     setSaving(false); setOk(true); setTimeout(() => setOk(false), 2000);
   }
 
   async function limpar() {
     setTexto("");
-    await supabase.from("config").upsert({ key:"aviso_masterlist", value:"" }, { onConflict:"key" });
+    await clienteAdmin().from("config").upsert({ key:"aviso_masterlist", value:"" }, { onConflict:"key" });
   }
 
   return (
@@ -7054,15 +7054,15 @@ function AdminPinBlock() {
     if (!pin.trim()) return;
     if (pin !== confirm) { setMsg("Os PINs não coincidem."); return; }
     setSaving(true);
-    const { data } = await supabase.from("config").select("id").eq("key","admin_pin").maybeSingle();
-    if (data) await supabase.from("config").update({ value: pin }).eq("key","admin_pin");
-    else       await supabase.from("config").insert({ key:"admin_pin", value: pin });
+    const { data } = await clienteAdmin().from("config").select("id").eq("key","admin_pin").maybeSingle();
+    if (data) await clienteAdmin().from("config").update({ value: pin }).eq("key","admin_pin");
+    else       await clienteAdmin().from("config").insert({ key:"admin_pin", value: pin });
     setMsg("PIN salvo! Vai valer no próximo acesso."); setPin(""); setConfirm(""); setSaving(false);
   }
 
   async function remover() {
     if (!window.confirm("Remover o PIN? O admin ficará sem senha.")) return;
-    await supabase.from("config").delete().eq("key","admin_pin");
+    await clienteAdmin().from("config").delete().eq("key","admin_pin");
     setMsg("PIN removido."); setPin(""); setConfirm("");
   }
 
@@ -8643,7 +8643,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       setStaffAcessos({});
       return;
     }
-    supabase.from("config").select("key,value").in("key", ["manutencao","senha_manutencao"])
+    clienteAdmin().from("config").select("key,value").in("key", ["manutencao","senha_manutencao"])
       .then(({ data }) => {
         if (!data) return;
         const m = data.find(d => d.key === "manutencao");
@@ -8660,7 +8660,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           STAFF_MEMBERS.forEach(s => { defaults[s.cog] = [...DEFAULT_STAFF_ACESSOS]; });
           setStaffAcessos(defaults);
           if (owner) {
-            await supabase.from("config").insert({ key:"staff_acessos", value: JSON.stringify(defaults) });
+            await clienteAdmin().from("config").insert({ key:"staff_acessos", value: JSON.stringify(defaults) });
           }
         }
       });
@@ -8902,7 +8902,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   }
   async function toggleManutencao() {
     const novo = !manutencaoAdmin;
-    await supabase.from("config").update({ value: String(novo) }).eq("key", "manutencao");
+    await clienteAdmin().from("config").update({ value: String(novo) }).eq("key", "manutencao");
     setManutencaoAdmin(novo);
   }
 
@@ -9263,7 +9263,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           />
           <button onClick={async () => {
             setSenhaManutSaving(true);
-            await supabase.from("config").upsert({ key:"senha_manutencao", value: senhaManutInput.trim() }, { onConflict:"key" });
+            await clienteAdmin().from("config").upsert({ key:"senha_manutencao", value: senhaManutInput.trim() }, { onConflict:"key" });
             setSenhaManutAdmin(senhaManutInput.trim());
             setSenhaManutMsg("Salvo ✓");
             setSenhaManutSaving(false);
