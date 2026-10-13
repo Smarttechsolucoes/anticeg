@@ -21865,14 +21865,13 @@ const WMAG_LK_CAPAS = [
 const WMAG_LK_CFG = {
   tabela: "pedidos_wmag_leeknow", pasta: "wmag-leeknow", produto: "W MAGAZINE LEE KNOW",
   titulo: "W MAGAZINE", sub: "LEE KNOW", deadline: null, pedidosAte: null,
-  preco: 48, capas: WMAG_LK_CAPAS, pagarAte: null,
+  preco: 50, capas: WMAG_LK_CAPAS, pagarAte: null,
   avisos: [
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
+    <>Envio previsto para o dia <strong>28 de outubro</strong>.</>,
     <>O prazo de pagamento e o frete internacional serão <strong>avisados em breve</strong>.</>,
   ],
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
-  aviso: "REVISTA AINDA NÃO DISPONÍVEL PARA A VENDA",
-  bloqueado: true, // remover quando a venda abrir
 };
 
 function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
@@ -25647,8 +25646,7 @@ function PrevendaTab({ user }) {
       url: "/wmag-leeknow",
       img: WMAG_LK_CAPAS[0].img,
       tags: ["Pedidos abertos"],
-      aviso: WMAG_LK_CFG.aviso,
-      info: "R$ 48,00 por unidade · PIX ou cartão · prazo a definir",
+      info: "R$ 50,00 por unidade · PIX ou cartão · envio previsto 28/10",
     },
     {
       key: "singba",
