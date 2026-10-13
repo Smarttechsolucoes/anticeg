@@ -51,11 +51,16 @@ export const SMOLMERCH_OPCOES = SMOLMERCH_PRODUTOS.flatMap(p => p.opcoes.map(o =
 export const SMOLMERCH_CFG = {
   tabela: "pedidos_smolmerch", pasta: "smolmerch", produto: "SMOL MERCH",
   titulo: "SMOL MERCH", sub: "Boddaramji · Han BDAY · Miso · Stickers e mais",
-  deadline: null, pedidosAte: null, pagarAte: null,   // preencher quando os prazos forem definidos
+  deadline: new Date("2026-10-16T23:59:59-03:00"), pedidosAte: "16/10/2026", pagarAte: "20/10",
+  // false = o formulário só registra o pedido; a pessoa paga depois (sem PIX/cartão no formulário).
+  // Para voltar a aceitar pagamento no formulário, troque para true.
+  pagamentoAgora: false,
   // **texto** = negrito
   avisos: [
+    "O formulário fica aberto até **16 de outubro**.",
+    "O pagamento é feito **depois**, até **20 de outubro**. Avisaremos como pagar.",
     "Ao fechar o pedido, ele **não poderá ser cancelado**.",
-    "O prazo de pagamento, o frete e a previsão de envio serão **avisados em breve**.",
+    "O frete e a previsão de envio serão **avisados em breve**.",
   ],
 };
 

@@ -25650,8 +25650,8 @@ function PrevendaTab({ user }) {
       subtitulo: "Boddaramji · Han BDAY · Miso e mais",
       url: "/smolmerch",
       img: "https://assets.bigcartel.com/product_images/417132855/carabiner.jpg?auto=format&fit=max&w=600",
-      tags: [`${SMOLMERCH_OPCOES.length} opções`, "PIX ou cartão"],
-      info: "A partir de R$ 5,50 · escolha quantas unidades de cada opção",
+      tags: ["Pedidos até 16/10", "Pagamento até 20/10"],
+      info: `${SMOLMERCH_OPCOES.length} opções · a partir de R$ 5,50 · pagamento depois do pedido`,
     },
     {
       key: "wmag-leeknow",
