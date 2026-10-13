@@ -1,10 +1,11 @@
 // Testes da lógica de notificações. Rodar: node --test supabase/functions/_shared/notificacoes.test.ts
 import test from "node:test";
 import assert from "node:assert/strict";
-import { prepararEmail, validarPush, endpointPushValido, identificarQuem, escapeHtml, LIMITES } from "./notificacoes.ts";
+import { prepararEmail, validarPush, endpointPushValido, identificarQuem, identificarChamada, escapeHtml, LIMITES } from "./notificacoes.ts";
 import type { Db, Demanda, Joiner, Pendencia, Report } from "./notificacoes.ts";
 
 const AGORA = new Date("2026-10-14T15:00:00Z");
+const LEGADO = { permitirAnonimo: true };   // modo "só @" ainda aceito (antes do lançamento do acesso por senha)
 const minutosAtras = (m: number) => new Date(AGORA.getTime() - m * 60000).toISOString();
 
 function criarDb(sobras: Partial<{ demandas: Demanda[]; reports: Report[]; joiners: Joiner[]; pend: Pendencia[]; envios: { evento: string; referencia: string; destinatario: string; em: string }[] }> = {}) {
@@ -28,7 +29,7 @@ function criarDb(sobras: Partial<{ demandas: Demanda[]; reports: Report[]; joine
 
 test("comprovante_recebido: o visitante pode acionar, o destinatário vem do CADASTRO e o corpo é do sistema", async () => {
   const { db } = criarDb();
-  const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA);
+  const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA, LEGADO);
   assert.equal(r.ok, true);
   assert.equal(r.para, "ana@exemplo.com");           // normalizado, vindo do banco
   assert.match(r.html!, /Recebemos o seu comprovante/);
@@ -38,32 +39,32 @@ test("comprovante_recebido: o visitante pode acionar, o destinatário vem do CAD
 test("o visitante NÃO consegue escolher destinatário, assunto nem corpo", async () => {
   const { db } = criarDb();
   for (const extra of [{ to_email: "vitima@x.com" }, { assunto: "Golpe" }, { corpo: "<a href=x>clique</a>" }, { to_name: "x" }]) {
-    const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101, ...extra }, "anonimo", db, AGORA);
+    const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101, ...extra }, "anonimo", db, AGORA, LEGADO);
     assert.equal(r.ok, false); assert.equal(r.status, 400);
   }
-  const antigo = await prepararEmail({ to_email: "x@y.com", assunto: "a", corpo: "b" }, "anonimo", db, AGORA);
+  const antigo = await prepararEmail({ to_email: "x@y.com", assunto: "a", corpo: "b" }, "anonimo", db, AGORA, LEGADO);
   assert.equal(antigo.ok, false); assert.equal(antigo.status, 400); // o formato antigo da função não funciona mais
 });
 test("só envia uma vez por registro (não dá para reenviar em loop)", async () => {
   const { db } = criarDb();
-  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA)).ok, true);
-  const r2 = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA, LEGADO)).ok, true);
+  const r2 = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA, LEGADO);
   assert.equal(r2.ok, false); assert.equal(r2.status, 409);
 });
 test("comprovante_recebido recusa: demanda antiga, já confirmada, inexistente ou id inválido", async () => {
   const velha = criarDb({ demandas: [{ id: 1, joiner_cog: "ana", status: "em_analise", created_at: minutosAtras(500), valor_total: 1, itens: [], motivo_rejeicao: null }] });
-  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 1 }, "anonimo", velha.db, AGORA)).status, 409);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 1 }, "anonimo", velha.db, AGORA, LEGADO)).status, 409);
   const paga = criarDb({ demandas: [{ id: 2, joiner_cog: "ana", status: "pago", created_at: minutosAtras(1), valor_total: 1, itens: [], motivo_rejeicao: null }] });
-  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 2 }, "anonimo", paga.db, AGORA)).status, 409);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 2 }, "anonimo", paga.db, AGORA, LEGADO)).status, 409);
   const { db } = criarDb();
-  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 999 }, "anonimo", db, AGORA)).status, 404);
-  for (const id of [0, -1, 1.5, "abc", null]) assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: id }, "anonimo", db, AGORA)).status, 400);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 999 }, "anonimo", db, AGORA, LEGADO)).status, 404);
+  for (const id of [0, -1, 1.5, "abc", null]) assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: id }, "anonimo", db, AGORA, LEGADO)).status, 400);
 });
 test("eventos de administração exigem administradora (ou o serviço do sync) e anônimo é barrado", async () => {
   const rej = [{ id: 5, joiner_cog: "ana", status: "rejeitado", created_at: minutosAtras(60), valor_total: 1, itens: [], motivo_rejeicao: "Valor <script>" }];
   const { db } = criarDb({ demandas: rej });
   for (const ev of [{ evento: "comprovante_recusado", demanda_id: 5 }, { evento: "report_resolvido", report_id: 7 }, { evento: "lembrete_pagamento", joiner_cog: "ana" }]) {
-    assert.equal((await prepararEmail(ev, "anonimo", db, AGORA)).status, 401);
+    assert.equal((await prepararEmail(ev, "anonimo", db, AGORA, LEGADO)).status, 401);
   }
   const ok1 = await prepararEmail({ evento: "comprovante_recusado", demanda_id: 5 }, "admin", db, AGORA);
   assert.equal(ok1.ok, true); assert.match(ok1.html!, /Valor &lt;script&gt;/); assert.doesNotMatch(ok1.html!, /<script>/);
@@ -82,17 +83,17 @@ test("lembrete: só uma vez por dia por joiner e só se houver pendência", asyn
 test("destinatário inválido, ausente ou ambíguo: não envia", async () => {
   for (const cog of ["sem", "dup", "ruim", "naoexiste"]) {
     const { db } = criarDb({ demandas: [{ id: 9, joiner_cog: cog, status: "em_analise", created_at: minutosAtras(1), valor_total: 1, itens: [], motivo_rejeicao: null }] });
-    const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 9 }, "anonimo", db, AGORA);
+    const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 9 }, "anonimo", db, AGORA, LEGADO);
     assert.equal(r.ok, false, cog); assert.equal(r.status, 422, cog);
   }
 });
 test("limites: por destinatário por hora e global por dia", async () => {
   const hora = Array.from({ length: LIMITES.porDestinatarioPorHora }, (_, i) => ({ evento: "x", referencia: "r" + i, destinatario: "ana@exemplo.com", em: minutosAtras(10) }));
   const a = criarDb({ envios: hora });
-  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", a.db, AGORA)).status, 429);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", a.db, AGORA, LEGADO)).status, 429);
   const dia = Array.from({ length: LIMITES.globalPorDia }, (_, i) => ({ evento: "x", referencia: "g" + i, destinatario: "outro" + i + "@e.com", em: minutosAtras(600) }));
   const b = criarDb({ envios: dia });
-  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", b.db, AGORA)).status, 429);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", b.db, AGORA, LEGADO)).status, 429);
 });
 test("evento desconhecido ou entrada estranha", async () => {
   const { db } = criarDb();
@@ -124,3 +125,33 @@ test("identificarQuem: chave de serviço, administradora e anônimo", async () =
   assert.equal(await identificarQuem("Bearer ", "", ehAdmin), "anonimo");
 });
 test("escapeHtml", () => { assert.equal(escapeHtml(`<a href="x" onclick='y'>&`), "&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;"); assert.equal(escapeHtml(null), ""); });
+
+test("depois do lançamento (modo legado desligado) o anônimo NÃO aciona nem o comprovante recebido", async () => {
+  const { db } = criarDb();
+  const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA, { permitirAnonimo: false });
+  assert.equal(r.ok, false); assert.equal(r.status, 401);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 101 }, "anonimo", db, AGORA)).status, 401); // padrão: sem contexto = não permite
+});
+test("joiner logada: só dispara o aviso da PRÓPRIA demanda, nunca a de outra pessoa", async () => {
+  const outra = criarDb({ demandas: [{ id: 50, joiner_cog: "bia", status: "em_analise", created_at: minutosAtras(1), valor_total: 1, itens: [], motivo_rejeicao: null }], joiners: [{ cog: "bia", nome: "Bia", email: "bia@e.com" }, { cog: "ana", nome: "Ana", email: "ana@e.com" }] });
+  const negado = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 50 }, "joiner", outra.db, AGORA, { cogConta: "ana", permitirAnonimo: false });
+  assert.equal(negado.ok, false); assert.equal(negado.status, 403);
+  assert.equal(outra.estado.envios.length, 0);                 // nada foi registrado nem enviado
+  const propria = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 50 }, "joiner", outra.db, AGORA, { cogConta: "BIA", permitirAnonimo: false });
+  assert.equal(propria.ok, true); assert.equal(propria.para, "bia@e.com");
+});
+test("joiner logada NÃO aciona eventos de administração", async () => {
+  const { db } = criarDb();
+  for (const ev of [{ evento: "comprovante_recusado", demanda_id: 101 }, { evento: "report_resolvido", report_id: 7 }, { evento: "lembrete_pagamento", joiner_cog: "ana" }]) {
+    assert.equal((await prepararEmail(ev, "joiner", db, AGORA, { cogConta: "ana" })).status, 403);
+  }
+});
+test("identificarChamada: serviço, administradora, joiner com conta, e anônimo (inclusive token de quem não tem conta ativada)", async () => {
+  const resolver = async (t: string) => t === "jwt-admin" ? { admin: true, cog: null } : t === "jwt-ana" ? { admin: false, cog: "ana" } : t === "jwt-sem-conta" ? { admin: false, cog: null } : (() => { throw new Error("inválido"); })();
+  assert.deepEqual(await identificarChamada("Bearer SERVICO", "SERVICO", resolver), { quem: "servico", cogConta: null });
+  assert.deepEqual(await identificarChamada("Bearer jwt-admin", "SERVICO", resolver), { quem: "admin", cogConta: null });
+  assert.deepEqual(await identificarChamada("Bearer jwt-ana", "SERVICO", resolver), { quem: "joiner", cogConta: "ana" });
+  assert.deepEqual(await identificarChamada("Bearer jwt-sem-conta", "SERVICO", resolver), { quem: "anonimo", cogConta: null });
+  assert.deepEqual(await identificarChamada("Bearer lixo", "SERVICO", resolver), { quem: "anonimo", cogConta: null });
+  assert.deepEqual(await identificarChamada(null, "SERVICO", resolver), { quem: "anonimo", cogConta: null });
+});

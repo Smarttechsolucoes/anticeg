@@ -3,7 +3,7 @@
 // Segredos necessários (Supabase > Edge Functions > Secrets): SENDGRID_API_KEY, SENDER_EMAIL, SENDER_NAME. Os do Supabase (URL, ANON, SERVICE_ROLE) já existem.
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { prepararEmail, identificarQuem } from "../_shared/notificacoes.ts";
+import { prepararEmail, identificarChamada } from "../_shared/notificacoes.ts";
 import type { Db } from "../_shared/notificacoes.ts";
 
 const ORIGENS = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://anticeg.vercel.app,http://localhost:5173,http://localhost:5199").split(",").map(s => s.trim());
@@ -24,11 +24,16 @@ serve(async (req) => {
     const sg = Deno.env.get("SENDGRID_API_KEY"), remetente = Deno.env.get("SENDER_EMAIL"), nomeRemetente = Deno.env.get("SENDER_NAME") ?? "ANTICEG";
     if (!sg || !remetente) return resp(500, { error: "envio de e-mail não configurado" }, origin);
 
-    const quem = await identificarQuem(req.headers.get("authorization"), servico, async (token) => {
+    const chamada = await identificarChamada(req.headers.get("authorization"), servico, async (token) => {
       const c = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } });
-      const { data } = await c.rpc("is_admin");
-      return data === true;
+      const { data: admin } = await c.rpc("is_admin");
+      if (admin === true) return { admin: true, cog: null };
+      const { data: cog } = await c.rpc("meu_cog");   // existe depois do J1; antes dele a chamada falha e segue como anônima
+      return { admin: false, cog: typeof cog === "string" ? cog : null };
     });
+    // Enquanto o acesso das joiners por senha não for lançado, o aviso de comprovante ainda precisa funcionar no modo "só @".
+    // Depois do lançamento, defina PERMITIR_COMPROVANTE_ANONIMO=false para exigir a conta da própria joiner.
+    const permitirAnonimo = (Deno.env.get("PERMITIR_COMPROVANTE_ANONIMO") ?? "true") !== "false";
 
     const sb = createClient(url, servico, { auth: { persistSession: false } });
     const db: Db = {
@@ -50,7 +55,7 @@ serve(async (req) => {
     };
 
     const entrada = await req.json().catch(() => null);
-    const r = await prepararEmail(entrada, quem, db);
+    const r = await prepararEmail(entrada, chamada.quem, db, new Date(), { cogConta: chamada.cogConta, permitirAnonimo });
     if (!r.ok) return resp(r.status, { error: r.erro }, origin);
 
     const envio = await fetch("https://api.sendgrid.com/v3/mail/send", {

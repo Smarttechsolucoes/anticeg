@@ -2,7 +2,9 @@
 // Regras: o visitante NUNCA escolhe destinatário, assunto ou corpo. Ele só informa o TIPO do evento e o id do registro;
 // o servidor busca o registro no banco, confere se o evento é legítimo, descobre o destinatário e monta a mensagem com modelos próprios.
 
-export type Quem = "anonimo" | "admin" | "servico";
+export type Quem = "anonimo" | "joiner" | "admin" | "servico";
+// Contexto de quem chama: o COG da conta logada (se for uma joiner com conta ativada) e se o modo legado "só @" ainda é aceito.
+export interface Contexto { cogConta?: string | null; permitirAnonimo?: boolean }
 
 export interface Joiner { cog: string; nome: string | null; email: string | null }
 export interface Demanda { id: number; joiner_cog: string; status: string; created_at: string; valor_total: number | string | null; itens: unknown; motivo_rejeicao: string | null }
@@ -19,7 +21,7 @@ export interface Db {
 }
 
 export const EVENTOS_EMAIL = {
-  comprovante_recebido: { quem: ["anonimo", "admin", "servico"], campos: ["demanda_id"] },
+  comprovante_recebido: { quem: ["anonimo", "joiner", "admin", "servico"], campos: ["demanda_id"] },
   comprovante_recusado: { quem: ["admin", "servico"], campos: ["demanda_id"] },
   report_resolvido: { quem: ["admin", "servico"], campos: ["report_id"] },
   lembrete_pagamento: { quem: ["admin", "servico"], campos: ["joiner_cog"] },
@@ -59,7 +61,7 @@ export interface ResultadoEmail { ok: boolean; status: number; erro?: string; pa
 const falha = (status: number, erro: string): ResultadoEmail => ({ ok: false, status, erro });
 
 // Valida o pedido e monta o e-mail. NÃO envia: devolve para quem, assunto e html para a camada de rede enviar.
-export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora: Date = new Date()): Promise<ResultadoEmail> {
+export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora: Date = new Date(), ctx: Contexto = {}): Promise<ResultadoEmail> {
   const e = entrada as Record<string, unknown> | null;
   if (!e || typeof e !== "object" || typeof e.evento !== "string" || !Object.prototype.hasOwnProperty.call(EVENTOS_EMAIL, e.evento)) return falha(400, "evento inválido");
   const evento = e.evento as EventoEmail;
@@ -68,6 +70,8 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
   const permitidos = new Set(["evento", ...regra.campos]);
   if (Object.keys(e).some(k => !permitidos.has(k))) return falha(400, "campos não permitidos");
   if (!(regra.quem as readonly string[]).includes(quem)) return falha(quem === "anonimo" ? 401 : 403, "sem permissão para este evento");
+  // modo legado (só @, sem login): só enquanto permitido pela configuração; depois do lançamento o comprovante exige a conta da própria joiner
+  if (quem === "anonimo" && !ctx.permitirAnonimo) return falha(401, "faça login para continuar");
 
   let cogDest = ""; let assunto = ""; let blocos = ""; let titulo = ""; let referencia = "";
   if (evento === "comprovante_recebido" || evento === "comprovante_recusado") {
@@ -76,6 +80,8 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
     const d = await db.demanda(id);
     if (!d) return falha(404, "registro não encontrado");
     cogDest = d.joiner_cog;
+    // uma joiner logada só dispara o aviso da PRÓPRIA demanda (nunca a de outra pessoa)
+    if (quem === "joiner" && String(ctx.cogConta || "").trim().toLowerCase() !== String(d.joiner_cog || "").trim().toLowerCase()) return falha(403, "esta demanda não é sua");
     if (evento === "comprovante_recebido") {
       const idadeMin = (agora.getTime() - new Date(d.created_at).getTime()) / 60000;
       if (d.status !== "em_analise" || !(idadeMin >= -1 && idadeMin <= LIMITES.janelaComprovanteMin)) return falha(409, "evento fora da janela");
@@ -148,11 +154,21 @@ export function iguaisSeguro(a: string, b: string): boolean {
   let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
-export async function identificarQuem(cabecalhoAuth: string | null, chaveServico: string, ehAdmin: (token: string) => Promise<boolean>): Promise<Quem> {
+export interface Chamada { quem: Quem; cogConta: string | null }
+export async function identificarChamada(cabecalhoAuth: string | null, chaveServico: string, resolver: (token: string) => Promise<{ admin: boolean; cog: string | null }>): Promise<Chamada> {
   const m = /^Bearer\s+(.+)$/i.exec(cabecalhoAuth || "");
-  if (!m) return "anonimo";
+  if (!m) return { quem: "anonimo", cogConta: null };
   const token = m[1].trim();
-  if (chaveServico && iguaisSeguro(token, chaveServico)) return "servico";
-  try { if (await ehAdmin(token)) return "admin"; } catch { /* token inválido: segue como anônimo */ }
-  return "anonimo";
+  if (chaveServico && iguaisSeguro(token, chaveServico)) return { quem: "servico", cogConta: null };
+  try {
+    const r = await resolver(token);
+    if (r.admin) return { quem: "admin", cogConta: null };
+    if (r.cog) return { quem: "joiner", cogConta: r.cog };
+  } catch { /* token inválido ou expirado: segue como anônimo */ }
+  return { quem: "anonimo", cogConta: null };
+}
+// compatível com o uso do push: administradora ou serviço
+export async function identificarQuem(cabecalhoAuth: string | null, chaveServico: string, ehAdmin: (token: string) => Promise<boolean>): Promise<Quem> {
+  const c = await identificarChamada(cabecalhoAuth, chaveServico, async t => ({ admin: await ehAdmin(t), cog: null }));
+  return c.quem;
 }
