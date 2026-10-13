@@ -119,7 +119,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Pedido registrado!</div>
             <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", lineHeight: 1.6, marginBottom: 24 }}>
               {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação."
-                : pagamento === "depois" ? `Pedido registrado! Avisaremos como pagar${cfg.pagarAte ? " (prazo: " + cfg.pagarAte + ")" : ""}.`
+                : pagamento === "depois" ? "Pedido registrado! Avisaremos como pagar."
                 : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop: 8, fontSize: 10, opacity: .5 }}>#{pedidoId}</div>}
             </div>
@@ -186,16 +186,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
               )}
             </div>
 
-            {cfg.pagamentoAgora === false ? (
-              <div style={{ marginBottom: 24 }}>
-                <div style={labelStyle}>Pagamento</div>
-                <div style={caixa}>
-                  O pagamento é feito <strong style={{ color: "var(--offwhite)" }}>depois do pedido</strong>
-                  {cfg.pagarAte ? <>, até <strong style={{ color: "var(--offwhite)" }}>{cfg.pagarAte}</strong></> : null}. Avisaremos como pagar.
-                  Pedidos sem pagamento até o prazo serão cancelados.
-                </div>
-              </div>
-            ) : (
+            {cfg.pagamentoAgora === false ? null : (
             <div style={{ marginBottom: 24 }}>
               <div style={labelStyle}>Pagamento</div>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
