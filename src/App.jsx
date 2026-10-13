@@ -3,6 +3,7 @@ import supabase from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
+import { AdminAuthGate } from "./AdminAuth.jsx";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -27416,7 +27417,7 @@ export default function App() {
           {tab === "promo-13" && <WaveMakerTab user={user} cfg={PROMO13_CFG} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
-          {tab === "admin" && isAdminUser(user) && <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} />}
+          {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}
         </>
       )}
 
