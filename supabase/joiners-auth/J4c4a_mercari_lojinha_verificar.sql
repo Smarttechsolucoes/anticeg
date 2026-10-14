@@ -1,0 +1,10 @@
+-- J4c-4a — VERIFICAÇÃO (somente leitura; só nomes e contagens). Esperado: 12 policies; visitante sem nada nas 3 tabelas; gatilhos ligados; dados iguais ao registro.
+select 'policies nas 3 tabelas (esperado 12)' as item, (select count(*) from pg_policies where schemaname = 'public' and tablename in ('mercari_pedidos', 'lojinha_repasses', 'repassos'))::text as valor
+union all select 'policies para visitante/PUBLIC (esperado 0)', (select count(*) from pg_policies where schemaname = 'public' and tablename in ('mercari_pedidos', 'lojinha_repasses', 'repassos') and ('anon' = any(roles) or 'public' = any(roles)))::text
+union all select 'RLS ligado nas 3 tabelas (esperado 3)', (select count(*) from pg_class where oid in ('public.mercari_pedidos'::regclass, 'public.lojinha_repasses'::regclass, 'public.repassos'::regclass) and relrowsecurity)::text
+union all select 'visitante com algum privilégio nas 3 tabelas (esperado false)',
+       (select coalesce(bool_or(has_table_privilege('anon', x.nome, 'SELECT') or has_table_privilege('anon', x.nome, 'INSERT') or has_table_privilege('anon', x.nome, 'UPDATE') or has_table_privilege('anon', x.nome, 'DELETE') or has_any_column_privilege('anon', x.nome, 'SELECT') or has_any_column_privilege('anon', x.nome, 'UPDATE') or has_any_column_privilege('anon', x.nome, 'INSERT')), false)::text
+          from (values ('public.mercari_pedidos'), ('public.lojinha_repasses'), ('public.repassos')) x(nome))
+union all select 'gatilhos de campos ligados (esperado 2)', (select count(*) from pg_trigger where tgname in ('trg_lojinha_protege', 'trg_repassos_protege') and tgenabled = 'O')::text
+union all select 'impressão antes | agora (mercari_pedidos)', coalesce((select detalhe from emergencia.c0b_estado_anterior where etapa = 'J4c-4a' and objeto = 'impressão mercari_pedidos'), 'sem registro') || ' | ' || (select 'linhas=' || count(*) || ' md5=' || md5(coalesce(string_agg(id::text || coalesce(status, ''), ',' order by id::text), '')) from public.mercari_pedidos)
+union all select 'estado registrado (linhas J4c-4a, esperado >= 9)', (select count(*) from emergencia.c0b_estado_anterior where etapa = 'J4c-4a')::text;
