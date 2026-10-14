@@ -201,6 +201,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
               : "Confira os dados: nome, @ (letras, números, _ ou .) e e-mail válidos.");
             setCadLoading(false); return;
           }
+          // aviso à administração (o servidor confere o pedido recente e usa o destinatário configurado; falha não atrapalha a entrada)
+          supabase.functions.invoke("email-evento", { body: { evento: "novo_cadastro", joiner_cog: cog } }).catch(() => {});
         }
         const acesso = await buscarAcessoSimples(cog);
         if (!acesso) { setCadError("Acesso não encontrado. Preencha nome, @ e e-mail para solicitar cadastro ou fale com a admin pelo WhatsApp."); setCadLoading(false); return; }
