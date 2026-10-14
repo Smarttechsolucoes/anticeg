@@ -12,7 +12,8 @@ process.on("uncaughtException", e => { console.log("ERRO:", String(e.message).sl
 process.on("unhandledRejection", e => { console.log("ERRO:", String(e && e.message || e).slice(0, 600)); process.exit(2); });
 
 // contas: 1 administradora | 2 ana (ativada, joiner 1) | 3 bia (ativada pelo admin, joiner 2) | 4 conta SEM vínculo | 9 gabi (ativada) | 7/8 "ela"/"Ela" (COGs parecidos)
-export async function laboratorio({ aplicarBase = true } = {}) {
+// ondas: "todas" (padrão: a ativação já está liberada para todas, como depois do lançamento geral) | "fechado" (ninguém liberada) | false (J4d não aplicado)
+export async function laboratorio({ aplicarBase = true, ondas = "todas" } = {}) {
   const d = new PGlite();
   await d.exec(`
     create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
@@ -37,6 +38,11 @@ export async function laboratorio({ aplicarBase = true } = {}) {
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(3)}', 2, 'admin')`);
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(7)}', 7, 'admin'), ('${U(8)}', 8, 'admin');`);
   if (aplicarBase) for (const a of ["J4_0_admin_em_todas_aplicar.sql", "J4a_publico_aplicar.sql"]) { const e = await rodar(d, a, J); if (e) throw new Error(a + ": " + e); }
+  if (aplicarBase && ondas) {
+    await d.exec(sql("J3_tentativas_aplicar.sql", J));
+    const e = await rodar(d, "J4d_ondas_aplicar.sql", J); if (e) throw new Error("J4d_ondas_aplicar.sql: " + e);
+    if (ondas === "todas") await d.exec("update public.ativacao_estado set liberar_todas = true");
+  }
   return d;
 }
 export async function como(d, papel, uid, q) {
