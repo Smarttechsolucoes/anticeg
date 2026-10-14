@@ -139,8 +139,10 @@ test("joiner logada: só dispara o aviso da PRÓPRIA demanda, nunca a de outra p
   const negado = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 50 }, "joiner", outra.db, AGORA, { cogConta: "ana", permitirAnonimo: false });
   assert.equal(negado.ok, false); assert.equal(negado.status, 403);
   assert.equal(outra.estado.envios.length, 0);                 // nada foi registrado nem enviado
-  const propria = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 50 }, "joiner", outra.db, AGORA, { cogConta: "BIA", permitirAnonimo: false });
+  const propria = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 50 }, "joiner", outra.db, AGORA, { cogConta: "bia", permitirAnonimo: false });
   assert.equal(propria.ok, true); assert.equal(propria.para, "bia@e.com");
+  // o COG da conta vem do banco, EXATO: "BIA" não é "bia"
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 50 }, "joiner", criarDb({ demandas: [{ id: 50, joiner_cog: "bia", status: "em_analise", created_at: minutosAtras(1), valor_total: 1, itens: [], motivo_rejeicao: null }] }).db, AGORA, { cogConta: "BIA", permitirAnonimo: false })).status, 403);
 });
 test("joiner logada NÃO aciona eventos de administração", async () => {
   const { db } = criarDb();
@@ -180,4 +182,16 @@ test("novo_cadastro: o visitante não escolhe destinatário, e só vale para ped
 test("novo_cadastro depois do lançamento (modo legado desligado): visitante sem login não aciona", async () => {
   const { db } = criarDb();
   assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova" }, "anonimo", db, AGORA, { permitirAnonimo: false, emailAdmin: "a@b.com" })).status, 401);
+});
+
+test("COGs parecidos: 'Ela' só dispara o aviso da própria demanda e o e-mail vai para o cadastro EXATO", async () => {
+  const joiners = [{ cog: "Ela", nome: "Ela M", email: "ela.maiuscula@exemplo.com" }, { cog: "ela", nome: "ela m", email: "ela.minuscula@exemplo.com" }];
+  const demandas = [{ id: 301, joiner_cog: "Ela", status: "em_analise", created_at: minutosAtras(1), valor_total: 1, itens: [], motivo_rejeicao: null }, { id: 302, joiner_cog: "ela", status: "em_analise", created_at: minutosAtras(1), valor_total: 2, itens: [], motivo_rejeicao: null }];
+  const { db } = criarDb({ joiners, demandas });
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 302 }, "joiner", db, AGORA, { cogConta: "Ela" })).status, 403);
+  assert.equal((await prepararEmail({ evento: "comprovante_recebido", demanda_id: 301 }, "joiner", db, AGORA, { cogConta: "ela" })).status, 403);
+  const r = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 302 }, "joiner", db, AGORA, { cogConta: "ela" });
+  assert.equal(r.ok, true); assert.equal(r.para, "ela.minuscula@exemplo.com");
+  const r2 = await prepararEmail({ evento: "comprovante_recebido", demanda_id: 301 }, "joiner", db, AGORA, { cogConta: "Ela" });
+  assert.equal(r2.ok, true); assert.equal(r2.para, "ela.maiuscula@exemplo.com");
 });
