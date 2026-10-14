@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { criarJoinerAuth, emailValido, mascararEmail, normalizarCog, validarSenha, SENHA_MIN } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, criarJoinerAuth, buscarAcessoSimples, emailValido, mascararEmail, normalizarCog, validarSenha, SENHA_MIN } from "./joinerAuth.js";
 import supabase from "./supabase.js";
 
 const C = { bg: "#17141f", borda: "rgba(245,240,232,0.14)", texto: "#F5F0E8", mudo: "rgba(245,240,232,0.62)", destaque: "#BAFF39", erro: "#FF8A80", ok: "#7CE08A" };
@@ -16,8 +16,8 @@ function Rotulo({ children }) {
   return <label style={{ display: "grid", gap: 4, fontSize: 11, color: C.mudo, fontFamily: mono }}>{children}</label>;
 }
 
-function JoinerAtivacaoModal({ user, api, onFechar }) {
-  const [fase, setFase] = useState("dados");           // dados | codigo | ok | pendente | regularizar
+function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_liberada !== false }) {
+  const [fase, setFase] = useState(liberada ? "dados" : "aguardando");           // dados | codigo | ok | pendente | regularizar | aguardando (ativação ainda não liberada para o grupo dela)
   const [cog, setCog] = useState(normalizarCog(user?.cog));
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -59,7 +59,7 @@ function JoinerAtivacaoModal({ user, api, onFechar }) {
     const r = await api.confirmar({ cog, email, codigo, senha });
     setOcupado(false);
     if (r.erro) { setErro(r.erro); return; }
-    setFase(r.resultado === "ok" ? "ok" : "pendente");
+    setFase(r.resultado === "ok" ? "ok" : r.resultado === "aguardando" ? "aguardando" : "pendente");
   }
   function continuarLimitado() {
     try { sessionStorage.setItem(DISPENSA, "1"); } catch { /* sem armazenamento: o aviso volta no próximo acesso */ }
@@ -80,6 +80,7 @@ function JoinerAtivacaoModal({ user, api, onFechar }) {
             <Rotulo>Repita a senha<input style={campo} type="password" value={repetir} onChange={ev => setRepetir(ev.target.value)} aria-label="Repita a senha" autoComplete="new-password" /></Rotulo>
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar código de confirmação"}</button>
+            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={continuarLimitado}>Agora não: continuar só com o @</button>
             <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => { setErro(""); setFase("regularizar"); }}>Meu e-mail não está no cadastro ou não lembro qual é</button>
           </form>
         )}
@@ -108,6 +109,13 @@ function JoinerAtivacaoModal({ user, api, onFechar }) {
             <button style={botao} onClick={continuarLimitado}>Continuar no modo limitado</button>
           </div>
         )}
+        {fase === "aguardando" && (
+          <div data-testid="ativacao-aguardando" style={{ display: "grid", gap: 12 }}>
+            <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>Sua ativação será liberada em breve</div>
+            <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Estamos liberando a criação de senha aos poucos, em grupos. Quando chegar a sua vez você será avisada pela administração. Enquanto isso você continua navegando só com o @ (calendário, regras e CEGs). Seus pedidos, claims e histórico continuam guardados no seu @ e nada se perde.</div>
+            <button style={botao} onClick={continuarLimitado}>Entendi, continuar só com o @</button>
+          </div>
+        )}
         {fase === "regularizar" && (
           <div style={{ display: "grid", gap: 12 }}>
             <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>Vamos regularizar o seu cadastro</div>
@@ -127,11 +135,19 @@ export function JoinerAtivacaoGate({ user }) {
   const [api] = useState(() => criarJoinerAuth());
   const [aberto, setAberto] = useState(false);
   const [dispensado, setDispensado] = useState(() => { try { return sessionStorage.getItem(DISPENSA) === "1"; } catch { return false; } });
+  const [liberada, setLiberada] = useState(user?.ativacao_liberada !== false);
 
   useEffect(() => {
     let vivo = true;
     if (!user?.cog) return undefined;
-    api.estado(user.cog).then(r => { if (vivo) setAberto(r.estado !== "ativa"); }).catch(() => { if (vivo) setAberto(true); });
+    api.estado(user.cog).then(async r => {
+      if (!vivo) return;
+      if (r.estado === "ativa") { setAberto(false); return; }
+      // a liberação pode ter mudado desde que o @ foi digitado: confere no servidor (só o @, sem dado pessoal)
+      const acesso = await buscarAcessoSimples(user.cog).catch(() => null);
+      const lib = acesso ? acesso.ativacao_liberada !== false : user?.ativacao_liberada !== false;
+      if (vivo) { setLiberada(lib); setAberto(lib); }      // quem ainda não foi liberada não recebe o pop-up sozinho
+    }).catch(() => { if (vivo) setAberto(true); });
     return () => { vivo = false; };
   }, [api, user?.cog]);
 
@@ -143,7 +159,7 @@ export function JoinerAtivacaoGate({ user }) {
   }, []);
 
   if (!aberto || dispensado) return null;
-  return <JoinerAtivacaoModal user={user} api={api} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;
+  return <JoinerAtivacaoModal user={user} api={api} liberada={liberada} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;
 }
 
 // ── nível de acesso: simples (só @) ou completo (@ + senha, conta ativada) ───────────────────────
@@ -324,6 +340,33 @@ export function TrocarSenhaJoiner({ user }) {
           <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Salvando…" : "Salvar nova senha"}</button>
         </form>
       )}
+    </div>
+  );
+}
+
+// D2: páginas de pedido (pré-vendas, revista, W Magazine, Smol Merch...) só abrem para conta ATIVADA e vinculada. Com o login novo desligado não muda nada.
+// Enviar comprovante e criar pedido também são recusados pelo servidor sem conta; esta tela só evita o pedido incompleto.
+export function ExigeContaAtiva({ children }) {
+  const [api] = useState(() => criarJoinerAuth());
+  const [estado, setEstado] = useState(JOINERS_AUTH_ATIVO ? "carregando" : "ativa");
+  useEffect(() => {
+    if (!JOINERS_AUTH_ATIVO) return undefined;
+    let vivo = true;
+    const atualizar = () => api.estado().then(r => { if (vivo) setEstado(r.estado === "ativa" ? "ativa" : "bloqueada"); }).catch(() => { if (vivo) setEstado("bloqueada"); });
+    atualizar();
+    const { data } = supabase.auth.onAuthStateChange(() => { setTimeout(atualizar, 0); });
+    return () => { vivo = false; data?.subscription?.unsubscribe(); };
+  }, [api]);
+  if (estado === "ativa") return children;
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg, #131310)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div data-testid="exige-conta" style={{ background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "26px 22px", width: "min(420px, 100%)", color: C.texto, display: "grid", gap: 12, textAlign: "center" }}>
+        {estado === "carregando" ? <div style={{ fontFamily: mono, fontSize: 12, color: C.mudo }}>carregando…</div> : (<>
+          <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>🔒 Entre na sua conta para fazer o pedido</div>
+          <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.6 }}>Pedidos e comprovantes agora são feitos com a sua conta ativada, para ficarem ligados ao seu cadastro e só você e a administração os verem. Entre com o seu @ e a sua senha; se ainda não ativou, a ativação aparece depois que você entra com o @. Nada do que já foi pedido se perde.</div>
+          <button style={botao} onClick={() => { window.location.href = "/"; }}>Ir para a entrada do site</button>
+        </>)}
+      </div>
     </div>
   );
 }

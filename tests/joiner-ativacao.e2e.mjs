@@ -26,9 +26,12 @@ async function nova(porta, cen) {
     const req = route.request(), u = req.url(), m = req.method();
     if (u.startsWith(`http://localhost:${porta}`)) return route.continue();
     const json = (status, body) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    // o pedido do código vai para a FUNÇÃO do servidor (nunca direto ao Auth): ela decide se envia e responde sempre igual
+    if (u.includes("/functions/v1/pedir-codigo-joiner")) { reg.otp.push(JSON.parse(req.postData() || "{}")); reg.ordem.push("otp"); return cen.otpErro ? json(429, { error: "Muitas tentativas. Espere alguns minutos e tente de novo." }) : json(200, { ok: true }); }
+    if (u.includes("/rest/v1/rpc/entrar_com_arroba")) { reg.rpc.push("entrar_com_arroba"); return cen.liberacaoServidor === undefined ? json(200, null) : json(200, { encontrado: true, cog: "ana", nome_site: "Ana", foto_perfil: null, conta_ativa: false, ativacao_liberada: cen.liberacaoServidor }); }
     if (u.includes("supabase.co/auth/v1/")) {
       const p = new URL(u).pathname.replace("/auth/v1", "");
-      if (p === "/otp") { reg.otp.push(JSON.parse(req.postData() || "{}")); reg.ordem.push("otp"); return cen.otpErro ? json(429, { code: 429, error_code: "over_email_send_rate_limit", msg: "email rate limit exceeded" }) : json(200, {}); }
+      if (p === "/otp") { reg.otpDireto = (reg.otpDireto || 0) + 1; return json(200, {}); }
       if (p === "/verify") { const c = JSON.parse(req.postData() || "{}"); reg.verify.push(c); reg.ordem.push("verify"); return c.token === cen.codigo ? json(200, sessao()) : json(403, { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" }); }
       if (p === "/user" && m === "PUT") { const c = JSON.parse(req.postData() || "{}"); reg.put.push(c.password); reg.ordem.push("senha"); return cen.putErro ? json(422, { code: 422, error_code: "weak_password", msg: "Password is known to be weak" }) : json(200, sessao().user); }
       if (p === "/user") return json(200, sessao().user);
@@ -84,7 +87,7 @@ const preencher = async (page, { email = "ana@exemplo.com", senha = "senha-boa-1
   ok((await corpo(page)).includes("menos óbvia") && reg.otp.length === 0, "senha óbvia: recusada");
   // pedido do código
   await preencher(page, { email: " Ana@Exemplo.com " });
-  ok(reg.otp.length === 1 && reg.otp[0].email === "ana@exemplo.com" && reg.otp[0].create_user === true && reg.otp[0].data?.cog_pedido === "ana", "pede o código para o e-mail digitado (normalizado) e leva o @ como PEDIDO, não como prova");
+  ok(reg.otp.length === 1 && reg.otp[0].email === "ana@exemplo.com" && reg.otp[0].cog === "ana" && !("create_user" in reg.otp[0]) && !reg.otpDireto, "pede o código AO SERVIDOR (função), com o e-mail digitado normalizado e o @ como PEDIDO, não como prova; nunca direto ao Auth");
   ok(/a•+@exemplo.com/.test(await modal(page).innerText()) && (await modal(page).innerText()).includes("Se os dados estiverem corretos"), "tela do código mostra o e-mail mascarado e a frase neutra (não revela se o @ existe)");
   ok(await page.getByRole("button", { name: /Reenviar código em/ }).isDisabled(), "reenvio fica bloqueado por 60 segundos");
   ok(reg.put.length === 0 && reg.rpc.filter(r => r.startsWith("ativar")).length === 0, "até aqui: a senha NÃO foi gravada e nenhum vínculo foi pedido (só depois do código)");
@@ -163,5 +166,26 @@ const preencher = async (page, { email = "ana@exemplo.com", senha = "senha-boa-1
   await B.browser.close();
 }
 
+{ // ativação ainda NÃO liberada para o grupo dela: sem pop-up automático, com aviso amigável quando ela procura ativar
+  const T = await nova(5197, { usuario: { ...ANA, ativacao_liberada: false }, versao: "5", liberacaoServidor: false }); const { page, reg } = T;
+  await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.waitForTimeout(1200);
+  ok(await modal(page).count() === 0, "ativação não liberada: o pop-up NÃO aparece sozinho (ela segue navegando só com o @)");
+  await page.evaluate(() => window.dispatchEvent(new Event("anticeg:abrir-ativacao"))); await page.waitForTimeout(400);
+  ok(await page.getByTestId("ativacao-aguardando").count() === 1 && (await modal(page).innerText()).includes("liberada em breve") && reg.otp.length === 0, "ao procurar ativar: aviso 'será liberada em breve', sem formulário e sem enviar e-mail");
+  await T.browser.close();
+}
+{ // a onda dela foi liberada depois que ela digitou o @: o site confere no servidor e o pop-up passa a aparecer
+  const T = await nova(5197, { usuario: { ...ANA, ativacao_liberada: false }, versao: "5", liberacaoServidor: true }); const { page } = T;
+  await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.waitForTimeout(1200);
+  ok(await modal(page).count() === 1 && await page.getByLabel("Crie sua senha").count() === 1, "onda liberada no servidor: o pop-up de ativação passa a aparecer (sem precisar digitar o @ de novo)");
+  await T.browser.close();
+}
+{ // o servidor responde que ainda aguarda a liberação (corrida: liberação recuada depois do código)
+  const T = await nova(5197, { usuario: ANA, versao: "5", codigo: "123456", ativar: "aguardando_liberacao" }); const { page } = T;
+  await abrir(page, 5197); await preencher(page);
+  await page.getByLabel("Código de confirmação").fill("123456"); await page.getByRole("button", { name: "Confirmar e ativar minha conta" }).click(); await page.waitForTimeout(900);
+  ok(await page.getByTestId("ativacao-aguardando").count() === 1, "se o servidor ainda segura a ativação, a tela mostra o aviso de espera (e nenhum acesso é concedido)");
+  await T.browser.close();
+}
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);

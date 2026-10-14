@@ -5,7 +5,7 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
-import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
+import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
 import { enviarComprovante, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
 import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
@@ -27231,17 +27231,17 @@ function AppPrincipal() {
       </div>
     );
   }
-  if (window.location.pathname === "/revista") return <RevistaFormPage />;
-  if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
-  if (window.location.pathname === "/prevenda/lightstick") return <LightstickForm onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/prevenda/singba") return <SingbaForm onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/prevenda/popcorn-sleeve") return <PopcornSleeveForm onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
-  if (window.location.pathname === "/wmag-leeknow") return <WMagFormPage cfg={WMAG_LK_CFG} />;
-  if (window.location.pathname === "/dazed-seungmin") return <WMagFormPage cfg={DAZED_SM_CFG} />;
-  if (window.location.pathname === "/smolmerch") return <SmolMerchFormPage pixKey={PIX_KEY} />;
-  if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
+  if (window.location.pathname === "/revista") return <ExigeContaAtiva><RevistaFormPage /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/bazaar") return <ExigeContaAtiva><RevistaBazaarInPage onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/popup-skzoo") return <ExigeContaAtiva><PopupSkzooEaawPage /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/lightstick") return <ExigeContaAtiva><LightstickForm onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/singba") return <ExigeContaAtiva><SingbaForm onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/popcorn-sleeve") return <ExigeContaAtiva><PopcornSleeveForm onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/wmag-hyunjin") return <ExigeContaAtiva><WMagFormPage /></ExigeContaAtiva>;
+  if (window.location.pathname === "/wmag-leeknow") return <ExigeContaAtiva><WMagFormPage cfg={WMAG_LK_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/dazed-seungmin") return <ExigeContaAtiva><WMagFormPage cfg={DAZED_SM_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/smolmerch") return <ExigeContaAtiva><SmolMerchFormPage pixKey={PIX_KEY} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/popup-this-that") return <ExigeContaAtiva><PopupThisAndThatPage /></ExigeContaAtiva>;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
   if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
   if (page === "landing" || !user) {

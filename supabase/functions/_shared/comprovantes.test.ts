@@ -47,8 +47,8 @@ test("pedido de envio: bucket, tipo, tamanho e campos extras", () => {
   assert.equal(validarPedidoUpload([pedido()]).ok, false);
 });
 
-test("envio: visitante, joiner e administradora recebem token; o resultado não vaza nada além do necessário", async () => {
-  for (const auth of [undefined, "anon-key", "jwt-ana", "jwt-admin"]) {
+test("envio: SÓ joiner ativada e administradora recebem token; o resultado não vaza nada além do necessário", async () => {
+  for (const auth of ["jwt-ana", "jwt-admin"]) {
     const m = montarUpload();
     const r = await tratarUploadComprovante(postUp(pedido(), auth), m.deps, "1.2.3.4");
     assert.equal(r.status, 200, String(auth));
@@ -59,11 +59,19 @@ test("envio: visitante, joiner e administradora recebem token; o resultado não 
   }
 });
 
-test("envio: grava a DONA do arquivo (COG da conta); visitante e administradora ficam sem dona", async () => {
+test("envio: SEM conta NUNCA envia (visitante, chave pública, token inválido e conta sem vínculo recebem 401 e nada é autorizado nem registrado)", async () => {
+  for (const auth of [undefined, "anon-key", "token-falso"]) {
+    const m = montarUpload(); const r = await tratarUploadComprovante(postUp(pedido(), auth), m.deps, "1.1.1.1");
+    assert.equal(r.status, 401, String(auth)); assert.equal(m.assinados.length, 0); assert.equal(m.registrados.length, 0);
+  }
+  // variável antiga "permitir anônimo" NÃO reabre o envio
+  const m = montarUpload({ env: { PERMITIR_COMPROVANTE_ANONIMO: "true" } });
+  assert.equal((await tratarUploadComprovante(postUp(pedido()), m.deps, "1.1.1.1")).status, 401, "o segredo antigo não reabre o envio sem conta");
+});
+
+test("envio: grava a DONA do arquivo (COG da conta); a administradora fica sem dona", async () => {
   const a = montarUpload(); await tratarUploadComprovante(postUp(pedido(), "jwt-ana"), a.deps, "1.1.1.1");
   assert.deepEqual(a.donos, { "comprovantes/wmag/1700000000000.jpg": "ana" });
-  const v = montarUpload(); await tratarUploadComprovante(postUp(pedido()), v.deps, "1.1.1.1");
-  assert.deepEqual(v.donos, { "comprovantes/wmag/1700000000000.jpg": null });
   const adm = montarUpload(); await tratarUploadComprovante(postUp(pedido(), "jwt-admin"), adm.deps, "1.1.1.1");
   assert.deepEqual(adm.donos, { "comprovantes/wmag/1700000000000.jpg": null });
 });
@@ -83,22 +91,12 @@ test("envio: pedidos inválidos viram 400 e não gastam a cota", async () => {
   assert.equal(m.registrados.length, 0);
 });
 
-test("envio: limite por hora (visitante por rede, joiner por conta); administradora sem limite", async () => {
-  const m = montarUpload({ usados: { "ip:9.9.9.9": LIMITES_UPLOAD.anonimoPorHora, "cog:ana": LIMITES_UPLOAD.joinerPorHora, "cog:bia": 3 } });
-  assert.equal((await tratarUploadComprovante(postUp(pedido()), m.deps, "9.9.9.9")).status, 429, "visitante acima do limite");
-  assert.equal((await tratarUploadComprovante(postUp(pedido()), m.deps, "8.8.8.8")).status, 200, "outra rede continua");
+test("envio: limite por hora por conta; administradora sem limite", async () => {
+  const m = montarUpload({ usados: { "cog:ana": LIMITES_UPLOAD.joinerPorHora, "cog:bia": 3 } });
   assert.equal((await tratarUploadComprovante(postUp(pedido(), "jwt-ana"), m.deps, "9.9.9.9")).status, 429, "joiner acima do limite");
   assert.equal((await tratarUploadComprovante(postUp(pedido(), "jwt-bia"), m.deps, "9.9.9.9")).status, 200, "outra joiner continua");
   const adm = montarUpload({ usados: { admin: 9999 } });
   assert.equal((await tratarUploadComprovante(postUp(pedido(), "jwt-admin"), adm.deps, "1.1.1.1")).status, 200, "administradora sem limite");
-});
-
-test("envio: com PERMITIR_COMPROVANTE_ANONIMO=false só conta logada envia", async () => {
-  const m = montarUpload({ env: { PERMITIR_COMPROVANTE_ANONIMO: "false" } });
-  assert.equal((await tratarUploadComprovante(postUp(pedido()), m.deps, "1.1.1.1")).status, 401);
-  assert.equal((await tratarUploadComprovante(postUp(pedido(), "anon-key"), m.deps, "1.1.1.1")).status, 401, "a chave pública não é conta");
-  assert.equal((await tratarUploadComprovante(postUp(pedido(), "token-falso"), m.deps, "1.1.1.1")).status, 401, "token inválido vale como visitante");
-  assert.equal((await tratarUploadComprovante(postUp(pedido(), "jwt-ana"), m.deps, "1.1.1.1")).status, 200);
 });
 
 test("envio: CORS só para a origem do site; método errado; erro interno não vaza detalhe", async () => {

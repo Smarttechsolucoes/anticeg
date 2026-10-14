@@ -10,7 +10,7 @@ import { cabecalhosCors } from "./handlers.ts";
 
 export const BUCKETS = ["comprovantes", "mercari-comprovantes"];
 export const LIMITE_BYTES = 10 * 1024 * 1024;
-export const LIMITES_UPLOAD = { anonimoPorHora: 20, joinerPorHora: 60, janelaMin: 60 };
+export const LIMITES_UPLOAD = { joinerPorHora: 60, janelaMin: 60 };
 export const SEGUNDOS_LINK = 600;
 const ORIGENS_PADRAO = "https://anticeg.vercel.app,http://localhost:5173,http://localhost:5199,http://localhost:5197";
 
@@ -60,22 +60,21 @@ export interface DepsUpload {
   assinar: (bucket: string, path: string) => Promise<{ token: string; path: string } | null>;   // null = o arquivo já existe
   agora?: () => Date;
 }
-export async function tratarUploadComprovante(req: Request, deps: DepsUpload, ip: string): Promise<Response> {
+export async function tratarUploadComprovante(req: Request, deps: DepsUpload, _ip: string): Promise<Response> {
   const origin = req.headers.get("origin");
   const cors = cabecalhosCors(origin, deps.env("ALLOWED_ORIGINS") ?? ORIGENS_PADRAO);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return responder(405, { error: "método não permitido" }, cors);
   try {
     const chamada: Chamada = await identificarChamada(req.headers.get("authorization"), deps.env("SUPABASE_SERVICE_ROLE_KEY") ?? "", deps.resolverToken);
-    const permitirAnonimo = (deps.env("PERMITIR_COMPROVANTE_ANONIMO") ?? "true") !== "false";
-    if (chamada.quem === "anonimo" && !permitirAnonimo) return responder(401, { error: "entre na sua conta para enviar o comprovante" }, cors);
+    // NUNCA sem conta: só joiner ATIVADA (vinculada a um cadastro) ou administradora. Visitante, chave pública e conta sem vínculo recebem 401.
+    if (chamada.quem === "anonimo") return responder(401, { error: "entre na sua conta para enviar o comprovante" }, cors);
     const v = validarPedidoUpload(await req.json().catch(() => null));
     if (!v.ok) return responder(400, { error: v.erro }, cors);
     const agora = deps.agora ? deps.agora() : new Date();
     const desde = new Date(agora.getTime() - LIMITES_UPLOAD.janelaMin * 60000).toISOString();
-    const chave = chamada.cogConta ? `cog:${chamada.cogConta.toLowerCase()}` : chamada.quem === "admin" || chamada.quem === "servico" ? `admin` : `ip:${ip || "desconhecido"}`;
-    const limite = chamada.quem === "anonimo" ? LIMITES_UPLOAD.anonimoPorHora : LIMITES_UPLOAD.joinerPorHora;
-    if (chamada.quem !== "admin" && chamada.quem !== "servico" && (await deps.contar(chave, desde)) >= limite) return responder(429, { error: "Muitos envios agora. Tente de novo em alguns minutos." }, cors);
+    const chave = chamada.cogConta ? `cog:${chamada.cogConta.toLowerCase()}` : "admin";
+    if (chamada.quem !== "admin" && chamada.quem !== "servico" && (await deps.contar(chave, desde)) >= LIMITES_UPLOAD.joinerPorHora) return responder(429, { error: "Muitos envios agora. Tente de novo em alguns minutos." }, cors);
     const assinado = await deps.assinar(v.pedido.bucket, v.pedido.path);
     if (!assinado) return responder(409, { error: "já existe um arquivo com esse nome" }, cors);
     await deps.registrar(chave, { bucket: v.pedido.bucket, path: assinado.path, cog: chamada.cogConta });

@@ -106,13 +106,15 @@ create view public.formulario_pedidos_publico as
 revoke all on public.formulario_pedidos_publico from public, anon, authenticated;
 grant select on public.formulario_pedidos_publico to anon, authenticated, service_role;
 
--- 3) criação de pedido pelas lojas (visitante ou conta): validada no servidor
+-- 3) criação de pedido pelas lojas (SÓ conta ativada ou administradora): validada no servidor
 create function public.pedido_loja_criar(p_tabela text, p_dados jsonb)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_lojas text[] := array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'];
   v_dados jsonb; v_cols text; v_id text; v_n integer;
 begin
+  -- D2: comprar (e enviar comprovante) exige conta ATIVADA e vinculada a um cadastro; visitante e conta sem vínculo não criam pedido
+  if (select public.meu_cog()) is null and not (select public.is_admin()) then return jsonb_build_object('ok', false, 'motivo', 'login_necessario'); end if;
   if p_tabela is null or not (p_tabela = any (v_lojas)) or to_regclass('public.' || p_tabela) is null then return jsonb_build_object('ok', false, 'motivo', 'loja_invalida'); end if;
   if p_dados is null or jsonb_typeof(p_dados) <> 'object' or pg_column_size(p_dados) > 30000 then return jsonb_build_object('ok', false, 'motivo', 'dados_invalidos'); end if;
   v_dados := p_dados - 'created_at' - 'updated_at';
@@ -131,8 +133,8 @@ begin
 exception when others then
   return jsonb_build_object('ok', false, 'motivo', 'dados_invalidos');
 end $$;
-revoke all on function public.pedido_loja_criar(text, jsonb) from public;
-grant execute on function public.pedido_loja_criar(text, jsonb) to anon, authenticated, service_role;
+revoke all on function public.pedido_loja_criar(text, jsonb) from public, anon;
+grant execute on function public.pedido_loja_criar(text, jsonb) to authenticated, service_role;   -- visitante não executa (D2)
 
 -- 4) conferência dentro da transação: qualquer falha desfaz tudo
 do $$
