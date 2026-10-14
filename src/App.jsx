@@ -19528,30 +19528,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
           async function solicitarEnvio() {
             setEnvioSolicitando(true);
-            const { data: openRounds } = await supabase.from("envio_rounds")
-              .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
-            let roundId, posicao, roundNum;
-            if (openRounds && openRounds.length > 0) {
-              const round = openRounds[0];
-              const { count } = await supabase.from("envio_requests")
-                .select("id", { count: "exact", head: true }).eq("round_id", round.id);
-              posicao = (count || 0) + 1;
-              roundId = round.id;
-              roundNum = round.numero;
-              if (posicao >= 7) await supabase.from("envio_rounds").update({ status: "fechado" }).eq("id", round.id);
-            } else {
-              const { data: allRounds } = await supabase.from("envio_rounds")
-                .select("numero").order("numero", { ascending: false }).limit(1);
-              roundNum = (allRounds?.[0]?.numero || 0) + 1;
-              const { data: newRound } = await supabase.from("envio_rounds")
-                .insert([{ numero: roundNum, status: "aberto" }]).select().single();
-              roundId = newRound.id;
-              posicao = 1;
-            }
-            const { data: request } = await supabase.from("envio_requests")
-              .insert([{ joiner_cog: user.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando", itens_manuais: itensManual.trim() || null }])
-              .select("*, envio_rounds(*)").single();
-            setEnvioRequest(request);
+            // o servidor escolhe a rodada e a posição (e fecha a rodada na 7ª pessoa), sob trava: envio_entrar_round
+            const { data, error } = await supabase.rpc("envio_entrar_round", { p_itens: itensManual.trim() || null });
+            setEnvioRequest(!error && data?.ok ? data.request : null);
             setEnvioSolicitando(false);
           }
 
