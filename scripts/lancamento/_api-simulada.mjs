@@ -9,7 +9,13 @@ globalThis.fetch = async (url, init = {}) => {
   const resp = (status, body) => new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   if (u.pathname.endsWith("/auth/v1/settings")) return resp(200, { external: { email: true, google: false }, disable_signup: process.env.MOCK_SIGNUP_OFF === "1", mailer_autoconfirm: false });
   if (u.pathname.includes("/functions/v1/login-joiner")) return resp(200, { access_token: tok(JSON.parse(init.body).cog) });
-  if (u.pathname.includes("/storage/v1/object/public")) return resp(400, { error: "Bucket not found" });
+  if (u.pathname.includes("/storage/v1/object/public")) return ABERTA ? new Response("x", { status: 206 }) : resp(400, { error: "Bucket not found" });
+  if (u.pathname.includes("/storage/v1/object/sign/")) return new Response("x", { status: 206 });
+  if (u.pathname.includes("/functions/v1/comprovante-url")) {
+    if (!marca) return resp(401, { error: "entre na sua conta" });
+    const c = JSON.parse(init.body || "{}"); const dona = String(c.path || "").includes("/" + marca) || String(c.path || "").startsWith(marca) || String(c.path || "").includes("pagamentos/" + marca);
+    return dona ? resp(200, { ok: true, url: "https://exemplo.supabase.co/storage/v1/object/sign/" + c.bucket + "/" + c.path + "?token=t" }) : resp(404, { error: "comprovante não encontrado" });
+  }
   if (u.pathname.includes("/storage/v1/object/list")) return resp(401, { message: "permission denied" });
   if (u.pathname.startsWith("/storage/v1/object/") && init.method === "POST") return resp(403, { message: "row-level security" });
   if (u.pathname.includes("/rpc/")) {

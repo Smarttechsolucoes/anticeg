@@ -40,7 +40,7 @@ for (const t of PROTEGIDAS) {
   else if (r.status === 200 && lista(r).length === 0) { aviso(`${t}: respondeu vazio em vez de "permissão negada" (confira se o script de proteção foi aplicado)`); ok(true, `visitante NÃO lê ${t} (vazio)`); }
   else ok(false, `visitante LÊ ${t} (HTTP ${r.status}, ${lista(r).length} linha(s))`);
 }
-for (const [fn, corpo] of [["claim_enviar", { p_evento: 1, p_pedidos: {} }], ["claim_organizar", { p_evento: 1 }], ["envio_entrar_round", { p_itens: null }], ["comprovante_assinavel", { p_bucket: "comprovantes", p_path: "x" }], ["ceg_itens", { p_ceg: "SKZOO" }], ["meus_dados", {}]]) {
+for (const [fn, corpo] of [["claim_enviar", { p_evento: 1, p_pedidos: {} }], ["claim_organizar", { p_evento: 1 }], ["envio_entrar_round", { p_itens: null }], ["comprovante_assinavel", { p_bucket: "comprovantes", p_path: "x" }], ["ceg_itens", { p_ceg: "SKZOO" }], ["pedido_loja_criar", { p_tabela: "pedidos_revista", p_dados: {} }], ["meus_dados", {}]]) {
   const r = await chamar(`/rest/v1/rpc/${fn}`, { metodo: "POST", corpo });
   ok(negado(r) || r.status === 404 || r.json === null || (Array.isArray(r.json) && r.json.length === 0), `visitante NÃO consegue usar ${fn} (HTTP ${r.status})`);
 }

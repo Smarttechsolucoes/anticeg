@@ -86,13 +86,13 @@ create policy joiner_le_proprias on public.multas_pagas for select to authentica
 
 create policy admin_tudo on public.masterlist for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 create policy joiner_le_proprios_e_slots on public.masterlist for select to authenticated
-  using (public.cog_e_da_conta(cog) or lower(trim(cog)) = 'disponivel');
+  using (public.cog_e_da_conta(cog) or (lower(trim(cog)) = 'disponivel' and (select public.meu_cog()) is not null));   -- slots só para conta ATIVADA (conta criada sem vínculo não vê nada)
 -- claim: pegar um slot 'disponivel' para si (o COG novo tem de ser o dela); devolver/reabrir um slot (continua 'disponivel')
 create policy joiner_assume_slot on public.masterlist for update to authenticated
-  using (lower(trim(cog)) = 'disponivel' and na_loja is true)
+  using (lower(trim(cog)) = 'disponivel' and na_loja is true and (select public.meu_cog()) is not null)
   with check (public.cog_e_da_conta(cog) or lower(trim(cog)) = 'disponivel');
 create policy joiner_abre_slot_de_set on public.masterlist for insert to authenticated
-  with check (lower(trim(cog)) = 'disponivel' and ceg = 'CLAIM');
+  with check (lower(trim(cog)) = 'disponivel' and ceg = 'CLAIM' and (select public.meu_cog()) is not null);
 
 -- conferência dentro da transação: qualquer falha desfaz tudo
 do $$

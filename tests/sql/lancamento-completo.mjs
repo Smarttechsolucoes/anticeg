@@ -1,7 +1,7 @@
 // SEQUÊNCIA COMPLETA DO LANÇAMENTO no laboratório fictício (PGlite): aplica, na ordem do roteiro, TODOS os SQLs de proteção (J4b, J4c-1, J4c-2, J4c-3, J4c-4a..e, J5), roda a verificação de cada um,
 // e termina com a auditoria final (supabase/lancamento/99_auditoria_final.sql): nada INESPERADO pode sobrar para o visitante. Também percorre a vida da joiner ativada em todas as áreas.
 // Uso: npm i --no-save @electric-sql/pglite && node tests/sql/lancamento-completo.mjs
-import { laboratorio, como, n, negado, rodar, verificar, ok, fim, J, sql } from "./_lab.mjs";
+import { laboratorio, como, n, negado, rodar, verificar, ok, fim, J, sql, U } from "./_lab.mjs";
 const d = await laboratorio(); await d.exec(sql("08_storage_simulado.sql", "laboratorio"));
 const ORDEM = [
   ["J4b_lote1_aplicar.sql", "J4b_lote1_verificar.sql"],
@@ -59,6 +59,38 @@ ok((await n(d, "authenticated", 2, "select 1 from public.joiners")) === 1 && (aw
 ok((await n(d, "authenticated", 1, "select 1 from public.joiners")) > 5 && (await n(d, "authenticated", 1, "select 1 from public.mercari_pedidos")) >= 2 && (await n(d, "authenticated", 1, "select 1 from public.envio_requests")) >= 2, "administradora preservada: lê tudo");
 ok((await como(d, "authenticated", 2, "select public.meu_cog() c")).rows[0].c === "ana", "ana é reconhecida pela conta (meu_cog)");
 
+// D3: conta CRIADA por qualquer pessoa (e-mail confirmado, sem vínculo a uma joiner) NÃO acessa nada privado: nem ler, nem escrever, nem usar função
+{
+  const SEM_VINCULO = [4, 20]; await d.exec(`insert into auth.users values ('${U(20)}', 'curioso@exemplo.com', now()) on conflict do nothing`);
+  let vazou = [];
+  for (const uid of SEM_VINCULO) {
+    for (const t of [...TODAS, "claim_reservas_quadro"]) { const r = await como(d, "authenticated", uid, `select * from public.${t} limit 1`); if (!r.erro && r.rows.length) vazou.push(`${uid}:${t}`); }
+    for (const q of ["update public.joiners set nome = 'x' returning id", "delete from public.mercari_pedidos returning id", "insert into public.mercari_pedidos (joiner_cog, status) values ('ana','pendente')", "update public.pagamento_demandas set status = 'pago' returning id", "insert into public.feedbacks (joiner_cog, message) values ('ana','x')", "insert into public.claim_reservas (evento_id, set_id, joiner_cog, membro) values (1,1,'ana','Han')"]) {
+      const r = await como(d, "authenticated", uid, q); if (!r.erro && r.rows?.length) vazou.push(`${uid}:${q.slice(0, 30)}`);
+    }
+  }
+  ok(vazou.length === 0, "D3: contas criadas SEM vínculo (2 contas) não leem nenhuma das " + (TODAS.length + 1) + " tabelas/visões protegidas nem alteram dado" + (vazou.length ? ": " + vazou.join(", ") : ""));
+  const f = async (uid, fn, args) => (await como(d, "authenticated", uid, `select public.${fn}(${args}) r`)).rows?.[0]?.r;
+  ok((await f(4, "claim_enviar", "1, '{\"Changbin\":1}'::jsonb")).motivo === "sem_conta" && (await f(4, "envio_entrar_round", "'x'")).motivo === "sem_conta" && (await f(4, "pedido_loja_criar", "'pedidos_revista', '{\"nome\":\"x\",\"email\":\"x@x.com\"}'::jsonb")).motivo === "login_necessario" && (await f(4, "comprovante_assinavel", "'comprovantes', 'pagamentos/ana.pdf'")) === false && JSON.stringify(await f(4, "ceg_itens", "'SKZOO'")) === "[]" && (await f(4, "meu_cog", "")) === null && (await f(4, "meus_dados", "")) === null,
+     "D3: as funções recusam a conta sem vínculo (claim, fila de envio, pedido de loja, comprovante, itens do CEG, meus dados)");
+  ok(negado(await como(d, "authenticated", 4, "insert into storage.objects (bucket_id, name) values ('avatars', 'sem/vinculo.png')")), "D3: conta sem vínculo não envia arquivo nem para os buckets públicos");
+}
+// COGs parecidos (Ela / ela são PESSOAS DIFERENTES): cada uma lê só as linhas do COG exato dela, em todas as tabelas com dono
+{
+  const comDono = [["pagamento_demandas", "joiner_cog"], ["mercari_pedidos", "joiner_cog"], ["reports", "joiner_cog"], ["feedbacks", "joiner_cog"], ["notifications", "joiner_cog"], ["joiner_storage", "joiner_cog"], ["envio_requests", "joiner_cog"], ["push_reads", "joiner_cog"], ["joiner_conferencias", "joiner_cog"], ["claim_reservas", "joiner_cog"], ["claims", "joiner_cog"], ["envio_solicitacoes", "joiner_cog"], ["lojinha_repasses", "joiner_cog"], ["multas_pagas", "joiner_cog"]];
+  const extras = { lojinha_repasses: ", status", claims: ", status", reports: ", status", envio_solicitacoes: ", status", claim_reservas: ", evento_id, membro", multas_pagas: ", masterlist_id, campo, dias_atraso, valor_multa", claims_x: "" };
+  const valores = { lojinha_repasses: ", 'vendido'", claims: ", 'pendente'", reports: ", 'pendente'", envio_solicitacoes: ", 'solicitação de envio'", claim_reservas: ", 1, 'Han'", multas_pagas: ", 1, 'item', 1, 1" };
+  let cobertas = 0, trocadas = [];
+  for (const [t, col] of comDono) {
+    try { await d.exec(`insert into public.${t} (${col}${extras[t] || ""}) values ('Ela'${valores[t] || ""}), ('ela'${valores[t] || ""})`); } catch { continue; }
+    cobertas++;
+    const r7 = (await como(d, "authenticated", 7, `select ${col} c from public.${t} where ${col} in ('Ela', 'ela')`)).rows || [], r8 = (await como(d, "authenticated", 8, `select ${col} c from public.${t} where ${col} in ('Ela', 'ela')`)).rows || [];
+    if (!(r7.length >= 1 && r7.every(x => x.c === "Ela")) || !(r8.length >= 1 && r8.every(x => x.c === "ela"))) trocadas.push(`${t} (Ela vê ${r7.map(x => x.c).join("/") || "nada"}; ela vê ${r8.map(x => x.c).join("/") || "nada"})`);
+  }
+  ok(cobertas >= 10 && trocadas.length === 0, `COGs parecidos: Ela e ela ficam isoladas em ${cobertas} tabelas com dono` + (trocadas.length ? " → MISTURA em: " + trocadas.join("; ") : ""));
+  const ml = (await como(d, "authenticated", 7, "select cog from public.masterlist where lower(trim(cog)) <> 'disponivel'")).rows || [];
+  ok(ml.every(x => x.cog === "Ela") && (await como(d, "authenticated", 8, "select cog from public.masterlist where lower(trim(cog)) <> 'disponivel'")).rows.every(x => x.cog === "ela"), "COGs parecidos: na masterlist cada uma lê só o COG exato");
+}
 // reversões protegidas dos lotes exigem a frase (nenhuma é executada aqui)
 for (const [arq, frase] of [["J4c4a_mercari_lojinha_reverter_protegido.sql", ""], ["J4c4b_claims_sets_reverter_protegido.sql", ""], ["J4c4c_pessoais_reverter_protegido.sql", ""], ["J4c4d_admin_catalogos_reverter_protegido.sql", ""], ["J5_comprovantes_reverter_protegido.sql", ""]])
   ok(await rodar(d, arq, J, frase) !== null, `${arq} é recusada sem a frase de autorização`);
