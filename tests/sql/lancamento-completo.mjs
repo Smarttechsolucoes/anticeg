@@ -16,6 +16,10 @@ const ORDEM = [
   ["J5_comprovantes_aplicar.sql", "J5_comprovantes_verificar.sql"],
 ];
 
+// PRÉ-VOO (somente leitura) roda sem erro antes e depois, e acusa o que falta
+{ const pv = (await d.query(sql("00_preflight_leitura.sql", "lancamento"))).rows;
+  ok(pv.length > 60 && pv.some(r => r.secao === "1 cadastros" && r.item === "joiners no total") && pv.some(r => r.item.startsWith("J4c-4b") && r.valor === "NÃO"), "o pré-voo roda e mostra que o J4c-4b ainda NÃO está aplicado: " + pv.length + " linhas");
+  const rep = pv.find(r => r.item.startsWith("@/COG repetidos")); ok(rep && Number(rep.valor) >= 2, "o pré-voo acusa os COGs repetidos ignorando maiúsculas (Ela/ela)"); }
 // ANTES: o visitante alcança tudo
 const antes = (await d.query(sql("99_auditoria_final.sql", "lancamento"))).rows;
 ok(antes.filter(r => r.situacao.startsWith("INESPERADO")).length >= 20, "ANTES: a auditoria final acusa DEZENAS de coisas que o visitante alcança hoje: " + antes.filter(r => r.situacao.startsWith("INESPERADO")).length);
@@ -36,6 +40,8 @@ console.log("INFO  itens a REVISAR (" + revisar.length + "): " + revisar.map(r =
 ok(depois.filter(r => r.situacao === "esperado" && r.tipo === "tabela/visão").length >= 8, "a auditoria lista o conteúdo público esperado (config, avisos gerais, fotos, links, calendário, preços, sugestões e as visões públicas)");
 ok(depois.some(r => r.tipo === "storage: bucket de comprovantes" && r.situacao === "esperado") && !depois.some(r => r.tipo === "storage: bucket de comprovantes" && r.situacao !== "esperado"), "comprovantes: buckets privados com limite");
 
+{ const pv2 = (await d.query(sql("00_preflight_leitura.sql", "lancamento"))).rows;
+  ok(pv2.filter(r => r.secao === "2 já aplicado" && /^J(1|4|5)/.test(r.item) && r.valor === "NÃO").length === 0, "depois do lançamento o pré-voo mostra TODAS as funções do lançamento como aplicadas"); }
 // VISITANTE: sondagem tabela por tabela (o equivalente local do teste de API anônima)
 const TODAS = ["joiners", "masterlist", "pagamento_demandas", "multas_pagas", "claims", "reports", "envio_solicitacoes", "pre_cadastros", "grupos_envio", "push_subscriptions", "formulario_pedidos",
   "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",

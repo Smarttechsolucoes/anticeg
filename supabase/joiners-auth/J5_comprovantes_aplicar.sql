@@ -4,7 +4,8 @@
 --   comprovantes, mercari-comprovantes : bucket PRIVADO (os links antigos "públicos" deixam de abrir sozinhos), só imagens e PDF, até 10 MB por arquivo.
 --       ENVIAR: só pela função comprovante-upload, que autoriza um arquivo por vez (conferindo caminho, tipo, tamanho e limite por hora) e nunca sobrescreve outro.
 --       VER: só pela função comprovante-url, que devolve um link assinado de 10 minutos para a administradora ou para a DONA do arquivo (comprovante_assinavel confere a dona registrada).
---   avatars, fotos-itens, storage-itens : continuam públicos para ver; só conta LOGADA envia (visitante não envia mais).
+--   avatars, fotos-itens, storage-itens : continuam públicos para ver; só conta ATIVADA (vinculada a uma joiner) ou a administradora envia. Visitante e conta sem vínculo não enviam mais
+--       (importante: com o cadastro de usuários do Auth ligado, QUALQUER pessoa consegue criar uma conta; só a vinculada a uma joiner pode enviar arquivos).
 -- Nenhum arquivo é movido, apagado ou renomeado; as URLs gravadas nos pedidos continuam as mesmas (a leitura passa a ser assinada pelo site novo).
 -- ⚠ APLICAR SOMENTE NO LANÇAMENTO, junto com o site novo no ar e com as funções comprovante-upload e comprovante-url já publicadas (VITE_JOINERS_AUTH ligado).
 --   O site de hoje envia e abre comprovantes direto no Storage e deixaria de funcionar nesses pontos. Depois do C0-B5 e do C0-B6.
@@ -129,7 +130,8 @@ begin
     execute format('drop policy %I on storage.objects', r.policyname);
   end loop;
 end $$;
-alter policy "allow upload" on storage.objects to authenticated with check (bucket_id not in ('anti-store', 'comprovantes', 'mercari-comprovantes'));
+alter policy "allow upload" on storage.objects to authenticated
+  with check (bucket_id not in ('anti-store', 'comprovantes', 'mercari-comprovantes') and ((select public.meu_cog()) is not null or (select public.is_admin())));
 
 -- 5) conferência dentro da transação: qualquer falha desfaz tudo
 do $$
