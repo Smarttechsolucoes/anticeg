@@ -18,7 +18,7 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
     create function auth.uid() returns uuid language sql stable as $f$ select nullif(coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'sub', '')::uuid $f$;
     create function auth.jwt() returns jsonb language sql stable as $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $f$;
     grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
-    insert into auth.users values ('${U(1)}','dona@exemplo.com',now()), ('${U(2)}','ana@exemplo.com',now()), ('${U(3)}','bia.antiga@exemplo.com',now()), ('${U(4)}','sem.vinculo@exemplo.com',now()), ('${U(9)}','gabi@exemplo.com',now());
+    insert into auth.users values ('${U(1)}','dona@exemplo.com',now()), ('${U(2)}','ana@exemplo.com',now()), ('${U(3)}','bia.antiga@exemplo.com',now()), ('${U(4)}','sem.vinculo@exemplo.com',now()), ('${U(9)}','gabi@exemplo.com',now()), ('${U(7)}','ela.conta@exemplo.com',now()), ('${U(8)}','ela2.conta@exemplo.com',now());
   `);
   await d.exec(sql("01_schema_minimo.sql", "laboratorio")); await d.exec(sql("02_politicas_de_hoje_simuladas.sql", "laboratorio"));
   // "hoje": os papéis do Supabase têm os privilégios padrão; as travas por coluna da masterlist (B1/B4) já existem
@@ -34,6 +34,7 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
   const ativar = async (uid, cog) => { await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated" })}', false)`); await d.exec("set role authenticated"); await d.query(`select public.ativar_minha_conta('${cog}')`); await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims','',false)"); };
   await ativar(2, "ana"); await ativar(9, "gabi");
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(3)}', 2, 'admin')`);   // bia: e-mail diferente, vinculada pelo admin
+  await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(7)}', 7, 'admin'), ('${U(8)}', 8, 'admin');`);
   return d;
 }
 async function como(d, papel, uid, q) {
@@ -141,5 +142,21 @@ const aplicarBase = async d => { for (const a of ["J4_0_admin_em_todas_aplicar.s
 { const d = await laboratorio(); await d.exec("drop table public.grupos_envio cascade"); await aplicarBase(d); ok(/não existe/.test((await rodar(d, "J4c1_joiners_aplicar.sql", J)) || ""), "J4c-1 ABORTA se uma tabela não existir (nada alterado)"); }
 { const d = await laboratorio(); await aplicarBase(d); await d.exec("delete from public.admin_roles"); ok(/administradora cadastrada/.test((await rodar(d, "J4c1_joiners_aplicar.sql", J)) || ""), "J4c-1 ABORTA sem administradora cadastrada"); }
 { const d = await laboratorio(); ok(/J4a não está aplicado/.test((await rodar(d, "J4c1_joiners_aplicar.sql", J)) || ""), "J4c-1 ABORTA sem o J4a"); }
+
+// ══ COGs parecidos: 'Ela' (joiner 7) e 'ela' (joiner 8) não veem nem tocam nos dados uma da outra ══════
+{
+  const d = await laboratorio(); await aplicarBase(d);
+  await d.exec(`insert into public.grupos_envio (codigo, host_cog, destinatario) values ('ELA111','Ela','Ela M'), ('ELA222','ela','ela m');
+    insert into public.push_subscriptions (joiner_cog, endpoint, p256dh, auth) values ('Ela','https://fcm.googleapis.com/fcm/send/e1','k','a'), ('ela','https://fcm.googleapis.com/fcm/send/e2','k','a');
+    update public.joiners set recrutador = 'Ela' where cog = 'gabi';`);
+  ok((await rodar(d, "J4c1_joiners_aplicar.sql", J)) === null, "Ela/ela: J4c-1 aplica");
+  const col = async (uid, q) => ((await como(d, "authenticated", uid, q)).rows || []).map(r => r.c).sort().join();
+  ok(await col(7, "select codigo c from public.grupos_envio") === "ELA111" && await col(8, "select codigo c from public.grupos_envio") === "ELA222", "grupos de envio: cada host vê só o dela");
+  ok(await col(7, "select endpoint c from public.push_subscriptions") === "https://fcm.googleapis.com/fcm/send/e1" && await col(8, "select endpoint c from public.push_subscriptions") === "https://fcm.googleapis.com/fcm/send/e2", "push: cada uma vê só os próprios aparelhos");
+  ok(await col(7, "select cog c from public.joiners") === "Ela" && await col(8, "select cog c from public.joiners") === "ela", "joiners: cada uma lê só a própria linha");
+  ok(negado(await como(d, "authenticated", 8, "insert into public.grupos_envio (codigo, host_cog) values ('ELA333','Ela')")) && negado(await como(d, "authenticated", 7, "insert into public.grupos_envio (codigo, host_cog) values ('ELA444','ela')")), "nenhuma cria grupo no nome da outra");
+  ok((await como(d, "authenticated", 8, "select public.registrar_push('https://fcm.googleapis.com/fcm/send/e1','k','a') r")).rows[0].r === true && (await d.query("select joiner_cog from public.push_subscriptions where endpoint like '%/e1'")).rows[0].joiner_cog === "ela", "registrar_push grava o COG EXATO da conta logada");
+  ok(await col(7, "select cog c from public.meus_recrutados()") === "gabi" && await col(8, "select cog c from public.meus_recrutados()") === "", "meus_recrutados: quem a 'Ela' recrutou aparece só para a 'Ela', nunca para a 'ela'");
+}
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

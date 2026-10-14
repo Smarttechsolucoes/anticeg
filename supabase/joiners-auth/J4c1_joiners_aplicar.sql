@@ -41,6 +41,7 @@ begin
   select count(*) into n from pg_attribute where attrelid = 'public.push_subscriptions'::regclass and not attisdropped and attname in ('joiner_cog', 'endpoint', 'p256dh', 'auth');
   if n <> 4 then raise exception 'push_subscriptions sem as colunas esperadas. Nada foi alterado.'; end if;
   if not exists (select 1 from public.admin_roles) then raise exception 'Não há administradora cadastrada. Nada foi alterado.'; end if;
+  if to_regprocedure('public.cog_e_da_conta(text)') is null then raise exception 'O J4a não está aplicado (falta cog_e_da_conta). Nada foi alterado.'; end if;
 end $$;
 
 -- estado ANTERIOR: policies (para recriar exatamente), permissões e impressão dos dados (só contagem e hash)
@@ -85,14 +86,14 @@ create policy joiner_edita_propria on public.joiners for update to authenticated
 create policy admin_tudo on public.pre_cadastros for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 
 create policy admin_tudo on public.grupos_envio for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy host_le_proprio on public.grupos_envio for select to authenticated using (lower(trim(host_cog)) = lower(trim((select public.meu_cog()))));
-create policy host_cria_proprio on public.grupos_envio for insert to authenticated with check (lower(trim(host_cog)) = lower(trim((select public.meu_cog()))));
+create policy host_le_proprio on public.grupos_envio for select to authenticated using (public.cog_e_da_conta(host_cog));
+create policy host_cria_proprio on public.grupos_envio for insert to authenticated with check (public.cog_e_da_conta(host_cog));
 create policy host_edita_proprio on public.grupos_envio for update to authenticated
-  using (lower(trim(host_cog)) = lower(trim((select public.meu_cog())))) with check (lower(trim(host_cog)) = lower(trim((select public.meu_cog()))));
+  using (public.cog_e_da_conta(host_cog)) with check (public.cog_e_da_conta(host_cog));
 
 create policy admin_tudo on public.push_subscriptions for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 create policy joiner_gerencia_proprias on public.push_subscriptions for all to authenticated
-  using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog())))) with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+  using (public.cog_e_da_conta(joiner_cog)) with check (public.cog_e_da_conta(joiner_cog));
 
 -- 4) trava de colunas da joiners para quem NÃO é administradora (lista PERMITIDA: coluna nova no futuro nasce protegida)
 --    O servidor (sync, service_role: sem auth.uid()) segue livre. E-mail e @ só mudam se não colidirem com outra joiner.
@@ -171,7 +172,7 @@ revoke all on function public.resolver_recrutador(text) from public;
 grant execute on function public.resolver_recrutador(text) to anon, authenticated, service_role;
 
 create function public.meus_recrutados() returns table (cog text, nome text, nome_site text) language sql stable security definer set search_path = '' as $$
-  select j.cog, coalesce(nullif(j.nome_site, ''), j.cog), j.nome_site from public.joiners j where lower(trim(j.recrutador)) = lower(trim((select public.meu_cog()))) order by j.id
+  select j.cog, coalesce(nullif(j.nome_site, ''), j.cog), j.nome_site from public.joiners j where public.cog_e_da_conta(j.recrutador) order by j.id
 $$;
 revoke all on function public.meus_recrutados() from public, anon;
 grant execute on function public.meus_recrutados() to authenticated, service_role;
