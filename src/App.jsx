@@ -6,7 +6,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
-import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -14451,7 +14451,7 @@ function ClaimAoVivo() {
   async function fetchDados() {
     const { data: itens } = await supabase.from("masterlist").select("id, nome_do_item, na_loja").eq("ceg","CLAIM").order("nome_do_item");
     const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
-    const { data: cd } = await supabase.from("claims").select("masterlist_id, joiner_nome, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado");
+    const cd = await quadroDeClaims();
     const mapaFotos = {};
     (fd||[]).forEach(f => { mapaFotos[f.nome_do_item] = f.foto_url; });
     setDados(itens || []);
@@ -16727,9 +16727,7 @@ function DisponiveisTab({ user }) {
     supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
       .eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => setMeusClaims(data || []));
-    supabase.from("claims").select("id, ceg, nome_do_item, valor, created_at")
-      .eq("status", "aprovado").order("created_at", { ascending: false })
-      .then(({ data }) => setVendidos(data || []));
+    claimsVendidos().then(data => setVendidos(data || []));
   }
 
   useEffect(() => { carregarItens(); }, [user.cog]); // eslint-disable-line react-hooks/exhaustive-deps

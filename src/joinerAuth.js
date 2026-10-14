@@ -207,3 +207,22 @@ export async function solicitarCadastro({ nome, cog, email, whatsapp, recrutador
   if (error || !data) return { ok: false, motivo: "erro" };
   return data;
 }
+
+// ── Quadros públicos de claims (J4c-2) ────────────────────────────────────────────────────────────────────────────
+// Ligada a flag, a tabela claims só mostra à joiner os claims dela; os quadros abertos vêm de visões sem e-mail, COG nem nome real.
+export async function quadroDeClaims(client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    const { data } = await client.from("claims").select("masterlist_id, joiner_nome, status, created_at").eq("ceg", "CLAIM").neq("status", "rejeitado");
+    return data || [];
+  }
+  const { data } = await client.from("claims_quadro").select("masterlist_id, joiner_nome, status, created_at");
+  return data || [];
+}
+export async function claimsVendidos(client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    const { data } = await client.from("claims").select("id, ceg, nome_do_item, valor, created_at").eq("status", "aprovado").order("created_at", { ascending: false });
+    return data || [];
+  }
+  const { data } = await client.from("claims_vendidos").select("id, ceg, nome_do_item, valor, created_at").order("created_at", { ascending: false });
+  return data || [];
+}
