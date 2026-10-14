@@ -72,7 +72,7 @@ const continuar = async page => { await page.getByRole("button", { name: /CONTIN
   const sc = reg.rpc.find(r => r.nome === "solicitar_cadastro");
   ok(!!sc && sc.corpo.p_cog === "novapessoa" && sc.corpo.p_email === "nova@exemplo.com" && sc.corpo.p_nome === "Nova Pessoa" && sc.corpo.p_recrutador === "@ana", "cadastro novo chama solicitar_cadastro com os dados (e-mail em minúsculas)");
   ok(tocouPrivada(reg.tabelas).length === 0, "cadastro novo: NENHUM insert/select direto em joiners ou pre_cadastros: " + JSON.stringify(tocouPrivada(reg.tabelas)));
-  ok(reg.functions.every(f => f !== "send-email"), "não usa mais a função antiga send-email");
+  ok(reg.functions.every(f => f !== "send-email") && reg.functions.includes("email-evento"), "não usa a função antiga send-email: o aviso à administração vai pelo evento novo_cadastro");
   const guardado = JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "{}");
   ok(guardado.cog === "novapessoa" && guardado.acesso_simples === true, "depois do pedido entra em acesso simples (o pop-up de ativação cuida do resto)");
   await T.browser.close();
