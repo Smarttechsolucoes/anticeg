@@ -23,8 +23,8 @@ end $$;
 create function public.ceg_resumo() returns jsonb language sql stable security definer set search_path = '' as $$
   select coalesce(jsonb_agg(jsonb_build_object('ceg', g.ceg, 'itens', g.itens, 'joiners', g.joiners, 'status_counts', g.sc) order by g.ceg), '[]'::jsonb)
     from (select t.ceg, sum(t.c)::bigint as itens, jsonb_object_agg(t.st, t.c) as sc,
-                 (select count(distinct m2.cog) from public.masterlist m2 where coalesce(m2.ceg, '—') = t.ceg and (m2.nome is null or m2.nome <> 'Disponivel') and m2.cog is not null) as joiners
-            from (select coalesce(m.ceg, '—') as ceg, coalesce(m.status, 'Pré-venda') as st, count(*) as c from public.masterlist m where m.nome is null or m.nome <> 'Disponivel' group by 1, 2) t
+                 (select count(distinct m2.cog) from public.masterlist m2 where coalesce(m2.ceg, '—') = t.ceg and lower(coalesce(m2.nome, '')) <> 'disponivel' and lower(trim(coalesce(m2.cog, ''))) <> 'disponivel' and m2.cog is not null) as joiners
+            from (select coalesce(m.ceg, '—') as ceg, coalesce(m.status, 'Pré-venda') as st, count(*) as c from public.masterlist m where lower(coalesce(m.nome, '')) <> 'disponivel' and lower(trim(coalesce(m.cog, ''))) <> 'disponivel' group by 1, 2) t
            group by t.ceg) g
 $$;
 revoke all on function public.ceg_resumo() from public;
@@ -40,7 +40,7 @@ grant execute on function public.ceg_vencimentos() to anon, authenticated, servi
 create function public.ceg_itens(p_ceg text) returns jsonb language sql stable security definer set search_path = '' as $$
   select case when (select public.meu_cog()) is null and not (select public.is_admin()) then '[]'::jsonb
     else coalesce((select jsonb_agg(jsonb_build_object('id', m.id, 'ceg', m.ceg, 'cog', m.cog, 'nome', m.nome, 'nome_do_item', m.nome_do_item, 'status', m.status, 'info_adicionais', m.info_adicionais) order by m.id)
-                     from public.masterlist m where m.ceg = p_ceg and coalesce(m.nome, '') not ilike 'disponivel'), '[]'::jsonb) end
+                     from public.masterlist m where m.ceg = p_ceg and coalesce(m.nome, '') not ilike 'disponivel' and lower(trim(coalesce(m.cog, ''))) <> 'disponivel'), '[]'::jsonb) end
 $$;
 revoke all on function public.ceg_itens(text) from public, anon;
 grant execute on function public.ceg_itens(text) to authenticated, service_role;

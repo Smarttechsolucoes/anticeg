@@ -1,0 +1,59 @@
+// SEQUÊNCIA COMPLETA DO LANÇAMENTO no laboratório fictício (PGlite): aplica, na ordem do roteiro, TODOS os SQLs de proteção (J4b, J4c-1, J4c-2, J4c-3, J4c-4a..e, J5), roda a verificação de cada um,
+// e termina com a auditoria final (supabase/lancamento/99_auditoria_final.sql): nada INESPERADO pode sobrar para o visitante. Também percorre a vida da joiner ativada em todas as áreas.
+// Uso: npm i --no-save @electric-sql/pglite && node tests/sql/lancamento-completo.mjs
+import { laboratorio, como, n, negado, rodar, verificar, ok, fim, J, sql } from "./_lab.mjs";
+const d = await laboratorio(); await d.exec(sql("08_storage_simulado.sql", "laboratorio"));
+const ORDEM = [
+  ["J4b_lote1_aplicar.sql", "J4b_lote1_verificar.sql"],
+  ["J4c1_joiners_aplicar.sql", "J4c1_joiners_verificar.sql"],
+  ["J4c2_pedidos_claims_aplicar.sql", "J4c2_pedidos_claims_verificar.sql"],
+  ["J4c3_lojas_aplicar.sql", "J4c3_lojas_verificar.sql"],
+  ["J4c4a_mercari_lojinha_aplicar.sql", "J4c4a_mercari_lojinha_verificar.sql"],
+  ["J4c4b_claims_sets_aplicar.sql", "J4c4b_claims_sets_verificar.sql"],
+  ["J4c4c_pessoais_aplicar.sql", "J4c4c_pessoais_verificar.sql"],
+  ["J4c4d_admin_catalogos_aplicar.sql", "J4c4d_admin_catalogos_verificar.sql"],
+  ["J4c4e_cegs_publico_aplicar.sql", "J4c4e_cegs_publico_verificar.sql"],
+  ["J5_comprovantes_aplicar.sql", "J5_comprovantes_verificar.sql"],
+];
+
+// ANTES: o visitante alcança tudo
+const antes = (await d.query(sql("99_auditoria_final.sql", "lancamento"))).rows;
+ok(antes.filter(r => r.situacao.startsWith("INESPERADO")).length >= 20, "ANTES: a auditoria final acusa DEZENAS de coisas que o visitante alcança hoje: " + antes.filter(r => r.situacao.startsWith("INESPERADO")).length);
+
+// o C0-B8 (config só da administradora) já está aplicado em produção: o laboratório reproduz esse estado antes do lançamento
+{ const e = await rodar(d, "21_B8_config_aplicar.sql", "c0-contencao"); ok(e === null, "C0-B8 (já em produção) aplicado no laboratório" + (e ? ": " + e.slice(0, 160) : "")); }
+for (const [aplicar, ver] of ORDEM) {
+  const e = await rodar(d, aplicar, J); ok(e === null, `${aplicar} aplica sem erro` + (e ? ": " + e : ""));
+  const v = await verificar(d, ver); ok(Object.keys(v).length >= 3, `${ver} responde (${Object.keys(v).length} itens)`);
+}
+
+// DEPOIS: auditoria final
+const depois = (await d.query(sql("99_auditoria_final.sql", "lancamento"))).rows;
+const ruins = depois.filter(r => r.situacao.startsWith("INESPERADO"));
+ok(ruins.length === 0, "AUDITORIA FINAL: nada INESPERADO para o visitante" + (ruins.length ? " → " + ruins.map(r => r.tipo + ":" + r.objeto + " (" + r.situacao + ")").join("; ") : ""));
+const revisar = depois.filter(r => r.situacao.startsWith("REVISAR"));
+console.log("INFO  itens a REVISAR (" + revisar.length + "): " + revisar.map(r => r.objeto).join(" | ").slice(0, 400));
+ok(depois.filter(r => r.situacao === "esperado" && r.tipo === "tabela/visão").length >= 8, "a auditoria lista o conteúdo público esperado (config, avisos gerais, fotos, links, calendário, preços, sugestões e as visões públicas)");
+ok(depois.some(r => r.tipo === "storage: bucket de comprovantes" && r.situacao === "esperado") && !depois.some(r => r.tipo === "storage: bucket de comprovantes" && r.situacao !== "esperado"), "comprovantes: buckets privados com limite");
+
+// VISITANTE: sondagem tabela por tabela (o equivalente local do teste de API anônima)
+const TODAS = ["joiners", "masterlist", "pagamento_demandas", "multas_pagas", "claims", "reports", "envio_solicitacoes", "pre_cadastros", "grupos_envio", "push_subscriptions", "formulario_pedidos",
+  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
+  "mercari_pedidos", "lojinha_repasses", "repassos", "claim_eventos", "claim_sets", "claim_reservas", "feedbacks", "notifications", "push_reads", "joiner_storage", "joiner_conferencias", "joiner_updates",
+  "envio_rounds", "envio_requests", "confirmacoes", "rastreios", "estoque_itens", "estoque_compras", "ceg_config", "antiv_badges"];
+for (const t of TODAS) ok(negado(await como(d, "anon", null, `select * from public.${t} limit 1`)), `visitante NÃO lê ${t}`);
+ok(negado(await como(d, "anon", null, "select * from public.claim_reservas_quadro")), "visitante NÃO lê o quadro dos sets");
+
+// ANA (ativada) em todas as áreas: lê só o que é dela
+const so = async (uid, t, col = "joiner_cog") => { const r = await como(d, "authenticated", uid, `select ${col} c from public.${t}`); return !r.erro && r.rows.every(x => String(x.c).toLowerCase() === "ana"); };
+for (const t of ["pagamento_demandas", "multas_pagas", "claims", "reports", "envio_solicitacoes", "mercari_pedidos", "feedbacks", "notifications", "push_reads", "joiner_storage", "joiner_conferencias", "envio_requests"])
+  ok(await so(2, t), `ana lê só as linhas dela em ${t}`);
+ok(await so(2, "masterlist", "case when lower(trim(cog)) = 'disponivel' then 'ana' else cog end"), "ana lê só os itens dela na masterlist (e slots disponíveis)");
+ok((await n(d, "authenticated", 2, "select 1 from public.joiners")) === 1 && (await n(d, "authenticated", 4, "select 1 from public.joiners")) === 0, "ana lê só a própria linha em joiners; conta sem vínculo não lê nada");
+ok((await n(d, "authenticated", 1, "select 1 from public.joiners")) > 5 && (await n(d, "authenticated", 1, "select 1 from public.mercari_pedidos")) >= 2 && (await n(d, "authenticated", 1, "select 1 from public.envio_requests")) >= 2, "administradora preservada: lê tudo");
+ok((await como(d, "authenticated", 2, "select public.meu_cog() c")).rows[0].c === "ana", "ana é reconhecida pela conta (meu_cog)");
+
+// reversões protegidas dos lotes exigem a frase (nenhuma é executada aqui)
+for (const [arq, frase] of [["J4c4a_mercari_lojinha_reverter_protegido.sql", ""], ["J4c4b_claims_sets_reverter_protegido.sql", ""], ["J4c4c_pessoais_reverter_protegido.sql", ""], ["J4c4d_admin_catalogos_reverter_protegido.sql", ""], ["J5_comprovantes_reverter_protegido.sql", ""]])
+  ok(await rodar(d, arq, J, frase) !== null, `${arq} é recusada sem a frase de autorização`);
+fim();

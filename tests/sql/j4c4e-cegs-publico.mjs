@@ -13,10 +13,11 @@ await d.exec(`delete from public.masterlist;
    (3, 'SKZOO', 'bia', 'Bia', 'Photocard C', 90, 22, 9, 'Comprado', null, true, null, null),
    (4, 'SKZOO', 'gabi', 'Gabi', 'Photocard D', 70, 15, 7, 'Chegou', null, false, current_date + 12, null),
    (5, 'SKZOO', 'ninguem', 'Disponivel', 'Slot livre', 50, 0, 0, 'Pré-venda', null, false, null, null),
-   (6, 'WAVE', 'ana', 'Ana', 'Box', 200, 50, 20, 'Pré-venda', null, false, current_date + 5, current_date + 9)`);
+   (6, 'WAVE', 'ana', 'Ana', 'Box', 200, 50, 20, 'Pré-venda', null, false, current_date + 5, current_date + 9),
+   (7, 'SKZOO', 'disponivel', 'disponivel', 'Slot livre minúsculo', 50, 0, 0, 'Pré-venda', null, false, null, null)`);
 
 // ANTES: a masterlist inteira é pública
-ok((await n(d, "anon", null, "select 1 from public.masterlist")) === 6, "ANTES: o visitante lê a masterlist inteira, com valores de todas (vulnerabilidade reproduzida)");
+ok((await n(d, "anon", null, "select 1 from public.masterlist")) === 7, "ANTES: o visitante lê a masterlist inteira, com valores de todas (vulnerabilidade reproduzida)");
 
 for (const a of ["J4b_lote1_aplicar.sql", "J4c4e_cegs_publico_aplicar.sql"]) { const e = await rodar(d, a, J); ok(e === null, `${a} aplica sem erro` + (e ? ": " + e : "")); }
 const v = await verificar(d, "J4c4e_cegs_publico_verificar.sql");
@@ -24,7 +25,7 @@ ok(v["funções de CEG seguras (esperado 3)"] === "3" && v["visitante executa ce
 
 // com o J4b, a masterlist direta mostra só o que é da própria joiner (é por isso que as telas precisam das funções)
 ok((await n(d, "anon", null, "select 1 from public.masterlist")) === undefined || negado(await como(d, "anon", null, "select * from public.masterlist")), "com o J4b o visitante NÃO lê mais a masterlist");
-ok((await como(d, "authenticated", 2, "select cog from public.masterlist where nome <> 'Disponivel'")).rows?.every(r => r.cog === "ana"), "com o J4b a ana lê direto só os itens dela");
+ok((await como(d, "authenticated", 2, "select cog from public.masterlist where lower(trim(cog)) <> 'disponivel'")).rows?.every(r => r.cog === "ana"), "com o J4b a ana lê direto só os itens dela (e os slots disponíveis, que são de todas)");
 
 // ceg_resumo: números, ninguém identificado; pública
 const rs = await rpc("anon", null, "ceg_resumo"); const sk = rs.find(x => x.ceg === "SKZOO"), wv = rs.find(x => x.ceg === "WAVE");
