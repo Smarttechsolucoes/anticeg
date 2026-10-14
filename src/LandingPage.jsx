@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
-import { JOINERS_AUTH_ATIVO, buscarAcessoSimples } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, buscarAcessoSimples, solicitarCadastro } from "./joinerAuth.js";
 import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
 import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
@@ -187,6 +187,30 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const whats = cadWhats.trim();
 
     if (!cog && !eml) { setCadError("Preencha pelo menos o @ ou o e-mail."); setCadLoading(false); return; }
+
+    // novo acesso: o e-mail NUNCA serve para entrar. Conta existente -> entra pelo @ (acesso simples) e ativa com o código enviado ao e-mail;
+    // conta nova -> pedido de cadastro pela função segura do servidor (resposta neutra: não revela se o @/e-mail já existiam).
+    if (JOINERS_AUTH_ATIVO) {
+      try {
+        if (!cog) { setCadError("Digite o seu @. O e-mail é usado só para ativar a conta."); setCadLoading(false); return; }
+        if (nome && eml) {
+          const r = await solicitarCadastro({ nome, cog, email: eml, whatsapp: whats, recrutador: cadRecrutador.trim() });
+          if (!r.ok) {
+            setCadError(r.motivo === "recrutador_invalido" ? "Recrutador não encontrado. Confira o @ ou deixe em branco."
+              : r.motivo === "tente_mais_tarde" ? "Muitos pedidos no momento. Tente de novo mais tarde."
+              : "Confira os dados: nome, @ (letras, números, _ ou .) e e-mail válidos.");
+            setCadLoading(false); return;
+          }
+        }
+        const acesso = await buscarAcessoSimples(cog);
+        if (!acesso) { setCadError("Acesso não encontrado. Preencha nome, @ e e-mail para solicitar cadastro ou fale com a admin pelo WhatsApp."); setCadLoading(false); return; }
+        await entrarCom(acesso);
+      } catch {
+        setCadError("Erro de conexão. Tente novamente.");
+      }
+      setCadLoading(false);
+      return;
+    }
 
     // tenta encontrar conta existente
     let joiner = null;

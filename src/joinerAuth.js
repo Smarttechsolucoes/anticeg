@@ -150,3 +150,60 @@ export async function carregarDadosPrivados(client = supabase) {
   const { data: itens } = await client.from("masterlist").select("*").eq("cog", meus.cog);
   return { joiner: meus, itens: itens || [] };
 }
+
+// ── Leituras e escritas entre joiners (J4c-1) ─────────────────────────────────────────────────────────────────────
+// Com a flag desligada tudo funciona como hoje (consulta direta). Ligada, a tabela joiners deixa de ser legível por outras joiners:
+// listas usam a visão pública (cog, nome do site, @, foto) e as funções seguras do servidor.
+export async function listarJoinersPublicos(client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) { const { data } = await client.from("joiners").select("cog, nome, twitter").order("nome"); return data || []; }
+  const { data } = await client.from("joiners_publico").select("cog, nome_site, twitter").order("nome_site");
+  return (data || []).map(j => ({ cog: j.cog, nome: j.nome_site || j.cog, twitter: j.twitter }));
+}
+export async function fotosDeJoiners(cogs, client = supabase) {
+  if (!cogs?.length) return [];
+  const { data } = await client.from(JOINERS_AUTH_ATIVO ? "joiners_publico" : "joiners").select("cog, foto_perfil").in("cog", cogs);
+  return data || [];
+}
+export async function meusRecrutados(cog, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) { const { data } = await client.from("joiners").select("cog, nome, nome_site").eq("recrutador", cog); return data || []; }
+  const { data } = await client.rpc("meus_recrutados");
+  return data || [];
+}
+export async function joinersOnline(minutos = 10, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    const { data } = await client.from("joiners").select("cog, nome, foto_perfil").gte("last_seen", new Date(Date.now() - minutos * 60 * 1000).toISOString());
+    return data || [];
+  }
+  const { data } = await client.rpc("joiners_online", { p_minutos: minutos });
+  return data || [];
+}
+// Gasta cashback. Ligada a flag, o servidor debita só do saldo da própria conta; desligada, o comportamento antigo (grava o novo saldo).
+export async function debitarCashback(cog, valor, novoSaldo, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) { await client.from("joiners").update({ saldo_cashback: novoSaldo }).eq("cog", cog); return novoSaldo; }
+  const { data } = await client.rpc("debitar_cashback", { p_valor: valor });
+  return typeof data === "number" || typeof data === "string" ? Number(data) : novoSaldo;
+}
+// Aparelho de push: ligada a flag, o servidor associa o aparelho à conta que está logada.
+export async function gravarAssinaturaPush(cog, sub, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    await client.from("push_subscriptions").upsert({ joiner_cog: cog, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth }, { onConflict: "endpoint" });
+    return;
+  }
+  await client.rpc("registrar_push", { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth });
+}
+// Grupo de envio por código (quem não é a host só enxerga o grupo sabendo o código).
+export async function consultarGrupoEnvio(codigo, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) { const { data } = await client.from("grupos_envio").select("*").eq("codigo", codigo).single(); return data || null; }
+  const { data } = await client.rpc("grupo_por_codigo", { p_codigo: codigo });
+  return data || null;
+}
+// Recrutador pelo @ (devolve { cog, nome } ou null). Cadastro novo: função segura com resposta neutra.
+export async function buscarRecrutadorSeguro(texto, client = supabase) {
+  const { data } = await client.rpc("resolver_recrutador", { p_texto: String(texto || "") });
+  return data && data.cog ? { cog: data.cog, nome: data.nome || data.cog } : null;
+}
+export async function solicitarCadastro({ nome, cog, email, whatsapp, recrutador }, client = supabase) {
+  const { data, error } = await client.rpc("solicitar_cadastro", { p_nome: nome, p_cog: cog, p_email: email, p_whatsapp: whatsapp || null, p_recrutador: recrutador || null });
+  if (error || !data) return { ok: false, motivo: "erro" };
+  return data;
+}
