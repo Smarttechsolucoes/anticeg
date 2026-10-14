@@ -9,7 +9,7 @@ import supabase from "./supabase.js";
 export const JOINERS_AUTH_ATIVO = import.meta.env.VITE_JOINERS_AUTH === "true";
 
 // Áreas que exigem conta ativada e senha. O resto (CEGs, calendário, regras...) continua público.
-export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13"];
+export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13", "mercari"];
 
 export const SENHA_MIN = 8;
 

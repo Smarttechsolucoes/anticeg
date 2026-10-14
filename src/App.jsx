@@ -12911,7 +12911,9 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   );
 }
 
-function MercariTab() {
+function MercariTab({ user = null }) {
+  // com o novo login a joiner é a conta que está logada (sem digitar @ ou e-mail, que não identifica ninguém)
+  const contaLogada = JOINERS_AUTH_ATIVO && !!user?.cog && !user.acesso_simples;
 
   const WA   = WHATSAPP_NUM;
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
@@ -12947,6 +12949,13 @@ function MercariTab() {
   const fileRef = useRef(null);
 
   useEffect(() => { jRef.current = joiner; }, [joiner]);
+  useEffect(() => {
+    if (!contaLogada) return;
+    const j = { cog: user.cog, nome: user.nome || user.nome_site || user.cog };
+    setJoiner(j); jRef.current = j;
+    setIdSt('found'); setIdMsg(`✦ ${j.nome} · @${j.cog}`);
+    loadPedidos(j);
+  }, [contaLogada, user?.cog]);
   useEffect(() => { fxRef.current = fxVal; }, [fxVal]);
 
   const calcBRL = (jpy) => { const s=jpy+100,f=Math.round(s*.08),c=s+f,p=Math.round(c*.08); return (c+p)*fxVal; };
@@ -13210,6 +13219,9 @@ function MercariTab() {
             </div>
 
             <div className="mc-sec">Identificação</div>
+            {contaLogada ? (
+              <div className="mc-id-info">{idMsg}</div>
+            ) : (<>
             <div className="mc-id-field">
               <input
                 className={`mc-id-input${idSt==='found'?' found':idSt==='notfound'?' notfound':''}`}
@@ -13220,6 +13232,7 @@ function MercariTab() {
               <span className="mc-id-status">{idSt==='loading'?'⁳':idSt==='found'?'✓':''}</span>
             </div>
             <div className={`mc-id-info${idSt==='notfound'?' err':''}`}>{idMsg}</div>
+            </>)}
 
             <div style={{height:22}}/>
 
@@ -26914,7 +26927,7 @@ function AppPrincipal() {
   if (window.location.pathname === "/tabela-stray-kids") return <TabelaStrayKids />;
   if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
 
-  if (!user && parseUrlParts().tab === "mercari") {
+  if (!user && !JOINERS_AUTH_ATIVO && parseUrlParts().tab === "mercari") {
     return (
       <div style={{ background:"#131310", minHeight:"100vh" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", background:"#0D0D0D", borderBottom:"1px solid #2a2a26" }}>
@@ -27288,7 +27301,7 @@ function AppPrincipal() {
           {tab === "paper-tales" && prot("paper-tales", <WaveMakerTab user={user} cfg={PT_CFG} />)}
           {tab === "odd-fresh" && prot("odd-fresh", <WaveMakerTab user={user} cfg={ODD_CFG} />)}
           {tab === "promo-13" && prot("promo-13", <WaveMakerTab user={user} cfg={PROMO13_CFG} />)}
-          {tab === "mercari" && <MercariTab />}
+          {tab === "mercari" && prot("mercari", <MercariTab user={user} />)}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}
         </>
