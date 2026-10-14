@@ -6,7 +6,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
-import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -14592,6 +14592,14 @@ function ClaimGuestPage({ onLogin }) {
     setLoading(true); setErro("");
     const isEmail = val.indexOf("@") > 0;
     let joiner = null;
+    if (JOINERS_AUTH_ATIVO) {
+      if (isEmail) { setErro("Digite o seu @. O e-mail é usado só para ativar a conta."); setLoading(false); return; }
+      joiner = await buscarAcessoSimples(val);
+      if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
+      onLogin(joiner, []);
+      setLoading(false);
+      return;
+    }
     if (isEmail) {
       const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).maybeSingle();
       joiner = data;
@@ -26854,7 +26862,7 @@ function AppPrincipal() {
       .then(({ data }) => { if (data) setCalEventos(data); });
     // Atualiza dados do joiner em cache (foto, nome, etc.)
     const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2")); } catch { return null; } })();
-    if (cached?.cog && !cached?.guest) {
+    if (cached?.cog && !cached?.guest && !JOINERS_AUTH_ATIVO) {
       supabase.from("joiners").select("*").eq("cog", cached.cog).single()
         .then(({ data }) => {
           if (data) {
@@ -26923,7 +26931,7 @@ function AppPrincipal() {
   }
 
   useEffect(() => {
-    if (user && !user.guest && !user.pre_cadastro) {
+    if (user && !user.guest && !user.pre_cadastro && !(JOINERS_AUTH_ATIVO && user.acesso_simples)) {
       updateLastSeen(user);
       fetchOnlineUsers();
       const iv = setInterval(() => { updateLastSeen(user); fetchOnlineUsers(); }, 5 * 60 * 1000);
@@ -26958,13 +26966,24 @@ function AppPrincipal() {
 
   // Avisos: ao restaurar sessão, a cada 2 min e ao voltar para a aba
   useEffect(() => {
-    if (!user || user.guest || user.pre_cadastro) return;
+    if (!user || user.guest || user.pre_cadastro || (JOINERS_AUTH_ATIVO && user.acesso_simples)) return;
     carregarAvisos(user);
     const iv = setInterval(() => carregarAvisos(user), 2 * 60 * 1000);
     const onVis = () => { if (document.visibilityState === "visible") carregarAvisos(user); };
     document.addEventListener("visibilitychange", onVis);
     return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
-  }, [user?.cog]);
+  }, [user?.cog, user?.acesso_simples]);
+
+  // Login completo (conta ativada + senha): troca a identidade mínima do acesso simples pelos dados da PRÓPRIA joiner, lidos com a conta
+  async function carregarPrivadosDaConta() {
+    if (!JOINERS_AUTH_ATIVO) return;
+    const r = await carregarDadosPrivados();
+    if (!r) return;
+    const completo = { ...r.joiner, acesso_simples: false };
+    localStorage.setItem("anticeg_user_v2", JSON.stringify(completo));
+    setUser(completo);
+    setItens(r.itens);
+  }
 
   async function handleLogin(u, itensData) {
     localStorage.setItem("anticeg_user_v2", JSON.stringify(u));
@@ -26985,7 +27004,7 @@ function AppPrincipal() {
       if (isMobile && !isStandalone && !localStorage.getItem("anticeg_a2hs_asked")) {
         setTimeout(() => setShowA2HS(true), 2000);
       }
-      carregarAvisos(u);
+      if (!(JOINERS_AUTH_ATIVO && u.acesso_simples)) carregarAvisos(u);
     }
   }
 
@@ -27013,7 +27032,7 @@ function AppPrincipal() {
 
   // ── detecta badges novos ao abrir o site (qualquer aba, não só Meu Perfil) ──
   useEffect(() => {
-    if (!user || user.guest || !user.cog) return;
+    if (!user || user.guest || !user.cog || (JOINERS_AUTH_ATIVO && user.acesso_simples)) return;
     let cancelled = false;
     (async () => {
       const [
@@ -27048,7 +27067,7 @@ function AppPrincipal() {
       }
     })();
     return () => { cancelled = true; };
-  }, [user?.cog, user?.guest]);
+  }, [user?.cog, user?.guest, user?.acesso_simples]);
 
   function handleVerCegs() {
     setUser({ guest: true });
@@ -27094,7 +27113,7 @@ function AppPrincipal() {
 
   const isAdmin = isAdminUser(user);
   // Áreas privadas: com o novo acesso ligado, só abrem com conta ativada e senha (administradoras seguem pelo próprio login)
-  const prot = (slug, el) => (JOINERS_AUTH_ATIVO && AREAS_PROTEGIDAS.includes(slug) && !isAdmin ? <AreaProtegida user={user} area={slug} onLogin={() => setPage("landing")}>{el}</AreaProtegida> : el);
+  const prot = (slug, el) => (JOINERS_AUTH_ATIVO && AREAS_PROTEGIDAS.includes(slug) && !isAdmin ? <AreaProtegida user={user} area={slug} onLogin={() => setPage("landing")} onCompleto={carregarPrivadosDaConta}>{el}</AreaProtegida> : el);
 
   return (
     <div>

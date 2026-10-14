@@ -134,3 +134,19 @@ export function criarJoinerAuth(client = supabase) {
 
   return { estado, pedirCodigo, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair };
 }
+
+// Acesso simples (só @): o servidor devolve apenas a identidade mínima (cog, nome do site, foto) e se a conta está ativada.
+// Nunca devolve e-mail, CPF, endereço nem telefone, e não aceita e-mail. Não é autenticação: não libera nada privado.
+export async function buscarAcessoSimples(identificador, client = supabase) {
+  const { data, error } = await client.rpc("entrar_com_arroba", { p_identificador: String(identificador || "") });
+  if (error || !data || !data.encontrado) return null;
+  return { cog: data.cog, nome: data.nome_site || data.cog, nome_site: data.nome_site || data.cog, foto_perfil: data.foto_perfil || null, confirmado: true, acesso_simples: true, conta_ativa: !!data.conta_ativa };
+}
+
+// Depois do login completo: a linha da PRÓPRIA joiner e os itens dela, lidos com a conta (o banco só devolve o que é dela).
+export async function carregarDadosPrivados(client = supabase) {
+  const { data: meus, error } = await client.rpc("meus_dados");
+  if (error || !meus) return null;
+  const { data: itens } = await client.from("masterlist").select("*").eq("cog", meus.cog);
+  return { joiner: meus, itens: itens || [] };
+}
