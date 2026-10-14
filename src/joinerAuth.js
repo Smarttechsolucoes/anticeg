@@ -242,3 +242,33 @@ export async function criarPedidoLoja(tabela, dados, { retornar = false } = {}, 
 }
 // Estoque e fila dos formulários: a visão pública traz só evento, modalidade, status, data e "Qtd: N" (nunca nome, e-mail ou texto livre).
 export const TABELA_FORMULARIO_PUBLICA = JOINERS_AUTH_ATIVO ? "formulario_pedidos_publico" : "formulario_pedidos";
+
+// Itens de um CEG (página do CEG). Hoje: a masterlist inteira. Com o novo login a MASTERLIST só mostra a cada joiner as linhas dela;
+// a comunidade continua vendo a lista do CEG (@, nome, item, situação) por ceg_itens(), SEM valor/frete/taxa/pagamento de terceiros,
+// e os valores aparecem só nas linhas da própria joiner (que vêm da masterlist, protegida por linha).
+export async function itensDoCeg(ceg, { semDisponivel = true } = {}, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    let q = client.from("masterlist").select("*").eq("ceg", ceg);
+    if (semDisponivel) q = q.not("nome", "ilike", "disponivel");
+    const { data } = await q;
+    return data || [];
+  }
+  const [{ data: lista }, { data: proprios }] = await Promise.all([
+    client.rpc("ceg_itens", { p_ceg: ceg }),
+    client.from("masterlist").select("*").eq("ceg", ceg),
+  ]);
+  const porId = new Map();
+  (Array.isArray(lista) ? lista : []).forEach(i => porId.set(i.id, i));
+  (proprios || []).filter(i => !semDisponivel || !/^disponivel$/i.test(String(i.nome || ""))).forEach(i => porId.set(i.id, i));   // a linha completa da joiner prevalece
+  return [...porId.values()];
+}
+// Resumo dos CEGs (lista de CEGs) e vencimentos (calendário geral): números e datas da comunidade, sem dono nem valor.
+export async function resumoDosCegs(client = supabase) {
+  const { data } = await client.rpc("ceg_resumo");
+  return Array.isArray(data) ? data : [];
+}
+export async function vencimentosDosCegs(client = supabase) {
+  const { data } = await client.rpc("ceg_vencimentos");
+  return Array.isArray(data) ? data : [];
+}
+

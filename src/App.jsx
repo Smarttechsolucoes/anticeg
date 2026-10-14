@@ -7,7 +7,7 @@ import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
 import { enviarComprovante, abrirComprovante, urlDoComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
-import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -674,9 +674,7 @@ function CegModal({ ceg, onClose }) {
   const [itens, setItens] = useState(null);
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).then(({ data }) => {
-      setItens(data || []);
-    });
+    itensDoCeg(ceg, { semDisponivel: false }).then(setItens);
   }, [ceg]);
 
   const byJoiner = itens
@@ -940,8 +938,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   }
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).not("nome", "ilike", "disponivel")
-      .then(({ data }) => setItens(data || []));
+    itensDoCeg(ceg).then(setItens);
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setFotos(data || []));
     supabase.from("ceg_config").select("whatsapp_link").eq("ceg", ceg).single()
@@ -1368,12 +1365,23 @@ function CegTab({ user, itens }) {
   const [detalhe, setDetalhe] = useState(null);
   const [filtro, setFiltro] = useState(!user || user.guest ? "todas" : "minhas");
   const [cegCapas, setCegCapas] = useState({});
+  const [resumoCegs, setResumoCegs] = useState(null);   // só no novo login: números dos CEGs vindos do servidor
 
   const guest = !user || user.guest;
   const meuCog = dataCog(user?.cog);
 
   useEffect(() => {
     async function fetchItens() {
+      if (JOINERS_AUTH_ATIVO) {
+        // números da comunidade por função segura + só as linhas da própria joiner da masterlist (protegida por linha)
+        const [resumo, { data: meus }] = await Promise.all([
+          resumoDosCegs(),
+          meuCog && !user?.acesso_simples ? supabase.from("masterlist").select("ceg, cog, status").or("nome.neq.Disponivel,nome.is.null") : Promise.resolve({ data: [] }),
+        ]);
+        setResumoCegs(resumo);
+        setAllItens(meus || []);
+        return;
+      }
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
@@ -1413,7 +1421,13 @@ function CegTab({ user, itens }) {
 
   const { todasCegs, minhasCegs, meuStatusPorCeg } = useMemo(() => {
     const cegMap = {};
-    (allItens || []).forEach(item => {
+    if (JOINERS_AUTH_ATIVO) {
+      const meusCegs = new Set((allItens || []).filter(i => i.cog === meuCog).map(i => i.ceg || "—"));
+      (resumoCegs || []).forEach(r => {
+        const ceg = r.ceg || "—";
+        cegMap[ceg] = { itens: Number(r.itens) || 0, joiners: { size: Number(r.joiners) || 0, has: () => meusCegs.has(ceg) }, statusCount: r.status_counts || {} };
+      });
+    } else (allItens || []).forEach(item => {
       const ceg = item.ceg || "—";
       if (!cegMap[ceg]) cegMap[ceg] = { itens: 0, joiners: new Set(), statusCount: {} };
       cegMap[ceg].itens++;
@@ -1433,7 +1447,7 @@ function CegTab({ user, itens }) {
       });
     }
     return { todasCegs: todas.filter(([ceg]) => !CEGS_OCULTAS.includes(ceg)), minhasCegs: minhas, meuStatusPorCeg: statusPorCeg };
-  }, [allItens, meuCog]);
+  }, [allItens, meuCog, resumoCegs]);
 
   const finalizadas = useMemo(() => meuCog
     ? minhasCegs.filter(([ceg]) => {
@@ -6211,6 +6225,7 @@ function CalendarTab({ user, itens, calEventos, setCalEventos }) {
 
   useEffect(() => {
     (async () => {
+      if (JOINERS_AUTH_ATIVO) { setAllItens(await vencimentosDosCegs()); return; }   // datas por CEG, sem dono nem valor
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
@@ -17205,8 +17220,7 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
   const [viewMode,   setViewMode]   = useState("tabela");
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).not("nome", "ilike", "disponivel")
-      .then(({ data }) => setItens(data || []));
+    itensDoCeg(ceg).then(setItens);
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setCategorias(data || []));
   }, [ceg]);
@@ -26869,6 +26883,7 @@ function AppPrincipal() {
   }
 
   useEffect(() => {
+    if (JOINERS_AUTH_ATIVO && user && (user.acesso_simples || user.guest)) return;   // só com @ (ou visitante): nenhum dado de itens é buscado; a conta completa busca depois do login
     if (user && user.cog) {
       supabase.from("masterlist").select("*").eq("cog", user.cog).then(({ data }) => {
         setItens(data || []);
