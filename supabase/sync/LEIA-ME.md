@@ -4,7 +4,7 @@
 O Google Sheets continua sendo a ferramenta de edição; só a **exclusão** passou a ser protegida, dentro do banco.
 
 ## O que é protegido (nunca apagado pelo sync)
-☆ linha com claim que não esteja rejeitado
+☆ linha com **qualquer** claim vinculado (pendente, aprovado ou recusado: evita registros órfãos)
 ☆ `ceg = 'CLAIM'` e `cog = 'disponivel'` (nascem no site)
 ☆ `na_loja = true`
 ☆ qualquer `pago_item / pago_frete / pago_rf` marcado
@@ -14,7 +14,7 @@ O Google Sheets continua sendo a ferramenta de edição; só a **exclusão** pas
 ☆ planilha com menos de 50% das linhas do banco: não apaga nada
 ☆ no máximo 25 exclusões por execução (e nunca mais que 5% da tabela, mínimo 10). Passou disso: **não apaga nenhuma** e o job do GitHub fica vermelho (código 3)
 ☆ tudo que é apagado fica arquivado em `masterlist_exclusoes` (linha completa, com o id original) e pode ser restaurado
-☆ segunda camada: um gatilho impede que QUALQUER chamador apague linha com claim ativo
+☆ segunda camada: um gatilho impede que QUALQUER chamador apague linha com claim vinculado, de qualquer status
 
 ## Como implantar (você roda; eu não executo nada em produção)
 1. SQL Editor: colar `S1_prune_protegido_aplicar.sql` e executar (transação única; para sozinho se algo estiver diferente).

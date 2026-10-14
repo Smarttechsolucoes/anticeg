@@ -63,26 +63,26 @@ const cnt = async (d, w = "true") => (await d.query(`select count(*)::int c from
   // exclusão real: todas as candidatas de uma vez (livres + protegidas misturadas)
   const ids = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110];
   const rel = (await prune(d, ids, 46)).rows[0].r;
-  ok(!rel.abortado && rel.apagadas === 4, `apagou só as 4 livres (apagadas=${rel.apagadas})`);
-  ok((await cnt(d, "id in (101,102,103,110)")) === 0, "as livres (101,102,103 e 110 com claim só rejeitado) saíram");
-  ok((await cnt(d, "id in (104,105,106,107,108,109)")) === 6, "PRESERVADAS: slot 'disponivel', CLAIM com claim pendente, claim aprovado, já paga, com multa e na_loja");
-  ok(rel.protegidas === 6 && rel.por_motivo.claim_ativo === 2 && rel.por_motivo.origem_site_disponivel === 1 && rel.por_motivo.pagamento_registrado === 1 && rel.por_motivo.multa_registrada === 1 && rel.por_motivo.na_loja === 1,
+  ok(!rel.abortado && rel.apagadas === 3, `apagou só as 3 livres (apagadas=${rel.apagadas})`);
+  ok((await cnt(d, "id in (101,102,103)")) === 0, "as livres (101,102,103) saíram");
+  ok((await cnt(d, "id in (104,105,106,107,108,109,110)")) === 7, "PRESERVADAS: slot 'disponivel', claim pendente, claim aprovado, claim RECUSADO (histórico), já paga, com multa e na_loja");
+  ok(rel.protegidas === 7 && rel.por_motivo.claim_vinculado === 3 && rel.por_motivo.origem_site_disponivel === 1 && rel.por_motivo.pagamento_registrado === 1 && rel.por_motivo.multa_registrada === 1 && rel.por_motivo.na_loja === 1,
      "relatório conta os motivos de proteção: " + JSON.stringify(rel.por_motivo));
   ok(!JSON.stringify(rel).match(/ana|bia|duda|edu|cris/), "o relatório não revela nomes de joiners");
   const depois = (await d.query("select md5(string_agg(m::text, '|' order by id)) h from public.masterlist m where id <= 40 or id in (104,105,106,107,108,109)")).rows[0].h;
   ok(depois === antes, "linhas da planilha e as protegidas ficaram IDÊNTICAS (mesmos ids e conteúdo)");
   ok((await d.query("select md5(string_agg(c::text, '|' order by id)) h from public.claims c")).rows[0].h === claimsAntes, "claims intactos, todos ainda apontam para linhas existentes");
-  ok((await d.query("select count(*)::int c from public.claims c where not exists (select 1 from public.masterlist m where m.id = c.masterlist_id) and c.status <> 'rejeitado'")).rows[0].c === 0, "nenhum claim ativo ficou órfão");
+  ok((await d.query("select count(*)::int c from public.claims c where not exists (select 1 from public.masterlist m where m.id = c.masterlist_id) and c.status <> 'rejeitado'")).rows[0].c === 0, "nenhum claim ficou órfão (nem os recusados)");
 
   // arquivo permite restaurar com o mesmo id
   const arq = (await d.query("select masterlist_id, dados->>'nome_do_item' item from public.masterlist_exclusoes order by masterlist_id")).rows;
-  ok(arq.length === 4 && arq.map(a => a.masterlist_id).join() === "101,102,103,110", "as 4 exclusões ficaram arquivadas com o id original");
+  ok(arq.length === 3 && arq.map(a => a.masterlist_id).join() === "101,102,103", "as 3 exclusões ficaram arquivadas com o id original");
   await d.exec("insert into public.masterlist select * from jsonb_populate_recordset(null::public.masterlist, (select jsonb_agg(dados) from public.masterlist_exclusoes where masterlist_id = 101))");
   ok((await cnt(d, "id = 101 and nome_do_item = 'Livre 1'")) === 1, "uma linha arquivada é restaurada com o mesmo id e conteúdo");
 
   // gatilho: nem service_role apaga linha com claim ativo
   const g = await como(d, "service_role", "delete from public.masterlist where id = 106");
-  ok(!!g.erro && /claim ativo/.test(g.erro) && (await cnt(d, "id = 106")) === 1, "DELETE direto de linha com claim ativo é barrado pelo gatilho (até para service_role)");
+  ok(!!g.erro && /claim vinculado/.test(g.erro) && (await cnt(d, "id = 106")) === 1, "DELETE direto de linha com claim vinculado é barrado pelo gatilho (até para service_role)");
   ok(!(await como(d, "service_role", "delete from public.masterlist where id = 101")).erro, "DELETE direto de linha sem claim ativo continua permitido (administração normal)");
 }
 

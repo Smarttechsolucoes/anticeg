@@ -1,14 +1,14 @@
 -- S1 — EXCLUSÃO SEGURA E ATÔMICA DA MASTERLIST (o sync deixa de apagar direto)
 -- Problema: o sync (scripts/sync-masterlist.js, service_role) apagava da masterlist toda linha ausente da planilha, inclusive linhas criadas pelo site
--- (slots 'disponivel', ceg 'CLAIM'), linhas com claim ativo e linhas já pagas.
+-- (slots 'disponivel', ceg 'CLAIM'), linhas com QUALQUER claim vinculado (pendente, aprovado ou recusado: o histórico não pode ficar órfão) e linhas já pagas.
 -- O que este script cria (ADITIVO: nenhuma linha, COG, pedido ou claim existente é alterado):
 --   1) public.masterlist_exclusoes — arquivo de tudo que for apagado (foto completa da linha, com o id original, para poder restaurar).
 --   2) public.prune_masterlist(p_ids, p_linhas_planilha, p_limite) — a ÚNICA porta de exclusão do sync. Em UMA transação ela:
 --        • recusa se a planilha veio vazia/parcial (menos de 50% das linhas do banco);
---        • separa as linhas PROTEGIDAS e nunca as apaga: claim não rejeitado, ceg 'CLAIM', cog 'disponivel', na_loja, qualquer pago_* marcado, multa registrada;
+--        • separa as linhas PROTEGIDAS e nunca as apaga: qualquer claim vinculado (inclusive aprovado e recusado), ceg 'CLAIM', cog 'disponivel', na_loja, qualquer pago_* marcado, multa registrada;
 --        • aplica um LIMITE por execução (no máximo 25 e nunca mais que 5% da tabela, mínimo 10): se houver mais candidatas que o limite, NÃO apaga nenhuma;
 --        • arquiva e apaga o restante e devolve um relatório (sem nomes de joiners).
---   3) gatilho trg_masterlist_protege_claims — segunda camada, vale para QUALQUER chamador (inclusive service_role): linha com claim não rejeitado não pode ser apagada.
+--   3) gatilho trg_masterlist_protege_claims — segunda camada, vale para QUALQUER chamador (inclusive service_role): linha com qualquer claim vinculado não pode ser apagada.
 -- Execução da função: somente service_role. Nada muda para o site nem para a planilha.
 begin;
 
@@ -55,7 +55,7 @@ grant select, insert on table public.masterlist_exclusoes to service_role;
 create function public.masterlist_motivos_protecao(p_id bigint)
 returns text[] language sql stable security definer set search_path = '' as $$
   select array_remove(array[
-    case when exists (select 1 from public.claims c where c.masterlist_id = m.id and coalesce(c.status, '') <> 'rejeitado') then 'claim_ativo' end,
+    case when exists (select 1 from public.claims c where c.masterlist_id = m.id) then 'claim_vinculado' end,
     case when m.ceg = 'CLAIM' then 'origem_site_claim' end,
     case when lower(coalesce(m.cog, '')) = 'disponivel' then 'origem_site_disponivel' end,
     case when m.na_loja is true then 'na_loja' end,
@@ -109,11 +109,11 @@ end $$;
 revoke all on function public.prune_masterlist(bigint[], integer, integer) from public, anon, authenticated;
 grant execute on function public.prune_masterlist(bigint[], integer, integer) to service_role;
 
--- segunda camada: nenhuma linha com claim não rejeitado some, por nenhuma via
+-- segunda camada: nenhuma linha com claim vinculado (de qualquer status) some, por nenhuma via
 create function public.trg_masterlist_protege_claims() returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if exists (select 1 from public.claims c where c.masterlist_id = old.id and coalesce(c.status, '') <> 'rejeitado') then
-    raise exception 'Linha % da masterlist tem claim ativo e não pode ser apagada. Rejeite ou resolva o claim antes.', old.id using errcode = '23503';
+  if exists (select 1 from public.claims c where c.masterlist_id = old.id) then
+    raise exception 'Linha % da masterlist tem claim vinculado (histórico) e não pode ser apagada.', old.id using errcode = '23503';
   end if;
   return old;
 end $$;
