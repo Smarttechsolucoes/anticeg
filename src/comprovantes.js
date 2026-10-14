@@ -59,13 +59,14 @@ export async function resolverComprovantesNoHtml(html) {
 
 // para <img src>: devolve o endereço direto (modo atual) ou o link assinado, quando ele chega (null enquanto carrega ou se não puder abrir)
 export function useUrlComprovante(valor) {
-  const [url, setUrl] = useState(precisaAssinar(valor) ? null : (valor || null));
+  const [resolvido, setResolvido] = useState({ para: null, url: null });
+  const assina = precisaAssinar(valor);
   useEffect(() => {
+    if (!assina) return undefined;
     let vivo = true;
-    if (!precisaAssinar(valor)) { setUrl(valor || null); return undefined; }
-    setUrl(null);
-    urlDoComprovante(valor).then(u => { if (vivo) setUrl(u); });
+    urlDoComprovante(valor).then(u => { if (vivo) setResolvido({ para: valor, url: u }); });
     return () => { vivo = false; };
-  }, [valor]);
-  return url;
+  }, [valor, assina]);
+  if (!assina) return valor || null;
+  return resolvido.para === valor ? resolvido.url : null;
 }

@@ -6,7 +6,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
-import { enviarComprovante, abrirComprovante, urlDoComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
+import { enviarComprovante, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
 import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";

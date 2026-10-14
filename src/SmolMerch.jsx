@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
-import { enviarComprovante, abrirComprovante, urlDoComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
+import { enviarComprovante, abrirComprovante } from "./comprovantes.js";
 import { criarPedidoLoja } from "./joinerAuth.js";
 import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } from "./smolmerchDados.js";
 
