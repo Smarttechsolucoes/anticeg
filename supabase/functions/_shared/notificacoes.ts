@@ -88,7 +88,7 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
     if (!d) return falha(404, "registro não encontrado");
     cogDest = d.joiner_cog;
     // uma joiner logada só dispara o aviso da PRÓPRIA demanda (nunca a de outra pessoa)
-    if (quem === "joiner" && String(ctx.cogConta || "").trim().toLowerCase() !== String(d.joiner_cog || "").trim().toLowerCase()) return falha(403, "esta demanda não é sua");
+    if (quem === "joiner" && String(ctx.cogConta || "").trim() !== String(d.joiner_cog || "").trim()) return falha(403, "esta demanda não é sua");
     if (evento === "comprovante_recebido") {
       const idadeMin = (agora.getTime() - new Date(d.created_at).getTime()) / 60000;
       if (d.status !== "em_analise" || !(idadeMin >= -1 && idadeMin <= LIMITES.janelaComprovanteMin)) return falha(409, "evento fora da janela");
@@ -120,7 +120,7 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
     destinoFixo = { para: ctx.emailAdmin!.trim().toLowerCase(), nome: "Administração" };
     assunto = "✦ Novo joiner adicionado — ANTICEG"; titulo = "Novo cadastro no site";
     blocos = par("Um novo cadastro foi criado automaticamente:") + par(`Nome: <b style="color:#F5F0E8">${escapeHtml(p.nome).slice(0, 120)}</b> · @: <b style="color:#F5F0E8">${escapeHtml(p.cog).slice(0, 64)}</b> · e-mail: <b style="color:#F5F0E8">${escapeHtml(p.email).slice(0, 160)}</b>`);
-    referencia = `${evento}:${p.cog.toLowerCase()}`;
+    referencia = `${evento}:${p.cog}`;
   } else {
     const cog = String(e.joiner_cog ?? "").trim();
     if (!cog || cog.length > 64) return falha(400, "joiner inválida");
@@ -130,14 +130,17 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
     const total = pend.reduce((s, p) => s + (!p.pago_item ? Number(p.valor_item || 0) : 0) + (!p.pago_frete ? Number(p.frete_inter || 0) : 0) + (!p.pago_rf ? Number(p.taxa_rf || 0) : 0), 0);
     assunto = "Lembrete de pagamento pendente"; titulo = "Você tem pagamentos pendentes";
     blocos = par(`Você tem <b style=\"color:#F5F0E8\">${pend.length}</b> item(ns) com pagamento pendente, somando <b style=\"color:#F5F0E8\">R$ ${brl(total)}</b> (sem multas). Acesse o portal para ver os detalhes e enviar o comprovante.`) + itensLista(pend);
-    referencia = `${evento}:${cog.toLowerCase()}:${agora.toISOString().slice(0, 10)}`;
+    referencia = `${evento}:${cog}:${agora.toISOString().slice(0, 10)}`;
   }
 
   // destinatário SEMPRE vem do cadastro (nunca do pedido): precisa existir exatamente uma joiner com esse COG e um e-mail válido
   let para: string; let nome: string;
   if (destinoFixo) { para = destinoFixo.para; nome = destinoFixo.nome; }
   else {
-    const candidatas = await db.joinersPorCog(cogDest);
+    // COG EXATO primeiro ('Ela' e 'ela' são pessoas diferentes): só cai para a busca sem diferenciar maiúsculas se NÃO houver nenhuma igual exata
+    const todas = await db.joinersPorCog(cogDest);
+    const exatas = todas.filter(j => String(j.cog || "").trim() === cogDest.trim());
+    const candidatas = exatas.length ? exatas : todas;
     if (candidatas.length !== 1 || !emailValido(candidatas[0].email)) return falha(422, "sem destinatário válido");
     para = candidatas[0].email!.trim().toLowerCase();
     nome = candidatas[0].nome || candidatas[0].cog;

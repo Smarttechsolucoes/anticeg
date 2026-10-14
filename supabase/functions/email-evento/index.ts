@@ -16,8 +16,8 @@ serve((req) => {
     demanda: async id => (await sb.from("pagamento_demandas").select("id,joiner_cog,status,created_at,valor_total,itens,motivo_rejeicao").eq("id", id).maybeSingle()).data ?? null,
     report: async id => (await sb.from("reports").select("id,joiner_cog,item_nome,resposta,status").eq("id", id).maybeSingle()).data ?? null,
     preCadastroRecente: async cog => (await sb.from("pre_cadastros").select("cog,nome,email,created_at").ilike("cog", likeSeguro(cog)).order("created_at", { ascending: false }).limit(1).maybeSingle()).data ?? null,
-    joinersPorCog: async cog => (await sb.from("joiners").select("cog,nome,email").ilike("cog", likeSeguro(cog)).limit(3)).data ?? [],
-    pendenciasDoJoiner: async cog => (await sb.from("masterlist").select("ceg,nome_do_item,valor_item,frete_inter,taxa_rf,pago_item,pago_frete,pago_rf").ilike("cog", likeSeguro(cog)).limit(500)).data ?? [],
+    joinersPorCog: async cog => (await sb.from("joiners").select("cog,nome,email").ilike("cog", likeSeguro(cog)).limit(5)).data ?? [],
+    pendenciasDoJoiner: async cog => ((await sb.from("masterlist").select("cog,ceg,nome_do_item,valor_item,frete_inter,taxa_rf,pago_item,pago_frete,pago_rf").ilike("cog", likeSeguro(cog)).limit(500)).data ?? []).filter((r: { cog: string | null }) => String(r.cog ?? "").trim() === cog.trim()),
     contarEnvios: async (dest, desde) => {
       let q = sb.from("emails_enviados").select("id", { count: "exact", head: true }).gte("criado_em", desde);
       if (dest) q = q.eq("destinatario", dest);
