@@ -1,3 +1,5 @@
+> **SUBSTITUÍDO (14/10/2026):** a decisão foi NÃO criar projeto Supabase de ensaio. O caminho oficial agora é `supabase/lancamento/LANCAMENTO.md`. Este guia fica só como referência histórica.
+
 # Guia: montar o ambiente de ENSAIO (projeto Supabase separado da produção)
 
 **Para quê:** testar J1–J4 (acesso das joiners, RLS), as Edge Functions e o site novo com **dados 100% fictícios**, num banco que não tem nenhuma ligação com a produção.
