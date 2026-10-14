@@ -90,3 +90,41 @@ test("recuperação: se o provedor de e-mail falhar, a resposta continua neutra"
   assert.equal((await processarRecuperacao({ cog: "ana", email: "x@y.com" }, "1.1.1.1", m.db, m.rede, AGORA)).status, 400);   // não aceita e-mail escolhido pelo visitante
 });
 test("normalizarCog", () => { assert.equal(normalizarCog("  @@Ana "), "ana"); assert.equal(normalizarCog(null), ""); });
+
+import { escolherJoinerPorArroba, arrobaSeguroParaBusca, emailDaContaPorArroba } from "./acesso.ts";
+
+test("@ → joiner pelo ID permanente: cog ou twitter, maiúsculas ignoradas", () => {
+  const linhas = [{ id: 1, cog: "ana", twitter: "@ana" }, { id: 2, cog: "bia", twitter: "@Bia_oficial" }];
+  assert.equal(escolherJoinerPorArroba(linhas, "@ANA"), "1");
+  assert.equal(escolherJoinerPorArroba(linhas, "bia_oficial"), "2");
+  assert.equal(escolherJoinerPorArroba(linhas, "naoexiste"), null);
+  assert.equal(escolherJoinerPorArroba(linhas, ""), null);
+});
+test("COG ambíguo ('Ela' e 'ela') NÃO resolve para ninguém — nem vincula a pessoa errada", () => {
+  const linhas = [{ id: 7, cog: "Ela", twitter: "@Ela" }, { id: 8, cog: "ela", twitter: "@ela" }];
+  assert.equal(escolherJoinerPorArroba(linhas, "ela"), null);
+});
+test("mesma pessoa casando por cog e por twitter conta uma vez só", () => {
+  assert.equal(escolherJoinerPorArroba([{ id: 3, cog: "gabi", twitter: "@gabi" }], "gabi"), "3");
+});
+test("o @ que vai para o filtro do servidor só aceita caracteres simples", () => {
+  for (const ruim of ["a,b", "x)or(id.gt.0", "a b", "a*", "%", "x'y"]) assert.equal(arrobaSeguroParaBusca(ruim), false, ruim);
+  for (const bom of ["ana", "@Ana.Silva", "a_b-c"]) assert.equal(arrobaSeguroParaBusca(bom), true, bom);
+});
+test("emailDaContaPorArroba usa joiners.id → contas_joiner.joiner_id (nunca contas_joiner.cog) e só devolve e-mail verificado", async () => {
+  const consultas: string[] = [];
+  const sb: any = {
+    from: (t: string) => ({
+      select: (_c: string) => ({
+        or: () => ({ limit: async () => { consultas.push(t); return { data: [{ id: 5, cog: "ana", twitter: "@ana" }] }; } }),
+        eq: (col: string, val: unknown) => ({ maybeSingle: async () => { consultas.push(`${t}.${col}=${val}`); return { data: { user_id: "u-ana" } }; } }),
+      }),
+    }),
+    auth: { admin: { getUserById: async (id: string) => ({ data: { user: id === "u-ana" ? { email: "ana@exemplo.com", email_confirmed_at: "2026-01-01" } : null } }) } },
+  };
+  assert.equal(await emailDaContaPorArroba(sb, "@Ana"), "ana@exemplo.com");
+  assert.deepEqual(consultas, ["joiners", "contas_joiner.joiner_id=5"]);
+  const naoVerificado = { ...sb, auth: { admin: { getUserById: async () => ({ data: { user: { email: "ana@exemplo.com", email_confirmed_at: null } } }) } } };
+  assert.equal(await emailDaContaPorArroba(naoVerificado, "ana"), null);
+  assert.equal(await emailDaContaPorArroba(sb, "a,b"), null);
+});

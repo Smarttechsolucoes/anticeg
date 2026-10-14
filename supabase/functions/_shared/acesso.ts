@@ -85,3 +85,37 @@ export async function processarRecuperacao(entrada: unknown, ip: string, db: DbA
   return resposta;
 }
 void NEUTRO;
+
+// ── Resolução do @ para a conta, SEMPRE pelo identificador permanente da joiner (joiners.id → contas_joiner.joiner_id) ──
+// (a coluna contas_joiner.cog não existe mais depois do J1 v2: o COG pode mudar sem perder a conta)
+export interface LinhaJoiner { id: number | string; cog: string | null; twitter: string | null }
+
+// Só devolve o id quando o @ aponta para UMA joiner (cog ou twitter). Zero ou mais de uma (ex.: 'Ela' e 'ela') => null, igual ao acesso simples.
+export function escolherJoinerPorArroba(linhas: LinhaJoiner[], arroba: string): string | null {
+  const h = normalizarCog(arroba);
+  if (!h) return null;
+  const ids = new Set<string>();
+  for (const j of linhas ?? []) {
+    if (normalizarCog(j.cog) === h || normalizarCog(j.twitter) === h) ids.add(String(j.id));
+  }
+  return ids.size === 1 ? [...ids][0] : null;
+}
+// o valor entra num filtro do PostgREST com a chave de serviço: só caracteres simples (nada de vírgula, parêntese etc.)
+export function arrobaSeguroParaBusca(arroba: string): boolean { return /^[a-z0-9_.\-]{1,64}$/.test(normalizarCog(arroba)); }
+
+export interface ClienteContas {
+  from(tabela: string): any;
+  auth: { admin: { getUserById(id: string): Promise<{ data: { user?: { email?: string | null; email_confirmed_at?: string | null } | null } | null }> } };
+}
+// e-mail VERIFICADO da conta ativada daquele @ (ou null). Só no servidor; o e-mail nunca volta ao navegador.
+export async function emailDaContaPorArroba(sb: ClienteContas, arroba: string): Promise<string | null> {
+  const h = normalizarCog(arroba);
+  if (!arrobaSeguroParaBusca(h)) return null;
+  const { data: linhas } = await sb.from("joiners").select("id,cog,twitter").or(`cog.ilike.${h},twitter.ilike.${h},twitter.ilike.@${h}`).limit(10);
+  const joinerId = escolherJoinerPorArroba(linhas ?? [], h);
+  if (!joinerId) return null;
+  const { data: c } = await sb.from("contas_joiner").select("user_id").eq("joiner_id", joinerId).maybeSingle();
+  if (!c?.user_id) return null;
+  const { data: u } = await sb.auth.admin.getUserById(c.user_id);
+  return u?.user?.email && u.user.email_confirmed_at ? u.user.email : null;
+}
