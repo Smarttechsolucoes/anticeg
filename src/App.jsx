@@ -24501,23 +24501,24 @@ function AdminRecrutadores() {
 // ── Admin Todos os Drops ────────────────────────────────────────
 function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, smolmerchCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
+  const agora = new Date();
   const DROPS = [
-    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"dazed-seungmin",   label:"Dazed & Confused Seungmin", icon:"◈", count:wmagDzCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" },
-    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
-    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
-    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento },
-    { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",         evento:ODD_CFG.evento },
-    { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento },
+    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= REVISTA_DEADLINE },
+    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= WMAG_DEADLINE },
+    { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= WMAG_LK_CFG.deadline },
+    { id:"dazed-seungmin",   label:"Dazed & Confused Seungmin", icon:"◈", count:wmagDzCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= DAZED_SM_CFG.deadline },
+    { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
+    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:POPUP_WEEKS.some(w => agora <= w.deadline) },
+    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= BAZAAR_IN_DEADLINE },
+    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:false },
+    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-09-08T12:00:00-03:00") },
+    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" , aberto:agora <= POPCORN_SLEEVE_DEADLINE },
+    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SINGBA_DEADLINE },
+    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" , aberto:!WM_CFG.fechado },
+    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" , aberto:true },
+    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento , aberto:!PT_CFG.fechado },
+    { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",         evento:ODD_CFG.evento , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
+    { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
   ];
   const STATUS_COLS = [
     { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -24530,8 +24531,11 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>TODOS OS DROPS</div>
       <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{DROPS.length} drops cadastrados</div>
 
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {DROPS.map(drop => {
+      {[["EM ABERTO", DROPS.filter(d => d.aberto)], ["ENCERRADOS", DROPS.filter(d => !d.aberto)]].map(([titulo, grupo]) => grupo.length > 0 && (
+        <div key={titulo} style={{ marginBottom:24 }}>
+          <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color: titulo === "EM ABERTO" ? "#4ade80" : "rgba(245,240,232,.3)", marginBottom:10 }}>{titulo} ({grupo.length})</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {grupo.map(drop => {
           const s = dropsStats?.[drop.evento] || null;
           const temPendentes = drop.count > 0;
           return (
@@ -24564,8 +24568,10 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
               )}
             </div>
           );
-        })}
-      </div>
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
