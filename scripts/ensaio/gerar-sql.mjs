@@ -16,12 +16,16 @@ writeFileSync(raiz + "ensaio/gerado/ENSAIO_1_base.sql", junta("ENSAIO 1 — esta
   ["laboratorio", "01_schema_minimo.sql"], ["laboratorio", "02_politicas_de_hoje_simuladas.sql"], ["laboratorio", "03_dados_ficticios.sql"], ["laboratorio", "04_tabelas_j4c.sql"], ["laboratorio", "05_travas_c0_simuladas.sql"],
   ["admin-auth", "A1_base_aplicar.sql"], ["admin-auth", "A2_senha_apenas_aplicar.sql"],
   ["joiners-auth", "J1_estrutura_aplicar.sql"], ["joiners-auth", "J3_tentativas_aplicar.sql"],
+  // controle de envios de e-mail (PR das notificações): entra se o arquivo existir nesta branch
+  ...(existsSync(raiz + "notificacoes/N1_emails_enviados_aplicar.sql") ? [["notificacoes", "N1_emails_enviados_aplicar.sql"]] : []),
 ]).replace("-- ═════ laboratorio/01", () => "-- (guarda: recusa rodar em banco que já tem as tabelas do site)\n" + aviso + "-- ═════ laboratorio/01"));
 
 // Etapa 2: o LANÇAMENTO (a ordem é a mesma da produção)
 writeFileSync(raiz + "ensaio/gerado/ENSAIO_2_lancamento.sql", junta("ENSAIO 2 — LANÇAMENTO: J4-0, J4a, J4b, J4c-1, J4c-2 (rode só depois de cadastrar a administradora de ensaio, passo 4 do guia)", [
   ["joiners-auth", "J4_0_admin_em_todas_aplicar.sql"], ["joiners-auth", "J4a_publico_aplicar.sql"], ["joiners-auth", "J4b_lote1_aplicar.sql"],
   ["joiners-auth", "J4c1_joiners_aplicar.sql"], ["joiners-auth", "J4c2_pedidos_claims_aplicar.sql"],
+  // proteção do sync (PR separado): entra se o arquivo existir nesta branch
+  ...(existsSync(raiz + "sync/S1_prune_protegido_aplicar.sql") ? [["sync", "S1_prune_protegido_aplicar.sql"]] : []),
 ]));
 
 // Etapa 3: storage de ensaio
