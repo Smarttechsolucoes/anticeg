@@ -56,7 +56,7 @@ export interface DepsUpload {
   env: (nome: string) => string | undefined;
   resolverToken: (token: string) => Promise<{ admin: boolean; cog: string | null }>;
   contar: (chave: string, desdeIso: string) => Promise<number>;
-  registrar: (chave: string) => Promise<void>;
+  registrar: (chave: string, arquivo: { bucket: string; path: string; cog: string | null }) => Promise<void>;   // grava a DONA do arquivo (e conta o envio para o limite)
   assinar: (bucket: string, path: string) => Promise<{ token: string; path: string } | null>;   // null = o arquivo já existe
   agora?: () => Date;
 }
@@ -78,7 +78,7 @@ export async function tratarUploadComprovante(req: Request, deps: DepsUpload, ip
     if (chamada.quem !== "admin" && chamada.quem !== "servico" && (await deps.contar(chave, desde)) >= limite) return responder(429, { error: "Muitos envios agora. Tente de novo em alguns minutos." }, cors);
     const assinado = await deps.assinar(v.pedido.bucket, v.pedido.path);
     if (!assinado) return responder(409, { error: "já existe um arquivo com esse nome" }, cors);
-    await deps.registrar(chave);
+    await deps.registrar(chave, { bucket: v.pedido.bucket, path: assinado.path, cog: chamada.cogConta });
     return responder(200, { ok: true, bucket: v.pedido.bucket, path: assinado.path, token: assinado.token, tipo: v.pedido.tipo }, cors);
   } catch (e) {
     console.error("comprovante-upload", e instanceof Error ? e.message : e);

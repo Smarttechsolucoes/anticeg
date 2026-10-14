@@ -9,16 +9,16 @@ const SERVICO = "chave-de-servico";
 const TOKENS: Record<string, { admin: boolean; cog: string | null }> = { "jwt-admin": { admin: true, cog: null }, "jwt-ana": { admin: false, cog: "ana" }, "jwt-bia": { admin: false, cog: "bia" }, "anon-key": { admin: false, cog: null } };
 
 function montarUpload(opcoes: { env?: Record<string, string | undefined>; existentes?: string[]; usados?: Record<string, number> } = {}) {
-  const usados = opcoes.usados ?? {}; const registrados: string[] = []; const assinados: string[] = []; const existentes = new Set(opcoes.existentes ?? []);
+  const usados = opcoes.usados ?? {}; const registrados: string[] = []; const donos: Record<string, string | null> = {}; const assinados: string[] = []; const existentes = new Set(opcoes.existentes ?? []);
   const env: Record<string, string | undefined> = { SUPABASE_SERVICE_ROLE_KEY: SERVICO, ...(opcoes.env ?? {}) };
   const deps: DepsUpload = {
     env: n => env[n],
     resolverToken: async t => { if (!TOKENS[t]) throw new Error("token inválido"); return TOKENS[t]; },
     contar: async chave => usados[chave] ?? 0,
-    registrar: async chave => { registrados.push(chave); usados[chave] = (usados[chave] ?? 0) + 1; },
+    registrar: async (chave, a) => { registrados.push(chave); donos[a.bucket + "/" + a.path] = a.cog; usados[chave] = (usados[chave] ?? 0) + 1; },
     assinar: async (bucket, path) => { if (existentes.has(bucket + "/" + path)) return null; assinados.push(bucket + "/" + path); return { token: "token-de-uso-unico", path }; },
   };
-  return { deps, registrados, assinados };
+  return { deps, registrados, assinados, donos };
 }
 const postUp = (corpo: unknown, auth?: string, extra: Record<string, string> = {}) => new Request("https://x.supabase.co/functions/v1/comprovante-upload", { method: "POST", headers: { "content-type": "application/json", ...(auth ? { authorization: "Bearer " + auth } : {}), ...extra }, body: JSON.stringify(corpo) });
 const pedido = (extra: Record<string, unknown> = {}) => ({ bucket: "comprovantes", path: "wmag/1700000000000.jpg", tipo: "image/jpeg", tamanho: 500000, ...extra });
@@ -57,6 +57,15 @@ test("envio: visitante, joiner e administradora recebem token; o resultado não 
     assert.equal(corpo.path, "wmag/1700000000000.jpg");
     assert.deepEqual(m.assinados, ["comprovantes/wmag/1700000000000.jpg"]);
   }
+});
+
+test("envio: grava a DONA do arquivo (COG da conta); visitante e administradora ficam sem dona", async () => {
+  const a = montarUpload(); await tratarUploadComprovante(postUp(pedido(), "jwt-ana"), a.deps, "1.1.1.1");
+  assert.deepEqual(a.donos, { "comprovantes/wmag/1700000000000.jpg": "ana" });
+  const v = montarUpload(); await tratarUploadComprovante(postUp(pedido()), v.deps, "1.1.1.1");
+  assert.deepEqual(v.donos, { "comprovantes/wmag/1700000000000.jpg": null });
+  const adm = montarUpload(); await tratarUploadComprovante(postUp(pedido(), "jwt-admin"), adm.deps, "1.1.1.1");
+  assert.deepEqual(adm.donos, { "comprovantes/wmag/1700000000000.jpg": null });
 });
 
 test("envio: NUNCA sobrescreve um arquivo que já existe", async () => {

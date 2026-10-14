@@ -19,7 +19,7 @@ serve((req) => {
       return { admin: false, cog: typeof cog === "string" ? cog : null };
     },
     contar: async (chave, desde) => (await sb.from("comprovantes_uploads").select("id", { count: "exact", head: true }).eq("chave", chave).gte("criado_em", desde)).count ?? 0,
-    registrar: async (chave) => { await sb.from("comprovantes_uploads").insert({ chave }); },
+    registrar: async (chave, a) => { await sb.from("comprovantes_uploads").insert({ chave, bucket: a.bucket, path: a.path, cog: a.cog, origem: "envio" }); },
     assinar: async (bucket, path) => {
       const { data, error } = await sb.storage.from(bucket).createSignedUploadUrl(path);   // sem upsert: se o arquivo já existe, recusa
       if (error || !data) return null;
