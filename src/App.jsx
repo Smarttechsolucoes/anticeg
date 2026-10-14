@@ -13358,20 +13358,27 @@ function AdminMercari({ pedidos = [], onUpdate }) {
 
   const lista = filtro === "todos" ? pedidos : pedidos.filter(p => p.status === filtro);
 
-  async function mudarStatus(p, novoStatus) {
+  async function mudarStatus(p, novoStatus, msgKey = novoStatus) {
     setCarregando(p.id);
     await supabase.from("mercari_pedidos").update({ status: novoStatus }).eq("id", p.id);
     const msgs = {
       aprovado: `🎌 Seu pedido Mercari foi aprovado! Seu item estará finalizado assim que a proxy realizar a compra no Mercari.`,
       recusado: `🎌 Seu pedido Mercari não pôde ser realizado. Entre em contato com a admin para mais informações.`,
+      cancelado: `🎌 Seu pedido Mercari foi cancelado. Entre em contato com a admin para mais informações.`,
       pago:       `🎌 Pagamento do seu pedido Mercari confirmado! Acompanhe o status por aqui.`,
       finalizado: `🎌 Seu pedido Mercari foi finalizado! A compra no Mercari foi realizada. Em breve você receberá mais informações sobre o envio.`,
     };
-    if (msgs[novoStatus]) {
-      await inserirPush([{ message: msgs[novoStatus], active: true, joiner_cog: p.joiner_cog }]);
+    if (msgs[msgKey]) {
+      await inserirPush([{ message: msgs[msgKey], active: true, joiner_cog: p.joiner_cog }]);
     }
     onUpdate(prev => prev.map(x => x.id === p.id ? { ...x, status: novoStatus } : x));
     setCarregando(null);
+  }
+
+  // cancela a qualquer momento (aprovado, pago ou finalizado): grava como "recusado", o status que o portal da joiner já entende
+  function cancelarPedido(p) {
+    if (!window.confirm(`Cancelar o pedido Mercari de ${p.joiner_nome}? A joiner será avisada.`)) return;
+    mudarStatus(p, "recusado", "cancelado");
   }
 
   const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
@@ -13480,6 +13487,12 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                 <button onClick={() => mudarStatus(p, "finalizado")} disabled={carregando === p.id}
                   style={{ background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.3)", color:"#4ecb71", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
                   {carregando === p.id ? "..." : "✓ Finalizar"}
+                </button>
+              )}
+              {["aprovado", "pago", "finalizado"].includes(p.status) && (
+                <button onClick={() => cancelarPedido(p)} disabled={carregando === p.id}
+                  style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  ✗ Cancelar pedido
                 </button>
               )}
             </div>
