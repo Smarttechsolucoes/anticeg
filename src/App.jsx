@@ -5,8 +5,8 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
-import { JoinerAtivacaoGate } from "./JoinerAuth.jsx";
-import { JOINERS_AUTH_ATIVO } from "./joinerAuth.js";
+import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
+import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -3825,6 +3825,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   return (
     <div className="admin-wrap">
       <h2 className="admin-title" style={{ marginBottom:4 }}>Meu Perfil</h2>
+      {JOINERS_AUTH_ATIVO && <TrocarSenhaJoiner user={user} />}
       <div className="admin-greeting" style={{ marginBottom:20 }}>
         <span className="admin-greeting-prompt">// </span>
         <span className="admin-greeting-msg">{user.nome_site || user.nome || user.cog}</span>
@@ -26733,6 +26734,15 @@ function RevistaFormPage() {
 }
 
 export default function App() {
+  return (
+    <>
+      <AppPrincipal />
+      {JOINERS_AUTH_ATIVO && <RecuperacaoSenhaGate />}
+    </>
+  );
+}
+
+function AppPrincipal() {
   const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
     try {
@@ -26980,6 +26990,7 @@ export default function App() {
   }
 
   function handleLogout() {
+    if (JOINERS_AUTH_ATIVO) supabase.auth.signOut({ scope: "local" }).catch(() => {});
     localStorage.removeItem("anticeg_user_v2");
     setUser(null);
     setItens([]);
@@ -27082,6 +27093,8 @@ export default function App() {
 
 
   const isAdmin = isAdminUser(user);
+  // Áreas privadas: com o novo acesso ligado, só abrem com conta ativada e senha (administradoras seguem pelo próprio login)
+  const prot = (slug, el) => (JOINERS_AUTH_ATIVO && AREAS_PROTEGIDAS.includes(slug) && !isAdmin ? <AreaProtegida user={user} area={slug} onLogin={() => setPage("landing")}>{el}</AreaProtegida> : el);
 
   return (
     <div>
@@ -27375,7 +27388,7 @@ export default function App() {
           </div>
         );
       })()}
-      {window.location.pathname === "/claim" ? (
+      {window.location.pathname === "/claim" ? prot("claims", (
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
@@ -27407,20 +27420,20 @@ export default function App() {
           {claimPageTab === "historico" && <ClaimHistorico />}
           {claimPageTab === "teste" && <ClaimAreaTeste />}
         </div>
-      ) : (
+      )) : (
         <>
-          {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
+          {tab === "masterlist" && prot("masterlist", <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />)}
           {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
           {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
-          {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
-          {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
-          {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
-          {tab === "prevenda" && <PrevendaTab user={user} />}
-          {tab === "wave-maker" && <WaveMakerTab user={user} />}
-          {tab === "run-it-vol-2" && <RunItVol2Tab user={user} />}
-          {tab === "paper-tales" && <WaveMakerTab user={user} cfg={PT_CFG} />}
-          {tab === "odd-fresh" && <WaveMakerTab user={user} cfg={ODD_CFG} />}
-          {tab === "promo-13" && <WaveMakerTab user={user} cfg={PROMO13_CFG} />}
+          {!user.guest && !user.pre_cadastro && tab === "perfil" && prot("perfil", <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />)}
+          {!user.guest && !user.pre_cadastro && tab === "envio" && prot("envio", <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />)}
+          {!user.guest && !user.pre_cadastro && tab === "disponiveis" && prot("disponiveis", <DisponiveisTab user={user} />)}
+          {tab === "prevenda" && prot("prevenda", <PrevendaTab user={user} />)}
+          {tab === "wave-maker" && prot("wave-maker", <WaveMakerTab user={user} />)}
+          {tab === "run-it-vol-2" && prot("run-it-vol-2", <RunItVol2Tab user={user} />)}
+          {tab === "paper-tales" && prot("paper-tales", <WaveMakerTab user={user} cfg={PT_CFG} />)}
+          {tab === "odd-fresh" && prot("odd-fresh", <WaveMakerTab user={user} cfg={ODD_CFG} />)}
+          {tab === "promo-13" && prot("promo-13", <WaveMakerTab user={user} cfg={PROMO13_CFG} />)}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}

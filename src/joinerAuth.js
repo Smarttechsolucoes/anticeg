@@ -1,11 +1,15 @@
-// Acesso das joiners com Supabase Auth: ativação da conta (e-mail confirmado + senha + vínculo seguro ao cadastro existente).
+// Acesso das joiners com Supabase Auth: ativação da conta (e-mail confirmado + senha + vínculo seguro ao cadastro existente),
+// login com @ + senha, recuperação e troca de senha.
 // Usa o cliente PRINCIPAL do site: é ele que carrega a sessão da joiner para as consultas ao banco (RLS, etapa J4).
 // A decisão de quem é dono de um COG NÃO é do navegador: o servidor (ativar_minha_conta) confere o e-mail confirmado com o cadastro.
 import supabase from "./supabase.js";
 
-// Desligado por padrão: com false o site se comporta exatamente como hoje (sem pop-up, sessões antigas valem).
+// Desligado por padrão: com false o site se comporta exatamente como hoje (sem pop-up, sem bloqueio, sessões antigas valem).
 // Para o lançamento: defina VITE_JOINERS_AUTH=true no ambiente do build (Vercel) — só depois da autorização.
 export const JOINERS_AUTH_ATIVO = import.meta.env.VITE_JOINERS_AUTH === "true";
+
+// Áreas que exigem conta ativada e senha. O resto (CEGs, calendário, regras...) continua público.
+export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13"];
 
 export const SENHA_MIN = 8;
 
@@ -32,14 +36,17 @@ export function validarSenha(senha, repetir, { cog = "", email = "" } = {}) {
 
 function mensagem(err, contexto) {
   const txt = String((err && (err.message || err.code)) || "");
-  const status = err && err.status;
-  if (status === 429 || /rate.?limit|too many|after \d+ seconds/i.test(txt)) return "Muitas tentativas. Espere um minuto e tente de novo.";
+  const status = err && (err.status || err.context?.status);
+  if (status === 429 || /rate.?limit|too many|after \d+ seconds/i.test(txt)) return "Muitas tentativas. Espere alguns minutos e tente de novo.";
   if (contexto === "codigo") return "Código inválido ou expirado. Confira o e-mail e tente de novo, ou peça um código novo.";
   if (contexto === "senha") {
     if (/same_password|different from the old/i.test(txt)) return "Escolha uma senha diferente da anterior.";
     if (/weak|pwned|compromised/i.test(txt)) return "Senha fraca demais. Escolha uma senha mais longa e única.";
+    if (/reauth/i.test(txt)) return "Por segurança, entre de novo e tente outra vez.";
     return "Não foi possível salvar a senha. Tente de novo.";
   }
+  if (contexto === "entrar") return "@ ou senha incorretos.";
+  if (contexto === "recuperar") return "Não foi possível enviar agora. Tente de novo em alguns minutos.";
   return "Não foi possível enviar o código agora. Tente de novo em alguns minutos.";
 }
 
@@ -81,7 +88,49 @@ export function criarJoinerAuth(client = supabase) {
     return { resultado: data && data.status === "ok" ? "ok" : "pendente" };
   }
 
+  // 3) login com @ + senha: o servidor resolve o @ para o e-mail verificado (sem devolvê-lo) e devolve só os tokens da sessão
+  async function entrar({ cog, senha }) {
+    const c = normalizarCog(cog);
+    if (!c || !senha) return { erro: "Informe o @ e a senha." };
+    const { data, error } = await client.functions.invoke("login-joiner", { body: { cog: c, senha } });
+    if (error || !data?.access_token || !data?.refresh_token) return { erro: mensagem(error, "entrar") };
+    const { error: es } = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    if (es) return { erro: mensagem(es, "entrar") };
+    const e = await estado(c);
+    if (e.estado !== "ativa") { await client.auth.signOut({ scope: "local" }); return { erro: "@ ou senha incorretos." }; }
+    return { ok: true, cog: e.cog };
+  }
+
+  // 3b) alternativa: e-mail + senha (a conta precisa ser a do @ que está nesta tela)
+  async function entrarComEmail({ cog, email, senha }) {
+    const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase();
+    if (!emailValido(e) || !senha) return { erro: "Informe o e-mail e a senha." };
+    const { error } = await client.auth.signInWithPassword({ email: e, password: senha });
+    if (error) return { erro: mensagem(error, "entrar") };
+    const est = await estado(c);
+    if (est.estado !== "ativa") { await client.auth.signOut({ scope: "local" }); return { erro: "Esta conta não corresponde a este @." }; }
+    return { ok: true, cog: est.cog };
+  }
+
+  // 4) esqueci minha senha: a resposta é sempre a mesma, com ou sem conta
+  async function recuperar({ cog }) {
+    const c = normalizarCog(cog);
+    if (!c) return { erro: "Informe o seu @." };
+    const { error } = await client.functions.invoke("recuperar-senha-joiner", { body: { cog: c } });
+    if (error && (error.status === 429 || error.context?.status === 429)) return { erro: mensagem(error, "recuperar") };
+    return { ok: true };
+  }
+
+  // 5) troca de senha (conta logada) e definição da senha nova depois do link de recuperação
+  async function trocarSenha(nova, repetir, contexto = {}) {
+    const msg = validarSenha(nova, repetir, contexto);
+    if (msg) return { erro: msg };
+    const { error } = await client.auth.updateUser({ password: nova });
+    if (error) return { erro: mensagem(error, "senha") };
+    return { ok: true };
+  }
+
   async function sair() { await client.auth.signOut({ scope: "local" }); }
 
-  return { estado, pedirCodigo, confirmar, sair };
+  return { estado, pedirCodigo, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair };
 }

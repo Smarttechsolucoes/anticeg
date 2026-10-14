@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { criarJoinerAuth, emailValido, mascararEmail, normalizarCog, validarSenha, SENHA_MIN } from "./joinerAuth.js";
+import supabase from "./supabase.js";
 
 const C = { bg: "#17141f", borda: "rgba(245,240,232,0.14)", texto: "#F5F0E8", mudo: "rgba(245,240,232,0.62)", destaque: "#BAFF39", erro: "#FF8A80", ok: "#7CE08A" };
 const mono = "'DM Mono',monospace";
@@ -134,6 +135,194 @@ export function JoinerAtivacaoGate({ user }) {
     return () => { vivo = false; };
   }, [api, user?.cog]);
 
+  // "Primeiro acesso? Ative sua conta" na tela de senha reabre este pop-up
+  useEffect(() => {
+    const abrir = () => { try { sessionStorage.removeItem(DISPENSA); } catch { /* sem armazenamento */ } setDispensado(false); setAberto(true); };
+    window.addEventListener("anticeg:abrir-ativacao", abrir);
+    return () => window.removeEventListener("anticeg:abrir-ativacao", abrir);
+  }, []);
+
   if (!aberto || dispensado) return null;
   return <JoinerAtivacaoModal user={user} api={api} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;
+}
+
+// ── nível de acesso: simples (só @) ou completo (@ + senha, conta ativada) ───────────────────────
+function useNivelAcesso(user) {
+  const [api] = useState(() => criarJoinerAuth());
+  const [nivel, setNivel] = useState("carregando");
+  useEffect(() => {
+    let vivo = true;
+    const atualizar = () => api.estado(user?.cog).then(r => { if (vivo) setNivel(r.estado === "ativa" ? "completo" : "simples"); }).catch(() => { if (vivo) setNivel("simples"); });
+    atualizar();
+    const { data } = supabase.auth.onAuthStateChange(() => { setTimeout(atualizar, 0); });
+    return () => { vivo = false; data?.subscription?.unsubscribe(); };
+  }, [api, user?.cog]);
+  return { api, nivel };
+}
+
+function PromptSenha({ user, api, onSemConta }) {
+  const [modo, setModo] = useState("arroba");       // arroba | email | recuperar
+  const [senha, setSenha] = useState("");
+  const [email, setEmail] = useState("");
+  const [erro, setErro] = useState("");
+  const [info, setInfo] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const cog = normalizarCog(user?.cog);
+
+  async function entrar(e) {
+    e.preventDefault(); setErro(""); setInfo(""); setOcupado(true);
+    const r = modo === "email" ? await api.entrarComEmail({ cog, email, senha }) : await api.entrar({ cog, senha });
+    setOcupado(false);
+    if (r.erro) { setErro(r.erro); return; }
+    setSenha("");      // a área aparece sozinha: o nível de acesso é recalculado pela mudança de sessão
+  }
+  async function recuperar(e) {
+    e.preventDefault(); setErro(""); setInfo(""); setOcupado(true);
+    const r = await api.recuperar({ cog });
+    setOcupado(false);
+    if (r.erro) setErro(r.erro); else setInfo("Se existir uma conta ativada para esse @, enviamos um link para o e-mail verificado. Confira também o spam.");
+  }
+
+  return (
+    <div data-testid="area-protegida" style={{ maxWidth: 420, margin: "32px auto", padding: "0 16px", boxSizing: "border-box" }}>
+      <div style={{ background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "22px 20px", color: C.texto, display: "grid", gap: 12 }}>
+        <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>🔒 Área protegida</div>
+        <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Esta área tem informações pessoais e só abre com a sua senha. Você pode continuar navegando nas áreas públicas.</div>
+        {modo !== "recuperar" ? (
+          <form onSubmit={entrar} noValidate style={{ display: "grid", gap: 10 }}>
+            {modo === "arroba"
+              ? <Rotulo>Seu @<input style={{ ...campo, opacity: 0.8 }} value={"@" + cog} readOnly aria-label="Seu @" /></Rotulo>
+              : <Rotulo>E-mail da conta<input style={campo} type="email" value={email} onChange={ev => setEmail(ev.target.value)} aria-label="E-mail da conta" autoComplete="username" /></Rotulo>}
+            <Rotulo>Senha<input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Senha" autoComplete="current-password" /></Rotulo>
+            <Aviso texto={erro} />
+            <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Entrando…" : "Entrar"}</button>
+            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => { setErro(""); setModo(modo === "arroba" ? "email" : "arroba"); }}>{modo === "arroba" ? "Entrar com e-mail e senha" : "Entrar com @ e senha"}</button>
+          </form>
+        ) : (
+          <form onSubmit={recuperar} style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Vamos enviar um link para redefinir a senha no e-mail verificado da conta de <b style={{ color: C.texto }}>@{cog}</b>.</div>
+            <Aviso texto={erro} />
+            {info && <div role="status" style={{ color: C.ok, fontSize: 12, fontFamily: mono }}>{info}</div>}
+            <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar link de redefinição"}</button>
+            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => { setErro(""); setInfo(""); setModo("arroba"); }}>Voltar</button>
+          </form>
+        )}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {modo !== "recuperar" && <button type="button" style={{ ...botaoSec, fontSize: 11, flex: 1 }} onClick={() => { setErro(""); setInfo(""); setModo("recuperar"); }}>Esqueci minha senha</button>}
+          <button type="button" style={{ ...botaoSec, fontSize: 11, flex: 1 }} onClick={onSemConta}>Primeiro acesso? Ative sua conta</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Envolve uma área privada: sem conta ativada e senha, mostra o pedido de senha em vez do conteúdo. Depois de entrar, o conteúdo aparece no mesmo endereço.
+export function AreaProtegida({ user, area, children, onLogin }) {   // "area" só para o rastreio do destino
+  const { api, nivel } = useNivelAcesso(user);
+  useEffect(() => { try { sessionStorage.setItem("anticeg_destino", window.location.pathname + window.location.search); } catch { /* sem armazenamento */ } }, [area]);
+  if (nivel === "completo") return children;
+  if (nivel === "carregando") return <div data-testid="area-verificando" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12 }}>Verificando acesso…</div>;
+  if (!user || user.guest || !user.cog) {
+    return (
+      <div data-testid="area-protegida" style={{ maxWidth: 420, margin: "32px auto", padding: "0 16px", boxSizing: "border-box" }}>
+        <div style={{ background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "22px 20px", color: C.texto, display: "grid", gap: 12 }}>
+          <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>🔒 Área protegida</div>
+          <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Entre com o seu @ para continuar.</div>
+          {onLogin && <button style={botao} onClick={onLogin}>Entrar</button>}
+        </div>
+      </div>
+    );
+  }
+  return <PromptSenha user={user} api={api} onSemConta={() => window.dispatchEvent(new Event("anticeg:abrir-ativacao"))} />;
+}
+
+// Depois do link de "esqueci minha senha": o Supabase abre a sessão de recuperação e o site pede a senha nova.
+export function RecuperacaoSenhaGate() {
+  const [api] = useState(() => criarJoinerAuth());
+  const [aberto, setAberto] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [repetir, setRepetir] = useState("");
+  const [erro, setErro] = useState("");
+  const [feito, setFeito] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange(evento => { if (evento === "PASSWORD_RECOVERY") setAberto(true); });
+    return () => data?.subscription?.unsubscribe();
+  }, []);
+
+  async function salvar(e) {
+    e.preventDefault(); setErro(""); setOcupado(true);
+    const r = await api.trocarSenha(senha, repetir);
+    setOcupado(false);
+    if (r.erro) { setErro(r.erro); return; }
+    setFeito(true);
+  }
+  function concluir() {
+    let destino = "/masterlist";
+    try { destino = sessionStorage.getItem("anticeg_destino") || destino; } catch { /* sem armazenamento */ }
+    setAberto(false);
+    window.location.assign(destino.startsWith("/") && !destino.startsWith("//") ? destino : "/masterlist");
+  }
+
+  if (!aberto) return null;
+  return (
+    <div data-testid="recuperacao-modal" role="dialog" aria-modal="true" aria-label="Definir nova senha"
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10001, padding: 16 }}>
+      <div style={{ background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "24px 22px", width: "min(420px, 100%)", color: C.texto, display: "grid", gap: 12, boxSizing: "border-box" }}>
+        {!feito ? (
+          <form onSubmit={salvar} noValidate style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>Defina a sua nova senha</div>
+            <Rotulo>Nova senha (mínimo {SENHA_MIN} caracteres)<input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Nova senha" autoComplete="new-password" /></Rotulo>
+            <Rotulo>Repita a nova senha<input style={campo} type="password" value={repetir} onChange={ev => setRepetir(ev.target.value)} aria-label="Repita a nova senha" autoComplete="new-password" /></Rotulo>
+            <Aviso texto={erro} />
+            <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Salvando…" : "Salvar nova senha"}</button>
+          </form>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.ok }}>✓ Senha alterada</div>
+            <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Pronto! Você já pode usar a nova senha.</div>
+            <button style={botao} onClick={concluir}>Continuar</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Cartão "Segurança" do perfil: troca de senha de quem já está com a conta ativada
+export function TrocarSenhaJoiner({ user }) {
+  const { api, nivel } = useNivelAcesso(user);
+  const [aberto, setAberto] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [repetir, setRepetir] = useState("");
+  const [erro, setErro] = useState("");
+  const [feito, setFeito] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  if (nivel !== "completo") return null;
+
+  async function salvar(e) {
+    e.preventDefault(); setErro(""); setFeito(false); setOcupado(true);
+    const r = await api.trocarSenha(senha, repetir, { cog: user?.cog });
+    setOcupado(false);
+    if (r.erro) { setErro(r.erro); return; }
+    setFeito(true); setSenha(""); setRepetir("");
+  }
+  return (
+    <div data-testid="trocar-senha-joiner" style={{ margin: "0 0 14px", padding: "12px 14px", borderRadius: 10, border: `1px solid ${C.borda}`, background: C.bg, color: C.texto, display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontFamily: mono, fontSize: 12, color: C.ok }}>🔒 Conta protegida por senha</span>
+        <button style={{ ...botaoSec, width: "auto", padding: "5px 12px", fontSize: 11, marginLeft: "auto" }} onClick={() => { setAberto(v => !v); setFeito(false); setErro(""); }}>Trocar minha senha</button>
+      </div>
+      {aberto && (
+        <form onSubmit={salvar} noValidate style={{ display: "grid", gap: 8 }}>
+          <input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} placeholder={`nova senha (mínimo ${SENHA_MIN} caracteres)`} aria-label="Nova senha" autoComplete="new-password" />
+          <input style={campo} type="password" value={repetir} onChange={ev => setRepetir(ev.target.value)} placeholder="repita a nova senha" aria-label="Repita a nova senha" autoComplete="new-password" />
+          <Aviso texto={erro} />
+          {feito && <div role="status" style={{ color: C.ok, fontSize: 12, fontFamily: mono }}>Senha alterada.</div>}
+          <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Salvando…" : "Salvar nova senha"}</button>
+        </form>
+      )}
+    </div>
+  );
 }
