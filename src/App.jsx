@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
-import supabase from "./supabase.js";
+import supabase, { SUPABASE_URL } from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
@@ -9921,7 +9921,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         }
         async function recortarFotosExistentes() {
           const BUCKET = "storage-itens";
-          const BASE   = `https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/${BUCKET}/`;
+          const BASE   = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
           setStorageRecortando(true);
           setStorageRecortandoProg({ done: 0, total: 0, erros: 0 });
           const { data: todos } = await supabase.from("joiner_storage").select("id, foto_url").eq("ativo", true);
@@ -20941,7 +20941,7 @@ function buildItemsFromQtds(qtds, week) {
 
 function PopupSkzooEaawPage() {
   const mono = "'DM Mono',monospace";
-  const BASE = "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo";
+  const BASE = `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo`;
   const [lightbox, setLightbox] = useState(null);
   const [qtds, setQtds] = useState({});
   const [etapa, setEtapa] = useState("loja");
@@ -25725,7 +25725,7 @@ function PrevendaTab({ user }) {
       titulo: "POP-UP SKZOO EAAW",
       subtitulo: "Rio de Janeiro · Merch Oficial",
       url: "/prevenda/popup-skzoo",
-      img: "https://ghjfsmwwcfpfvrouyrka.supabase.co/storage/v1/object/public/popup-skzoo/capa.png",
+      img: `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo/capa.png`,
       tags: ["Aberto · Formulário 03–05/09", "Pagamento imediato"],
       info: "22 itens · LATAM Ver. exclusivos · preços confirmados",
     },
