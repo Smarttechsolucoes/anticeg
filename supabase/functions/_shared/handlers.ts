@@ -33,14 +33,21 @@ export async function tratarEmail(req: Request, deps: DepsEmail): Promise<Respon
   if (req.method !== "POST") return responder(405, { error: "método não permitido" }, cors);
   try {
     const chave = deps.env("SENDGRID_API_KEY"), remetente = deps.env("SENDER_EMAIL"), nomeRemetente = deps.env("SENDER_NAME") ?? "ANTICEG";
-    if (!chave || !remetente) return responder(500, { error: "envio de e-mail não configurado" }, cors);
+    // MODO SECO (EMAIL_MODO_SECO=true): faz TODA a validação (quem chama, evento, destinatário, limites) mas NÃO envia nada ao provedor e devolve a vaga de envio.
+    // Serve para conferir as notificações legítimas em produção enquanto o SendGrid não está pronto.
+    const seco = deps.env("EMAIL_MODO_SECO") === "true";
+    if (!seco && (!chave || !remetente)) return responder(500, { error: "envio de e-mail não configurado" }, cors);
 
     const chamada: Chamada = await identificarChamada(req.headers.get("authorization"), deps.env("SUPABASE_SERVICE_ROLE_KEY") ?? "", deps.resolverToken);
     const permitirAnonimo = (deps.env("PERMITIR_COMPROVANTE_ANONIMO") ?? "true") !== "false";
     const entrada = await req.json().catch(() => null);
-    const r = await prepararEmail(entrada, chamada.quem, deps.db(), deps.agora ? deps.agora() : new Date(), { cogConta: chamada.cogConta, permitirAnonimo });
+    const r = await prepararEmail(entrada, chamada.quem, deps.db(), deps.agora ? deps.agora() : new Date(), { cogConta: chamada.cogConta, permitirAnonimo, emailAdmin: deps.env("ADMIN_NOTIFY_EMAIL") ?? null });
     if (!r.ok) return responder(r.status, { error: r.erro }, cors);
 
+    if (seco) {
+      await deps.desfazerEnvio(r.evento!, r.para!);        // nada foi enviado: o registro de "já enviado" não pode ficar
+      return responder(200, { ok: true, seco: true }, cors);
+    }
     const envio = await deps.fetch("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
       headers: { "Authorization": `Bearer ${chave}`, "Content-Type": "application/json" },

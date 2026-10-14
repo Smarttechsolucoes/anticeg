@@ -4,14 +4,18 @@
 
 export type Quem = "anonimo" | "joiner" | "admin" | "servico";
 // Contexto de quem chama: o COG da conta logada (se for uma joiner com conta ativada) e se o modo legado "só @" ainda é aceito.
-export interface Contexto { cogConta?: string | null; permitirAnonimo?: boolean }
+// emailAdmin: destinatário FIXO dos avisos para a administração (vem da configuração do servidor, nunca do pedido)
+export interface Contexto { cogConta?: string | null; permitirAnonimo?: boolean; emailAdmin?: string | null }
 
 export interface Joiner { cog: string; nome: string | null; email: string | null }
 export interface Demanda { id: number; joiner_cog: string; status: string; created_at: string; valor_total: number | string | null; itens: unknown; motivo_rejeicao: string | null }
 export interface Report { id: number; joiner_cog: string; item_nome: string | null; resposta: string | null; status: string }
 export interface Pendencia { ceg: string | null; nome_do_item: string | null; valor_item: number | null; frete_inter: number | null; taxa_rf: number | null; pago_item: boolean | null; pago_frete: boolean | null; pago_rf: boolean | null }
 
+export interface PreCadastro { cog: string; nome: string | null; email: string | null; created_at: string }
+
 export interface Db {
+  preCadastroRecente(cog: string): Promise<PreCadastro | null>;   // último pedido de cadastro daquele @ (tabela pre_cadastros)
   demanda(id: number): Promise<Demanda | null>;
   report(id: number): Promise<Report | null>;
   joinersPorCog(cog: string): Promise<Joiner[]>;
@@ -25,6 +29,8 @@ export const EVENTOS_EMAIL = {
   comprovante_recusado: { quem: ["admin", "servico"], campos: ["demanda_id"] },
   report_resolvido: { quem: ["admin", "servico"], campos: ["report_id"] },
   lembrete_pagamento: { quem: ["admin", "servico"], campos: ["joiner_cog"] },
+  // aviso à administração de um cadastro novo: o visitante só informa o @; texto e destinatário são do servidor, e só vale para um pedido de cadastro RECENTE
+  novo_cadastro: { quem: ["anonimo", "joiner", "admin", "servico"], campos: ["joiner_cog"] },
 } as const;
 export type EventoEmail = keyof typeof EVENTOS_EMAIL;
 
@@ -73,6 +79,7 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
   // modo legado (só @, sem login): só enquanto permitido pela configuração; depois do lançamento o comprovante exige a conta da própria joiner
   if (quem === "anonimo" && !ctx.permitirAnonimo) return falha(401, "faça login para continuar");
 
+  let destinoFixo: { para: string; nome: string } | null = null;
   let cogDest = ""; let assunto = ""; let blocos = ""; let titulo = ""; let referencia = "";
   if (evento === "comprovante_recebido" || evento === "comprovante_recusado") {
     const id = Number(e.demanda_id);
@@ -102,6 +109,18 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
     cogDest = r.joiner_cog; assunto = "Seu report foi resolvido ✓"; titulo = "Seu report foi resolvido";
     blocos = par(`Seu report sobre <b style=\"color:#F5F0E8\">${escapeHtml(r.item_nome)}</b> foi atualizado. Acesse a aba Suporte e confira se está correto.`) + (r.resposta ? par(`Resposta da administração: ${escapeHtml(r.resposta).slice(0, 600)}`) : "");
     referencia = `${evento}:${r.id}`;
+  } else if (evento === "novo_cadastro") {
+    const cog = String(e.joiner_cog ?? "").trim();
+    if (!cog || cog.length > 64) return falha(400, "joiner inválida");
+    const p = await db.preCadastroRecente(cog);
+    if (!p) return falha(404, "registro não encontrado");
+    const idadeMin = (agora.getTime() - new Date(p.created_at).getTime()) / 60000;
+    if (!(idadeMin >= -1 && idadeMin <= LIMITES.janelaComprovanteMin)) return falha(409, "evento fora da janela");
+    if (!emailValido(ctx.emailAdmin)) return falha(422, "sem destinatário válido");
+    destinoFixo = { para: ctx.emailAdmin!.trim().toLowerCase(), nome: "Administração" };
+    assunto = "✦ Novo joiner adicionado — ANTICEG"; titulo = "Novo cadastro no site";
+    blocos = par("Um novo cadastro foi criado automaticamente:") + par(`Nome: <b style="color:#F5F0E8">${escapeHtml(p.nome).slice(0, 120)}</b> · @: <b style="color:#F5F0E8">${escapeHtml(p.cog).slice(0, 64)}</b> · e-mail: <b style="color:#F5F0E8">${escapeHtml(p.email).slice(0, 160)}</b>`);
+    referencia = `${evento}:${p.cog.toLowerCase()}`;
   } else {
     const cog = String(e.joiner_cog ?? "").trim();
     if (!cog || cog.length > 64) return falha(400, "joiner inválida");
@@ -115,10 +134,14 @@ export async function prepararEmail(entrada: unknown, quem: Quem, db: Db, agora:
   }
 
   // destinatário SEMPRE vem do cadastro (nunca do pedido): precisa existir exatamente uma joiner com esse COG e um e-mail válido
-  const candidatas = await db.joinersPorCog(cogDest);
-  if (candidatas.length !== 1 || !emailValido(candidatas[0].email)) return falha(422, "sem destinatário válido");
-  const para = candidatas[0].email!.trim().toLowerCase();
-  const nome = candidatas[0].nome || candidatas[0].cog;
+  let para: string; let nome: string;
+  if (destinoFixo) { para = destinoFixo.para; nome = destinoFixo.nome; }
+  else {
+    const candidatas = await db.joinersPorCog(cogDest);
+    if (candidatas.length !== 1 || !emailValido(candidatas[0].email)) return falha(422, "sem destinatário válido");
+    para = candidatas[0].email!.trim().toLowerCase();
+    nome = candidatas[0].nome || candidatas[0].cog;
+  }
 
   // limites e envio único
   const umaHora = new Date(agora.getTime() - 3600_000).toISOString();

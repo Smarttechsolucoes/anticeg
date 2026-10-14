@@ -1,7 +1,7 @@
 // E-mails de notificação do site. O visitante NÃO escolhe destinatário, assunto nem corpo: informa só o tipo do evento e o id do registro.
 // O servidor confere o evento no banco, descobre o destinatário no cadastro e monta a mensagem com modelos próprios (ver _shared/notificacoes.ts).
 // A lógica HTTP fica em _shared/handlers.ts (testada sem rede). Aqui só entram as dependências reais.
-// Segredos (Supabase > Edge Functions > Secrets): SENDGRID_API_KEY, SENDER_EMAIL, SENDER_NAME. Opcionais: ALLOWED_ORIGINS, PERMITIR_COMPROVANTE_ANONIMO ("false" depois do lançamento).
+// Segredos (Supabase > Edge Functions > Secrets): SENDGRID_API_KEY, SENDER_EMAIL, SENDER_NAME. Opcionais: ADMIN_NOTIFY_EMAIL (aviso de cadastro novo à administração), ALLOWED_ORIGINS, PERMITIR_COMPROVANTE_ANONIMO ("false" depois do lançamento).
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { tratarEmail } from "../_shared/handlers.ts";
@@ -15,6 +15,7 @@ serve((req) => {
   const db: Db = {
     demanda: async id => (await sb.from("pagamento_demandas").select("id,joiner_cog,status,created_at,valor_total,itens,motivo_rejeicao").eq("id", id).maybeSingle()).data ?? null,
     report: async id => (await sb.from("reports").select("id,joiner_cog,item_nome,resposta,status").eq("id", id).maybeSingle()).data ?? null,
+    preCadastroRecente: async cog => (await sb.from("pre_cadastros").select("cog,nome,email,created_at").ilike("cog", likeSeguro(cog)).order("created_at", { ascending: false }).limit(1).maybeSingle()).data ?? null,
     joinersPorCog: async cog => (await sb.from("joiners").select("cog,nome,email").ilike("cog", likeSeguro(cog)).limit(3)).data ?? [],
     pendenciasDoJoiner: async cog => (await sb.from("masterlist").select("ceg,nome_do_item,valor_item,frete_inter,taxa_rf,pago_item,pago_frete,pago_rf").ilike("cog", likeSeguro(cog)).limit(500)).data ?? [],
     contarEnvios: async (dest, desde) => {

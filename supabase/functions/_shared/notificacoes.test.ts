@@ -2,21 +2,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prepararEmail, validarPush, endpointPushValido, identificarQuem, identificarChamada, escapeHtml, LIMITES } from "./notificacoes.ts";
-import type { Db, Demanda, Joiner, Pendencia, Report } from "./notificacoes.ts";
+import type { Db, Demanda, Joiner, Pendencia, PreCadastro, Report } from "./notificacoes.ts";
 
 const AGORA = new Date("2026-10-14T15:00:00Z");
 const LEGADO = { permitirAnonimo: true };   // modo "só @" ainda aceito (antes do lançamento do acesso por senha)
 const minutosAtras = (m: number) => new Date(AGORA.getTime() - m * 60000).toISOString();
 
-function criarDb(sobras: Partial<{ demandas: Demanda[]; reports: Report[]; joiners: Joiner[]; pend: Pendencia[]; envios: { evento: string; referencia: string; destinatario: string; em: string }[] }> = {}) {
+function criarDb(sobras: Partial<{ demandas: Demanda[]; reports: Report[]; joiners: Joiner[]; pend: Pendencia[]; envios: { evento: string; referencia: string; destinatario: string; em: string }[]; pre: PreCadastro[] }> = {}) {
   const estado = {
     demandas: sobras.demandas ?? [{ id: 101, joiner_cog: "ana", status: "em_analise", created_at: minutosAtras(2), valor_total: 120.5, itens: [{ nome_do_item: "<b>Photocard</b>", ceg: "SKZOO", valor_item: 120.5 }], motivo_rejeicao: null }],
     reports: sobras.reports ?? [{ id: 7, joiner_cog: "ana", item_nome: "Item <x>", resposta: "ok", status: "resolvido" }],
     joiners: sobras.joiners ?? [{ cog: "ana", nome: "Ana", email: "Ana@Exemplo.com" }, { cog: "sem", nome: "Sem", email: null }, { cog: "dup", nome: "D1", email: "d@e.com" }, { cog: "dup", nome: "D2", email: "d2@e.com" }, { cog: "ruim", nome: "R", email: "sem-arroba" }],
     pend: sobras.pend ?? [{ ceg: "SKZOO", nome_do_item: "Item A", valor_item: 50, frete_inter: 10, taxa_rf: 0, pago_item: false, pago_frete: false, pago_rf: false }],
     envios: sobras.envios ?? [],
+    pre: sobras.pre ?? [{ cog: "nova", nome: "Nova <script>", email: "nova@exemplo.com", created_at: minutosAtras(1) }, { cog: "velha", nome: "Velha", email: "v@exemplo.com", created_at: minutosAtras(500) }],
   };
   const db: Db = {
+    preCadastroRecente: async cog => estado.pre.find(p => p.cog.toLowerCase() === cog.toLowerCase()) ?? null,
     demanda: async id => estado.demandas.find(d => d.id === id) ?? null,
     report: async id => estado.reports.find(r => r.id === id) ?? null,
     joinersPorCog: async cog => estado.joiners.filter(j => j.cog.toLowerCase() === cog.toLowerCase()),
@@ -154,4 +156,28 @@ test("identificarChamada: serviço, administradora, joiner com conta, e anônimo
   assert.deepEqual(await identificarChamada("Bearer jwt-sem-conta", "SERVICO", resolver), { quem: "anonimo", cogConta: null });
   assert.deepEqual(await identificarChamada("Bearer lixo", "SERVICO", resolver), { quem: "anonimo", cogConta: null });
   assert.deepEqual(await identificarChamada(null, "SERVICO", resolver), { quem: "anonimo", cogConta: null });
+});
+
+const ADMIN_FIXO = { permitirAnonimo: true, emailAdmin: "Admin@Exemplo.com" };
+test("novo_cadastro: o aviso vai SÓ para o e-mail fixo da administração, com texto do sistema e dados escapados", async () => {
+  const { db } = criarDb();
+  const r = await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova" }, "anonimo", db, AGORA, ADMIN_FIXO);
+  assert.equal(r.ok, true);
+  assert.equal(r.para, "admin@exemplo.com");
+  assert.match(r.html!, /Novo cadastro no site/);
+  assert.match(r.html!, /Nova &lt;script&gt;/);
+  assert.doesNotMatch(r.html!, /<script>/);
+});
+test("novo_cadastro: o visitante não escolhe destinatário, e só vale para pedido RECENTE, uma vez, com destinatário configurado", async () => {
+  const { db } = criarDb();
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova", to_email: "x@y.com" }, "anonimo", db, AGORA, ADMIN_FIXO)).status, 400);
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "velha" }, "anonimo", db, AGORA, ADMIN_FIXO)).status, 409);
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "naoexiste" }, "anonimo", db, AGORA, ADMIN_FIXO)).status, 404);
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova" }, "anonimo", db, AGORA, { permitirAnonimo: true })).status, 422);
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova" }, "anonimo", db, AGORA, ADMIN_FIXO)).ok, true);
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova" }, "anonimo", db, AGORA, ADMIN_FIXO)).status, 409);   // já enviado
+});
+test("novo_cadastro depois do lançamento (modo legado desligado): visitante sem login não aciona", async () => {
+  const { db } = criarDb();
+  assert.equal((await prepararEmail({ evento: "novo_cadastro", joiner_cog: "nova" }, "anonimo", db, AGORA, { permitirAnonimo: false, emailAdmin: "a@b.com" })).status, 401);
 });

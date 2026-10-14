@@ -26,6 +26,7 @@ linha("campo extra junto do evento é recusado", await chamar("email-evento", { 
 linha("evento de administração sem login", await chamar("email-evento", { evento: "lembrete_pagamento", joiner_cog: "__inexistente__" }), [401]);
 linha("evento inexistente", await chamar("email-evento", { evento: "toString" }), [400]);
 linha("comprovante com id inexistente (modo legado 404 | depois do lançamento 401)", await chamar("email-evento", { evento: "comprovante_recebido", demanda_id: -1 }), [404, 401]);
+linha("aviso de cadastro novo para um @ inexistente (404; 401 depois do lançamento)", await chamar("email-evento", { evento: "novo_cadastro", joiner_cog: "__inexistente__" }), [404, 401]);
 linha("push sem login de administradora", await chamar("push-evento", { subscription: { endpoint: "https://fcm.googleapis.com/x", keys: { p256dh: "a", auth: "b" } }, title: "t", body: "b" }), [401]);
 
 console.log("\n== funções ANTIGAS (a brecha: devem ficar 410 depois da validação) ==");

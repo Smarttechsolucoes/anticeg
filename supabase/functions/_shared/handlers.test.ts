@@ -17,6 +17,7 @@ function montarEmail(opcoes: { env?: Record<string, string | undefined>; sgOk?: 
   const demandas = (opcoes.demandas ?? [{ id: 101, joiner_cog: "ana", status: "em_analise", created_at: new Date(AGORA.getTime() - 120000).toISOString(), valor_total: 50, itens: [{ nome_do_item: "Item", ceg: "X", valor_item: 50 }], motivo_rejeicao: null },
     { id: 102, joiner_cog: "bia", status: "rejeitado", created_at: new Date(AGORA.getTime() - 3600000).toISOString(), valor_total: 10, itens: [], motivo_rejeicao: "Valor errado" }]) as any[];
   const db: Db = {
+    preCadastroRecente: async cog => cog === "nova" ? { cog: "nova", nome: "Nova", email: "nova@exemplo.com", created_at: new Date(AGORA.getTime() - 60000).toISOString() } : null,
     demanda: async id => demandas.find(d => d.id === id) ?? null,
     report: async () => null,
     joinersPorCog: async cog => [{ cog: "ana", nome: "Ana", email: "ana@exemplo.com" }, { cog: "bia", nome: "Bia", email: "bia@exemplo.com" }].filter(j => j.cog === cog.toLowerCase()),
@@ -140,4 +141,29 @@ test("push: inscrição expirada vira 410; sem VAPID vira 500; método errado 40
   assert.equal((await tratarPush(postPush(pedidoPush, { authorization: "Bearer jwt-admin" }), montarPush({ erroEnvio: { statusCode: 410 } }).deps)).status, 410);
   assert.equal((await tratarPush(postPush(pedidoPush, { authorization: "Bearer jwt-admin" }), montarPush({ env: { VAPID_PRIVATE_KEY: undefined } }).deps)).status, 500);
   assert.equal((await tratarPush(new Request("https://x/f", { method: "GET" }), montarPush().deps)).status, 405);
+});
+
+test("novo_cadastro pelo handler: vai para o ADMIN_NOTIFY_EMAIL da configuração; sem a configuração, 422 e nada é enviado", async () => {
+  const com = montarEmail({ env: { ADMIN_NOTIFY_EMAIL: "admin@exemplo.com" } });
+  const r = await tratarEmail(post({ evento: "novo_cadastro", joiner_cog: "nova" }, { authorization: "Bearer chave-anonima-publica" }), com.deps);
+  assert.equal(r.status, 200); assert.equal(com.chamadasProvedor[0].corpo.personalizations[0].to[0].email, "admin@exemplo.com");
+  const sem = montarEmail();
+  const r2 = await tratarEmail(post({ evento: "novo_cadastro", joiner_cog: "nova" }), sem.deps);
+  assert.equal(r2.status, 422); assert.equal(sem.chamadasProvedor.length, 0);
+});
+
+test("MODO SECO: valida tudo, não chama o provedor, não exige chave e devolve a vaga (o envio real depois continua possível)", async () => {
+  const m = montarEmail({ env: { EMAIL_MODO_SECO: "true", SENDGRID_API_KEY: undefined, SENDER_EMAIL: undefined } });
+  const r = await tratarEmail(post({ evento: "comprovante_recebido", demanda_id: 101 }, { authorization: "Bearer chave-anonima-publica" }), m.deps);
+  assert.equal(r.status, 200); assert.deepEqual(await r.json(), { ok: true, seco: true });
+  assert.equal(m.chamadasProvedor.length, 0); assert.equal(m.envios.length, 0);
+  // a autorização continua valendo no modo seco
+  const proibido = await tratarEmail(post({ evento: "lembrete_pagamento", joiner_cog: "ana" }), m.deps);
+  assert.equal(proibido.status, 401);
+  const antigo = await tratarEmail(post({ to_email: "x@y.com", assunto: "a", corpo: "b" }), m.deps);
+  assert.equal(antigo.status, 400);
+  // depois de desligar o modo seco, o mesmo comprovante ainda pode ser enviado de verdade
+  const real = montarEmail({ env: {} }); real.envios.push(...m.envios);
+  assert.equal((await tratarEmail(post({ evento: "comprovante_recebido", demanda_id: 101 }), real.deps)).status, 200);
+  assert.equal(real.chamadasProvedor.length, 1);
 });
