@@ -34,6 +34,7 @@ begin
   if n <> 5 then raise exception 'envio_solicitacoes sem as colunas esperadas. Nada foi alterado.'; end if;
   if to_regclass('public.claims_quadro') is not null or to_regclass('public.claims_vendidos') is not null then raise exception 'As visões de claims já existem. Nada foi alterado.'; end if;
   if not exists (select 1 from public.admin_roles) then raise exception 'Não há administradora cadastrada. Nada foi alterado.'; end if;
+  if to_regprocedure('public.cog_e_da_conta(text)') is null then raise exception 'O J4a não está aplicado (falta cog_e_da_conta). Nada foi alterado.'; end if;
 end $$;
 
 insert into emergencia.c0b_estado_anterior (etapa, objeto, detalhe)
@@ -78,28 +79,28 @@ grant select on public.claims_quadro, public.claims_vendidos to anon, authentica
 
 -- 4) policies
 create policy admin_tudo on public.claims for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy joiner_le_proprios on public.claims for select to authenticated using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+create policy joiner_le_proprios on public.claims for select to authenticated using (public.cog_e_da_conta(joiner_cog));
 create policy joiner_cria_proprio on public.claims for insert to authenticated
-  with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and status = 'pendente');
+  with check (public.cog_e_da_conta(joiner_cog) and status = 'pendente');
 create policy joiner_desfaz_proprio on public.claims for update to authenticated
-  using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and status = 'pendente')
-  with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and status = 'rejeitado');
+  using (public.cog_e_da_conta(joiner_cog) and status = 'pendente')
+  with check (public.cog_e_da_conta(joiner_cog) and status = 'rejeitado');
 create policy joiner_apaga_proprio_pendente on public.claims for delete to authenticated
-  using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and status = 'pendente');
+  using (public.cog_e_da_conta(joiner_cog) and status = 'pendente');
 
 create policy admin_tudo on public.reports for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy joiner_le_proprios on public.reports for select to authenticated using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+create policy joiner_le_proprios on public.reports for select to authenticated using (public.cog_e_da_conta(joiner_cog));
 create policy joiner_cria_proprio on public.reports for insert to authenticated
-  with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and coalesce(status, 'pendente') = 'pendente' and resposta is null);
+  with check (public.cog_e_da_conta(joiner_cog) and coalesce(status, 'pendente') = 'pendente' and resposta is null);
 create policy joiner_edita_proprio on public.reports for update to authenticated
-  using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog())))) with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+  using (public.cog_e_da_conta(joiner_cog)) with check (public.cog_e_da_conta(joiner_cog));
 
 create policy admin_tudo on public.envio_solicitacoes for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy joiner_le_proprias on public.envio_solicitacoes for select to authenticated using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+create policy joiner_le_proprias on public.envio_solicitacoes for select to authenticated using (public.cog_e_da_conta(joiner_cog));
 create policy joiner_cria_propria on public.envio_solicitacoes for insert to authenticated
-  with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and status = 'solicitação de envio');
+  with check (public.cog_e_da_conta(joiner_cog) and status = 'solicitação de envio');
 create policy joiner_edita_propria on public.envio_solicitacoes for update to authenticated
-  using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog())))) with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+  using (public.cog_e_da_conta(joiner_cog)) with check (public.cog_e_da_conta(joiner_cog));
 
 -- 5) gatilhos de campos (para quem NÃO é administradora; o servidor, sem auth.uid(), segue livre)
 create function public.trg_reports_protege() returns trigger language plpgsql security definer set search_path = '' as $$

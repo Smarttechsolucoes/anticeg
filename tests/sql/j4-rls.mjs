@@ -18,7 +18,7 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
     create function auth.uid() returns uuid language sql stable as $f$ select nullif(coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'sub', '')::uuid $f$;
     create function auth.jwt() returns jsonb language sql stable as $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $f$;
     grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
-    insert into auth.users values ('${U(1)}','dona@exemplo.com',now()), ('${U(2)}','ana@exemplo.com',now()), ('${U(3)}','bia.antiga@exemplo.com',now()), ('${U(4)}','sem.vinculo@exemplo.com',now()), ('${U(9)}','gabi@exemplo.com',now());
+    insert into auth.users values ('${U(1)}','dona@exemplo.com',now()), ('${U(2)}','ana@exemplo.com',now()), ('${U(3)}','bia.antiga@exemplo.com',now()), ('${U(4)}','sem.vinculo@exemplo.com',now()), ('${U(9)}','gabi@exemplo.com',now()), ('${U(7)}','ela.conta@exemplo.com',now()), ('${U(8)}','ela2.conta@exemplo.com',now());
   `);
   await d.exec(sql("01_schema_minimo.sql", "laboratorio")); await d.exec(sql("02_politicas_de_hoje_simuladas.sql", "laboratorio"));
   // "hoje": os papéis do Supabase têm os privilégios padrão; as travas por coluna da masterlist (B1/B4) já existem
@@ -34,6 +34,11 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
   const ativar = async (uid, cog) => { await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated" })}', false)`); await d.exec("set role authenticated"); await d.query(`select public.ativar_minha_conta('${cog}')`); await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims','',false)"); };
   await ativar(2, "ana"); await ativar(9, "gabi");
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(3)}', 2, 'admin')`);   // bia: e-mail diferente, vinculada pelo admin
+  // COGs parecidos: 'Ela' (joiner 7) e 'ela' (joiner 8) são pessoas DIFERENTES; as contas são ligadas pelo admin, por id
+  await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(7)}', 7, 'admin'), ('${U(8)}', 8, 'admin');
+    insert into public.pagamento_demandas (joiner_cog, itens, valor_total, status) values ('Ela','[]',1,'em_analise'), ('ela','[]',2,'em_analise');
+    insert into public.masterlist (id, ceg, cog, nome, nome_do_item, status) values (7,'SKZOO','ela','Ela Minúscula','Photocard E','Comprado');
+    insert into public.multas_pagas (joiner_cog, masterlist_id, campo, dias_atraso, valor_multa) values ('Ela',6,'item',1,1), ('ela',7,'item',2,2);`);
   return d;
 }
 async function como(d, papel, uid, q) {
@@ -68,7 +73,7 @@ const n = async (d, papel, uid, q) => (await como(d, papel, uid, q)).rows?.lengt
   const d = await laboratorio();
   ok((await rodar(d, "J4a_publico_aplicar.sql", J)) === null, "J4a aplica sem erro");
   const v = Object.fromEntries((await d.query(sql("J4a_publico_verificar.sql", J))).rows.map(r => [r.item, r.valor]));
-  ok(v["coluna sensível na visão pública (esperado 0)"] === "0" && v["anon executa meus_dados (esperado false)"] === "false" && v["funções security definer com search_path vazio (esperado 3)"] === "3", "verificação J4a como esperado");
+  ok(v["coluna sensível na visão pública (esperado 0)"] === "0" && v["anon executa meus_dados (esperado false)"] === "false" && v["funções security definer com search_path vazio (esperado 4)"] === "4", "verificação J4a como esperado");
   const pub = (await como(d, "anon", null, "select * from public.joiners_publico order by cog")).rows;
   ok(pub.length === 11 && Object.keys(pub[0]).sort().join() === "cog,foto_perfil,nome_site,recrutador,twitter", "visão pública: só 5 colunas seguras");
   ok(!!(await como(d, "anon", null, "select email from public.joiners_publico")).erro, "visitante NÃO consegue pedir e-mail pela visão pública");
@@ -89,7 +94,7 @@ const n = async (d, papel, uid, q) => (await como(d, papel, uid, q)).rows?.lengt
 // ══ J4b lote 1: dados individuais ════════════════════════════════════════════════════════════
 {
   const d = await laboratorio();
-  await rodar(d, "J4_0_admin_em_todas_aplicar.sql", J);
+  await rodar(d, "J4_0_admin_em_todas_aplicar.sql", J); await rodar(d, "J4a_publico_aplicar.sql", J);
   const antes = { pag: (await d.query("select count(*)::int c from public.pagamento_demandas")).rows[0].c, ml: (await d.query("select count(*)::int c from public.masterlist")).rows[0].c };
   ok((await n(d, "anon", null, "select 1 from public.pagamento_demandas")) === antes.pag, "ANTES: o visitante lê TODOS os pagamentos (vulnerabilidade reproduzida)");
   const e = await rodar(d, "J4b_lote1_aplicar.sql", J); ok(e === null, "J4b lote 1 aplica sem erro" + (e ? ": " + e : ""));
@@ -135,5 +140,19 @@ const n = async (d, papel, uid, q) => (await como(d, papel, uid, q)).rows?.lengt
 }
 { const d = await laboratorio(); await d.exec("drop table public.multas_pagas cascade"); ok(/não existe/.test((await rodar(d, "J4b_lote1_aplicar.sql", J)) || ""), "J4b ABORTA se uma tabela do lote não existir (nada alterado)"); }
 { const d = await laboratorio(); await d.exec("delete from public.admin_roles"); ok(/administradora cadastrada/.test((await rodar(d, "J4b_lote1_aplicar.sql", J)) || ""), "J4b ABORTA sem administradora cadastrada (ninguém administraria)"); ok((await n(d, "anon", null, "select 1 from public.masterlist")) > 0, "J4b abortado: estado original intacto"); }
+
+// ══ COGs parecidos: 'Ela' e 'ela' NÃO podem ver nem tocar os dados uma da outra ═══════════════════════
+{
+  const d = await laboratorio(); await rodar(d, "J4_0_admin_em_todas_aplicar.sql", J);
+  ok((await rodar(d, "J4a_publico_aplicar.sql", J)) === null && (await rodar(d, "J4b_lote1_aplicar.sql", J)) === null, "Ela/ela: J4a e J4b aplicam");
+  const cogs = async (uid, q) => ((await como(d, "authenticated", uid, q)).rows || []).map(r => r.c).sort().join();
+  ok((await como(d, "authenticated", 7, "select public.meu_cog() c")).rows[0].c === "Ela" && (await como(d, "authenticated", 8, "select public.meu_cog() c")).rows[0].c === "ela", "as duas contas ficam ligadas às pessoas certas (por id): Ela e ela");
+  ok(await cogs(7, "select joiner_cog c from public.pagamento_demandas") === "Ela" && await cogs(8, "select joiner_cog c from public.pagamento_demandas") === "ela", "pagamentos: a 'Ela' vê só os dela e a 'ela' só os dela");
+  ok(await cogs(7, "select joiner_cog c from public.multas_pagas") === "Ela" && await cogs(8, "select joiner_cog c from public.multas_pagas") === "ela", "multas: cada uma vê só as suas");
+  ok(await cogs(7, "select cog c from public.masterlist where lower(cog) <> 'disponivel'") === "Ela" && await cogs(8, "select cog c from public.masterlist where lower(cog) <> 'disponivel'") === "ela", "masterlist: cada uma vê só os próprios itens");
+  ok(negado(await como(d, "authenticated", 7, "insert into public.pagamento_demandas (joiner_cog, itens, valor_total) values ('ela','[]',9)")) && negado(await como(d, "authenticated", 8, "insert into public.pagamento_demandas (joiner_cog, itens, valor_total) values ('Ela','[]',9)")), "nenhuma cria demanda no nome da outra");
+  ok((await como(d, "authenticated", 7, "update public.masterlist set cog = 'Ela' where id = 5 returning id")).rows?.length === 1, "a 'Ela' assume um slot para o COG dela");
+  ok(negado(await como(d, "authenticated", 7, "update public.masterlist set cog = 'ela' where id = 4")) || (await como(d, "authenticated", 7, "update public.masterlist set cog = 'ela' where id = 4 returning id")).rows?.length === 0, "a 'Ela' NÃO joga um slot para o COG da 'ela'");
+}
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
