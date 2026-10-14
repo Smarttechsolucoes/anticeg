@@ -26,7 +26,7 @@ declare
     'claim_eventos','envio_rounds','repassos','pushes','envio_requests','pagamento_demandas','feedbacks','lojinha_repasses','pedidos_revista','notifications','ceg_config',
     'push_reads','pedidos_popup','links_uteis','estoque_compras','joiner_conferencias','push_subscriptions','mercari_pedidos','pedidos_skzoo_rio','joiner_updates','rastreios',
     'estoque_itens','grupos_envio','pre_cadastros','pedidos_bazaar_in','pedidos_lightstick','sugestoes_tabela','multas_pagas','confirmacoes','pedidos_popcorn_sleeve',
-    'pedidos_singba','cal_eventos','tabela_precos','antiv_badges','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch'];
+    'pedidos_singba','cal_eventos','tabela_precos','antiv_badges','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch'];
   t text; reg regclass; criadas text[] := '{}'; sem_rls text[] := '{}'; ausentes text[] := '{}'; ja text[] := '{}';
 begin
   if exists (select 1 from emergencia.c0b_estado_anterior where etapa = 'J4-0') then

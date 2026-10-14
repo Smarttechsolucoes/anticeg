@@ -22,7 +22,7 @@ alter table emergencia.c0b_estado_anterior enable row level security;
 revoke all on table emergencia.c0b_estado_anterior from public, anon, authenticated;
 
 do $$
-declare n integer; t text; lojas text[] := array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'];
+declare n integer; t text; lojas text[] := array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'];
 begin
   if exists (select 1 from emergencia.c0b_estado_anterior where etapa = 'J4c-3') then raise exception 'J4c-3 já foi aplicado. Nada foi alterado.'; end if;
   if to_regprocedure('public.is_admin()') is null or to_regprocedure('public.meu_cog()') is null then raise exception 'J1/A1 não estão aplicados. Nada foi alterado.'; end if;
@@ -46,14 +46,14 @@ end $$;
 insert into emergencia.c0b_estado_anterior (etapa, objeto, detalhe)
 select 'J4c-3', 'policy ' || tablename || ' / ' || policyname,
        json_build_object('tabela', tablename, 'nome', policyname, 'cmd', cmd, 'roles', roles, 'qual', qual, 'with_check', with_check, 'permissive', permissive)::text
-from pg_policies where schemaname = 'public' and tablename in ('pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos');
+from pg_policies where schemaname = 'public' and tablename in ('pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos');
 insert into emergencia.c0b_estado_anterior (etapa, objeto, detalhe)
 select 'J4c-3', 'acl ' || c.relname, coalesce(c.relacl::text, '(padrão do dono)') from pg_class c
- where c.relnamespace = 'public'::regnamespace and c.relname in ('pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos');
+ where c.relnamespace = 'public'::regnamespace and c.relname in ('pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos');
 do $$
 declare t text; v text;
 begin
-  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
+  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
     if to_regclass('public.' || t) is not null then
       execute format('select ''linhas='' || count(*) || '' md5='' || md5(coalesce(string_agg(id::text || coalesce(status, ''''), '','' order by id::text), '''')) from public.%I', t) into v;
       insert into emergencia.c0b_estado_anterior (etapa, objeto, detalhe) values ('J4c-3', 'impressão ' || t, v);
@@ -65,7 +65,7 @@ end $$;
 do $$
 declare t text; r record; cols text[];
 begin
-  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'] loop
+  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'] loop
     if to_regclass('public.' || t) is null then continue; end if;
     execute format('alter table public.%I enable row level security', t);
     for r in select policyname from pg_policies where schemaname = 'public' and tablename = t loop execute format('drop policy %I on public.%I', r.policyname, t); end loop;
@@ -110,7 +110,7 @@ grant select on public.formulario_pedidos_publico to anon, authenticated, servic
 create function public.pedido_loja_criar(p_tabela text, p_dados jsonb)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
-  v_lojas text[] := array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'];
+  v_lojas text[] := array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio'];
   v_dados jsonb; v_cols text; v_id text; v_n integer;
 begin
   if p_tabela is null or not (p_tabela = any (v_lojas)) or to_regclass('public.' || p_tabela) is null then return jsonb_build_object('ok', false, 'motivo', 'loja_invalida'); end if;
@@ -138,7 +138,7 @@ grant execute on function public.pedido_loja_criar(text, jsonb) to anon, authent
 do $$
 declare t text; n integer; v_a text; v_d text;
 begin
-  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
+  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
     if to_regclass('public.' || t) is null then continue; end if;
     if has_table_privilege('anon', 'public.' || t, 'SELECT') or has_table_privilege('anon', 'public.' || t, 'INSERT') or has_table_privilege('anon', 'public.' || t, 'UPDATE') or has_table_privilege('anon', 'public.' || t, 'DELETE')
        or has_any_column_privilege('anon', 'public.' || t, 'SELECT') or has_any_column_privilege('anon', 'public.' || t, 'INSERT') or has_any_column_privilege('anon', 'public.' || t, 'UPDATE') then

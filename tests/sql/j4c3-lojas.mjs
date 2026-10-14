@@ -53,7 +53,7 @@ async function comoEmail(d, uid, email, q) {
   await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated", aal: "aal1", email })}', false)`); await d.exec("set role authenticated");
   try { return { rows: (await d.query(q)).rows }; } catch (e) { return { erro: e.message }; } finally { await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims', '', false)"); }
 }
-const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
+const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
 
 {
   const d = await laboratorio(); await aplicarBase(d);
@@ -63,7 +63,7 @@ const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag
   await d.exec("update public.pedidos_revista set status = 'aguardando' where email = 'cliente1@exemplo.com'");
   const e = await rodar(d, "J4c3_lojas_aplicar.sql", J); ok(e === null, "J4c-3 aplica sem erro" + (e ? ": " + e : ""));
   const v = Object.fromEntries((await d.query(sql("J4c3_lojas_verificar.sql", J))).rows.map(r => [r.item, r.valor]));
-  ok(v["tabelas do lote presentes"] === "11" && v["com admin_tudo (esperado = presentes)"] === "11" && v["policies para visitante/PUBLIC (esperado 0)"] === "0" && v["visitante com algum privilégio nas tabelas do lote (esperado false)"] === "false" && v["pedido_loja_criar presente, seguro e aberto à loja (esperado true)"] === "true" && v["colunas pessoais na visão pública do formulário (esperado 0)"] === "0", "verificação J4c-3 como esperado: " + JSON.stringify(v).slice(0, 260));
+  ok(v["tabelas do lote presentes"] === "12" && v["com admin_tudo (esperado = presentes)"] === "12" && v["policies para visitante/PUBLIC (esperado 0)"] === "0" && v["visitante com algum privilégio nas tabelas do lote (esperado false)"] === "false" && v["pedido_loja_criar presente, seguro e aberto à loja (esperado true)"] === "true" && v["colunas pessoais na visão pública do formulário (esperado 0)"] === "0", "verificação J4c-3 como esperado: " + JSON.stringify(v).slice(0, 260));
 
   // visitante
   for (const t of [...LOJAS, "formulario_pedidos"]) ok(negado(await como(d, "anon", null, `select * from public.${t}`)), `visitante NÃO lê ${t}`);
