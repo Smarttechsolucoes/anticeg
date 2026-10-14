@@ -1,6 +1,6 @@
--- J1 — REVERSÃO PROTEGIDA: remove as tabelas e funções de contas das joiners.
+-- J1 (v2) — REVERSÃO PROTEGIDA: remove as tabelas e funções de contas das joiners.
 -- Se já houver contas vinculadas, a reversão é RECUSADA (apagaria os vínculos). Para apagar mesmo assim, use a frase mais longa.
--- Nada reverte sozinho. Digite, na variável abaixo, a frase exata de autorização.
+-- Nada reverte sozinho. Digite, na variável abaixo, a frase exata de autorização. A tabela joiners nunca é tocada.
 begin;
 
 do $$
@@ -21,8 +21,11 @@ begin
   end if;
 end $$;
 
-drop function if exists public.admin_resolver_vinculo(bigint, boolean, text);
+drop function if exists public.admin_desvincular_conta(uuid);
+drop function if exists public.admin_resolver_vinculo(bigint, boolean, bigint);
+drop function if exists public.admin_buscar_joiners(text);
 drop function if exists public.admin_vinculos_pendentes();
+drop function if exists public.meu_joiner_id();
 drop function if exists public.meu_cog();
 drop function if exists public.ativar_minha_conta(text);
 drop table if exists public.vinculos_pendentes;
