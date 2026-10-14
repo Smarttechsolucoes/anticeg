@@ -78,13 +78,13 @@ create table if not exists public.links_uteis (
   id bigint generated always as identity primary key, titulo text, url text, ordem int default 0
 );
 create table if not exists public.tabela_precos (
-  id bigint generated always as identity primary key, nome text, valor numeric
+  id bigint generated always as identity primary key, sheet text, categoria text, item text, preco text, ordem_cat int default 0, ordem_item int default 0, updated_at timestamptz default now()
 );
 create table if not exists public.sugestoes_tabela (
-  id bigint generated always as identity primary key, joiner_cog text, texto text, created_at timestamptz default now()
+  id bigint generated always as identity primary key, tabela_preco_id bigint, sheet text, categoria text, item text, preco_atual text, preco_sugerido text, status text default 'pendente', created_at timestamptz default now()
 );
 create table if not exists public.antiv_badges (
-  id bigint generated always as identity primary key, joiner_cog text, badge text
+  id bigint generated always as identity primary key, joiner_cog text, badge_slug text
 );
 
 -- "hoje": RLS ligado com policy aberta ao visitante, exceto 9 tabelas sem RLS (diagnóstico da contenção) e as 3 com RLS sem policy (leitura vazia)
@@ -145,3 +145,6 @@ insert into public.estoque_compras (item_id, data_compra, quantidade, valor_tota
 insert into public.ceg_config (ceg, whatsapp_link) values ('SKZOO', 'https://chat.whatsapp.com/EXEMPLO');
 insert into public.item_fotos (ceg, nome_do_item, foto_url, ordem) values ('SKZOO', 'Capa', 'https://exemplo.com/capa.jpg', -1);
 insert into public.links_uteis (titulo, url) values ('Link fictício', 'https://exemplo.com');
+insert into public.tabela_precos (sheet, categoria, item, preco) values ('Album', 'Fisicos', 'Album fictício', 'R$ 100');
+insert into public.sugestoes_tabela (tabela_preco_id, sheet, categoria, item, preco_atual, preco_sugerido, status) values (1, 'Album', 'Fisicos', 'Album fictício', 'R$ 100', 'R$ 110', 'pendente');
+insert into public.antiv_badges (joiner_cog, badge_slug) values ('ana', 'veterana'), ('bia', 'novata');
