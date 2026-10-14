@@ -26,7 +26,7 @@ async function nova(porta, cen) {
     if (destino) sessionStorage.setItem("anticeg_destino", destino);
     if (sess) localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify(sess));
   }, [cen.usuario === undefined ? ANA : cen.usuario, cen.versao || "5", cen.comSessao ? sessao() : null, REF, cen.destino || null]);
-  const reg = { login: [], recuperar: [], put: [], emailLogin: [], rpc: [] };
+  const reg = { login: [], recuperar: [], put: [], emailLogin: [], rpc: [], restAuth: [] };
   await ctx.route("**/*", route => {
     const req = route.request(), u = req.url(), m = req.method();
     if (u.startsWith(`http://localhost:${porta}`)) return route.continue();
@@ -41,8 +41,10 @@ async function nova(porta, cen) {
       if (p === "/logout") return route.fulfill({ status: 204, body: "" });
       return json(200, {});
     }
+    if (u.includes("/rest/v1/rpc/is_admin")) return json(200, !!cen.ehAdmin && tokenDaJoiner(req.headers()["authorization"] || ""));
     if (u.includes("/rest/v1/rpc/meu_cog")) { const logada = tokenDaJoiner(req.headers()["authorization"] || ""); reg.rpc.push(logada); return json(200, logada ? (cen.cogDaConta ?? "ana") : null); }
     if (u.includes("supabase.co/rest/v1/")) {
+      if (m === "GET") reg.restAuth.push(req.headers()["authorization"] || "");
       const objeto = (req.headers()["accept"] || "").includes("pgrst.object");
       if (u.includes("/rest/v1/joiners") && objeto) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cen.usuario ?? ANA) });
       return route.fulfill({ status: 200, contentType: "application/json", body: objeto ? "{}" : "[]", headers: { "content-range": "*/0" } });
@@ -154,6 +156,16 @@ const entrar = async (page, senha) => { await page.getByLabel("Senha", { exact: 
   ok(reg.put.at(-1) === "outra-senha-123" && (await corpo(page)).includes("Senha alterada"), "recuperação: nova senha salva");
   await page.getByRole("button", { name: "Continuar" }).click(); await page.waitForTimeout(900);
   ok(await page.evaluate(() => window.location.pathname) === "/perfil", "depois de redefinir, volta para a página que a joiner tentava acessar (/perfil)");
+  await T.browser.close();
+}
+
+{ // administradora com o recurso ligado: UMA sessão para tudo (o banco decide por is_admin())
+  const T = await nova(5197, { usuario: OWNER, senhaCerta: "senha-boa-123", ehAdmin: true, cogDaConta: "nandaverseo_c" }); const { page, reg } = T;
+  await ir(page, 5197, "/admin");
+  ok(await page.getByTestId("admin-auth-card").count() === 1, "administradora: a aba Admin pede o login seguro (e-mail e senha)");
+  await page.getByLabel("E-mail do administrador").fill("dona@exemplo.com"); await page.getByLabel("Senha", { exact: true }).fill("senha-boa-123"); await page.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(1200);
+  ok(await page.getByTestId("admin-auth-ok").count() === 1, "administradora: 'Acesso de administrador verificado' com o recurso ligado");
+  ok(reg.restAuth.some(a => tokenDaJoiner(a)), "UMA sessão para tudo: depois do login, as consultas do site já saem com a conta da administradora (o banco libera por is_admin())");
   await T.browser.close();
 }
 

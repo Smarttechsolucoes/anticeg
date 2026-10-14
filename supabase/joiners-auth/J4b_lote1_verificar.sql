@@ -1,0 +1,11 @@
+-- J4b (lote 1) — VERIFICAÇÃO (somente leitura; só nomes e contagens). Esperado: 9 policies (3 por tabela, menos multas com 2 e masterlist com 5); visitante sem nada; colunas travadas intactas.
+select 'policies nas 3 tabelas (esperado 9)' as item, (select count(*) from pg_policies where schemaname = 'public' and tablename in ('pagamento_demandas', 'multas_pagas', 'masterlist'))::text as valor
+union all select 'policies para visitante/PUBLIC (esperado 0)', (select count(*) from pg_policies where schemaname = 'public' and tablename in ('pagamento_demandas', 'multas_pagas', 'masterlist') and ('anon' = any(roles) or 'public' = any(roles)))::text
+union all select 'visitante com algum privilégio nas 3 tabelas (esperado false)',
+       (select coalesce(bool_or(has_table_privilege('anon', x.nome, 'SELECT') or has_table_privilege('anon', x.nome, 'INSERT') or has_table_privilege('anon', x.nome, 'UPDATE') or has_table_privilege('anon', x.nome, 'DELETE') or has_any_column_privilege('anon', x.nome, 'SELECT') or has_any_column_privilege('anon', x.nome, 'UPDATE')), false)::text
+          from (values ('public.pagamento_demandas'), ('public.multas_pagas'), ('public.masterlist')) x(nome))
+union all select 'colunas travadas da masterlist editáveis por conta logada (esperado 0)',
+       (select count(*) from pg_attribute a where a.attrelid = 'public.masterlist'::regclass and a.attname in ('pago_item', 'pago_frete', 'pago_rf', 'pag_item', 'pag_frete', 'pag_taxa', 'venc_item', 'venc_frete', 'venc_rf', 'venc_taxa') and has_column_privilege('authenticated', 'public.masterlist', a.attname, 'UPDATE'))::text
+union all select 'service_role (sync) ainda grava na masterlist (esperado true)', has_table_privilege('service_role', 'public.masterlist', 'UPDATE')::text
+union all select 'impressões antes | agora (pagamento_demandas)', coalesce((select detalhe from emergencia.c0b_estado_anterior where etapa = 'J4b-1' and objeto = 'impressão pagamento_demandas'), 'sem registro') || ' | ' || (select 'linhas=' || count(*) || ' md5=' || md5(coalesce(string_agg(id::text || coalesce(status, ''), ',' order by id), '')) from public.pagamento_demandas)
+union all select 'estado registrado (linhas J4b-1, esperado >= 10)', (select count(*) from emergencia.c0b_estado_anterior where etapa = 'J4b-1')::text;

@@ -217,8 +217,9 @@ function PromptSenha({ user, api, onSemConta }) {
 }
 
 // Envolve uma área privada: sem conta ativada e senha, mostra o pedido de senha em vez do conteúdo. Depois de entrar, o conteúdo aparece no mesmo endereço.
-export function AreaProtegida({ user, area, children, onLogin }) {   // "area" só para o rastreio do destino
+export function AreaProtegida({ user, area, children, onLogin, onCompleto }) {   // "area" só para o rastreio do destino
   const { api, nivel } = useNivelAcesso(user);
+  useEffect(() => { if (nivel === "completo" && user?.acesso_simples && onCompleto) onCompleto(); }, [nivel]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { sessionStorage.setItem("anticeg_destino", window.location.pathname + window.location.search); } catch { /* sem armazenamento */ } }, [area]);
   if (nivel === "completo") return children;
   if (nivel === "carregando") return <div data-testid="area-verificando" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12 }}>Verificando acesso…</div>;

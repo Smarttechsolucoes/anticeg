@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
+import { JOINERS_AUTH_ATIVO, buscarAcessoSimples } from "./joinerAuth.js";
 import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
 import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
@@ -97,6 +98,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   }
 
   async function buscarJoiner(input) {
+    // novo acesso: só pelo @ e pela função segura do servidor (nunca lê a linha da joiner nem aceita e-mail)
+    if (JOINERS_AUTH_ATIVO) return isEmail(input) ? null : buscarAcessoSimples(input);
     const handle = input.startsWith("@") ? input.slice(1) : input;
     // email: busca direto por email, sem passar pelo cog
     if (isEmail(input)) {
@@ -128,6 +131,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       setLoading(false);
       return;
     }
+
+    if (JOINERS_AUTH_ATIVO && isEmail(input)) { setError("Digite o seu @. O e-mail é usado só para ativar a conta."); setLoading(false); return; }
 
     try {
       const joiner = await buscarJoiner(input);
@@ -168,7 +173,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
   async function entrarCom(joiner) {
     const cogReal = joiner.cog === "ADMMODE" ? "nandaverseo_c" : joiner.cog;
-    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", cogReal);
+    // no acesso simples os itens (dados privados) NÃO são carregados; eles vêm só depois do login com senha
+    const { data: itens } = JOINERS_AUTH_ATIVO && !joiner._senha_demo ? { data: [] } : await supabase.from("masterlist").select("*").eq("cog", cogReal);
     sairDaPaginaPublica();
     onLogin(joiner, itens || []);
   }
