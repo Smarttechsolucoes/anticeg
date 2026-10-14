@@ -10,6 +10,7 @@ begin
 end $$;
 
 drop function if exists public.contar_recrutados(text);
+drop function if exists public.cog_e_da_conta(text);
 drop function if exists public.meus_dados();
 drop function if exists public.entrar_com_arroba(text);
 drop view if exists public.joiners_publico;

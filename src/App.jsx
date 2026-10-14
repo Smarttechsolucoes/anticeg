@@ -6,7 +6,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
-import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -12454,7 +12454,7 @@ const fmtReais = n => "R$" + Number(n).toFixed(2).replace(".", ",");
 async function carregarEstoqueWM(cfg) {
   const [{ data: rows, error: e1 }, { data: pedidos, error: e2 }] = await Promise.all([
     supabase.from(cfg.tabelaEstoque).select("item_id, estoque, contar_desde"),
-    supabase.from("formulario_pedidos").select("modalidade, observacoes, status, created_at").eq("evento", cfg.evento),
+    supabase.from(TABELA_FORMULARIO_PUBLICA).select("modalidade, observacoes, status, created_at").eq("evento", cfg.evento),
   ]);
   if (e1 || e2 || !rows) return null;
   const mapa = {};
@@ -12562,7 +12562,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       status: "pendente",
     }]).select("id");
     if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
-    const { count } = await supabase.from("formulario_pedidos")
+    const { count } = await supabase.from(TABELA_FORMULARIO_PUBLICA)
       .select("id", { count: "exact", head: true })
       .eq("evento", cfg.evento)
       .eq("status", "pendente");
@@ -21002,7 +21002,7 @@ function PopupSkzooEaawPage() {
       const qtd = qtds[`${item.n}:_`] || 0;
       return qtd > 0 ? [{ n: item.n, nome: item.nome, qtd }] : [];
     });
-    const { data, error } = await supabase.from("pedidos_skzoo_rio").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_skzoo_rio", {
       cog: cog.trim().replace(/^@/, ""),
       nome: nomeJoiner.trim(),
       itens: itensPedido,
@@ -21010,7 +21010,7 @@ function PopupSkzooEaawPage() {
       pagamento: "imediato",
       total_reais: totalReais,
       status: "pendente",
-    }]).select().single();
+    }, { retornar: true });
     setEnviando(false);
     if (!error && data) { setPedidoId(data.id); setEtapa("sucesso"); }
   }
@@ -21474,10 +21474,10 @@ function PopupThisAndThatPage() {
     if (tem2 && agora > POPUP_WEEKS[1].deadline) { setErro("Week 02 já encerrada."); setStatus("idle"); return; }
     const semanas = [tem1?"01":null,tem2?"02":null].filter(Boolean).join(",");
     const itens   = [...buildItemsFromQtds(qtds1,"01"), ...buildItemsFromQtds(qtds2,"02")];
-    const { data, error } = await supabase.from("pedidos_popup").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_popup", {
       claim:claim.trim()||null, nome:nome.trim(), email:email.trim(),
       social:social.trim()||null, week:semanas, itens, status:"pendente",
-    }]).select().single();
+    }, { retornar: true });
     if (error) { setStatus("idle"); setErro("Erro: "+(error.message||JSON.stringify(error))); return; }
     setPedidoId(data.id); setStep("sucesso");
   }
@@ -21974,13 +21974,13 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     }
 
     const statusPedido = pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao_whatsapp";
-    const { data, error } = await supabase.from(cfg.tabela).insert([{
+    const { data, error } = await criarPedidoLoja(cfg.tabela, {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       capa_a: qtds.a, capa_b: qtds.b, capa_c: qtds.c,
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: statusPedido,
-    }]).select().single();
+    }, { retornar: true });
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
@@ -24692,10 +24692,10 @@ function LightstickForm({ onVoltar }) {
         }
       } catch { /* salva mesmo sem comprovante */ }
     }
-    const { error } = await supabase.from('pedidos_lightstick').insert([{
+    const { error } = await criarPedidoLoja('pedidos_lightstick', {
       nome, contato, joiner_cog: j?.cog || null,
       metodo_pagamento: metodo, comprovante_url: comprovanteUrl, status: 'aguardando',
-    }]);
+    });
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
   };
@@ -24928,11 +24928,11 @@ function PopcornSleeveForm({ onVoltar }) {
         setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
       }
     }
-    const { error } = await supabase.from('pedidos_popcorn_sleeve').insert([{
+    const { error } = await criarPedidoLoja('pedidos_popcorn_sleeve', {
       nome, contato, joiner_cog: j?.cog || null,
       comprovante_url: comprovanteUrl, status: 'aguardando',
       metodo_pagamento: metodo, quantidade, valor_total: valorTotal,
-    }]);
+    });
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
   };
@@ -25304,11 +25304,11 @@ function SingbaForm({ onVoltar }) {
         setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
       }
     }
-    const { error } = await supabase.from('pedidos_singba').insert([{
+    const { error } = await criarPedidoLoja('pedidos_singba', {
       nome, contato, joiner_cog: j?.cog || null,
       comprovante_url: comprovanteUrl, status: 'aguardando',
       metodo_pagamento: metodo, itens, quantidade, valor_total: valorTotal,
-    }]);
+    });
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
   };
@@ -26272,14 +26272,14 @@ function RevistaBazaarInPage({ onVoltar }) {
       ...Object.fromEntries(BAZAAR_IN_TODOS.map(p => [p.id, m.qtds[p.id]||0])),
       valor: BAZAAR_IN_TODOS.reduce((s, p) => s + p.preco*(m.qtds[p.id]||0), 0),
     })) : null;
-    const { data, error } = await supabase.from("pedidos_bazaar_in").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_bazaar_in", {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       capa_a: qtds.capaA, capa_b: qtds.capaB, capa_c: qtds.capaC,
       caixa_f: qtds.caixaF, caixa_g: qtds.caixaG,
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: statusPedido, membros_grupo: membrosPayload,
-    }]).select().single();
+    }, { retornar: true });
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
@@ -26560,12 +26560,12 @@ function RevistaFormPage() {
       comprovanteUrl = publicUrl;
     }
 
-    const { data, error } = await supabase.from("pedidos_revista").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_revista", {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       versao_regular: qtd, versao_guys: 0, qtd_total: qtd,
       valor_total: total, forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
-    }]).select().single();
+    }, { retornar: true });
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);

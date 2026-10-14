@@ -5,6 +5,8 @@
 --     e responde igual para @ inexistente ou ambíguo.
 --   * meus_dados(): a linha COMPLETA da própria joiner (só para conta logada e vinculada).
 --   * contar_recrutados(cog): número de pessoas recrutadas (agregado, sem identificar ninguém).
+--   * cog_e_da_conta(texto): usada pelas policies para dizer se um COG gravado numa tabela é DA conta logada. Compara o COG EXATO; só aceita diferença de maiúsculas quando
+--     nenhuma outra joiner tem o mesmo COG com outra caixa (assim 'Ela' e 'ela', pessoas diferentes, nunca enxergam os dados uma da outra).
 -- Pré-requisito: J1 aplicado (contas_joiner, meu_joiner_id). Tudo em uma transação com registro e verificação antes do COMMIT.
 begin;
 
@@ -31,7 +33,7 @@ begin
   if to_regclass('public.joiners_publico') is not null then raise exception 'joiners_publico já existe. Nada foi alterado.'; end if;
 end $$;
 
-insert into emergencia.c0b_estado_anterior (etapa, objeto, detalhe) values ('J4a', 'joiners_publico, entrar_com_arroba, meus_dados, contar_recrutados', 'não existiam (criados pelo J4a)');
+insert into emergencia.c0b_estado_anterior (etapa, objeto, detalhe) values ('J4a', 'joiners_publico, entrar_com_arroba, meus_dados, contar_recrutados, cog_e_da_conta', 'não existiam (criados pelo J4a)');
 
 create view public.joiners_publico as
   select j.cog, j.nome_site, j.twitter, j.foto_perfil, j.recrutador from public.joiners j;
@@ -69,6 +71,18 @@ $$;
 revoke all on function public.contar_recrutados(text) from public;
 grant execute on function public.contar_recrutados(text) to anon, authenticated, service_role;
 
+create function public.cog_e_da_conta(p_cog text)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select case
+    when p_cog is null or public.meu_cog() is null then false
+    when btrim(p_cog) = btrim(public.meu_cog()) then true
+    when lower(btrim(p_cog)) = lower(btrim(public.meu_cog())) then
+      not exists (select 1 from public.joiners j where lower(btrim(j.cog)) = lower(btrim(public.meu_cog())) and j.id <> public.meu_joiner_id())
+    else false end
+$$;
+revoke all on function public.cog_e_da_conta(text) from public, anon;
+grant execute on function public.cog_e_da_conta(text) to authenticated, service_role;
+
 do $$
 declare n integer;
 begin
@@ -76,7 +90,7 @@ begin
   if n <> 5 then raise exception 'A visão pública deveria ter 5 colunas e tem %. Transação desfeita.', n; end if;
   select count(*) into n from information_schema.columns where table_schema = 'public' and table_name = 'joiners_publico' and column_name ~* '(email|cpf|whats|telefone|cep|rua|bairro|cidade|numero|saldo|bloque|nome_entrega|^nome$)';
   if n > 0 then raise exception 'A visão pública expõe coluna sensível. Transação desfeita.'; end if;
-  select count(*) into n from pg_proc p where p.oid in ('public.entrar_com_arroba(text)'::regprocedure, 'public.meus_dados()'::regprocedure, 'public.contar_recrutados(text)'::regprocedure)
+  select count(*) into n from pg_proc p where p.oid in ('public.entrar_com_arroba(text)'::regprocedure, 'public.meus_dados()'::regprocedure, 'public.contar_recrutados(text)'::regprocedure, 'public.cog_e_da_conta(text)'::regprocedure)
      and (not p.prosecdef or p.proconfig is distinct from array['search_path=""']);
   if n > 0 then raise exception 'Função sem security definer / search_path vazio. Transação desfeita.'; end if;
   if has_function_privilege('anon', 'public.meus_dados()', 'EXECUTE') then raise exception 'anon pode executar meus_dados(). Transação desfeita.'; end if;

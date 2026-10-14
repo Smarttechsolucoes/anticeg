@@ -18,7 +18,7 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
     create function auth.uid() returns uuid language sql stable as $f$ select nullif(coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'sub', '')::uuid $f$;
     create function auth.jwt() returns jsonb language sql stable as $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $f$;
     grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
-    insert into auth.users values ('${U(1)}','dona@exemplo.com',now()), ('${U(2)}','ana@exemplo.com',now()), ('${U(3)}','bia.antiga@exemplo.com',now()), ('${U(4)}','sem.vinculo@exemplo.com',now()), ('${U(9)}','gabi@exemplo.com',now());
+    insert into auth.users values ('${U(1)}','dona@exemplo.com',now()), ('${U(2)}','ana@exemplo.com',now()), ('${U(3)}','bia.antiga@exemplo.com',now()), ('${U(4)}','sem.vinculo@exemplo.com',now()), ('${U(9)}','gabi@exemplo.com',now()), ('${U(7)}','ela.conta@exemplo.com',now()), ('${U(8)}','ela2.conta@exemplo.com',now());
   `);
   await d.exec(sql("01_schema_minimo.sql", "laboratorio")); await d.exec(sql("02_politicas_de_hoje_simuladas.sql", "laboratorio"));
   // "hoje": os papéis do Supabase têm os privilégios padrão; as travas por coluna da masterlist (B1/B4) já existem
@@ -34,6 +34,7 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
   const ativar = async (uid, cog) => { await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated" })}', false)`); await d.exec("set role authenticated"); await d.query(`select public.ativar_minha_conta('${cog}')`); await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims','',false)"); };
   await ativar(2, "ana"); await ativar(9, "gabi");
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(3)}', 2, 'admin')`);   // bia: e-mail diferente, vinculada pelo admin
+  await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(7)}', 7, 'admin'), ('${U(8)}', 8, 'admin');`);
   return d;
 }
 async function como(d, papel, uid, q) {
@@ -119,5 +120,21 @@ const aplicarBase = async d => { for (const a of ["J4_0_admin_em_todas_aplicar.s
 }
 { const d = await laboratorio(); await aplicarBase(d); await d.exec("drop table public.reports cascade"); ok(/não existe/.test((await rodar(d, "J4c2_pedidos_claims_aplicar.sql", J)) || ""), "J4c-2 ABORTA se uma tabela não existir (nada alterado)"); }
 { const d = await laboratorio(); await aplicarBase(d); await d.exec("delete from public.admin_roles"); ok(/administradora cadastrada/.test((await rodar(d, "J4c2_pedidos_claims_aplicar.sql", J)) || ""), "J4c-2 ABORTA sem administradora cadastrada"); }
+
+// ══ COGs parecidos: 'Ela' (joiner 7) e 'ela' (joiner 8) não veem nem tocam nos dados uma da outra ══════
+{
+  const d = await laboratorio(); await aplicarBase(d);
+  await d.exec(`insert into public.claims (joiner_cog, masterlist_id, ceg, nome_do_item, status) values ('Ela', 4, 'CLAIM', 'Set A', 'pendente'), ('ela', 5, 'CLAIM', 'Set B', 'pendente');
+    insert into public.reports (joiner_cog, item_nome) values ('Ela', 'Item da Ela'), ('ela', 'Item da ela');
+    insert into public.envio_solicitacoes (joiner_cog, destinatario, cpf, status, itens) values ('Ela', 'Ela', '111', 'solicitação de envio', '[]'), ('ela', 'ela', '222', 'solicitação de envio', '[]');`);
+  ok((await rodar(d, "J4c2_pedidos_claims_aplicar.sql", J)) === null, "Ela/ela: J4c-2 aplica");
+  const col = async (uid, q) => ((await como(d, "authenticated", uid, q)).rows || []).map(r => r.c).sort().join();
+  ok(await col(7, "select joiner_cog c from public.claims") === "Ela" && await col(8, "select joiner_cog c from public.claims") === "ela", "claims: cada uma vê só os próprios");
+  ok(await col(7, "select joiner_cog c from public.reports") === "Ela" && await col(8, "select joiner_cog c from public.reports") === "ela", "reports: cada uma vê só os próprios");
+  ok(await col(7, "select cpf c from public.envio_solicitacoes") === "111" && await col(8, "select cpf c from public.envio_solicitacoes") === "222", "envios (CPF/endereço): cada uma vê só os próprios");
+  ok(barrado(await como(d, "authenticated", 7, "insert into public.claims (joiner_cog, status) values ('ela','pendente')")) && barrado(await como(d, "authenticated", 8, "insert into public.reports (joiner_cog, item_nome) values ('Ela','x')")) && barrado(await como(d, "authenticated", 8, "insert into public.envio_solicitacoes (joiner_cog, status) values ('Ela','solicitação de envio')")), "nenhuma cria claim, report ou envio no nome da outra");
+  ok((await como(d, "authenticated", 7, "update public.claims set status = 'rejeitado' where joiner_cog = 'ela' returning id")).rows?.length === 0 && (await como(d, "authenticated", 8, "delete from public.claims where joiner_cog = 'Ela' returning id")).rows?.length === 0, "nenhuma desfaz nem apaga o claim da outra");
+  ok((await como(d, "authenticated", 7, "update public.envio_solicitacoes set status = 'cancelado' where joiner_cog = 'ela' returning id")).rows?.length === 0, "a 'Ela' NÃO cancela o envio da 'ela'");
+}
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

@@ -40,7 +40,7 @@ node scripts/ensaio/testar-ensaio.mjs
 O script **recusa rodar contra a produção** (confere URL e chaves). Ele cria no Auth do ensaio as contas fictícias (`admin.ensaio@exemplo.com`, `ana@exemplo.com`, `gabi@exemplo.com`, `sem.vinculo@exemplo.com`, senha `Ensaio-Fictício-2026!`), registra a administradora de ensaio e, como o J4 ainda não foi aplicado, mostra "Estado: HOJE" e **reproduz a vulnerabilidade atual** (visitante lê joiners).
 
 ## Passo 4 — Aplicar o "lançamento" (J4) no ensaio e testar a proteção
-1. No SQL Editor do ensaio, cole **`ENSAIO_2_lancamento.sql`** → Run (J4-0, J4a, J4b, J4c-1, J4c-2 e a proteção do sync, na mesma ordem da produção).
+1. No SQL Editor do ensaio, cole **`ENSAIO_2_lancamento.sql`** → Run (J4-0, J4a, J4b, J4c-1, J4c-2, J4c-3 e a proteção do sync, na mesma ordem da produção).
 2. Rode de novo `node scripts/ensaio/testar-ensaio.mjs`. Agora ele mostra "Estado: LANÇAMENTO" e confere, no Supabase **de verdade** (Auth + PostgREST + RPC): visitante sem acesso, acesso simples só com identidade mínima, cada joiner só vê o que é dela, campos travados (saldo, bloqueio, rastreio...), administradora vê tudo, conta sem vínculo não vê nada. **Esperado: `TODOS OS TESTES PASSARAM`.**
 
 ## Passo 5 — Edge Functions no ensaio
