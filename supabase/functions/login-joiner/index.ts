@@ -3,7 +3,7 @@
 // Usa as variáveis do próprio Supabase (URL, ANON, SERVICE_ROLE) e a tabela tentativas_acesso (SQL J3).
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { processarLogin } from "../_shared/acesso.ts";
+import { processarLogin, emailDaContaPorArroba } from "../_shared/acesso.ts";
 import type { DbAcesso, Rede } from "../_shared/acesso.ts";
 
 const ORIGENS = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://anticeg.vercel.app,http://localhost:5173,http://localhost:5199,http://localhost:5197").split(",").map(s => s.trim());
@@ -13,7 +13,6 @@ const cors = (origin: string | null) => ({
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 });
 const resp = (status: number, corpo: unknown, origin: string | null) => new Response(JSON.stringify(corpo), { status, headers: { ...cors(origin), "Content-Type": "application/json", "Cache-Control": "no-store" } });
-const likeSeguro = (v: string) => v.replace(/[\\%_]/g, c => "\\" + c);
 
 serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -28,12 +27,7 @@ serve(async (req) => {
       contarTentativas: async (tipo, chave, desde) => (await sb.from("tentativas_acesso").select("id", { count: "exact", head: true }).eq("tipo", tipo).eq("chave", chave).gte("criado_em", desde)).count ?? 0,
       registrarTentativa: async (tipo, chave) => { await sb.from("tentativas_acesso").insert({ tipo, chave }); },
       limparTentativas: async (tipo, chave) => { await sb.from("tentativas_acesso").delete().eq("tipo", tipo).eq("chave", chave); },
-      emailDaConta: async (cog) => {
-        const { data: c } = await sb.from("contas_joiner").select("user_id").ilike("cog", likeSeguro(cog)).maybeSingle();
-        if (!c?.user_id) return null;
-        const { data: u } = await sb.auth.admin.getUserById(c.user_id);
-        return u?.user?.email && u.user.email_confirmed_at ? u.user.email : null;
-      },
+      emailDaConta: (cog) => emailDaContaPorArroba(sb, cog),   // @ → joiners.id → contas_joiner.joiner_id → e-mail verificado
     };
     const rede: Rede = {
       entrarComSenha: async (email, senha) => {
