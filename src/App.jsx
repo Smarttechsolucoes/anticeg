@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
-import supabase, { SUPABASE_URL, AMBIENTE_ENSAIO } from "./supabase.js";
+import supabase, { SUPABASE_URL } from "./supabase.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
@@ -26735,7 +26735,6 @@ function RevistaFormPage() {
 export default function App() {
   return (
     <>
-      {AMBIENTE_ENSAIO && <div data-testid="faixa-ensaio" style={{ position:"fixed", top:0, left:0, right:0, zIndex:99999, background:"#b45309", color:"#fff", textAlign:"center", fontSize:11, fontFamily:"monospace", padding:"2px 8px", letterSpacing:1, pointerEvents:"none" }}>AMBIENTE DE ENSAIO · dados fictícios · nada aqui é real</div>}
       <AppPrincipal />
       {JOINERS_AUTH_ATIVO && <RecuperacaoSenhaGate />}
     </>
