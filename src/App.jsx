@@ -6,7 +6,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
-import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -49,12 +49,7 @@ async function registrarPush(joinerCog) {
       applicationServerKey: VAPID_PUBLIC_KEY,
     });
     const subJson = sub.toJSON();
-    await supabase.from("push_subscriptions").upsert({
-      joiner_cog: joinerCog,
-      endpoint: subJson.endpoint,
-      p256dh: subJson.keys.p256dh,
-      auth: subJson.keys.auth,
-    }, { onConflict: "endpoint" });
+    await gravarAssinaturaPush(joinerCog, subJson);
   } catch (e) { console.error("[push] registrarPush erro:", e); }
 }
 
@@ -3662,8 +3657,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   // aba Recrutador: quem esta pessoa já indicou
   useEffect(() => {
     if (perfilSubTab !== "recrutador" || !user.cog || user.guest) return;
-    supabase.from("joiners").select("cog, nome, nome_site").eq("recrutador", user.cog)
-      .then(({ data }) => { if (data) { setMeusRecrutados(data); setRecrutadosCount(data.length); } });
+    buscarMeusRecrutados(user.cog)
+      .then(data => { if (data) { setMeusRecrutados(data); setRecrutadosCount(data.length); } });
   }, [perfilSubTab, user.cog]);
 
   useEffect(() => {
@@ -4067,8 +4062,8 @@ ${p.comprovante_url ? (() => {
           if (cashbackVal > 0 && saldoCashback > 0) {
             const fromDB = Math.min(cashbackVal, saldoCashback);
             const novoSaldo = Math.max(0, saldoCashback - fromDB);
-            await supabase.from("joiners").update({ saldo_cashback: novoSaldo }).eq("cog", user.cog);
-            setSaldoCashback(novoSaldo);
+            const saldoFinal = await debitarCashback(user.cog, fromDB, novoSaldo);
+            setSaldoCashback(saldoFinal);
           }
           setMeusPagamentos(prev => [nova, ...prev]);
           setPagRecibo(nova);
@@ -5045,7 +5040,7 @@ ${compHTML}
                     <div>
                       <input value={repasseNovoDonoSearch} onChange={e => {
                           setRepasseNovoDonoSearch(e.target.value);
-                          if (!repasseJoiners) supabase.from("joiners").select("cog,nome,twitter").order("nome").then(({ data }) => setRepasseJoiners(data || []));
+                          if (!repasseJoiners) listarJoinersPublicos().then(data => setRepasseJoiners(data || []));
                         }}
                         placeholder="Buscar joiner por nome ou @..."
                         style={inputSt} />
@@ -14456,7 +14451,7 @@ function ClaimAoVivo() {
   async function fetchDados() {
     const { data: itens } = await supabase.from("masterlist").select("id, nome_do_item, na_loja").eq("ceg","CLAIM").order("nome_do_item");
     const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
-    const { data: cd } = await supabase.from("claims").select("masterlist_id, joiner_nome, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado");
+    const cd = await quadroDeClaims();
     const mapaFotos = {};
     (fd||[]).forEach(f => { mapaFotos[f.nome_do_item] = f.foto_url; });
     setDados(itens || []);
@@ -15968,7 +15963,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
     setRepasses(pub || []);
     const cogsAtivos = [...new Set((pub || []).map(r => r.joiner_cog).filter(Boolean))];
     if (cogsAtivos.length) {
-      const { data: js } = await supabase.from("joiners").select("cog, foto_perfil").in("cog", cogsAtivos);
+      const js = await fotosDeJoiners(cogsAtivos);
       const mapa = {};
       (js || []).forEach(j => { mapa[(j.cog || "").toLowerCase()] = j.foto_perfil; });
       setPerfis(mapa);
@@ -16046,8 +16041,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
     setTransferindo(null);
     setBuscaJoiner(""); setJoinerSelecionado(null);
     if (joiners.length === 0) {
-      const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
-      setJoiners(data || []);
+      setJoiners(await listarJoinersPublicos());
     }
   }
 
@@ -16062,8 +16056,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
     setTransferindo({ repasseId: repasse.id, masterlistId: repasse.masterlist_id, repasse });
     setBuscaJoiner(""); setJoinerSelecionado(null);
     if (joiners.length === 0) {
-      const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
-      setJoiners(data || []);
+      setJoiners(await listarJoinersPublicos());
     }
   }
 
@@ -16734,9 +16727,7 @@ function DisponiveisTab({ user }) {
     supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
       .eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => setMeusClaims(data || []));
-    supabase.from("claims").select("id, ceg, nome_do_item, valor, created_at")
-      .eq("status", "aprovado").order("created_at", { ascending: false })
-      .then(({ data }) => setVendidos(data || []));
+    claimsVendidos().then(data => setVendidos(data || []));
   }
 
   useEffect(() => { carregarItens(); }, [user.cog]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -19480,8 +19471,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     const codigo = grupoInput.trim().toUpperCase();
     if (!codigo) return;
     setGrupoLoading(true); setGrupoErr("");
-    const { data, error } = await supabase.from("grupos_envio").select("*").eq("codigo", codigo).single();
-    if (error || !data) {
+    const data = await consultarGrupoEnvio(codigo);
+    if (!data) {
       setGrupoErr("Código não encontrado. Confira com a host do grupo.");
       setGrupoLoading(false); return;
     }
@@ -26925,9 +26916,7 @@ function AppPrincipal() {
   }
 
   async function fetchOnlineUsers() {
-    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data } = await supabase.from("joiners").select("cog, nome, foto_perfil").gte("last_seen", since);
-    setOnlineUsers(data || []);
+    setOnlineUsers(await joinersOnline(10));
   }
 
   useEffect(() => {

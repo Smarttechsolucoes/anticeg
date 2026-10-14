@@ -1,9 +1,11 @@
 import supabase from "./supabase.js";
+import { JOINERS_AUTH_ATIVO, buscarRecrutadorSeguro } from "./joinerAuth.js";
 
 // Procura um joiner a partir do @ digitado (cog ou twitter). Retorna { cog, nome } ou null.
 export async function buscarRecrutador(texto) {
   const handle = (texto || "").trim().replace(/^@/, "");
   if (!handle) return null;
+  if (JOINERS_AUTH_ATIVO) return buscarRecrutadorSeguro(handle);   // a tabela joiners não é mais legível por visitantes
   const campos = "cog, nome, nome_site";
   let { data } = await supabase.from("joiners").select(campos).eq("cog", handle).maybeSingle();
   if (!data) {
@@ -20,6 +22,7 @@ export async function resolverRecrutador(texto) {
 
 // Quantos joiners têm este cog como recrutador (0 se a coluna ainda não existir)
 export async function contarRecrutados(cog) {
+  if (JOINERS_AUTH_ATIVO) { const { data } = await supabase.rpc("contar_recrutados", { p_cog: cog }); return Number(data) || 0; }
   const { count } = await supabase.from("joiners").select("id", { count: "exact", head: true }).eq("recrutador", cog);
   return count || 0;
 }
