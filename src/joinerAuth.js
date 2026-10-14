@@ -9,7 +9,7 @@ import supabase from "./supabase.js";
 export const JOINERS_AUTH_ATIVO = import.meta.env.VITE_JOINERS_AUTH === "true";
 
 // Áreas que exigem conta ativada e senha. O resto (CEGs, calendário, regras...) continua público.
-export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13"];
+export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13", "mercari"];
 
 export const SENHA_MIN = 8;
 
@@ -69,7 +69,8 @@ export function criarJoinerAuth(client = supabase) {
     // se houver sessão de outra pessoa neste aparelho, encerra antes (só local)
     const { data: s } = await client.auth.getSession();
     if (s?.session) await client.auth.signOut({ scope: "local" });
-    const { error } = await client.auth.signInWithOtp({ email: e, options: { shouldCreateUser: true, data: { cog_pedido: c } } });
+    // o SERVIDOR decide se envia (só para o e-mail do cadastro, só para quem já foi liberada, com limites) e a resposta é sempre a mesma
+    const { error } = await client.functions.invoke("pedir-codigo-joiner", { body: { cog: c, email: e } });
     if (error) return { erro: mensagem(error, "envio") };
     return { ok: true };
   }
@@ -85,7 +86,7 @@ export function criarJoinerAuth(client = supabase) {
     if (es) return { erro: mensagem(es, "senha"), senhaPendente: true };
     const { data, error: er } = await client.rpc("ativar_minha_conta", { p_cog: c });
     if (er) return { erro: "Seu e-mail foi confirmado, mas não conseguimos concluir agora. Tente de novo em instantes." };
-    return { resultado: data && data.status === "ok" ? "ok" : "pendente" };
+    return { resultado: data && data.status === "ok" ? "ok" : data && data.status === "aguardando_liberacao" ? "aguardando" : "pendente" };
   }
 
   // 3) login com @ + senha: o servidor resolve o @ para o e-mail verificado (sem devolvê-lo) e devolve só os tokens da sessão
@@ -140,7 +141,7 @@ export function criarJoinerAuth(client = supabase) {
 export async function buscarAcessoSimples(identificador, client = supabase) {
   const { data, error } = await client.rpc("entrar_com_arroba", { p_identificador: String(identificador || "") });
   if (error || !data || !data.encontrado) return null;
-  return { cog: data.cog, nome: data.nome_site || data.cog, nome_site: data.nome_site || data.cog, foto_perfil: data.foto_perfil || null, confirmado: true, acesso_simples: true, conta_ativa: !!data.conta_ativa };
+  return { cog: data.cog, nome: data.nome_site || data.cog, nome_site: data.nome_site || data.cog, foto_perfil: data.foto_perfil || null, confirmado: true, acesso_simples: true, conta_ativa: !!data.conta_ativa, ativacao_liberada: data.ativacao_liberada !== false };
 }
 
 // Depois do login completo: a linha da PRÓPRIA joiner e os itens dela, lidos com a conta (o banco só devolve o que é dela).
@@ -237,8 +238,38 @@ export async function criarPedidoLoja(tabela, dados, { retornar = false } = {}, 
   }
   const { data, error } = await client.rpc("pedido_loja_criar", { p_tabela: tabela, p_dados: dados });
   if (error) return { data: null, error };
-  if (!data || data.ok !== true) return { data: null, error: { message: data?.motivo === "tente_mais_tarde" ? "Muitos pedidos agora. Tente de novo em alguns minutos." : "Não foi possível registrar o pedido. Confira os dados e tente de novo." } };
+  if (!data || data.ok !== true) return { data: null, error: { message: data?.motivo === "tente_mais_tarde" ? "Muitos pedidos agora. Tente de novo em alguns minutos." : data?.motivo === "login_necessario" ? "Entre na sua conta (com a senha ativada) para fazer o pedido." : "Não foi possível registrar o pedido. Confira os dados e tente de novo." } };
   return { data: { id: data.id }, error: null };
 }
 // Estoque e fila dos formulários: a visão pública traz só evento, modalidade, status, data e "Qtd: N" (nunca nome, e-mail ou texto livre).
 export const TABELA_FORMULARIO_PUBLICA = JOINERS_AUTH_ATIVO ? "formulario_pedidos_publico" : "formulario_pedidos";
+
+// Itens de um CEG (página do CEG). Hoje: a masterlist inteira. Com o novo login a MASTERLIST só mostra a cada joiner as linhas dela;
+// a comunidade continua vendo a lista do CEG (@, nome, item, situação) por ceg_itens(), SEM valor/frete/taxa/pagamento de terceiros,
+// e os valores aparecem só nas linhas da própria joiner (que vêm da masterlist, protegida por linha).
+export async function itensDoCeg(ceg, { semDisponivel = true } = {}, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    let q = client.from("masterlist").select("*").eq("ceg", ceg);
+    if (semDisponivel) q = q.not("nome", "ilike", "disponivel");
+    const { data } = await q;
+    return data || [];
+  }
+  const [{ data: lista }, { data: proprios }] = await Promise.all([
+    client.rpc("ceg_itens", { p_ceg: ceg }),
+    client.from("masterlist").select("*").eq("ceg", ceg),
+  ]);
+  const porId = new Map();
+  (Array.isArray(lista) ? lista : []).forEach(i => porId.set(i.id, i));
+  (proprios || []).filter(i => !semDisponivel || !/^disponivel$/i.test(String(i.nome || ""))).forEach(i => porId.set(i.id, i));   // a linha completa da joiner prevalece
+  return [...porId.values()];
+}
+// Resumo dos CEGs (lista de CEGs) e vencimentos (calendário geral): números e datas da comunidade, sem dono nem valor.
+export async function resumoDosCegs(client = supabase) {
+  const { data } = await client.rpc("ceg_resumo");
+  return Array.isArray(data) ? data : [];
+}
+export async function vencimentosDosCegs(client = supabase) {
+  const { data } = await client.rpc("ceg_vencimentos");
+  return Array.isArray(data) ? data : [];
+}
+

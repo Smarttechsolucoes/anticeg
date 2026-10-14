@@ -1,0 +1,12 @@
+-- J4c-4d — VERIFICAÇÃO (somente leitura; só nomes e contagens). Esperado: 18 policies (6 para visitante: 4 leituras públicas + 2 de sugestões); visitante sem acesso às tabelas restritas e sem escrita no conteúdo público.
+select 'policies nas 10 tabelas (esperado 18)' as item, (select count(*) from pg_policies where schemaname = 'public' and tablename in ('rastreios', 'estoque_itens', 'estoque_compras', 'ceg_config', 'item_fotos', 'links_uteis', 'cal_eventos', 'tabela_precos', 'sugestoes_tabela', 'antiv_badges'))::text as valor
+union all select 'policies para visitante/PUBLIC (esperado 6)', (select count(*) from pg_policies where schemaname = 'public' and tablename in ('rastreios', 'estoque_itens', 'estoque_compras', 'ceg_config', 'item_fotos', 'links_uteis', 'cal_eventos', 'tabela_precos', 'sugestoes_tabela', 'antiv_badges') and ('anon' = any(roles) or 'public' = any(roles)))::text
+union all select 'RLS ligado nas 10 tabelas (esperado 10)', (select count(*) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relname in ('rastreios', 'estoque_itens', 'estoque_compras', 'ceg_config', 'item_fotos', 'links_uteis', 'cal_eventos', 'tabela_precos', 'sugestoes_tabela', 'antiv_badges') and c.relrowsecurity)::text
+union all select 'visitante com privilégio em tabela restrita (esperado false)',
+       (select coalesce(bool_or(has_table_privilege('anon', 'public.' || x, 'SELECT') or has_table_privilege('anon', 'public.' || x, 'INSERT') or has_table_privilege('anon', 'public.' || x, 'UPDATE') or has_table_privilege('anon', 'public.' || x, 'DELETE')), false)::text
+          from unnest(array['rastreios', 'estoque_itens', 'estoque_compras', 'ceg_config', 'antiv_badges']) x)
+union all select 'visitante escreve em conteúdo público (esperado false)',
+       (select coalesce(bool_or(has_table_privilege('anon', 'public.' || x, 'UPDATE') or has_table_privilege('anon', 'public.' || x, 'DELETE') or has_table_privilege('anon', 'public.' || x, 'INSERT')), false)::text
+          from unnest(array['item_fotos', 'links_uteis', 'cal_eventos', 'tabela_precos']) x)
+union all select 'visitante altera ou apaga sugestões (esperado false)', (has_table_privilege('anon', 'public.sugestoes_tabela', 'UPDATE') or has_table_privilege('anon', 'public.sugestoes_tabela', 'DELETE'))::text
+union all select 'estado registrado (linhas J4c-4d, esperado >= 30)', (select count(*) from emergencia.c0b_estado_anterior where etapa = 'J4c-4d')::text;

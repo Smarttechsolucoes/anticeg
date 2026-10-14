@@ -53,7 +53,7 @@ async function comoEmail(d, uid, email, q) {
   await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated", aal: "aal1", email })}', false)`); await d.exec("set role authenticated");
   try { return { rows: (await d.query(q)).rows }; } catch (e) { return { erro: e.message }; } finally { await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims', '', false)"); }
 }
-const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
+const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
 
 {
   const d = await laboratorio(); await aplicarBase(d);
@@ -63,7 +63,7 @@ const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag
   await d.exec("update public.pedidos_revista set status = 'aguardando' where email = 'cliente1@exemplo.com'");
   const e = await rodar(d, "J4c3_lojas_aplicar.sql", J); ok(e === null, "J4c-3 aplica sem erro" + (e ? ": " + e : ""));
   const v = Object.fromEntries((await d.query(sql("J4c3_lojas_verificar.sql", J))).rows.map(r => [r.item, r.valor]));
-  ok(v["tabelas do lote presentes"] === "11" && v["com admin_tudo (esperado = presentes)"] === "11" && v["policies para visitante/PUBLIC (esperado 0)"] === "0" && v["visitante com algum privilégio nas tabelas do lote (esperado false)"] === "false" && v["pedido_loja_criar presente, seguro e aberto à loja (esperado true)"] === "true" && v["colunas pessoais na visão pública do formulário (esperado 0)"] === "0", "verificação J4c-3 como esperado: " + JSON.stringify(v).slice(0, 260));
+  ok(v["tabelas do lote presentes"] === "12" && v["com admin_tudo (esperado = presentes)"] === "12" && v["policies para visitante/PUBLIC (esperado 0)"] === "0" && v["visitante com algum privilégio nas tabelas do lote (esperado false)"] === "false" && v["pedido_loja_criar presente, segura e FECHADA ao visitante (esperado true)"] === "true" && v["colunas pessoais na visão pública do formulário (esperado 0)"] === "0", "verificação J4c-3 como esperado: " + JSON.stringify(v).slice(0, 260));
 
   // visitante
   for (const t of [...LOJAS, "formulario_pedidos"]) ok(negado(await como(d, "anon", null, `select * from public.${t}`)), `visitante NÃO lê ${t}`);
@@ -71,7 +71,10 @@ const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag
   ok(negado(await como(d, "anon", null, "insert into public.formulario_pedidos (evento, joiner_cog, status) values ('WAVE MAKER - SG JAPAN 2027','ana','pendente')")), "visitante NÃO cria pedido de formulário");
 
   // compra pela loja (função segura)
-  const criar = async (t, dados) => (await como(d, "anon", null, `select public.pedido_loja_criar('${t}', '${JSON.stringify(dados).replace(/'/g, "''")}'::jsonb) r`)).rows?.[0].r;
+  // D2: quem compra é a joiner ATIVADA (ana); visitante e conta sem vínculo não compram
+  ok(negado(await como(d, "anon", null, `select public.pedido_loja_criar('pedidos_revista', '{"nome":"x","email":"x@x.com"}'::jsonb)`)), "D2: o VISITANTE não executa pedido_loja_criar (nem com dados válidos)");
+  { const r = (await como(d, "authenticated", 4, `select public.pedido_loja_criar('pedidos_revista', '{"nome":"x","email":"x@x.com","status":"aguardando"}'::jsonb) r`)).rows?.[0]?.r; ok(r?.ok === false && r.motivo === "login_necessario", "D2: conta criada SEM vínculo a uma joiner NÃO cria pedido: " + JSON.stringify(r)); }
+  const criar = async (t, dados) => (await como(d, "authenticated", 2, `select public.pedido_loja_criar('${t}', '${JSON.stringify(dados).replace(/'/g, "''")}'::jsonb) r`)).rows?.[0].r;
   const c1 = await criar("pedidos_revista", { nome: "Compradora", email: "compradora@exemplo.com", qtd_total: 1, valor_total: 100, forma_pagamento: "pix", status: "aguardando" });
   ok(c1.ok === true && /^\d+$/.test(c1.id), "a loja registra o pedido pela função e recebe SÓ o número do pedido: " + JSON.stringify(c1));
   ok((await d.query(`select status, email from public.pedidos_revista where id = ${c1.id}`)).rows[0].status === "aguardando", "o pedido nasce 'aguardando'");
@@ -82,7 +85,7 @@ const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag
   const uuid = "11111111-1111-4111-8111-111111111111";
   ok((await criar("pedidos_smolmerch", { id: uuid, nome: "S", email: "s@exemplo.com", qtd_total: 1, valor_total: 50, status: "aguardando" })).id === uuid, "SmolMerch (id UUID gerado no navegador) segue funcionando");
   ok((await criar("pedidos_lightstick", { nome: "L", contato: "l@exemplo.com", joiner_cog: null, status: "aguardando" })).ok === true && (await criar("pedidos_singba", { nome: "S", contato: "s", itens: [{ opcao: "a" }], quantidade: 1, status: "aguardando", metodo_pagamento: "pix" })).ok === true && (await criar("pedidos_skzoo_rio", { cog: "ana", nome: "Ana", itens: [], total_reais: 10, status: "pendente" })).ok === true && (await criar("pedidos_popup", { nome: "P", email: "p@exemplo.com", week: "01", itens: [], status: "pendente" })).ok === true, "lightstick, singba, skzoo rio e popup também compram pela função");
-  ok(negado(await como(d, "anon", null, `select public.pedido_loja_criar('pedidos_revista', '{}'::jsonb)`)) === false && (await criar("pedidos_revista", {})).motivo === "dados_invalidos", "pedido vazio é recusado");
+  ok((await criar("pedidos_revista", {})).motivo === "dados_invalidos", "pedido vazio é recusado");
   await d.exec("insert into public.pedidos_wmag (nome, email) select 'spam', 'spam@exemplo.com' from generate_series(1, 200)");
   ok((await criar("pedidos_wmag", { nome: "Mais um", email: "m@exemplo.com" })).motivo === "tente_mais_tarde", "trava de 200 pedidos por hora por loja");
 

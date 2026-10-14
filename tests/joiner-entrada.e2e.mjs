@@ -49,7 +49,11 @@ async function nova(porta) {
   const page = await ctx.newPage(); const erros = []; page.on("pageerror", e => erros.push(String(e)));
   return { browser, page, reg, erros };
 }
-const PRIVADAS = ["joiners", "masterlist", "notifications", "reports", "pagamento_demandas", "multas_pagas", "envio_solicitacoes", "pushes", "push_reads"];
+const PRIVADAS = ["joiners", "masterlist", "notifications", "reports", "pagamento_demandas", "multas_pagas", "envio_solicitacoes", "pushes", "push_reads",
+  // J4c-4: tudo que passa a ser protegido pelo banco no lançamento (o acesso simples, só com @, não pode tocar em nenhuma)
+  "claims", "grupos_envio", "push_subscriptions", "formulario_pedidos", "mercari_pedidos", "lojinha_repasses", "repassos", "claim_eventos", "claim_sets", "claim_reservas", "claim_reservas_quadro",
+  "feedbacks", "joiner_storage", "joiner_conferencias", "joiner_updates", "envio_rounds", "envio_requests", "confirmacoes", "rastreios", "estoque_itens", "estoque_compras", "ceg_config", "antiv_badges",
+  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
 const tocouPrivada = tabs => tabs.filter(x => PRIVADAS.some(tb => x.split(" ")[1] === tb));
 const corpo = page => page.locator("body").innerText();
 const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(valor); await page.getByRole("button", { name: /ENTRAR/ }).first().click(); await page.waitForTimeout(1000); };
@@ -88,6 +92,26 @@ const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede s
   const completo = JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "{}");
   ok(completo.cog === "ana" && completo.email === "ana@exemplo.com" && completo.acesso_simples === false, "com a conta completa, os dados da própria joiner passam a existir no navegador dela");
   ok(erros.length === 0, "nenhum erro de JavaScript" + (erros.length ? ": " + erros[0] : ""));
+  await T.browser.close();
+}
+
+// ── MODO LIMITADO (só com @): percorre TODAS as áreas protegidas e as públicas e confirma que nenhuma lê ou grava tabela privada ─────────
+{
+  const T = await nova(5197); const { page, reg, erros } = T;
+  await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.waitForTimeout(500);
+  await entrar(page, "@Ana");
+  const protegidas = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13", "mercari"];
+  for (const slug of protegidas) {
+    reg.tabelas.length = 0;
+    await page.goto(`http://localhost:5197/${slug}`, { waitUntil: "networkidle" }); await page.waitForTimeout(700);
+    ok(await page.getByTestId("area-protegida").count() === 1 && tocouPrivada(reg.tabelas).length === 0, `MODO LIMITADO: /${slug} pede senha e não toca em tabela privada ${JSON.stringify(tocouPrivada(reg.tabelas))}`);
+  }
+  for (const rota of ["calendario", "regras", "cegs", ""]) {
+    reg.tabelas.length = 0;
+    await page.goto(`http://localhost:5197/${rota}`, { waitUntil: "networkidle" }); await page.waitForTimeout(700);
+    ok(tocouPrivada(reg.tabelas).length === 0, `MODO LIMITADO: /${rota} (área pública) não toca em tabela privada ${JSON.stringify(tocouPrivada(reg.tabelas))}`);
+  }
+  ok(erros.length === 0, "MODO LIMITADO: nenhum erro de JavaScript em nenhuma das áreas" + (erros.length ? ": " + erros[0] : ""));
   await T.browser.close();
 }
 
