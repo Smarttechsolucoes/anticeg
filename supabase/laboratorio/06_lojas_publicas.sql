@@ -17,9 +17,9 @@ begin
   foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy anon_all on public.%I for all to anon using (true) with check (true)', t);   -- como hoje: aberto ao visitante
+    execute format('grant all on table public.%I to anon, authenticated, service_role', t);                    -- só estas tabelas (não mexe nas travas C0 da masterlist)
   end loop;
 end $$;
-grant all on all tables in schema public to anon, authenticated, service_role;
 -- dados fictícios
 insert into public.pedidos_revista (nome, email, qtd_total, valor_total, status) values ('Cliente Um', 'cliente1@exemplo.com', 1, 100, 'aguardando'), ('Ana Fictícia', 'ana@exemplo.com', 2, 200, 'confirmado');
 insert into public.pedidos_popup (nome, email, week, status) values ('Cliente Dois', 'cliente2@exemplo.com', '01', 'pendente'), ('Ana Fictícia', 'ana@exemplo.com', '02', 'pendente');
