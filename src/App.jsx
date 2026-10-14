@@ -14848,6 +14848,9 @@ function ClaimAreaTeste() {
   );
 }
 
+// quadro dos sets: com o login novo a leitura é pela visão (sem nome real); hoje, pela tabela
+const TABELA_RESERVAS = JOINERS_AUTH_ATIVO ? "claim_reservas_quadro" : "claim_reservas";
+
 function ClaimHistorico() {
   const mono = "'DM Mono',monospace";
   const [eventos, setEventos] = useState(null);
@@ -14869,7 +14872,7 @@ function ClaimHistorico() {
       setSets(setsMap);
       const setIds = (setsData || []).map(s => s.id);
       if (!setIds.length) return;
-      const { data: resData } = await supabase.from("claim_reservas_quadro")
+      const { data: resData } = await supabase.from(TABELA_RESERVAS)
         .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
       const resMap = {};
       (resData || []).forEach(r => { if (!resMap[r.set_id]) resMap[r.set_id] = []; resMap[r.set_id].push(r); });
@@ -14975,11 +14978,11 @@ function ClaimScoreboard() {
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const { data: resData } = await supabase.from("claim_reservas_quadro").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      const { data: resData } = await supabase.from(TABELA_RESERVAS).select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
       (resData || []).forEach(r => { if (!newRes[r.set_id]) newRes[r.set_id] = []; newRes[r.set_id].push(r); });
     }
     setReservas(newRes);
-    const { data: sbData } = await supabase.from("claim_reservas_quadro").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at");
+    const { data: sbData } = await supabase.from(TABELA_RESERVAS).select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at");
     const sbMap = {};
     (sbData || []).forEach(r => { if (!sbMap[r.evento_id]) sbMap[r.evento_id] = []; sbMap[r.evento_id].push(r); });
     setStandby(sbMap);
@@ -15144,7 +15147,7 @@ function ClaimPublicoPage({ user }) {
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const { data: resData } = await supabase.from("claim_reservas_quadro")
+      const { data: resData } = await supabase.from(TABELA_RESERVAS)
         .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
       (resData || []).forEach(r => {
         if (!newRes[r.set_id]) newRes[r.set_id] = [];
@@ -15152,7 +15155,7 @@ function ClaimPublicoPage({ user }) {
       });
     }
     setReservas(newRes);
-    const { data: sbData } = await supabase.from("claim_reservas_quadro")
+    const { data: sbData } = await supabase.from(TABELA_RESERVAS)
       .select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado")
       .order("created_at");
     const sbMap = {};
@@ -15164,17 +15167,56 @@ function ClaimPublicoPage({ user }) {
 
     if (!fazAutoAbrir) return;
 
-    // O servidor fecha sets completos e abre o próximo set quando há standby (claim_organizar); aqui só pedimos que ele confira.
-    let mudou = false;
-    for (const ev of evData) {
-      if (new Date() < new Date(ev.abertura) || ev.sem_novos_sets) continue;
-      const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
-      if (evSets.some(s => s.status === "aberto")) continue;
-      if (!(sbData || []).some(r => r.evento_id === ev.id)) continue;
-      const { data: org } = await supabase.rpc("claim_organizar", { p_evento: ev.id });
-      if (org?.ok && org.sets_abertos > 0) mudou = true;
+    if (JOINERS_AUTH_ATIVO) {
+      // O servidor fecha sets completos e abre o próximo set quando há standby (claim_organizar); aqui só pedimos que ele confira.
+      let mudou = false;
+      for (const ev of evData) {
+        if (new Date() < new Date(ev.abertura) || ev.sem_novos_sets) continue;
+        const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
+        if (evSets.some(s => s.status === "aberto")) continue;
+        if (!(sbData || []).some(r => r.evento_id === ev.id)) continue;
+        const { data: org } = await supabase.rpc("claim_organizar", { p_evento: ev.id });
+        if (org?.ok && org.sets_abertos > 0) mudou = true;
+      }
+      if (mudou) await fetchTudo(false);
+    } else {
+      // Auto-abrir set se todos fecharam e ainda tem standby
+      let abriuAlgum = false;
+      for (const ev of evData) {
+        if (ev.status !== "ativo") continue;
+        if (new Date() < new Date(ev.abertura)) continue;
+        if (ev.sem_novos_sets) continue; // admin parou a abertura de novos sets
+
+        const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
+        if (evSets.length >= 10) continue; // limite máximo de sets
+        if (evSets.some(s => s.status === "aberto")) continue;
+
+        const sbEvento = (sbData || []).filter(r => r.evento_id === ev.id);
+        if (!sbEvento.length) continue;
+
+        // Re-verifica no banco para evitar race condition entre clientes
+        const { data: aindaAberto } = await supabase.from("claim_sets")
+          .select("id").eq("evento_id", ev.id).eq("status","aberto").limit(1);
+        if (aindaAberto?.length) continue;
+
+        const prox = evSets.length ? Math.max(...evSets.map(s => s.numero)) + 1 : 1;
+        const { data: novoSet } = await supabase.from("claim_sets")
+          .insert([{ evento_id: ev.id, numero: prox, status: "aberto" }]).select().single();
+        if (!novoSet) continue;
+
+        abriuAlgum = true;
+        const membrosPromovidos = new Set();
+        for (const r of sbEvento) {
+          if (membrosPromovidos.has(r.membro)) continue;
+          if (!membrosDe(ev).includes(r.membro)) continue;
+          await supabase.from("claim_reservas")
+            .update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
+          membrosPromovidos.add(r.membro);
+        }
+      }
+
+      if (abriuAlgum) await fetchTudo(false);
     }
-    if (mudou) await fetchTudo(false);
   }
 
   useEffect(() => {
@@ -15219,6 +15261,7 @@ function ClaimPublicoPage({ user }) {
   }
 
   async function enviarClaimsInterno(eventoId, qtdOverride) {
+    if (!JOINERS_AUTH_ATIVO) return enviarClaimsInternoLegado(eventoId, qtdOverride);
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
@@ -15249,6 +15292,208 @@ function ClaimPublicoPage({ user }) {
     setEnviando(false);
     fetchTudo();
   }
+
+  // ── caminho de HOJE (login novo desligado): as regras rodam no navegador. Sai quando o lançamento estiver concluído. ──
+  async function verificarFechamento(eventoId, setId) {
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (!ev) return;
+    const { data: resDoSet } = await supabase.from("claim_reservas")
+      .select("membro").eq("set_id", setId).neq("status","cancelado");
+    const claimados = new Set((resDoSet || []).map(r => r.membro));
+    if (!membrosDe(ev).every(m => claimados.has(m))) return;
+
+    await supabase.from("claim_sets").update({ status:"fechado", closed_at: new Date().toISOString() }).eq("id", setId);
+
+    // Admin parou novos sets: só fecha este, sem abrir o próximo (lido do banco, o estado local pode estar antigo)
+    const { data: evFlag } = await supabase.from("claim_eventos").select("sem_novos_sets").eq("id", eventoId).maybeSingle();
+    if (evFlag?.sem_novos_sets) return;
+
+    // Verifica se há standby aguardando
+    const { data: sbCheck } = await supabase.from("claim_reservas")
+      .select("id").eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado").limit(1);
+    if (!sbCheck?.length) return;
+
+    // Verifica se ainda existe algum set aberto (evita duplicação em paralelo)
+    const { data: abertos } = await supabase.from("claim_sets")
+      .select("id").eq("evento_id", eventoId).eq("status","aberto").limit(1);
+    if (abertos?.length) return;
+
+    // Abre novo set automaticamente (limite: 10 sets)
+    const { data: todosOsSets } = await supabase.from("claim_sets").select("numero").eq("evento_id", eventoId).neq("status","cancelado");
+    if ((todosOsSets || []).length >= 10) return;
+    const prox = Math.max(0, ...(todosOsSets || []).map(s => s.numero)) + 1;
+    const { data: novoSet, error: errSet } = await supabase.from("claim_sets")
+      .insert([{ evento_id: eventoId, numero: prox, status: "aberto" }]).select().single();
+    if (errSet || !novoSet) return;
+
+    // Promove standby para o novo set (um por membro, ordem de criação)
+    const { data: sbAll } = await supabase.from("claim_reservas")
+      .select("*").eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado").order("created_at");
+    const membrosPromovidos = new Set();
+    for (const r of (sbAll || [])) {
+      if (membrosPromovidos.has(r.membro)) continue;
+      if (!membrosDe(ev).includes(r.membro)) continue;
+      await supabase.from("claim_reservas").update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
+      membrosPromovidos.add(r.membro);
+    }
+
+    // Verifica se o novo set já está completo (standby tinha todos os membros)
+    await verificarFechamento(eventoId, novoSet.id);
+  }
+
+  async function lerEstadoFresco(eventoId) {
+    const { data: setsData, error: e1 } = await supabase.from("claim_sets")
+      .select("*").eq("evento_id", eventoId).neq("status","cancelado").order("numero");
+    if (e1) throw e1;
+    const setIds = (setsData || []).map(x => x.id);
+    const resMap = {};
+    if (setIds.length) {
+      const { data: resData, error: e2 } = await supabase.from("claim_reservas")
+        .select("*").in("set_id", setIds).neq("status","cancelado");
+      if (e2) throw e2;
+      (resData || []).forEach(r => { (resMap[r.set_id] = resMap[r.set_id] || []).push(r); });
+    }
+    const { data: sbData, error: e3 } = await supabase.from("claim_reservas")
+      .select("*").eq("evento_id", eventoId).is("set_id", null).neq("status","cancelado");
+    if (e3) throw e3;
+    return { sets: setsData || [], reservas: resMap, standby: sbData || [] };
+  }
+
+  async function enviarClaimsInternoLegado(eventoId, qtdOverride) {
+    if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (!ev) return;
+    const qtds = qtdOverride || quantidades[eventoId] || {};
+    const pedidos = Object.entries(qtds).filter(([, q]) => q > 0);
+    if (!pedidos.length) return;
+    setEnviando(true); setClaimErro(null);
+
+    // Bloqueio e estado sempre lidos do banco no momento do envio (evita dados antigos de até 30s)
+    const { data: jb } = await supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle();
+    if (jb?.bloqueado) { setIsBloqueada(true); setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
+    const fresco = await lerEstadoFresco(eventoId);
+    let setsEv = fresco.sets, resMap = fresco.reservas, sbEv = fresco.standby;
+    const { data: evFlag } = await supabase.from("claim_eventos").select("sem_novos_sets").eq("id", eventoId).maybeSingle();
+    const semNovosSets = !!evFlag?.sem_novos_sets;
+
+    // OT8: joiner marcou todos os membros → cria set exclusivo
+    const todosOsMembros = membrosDe(ev);
+    const isOT8 = !eventoEhItem(ev) && todosOsMembros.every(m => (qtds[m] || 0) >= 1);
+    if (isOT8) {
+      if (semNovosSets) { setClaimErro("Não abriremos mais sets neste evento — o OT8 exclusivo não está disponível. Escolha membros dos sets que ainda estão abertos."); setEnviando(false); return; }
+      // Bloqueia OT8 se já tem qualquer claim ativo para esse evento
+      const jaTemAlgum = todosOsMembros.some(m => {
+        const noSets = setsEv.reduce((acc, s) => acc + ((resMap[s.id]||[]).filter(r=>r.membro===m&&r.joiner_cog===user.cog).length), 0);
+        const noStandby = sbEv.filter(r=>r.membro===m&&r.joiner_cog===user.cog).length;
+        return (noSets + noStandby) > 0;
+      });
+      if (jaTemAlgum) { setClaimErro("Você já tem membros claimados. Cancele antes de fazer OT8."); setEnviando(false); return; }
+      // Busca número mais alto atual no banco para evitar state desatualizado
+      let novoSet = null, errSet = null;
+      for (let t = 0; t < 4 && !novoSet; t++) {
+        const { data: ultimoSet } = await supabase.from("claim_sets")
+          .select("numero").eq("evento_id", eventoId).order("numero", { ascending: false }).limit(1);
+        const prox = ((ultimoSet?.[0]?.numero) || 0) + 1;
+        const r = await supabase.from("claim_sets")
+          .insert([{ evento_id: eventoId, numero: prox, status: "aberto" }]).select().single();
+        novoSet = r.data; errSet = r.error;
+        if (errSet && errSet.code !== "23505") break;
+      }
+      if (errSet || !novoSet) { setClaimErro("Erro ao criar set exclusivo. Tente novamente."); setEnviando(false); return; }
+      const rowsOT8 = todosOsMembros.map(m => ({
+        evento_id: eventoId, set_id: novoSet.id,
+        joiner_cog: user.cog, joiner_nome: user.nome || user.cog,
+        membro: m, status: "pendente"
+      }));
+      const { error } = await supabase.from("claim_reservas").insert(rowsOT8);
+      if (error) {
+        await supabase.from("claim_sets").update({ status: "cancelado" }).eq("id", novoSet.id);
+        setClaimErro("Erro ao enviar. Tente novamente.");
+        setEnviando(false); fetchTudo(); return;
+      }
+      await supabase.from("claim_sets").update({ status: "fechado", closed_at: new Date().toISOString() }).eq("id", novoSet.id);
+      // Dispara verificação de standby igual ao fluxo normal
+      await verificarFechamento(eventoId, novoSet.id);
+      setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
+      setClaimOk("Claim OT8 enviado! Você tem um set exclusivo ✓");
+      setTimeout(() => setClaimOk(null), 5000);
+      setEnviando(false); fetchTudo(); return;
+    }
+
+    const limite = ev.limite_por_joiner || Infinity;
+    const evSetsAbertos = setsEv.filter(s => s.status === "aberto");
+    const rows = [];
+    let semVaga = false;
+    for (const [membro, qtd] of pedidos) {
+      const jaTemNoSets = setsEv.reduce((acc, s) => acc + ((resMap[s.id]||[]).filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length), 0);
+      const jaTemStandby = sbEv.filter(r=>r.membro===membro&&r.joiner_cog===user.cog).length;
+      const jaTem = jaTemNoSets + jaTemStandby;
+      const qtdPermitida = Math.min(qtd, Math.max(0, limite - jaTem));
+      if (qtdPermitida === 0) continue;
+      let adicionados = 0;
+      for (const s of evSetsAbertos) {
+        if (adicionados >= qtdPermitida) break;
+        const resSet = resMap[s.id] || [];
+        const jaMeu = resSet.some(r => r.membro === membro && r.joiner_cog === user.cog);
+        const ocupado = resSet.some(r => r.membro === membro);
+        if (!jaMeu && !ocupado) {
+          rows.push({ evento_id: eventoId, set_id: s.id, joiner_cog: user.cog, joiner_nome: user.nome || user.cog, membro, status: "pendente" });
+          adicionados++;
+        }
+      }
+      if (semNovosSets) { semVaga = semVaga || adicionados < qtdPermitida; continue; } // sem novos sets: não entra em standby
+      for (let i = adicionados; i < qtdPermitida; i++) {
+        rows.push({ evento_id: eventoId, set_id: null, joiner_cog: user.cog, joiner_nome: user.nome || user.cog, membro, status: "standby" });
+      }
+    }
+    if (!rows.length) {
+      setClaimErro(semVaga ? "Não há mais vagas: os sets em aberto já foram preenchidos e não abriremos novos sets neste evento." : "Você já fez claim desses membros.");
+      fetchTudo(false); return;
+    }
+
+    // Tenta tudo de uma vez. Se houver conflito (alguém pegou a vaga no mesmo instante),
+    // envia item por item e o que não estiver disponível vai automaticamente para o standby.
+    let gravados = [], viraramStandby = [], falhas = [];
+    const { error: errLote } = await supabase.from("claim_reservas").insert(rows);
+    if (!errLote) {
+      gravados = rows;
+    } else if (errLote.code !== "23505") {
+      console.error("claim insert", errLote);
+      setClaimErro("Erro ao enviar. Tente novamente." + (errLote.code ? " (cód. " + errLote.code + ")" : ""));
+      fetchTudo(); return;
+    } else {
+      for (const row of rows) {
+        const r1 = await supabase.from("claim_reservas").insert([row]);
+        if (!r1.error) { gravados.push(row); continue; }
+        if (r1.error.code === "23505" && row.set_id && !semNovosSets) {
+          const rowSb = { ...row, set_id: null, status: "standby" };
+          const r2 = await supabase.from("claim_reservas").insert([rowSb]);
+          if (!r2.error) { gravados.push(rowSb); viraramStandby.push(row.membro); continue; }
+          console.error("claim standby", r2.error);
+        } else {
+          console.error("claim insert item", r1.error);
+        }
+        falhas.push(row.membro);
+      }
+    }
+    if (!gravados.length) {
+      setClaimErro("Não foi possível registrar seu claim" + (falhas.length ? " de " + [...new Set(falhas)].join(", ") : "") + ". Você já pode ter esse membro na lista.");
+      fetchTudo(); return;
+    }
+    for (const s of evSetsAbertos) await verificarFechamento(eventoId, s.id);
+    setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
+    const todosStandby = gravados.every(r => r.status === "standby");
+    const nomesSb = [...new Set(viraramStandby)];
+    const nomesFalha = [...new Set(falhas)];
+    setClaimOk(
+      nomesFalha.length ? "Claim enviado, exceto: " + nomesFalha.join(", ") + " (já estão na sua lista)."
+      : nomesSb.length ? "Claim enviado! " + nomesSb.join(", ") + " já tinha(m) sido pego(s) e você entrou no standby automático."
+      : todosStandby ? "Você está no standby! Será notificada se uma vaga abrir." : "Claim enviado com sucesso!");
+    setTimeout(() => setClaimOk(null), 4000);
+    setEnviando(false);
+    fetchTudo();
+  }
+
 
   if (!eventos) return (
     <div style={{ padding:"40px 0", textAlign:"center", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>
@@ -19555,10 +19800,40 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
           }
 
           async function solicitarEnvio() {
+            if (!JOINERS_AUTH_ATIVO) return solicitarEnvioLegado();
             setEnvioSolicitando(true);
             // o servidor escolhe a rodada e a posição (e fecha a rodada na 7ª pessoa), sob trava: envio_entrar_round
             const { data, error } = await supabase.rpc("envio_entrar_round", { p_itens: itensManual.trim() || null });
             setEnvioRequest(!error && data?.ok ? data.request : null);
+            setEnvioSolicitando(false);
+          }
+
+          async function solicitarEnvioLegado() {
+            setEnvioSolicitando(true);
+            const { data: openRounds } = await supabase.from("envio_rounds")
+              .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
+            let roundId, posicao, roundNum;
+            if (openRounds && openRounds.length > 0) {
+              const round = openRounds[0];
+              const { count } = await supabase.from("envio_requests")
+                .select("id", { count: "exact", head: true }).eq("round_id", round.id);
+              posicao = (count || 0) + 1;
+              roundId = round.id;
+              roundNum = round.numero;
+              if (posicao >= 7) await supabase.from("envio_rounds").update({ status: "fechado" }).eq("id", round.id);
+            } else {
+              const { data: allRounds } = await supabase.from("envio_rounds")
+                .select("numero").order("numero", { ascending: false }).limit(1);
+              roundNum = (allRounds?.[0]?.numero || 0) + 1;
+              const { data: newRound } = await supabase.from("envio_rounds")
+                .insert([{ numero: roundNum, status: "aberto" }]).select().single();
+              roundId = newRound.id;
+              posicao = 1;
+            }
+            const { data: request } = await supabase.from("envio_requests")
+              .insert([{ joiner_cog: user.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando", itens_manuais: itensManual.trim() || null }])
+              .select("*, envio_rounds(*)").single();
+            setEnvioRequest(request);
             setEnvioSolicitando(false);
           }
 
