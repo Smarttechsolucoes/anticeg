@@ -181,7 +181,7 @@ async function main() {
 
   console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data`);
 
-  const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/send-push`;
+  const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/push-evento`;
 
   // Enviar push para joiners com mudança de status
   if (mudancasStatus.length > 0) {
