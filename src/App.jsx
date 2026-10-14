@@ -6,6 +6,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { JoinerAtivacaoGate, AreaProtegida, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
+import { enviarComprovante, abrirComprovante, urlDoComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
 import { JOINERS_AUTH_ATIVO, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, debitarCashback, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
@@ -184,7 +185,7 @@ function buildEmailConfirmacaoPagamento(toNome, recibo) {
         <span style="font-size:10px;font-family:'Courier New',monospace;padding:3px 10px;border-radius:4px;border:1px solid rgba(201,168,240,0.35);color:#C9A8F0;text-transform:uppercase;letter-spacing:.5px">◉ Em análise</span>
       </div>
     </div>
-    ${recibo.comprovante_url ? `
+    ${recibo.comprovante_url && !JOINERS_AUTH_ATIVO ? `
     <div style="margin-bottom:20px">
       <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Comprovante enviado</div>
       <img src="${recibo.comprovante_url}" alt="comprovante" style="max-width:100%;border-radius:6px;border:1px solid rgba(245,240,232,0.1);display:block;margin-bottom:8px" />
@@ -3848,7 +3849,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
 
       {/* ── PAGAMENTOS ── */}
       {perfilSubTab === "pagamentos" && (() => {
-        function exportarComprovante(p) {
+        async function exportarComprovante(p) {
           const itensHTML = p.itens.map(it => {
             const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
             const partes = [
@@ -3901,7 +3902,7 @@ ${p.comprovante_url ? (() => {
 <script>window.onload=()=>window.print();</script>
 </body></html>`;
           const w = window.open("","_blank");
-          w.document.write(html);
+          w.document.write(await resolverComprovantesNoHtml(html));
           w.document.close();
         }
         if (pagSubTab === "historico") return (
@@ -3960,7 +3961,7 @@ ${p.comprovante_url ? (() => {
                 <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                     {p.comprovante_url && (
-                      <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver anexo</a>
+                      <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver anexo</a>
                     )}
                     <button onClick={() => exportarComprovante(p)} style={{ fontSize:9, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, padding:"3px 10px", cursor:"pointer" }}>
                       ↓ exportar
@@ -4020,7 +4021,7 @@ ${p.comprovante_url ? (() => {
           } else {
             const ext  = pagComprovante.name.split(".").pop();
             const path = `${user.cog}/${Date.now()}.${ext}`;
-            const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: false });
+            const { error: upErr } = await enviarComprovante("comprovantes", path, pagComprovante, { upsert: false });
             if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
             const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
             comprovanteUrl = publicUrl;
@@ -4127,7 +4128,7 @@ ${p.comprovante_url ? (() => {
               {pagRecibo.comprovante_url && (
                 <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px" }}>Comprovante anexado</span>
-                  <a href={pagRecibo.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver arquivo</a>
+                  <a href={pagRecibo.comprovante_url} onClick={e => abrirComprovante(e, pagRecibo.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver arquivo</a>
                 </div>
               )}
             </div>
@@ -4691,7 +4692,7 @@ ${p.comprovante_url ? (() => {
           setRepasseStatus("enviando"); setRepasseErro("");
           const ext  = repasseComprovante.name.split(".").pop();
           const path = `repassos/${user.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, repasseComprovante, { upsert: false });
+          const { error: upErr } = await enviarComprovante("comprovantes", path, repasseComprovante, { upsert: false });
           if (upErr) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const custosPagosArr = [...repasseCustos];
@@ -4832,7 +4833,7 @@ ${p.comprovante_url ? (() => {
 
             {repasseSubTab === "historico" && (() => {
 
-              function exportarComprovanteRepasse(r) {
+              async function exportarComprovanteRepasse(r) {
                 const protocolo = `#${String(r.id).slice(-6).toUpperCase()}`;
                 const dataFmt   = new Date(r.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
                 const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
@@ -4875,7 +4876,7 @@ ${compHTML}
 <script>window.onload=()=>window.print();</script>
 </body></html>`;
                 const w = window.open("","_blank");
-                w.document.write(html);
+                w.document.write(await resolverComprovantesNoHtml(html));
                 w.document.close();
               }
 
@@ -7302,7 +7303,7 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
       )}
       {(d.comprovante_url || d.obs) && (
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
-          {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
+          {d.comprovante_url && <a href={d.comprovante_url} onClick={e => abrirComprovante(e, d.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
           {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
         </div>
       )}
@@ -7542,7 +7543,7 @@ function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginTop:4 }}>
         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
           {r.comprovacao_url && (
-            <a href={r.comprovacao_url} target="_blank" rel="noopener noreferrer"
+            <a href={r.comprovacao_url} onClick={e => abrirComprovante(e, r.comprovacao_url)} target="_blank" rel="noopener noreferrer"
               style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:4, padding:"3px 8px", color:"#64B5F6", textDecoration:"none" }}>
               ↗ ver comprovação
             </a>
@@ -11576,7 +11577,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 {s.comprovante_url && (
                   <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"9px 14px", marginBottom:12 }}>
                     <span style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>📎 Comprovante enviado</span>
-                    <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
+                    <a href={s.comprovante_url} onClick={e => abrirComprovante(e, s.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
                   </div>
                 )}
 
@@ -11978,7 +11979,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               {/* Comprovante + obs */}
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom: (isPend || !isPend) ? 10 : 0 }}>
                 {d.comprovante_url && (
-                  <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer"
+                  <a href={d.comprovante_url} onClick={e => abrirComprovante(e, d.comprovante_url)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>
                     ↓ ver comprovante
                   </a>
@@ -13038,7 +13039,7 @@ function MercariTab({ user = null }) {
       try{
         const ext=fileComp.name.split('.').pop()||'jpg';
         const path=`${jRef.current.cog}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('mercari-comprovantes').upload(path, fileComp, { contentType: fileComp.type || 'application/octet-stream', upsert: false });
+        const { error: upErr } = await enviarComprovante("mercari-comprovantes", path, fileComp, { contentType: fileComp.type || 'application/octet-stream', upsert: false });
         if (!upErr) { const { data: pub } = supabase.storage.from('mercari-comprovantes').getPublicUrl(path); comp = pub.publicUrl; compOk = true; }
       }catch{ compOk=false; }
       if(!compOk){ setFormErr('Não foi possível enviar o comprovante. Tente novamente ou use "Não consigo anexar o comprovante".'); setSending(false); return; }
@@ -13450,7 +13451,7 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                   </span>
                 )}
                 {p.comprovante_url && (
-                  <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer"
+                  <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize:10, color:"#4ecb71", fontFamily:"'DM Mono',monospace", fontWeight:700, textDecoration:"none", background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.25)", borderRadius:4, padding:"2px 8px" }}>
                     📎 comprovante
                   </a>
@@ -20332,7 +20333,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                         {s.comprovante_url ? (
                                           <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"10px 12px" }}>
                                             <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>✓ Comprovante enviado</span>
-                                            <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver →</a>
+                                            <a href={s.comprovante_url} onClick={e => abrirComprovante(e, s.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver →</a>
                                           </div>
                                         ) : (() => {
                                           const cf = comprovFiles[s.id];
@@ -20357,7 +20358,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                                     setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: true } }));
                                                     const ext = cf.file.name.split(".").pop();
                                                     const path = `envio/${s.id}/comprovante_${Date.now()}.${ext}`;
-                                                    const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, cf.file, { upsert: false });
+                                                    const { error: upErr } = await enviarComprovante("comprovantes", path, cf.file, { upsert: false });
                                                     if (upErr) { alert("Erro no upload: " + upErr.message); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
                                                     const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
                                                     await supabase.from("envio_solicitacoes").update({ comprovante_url: publicUrl }).eq("id", s.id);
@@ -21818,7 +21819,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
@@ -22065,7 +22066,7 @@ function AdminWMag({ onCountChange, cfg = WMAG_HJ_CFG }) {
                   {p.qtd_total} un · R${Number(p.valor_total).toFixed(2).replace(".",",")}
                 </div>
                 {p.comprovante_url && (
-                  <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>ver comprovante ↗</a>
+                  <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>ver comprovante ↗</a>
                 )}
               </div>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
@@ -22085,9 +22086,11 @@ function AdminWMag({ onCountChange, cfg = WMAG_HJ_CFG }) {
   );
 }
 
-function ComprovanteThumb({ url }) {
+function ComprovanteThumb({ url: urlOriginal }) {
+  const url = useUrlComprovante(urlOriginal);
   const [aberto, setAberto] = useState(false);
   const mono = "'DM Mono',monospace";
+  if (!url) return null;
   return (
     <div style={{ marginTop:6 }}>
       <img
@@ -24542,7 +24545,7 @@ function LightstickForm({ onVoltar }) {
         const slug = contato.replace(/[^a-z0-9]/gi, '_');
         const ext = comprovante.name.split('.').pop() || 'jpg';
         const path = `lightstick/${slug}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, {
           contentType: comprovante.type || 'application/octet-stream', upsert: false,
         });
         if (!upErr) {
@@ -24777,7 +24780,7 @@ function PopcornSleeveForm({ onVoltar }) {
         const slug = contato.replace(/[^a-z0-9]/gi, '_');
         const ext = comprovante.name.split('.').pop() || 'jpg';
         const path = `popcorn-sleeve/${slug}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, {
           contentType: comprovante.type || 'application/octet-stream', upsert: false,
         });
         if (upErr) throw upErr;
@@ -25026,7 +25029,7 @@ function AdminPopcornSleeve({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
                     <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 1}x sleeve</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "cartao" ? "💳 Cartão" : "⚡ PIX"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 </div>
@@ -25153,7 +25156,7 @@ function SingbaForm({ onVoltar }) {
         const slug = contato.replace(/[^a-z0-9]/gi, '_');
         const ext = comprovante.name.split('.').pop() || 'jpg';
         const path = `singba/${slug}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, {
           contentType: comprovante.type || 'application/octet-stream', upsert: false,
         });
         if (upErr) throw upErr;
@@ -25457,7 +25460,7 @@ function AdminSingba({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
                     <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 0} pacotes</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "cartao" ? "💳 Cartão" : "⚡ PIX"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 </div>
@@ -25879,7 +25882,7 @@ function AdminRevista({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:11 }}>{p.qtd_total}x unidade{p.qtd_total>1?"s":""}</span>
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${Number(p.valor_total||0).toFixed(2).replace(".",",")}</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.forma_pagamento === "pix" ? "PIX" : "Cartão"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                   </div>
                 </div>
                 {/* Lado direito — status + ações */}
@@ -26023,7 +26026,7 @@ function AdminLightstick({ onCountChange }) {
                   <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ 450,00</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "pix" ? "⚡ PIX" : "💳 Cartão"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 </div>
@@ -26129,7 +26132,7 @@ function RevistaBazaarInPage({ onVoltar }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `bazaar-in/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
@@ -26423,7 +26426,7 @@ function RevistaFormPage() {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `revista/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
