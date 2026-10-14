@@ -2,8 +2,9 @@
 // Uso: node scripts/testar-notificacoes.mjs
 import { readFileSync } from "node:fs";
 const fonte = readFileSync(new URL("../src/supabase.js", import.meta.url), "utf8");
-const BASE = fonte.match(/https:\/\/[a-z0-9]+\.supabase\.co/)[0];
-const CHAVE = fonte.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/)[0];
+// por padrão sonda a produção; para o projeto de ENSAIO: $env:SONDAR_URL e $env:SONDAR_CHAVE (chave pública anon do ensaio)
+const BASE = (process.env.SONDAR_URL || fonte.match(/https:\/\/[a-z0-9]+\.supabase\.co/)[0]).replace(/\/$/, "");
+const CHAVE = process.env.SONDAR_CHAVE || fonte.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/)[0];
 let falhas = 0;
 async function chamar(funcao, corpo) {
   try {
