@@ -226,3 +226,19 @@ export async function claimsVendidos(client = supabase) {
   const { data } = await client.from("claims_vendidos").select("id, ceg, nome_do_item, valor, created_at").order("created_at", { ascending: false });
   return data || [];
 }
+
+// ── Lojas públicas e formulários (J4c-3) ──────────────────────────────────────────────────────────────────────────
+// Com a flag desligada tudo funciona como hoje (insert direto). Ligada, o visitante deixa de poder ler/gravar as tabelas de pedidos: a compra passa por
+// pedido_loja_criar() (o servidor valida a loja, descarta campos que o cliente não escolhe e recusa pedido já 'confirmado'), que devolve só o número do pedido.
+export async function criarPedidoLoja(tabela, dados, { retornar = false } = {}, client = supabase) {
+  if (!JOINERS_AUTH_ATIVO) {
+    const q = client.from(tabela).insert([dados]);
+    return retornar ? q.select().single() : q;
+  }
+  const { data, error } = await client.rpc("pedido_loja_criar", { p_tabela: tabela, p_dados: dados });
+  if (error) return { data: null, error };
+  if (!data || data.ok !== true) return { data: null, error: { message: data?.motivo === "tente_mais_tarde" ? "Muitos pedidos agora. Tente de novo em alguns minutos." : "Não foi possível registrar o pedido. Confira os dados e tente de novo." } };
+  return { data: { id: data.id }, error: null };
+}
+// Estoque e fila dos formulários: a visão pública traz só evento, modalidade, status, data e "Qtd: N" (nunca nome, e-mail ou texto livre).
+export const TABELA_FORMULARIO_PUBLICA = JOINERS_AUTH_ATIVO ? "formulario_pedidos_publico" : "formulario_pedidos";

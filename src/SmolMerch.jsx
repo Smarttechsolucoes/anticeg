@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
+import { criarPedidoLoja } from "./joinerAuth.js";
 import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } from "./smolmerchDados.js";
 
 const mono = "'DM Mono',monospace";
@@ -67,13 +68,13 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
       comprovanteUrl = publicUrl;
     }
 
-    const { error } = await supabase.from(cfg.tabela).insert([{
+    const { error } = await criarPedidoLoja(cfg.tabela, {
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: o.preco, qtd: qtds[o.id] })),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
-    }]);
+    });
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
 
