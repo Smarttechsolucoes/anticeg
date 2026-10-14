@@ -37,6 +37,7 @@ begin
   select count(*) into n from pg_attribute where attrelid = 'public.masterlist'::regclass and attname in ('cog', 'na_loja', 'ceg') and not attisdropped;
   if n <> 3 then raise exception 'masterlist sem as colunas cog, na_loja e ceg. Nada foi alterado.'; end if;
   if not exists (select 1 from public.admin_roles) then raise exception 'Não há administradora cadastrada. Nada foi alterado.'; end if;
+  if to_regprocedure('public.cog_e_da_conta(text)') is null then raise exception 'O J4a não está aplicado (falta cog_e_da_conta). Nada foi alterado.'; end if;
 end $$;
 
 -- estado ANTERIOR: todas as policies das 3 tabelas (para recriar exatamente), permissões e impressão dos dados (só contagem e hash)
@@ -76,20 +77,20 @@ grant insert on table public.masterlist to authenticated;
 
 -- 3) as policies novas
 create policy admin_tudo on public.pagamento_demandas for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy joiner_le_proprias on public.pagamento_demandas for select to authenticated using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+create policy joiner_le_proprias on public.pagamento_demandas for select to authenticated using (public.cog_e_da_conta(joiner_cog));
 create policy joiner_cria_proprias on public.pagamento_demandas for insert to authenticated
-  with check (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))) and status = 'em_analise' and motivo_rejeicao is null);
+  with check (public.cog_e_da_conta(joiner_cog) and status = 'em_analise' and motivo_rejeicao is null);
 
 create policy admin_tudo on public.multas_pagas for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy joiner_le_proprias on public.multas_pagas for select to authenticated using (lower(trim(joiner_cog)) = lower(trim((select public.meu_cog()))));
+create policy joiner_le_proprias on public.multas_pagas for select to authenticated using (public.cog_e_da_conta(joiner_cog));
 
 create policy admin_tudo on public.masterlist for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 create policy joiner_le_proprios_e_slots on public.masterlist for select to authenticated
-  using (lower(trim(cog)) = lower(trim((select public.meu_cog()))) or lower(trim(cog)) = 'disponivel');
+  using (public.cog_e_da_conta(cog) or lower(trim(cog)) = 'disponivel');
 -- claim: pegar um slot 'disponivel' para si (o COG novo tem de ser o dela); devolver/reabrir um slot (continua 'disponivel')
 create policy joiner_assume_slot on public.masterlist for update to authenticated
   using (lower(trim(cog)) = 'disponivel' and na_loja is true)
-  with check (lower(trim(cog)) = lower(trim((select public.meu_cog()))) or lower(trim(cog)) = 'disponivel');
+  with check (public.cog_e_da_conta(cog) or lower(trim(cog)) = 'disponivel');
 create policy joiner_abre_slot_de_set on public.masterlist for insert to authenticated
   with check (lower(trim(cog)) = 'disponivel' and ceg = 'CLAIM');
 
