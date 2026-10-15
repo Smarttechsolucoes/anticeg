@@ -12,7 +12,7 @@ end $$;
 do $$
 declare r record; j json; v_roles text; v_sql text; t text;
 begin
-  for r in select tablename, policyname from pg_policies where schemaname = 'public' and tablename in ('pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos') loop
+  for r in select tablename, policyname from pg_policies where schemaname = 'public' and tablename in ('pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_esquire_hyunjin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos') loop
     execute format('drop policy %I on public.%I', r.policyname, r.tablename);
   end loop;
   for r in select detalhe from emergencia.c0b_estado_anterior where etapa = 'J4c-3' and objeto like 'policy %' loop
@@ -23,7 +23,7 @@ begin
     if j ->> 'with_check' is not null then v_sql := v_sql || ' with check (' || (j ->> 'with_check') || ')'; end if;
     execute v_sql;
   end loop;
-  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
+  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_esquire_hyunjin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
     if to_regclass('public.' || t) is not null then execute format('grant all on table public.%I to anon, authenticated', t); end if;
   end loop;
   drop view if exists public.formulario_pedidos_publico;

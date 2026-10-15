@@ -19,7 +19,7 @@ declare
     ['pagamento_demandas', 'comprovante_url', 'cog:joiner_cog'], ['envio_solicitacoes', 'comprovante_url', 'cog:joiner_cog'], ['mercari_pedidos', 'comprovante_url', 'cog:joiner_cog'],
     ['repassos', 'comprovacao_url', 'cog:joiner_cog,cog:novo_dono_cog'],
     ['pedidos_revista', 'comprovante_url', 'email:email'], ['pedidos_popup', 'comprovante_url', 'email:email'], ['pedidos_wmag', 'comprovante_url', 'email:email'],
-    ['pedidos_wmag_leeknow', 'comprovante_url', 'email:email'], ['pedidos_dazed_seungmin', 'comprovante_url', 'email:email'], ['pedidos_smolmerch', 'comprovante_url', 'email:email'],
+    ['pedidos_wmag_leeknow', 'comprovante_url', 'email:email'], ['pedidos_dazed_seungmin', 'comprovante_url', 'email:email'], ['pedidos_esquire_hyunjin', 'comprovante_url', 'email:email'], ['pedidos_smolmerch', 'comprovante_url', 'email:email'],
     ['pedidos_bazaar_in', 'comprovante_url', 'email:email'], ['pedidos_lightstick', 'comprovante_url', 'cog:joiner_cog'], ['pedidos_popcorn_sleeve', 'comprovante_url', 'cog:joiner_cog'],
     ['pedidos_singba', 'comprovante_url', 'cog:joiner_cog'], ['pedidos_skzoo_rio', 'comprovante_url', 'cog:cog']];
   v_rx text := '/storage/v1/object/(?:public|sign|authenticated)/(comprovantes|mercari-comprovantes)/([^?#]+)';

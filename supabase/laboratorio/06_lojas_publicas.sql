@@ -5,6 +5,7 @@ create table if not exists public.pedidos_popup (id bigint generated always as i
 create table if not exists public.pedidos_wmag (id bigint generated always as identity primary key, nome text not null, email text not null, social text, capa_a int default 0, capa_b int default 0, capa_c int default 0, qtd_total int default 0, valor_total numeric default 0, forma_pagamento text, comprovante_url text, status text not null default 'aguardando', created_at timestamptz not null default now());
 create table if not exists public.pedidos_wmag_leeknow (like public.pedidos_wmag including all);
 create table if not exists public.pedidos_dazed_seungmin (like public.pedidos_wmag including all);
+create table if not exists public.pedidos_esquire_hyunjin (like public.pedidos_wmag including all);
 create table if not exists public.pedidos_smolmerch (id uuid primary key default gen_random_uuid(), nome text not null, email text not null, social text, itens jsonb not null default '[]', qtd_total int not null default 0, valor_total numeric not null default 0, forma_pagamento text, comprovante_url text, status text not null default 'aguardando', created_at timestamptz not null default now());
 create table if not exists public.pedidos_bazaar_in (id bigint generated always as identity primary key, nome text not null, email text not null, social text, capa_a int default 0, capa_b int default 0, capa_c int default 0, caixa_f int default 0, caixa_g int default 0, qtd_total int default 0, valor_total numeric default 0, forma_pagamento text, comprovante_url text, status text not null default 'aguardando', membros_grupo jsonb, created_at timestamptz not null default now());
 create table if not exists public.pedidos_lightstick (id bigint generated always as identity primary key, nome text not null, contato text not null, joiner_cog text, metodo_pagamento text, comprovante_url text, status text not null default 'aguardando', created_at timestamptz not null default now());
@@ -15,7 +16,7 @@ create table if not exists public.formulario_pedidos (id bigint generated always
 do $$
 declare t text;
 begin
-  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
+  foreach t in array array['pedidos_revista','pedidos_popup','pedidos_wmag','pedidos_wmag_leeknow','pedidos_dazed_seungmin','pedidos_esquire_hyunjin','pedidos_smolmerch','pedidos_bazaar_in','pedidos_lightstick','pedidos_popcorn_sleeve','pedidos_singba','pedidos_skzoo_rio','formulario_pedidos'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy anon_all on public.%I for all to anon using (true) with check (true)', t);   -- como hoje: aberto ao visitante
     execute format('grant all on table public.%I to anon, authenticated, service_role', t);                    -- só estas tabelas (não mexe nas travas C0 da masterlist)

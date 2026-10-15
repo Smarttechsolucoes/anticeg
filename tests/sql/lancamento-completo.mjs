@@ -44,7 +44,7 @@ ok(depois.some(r => r.tipo === "storage: bucket de comprovantes" && r.situacao =
   ok(pv2.filter(r => r.secao === "2 já aplicado" && /^J(1|4|5)/.test(r.item) && r.valor === "NÃO").length === 0, "depois do lançamento o pré-voo mostra TODAS as funções do lançamento como aplicadas"); }
 // VISITANTE: sondagem tabela por tabela (o equivalente local do teste de API anônima)
 const TODAS = ["joiners", "masterlist", "pagamento_demandas", "multas_pagas", "claims", "reports", "envio_solicitacoes", "pre_cadastros", "grupos_envio", "push_subscriptions", "formulario_pedidos",
-  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
+  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_esquire_hyunjin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
   "mercari_pedidos", "lojinha_repasses", "repassos", "claim_eventos", "claim_sets", "claim_reservas", "feedbacks", "notifications", "push_reads", "joiner_storage", "joiner_conferencias", "joiner_updates",
   "envio_rounds", "envio_requests", "confirmacoes", "rastreios", "estoque_itens", "estoque_compras", "ceg_config", "antiv_badges"];
 for (const t of TODAS) ok(negado(await como(d, "anon", null, `select * from public.${t} limit 1`)), `visitante NÃO lê ${t}`);

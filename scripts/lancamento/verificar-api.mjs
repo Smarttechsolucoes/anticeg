@@ -26,7 +26,7 @@ const negado = r => r.status === 401 || r.status === 403 || (r.status >= 400 && 
 
 // ── tabelas e quem é a dona de cada linha ───────────────────────────────────────────────────────────────────────────────────────────
 const PROTEGIDAS = ["joiners", "masterlist", "pagamento_demandas", "multas_pagas", "claims", "reports", "envio_solicitacoes", "pre_cadastros", "grupos_envio", "push_subscriptions", "formulario_pedidos",
-  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
+  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_esquire_hyunjin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
   "mercari_pedidos", "lojinha_repasses", "repassos", "claim_eventos", "claim_sets", "claim_reservas", "claim_reservas_quadro", "feedbacks", "notifications", "push_reads", "joiner_storage", "joiner_conferencias",
   "joiner_updates", "envio_rounds", "envio_requests", "confirmacoes", "rastreios", "estoque_itens", "estoque_compras", "ceg_config", "antiv_badges"];
 const COM_DONA = [["pagamento_demandas", "joiner_cog"], ["multas_pagas", "joiner_cog"], ["claims", "joiner_cog"], ["reports", "joiner_cog"], ["envio_solicitacoes", "joiner_cog"], ["mercari_pedidos", "joiner_cog"],

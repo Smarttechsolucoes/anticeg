@@ -53,7 +53,7 @@ const PRIVADAS = ["joiners", "masterlist", "notifications", "reports", "pagament
   // J4c-4: tudo que passa a ser protegido pelo banco no lançamento (o acesso simples, só com @, não pode tocar em nenhuma)
   "claims", "grupos_envio", "push_subscriptions", "formulario_pedidos", "mercari_pedidos", "lojinha_repasses", "repassos", "claim_eventos", "claim_sets", "claim_reservas", "claim_reservas_quadro",
   "feedbacks", "joiner_storage", "joiner_conferencias", "joiner_updates", "envio_rounds", "envio_requests", "confirmacoes", "rastreios", "estoque_itens", "estoque_compras", "ceg_config", "antiv_badges",
-  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
+  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_esquire_hyunjin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio"];
 const tocouPrivada = tabs => tabs.filter(x => PRIVADAS.some(tb => x.split(" ")[1] === tb));
 const corpo = page => page.locator("body").innerText();
 const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(valor); await page.getByRole("button", { name: /ENTRAR/ }).first().click(); await page.waitForTimeout(1000); };

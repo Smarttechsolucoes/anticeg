@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 
 // tabelas que o lançamento FECHA para o papel anônimo (a chave pública do site)
 export const FECHADAS = new Set(["joiners", "masterlist", "pagamento_demandas", "multas_pagas", "claims", "reports", "envio_solicitacoes", "pre_cadastros", "grupos_envio", "push_subscriptions", "formulario_pedidos",
-  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
+  "pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag_leeknow", "pedidos_dazed_seungmin", "pedidos_esquire_hyunjin", "pedidos_smolmerch", "pedidos_bazaar_in", "pedidos_lightstick", "pedidos_popcorn_sleeve", "pedidos_singba", "pedidos_skzoo_rio",
   "mercari_pedidos", "lojinha_repasses", "repassos", "claim_eventos", "claim_sets", "claim_reservas", "feedbacks", "notifications", "pushes", "push_reads", "joiner_storage", "joiner_conferencias", "joiner_updates",
   "envio_rounds", "envio_requests", "confirmacoes", "rastreios", "estoque_itens", "estoque_compras", "ceg_config", "antiv_badges", "config", "admin_roles", "contas_joiner", "vinculos_pendentes", "emails_enviados"]);
 const ABERTAS_LEITURA = new Set(["item_fotos", "links_uteis", "cal_eventos", "tabela_precos", "sugestoes_tabela"]);
