@@ -38,11 +38,13 @@ create index tentativas_acesso_tempo on public.tentativas_acesso (criado_em);
 alter table public.tentativas_acesso enable row level security;
 revoke all on table public.tentativas_acesso from public, anon, authenticated;
 grant select, insert, update, delete on table public.tentativas_acesso to service_role;
--- permissão restrita à sequência da coluna IDENTITY desta tabela (nome real obtido do catálogo), e a nenhuma outra
+-- permissões da sequência da coluna IDENTITY desta tabela (nome real obtido do catálogo): fecha para public/anon/authenticated e libera só para o servidor. Nenhuma outra sequência é tocada
 do $$
 declare v_seq text := pg_get_serial_sequence('public.tentativas_acesso', 'id');
 begin
   if v_seq is null then raise exception 'Sequência da coluna id de tentativas_acesso não encontrada. Transação desfeita.'; end if;
+  -- no Supabase, sequências novas do schema public já nascem com privilégios abertos (default privileges: anon, authenticated, service_role). Fecha SÓ esta sequência (inclusive o UPDATE herdado do service_role, que não precisa) e devolve ao servidor só USAGE e SELECT:
+  execute format('revoke all on sequence %s from public, anon, authenticated, service_role', v_seq);
   execute format('grant usage, select on sequence %s to service_role', v_seq);
 end $$;
 
