@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/piloto-senha",          "destination": "/piloto-senha/index.html" },
     { "source": "/masterlist",           "destination": "/index.html" },
     { "source": "/cegs",                 "destination": "/index.html" },
     { "source": "/cegs/:slug",           "destination": "/index.html" },
