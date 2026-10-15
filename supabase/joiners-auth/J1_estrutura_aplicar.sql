@@ -7,6 +7,7 @@
 --   * saber o @ ou o COG NÃO basta; e-mail ausente, inválido, diferente, compartilhado, COG repetido ou joiner já vinculada => não vincula;
 --     esses casos viram um pedido em vinculos_pendentes para o administrador resolver (escolhendo a joiner exata pelo id), sem acesso automático;
 --   * a resposta ao usuário é sempre a mesma nas falhas (sem enumerar @ nem e-mails).
+-- ATENÇÃO: depois do J1 a ativação fica FECHADA para usuários logados até o J4d ser aplicado (ele reabre, já com a conferência das ondas). Aplique o J4d logo em seguida.
 -- Nada aqui fecha a leitura atual dos dados: isso é a etapa de RLS (J4), depois que o login estiver no ar.
 -- Tudo em uma transação com registro e verificação antes do COMMIT. Se qualquer guarda falhar: "Nada foi alterado".
 begin;
@@ -137,8 +138,10 @@ begin
   do update set cog_pedido = excluded.cog_pedido, joiner_id_candidato = excluded.joiner_id_candidato, motivo = excluded.motivo, criado_em = now();
   return jsonb_build_object('status', 'pendente');
 end $$;
-revoke all on function public.ativar_minha_conta(text) from public, anon;
-grant execute on function public.ativar_minha_conta(text) to authenticated, service_role;
+-- JANELA ENTRE J1 E J4d: esta versão ainda NÃO conhece as ondas (ativacao_liberada só nasce no J4d). Por isso NENHUM usuário logado pode executá-la agora:
+-- só o servidor (service_role). O J4d substitui a função por uma que confere a liberação e SÓ ENTÃO devolve a execução ao papel authenticated.
+revoke all on function public.ativar_minha_conta(text) from public, anon, authenticated;
+grant execute on function public.ativar_minha_conta(text) to service_role;
 
 -- ── 4) quem sou eu: COG ATUAL e id da joiner da conta logada (base das policies de RLS do J4) ──
 create function public.meu_cog()
@@ -160,7 +163,7 @@ create function public.admin_vinculos_pendentes()
 returns table (id bigint, email_da_conta text, cog_pedido text, joiner_id_candidato bigint, motivo text, criado_em timestamptz)
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if not (select public.is_admin()) then raise exception 'sem permissão'; end if;
+  if (select public.is_admin()) is not true then raise exception 'sem permissão'; end if;
   return query
     select p.id, u.email::text, p.cog_pedido, p.joiner_id_candidato, p.motivo, p.criado_em
       from public.vinculos_pendentes p join auth.users u on u.id = p.user_id
@@ -175,7 +178,7 @@ returns table (id bigint, cog text, nome_site text, twitter text, email text, co
 language plpgsql stable security definer set search_path = '' as $$
 declare v_t text := regexp_replace(lower(trim(coalesce(p_termo, ''))), '^@+', '');
 begin
-  if not (select public.is_admin()) then raise exception 'sem permissão'; end if;
+  if (select public.is_admin()) is not true then raise exception 'sem permissão'; end if;
   if length(v_t) < 2 then return; end if;
   return query
     select j.id, j.cog::text, j.nome_site::text, j.twitter::text, j.email::text, exists (select 1 from public.contas_joiner c where c.joiner_id = j.id)
@@ -191,7 +194,7 @@ create function public.admin_resolver_vinculo(p_id bigint, p_aprovar boolean, p_
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_p record; v_j record; v_n integer; v_cog text; v_uid uuid := (select auth.uid());
 begin
-  if not (select public.is_admin()) then raise exception 'sem permissão'; end if;
+  if (select public.is_admin()) is not true then raise exception 'sem permissão'; end if;
   select * into v_p from public.vinculos_pendentes where id = p_id and status = 'aberto' for update;
   if not found then return jsonb_build_object('status', 'nao_encontrado'); end if;
   if not p_aprovar then
@@ -222,7 +225,7 @@ create function public.admin_desvincular_conta(p_user_id uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare n integer;
 begin
-  if not (select public.is_admin()) then raise exception 'sem permissão'; end if;
+  if (select public.is_admin()) is not true then raise exception 'sem permissão'; end if;
   delete from public.contas_joiner where user_id = p_user_id;
   get diagnostics n = row_count;
   return jsonb_build_object('status', case when n = 1 then 'desvinculada' else 'nao_encontrada' end);
@@ -254,6 +257,7 @@ begin
          'public.admin_resolver_vinculo(bigint, boolean, bigint)'::regprocedure, 'public.admin_desvincular_conta(uuid)'::regprocedure)
      and has_function_privilege('anon', p.oid, 'EXECUTE');
   if n > 0 then raise exception 'anon pode executar funções de conta. Transação desfeita.'; end if;
+  if has_function_privilege('authenticated', 'public.ativar_minha_conta(text)', 'EXECUTE') then raise exception 'authenticated pode executar ativar_minha_conta antes do J4d. Transação desfeita.'; end if;
   select detalhe into v_antes from emergencia.c0b_estado_anterior where etapa = 'J1' and objeto = 'impressão de joiners';
   select 'linhas=' || count(*) || ' md5=' || md5(coalesce(string_agg(id::text || '|' || coalesce(cog, '') || '|' || coalesce(email, ''), E'\n' order by id), ''))
     into v_depois from public.joiners;

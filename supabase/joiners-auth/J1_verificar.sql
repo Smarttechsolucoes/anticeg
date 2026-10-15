@@ -1,6 +1,6 @@
 -- J1 (v2) — VERIFICAÇÃO (somente leitura; não mostra e-mails nem COGs).
--- Esperado: RLS ligado nas 2 tabelas; anon sem acesso; authenticated só lê; 7 funções security definer com search_path vazio,
---           nenhuma executável por anon; joiners idêntica ao registrado antes; estado registrado (1 linha).
+-- Esperado (10 linhas): RLS ligado nas 2 tabelas; anon sem acesso; authenticated só lê; 7 funções security definer com search_path vazio,
+--           nenhuma executável por anon; ativar_minha_conta FECHADA para authenticated até o J4d; joiners idêntica ao registrado antes; estado registrado (1 linha).
 select 'RLS ligado em contas_joiner e vinculos_pendentes (esperado true)' as item,
        ((select relrowsecurity from pg_class where oid = to_regclass('public.contas_joiner')) and (select relrowsecurity from pg_class where oid = to_regclass('public.vinculos_pendentes')))::text as valor
 union all select 'anon com algum acesso às 2 tabelas (esperado false)',
@@ -24,4 +24,6 @@ union all select 'joiners (linhas | hash) | antes',
        (select 'linhas=' || count(*) || ' md5=' || md5(coalesce(string_agg(id::text || '|' || coalesce(cog, '') || '|' || coalesce(email, ''), E'\n' order by id), '')) from public.joiners)
        || ' | ' || coalesce((select detalhe from emergencia.c0b_estado_anterior where etapa = 'J1' and objeto = 'impressão de joiners'), 'sem registro')
 union all select 'contas vinculadas | pedidos abertos', (select count(*) from public.contas_joiner)::text || ' | ' || (select count(*) from public.vinculos_pendentes where status = 'aberto')::text
+union all select 'usuário logado executa ativar_minha_conta (esperado false ATÉ o J4d; depois do J4d vira true, e aí só vale com a liberação)',
+       has_function_privilege('authenticated', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
 union all select 'estado registrado (linhas J1, esperado 1)', (select count(*) from emergencia.c0b_estado_anterior where etapa = 'J1')::text;

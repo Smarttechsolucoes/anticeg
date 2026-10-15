@@ -43,7 +43,8 @@ async function como(d, papel, uid, q) {
 }
 const negado = r => !!r.erro && /permission denied|row-level security|sem permiss/.test(r.erro);
 async function rodar(d, arq, dir = DJ, frase) { try { await d.exec(frase ? sql(arq, dir).replace("confirmacao text := '';", `confirmacao text := '${frase}';`) : sql(arq, dir)); return null; } catch (e) { await d.exec("rollback").catch(() => {}); return e.message; } }
-const ativar = async (d, uid, cog) => (await como(d, "authenticated", uid, `select public.ativar_minha_conta('${cog}') r`)).rows?.[0]?.r;
+// J1 isolado: só o servidor executa a ativação (o J4d reabre para authenticated, com a conferência das ondas)
+const ativar = async (d, uid, cog) => (await como(d, "service_role", uid, `select public.ativar_minha_conta('${cog}') r`)).rows?.[0]?.r;
 const vinc = async d => (await d.query("select user_id::text u, joiner_id j from public.contas_joiner order by joiner_id")).rows;
 const pend = async d => (await d.query("select user_id::text u, motivo, status, joiner_id_candidato c from public.vinculos_pendentes order by id")).rows;
 const fpJ = async d => JSON.stringify((await d.query("select count(*)::int n, md5(string_agg(id::text||coalesce(cog,'')||coalesce(email,''), ',' order by id)) m from public.joiners")).rows[0]);
@@ -52,6 +53,9 @@ const fpJ = async d => JSON.stringify((await d.query("select count(*)::int n, md
   const d = await banco(); const antes = await fpJ(d);
   const e = await rodar(d, "J1_estrutura_aplicar.sql"); ok(e === null, "J1 aplica sem erro" + (e ? ": " + e : ""));
   ok(await fpJ(d) === antes, "J1: a tabela joiners ficou IDÊNTICA (linhas e hash)");
+  ok(negado(await como(d, "authenticated", 2, "select public.ativar_minha_conta('ana') r")), "J1 isolado: usuário logado (conta preexistente) NÃO executa o vínculo antes do J4d");
+  ok(negado(await como(d, "authenticated", 4, "select public.ativar_minha_conta('ana') r")) && (await d.query("select count(*)::int n from public.contas_joiner")).rows[0].n === 0 && (await d.query("select count(*)::int n from public.vinculos_pendentes")).rows[0].n === 0, "J1 isolado: a tentativa não grava vínculo nem pedido pendente");
+  ok((await d.query(sql("J1_verificar.sql"))).rows.some(r => /usuário logado executa ativar_minha_conta/.test(r.item) && r.valor === "false"), "J1_verificar: usuário logado executa ativar_minha_conta = false até o J4d");
   ok((await d.query("select count(*)::int n from public.contas_joiner")).rows[0].n === 0, "J1: nenhuma conta é vinculada automaticamente");
 
   // caso feliz: o vínculo guarda o ID PERMANENTE
@@ -79,7 +83,7 @@ const fpJ = async d => JSON.stringify((await d.query("select count(*)::int n, md
   ok((await ativar(d, 9, "gabi")).status === "email_nao_verificado" && (await vinc(d)).length === 2, "e-mail NÃO confirmado: recusa e não vincula (nem cria pedido)");
   ok((await ativar(d, 10, "ana")).status === "pendente" && (await pend(d)).some(x => x.u === U(10) && x.motivo === "email_compartilhado" || x.motivo === "cog_ja_vinculado"), "mesma joiner já vinculada a outra conta: não assume, vai para o admin");
   ok((await como(d, "anon", null, "select public.ativar_minha_conta('ana')")).erro?.includes("permission denied"), "visitante anônimo NÃO executa o vínculo");
-  ok((await como(d, "authenticated", null, "select public.ativar_minha_conta('ana') r")).rows?.[0].r.status === "nao_autenticado", "sem sessão: 'nao_autenticado'");
+  ok((await como(d, "service_role", null, "select public.ativar_minha_conta('ana') r")).rows?.[0].r.status === "nao_autenticado", "sem sessão: 'nao_autenticado'");
   ok((await ativar(d, 3, "ana")).status === "pendente" && (await vinc(d)).length === 2, "tentar o COG de outra pessoa com e-mail que não é o dela não funciona");
   ok((await ativar(d, 3, "bia")).status === "pendente" && (await pend(d)).filter(x => x.u === U(3)).length === 1, "pedir repetidamente não acumula: um pedido aberto por conta");
 
@@ -136,5 +140,12 @@ const fpJ = async d => JSON.stringify((await d.query("select count(*)::int n, md
 { const d = await banco({ semPk: true }); ok((await rodar(d, "J1_estrutura_aplicar.sql")) === null, "J1 aplica mesmo sem constraint de unicidade no id, desde que os valores sejam únicos (sem a trava de apagar)"); }
 { const d = await banco(); await rodar(d, "J1_estrutura_aplicar.sql"); await d.exec(`insert into auth.users values ('${U(20)}','fabi@exemplo.com',now())`);
   ok((await ativar(d, 12, "fabi")).status === "ok" && (await ativar(d, 20, "fabi")).status === "pendente" && (await vinc(d)).filter(v => String(v.j) === "10").length === 1, "duas contas com o mesmo e-mail tentando a mesma joiner: só uma é vinculada, a outra vira pedido"); }
+
+{ // checagem de administrador que nega também NULL (is_admin() indefinido não pode abrir as funções admin)
+  const d = await banco(); await rodar(d, "J1_estrutura_aplicar.sql");
+  await d.exec("create or replace function public.is_admin() returns boolean language sql stable as $f$ select null::boolean $f$");
+  for (const q of ["select * from public.admin_vinculos_pendentes()", "select public.admin_resolver_vinculo(1, false)", "select * from public.admin_buscar_joiners('ana')", "select public.admin_desvincular_conta('" + U(3) + "')"])
+    ok(/sem permiss/.test((await como(d, "authenticated", 1, q)).erro || ""), "is_admin() NULL é NEGADO: " + q.slice(0, 50));
+}
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

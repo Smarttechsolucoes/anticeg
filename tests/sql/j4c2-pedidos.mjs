@@ -31,7 +31,7 @@ async function laboratorio({ comJ4_0 = true, semRlsEm = null } = {}) {
   await d.exec(`insert into public.admin_roles (user_id) values ('${U(1)}')`);
   await d.exec(sql("J1_estrutura_aplicar.sql", "joiners-auth"));
   // contas ativadas pelo caminho oficial (e-mail confirmado igual ao cadastro) e uma pelo admin
-  const ativar = async (uid, cog) => { await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated" })}', false)`); await d.exec("set role authenticated"); await d.query(`select public.ativar_minha_conta('${cog}')`); await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims','',false)"); };
+  const ativar = async (uid, cog) => { await d.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: U(uid), role: "authenticated" })}', false)`); await d.exec("set role service_role"); await d.query(`select public.ativar_minha_conta('${cog}')`); await d.exec("reset role"); await d.exec("select set_config('request.jwt.claims','',false)"); };
   await ativar(2, "ana"); await ativar(9, "gabi");
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(3)}', 2, 'admin')`);   // bia: e-mail diferente, vinculada pelo admin
   await d.exec(`insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(7)}', 7, 'admin'), ('${U(8)}', 8, 'admin');`);
