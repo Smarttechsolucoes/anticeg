@@ -3,6 +3,10 @@
 // Uso: npm i --no-save @electric-sql/pglite && node tests/sql/lancamento-completo.mjs
 import { laboratorio, como, n, negado, rodar, verificar, ok, fim, J, sql, U } from "./_lab.mjs";
 const d = await laboratorio(); await d.exec(sql("08_storage_simulado.sql", "laboratorio"));
+// estoque dos drops como está em produção hoje (supabase/sql/*_estoque.sql): leitura pública + UPDATE aberto; odd_fresh_estoque não existe no repositório
+for (const t of ["wave_maker_estoque", "paper_tales_estoque", "promo_13_estoque"]) await d.exec(`create table public.${t} (item_id text primary key, estoque integer not null default 0, contar_desde timestamptz not null default now());
+  alter table public.${t} enable row level security; create policy select_publico on public.${t} for select using (true); create policy update_admin on public.${t} for update using (true);
+  grant all on table public.${t} to anon, authenticated, service_role; insert into public.${t} (item_id, estoque) values ('KIT 01', 3)`);
 const ORDEM = [
   ["J4b_lote1_aplicar.sql", "J4b_lote1_verificar.sql"],
   ["J4c1_joiners_aplicar.sql", "J4c1_joiners_verificar.sql"],
@@ -12,6 +16,7 @@ const ORDEM = [
   ["J4c4b_claims_sets_aplicar.sql", "J4c4b_claims_sets_verificar.sql"],
   ["J4c4c_pessoais_aplicar.sql", "J4c4c_pessoais_verificar.sql"],
   ["J4c4d_admin_catalogos_aplicar.sql", "J4c4d_admin_catalogos_verificar.sql"],
+  ["J4c4f_estoque_drops_aplicar.sql", "J4c4f_estoque_drops_verificar.sql"],
   ["J4c4e_cegs_publico_aplicar.sql", "J4c4e_cegs_publico_verificar.sql"],
   ["J5_comprovantes_aplicar.sql", "J5_comprovantes_verificar.sql"],
 ];
@@ -91,7 +96,10 @@ ok((await como(d, "authenticated", 2, "select public.meu_cog() c")).rows[0].c ==
   const ml = (await como(d, "authenticated", 7, "select cog from public.masterlist where lower(trim(cog)) <> 'disponivel'")).rows || [];
   ok(ml.every(x => x.cog === "Ela") && (await como(d, "authenticated", 8, "select cog from public.masterlist where lower(trim(cog)) <> 'disponivel'")).rows.every(x => x.cog === "ela"), "COGs parecidos: na masterlist cada uma lê só o COG exato");
 }
+// estoque dos drops: visitante lê e NÃO escreve; administradora escreve (J4c-4f na sequência completa)
+ok((await n(d, "anon", null, "select 1 from public.paper_tales_estoque")) === 1 && (await como(d, "anon", null, "update public.paper_tales_estoque set estoque = 9999 returning item_id")).rows?.length !== 1, "sequência completa: visitante lê o estoque dos drops e NÃO o altera");
+ok((await como(d, "authenticated", 1, "update public.paper_tales_estoque set estoque = 2 returning item_id")).rows?.length === 1, "sequência completa: a administradora altera o estoque dos drops");
 // reversões protegidas dos lotes exigem a frase (nenhuma é executada aqui)
-for (const [arq, frase] of [["J4c4a_mercari_lojinha_reverter_protegido.sql", ""], ["J4c4b_claims_sets_reverter_protegido.sql", ""], ["J4c4c_pessoais_reverter_protegido.sql", ""], ["J4c4d_admin_catalogos_reverter_protegido.sql", ""], ["J5_comprovantes_reverter_protegido.sql", ""]])
+for (const [arq, frase] of [["J4c4a_mercari_lojinha_reverter_protegido.sql", ""], ["J4c4b_claims_sets_reverter_protegido.sql", ""], ["J4c4c_pessoais_reverter_protegido.sql", ""], ["J4c4d_admin_catalogos_reverter_protegido.sql", ""], ["J4c4f_estoque_drops_reverter_protegido.sql", ""], ["J5_comprovantes_reverter_protegido.sql", ""]])
   ok(await rodar(d, arq, J, frase) !== null, `${arq} é recusada sem a frase de autorização`);
 fim();

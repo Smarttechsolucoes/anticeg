@@ -40,6 +40,12 @@ for (const t of PROTEGIDAS) {
   else if (r.status === 200 && lista(r).length === 0) { aviso(`${t}: respondeu vazio em vez de "permissão negada" (confira se o script de proteção foi aplicado)`); ok(true, `visitante NÃO lê ${t} (vazio)`); }
   else ok(false, `visitante LÊ ${t} (HTTP ${r.status}, ${lista(r).length} linha(s))`);
 }
+// estoque dos drops: leitura pública continua; escrita do visitante não. O filtro não casa com nenhuma linha, então nada é alterado nem se a proteção falhasse.
+for (const t of ["wave_maker_estoque", "paper_tales_estoque", "promo_13_estoque", "odd_fresh_estoque"]) {
+  const r = await chamar(`/rest/v1/${t}?item_id=eq.__teste_visitante__`, { metodo: "PATCH", corpo: { estoque: 0 }, extra: { Prefer: "return=representation" } });
+  if (r.status === 404) { aviso(`${t}: tabela não existe neste projeto (ignorada)`); continue; }
+  ok(negado(r) || (r.status < 300 && lista(r).length === 0), `visitante NÃO escreve no estoque ${t} (HTTP ${r.status})`);
+}
 for (const [fn, corpo] of [["claim_enviar", { p_evento: 1, p_pedidos: {} }], ["claim_organizar", { p_evento: 1 }], ["envio_entrar_round", { p_itens: null }], ["comprovante_assinavel", { p_bucket: "comprovantes", p_path: "x" }], ["ceg_itens", { p_ceg: "SKZOO" }], ["pedido_loja_criar", { p_tabela: "pedidos_revista", p_dados: {} }], ["meus_dados", {}]]) {
   const r = await chamar(`/rest/v1/rpc/${fn}`, { metodo: "POST", corpo });
   ok(negado(r) || r.status === 404 || r.json === null || (Array.isArray(r.json) && r.json.length === 0), `visitante NÃO consegue usar ${fn} (HTTP ${r.status})`);

@@ -7,7 +7,8 @@
 with
 publico_ok as (select unnest(array[
   'config', 'pushes', 'item_fotos', 'links_uteis', 'cal_eventos', 'tabela_precos', 'sugestoes_tabela',
-  'joiners_publico', 'claims_quadro', 'claims_vendidos', 'formulario_pedidos_publico']) as nome),
+  'joiners_publico', 'claims_quadro', 'claims_vendidos', 'formulario_pedidos_publico',
+  'wave_maker_estoque', 'paper_tales_estoque', 'promo_13_estoque', 'odd_fresh_estoque']) as nome),
 funcoes_ok as (select unnest(array[
   'entrar_com_arroba', 'contar_recrutados', 'solicitar_cadastro', 'resolver_recrutador', 'pedido_loja_criar', 'ceg_resumo', 'ceg_vencimentos',
   'is_admin', 'meu_cog', 'meu_joiner_id']) as nome),

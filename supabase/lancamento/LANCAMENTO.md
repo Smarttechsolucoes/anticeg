@@ -123,6 +123,7 @@ O SendGrid e o domínio `anticegs.com.br` já estão autenticados e o SMTP do Su
 | 6 | `J4c4b_claims_sets_aplicar.sql` | `J4c4b_claims_sets_verificar.sql` | 6 policies, 3 funções seguras |
 | 7 | `J4c4c_pessoais_aplicar.sql` | `J4c4c_pessoais_verificar.sql` | 29 policies (1 de visitante: avisos gerais) |
 | 8 | `J4c4d_admin_catalogos_aplicar.sql` | `J4c4d_admin_catalogos_verificar.sql` | 18 policies |
+| 8b | `J4c4f_estoque_drops_aplicar.sql` | `J4c4f_estoque_drops_verificar.sql` | estoque dos drops: leitura pública mantida; escrita só da administradora (2 policies por tabela existente; tabela ausente é ignorada) |
 | 9 | `J5_comprovantes_aplicar.sql` | `J5_comprovantes_verificar.sql` | buckets privados, 10 MB, **arquivos antes = depois**, donas registradas |
 
 Cada script roda em **uma transação** com conferência final: se algo estiver fora do esperado ele termina com "Nada foi alterado". **Se um script abortar, pare aqui** (os anteriores ficam aplicados; veja a seção 6).
@@ -202,6 +203,7 @@ Vercel → Deployments → o deploy anterior → **Promote** (Instant Rollback).
 |---|---|---|
 | 1 | `J5_comprovantes_reverter_protegido.sql` | AUTORIZO REABRIR COMPROVANTES |
 | 2 | `J4c4d_admin_catalogos_reverter_protegido.sql` | AUTORIZO REABRIR ADMINISTRACAO E CATALOGOS |
+| 2b | `J4c4f_estoque_drops_reverter_protegido.sql` (antes do 2) | AUTORIZO REABRIR ESTOQUE DOS DROPS |
 | 3 | `J4c4c_pessoais_reverter_protegido.sql` | AUTORIZO REABRIR DADOS PESSOAIS RESTANTES |
 | 4 | `J4c4b_claims_sets_reverter_protegido.sql` | AUTORIZO REABRIR CLAIMS EM SETS |
 | 5 | `J4c4a_mercari_lojinha_reverter_protegido.sql` | AUTORIZO REABRIR MERCARI E LOJINHA |
