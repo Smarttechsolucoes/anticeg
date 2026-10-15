@@ -5,6 +5,8 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
+import { JoinerAtivacaoGate } from "./JoinerAuth.jsx";
+import { JOINERS_AUTH_ATIVO } from "./joinerAuth.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -269,7 +271,8 @@ const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd", "lyrichangbin"];
-const SESSION_VERSION = "4";
+// Com o novo acesso das joiners ligado (VITE_JOINERS_AUTH), a versão sobe e as sessões antigas (só @) deixam de valer; as de administradoras são preservadas.
+const SESSION_VERSION = JOINERS_AUTH_ATIVO ? "5" : "4";
 // Cogs de demonstração: mapeiam para o cog real cujos dados serão exibidos
 const DEMO_COG_MAP = { "ADMMODE": "nandaverseo_c" };
 function dataCog(cog) { return DEMO_COG_MAP[cog] || cog; }
@@ -26823,6 +26826,7 @@ export default function App() {
   const [user, setUser] = useState(() => {
     try {
       if (localStorage.getItem("anticeg_session_v") !== SESSION_VERSION) {
+        try { const antigo = JSON.parse(localStorage.getItem("anticeg_user_v2")); if (antigo && isAdminUser(antigo)) { localStorage.setItem("anticeg_session_v", SESSION_VERSION); return antigo; } } catch { /* sessão ilegível: segue o fluxo normal */ }
         localStorage.removeItem("anticeg_user_v2");
         localStorage.removeItem("anticeg_session_at_v2");
         localStorage.setItem("anticeg_session_v", SESSION_VERSION);
@@ -27513,6 +27517,8 @@ export default function App() {
           {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}
         </>
       )}
+
+      {JOINERS_AUTH_ATIVO && !user.guest && !user.pre_cadastro && !isAdmin && <JoinerAtivacaoGate user={user} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
 
