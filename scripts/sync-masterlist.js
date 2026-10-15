@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 import ws from 'ws';
+import { montarUpsertJoiner, carregarIdsComConta } from './preservar-email.js';
 
 const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
@@ -59,7 +60,7 @@ async function main() {
   console.log('Colunas:', Object.keys(colMap).join(' | '));
 
   // Carregar joiners para lookup
-  const { data: joiners } = await supabase.from('joiners').select('cog, email, twitter');
+  const { data: joiners } = await supabase.from('joiners').select('id, cog, email, twitter');
   const byTwitter = {}, byEmail = {};
   (joiners || []).forEach(j => {
     if (j.twitter) byTwitter[j.twitter.replace(/^@/, '').toLowerCase()] = j.cog;
@@ -284,14 +285,24 @@ async function main() {
   console.log(`\nSincronizando ${joinersList.length} joiners únicos...`);
   let jUpserted = 0, jErros = 0;
 
+  // E-mail: célula vazia da planilha nunca apaga o e-mail do banco, e quem já tem conta ativada (e-mail verificado) não tem o e-mail trocado pelo sync.
+  const { idsComConta, contasIndisponiveis } = await carregarIdsComConta(supabase);
+  if (contasIndisponiveis) console.error('Aviso: não foi possível consultar contas_joiner — nenhum e-mail será enviado pelo sync nesta rodada (preservação total).');
+  const joinerPorCog = {}, joinerPorCogMin = {};
+  (joiners || []).forEach(x => { if (x.cog) { joinerPorCog[x.cog] = x; joinerPorCogMin[x.cog.toLowerCase()] = joinerPorCogMin[x.cog.toLowerCase()] || x; } });
+  let emailsPreservados = 0;
+
   for (const j of joinersList) {
+    const atual = joinerPorCog[j.cog] || joinerPorCogMin[String(j.cog || '').toLowerCase()];
+    const alvo = montarUpsertJoiner(j, atual, { idsComConta, contasIndisponiveis });
+    if (atual?.email && !('email' in alvo)) emailsPreservados++;
     const { error } = await supabase.from('joiners')
-      .upsert(j, { onConflict: 'cog', ignoreDuplicates: false });
+      .upsert(alvo, { onConflict: 'cog', ignoreDuplicates: false });
     if (error) { console.error('Erro joiner:', error.message); jErros++; }
     else jUpserted++;
   }
 
-  console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros`);
+  console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
 
   // Remover registros do banco que não existem mais na planilha
   const totalExistentes = Object.values(existingMap).reduce((a, v) => a + v.length, 0);
