@@ -26599,7 +26599,6 @@ function RevistaBazaarInPage({ onVoltar }) {
 const REVISTA_DEADLINE = new Date("2026-09-04T23:59:59-03:00");
 const REVISTA_PRECO    = 68;
 
-const WA_REVISTA       = WHATSAPP_NUM;
 
 function RevistaFormPage() {
   const encerrado = new Date() > REVISTA_DEADLINE;
@@ -26671,10 +26670,7 @@ function RevistaFormPage() {
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
 
-    if (pagamento === "cartao") {
-      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da NYLON HAN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\nQuantidade: ${qtd}x\nTotal: R$${total.toFixed(2).replace(".",",")}`);
-      window.open(`https://wa.me/${WA_REVISTA}?text=${msg}`, "_blank");
-    }
+    if (pagamento === "cartao") window.open("https://linknabio.gg/anticeg-comu", "_blank");
     setStatus("sucesso");
   }
 
@@ -26721,7 +26717,7 @@ function RevistaFormPage() {
             <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
             <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
-              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
             <a href="https://chat.whatsapp.com/Bs2rkIZ5Zpp1F1J4lFmBqk" target="_blank" rel="noopener noreferrer"
@@ -26804,7 +26800,7 @@ function RevistaFormPage() {
 
               {pagamento === "cartao" && (
                 <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontSize:12, color:"rgba(245,240,232,.6)", lineHeight:1.6 }}>
-                  Ao confirmar o pedido, você será redirecionada para o <strong>WhatsApp</strong> para combinar o pagamento via cartão de crédito.
+                  Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.
                 </div>
               )}
             </div>
