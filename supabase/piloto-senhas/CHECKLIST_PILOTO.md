@@ -60,10 +60,11 @@ A conta de uma das cinco tem o **mesmo alcance de um visitante** (o teste confer
 ☆ Reversão: pausar com `P1_desativar.sql` já impede qualquer envio; as funções podem ficar.
 
 ### Etapa 5 — Supabase Auth (painel)
-☆ Authentication → Sign In / Providers → **cadastro público de usuários DESLIGADO** (confira; `node scripts/lancamento/auth-settings.mjs` com a chave pública também mostra). Email OTP: **comprimento 6**, validade **600 s**.
+☆ **Passo a passo completo e modelos prontos para colar: `PAINEL_AUTH.md` e a pasta `auth/`.** Leitura pública de hoje: o cadastro público de usuários está **LIGADO** e precisa ser **DESLIGADO** (Sign In / Providers → User Signups). Email OTP: **comprimento 6**, validade **600 s**.
 ☆ Authentication → Emails → Templates: `templates-email/codigo-ativacao.html` em **Confirm signup** e em **Magic Link**; `recuperar-senha.html` em **Reset Password**.
 ☆ Authentication → URL Configuration: Site URL `https://anticeg.vercel.app` e Redirect URLs com `https://anticeg.vercel.app/**`.
 ☆ Limite de e-mails por hora acima de 30 e SMTP personalizado (SendGrid) ativo. **Esperado:** nada a mais.
+☆ Depois de publicar as funções (Etapa 4): `node supabase/piloto-senhas/testar-funcoes.mjs` (teste de fumaça só com a chave pública; confere funções, CORS, respostas neutras e cadastro público desligado).
 ☆ **Risco conhecido (R1):** se o Supabase não enviar o código com o cadastro público desligado, o teste da Etapa 7 mostrará isso logo na primeira pessoa — nesse caso **pare** (não ligue o cadastro por conta própria; o plano B exige a sua decisão).
 
 ### Etapa 6 — Site: página `/piloto-senha/`
