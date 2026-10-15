@@ -1,5 +1,5 @@
 -- J4d — REVERSÃO PROTEGIDA: volta ativar_minha_conta e entrar_com_arroba às versões do J1/J4a (sem conferir a liberação) e remove as tabelas de ondas.
--- ATENÇÃO: depois disto QUALQUER joiner com e-mail confirmado igual ao cadastro consegue ativar (o servidor deixa de segurar as ondas). Nenhuma conta nem senha é alterada.
+-- ATENÇÃO: depois disto a ativação fica FECHADA para todo usuário logado (só o servidor executa ativar_minha_conta, como após o J1c), e o pedido de código deixa de funcionar até reaplicar o J4d. Nenhuma conta nem senha é alterada.
 begin;
 
 do $$
@@ -14,6 +14,9 @@ do $$
 declare r record;
 begin
   for r in select detalhe from emergencia.c0b_estado_anterior where etapa = 'J4d' and objeto like 'funcao %' loop execute r.detalhe; end loop;
+  -- volta ao estado do J1c: a ativação fica FECHADA para usuário logado (só o servidor executa); nada fica aberto sem a conferência das ondas
+  revoke all on function public.ativar_minha_conta(text) from public, anon, authenticated;
+  grant execute on function public.ativar_minha_conta(text) to service_role;
   drop function if exists public.ativacao_liberada(bigint);
   drop table if exists public.ativacao_ondas;
   drop table if exists public.ativacao_estado;

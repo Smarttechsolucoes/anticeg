@@ -5,4 +5,6 @@ union all select 'ativacao_liberada fechada ao visitante e à joiner (esperado f
 union all select 'onda liberada | liberar todas', (select onda_liberada::text || ' | ' || liberar_todas::text from public.ativacao_estado)
 union all select 'joiners por onda', coalesce((select string_agg('onda ' || onda || ': ' || c, ' · ' order by onda) from (select onda, count(*) as c from public.ativacao_ondas group by onda) x), 'nenhuma onda cadastrada')
 union all select 'joiners SEM onda (só ativam com "liberar todas")', (select count(*) from public.joiners j where not exists (select 1 from public.ativacao_ondas o where o.joiner_id = j.id))::text
+union all select 'usuário logado executa ativar_minha_conta (esperado true: o J4d reabre a execução, agora com a conferência das ondas)', has_function_privilege('authenticated', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
+union all select 'visitante executa ativar_minha_conta (esperado false)', has_function_privilege('anon', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
 union all select 'contas já vinculadas (não são afetadas pelas ondas)', (select count(*) from public.contas_joiner)::text;

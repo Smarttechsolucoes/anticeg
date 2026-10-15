@@ -59,6 +59,7 @@ ok(!!(await d.query("insert into public.tentativas_acesso (tipo, chave) values (
 ok((await rodar(d, "J4d_ondas_reverter_protegido.sql", J)) !== null, "reversão SEM a frase é recusada");
 ok(await rodar(d, "J4d_ondas_reverter_protegido.sql", J, "AUTORIZO REMOVER CONTROLE DE ONDAS") === null && !(await d.query("select to_regclass('public.ativacao_ondas') as t")).rows[0].t, "reversão COM a frase remove as tabelas");
 ok((await rpc("authenticated", 10, "meu_cog")) === "fabi" && (await rpc("anon", null, "entrar_com_arroba", "'fabi'")).ativacao_liberada === undefined, "a reversão não mexe nas contas e devolve as funções do J1/J4a");
+ok(!(await d.query("select has_function_privilege('authenticated', 'public.ativar_minha_conta(text)', 'EXECUTE') x")).rows[0].x, "depois da reversão a ativação volta FECHADA para usuário logado (como no J1c)");
 ok(await rodar(d, "J4d_ondas_aplicar.sql", J) === null, "J4d reaplica depois de revertido");
 // guardas
 const g = await laboratorio({ ondas: false }); ok(/J3 não está aplicado/.test(await rodar(g, "J4d_ondas_aplicar.sql", J) || ""), "J4d ABORTA sem o J3 (laboratório base sem J3)");
