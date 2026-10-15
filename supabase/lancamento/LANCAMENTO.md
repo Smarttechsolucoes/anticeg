@@ -118,7 +118,7 @@ O SendGrid e o domínio `anticegs.com.br` já estão autenticados e o SMTP do Su
 | 1 | `J4b_lote1_aplicar.sql` | `J4b_lote1_verificar.sql` | policies novas, visitante sem nada, dados iguais antes/depois |
 | 2 | `J4c1_joiners_aplicar.sql` | `J4c1_joiners_verificar.sql` | idem |
 | 3 | `J4c2_pedidos_claims_aplicar.sql` | `J4c2_pedidos_claims_verificar.sql` | 13 policies |
-| 4 | `J4c3_lojas_aplicar.sql` | `J4c3_lojas_verificar.sql` | 12 lojas + formulários; `pedido_loja_criar` fechada ao visitante |
+| 4 | `J4c3_lojas_aplicar.sql` | `J4c3_lojas_verificar.sql` | 13 lojas + formulários; `pedido_loja_criar` fechada ao visitante |
 | 5 | `J4c4a_mercari_lojinha_aplicar.sql` | `J4c4a_mercari_lojinha_verificar.sql` | 12 policies |
 | 6 | `J4c4b_claims_sets_aplicar.sql` | `J4c4b_claims_sets_verificar.sql` | 6 policies, 3 funções seguras |
 | 7 | `J4c4c_pessoais_aplicar.sql` | `J4c4c_pessoais_verificar.sql` | 29 policies (1 de visitante: avisos gerais) |

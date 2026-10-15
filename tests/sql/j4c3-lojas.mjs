@@ -63,7 +63,7 @@ const LOJAS = ["pedidos_revista", "pedidos_popup", "pedidos_wmag", "pedidos_wmag
   await d.exec("update public.pedidos_revista set status = 'aguardando' where email = 'cliente1@exemplo.com'");
   const e = await rodar(d, "J4c3_lojas_aplicar.sql", J); ok(e === null, "J4c-3 aplica sem erro" + (e ? ": " + e : ""));
   const v = Object.fromEntries((await d.query(sql("J4c3_lojas_verificar.sql", J))).rows.map(r => [r.item, r.valor]));
-  ok(v["tabelas do lote presentes"] === "12" && v["com admin_tudo (esperado = presentes)"] === "12" && v["policies para visitante/PUBLIC (esperado 0)"] === "0" && v["visitante com algum privilégio nas tabelas do lote (esperado false)"] === "false" && v["pedido_loja_criar presente, segura e FECHADA ao visitante (esperado true)"] === "true" && v["colunas pessoais na visão pública do formulário (esperado 0)"] === "0", "verificação J4c-3 como esperado: " + JSON.stringify(v).slice(0, 260));
+  ok(v["tabelas do lote presentes"] === "13" && v["com admin_tudo (esperado = presentes)"] === "13" && v["policies para visitante/PUBLIC (esperado 0)"] === "0" && v["visitante com algum privilégio nas tabelas do lote (esperado false)"] === "false" && v["pedido_loja_criar presente, segura e FECHADA ao visitante (esperado true)"] === "true" && v["colunas pessoais na visão pública do formulário (esperado 0)"] === "0", "verificação J4c-3 como esperado: " + JSON.stringify(v).slice(0, 260));
 
   // visitante
   for (const t of [...LOJAS, "formulario_pedidos"]) ok(negado(await como(d, "anon", null, `select * from public.${t}`)), `visitante NÃO lê ${t}`);
