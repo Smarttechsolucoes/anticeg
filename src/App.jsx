@@ -7374,7 +7374,7 @@ async function executarAprovacaoRepasse(r, { notificar = true } = {}) {
     // Busca id_linha para atualizar planilha
     const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", r.item_id).single();
     if (mlItem?.id_linha) {
-      chamarPlanilha("repassar", { id_linha: mlItem.id_linha, ceg: r.ceg, nome_do_item: r.nome_do_item, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }).then(res => {
+      chamarPlanilha("repassar", { id_linha: mlItem.id_linha, ceg: r.ceg, nome_do_item: r.nome_do_item, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }, { admin: true }).then(res => {
         const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Repasse" });
         if (msg) { console.error("planilha (repassar):", res); alert(`Repasse aprovado no site, mas a planilha precisa de atenção:\n\n${msg}\n\nAtualize o novo dono na planilha à mão; sem isso a próxima sincronização pode devolver o item ao dono anterior.`); }
       });
@@ -9568,7 +9568,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   const itensComId = (d.itens || []).filter(i => i.id_linha);
                   const itensSemCodigo = (d.itens || []).filter(i => i.id && !i.id_linha);
                   if (itensComId.length > 0 || itensSemCodigo.length > 0) {
-                    (itensComId.length > 0 ? chamarPlanilha("cancelar", { itens: itensComId }, { esperados: esperadosConfirmacao(itensComId) }) : Promise.resolve(null)).then(res => {
+                    (itensComId.length > 0 ? chamarPlanilha("cancelar", { itens: itensComId }, { esperados: esperadosConfirmacao(itensComId), admin: true }) : Promise.resolve(null)).then(res => {
                       const msg = mensagemPlanilha(res, { perfil: "admin", itensSemId: itensSemCodigo, contexto: "Reversão do pagamento" });
                       if (msg) { console.error("planilha (cancelar):", res); alert(`Comprovante recusado no site, mas desmarcar o pagamento na planilha precisa de atenção:\n\n${msg}\n\nConfira estes itens na planilha: eles podem continuar marcados como pagos.`); }
                     });
@@ -13534,7 +13534,7 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
     }
     await supabase.from("pre_cadastros").update({ status: "aprovado" }).eq("id", p.id);
     // Adiciona joiner na planilha (Dados + MASTERLIST)
-    chamarPlanilha("novo_joiner", { nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }).then(res => {
+    chamarPlanilha("novo_joiner", { nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }, { admin: true }).then(res => {
       const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Cadastro na planilha" });
       if (msg) { console.error("planilha (novo_joiner):", res); alert(`Cadastro aprovado no site, mas a planilha precisa de atenção:\n\n${msg}`); }
       else if (res?.bruto?.codigo_gerado === false) alert(`Cadastro adicionado à planilha, mas a linha de ${p.nome} ficou SEM código (NUM/ID). Confira a MASTERLIST.`);
@@ -14097,7 +14097,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
         novo_nome: claim.joiner_nome,
         novo_twitter: "@" + claim.joiner_cog,
         vencimento: claim.vencimento || "",
-      }).then(res => {
+      }, { admin: true }).then(res => {
         const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Claim" });
         if (msg) { console.error("planilha (aprovar_disponivel):", res); alert(`Claim aprovado no site, mas a planilha precisa de atenção:\n\n${msg}\n\nAtualize o dono na planilha à mão; sem isso a próxima sincronização pode desfazer a aprovação.`); }
       });
