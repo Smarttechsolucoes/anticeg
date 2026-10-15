@@ -38,7 +38,13 @@ create index tentativas_acesso_tempo on public.tentativas_acesso (criado_em);
 alter table public.tentativas_acesso enable row level security;
 revoke all on table public.tentativas_acesso from public, anon, authenticated;
 grant select, insert, update, delete on table public.tentativas_acesso to service_role;
-grant usage, select on all sequences in schema public to service_role;
+-- permissão restrita à sequência da coluna IDENTITY desta tabela (nome real obtido do catálogo), e a nenhuma outra
+do $$
+declare v_seq text := pg_get_serial_sequence('public.tentativas_acesso', 'id');
+begin
+  if v_seq is null then raise exception 'Sequência da coluna id de tentativas_acesso não encontrada. Transação desfeita.'; end if;
+  execute format('grant usage, select on sequence %s to service_role', v_seq);
+end $$;
 
 do $$
 declare n integer;
@@ -48,6 +54,10 @@ begin
    where has_table_privilege(r.rolname, 'public.tentativas_acesso', 'SELECT') or has_table_privilege(r.rolname, 'public.tentativas_acesso', 'INSERT')
       or has_table_privilege(r.rolname, 'public.tentativas_acesso', 'UPDATE') or has_table_privilege(r.rolname, 'public.tentativas_acesso', 'DELETE');
   if n > 0 then raise exception 'anon/authenticated têm acesso a tentativas_acesso. Transação desfeita.'; end if;
+  if has_sequence_privilege('anon', pg_get_serial_sequence('public.tentativas_acesso', 'id'), 'USAGE') or has_sequence_privilege('authenticated', pg_get_serial_sequence('public.tentativas_acesso', 'id'), 'USAGE') then
+    raise exception 'anon/authenticated têm acesso à sequência de tentativas_acesso. Transação desfeita.';
+  end if;
+  if not has_sequence_privilege('service_role', pg_get_serial_sequence('public.tentativas_acesso', 'id'), 'USAGE') then raise exception 'service_role sem permissão na sequência. Transação desfeita.'; end if;
   if not (has_table_privilege('service_role', 'public.tentativas_acesso', 'INSERT') and has_table_privilege('service_role', 'public.tentativas_acesso', 'SELECT') and has_table_privilege('service_role', 'public.tentativas_acesso', 'DELETE')) then
     raise exception 'service_role sem permissão. Transação desfeita.';
   end if;
