@@ -1,4 +1,6 @@
-// Chamadas ao Apps Script da planilha (MASTERLIST / Dados), com tratamento EXPLÍCITO da resposta.
+// Chamadas à planilha (MASTERLIST / Dados), com tratamento EXPLÍCITO da resposta.
+// O navegador NÃO fala mais com o Apps Script e NÃO conhece o token dele: ele chama a função `planilha-acao` do Supabase com o login de quem está usando o site.
+// A função decide se aquela pessoa pode fazer aquela ação naquele item e só então repete a chamada ao Apps Script com o segredo guardado no servidor.
 // Antes, cada chamada era `fetch(...).catch(() => {})`: se o script recusasse (ID repetido, item não achado, erro de gravação)
 // ou a sincronização falhasse, ninguém ficava sabendo e a tela podia parecer que deu certo.
 //
@@ -7,10 +9,19 @@
 //   versão nova:    { ok, updated, processados, nao_processados:[{id_linha,motivo,detalhe,linhas,ceg,nome_do_item}], parcial, sync, aviso, erro }
 // Este módulo entende as duas.
 
-const URL_PADRAO = "https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec";
-// VITE_PLANILHA_URL / VITE_PLANILHA_TOKEN permitem apontar para uma CÓPIA de teste da planilha (sem tocar na produção).
-export const URL_PLANILHA = import.meta.env?.VITE_PLANILHA_URL || URL_PADRAO;
-const TOKEN_PLANILHA = import.meta.env?.VITE_PLANILHA_TOKEN || "anticeg-pag-2026";
+const FUNCAO = "planilha-acao";
+
+/** Endereço da função, chave pública e token de login (o da administradora quando admin=true). Importações dinâmicas: o módulo continua testável sem o navegador. */
+async function configPadrao(admin) {
+  const sb = await import("./supabase.js");
+  let token = null;
+  try {
+    const cliente = admin ? (await import("./adminAuth.js")).clienteAdmin() : sb.default;
+    const { data } = await cliente.auth.getSession();
+    token = data?.session?.access_token || null;
+  } catch { /* sem sessão: segue com a chave pública e a função decide */ }
+  return { url: `${sb.SUPABASE_URL}/functions/v1/${FUNCAO}`, apikey: sb.SUPABASE_ANON_KEY, token };
+}
 
 const MOTIVOS = {
   id_ambiguo: "o código (ID) está repetido na planilha",
@@ -52,23 +63,29 @@ export function interpretarResposta(acao, json, { esperados = null } = {}) {
 }
 
 /** Faz a chamada e SEMPRE devolve um resultado (nunca lança). Sem resposta legível = "indeterminado": pode ou não ter sido aplicado. */
-export async function chamarPlanilha(acao, dados = {}, { esperados = null, fetchImpl, url = URL_PLANILHA, token = TOKEN_PLANILHA, timeoutMs = 30000 } = {}) {
+export async function chamarPlanilha(acao, dados = {}, { esperados = null, fetchImpl, admin = false, config, timeoutMs = 30000 } = {}) {
   const f = fetchImpl || globalThis.fetch;
   const base = { acao, ok: false, estado: "indeterminado", atualizados: null, naoProcessados: [], sincronizacaoPendente: false, aviso: null, erro: null, bruto: null };
   const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
   let resp;
   try {
-    resp = await f(url, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao, token, ...dados }), signal: ctrl?.signal });
+    const cfg = config || await configPadrao(admin);
+    resp = await f(cfg.url, { method: "POST", headers: { "Content-Type": "application/json", apikey: cfg.apikey, Authorization: `Bearer ${cfg.token || cfg.apikey}` }, body: JSON.stringify({ acao, ...dados }), signal: ctrl?.signal });
   } catch (e) {
     return { ...base, erro: e?.name === "AbortError" ? "A planilha demorou demais para responder." : "Sem resposta da planilha (conexão ou bloqueio do navegador)." };
   } finally {
     if (timer) clearTimeout(timer);
   }
-  if (!resp.ok) return { ...base, erro: `A planilha respondeu com erro HTTP ${resp.status}.` };
-  let json;
-  try { json = JSON.parse(await resp.text()); }
-  catch { return { ...base, erro: "A planilha respondeu algo que não foi possível entender." }; }
+  let json = null;
+  try { json = JSON.parse(await resp.text()); } catch { /* corpo ilegível */ }
+  if (!resp.ok) {
+    // 4xx com mensagem = a função RECUSOU antes de tocar na planilha (sem permissão, item que não é seu, pedido inválido): recusa explícita.
+    // 5xx / 502 'indeterminado' = não dá para saber se a planilha foi alterada: nunca é tratado como sucesso nem repetido sozinho.
+    if (resp.status >= 400 && resp.status < 500 && json && json.erro) return interpretarResposta(acao, { erro: String(json.erro) }, { esperados });
+    return { ...base, erro: json && json.erro && json.indeterminado ? String(json.erro) : `A planilha respondeu com erro HTTP ${resp.status}.` };
+  }
+  if (json === null) return { ...base, erro: "A planilha respondeu algo que não foi possível entender." };
   return interpretarResposta(acao, json, { esperados });
 }
 
