@@ -96,3 +96,19 @@ test("GUARDA: nenhuma chamada ao Apps Script fora do módulo e nenhum `.catch(()
     assert.equal((codigo.match(/anticeg-pag-2026/g) || []).length, 0, f + " ainda tem o token solto");
   }
 });
+
+test("escrita parcial com updated=0 (script gravou algo e falhou): estado parcial, nunca 'recusado'/'nada alterado'", async () => {
+  const r = await chamar({ ok: false, updated: 0, parcial: true, nao_processados: [{ id_linha: "X-1", motivo: "escrita_parcial", linhas: [8], ceg: "UNIC", nome_do_item: "Photocard" }], erro: "Atualização PARCIAL: 1 item(ns) não processado(s)" });
+  assert.equal(r.ok, false); assert.equal(r.estado, "parcial");
+  const adm = mensagemPlanilha(r, { perfil: "admin" });
+  assert.match(adm, /PARCIAL/); assert.doesNotMatch(adm, /NÃO foi atualizada/); assert.match(adm, /gravação parou no meio/); assert.doesNotMatch(adm, /0 item/);
+});
+
+test("exceção do script depois de gravar (novo_joiner/repassar sem lista de itens): parcial com o texto do script; sem parcial continua recusa", async () => {
+  const p = await chamar({ ok: false, parcial: true, erro: "Operação interrompida DEPOIS de gravar parte dos dados (x). A planilha foi alterada em parte: confira antes de repetir.", sync: true });
+  assert.equal(p.estado, "parcial"); assert.match(mensagemPlanilha(p, { perfil: "admin" }), /alterada em parte/);
+  const j = await chamar({ ok: false, parcial: true, cadastro_criado: true, codigo_gerado: false, erro: "Cadastro CRIADO (aba Dados e MASTERLIST linha 9317), mas o NUM/ID NÃO foi gerado." });
+  assert.equal(j.estado, "parcial"); assert.equal(j.ok, false);
+  const recusa = await chamar({ erro: "id_linha não encontrado" });
+  assert.equal(recusa.estado, "recusado");
+});

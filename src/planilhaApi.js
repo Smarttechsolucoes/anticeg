@@ -18,6 +18,7 @@ const MOTIVOS = {
   sem_id_linha: "o item não tem código (ID) na planilha",
   erro_ao_gravar: "erro ao gravar na planilha",
   nao_tentado: "não foi tentado porque uma gravação anterior falhou",
+  escrita_parcial: "a gravação parou no meio deste item: confira a linha na planilha",
 };
 
 /** Quantos itens do lote têm algo a marcar (valor de item, frete ou taxa > 0). */
@@ -38,7 +39,9 @@ export function interpretarResposta(acao, json, { esperados = null } = {}) {
   const atualizados = typeof json.updated === "number" ? json.updated : null;
   const r = { ...base, atualizados, naoProcessados: naoProc, sincronizacaoPendente: json.sync === false, aviso: json.aviso || null };
 
-  if (naoProc.length) return { ...r, estado: atualizados > 0 ? "parcial" : "recusado", erro: json.erro || "Nem todos os itens foram processados." };
+  // json.parcial: o script gravou ALGO antes de falhar (mesmo com updated=0) — nunca tratar como "nada foi alterado"
+  if (naoProc.length) return { ...r, estado: (atualizados > 0 || json.parcial === true) ? "parcial" : "recusado", erro: json.erro || "Nem todos os itens foram processados." };
+  if (json.parcial === true) return { ...r, estado: "parcial", erro: String(json.erro || "A planilha foi alterada só em parte.") };
   if (json.erro) return { ...r, erro: String(json.erro) };
   if (json.ok === false) return { ...r, erro: "A planilha recusou a operação." };
   // versão antiga do script: não lista o que ficou de fora, mas devolve quantos atualizou — comparamos com o esperado
@@ -83,7 +86,7 @@ export function mensagemPlanilha(r, { perfil = "joiner", itensSemId = [], contex
     linhas.push(perfil === "admin" ? `${contexto}: não foi possível confirmar se foi atualizada — ${r.erro || "sem resposta"}. Confira a planilha.` : `Não conseguimos confirmar a atualização automática da planilha. A administração vai conferir.`);
   } else if (r && !r.ok) {
     linhas.push(r.estado === "parcial"
-      ? (perfil === "admin" ? `${contexto}: atualização PARCIAL${r.atualizados != null ? ` (${r.atualizados} item(ns) atualizado(s))` : ""}.` : "A planilha foi atualizada só em parte. A administração vai conferir o restante.")
+      ? (perfil === "admin" ? `${contexto}: atualização PARCIAL${r.atualizados > 0 ? ` (${r.atualizados} item(ns) atualizado(s))` : ""}.` : "A planilha foi atualizada só em parte. A administração vai conferir o restante.")
       : (perfil === "admin" ? `${contexto}: NÃO foi atualizada${r.erro ? ` — ${r.erro}` : ""}.` : "A planilha não pôde ser atualizada automaticamente. A administração vai conferir."));
     if (r.naoProcessados.length) { linhas.push(perfil === "admin" ? "Itens não processados:" : "Itens que precisam de conferência:"); linhas.push(...lista(r.naoProcessados, true)); }
     else if (perfil === "admin" && r.erro && r.estado === "parcial") linhas.push(r.erro);
