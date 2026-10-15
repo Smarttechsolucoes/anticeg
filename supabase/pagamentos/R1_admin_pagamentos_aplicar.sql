@@ -2,7 +2,8 @@
 -- Por que existe: o C0 tirou UPDATE de pagamento_demandas e das colunas pago_* da masterlist, e o botão ficou suspenso (PAGAMENTOS_SUSPENSO) porque a função antiga
 --   set_pagamento_demanda_status era SECURITY DEFINER SEM checar quem chama e liberada para o visitante (anon).
 -- O que faz (somente FUNÇÕES; nenhuma permissão de tabela ou coluna é alterada, nenhuma policy, nenhum dado):
---   1) admin_definir_status_pagamento(demanda, status, motivo): muda o status da demanda (pago | em_analise | rejeitado). Em 'pago' marca pago_item / pago_frete / pago_rf
+--   1) admin_definir_status_pagamento(demanda, status, motivo, aceitar_terceiros): muda o status da demanda (pago | em_analise | rejeitado). Em 'pago' marca pago_item / pago_frete / pago_rf
+--      (se algum item pertencer a OUTRA joiner, devolve 'confirmar_terceiros' e não altera nada até a administradora confirmar de novo com aceitar_terceiros = true).
 --      dos itens da demanda na masterlist, na MESMA transação (o que o botão sempre fez). Só para quem está em admin_roles (is_admin() IS NOT TRUE => nega, inclusive NULL).
 --   2) admin_marcar_pago(item, item?, frete?, rf?): marca como pago (nunca desmarca) itens da masterlist; mesma autorização.
 --   3) a função antiga set_pagamento_demanda_status perde a execução de visitante e de logado (fecha o buraco); o site passa a usar as novas.
@@ -29,7 +30,7 @@ begin
   if (select count(*) from pg_attribute where attrelid = 'public.masterlist'::regclass and attname in ('id', 'pago_item', 'pago_frete', 'pago_rf') and not attisdropped) <> 4 then
     raise exception 'Esperava as colunas id, pago_item, pago_frete e pago_rf em masterlist. Nada foi alterado.';
   end if;
-  if to_regprocedure('public.admin_definir_status_pagamento(bigint, text, text)') is not null or to_regprocedure('public.admin_marcar_pago(bigint, boolean, boolean, boolean)') is not null then
+  if to_regprocedure('public.admin_definir_status_pagamento(bigint, text, text, boolean)') is not null or to_regprocedure('public.admin_marcar_pago(bigint, boolean, boolean, boolean)') is not null then
     raise exception 'As funções do R1 já existem. Nada foi alterado.';
   end if;
 end $$;
@@ -45,18 +46,32 @@ select 'R1', 'funcao_antiga ' || p.oid::regprocedure::text,
   from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'set_pagamento_demanda_status';
 
 -- 1) status da demanda + marcação dos itens na masterlist (mesma transação)
-create function public.admin_definir_status_pagamento(p_demanda_id bigint, p_novo_status text, p_motivo text default null)
+create function public.admin_definir_status_pagamento(p_demanda_id bigint, p_novo_status text, p_motivo text default null, p_aceitar_terceiros boolean default false)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
-  v_d record; v_it jsonb; v_id bigint; v_marcados integer := 0; v_ausentes integer := 0; v_n integer; v_motivo text;
+  v_d record; v_it jsonb; v_id bigint; v_marcados integer := 0; v_ausentes integer := 0; v_n integer; v_motivo text; v_terceiros integer := 0; v_outras text[] := '{}';
 begin
   if (select public.is_admin()) is not true then raise exception 'sem permissão'; end if;
   if p_novo_status is null or p_novo_status not in ('pago', 'em_analise', 'rejeitado') then raise exception 'status inválido'; end if;
-  select id, status, itens into v_d from public.pagamento_demandas where id = p_demanda_id for update;
+  select id, status, itens, joiner_cog into v_d from public.pagamento_demandas where id = p_demanda_id for update;
   if not found then raise exception 'demanda não encontrada'; end if;
   v_motivo := case when p_novo_status = 'rejeitado' then nullif(left(btrim(coalesce(p_motivo, '')), 500), '') else null end;
   if v_d.status is not distinct from p_novo_status and v_motivo is not distinct from null then
     return jsonb_build_object('status', p_novo_status, 'alterado', false, 'itens_marcados', 0);
+  end if;
+  -- pagamento de TERCEIROS: itens da masterlist que pertencem a outra joiner exigem confirmação explícita (a demanda continua como está até lá)
+  if p_novo_status = 'pago' and not coalesce(p_aceitar_terceiros, false) and jsonb_typeof(v_d.itens) = 'array' then
+    for v_it in select e from jsonb_array_elements(v_d.itens) e loop
+      if jsonb_typeof(v_it) <> 'object' or coalesce(v_it ->> 'id', '') !~ '^[0-9]{1,18}$' then continue; end if;
+      select count(*) into v_n from public.masterlist m where m.id = (v_it ->> 'id')::bigint and lower(btrim(coalesce(m.cog, ''))) <> lower(btrim(coalesce(v_d.joiner_cog, '')));
+      if v_n > 0 then
+        v_terceiros := v_terceiros + v_n;
+        v_outras := v_outras || (select array_agg(distinct m.cog) from public.masterlist m where m.id = (v_it ->> 'id')::bigint and lower(btrim(coalesce(m.cog, ''))) <> lower(btrim(coalesce(v_d.joiner_cog, ''))));
+      end if;
+    end loop;
+    if v_terceiros > 0 then
+      return jsonb_build_object('status', 'confirmar_terceiros', 'alterado', false, 'itens_de_outra_joiner', v_terceiros, 'outras_joiners', (select coalesce(jsonb_agg(distinct x), '[]'::jsonb) from unnest(v_outras) x));
+    end if;
   end if;
   update public.pagamento_demandas set status = p_novo_status, motivo_rejeicao = v_motivo where id = p_demanda_id;
   if p_novo_status = 'pago' and jsonb_typeof(v_d.itens) = 'array' then
@@ -74,8 +89,8 @@ begin
   end if;
   return jsonb_build_object('status', p_novo_status, 'alterado', true, 'itens_marcados', v_marcados, 'itens_nao_encontrados', v_ausentes);
 end $$;
-revoke all on function public.admin_definir_status_pagamento(bigint, text, text) from public, anon, authenticated;
-grant execute on function public.admin_definir_status_pagamento(bigint, text, text) to authenticated, service_role;
+revoke all on function public.admin_definir_status_pagamento(bigint, text, text, boolean) from public, anon, authenticated;
+grant execute on function public.admin_definir_status_pagamento(bigint, text, text, boolean) to authenticated, service_role;
 
 -- 2) marcar como pago manualmente (só liga; nunca desmarca)
 create function public.admin_marcar_pago(p_item_id bigint, p_item boolean default false, p_frete boolean default false, p_rf boolean default false)
@@ -108,13 +123,13 @@ end $$;
 do $$
 declare n integer; v_antes text; v_depois text; r record;
 begin
-  select count(*) into n from pg_proc p where p.oid in ('public.admin_definir_status_pagamento(bigint, text, text)'::regprocedure, 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)'::regprocedure)
+  select count(*) into n from pg_proc p where p.oid in ('public.admin_definir_status_pagamento(bigint, text, text, boolean)'::regprocedure, 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)'::regprocedure)
      and p.prosecdef and p.proconfig = array['search_path=""'];
   if n <> 2 then raise exception 'As funções novas não estão com security definer e search_path vazio. Transação desfeita.'; end if;
-  if has_function_privilege('anon', 'public.admin_definir_status_pagamento(bigint, text, text)', 'EXECUTE') or has_function_privilege('anon', 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)', 'EXECUTE') then
+  if has_function_privilege('anon', 'public.admin_definir_status_pagamento(bigint, text, text, boolean)', 'EXECUTE') or has_function_privilege('anon', 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)', 'EXECUTE') then
     raise exception 'O visitante executa as funções novas. Transação desfeita.';
   end if;
-  if not (has_function_privilege('authenticated', 'public.admin_definir_status_pagamento(bigint, text, text)', 'EXECUTE') and has_function_privilege('authenticated', 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)', 'EXECUTE')) then
+  if not (has_function_privilege('authenticated', 'public.admin_definir_status_pagamento(bigint, text, text, boolean)', 'EXECUTE') and has_function_privilege('authenticated', 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)', 'EXECUTE')) then
     raise exception 'A administradora logada não executa as funções novas. Transação desfeita.';
   end if;
   for r in select p.oid from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'set_pagamento_demanda_status' loop

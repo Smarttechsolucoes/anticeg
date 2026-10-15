@@ -21,7 +21,7 @@ begin
       if (a ->> 'authenticated')::boolean then execute format('grant execute on function %s to authenticated', substr(r.objeto, length('funcao_antiga ') + 1)); end if;
     end if;
   end loop;
-  drop function if exists public.admin_definir_status_pagamento(bigint, text, text);
+  drop function if exists public.admin_definir_status_pagamento(bigint, text, text, boolean);
   drop function if exists public.admin_marcar_pago(bigint, boolean, boolean, boolean);
 end $$;
 

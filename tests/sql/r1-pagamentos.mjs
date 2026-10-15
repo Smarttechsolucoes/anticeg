@@ -77,6 +77,15 @@ const permissoes = async d => JSON.stringify((await d.query("select relname, rel
   await d.exec("create or replace function public.is_admin() returns boolean language sql stable security definer set search_path = '' as $f$ select exists (select 1 from public.admin_roles r where r.user_id = (select auth.uid())) $f$");
 
   // a administradora
+  // terceiros: demanda da "ana" com item da "bia" (pagamento por outra pessoa) exige confirmação explícita
+  await d.exec(`insert into public.pagamento_demandas (joiner_cog, itens, valor_total) values ('ana', '[{"id":3,"valor_item":70}]', 70)`);
+  const t3 = (await pag(d)).find(x => x.status === "em_analise" && x.id === 3).id;
+  const r3 = await como(d, "authenticated", 1, `select public.admin_definir_status_pagamento(${t3}, 'pago') r`);
+  ok(r3.rows?.[0].r.status === "confirmar_terceiros" && r3.rows[0].r.itens_de_outra_joiner === 1 && JSON.stringify(r3.rows[0].r.outras_joiners) === '["bia"]', "item de OUTRA joiner: devolve 'confirmar_terceiros' (itens e joiners apontados)");
+  ok((await pag(d)).find(x => x.id === t3).status === "em_analise" && (await ml(d)) === "1:000 2:000 3:000", "…e NADA foi alterado até a confirmação");
+  const r3b = await como(d, "authenticated", 1, `select public.admin_definir_status_pagamento(${t3}, 'pago', null, true) r`);
+  ok(r3b.rows?.[0].r.status === "pago" && (await ml(d)) === "1:000 2:000 3:100" && (await pag(d)).find(x => x.id === t3).status === "pago", "confirmando de novo com aceitar_terceiros: paga e marca (pagamento legítimo de terceiros preservado)");
+  await d.exec(`update public.pagamento_demandas set status = 'em_analise' where id = ${t3}; update public.masterlist set pago_item = false where id = 3`);
   ok(/status inválido/.test((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'qualquer')")).erro || ""), "status inválido é recusado");
   ok(/não encontrada/.test((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(12345, 'pago')")).erro || ""), "demanda inexistente é recusada");
   const c = await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'pago') r");

@@ -9515,7 +9515,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
               async function confirmar(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null });
+                let resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null });
+                if (!resp.error && resp.data?.status === "confirmar_terceiros") {
+                  // itens de OUTRA joiner (pagamento feito por terceiros): só segue se a administradora confirmar de forma explícita
+                  const quem = (resp.data.outras_joiners || []).join(", ");
+                  if (!window.confirm(`Atenção: ${resp.data.itens_de_outra_joiner} item(ns) desta demanda pertencem a outra joiner (${quem}).
+
+Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir esses itens.`)) return;
+                  resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null, p_aceitar_terceiros: true });
+                }
+                const { error } = resp;
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
