@@ -7242,9 +7242,9 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
 }
 
 // ── SUSPENSÃO TEMPORÁRIA (contenção de segurança do C0) ───────────────────────────────────────────────
-// Enquanto true, Confirmar / Reabrir / Rejeitar ficam desabilitados e nada é enviado ao banco.
-// Para reativar: trocar para false (depois que a nova proteção de pagamentos estiver no ar).
-const PAGAMENTOS_SUSPENSO = true;
+// Era true durante a contenção. Agora as ações de pagamento passam por funções do servidor que só aceitam administradoras (admin_definir_status_pagamento e admin_marcar_pago).
+// Para suspender de novo em emergência: trocar para true.
+const PAGAMENTOS_SUSPENSO = false;
 const PAGAMENTOS_SUSPENSO_MSG = "Confirmar, Reabrir e Rejeitar estão suspensos temporariamente por manutenção de segurança.";
 const PAGAMENTOS_MANUAL_SUSPENSO_MSG = "Marcar pagamentos como pagos (item, frete e taxa RF) está suspenso temporariamente por manutenção de segurança.";
 
@@ -9515,20 +9515,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
               async function confirmar(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago", motivo_rejeicao: null });
+                const { error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null });
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
-                  // Atualiza pago_item/pago_frete/pago_rf no masterlist para cada item da demanda
-                  for (const it of (d.itens || [])) {
-                    if (!it.id) continue;
-                    const updates = {};
-                    if (Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
-                    if (Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
-                    if (Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
-                    if (Object.keys(updates).length > 0)
-                      await supabase.from("masterlist").update(updates).eq("id", it.id);
-                  }
+                  // pago_item/pago_frete/pago_rf dos itens são marcados pelo servidor, na mesma operação que confirma a demanda
                   const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
                   await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
@@ -9537,13 +9528,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               }
               async function reabrir(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise", motivo_rejeicao: null });
+                const { error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado", motivo_rejeicao: motivo.trim() || null });
+                const { error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "rejeitado", p_motivo: motivo.trim() || null });
                 if (error) { alert("Não foi possível rejeitar: " + error.message); return; }
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
@@ -13734,7 +13725,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
     const key = `${itemId}_${tipo}`;
     setSaving(prev => ({ ...prev, [key]: true }));
     const campo = tipo === "item" ? "pago_item" : tipo === "frete" ? "pago_frete" : "pago_rf";
-    const { error } = await supabase.from("masterlist").update({ [campo]: true }).eq("id", itemId);
+    const { error } = await clienteAdmin().rpc("admin_marcar_pago", { p_item_id: itemId, p_item: tipo === "item", p_frete: tipo === "frete", p_rf: tipo === "rf" });
     if (error) {
       alert("Não foi possível marcar como pago: " + error.message);
       setSaving(prev => { const n = { ...prev }; delete n[key]; return n; });
@@ -13752,7 +13743,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
       if (isPendente(it.pago_frete) && Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
       if (isPendente(it.pago_rf)    && Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
       if (Object.keys(updates).length > 0) {
-        const { error } = await supabase.from("masterlist").update(updates).eq("id", it.id);
+        const { error } = await clienteAdmin().rpc("admin_marcar_pago", { p_item_id: it.id, p_item: !!updates.pago_item, p_frete: !!updates.pago_frete, p_rf: !!updates.pago_rf });
         if (error) { alert("Não foi possível marcar todos como pagos: " + error.message + "\nA tela não foi alterada; recarregue para ver o estado real."); return; }
       }
     }
