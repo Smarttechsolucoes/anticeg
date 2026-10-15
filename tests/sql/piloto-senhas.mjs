@@ -14,7 +14,7 @@ async function labPreJ1() {
     create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
     grant usage on schema public to anon, authenticated, service_role;
     create schema auth; grant usage on schema auth to anon, authenticated, service_role;
-    create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz);
+    create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz, last_sign_in_at timestamptz);
     create function auth.uid() returns uuid language sql stable as $f$ select nullif(coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'sub', '')::uuid $f$;
     create function auth.jwt() returns jsonb language sql stable as $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $f$;
     grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
@@ -162,10 +162,16 @@ ok(JSON.stringify(libertas) === JSON.stringify([2, 42, 272, 7213, 187751]), "ati
 
 // ═══ 6) ATIVAÇÃO: as cinco entram; ninguém mais ═════════════════════════════════════════════════════════════════
 const emailDe = id => (id === 2 ? "al.melo" : id === 272 ? "nicolle" : id === 42 ? "lyric" : id === 187751 ? "gnab" : "tali") + "@exemplo.com";
-for (const [id, , uid] of CINCO) await d.exec(`insert into auth.users values ('${U(uid)}', '${emailDe(id)}', now())`);   // o que o servidor cria e o código confirma
+for (const [id, , uid] of CINCO) await d.exec(`insert into auth.users values ('${U(uid)}', '${emailDe(id)}', now(), null)`);   // o que o servidor cria (admin.createUser com e-mail confirmado, senha aleatória desconhecida, SEM login)
 const ativar = async (uid, cog) => (await como(d, "authenticated", uid, `select public.ativar_minha_conta('${cog}') as r`)).rows?.[0]?.r;
+await d.exec(`insert into auth.users values ('${U(21)}', 'compartilhado@exemplo.com', now(), null), ('${U(23)}', 'curioso@exemplo.com', now(), null)`);
+const semLogin = async () => (await p1v(d))["contas do Auth com e-mail marcado CONFIRMADO e SEM primeiro login (convidadas que ainda não digitaram o código; o e-mail só é PROVADO no primeiro login)"];
+ok(await semLogin() === "5", "contas recém-criadas pelo servidor (confirmadas, sem login): o P1_verificar as mostra como 'ainda NÃO provaram o e-mail' (5)");
+// NEGATIVO: ninguém, de fora, consegue vincular uma conta recém-criada ANTES de ela abrir sessão com o código
+for (const [, cog] of CINCO) ok((await ativar(23, cog)).status === "pendente", `NEGATIVO: outra conta autenticada tentando o @${cog} antes de a dona digitar o código → pendente, não vincula`);
+ok((await d.query("select count(*)::int c from public.contas_joiner where joiner_id in (2, 272, 42, 187751, 7213)")).rows[0].c === 0, "NEGATIVO: nenhuma das cinco foi vinculada sem a dona ter aberto sessão");
+ok(negado(await como(d, "anon", null, "select public.ativar_minha_conta('al.melo')")), "NEGATIVO: sem sessão (visitante) não há vínculo possível, mesmo com a conta já confirmada no Auth");
 // negativos
-await d.exec(`insert into auth.users values ('${U(21)}', 'compartilhado@exemplo.com', now()), ('${U(23)}', 'curioso@exemplo.com', now())`);
 const contasFora = async () => (await d.query("select count(*)::int c from public.contas_joiner where joiner_id not in (2, 272, 42, 187751, 7213, 900)")).rows[0].c;
 ok((await ativar(20, "fora_da_lista")).status === "aguardando_liberacao" && await contasFora() === 0, "NEGATIVO: joiner FORA da lista (conta com o e-mail certo) → 'aguardando liberação' e nenhuma conta é criada");
 ok((await d.query("select count(*)::int c from public.vinculos_pendentes where user_id = '" + U(20) + "'")).rows[0].c === 0, "NEGATIVO: fora da lista não deixa nem pedido de vínculo pendente");
@@ -174,6 +180,8 @@ ok((await ativar(23, "al.melo")).status === "pendente" && (await d.query("select
 ok((await ativar(11, "lyrichangbin")).status === "pendente" && (await d.query("select count(*)::int c from public.contas_joiner where joiner_id = 42")).rows[0].c === 0, "NEGATIVO: a conta da al.melo tentando o @ da lyrichangbin → pendente, não vincula");
 ok((await ativar(11, "inexistente_xyz")).status === "pendente", "NEGATIVO: @ que não existe → pendente");
 // positivos
+for (const [id, cog, uid] of CINCO) { await d.exec(`update auth.users set last_sign_in_at = now() where id = '${U(uid)}'`); }   // verifyOtp: a sessão nasce do código
+ok(await semLogin() === "0", "depois do código digitado (primeiro login), nenhuma conta fica 'confirmada sem provar'");
 for (const [id, cog, uid] of CINCO) ok((await ativar(uid, cog)).status === "ok", `@${cog} (ID ${id}) ativa com o e-mail verificado do próprio cadastro`);
 const pares = (await d.query("select c.joiner_id::int id, j.cog from public.contas_joiner c join public.joiners j on j.id = c.joiner_id where c.joiner_id in (2, 272, 42, 187751, 7213) order by 1")).rows.map(r => `${r.id}=${r.cog}`).join(",");
 ok(pares === "2=al.melo,42=lyrichangbin,272=nicknowsaurus,7213=ttalilitinha,187751=gnabjubs", "contas vinculadas às cinco: exatamente os pares ID = @ esperados (" + pares + ")");
@@ -181,6 +189,10 @@ ok((await d.query("select count(*)::int c from public.contas_joiner")).rows[0].c
 ok((await ativar(23, "nicknowsaurus")).status === "pendente" && (await d.query("select count(*)::int c from public.contas_joiner where joiner_id = 272")).rows[0].c === 1, "outra conta NÃO toma o lugar da nicknowsaurus (vínculo único por joiner)");
 ok((await ativar(12, "nicknowsaurus")).status === "ok", "repetir a ativação da conta já vinculada é inofensivo (idempotente)");
 ok(await p0b(d) === fotoA, "P0b: depois das cinco ativações o código de conferência continua IDÊNTICO");
+ok((await p1v(d))["contas vinculadas por e-mail verificado cujo usuário NUNCA abriu sessão (esperado 0: o vínculo exige a sessão aberta pelo código)"] === "0", "nenhuma conta vinculada por e-mail verificado sem sessão aberta pelo código");
+{ await d.exec(`insert into auth.users values ('${U(77)}', 'quebra@exemplo.com', now(), null); insert into public.joiners (id, cog, nome, nome_site, email, twitter) values (777, 'quebra', 'Q', 'Q', 'quebra@exemplo.com', '@quebra'); insert into public.contas_joiner (user_id, joiner_id, origem) values ('${U(77)}', 777, 'email_verificado')`);
+  ok((await p1v(d))["contas vinculadas por e-mail verificado cujo usuário NUNCA abriu sessão (esperado 0: o vínculo exige a sessão aberta pelo código)"] === "1", "o alarme do P1_verificar ACUSA um vínculo sem sessão (simulado)");
+  await d.exec(`delete from public.contas_joiner where user_id = '${U(77)}'; delete from public.joiners where id = 777; delete from auth.users where id = '${U(77)}'`); }
 v = await p1v(d);
 ok(v["vínculo com @ DIFERENTE do esperado (esperado 0)"] === "0" && v["contas vinculadas às cinco (pares ID = @)"].split(" · ").length === 5, "P1_verificar mostra os cinco pares corretos e nenhum vínculo trocado");
 // o que a conta logada de uma das cinco consegue (nada além do visitante)

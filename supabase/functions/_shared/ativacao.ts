@@ -22,9 +22,26 @@ export interface DbAtivacao {
   liberada(joinerId: number): Promise<boolean>;
 }
 export interface RedeAtivacao {
-  garantirUsuario(email: string): Promise<void>;                  // cria a conta do Auth (sem senha, não confirmada) se ainda não existir
+  garantirUsuario(email: string): Promise<void>;                  // cria a conta do Auth pelo fluxo administrativo (sem senha informada) se ainda não existir; conta existente NÃO é alterada
   enviarCodigo(email: string): Promise<void>;                     // pede ao Auth o e-mail com o código (modelo em português)
 }
+/**
+ * Cria a conta do Auth pelo fluxo ADMINISTRATIVO (chave de serviço, só no servidor), que funciona com o cadastro público (User Signups) DESLIGADO.
+ * Garantias (cada uma coberta por teste):
+ *   - NUNCA informa senha: o Auth gera uma aleatória de 64 caracteres que ninguém conhece (admin.go, adminUserCreate). Ninguém entra por senha antes de definir uma.
+ *   - email_confirm: true é necessário porque, com o cadastro público desligado, o Auth recusa o envio do código para conta NÃO confirmada
+ *     (magic_link.go chama Signup, e signup.go devolve "Signups not allowed"). Conta já confirmada segue por sendMagicLink, que não consulta essa configuração.
+ *     Isso NÃO prova o e-mail: a conta não tem sessão nem senha conhecida; a única porta é o código enviado ao e-mail (a sessão só nasce de verifyOtp).
+ *   - Se o e-mail já tem conta (ex.: conta criada antes por outro meio), o Auth responde 422 email_exists e NADA é alterado: esta função não chama nenhum método de atualização.
+ */
+export interface AdminAuthMinimo { auth: { admin: { createUser(atributos: { email: string; email_confirm: boolean }): Promise<{ error: { message: string } | null }> } } }
+export async function garantirUsuarioAdmin(sb: AdminAuthMinimo, email: string): Promise<"criado" | "ja_existia"> {
+  const { error } = await sb.auth.admin.createUser({ email, email_confirm: true });
+  if (!error) return "criado";
+  if (/already|registered|exists/i.test(error.message)) return "ja_existia";
+  throw new Error("não foi possível preparar a conta");
+}
+
 export interface Resultado { status: number; corpo: Record<string, unknown> }
 const NEUTRO: Resultado = { status: 200, corpo: { ok: true } };
 

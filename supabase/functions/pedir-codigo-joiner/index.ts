@@ -3,7 +3,7 @@
 // Segredos usados: os padrões do Supabase (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY). Opcional: ALLOWED_ORIGINS.
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { tratarPedidoCodigo } from "../_shared/ativacao.ts";
+import { tratarPedidoCodigo, garantirUsuarioAdmin } from "../_shared/ativacao.ts";
 
 const likeSeguro = (v: string) => v.replace(/[\\%_]/g, c => "\\" + c);
 
@@ -22,10 +22,7 @@ serve((req) => {
       liberada: async (id) => (await sb.rpc("ativacao_liberada", { p_joiner_id: id })).data === true,
     }),
     rede: () => ({
-      garantirUsuario: async (email) => {
-        const { error } = await sb.auth.admin.createUser({ email, email_confirm: false });
-        if (error && !/already|registered|exists/i.test(error.message)) throw new Error("não foi possível preparar a conta");
-      },
+      garantirUsuario: async (email) => { await garantirUsuarioAdmin(sb as never, email); },   // fluxo administrativo: funciona com User Signups desligado (ver _shared/ativacao.ts)
       enviarCodigo: async (email) => {
         const r = await fetch(`${url}/auth/v1/otp`, { method: "POST", headers: { apikey: anon, "Content-Type": "application/json" }, body: JSON.stringify({ email, create_user: false }) });
         if (!r.ok) throw new Error("o Auth recusou o envio (HTTP " + r.status + ")");

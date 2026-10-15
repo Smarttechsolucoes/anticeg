@@ -7,9 +7,11 @@ Estado lido hoje pela API pública (somente leitura): e-mail ligado ✔ · confi
 
 ### 1. Desligar o cadastro público  ← único item que ainda está errado
 **Sign In / Providers → User Signups → "Allow new users to sign up" = DESLIGADO.** Salvar.
-☆ Por quê: hoje qualquer pessoa pode criar conta no Auth e disparar e-mails para qualquer endereço. No piloto a conta é criada **só** pela função `pedir-codigo-joiner` (para joiner real e liberada).
-☆ Não afeta o que existe: o site atual não usa cadastro público (conferi o código); o login da administradora é por senha (`signInWithPassword`); contas já existentes, inclusive a da Leticia, não mudam.
-☆ Se na Etapa 7 o código **não chegar** para a primeira pessoa, anote e me avise **antes** de religar qualquer coisa.
+☆ **É seguro porque a função foi corrigida** (`pedir-codigo-joiner` cria a conta pelo fluxo administrativo, já confirmada e sem senha, e pede o código só para conta existente). Sem essa correção o envio do código FALHARIA com o cadastro desligado (código-fonte do Auth: conta não confirmada passa pelo `Signup`, que é recusado). A análise completa está em `ANALISE_EMAIL_CONFIRMADO.md`.
+☆ Por quê desligar: hoje qualquer pessoa pode criar conta no Auth e disparar e-mails para qualquer endereço. No piloto a conta é criada **só** pela função, para joiner real e liberada.
+☆ Não afeta o que existe: o site atual não usa cadastro público (conferi o código); o login da administradora é por senha; contas já existentes, inclusive a da Leticia, não mudam.
+☆ **Ordem:** pode desligar agora ou logo antes da Etapa 4; o `testar-funcoes.mjs` só dá "tudo certo" com ele desligado.
+☆ Se na Etapa 7 o código **não chegar** para a primeira pessoa: **não** religue por reflexo. Primeiro rode o `P0`, veja os logs da função `pedir-codigo-joiner` e me avise; religar o cadastro só serve para isolar a causa e eu te digo se vale.
 
 ### 2. Código de e-mail: 6 dígitos, 10 minutos
 **Sign In / Providers → Email** (abrir o provedor "Email"):

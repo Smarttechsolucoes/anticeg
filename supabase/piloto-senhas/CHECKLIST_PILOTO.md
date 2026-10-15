@@ -56,7 +56,7 @@ A conta de uma das cinco tem o **mesmo alcance de um visitante** (o teste confer
 ### Etapa 4 — Funções de acesso (3) e segredos
 ☆ No seu computador, na pasta do branch `piloto/banco-e-docs` (uma vez: `npx supabase login` e `npx supabase link --project-ref ghjfsmwwcfpfvrouyrka`): `npx supabase functions deploy pedir-codigo-joiner login-joiner recuperar-senha-joiner`.
 ☆ Segredos: `npx supabase secrets set ALLOWED_ORIGINS=https://anticeg.vercel.app SITE_URL=https://anticeg.vercel.app/piloto-senha` (só a função de recuperação usa `SITE_URL`; no lançamento da Fase 2 ele volta para `https://anticeg.vercel.app`).
-☆ **Teste sem efeito** (`curl`, só com a chave pública do projeto): (a) `pedir-codigo-joiner` com `{"cog":"naoexiste_xyz","email":"x@exemplo.com"}` → `{"ok":true}` (sem e-mail, sem conta); (b) `login-joiner` com `{"cog":"naoexiste_xyz","senha":"qualquer"}` → HTTP 401 `@ ou senha incorretos.`; (c) `recuperar-senha-joiner` com `{"cog":"naoexiste_xyz"}` → `{"ok":true,...}`. Confirme que **nenhum usuário novo** apareceu em Authentication → Users.
+☆ **Teste sem efeito** (`node supabase/piloto-senhas/testar-funcoes.mjs`, só com a chave pública; equivale aos três `curl` abaixo): (a) `pedir-codigo-joiner` com `{"cog":"naoexiste_xyz","email":"x@exemplo.com"}` → `{"ok":true}` (sem e-mail, sem conta); (b) `login-joiner` com `{"cog":"naoexiste_xyz","senha":"qualquer"}` → HTTP 401 `@ ou senha incorretos.`; (c) `recuperar-senha-joiner` com `{"cog":"naoexiste_xyz"}` → `{"ok":true,...}`. Confirme que **nenhum usuário novo** apareceu em Authentication → Users.
 ☆ Reversão: pausar com `P1_desativar.sql` já impede qualquer envio; as funções podem ficar.
 
 ### Etapa 5 — Supabase Auth (painel)
@@ -65,7 +65,8 @@ A conta de uma das cinco tem o **mesmo alcance de um visitante** (o teste confer
 ☆ Authentication → URL Configuration: Site URL `https://anticeg.vercel.app` e Redirect URLs com `https://anticeg.vercel.app/**`.
 ☆ Limite de e-mails por hora acima de 30 e SMTP personalizado (SendGrid) ativo. **Esperado:** nada a mais.
 ☆ Depois de publicar as funções (Etapa 4): `node supabase/piloto-senhas/testar-funcoes.mjs` (teste de fumaça só com a chave pública; confere funções, CORS, respostas neutras e cadastro público desligado).
-☆ **Risco conhecido (R1):** se o Supabase não enviar o código com o cadastro público desligado, o teste da Etapa 7 mostrará isso logo na primeira pessoa — nesse caso **pare** (não ligue o cadastro por conta própria; o plano B exige a sua decisão).
+☆ **Cadastro público desligado é seguro com esta versão da função:** ela cria a conta pelo fluxo administrativo, já confirmada e **sem senha** (a senha aleatória do Auth ninguém conhece), e o código é pedido só para conta existente. Sem isso o envio falharia (código-fonte do Auth). Análise e garantias: `ANALISE_EMAIL_CONFIRMADO.md`.
+☆ **Risco que resta (R1):** só o primeiro e-mail real prova na hospedagem. Se não chegar, **pare** e me avise (diagnóstico: P0, logs da função `pedir-codigo-joiner`, SendGrid); não religue o cadastro por conta própria.
 
 ### Etapa 6 — Site: página `/piloto-senha/`
 ☆ Branch `feat/piloto-senhas-site` (commit `75232af`): autorizar `git push` → PR → merge → deploy da Vercel. O site principal não muda (a flag segue desligada; a página tem código e entrada próprios).
@@ -79,7 +80,8 @@ Para cada pessoa, no celular ou computador dela, **em janela anônima**:
 3. **Sair** → **Entrar** com @ e senha → "Conta ativa".
 4. **Trocar senha** (estando logada) → sair → entrar com a senha nova.
 5. **Esqueci a senha** → e-mail com link → abrir **no mesmo aparelho** → definir senha nova → "Agora entre com a senha nova" → entrar → sair.
-**Você confere depois de cada pessoa:** `P1_verificar.sql` (a coluna "contas vinculadas às cinco" ganha um par `ID = @` correto; "vínculo com @ diferente" = 0; "contas fora da lista" não aumenta; "pedidos de vínculo abertos" = 0) e `P0b` (idêntico).
+**Você confere depois de cada pessoa:** `P1_verificar.sql` (a coluna "contas vinculadas às cinco" ganha um par `ID = @` correto; "vínculo com @ diferente" = 0; "contas fora da lista" não aumenta; "pedidos de vínculo abertos" = 0; "contas confirmadas SEM primeiro login" cai a cada pessoa que digita o código; "contas vinculadas cujo usuário nunca abriu sessão" = **0**) e `P0b` (idêntico).
+**Ordem do teste de cadastro desligado:** a 1ª pessoa já é a prova (o cadastro precisa estar desligado antes; o `testar-funcoes.mjs` confere). A conta da @lyrichangbin **não** é tocada: ela só entra no teste se for convidada.
 **Interromper o piloto (e rodar `P1_desativar.sql`) se:** o par ID = @ vier trocado; aparecer conta fora da lista; o e-mail chegar para quem não pediu; alguém ver qualquer dado do site depois do login (a página só mostra "Conta ativa").
 **Se o código não chegar:** (1) a pessoa digitou o e-mail do cadastro? (o servidor só envia para esse); (2) o P0 ainda está sem FALHA? (3) Logs → Edge Functions → `pedir-codigo-joiner`; (4) painel do SendGrid; (5) limite de e-mails do Auth.
 **Se aparecer "precisa de conferência da administração":** o e-mail ou o @ não conferem com o cadastro (ou voltou a duplicidade). Não force: rode o `P0` e me envie o resultado.

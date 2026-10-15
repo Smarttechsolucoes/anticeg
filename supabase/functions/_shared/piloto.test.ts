@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { processarPedidoCodigo, LIMITES_ATIVACAO } from "./ativacao.ts";
+import { processarPedidoCodigo, garantirUsuarioAdmin, LIMITES_ATIVACAO } from "./ativacao.ts";
 import type { DbAtivacao, JoinerAtivacao, RedeAtivacao } from "./ativacao.ts";
 
 const AGORA = new Date("2026-10-20T15:00:00Z");
@@ -76,12 +76,48 @@ test("a nicknowsaurus depois de o cadastro antigo ser excluído: o e-mail dela �
   assert.deepEqual(comAntigo.chamadas, [], "sem o cadastro antigo excluído o servidor não envia: é a trava que impede a ambiguidade");
 });
 
-test("conta do Auth já existente para o e-mail: o servidor reaproveita (não duplica); se não conseguir preparar a conta, NÃO envia código", async () => {
-  const falha = montar({ usuarioFalha: true }); await pedir(falha, "al.melo", "al.melo@exemplo.com");
+test("se não conseguir preparar a conta no Auth, NÃO envia código (e a resposta continua neutra)", async () => {
+  const falha = montar({ usuarioFalha: true }); const r = await pedir(falha, "al.melo", "al.melo@exemplo.com");
+  assert.deepEqual(r, { status: 200, corpo: { ok: true } });
   assert.deepEqual(falha.chamadas, ["usuario:al.melo@exemplo.com"], "falha ao preparar a conta: nenhum envio");
+});
+
+// ── criação da conta no Auth: fluxo ADMINISTRATIVO, sem cadastro público, sem senha, sem tocar em conta existente ──────────────────────
+function adminFalso(resposta: (a: { email: string; email_confirm: boolean }) => { message: string } | null) {
+  const chamadas: unknown[] = [], outras: string[] = [];
+  const admin = new Proxy({ createUser: async (a: { email: string; email_confirm: boolean }) => { chamadas.push(a); return { error: resposta(a) }; } } as Record<string, unknown>, {
+    get: (alvo, nome: string) => nome in alvo ? alvo[nome] : (() => { outras.push(nome); throw new Error("método de administração inesperado: " + nome); }),
+  });
+  return { sb: { auth: { admin } } as never, chamadas, outras };
+}
+test("conta nova: createUser administrativo com e-mail JÁ CONFIRMADO e SEM senha (o Auth gera uma aleatória que ninguém conhece); nada além disso", async () => {
+  const a = adminFalso(() => null);
+  assert.equal(await garantirUsuarioAdmin(a.sb, "al.melo@exemplo.com"), "criado");
+  assert.deepEqual(a.chamadas, [{ email: "al.melo@exemplo.com", email_confirm: true }], "só e-mail e email_confirm: nenhuma senha, nenhum metadado");
+  assert.ok(!("password" in (a.chamadas[0] as object)) && !("password_hash" in (a.chamadas[0] as object)));
+  assert.deepEqual(a.outras, []);
+});
+test("NEGATIVO — e-mail que já tem conta (ex.: a da @lyrichangbin): o Auth recusa a criação, a função só reconhece 'já existia' e NÃO chama nenhum método que altere conta (nem senha, nem confirmação, nem ban, nem exclusão)", async () => {
+  for (const msg of ["A user with this email address has already been registered", "User already registered", "email_exists: exists"]) {
+    const a = adminFalso(() => ({ message: msg }));
+    assert.equal(await garantirUsuarioAdmin(a.sb, "lyric@exemplo.com"), "ja_existia", msg);
+    assert.equal(a.chamadas.length, 1, "uma única chamada"); assert.deepEqual(a.outras, [], "nenhum updateUserById, deleteUser, generateLink etc.");
+  }
+});
+test("NEGATIVO — qualquer outro erro do Auth interrompe: sem conta preparada não há envio de código", async () => {
+  const a = adminFalso(() => ({ message: "Database error creating new user" }));
+  await assert.rejects(garantirUsuarioAdmin(a.sb, "x@exemplo.com"), /não foi possível preparar a conta/);
+});
+test("fluxo sem cadastro público: o código do servidor só usa createUser administrativo e /auth/v1/otp com create_user:false; não existe signUp, signInWithOtp, invite nem generateLink", () => {
   const idx = readFileSync(new URL("../pedir-codigo-joiner/index.ts", import.meta.url), "utf8");
-  assert.match(idx, /createUser\(\{ email, email_confirm: false \}\)/); assert.match(idx, /already\|registered\|exists/, "e-mail já existente no Auth é tolerado (sem criar outra conta)");
+  const ati = readFileSync(new URL("./ativacao.ts", import.meta.url), "utf8");
+  assert.match(idx, /garantirUsuarioAdmin\(sb as never, email\)/); assert.match(ati, /createUser\(\{ email, email_confirm: true \}\)/);
+  assert.doesNotMatch(ati + idx, /email_confirm: false/, "conta NÃO confirmada quebra o envio com o cadastro público desligado");
   assert.match(idx, /create_user: false/, "o pedido do código nunca cria usuário por conta própria");
+  assert.match(idx, /\/auth\/v1\/otp/); assert.doesNotMatch(ati + idx, /signUp|signInWithOtp|auth\/v1\/signup|inviteUserByEmail|generateLink|updateUserById|deleteUser|ban_duration/);
+  const outros = ["../login-joiner/index.ts", "../recuperar-senha-joiner/index.ts", "./acesso.ts"].map(f => readFileSync(new URL(f, import.meta.url), "utf8")).join("\n");
+  assert.doesNotMatch(outros, /signUp|signInWithOtp|auth\/v1\/signup|createUser|inviteUserByEmail|generateLink|updateUserById/, "login e recuperação não criam nem alteram conta");
+  assert.match(outros, /auth\/v1\/token\?grant_type=password/); assert.match(outros, /auth\/v1\/recover/);
 });
 
 test("a resposta é IDÊNTICA em todos os casos (o navegador não descobre quem está na lista, quem tem conta nem de quem é o e-mail)", async () => {
