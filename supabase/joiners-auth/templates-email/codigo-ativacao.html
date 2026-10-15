@@ -1,0 +1,11 @@
+<!-- Supabase > Authentication > Emails > Templates: usar este mesmo corpo em "Confirm signup" E em "Magic Link".
+     Assunto: Seu código de ativação da Anti CEG
+     (conta nova chega por "Confirm signup"; conta que já existe chega por "Magic Link": os dois precisam mostrar {{ .Token }}) -->
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1a1a1a">
+  <h2 style="margin:0 0 16px;font-size:20px">Seu código de ativação</h2>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.5">Olá! Use o código abaixo para confirmar seu e-mail e ativar o seu acesso à Anti CEG:</p>
+  <p style="margin:0 0 20px;font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;background:#f4f4f4;border-radius:8px;padding:16px">{{ .Token }}</p>
+  <p style="margin:0 0 8px;font-size:14px;line-height:1.5">O código vale por <strong>10 minutos</strong> e só pode ser usado uma vez.</p>
+  <p style="margin:0 0 8px;font-size:14px;line-height:1.5">Digite-o na tela de ativação do site. Não compartilhe com ninguém: a equipe da Anti CEG nunca pede esse código.</p>
+  <p style="margin:16px 0 0;font-size:13px;color:#666;line-height:1.5">Se você não pediu esse código, pode ignorar este e-mail. Nada será alterado na sua conta.</p>
+</div>
