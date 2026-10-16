@@ -111,7 +111,16 @@ const permissoes = async d => JSON.stringify((await d.query("select relname, rel
   const d = await banco(); await d.exec("drop function public.is_admin()");
   ok(/is_admin\(\) não existe/.test((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) || ""), "R1 ABORTA sem is_admin()");
 }
-{ const d = await banco(); await d.exec("alter table public.masterlist drop column pago_rf"); ok(/Esperava as colunas id, pago_item/.test((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) || ""), "R1 ABORTA se faltar coluna pago_*"); }
+{ const d = await banco(); await d.exec("alter table public.masterlist drop column pago_rf"); ok(/Esperava as colunas id, cog, pago_item/.test((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) || ""), "R1 ABORTA se faltar coluna pago_*"); }
+{ const d = await banco(); await d.exec("alter table public.pagamento_demandas alter column itens type json using itens::json");
+  ok(/itens precisa ser jsonb e é json/.test((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) || ""), "R1 ABORTA se pagamento_demandas.itens for json (e não jsonb)"); }
+{ const d = await banco(); await d.exec("alter table public.pagamento_demandas drop column joiner_cog");
+  ok(/Esperava as colunas id, itens, status, motivo_rejeicao e joiner_cog/.test((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) || ""), "R1 ABORTA se faltar joiner_cog em pagamento_demandas"); }
+{ const d = await banco(); await d.exec("alter table public.masterlist drop column cog");
+  ok(/Esperava as colunas id, cog, pago_item/.test((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) || ""), "R1 ABORTA se faltar cog na masterlist"); }
+{ const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
+  const o = (await d.query("select pg_get_userbyid(proowner) o from pg_proc where proname in ('admin_definir_status_pagamento', 'admin_marcar_pago')")).rows;
+  ok(o.length === 2 && o.every(r => r.o === "postgres"), "as 2 funções novas pertencem ao postgres"); }
 { // sem a função antiga no banco: aplica do mesmo jeito
   const d = await banco({ funcaoAntiga: false });
   ok((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) === null, "R1 aplica mesmo sem a função antiga");

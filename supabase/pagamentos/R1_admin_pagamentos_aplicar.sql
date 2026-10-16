@@ -6,7 +6,7 @@
 --      (se algum item pertencer a OUTRA joiner, devolve 'confirmar_terceiros' e não altera nada até a administradora confirmar de novo com aceitar_terceiros = true).
 --      dos itens da demanda na masterlist, na MESMA transação (o que o botão sempre fez). Só para quem está em admin_roles (is_admin() IS NOT TRUE => nega, inclusive NULL).
 --   2) admin_marcar_pago(item, item?, frete?, rf?): marca como pago (nunca desmarca) itens da masterlist; mesma autorização.
---   3) a função antiga set_pagamento_demanda_status perde a execução de visitante e de logado (fecha o buraco); o site passa a usar as novas.
+--   3) as funções passam a pertencer ao postgres (confere no fim); a função antiga set_pagamento_demanda_status perde a execução de visitante e de logado (fecha o buraco); o site passa a usar as novas.
 -- Tudo em uma transação com registro do estado anterior; qualquer guarda que falhe: "Nada foi alterado".
 begin;
 
@@ -24,11 +24,15 @@ begin
   if to_regprocedure('public.is_admin()') is null then raise exception 'public.is_admin() não existe (A1/A2 não aplicados). Nada foi alterado.'; end if;
   if to_regclass('public.admin_roles') is null then raise exception 'public.admin_roles não existe. Nada foi alterado.'; end if;
   if to_regclass('public.pagamento_demandas') is null or to_regclass('public.masterlist') is null then raise exception 'pagamento_demandas/masterlist não existem. Nada foi alterado.'; end if;
-  if (select count(*) from pg_attribute where attrelid = 'public.pagamento_demandas'::regclass and attname in ('id', 'itens', 'status', 'motivo_rejeicao') and not attisdropped) <> 4 then
-    raise exception 'Esperava as colunas id, itens, status e motivo_rejeicao em pagamento_demandas. Nada foi alterado.';
+  if (select count(*) from pg_attribute where attrelid = 'public.pagamento_demandas'::regclass and attname in ('id', 'itens', 'status', 'motivo_rejeicao', 'joiner_cog') and not attisdropped) <> 5 then
+    raise exception 'Esperava as colunas id, itens, status, motivo_rejeicao e joiner_cog em pagamento_demandas. Nada foi alterado.';
   end if;
-  if (select count(*) from pg_attribute where attrelid = 'public.masterlist'::regclass and attname in ('id', 'pago_item', 'pago_frete', 'pago_rf') and not attisdropped) <> 4 then
-    raise exception 'Esperava as colunas id, pago_item, pago_frete e pago_rf em masterlist. Nada foi alterado.';
+  -- as funções usam jsonb_typeof / jsonb_array_elements sobre itens: se a coluna for json (e não jsonb) elas falhariam na primeira confirmação real
+  if (select format_type(a.atttypid, a.atttypmod) from pg_attribute a where a.attrelid = 'public.pagamento_demandas'::regclass and a.attname = 'itens' and not a.attisdropped) is distinct from 'jsonb' then
+    raise exception 'pagamento_demandas.itens precisa ser jsonb e é %. Nada foi alterado.', (select format_type(a.atttypid, a.atttypmod) from pg_attribute a where a.attrelid = 'public.pagamento_demandas'::regclass and a.attname = 'itens');
+  end if;
+  if (select count(*) from pg_attribute where attrelid = 'public.masterlist'::regclass and attname in ('id', 'cog', 'pago_item', 'pago_frete', 'pago_rf') and not attisdropped) <> 5 then
+    raise exception 'Esperava as colunas id, cog, pago_item, pago_frete e pago_rf em masterlist. Nada foi alterado.';
   end if;
   if to_regprocedure('public.admin_definir_status_pagamento(bigint, text, text, boolean)') is not null or to_regprocedure('public.admin_marcar_pago(bigint, boolean, boolean, boolean)') is not null then
     raise exception 'As funções do R1 já existem. Nada foi alterado.';
@@ -110,6 +114,10 @@ end $$;
 revoke all on function public.admin_marcar_pago(bigint, boolean, boolean, boolean) from public, anon, authenticated;
 grant execute on function public.admin_marcar_pago(bigint, boolean, boolean, boolean) to authenticated, service_role;
 
+-- as funções SECURITY DEFINER precisam pertencer ao postgres (e não a um papel temporário de login, como o do CLI), pois é com os privilégios do dono que elas gravam
+alter function public.admin_definir_status_pagamento(bigint, text, text, boolean) owner to postgres;
+alter function public.admin_marcar_pago(bigint, boolean, boolean, boolean) owner to postgres;
+
 -- 3) a função antiga deixa de ser executável por visitante e por logado (o site passa a usar as novas)
 do $$
 declare r record;
@@ -126,6 +134,8 @@ begin
   select count(*) into n from pg_proc p where p.oid in ('public.admin_definir_status_pagamento(bigint, text, text, boolean)'::regprocedure, 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)'::regprocedure)
      and p.prosecdef and p.proconfig = array['search_path=""'];
   if n <> 2 then raise exception 'As funções novas não estão com security definer e search_path vazio. Transação desfeita.'; end if;
+  select count(*) into n from pg_proc p where p.oid in ('public.admin_definir_status_pagamento(bigint, text, text, boolean)'::regprocedure, 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)'::regprocedure) and pg_get_userbyid(p.proowner) = 'postgres';
+  if n <> 2 then raise exception 'As funções novas não pertencem ao postgres. Transação desfeita.'; end if;
   if has_function_privilege('anon', 'public.admin_definir_status_pagamento(bigint, text, text, boolean)', 'EXECUTE') or has_function_privilege('anon', 'public.admin_marcar_pago(bigint, boolean, boolean, boolean)', 'EXECUTE') then
     raise exception 'O visitante executa as funções novas. Transação desfeita.';
   end if;
