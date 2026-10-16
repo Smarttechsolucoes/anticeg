@@ -1,0 +1,34 @@
+// Valida o E0_pre_checagem_leitura.sql (somente leitura) em banco local com dados fictícios. Uso: node tests/sql/e0-pre-checagem.mjs
+import { PGlite } from "@electric-sql/pglite";
+import { readFileSync } from "node:fs";
+const R = new URL("../../supabase/emergencia/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+let falhas = 0; const ok = (c, m) => { console.log((c ? "OK   " : "FALHA ") + m); if (!c) falhas++; };
+const d = new PGlite();
+await d.exec(`
+  create role anon nologin; create role authenticated nologin;
+  grant usage on schema public to anon, authenticated;
+  create schema emergencia;
+  create table public.masterlist (id int primary key); create table public.claims (id int primary key); create table public.pedidos_x (id int primary key);
+  create table public.config (key text primary key); create table public.bkp_unir_a (id int); create table public.bkp_unir_b (id int);
+  grant all on all tables in schema public to anon, authenticated;
+  revoke delete on public.config from anon;
+  grant delete on public.pedidos_x to public;
+`);
+const imp = async () => (await d.query(`select md5(coalesce((select string_agg(relname || coalesce(relacl::text, ''), ',' order by relname) from pg_class where relnamespace in ('public'::regnamespace, 'emergencia'::regnamespace)), '')) h`)).rows[0].h;
+const antes = await imp();
+const rows = (await d.query(readFileSync(R + "E0_pre_checagem_leitura.sql", "utf8"))).rows;
+const v = n => rows.find(r => r.item.startsWith(n))?.valor;
+ok(rows.length === 13, "devolve 13 linhas");
+ok(await imp() === antes, "não altera nada (permissões idênticas)");
+ok(v("E00 aplicado") === "false" && v("E0 já aplicado") === "E00 ausente", "sem E00: não quebra e informa 'E00 ausente'");
+ok(v("tabelas bkp_unir_*") === "2", "2 tabelas bkp com privilégio");
+ok(v("DELETE que o E0 REVOGA de anon") === "pedidos_x", "anon: só pedidos_x perde DELETE (masterlist/claims estão na lista; config já não tinha; bkp tratadas à parte)");
+ok(v("DELETE que o E0 REVOGA de authenticated") === "config, pedidos_x", "authenticated: config e pedidos_x perdem DELETE");
+ok(/^2 de 12: claims, masterlist/.test(v("tabelas da lista (12)")), "mostra quantas das 12 existem neste cenário");
+ok(v("tabelas com TRUNCATE") === "6 / 6", "6 tabelas com TRUNCATE para anon e para authenticated");
+ok(v("concessões a PUBLIC") === "1", "detecta a concessão a PUBLIC que o E0 não remove");
+ok(v("config: anon") === "false / true", "config: anon sem DELETE, authenticated com");
+await d.exec("create table emergencia.grant_backup (id serial, etapa text); insert into emergencia.grant_backup (etapa) values ('E0'), ('E0'), ('outra')");
+const r2 = (await d.query(readFileSync(R + "E0_pre_checagem_leitura.sql", "utf8"))).rows;
+ok(r2.find(r => r.item.startsWith("E00 aplicado")).valor === "true" && r2.find(r => r.item.startsWith("E0 já aplicado")).valor === "2", "com E00 criado: conta as concessões da etapa E0");
+console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

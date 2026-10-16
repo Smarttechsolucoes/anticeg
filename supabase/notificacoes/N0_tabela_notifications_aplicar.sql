@@ -1,6 +1,7 @@
 -- N0 — CRIA A TABELA public.notifications. Estado: ela NÃO consta em public no AUD_01 (16/10) nem no diagnóstico de 12-13/10; o site a usa desde 17/06 (insert/select/update) e o J4c-4c ABORTA sem ela.
 -- HISTÓRICO ANTERIOR DESCONHECIDO: não há migration nem SQL no repositório que a crie, e não se sabe se já existiu (se existiu e foi removida, os dados antigos não estão aqui). Este script NÃO presume exclusão e não recria dados.
 -- Aditivo: só cria tabela nova (nenhuma tabela, permissão ou dado existente é tocado); se a tabela já existir ele recusa.
+-- Colunas = as que o site usa (insert: joiner_cog, message, type, report_id; leitura: *; update: só read_at).
 -- Permissões = o MÍNIMO que o site atual usa com a chave pública: ler, criar e marcar como lida (UPDATE só na coluna read_at). Sem DELETE.
 -- Isso é o modelo "aberto" de hoje, igual às demais tabelas; o J4c-4c (lançamento) troca por policies por joiner (a joiner só lê as próprias; criar é da administradora/servidor).
 -- Tudo em uma transação com registro e conferência: qualquer guarda que falhe = "Nada foi alterado".
@@ -27,6 +28,7 @@ create table public.notifications (
   joiner_cog text,
   message    text,
   type       text,
+  report_id  bigint,   -- o painel grava o id do report ao avisar que foi resolvido (src/App.jsx: type 'report_resolved')
   read_at    timestamptz,
   created_at timestamptz not null default now()
 );
