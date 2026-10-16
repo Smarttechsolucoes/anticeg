@@ -1,5 +1,15 @@
 # Bloco 2 (parte 1) — E0 e N0: ordem de implantação, verificadores e reversão
 
+## STATUS (atualizado em 2026-10-16)
+| Etapa | Estado | Evidência |
+|---|---|---|
+| **N0 v3 (estrutural)** | **APLICADO em produção** (commit `503657a`) | verificador 9/9 (`true, true, 0, false, false, true, 0, 7, 1`); teste de fumaça `N0 FUMAÇA OK` (13 OK, nada gravado); RLS ligado, 0 policies, 0 gatilhos, 0 funções de notificação; ACL = só `postgres` e `service_role`; AUD_02: visitante e logado **bloqueados** em ler/inserir/alterar/apagar; 0 linhas; masterlist/claims/multas intactas |
+| **E00 / E0** | **não aplicados** | aguardam o gate de logs de DELETE (`E0_gate_logs_delete.md`, a cargo da usuária) e autorização própria |
+| Front de notificações (`fix/notificacoes-isoladas-front`) | **SUSPENSO, não publicar** | depende de funções "por @" que foram descartadas: sem login, o @ é público e um visitante lia/marcava como lida a notificação de outra joiner só informando o @ (provado em teste local) |
+| Notificações do site | continuam **desligadas** (as chamadas diretas falham como antes, sem armazenar nem expor nada) | voltam no lançamento (J4c-4c, com login e policies por conta; testado sobre esta tabela) |
+Reversão do N0: `N0_tabela_notifications_reverter_protegido.sql` (frase `AUTORIZO APAGAR NOTIFICATIONS VAZIA`; recusa se houver linhas).
+Regra de projeto derivada: **nenhuma função pública que confie só no @** enquanto não houver login geral.
+
 Escopo: **somente** `N0` (cria `public.notifications`) e `E00 + E0` (revoga privilégios inúteis/perigosos de `anon`/`authenticated`). Não toca no sync, no S1/S2, nas demandas de pagamento, em RLS, em policies nem em dados. Tudo aqui é aditivo ou só `REVOKE`; nenhuma linha é apagada.
 
 ## Estado real em produção (leituras de 16/10/2026)
