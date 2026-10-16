@@ -1,0 +1,40 @@
+// Casamento das linhas da PLANILHA com as linhas já existentes na masterlist, pelo CÓDIGO da planilha (coluna ID => masterlist.id_linha), antes da regra antiga (ceg|item|nome + ordem).
+//
+// Problema que resolve: a regra antiga identifica a linha por ceg|nome_do_item|nome. Se alguém edita o nome do item, o nome de exibição ou o CEG na planilha, a chave muda: o sync INSERE uma linha nova (id novo)
+// e apaga a antiga. As demandas de pagamento guardam o masterlist.id antigo e passam a apontar para uma linha que não existe mais (413 de 3.811 itens de demandas em 2026-10-16).
+// Com este casamento, a linha continua a MESMA (mesmo id) quando só o nome/valor/dono mudam, desde que o código (id_linha) seja inequívoco.
+//
+// Regras (conservadoras; na dúvida NÃO casa e vale a regra antiga):
+//   ☆ o código existe e é ÚNICO na planilha (nenhuma outra linha da planilha o usa);
+//   ☆ exatamente UMA linha da masterlist tem esse código;
+//   ☆ o CEG é o mesmo (case-insensitive) — o código de um item nunca muda de CEG; se mudar, tratamos como item diferente;
+//   ☆ a linha da masterlist ainda não foi reivindicada por outra linha da planilha.
+//
+// Entrada: linhasPlanilha = [{ idLinha, ceg }]; existentes = [{ id, id_linha, ceg }].
+// Saída: { porIndice: Map<indice da linha da planilha, linha existente>, reivindicados: Set<id> }.
+
+const norm = v => String(v ?? '').trim();
+
+export function casarPorIdLinha(linhasPlanilha, existentes) {
+  const porIndice = new Map();
+  const reivindicados = new Set();
+
+  const naPlanilha = new Map();                       // código -> quantas vezes aparece na planilha
+  for (const l of linhasPlanilha) { const c = norm(l?.idLinha); if (c) naPlanilha.set(c, (naPlanilha.get(c) || 0) + 1); }
+
+  const noBanco = new Map();                          // código -> linhas da masterlist
+  for (const e of existentes) { const c = norm(e?.id_linha); if (c) { if (!noBanco.has(c)) noBanco.set(c, []); noBanco.get(c).push(e); } }
+
+  linhasPlanilha.forEach((l, i) => {
+    const c = norm(l?.idLinha);
+    if (!c || naPlanilha.get(c) !== 1) return;        // sem código, ou repetido na planilha
+    const candidatos = noBanco.get(c);
+    if (!candidatos || candidatos.length !== 1) return; // inexistente ou ambíguo no banco
+    const e = candidatos[0];
+    if (norm(e.ceg).toLowerCase() !== norm(l.ceg).toLowerCase()) return;
+    if (reivindicados.has(e.id)) return;
+    porIndice.set(i, e);
+    reivindicados.add(e.id);
+  });
+  return { porIndice, reivindicados };
+}
