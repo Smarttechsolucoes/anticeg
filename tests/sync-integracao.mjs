@@ -124,5 +124,33 @@ const mudar = (pl, idl, campos) => pl.map(l => l.id === idl ? { ...l, ...campos 
   const antigoSemS1 = rodar({ planilha: pl, aplicarS1: false, scriptSource: gitMain });
   ok(!antigoSemS1.erro && !por(antigoSemS1, 6) && !por(antigoSemS1, 3), "(situação de hoje) sync ANTIGO sem S1: apaga as duas linhas, inclusive a com claim — o risco que o S1 elimina");
 }
+{ // 13) AS DUAS "LIVIA" (ids 7129 sem código e 8357 com código; mesmo CEG, mesmo item, mesmo nome de exibição, @ diferentes): nunca trocar donos, nem com a ordem da planilha invertida
+  const dois = ["insert into public.masterlist (id, ceg, cog, nome, nome_do_item, id_linha, valor_item, status) values (7129, 'MEMBRO NOVO', 'hyunbuzzcut', 'Livia', 'PERFIL NOVO', null, 0, 'Comprado'), (8357, 'MEMBRO NOVO', 'schreavruelker', 'livia', 'PERFIL NOVO', 'MEMB-ITE-5065', 0, 'Comprado');"];
+  const velha = { ceg: "MEMBRO NOVO", nome: "Livia", cog: "hyunbuzzcut", item: "PERFIL NOVO", id: null };   // 7129: sem código
+  const nova = { ceg: "MEMBRO NOVO", nome: "livia", cog: "schreavruelker", item: "PERFIL NOVO", id: "MEMB-ITE-5065" };   // 8357: com código
+  for (const [nomeOrdem, ordem] of [["ordem original", [velha, nova]], ["ordem INVERTIDA", [nova, velha]]]) {
+    const o = rodar({ planilha: ordem, aplicarS1: true, setup: dois[0] });
+    const a = por(o, 7129), b = por(o, 8357);
+    ok(!o.erro && JSON.stringify(ids(o)) === "[7129,8357]" && a?.cog === "hyunbuzzcut" && b?.cog === "schreavruelker" && a?.id_linha === null && b?.id_linha === "MEMB-ITE-5065", `Livia/livia (${nomeOrdem}): cada id mantém o SEU dono e o SEU código; 0 linhas novas, 0 apagadas` + (o.erro ? " | " + o.erro : ""));
+    ok(/0 inseridos/.test(o.log) && /Nenhum registro candidato/.test(o.log), `Livia/livia (${nomeOrdem}): o log mostra 0 inseridos e nenhum candidato à remoção`);
+  }
+}
+{ // 14) DUAS linhas SEM código, mesma chave, @ diferentes, ordem invertida: o script ANTIGO troca os donos; o S2 final NÃO
+  const setup = "insert into public.masterlist (id, ceg, cog, nome, nome_do_item, id_linha, valor_item, status) values (7129, 'MEMBRO NOVO', 'hyunbuzzcut', 'Livia', 'PERFIL NOVO', null, 0, 'Comprado'), (7130, 'MEMBRO NOVO', 'schreavruelker', 'Livia', 'PERFIL NOVO', null, 0, 'Comprado');";
+  const A = { ceg: "MEMBRO NOVO", nome: "Livia", cog: "hyunbuzzcut", item: "PERFIL NOVO", id: null }, B = { ceg: "MEMBRO NOVO", nome: "Livia", cog: "schreavruelker", item: "PERFIL NOVO", id: null };
+  const antigo = rodar({ planilha: [B, A], aplicarS1: false, setup, scriptSource: gitMain });
+  ok(!antigo.erro && por(antigo, 7129)?.cog === "schreavruelker" && por(antigo, 7130)?.cog === "hyunbuzzcut", "(situação de hoje) script ANTIGO, 2 linhas sem código e ordem invertida: os DONOS são TROCADOS entre os ids 7129 e 7130" + (antigo.erro ? " | " + antigo.erro : ""));
+  const novo = rodar({ planilha: [B, A], aplicarS1: true, setup });
+  ok(!novo.erro && por(novo, 7129)?.cog === "hyunbuzzcut" && por(novo, 7130)?.cog === "schreavruelker" && JSON.stringify(ids(novo)) === "[7129,7130]", "S2 final, mesmas linhas e ordem invertida: cada id MANTÉM o seu dono (desempate pelo @)" + (novo.erro ? " | " + novo.erro : ""));
+  ok(/2 desempatadas pelo dono/.test(novo.log), "o log informa as linhas desempatadas pelo dono");
+}
+{ // 15) CÓDIGO REAPROVEITADO por OUTRA joiner (mesmo CEG, mesmo código, @ diferente): NUNCA move o mesmo id para outro dono
+  const setup = "insert into public.masterlist (id, ceg, cog, nome, nome_do_item, id_linha, valor_item, status) values (7400, 'CEG1', 'ana', 'Ana', 'Item X', 'REUSO-1', 10, 'Comprado');";
+  const pl = [{ ceg: "CEG1", nome: "Bia", cog: "bia", item: "Item X", id: "REUSO-1" }];
+  const o = rodar({ planilha: pl, aplicarS1: true, setup });
+  ok(!o.erro && !o.masterlist.some(x => x.id === 7400 && x.cog === "bia"), "código reaproveitado por OUTRA joiner: o id 7400 NUNCA passa a pertencer à bia" + (o.erro ? " | " + o.erro : ""));
+  ok(o.masterlist.some(x => x.cog === "bia" && x.nome_do_item === "Item X" && x.id !== 7400), "…a bia recebe uma linha NOVA, com id próprio");
+  ok(/0 casados pelo código/.test(o.log), "…e o log mostra 0 casados pelo código");
+}
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
 

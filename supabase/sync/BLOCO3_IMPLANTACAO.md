@@ -5,7 +5,7 @@
 |---|---|
 | R1.1 | **APLICADO** (SQL + verificador 8/8 + permissões OK; PR #35 `8aac0bc`) |
 | S1 | **APLICADO** (SQL + verificador OK; PR #24 `11b5fb2`). Execuções reais do sync pós-S1: verdes, sem exclusão, ids preservados. O caminho de EXCLUSÃO com dados reais ainda não foi exercitado (nenhuma candidata); a função foi validada com chamadas que não apagam nada |
-| **S2** | **PRONTO, NÃO PUBLICADO** — branch `fix/sync-casar-por-codigo-final` (a partir da main atual; o diff é só o S2). Testes: 18 unitários, 25 do script real do sync contra PGlite + SQL do S1, 5 do verificador. Aguarda a execução agendada de 00:00 UTC e a autorização da usuária |
+| **S2** | **PRONTO, NÃO PUBLICADO** — branch `fix/sync-casar-por-codigo-final` (a partir da main atual; o diff é só o S2). Testes: 14 unitários, 34 do script real do sync (inclui Livias 7129/8357, ordem invertida e código reaproveitado) contra PGlite + SQL do S1, 5 do verificador. Aguarda a execução agendada de 00:00 UTC e a autorização da usuária |
 Os passos 1 e 2 abaixo ficam como registro; **o próximo é o passo 3 (S2)**.
 
 **Problema:** o sync identifica a linha por `ceg|item|nome` + ordem. Quando alguém edita o nome do item, o nome de exibição ou o CEG na planilha, ele **apaga a linha e insere outra com id novo**. As demandas de pagamento guardam o id antigo (413 de 3.811 itens em 16/10; demanda 779 em análise). Hoje o sync também **apaga linhas com claim e linhas pagas** (o teste `tests/sync-integracao.mjs` reproduz isso com o script atual).
@@ -50,6 +50,8 @@ Os passos 1 e 2 abaixo ficam como registro; **o próximo é o passo 3 (S2)**.
 | Código **repetido na planilha** (218 repetições) | não casa nenhuma das linhas repetidas; seguem pela regra antiga; a linha nova nunca toma o id de outra |
 | Código **repetido no banco** (24 valores) | não casa (ambíguo); a outra linha nunca é confundida |
 | Mesmo código, **CEG diferente** | trata como item diferente: linha nova; a antiga segue a regra antiga/S1 |
+| Mesmo código, mas **dono (@) diferente** | NÃO casa: o id nunca muda de dono; a outra joiner recebe linha nova (testado: código reaproveitado) |
+| **Sem código**, mesma chave `ceg|item|nome` (ex.: duas Livias, ids 7129/8357) | desempate pelo **@ exato**: cada linha segue com o seu dono, mesmo com a ordem da planilha invertida (o script antigo TROCA os donos; o S2 não) |
 | Linha com **claim** e código, renomeada | mantém o id; o claim continua ligado |
 | Linha **sem código**, paga/com claim, renomeada | S1 preserva a antiga: **duplicata conhecida** até alguém cadastrar o código na planilha |
 
