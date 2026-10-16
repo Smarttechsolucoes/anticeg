@@ -304,34 +304,29 @@ async function main() {
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
 
-  // Remover registros do banco que não existem mais na planilha
+  // Remover registros do banco que não existem mais na planilha — SEMPRE pela função atômica prune_masterlist (supabase/sync/S1_*.sql).
+  // Ela mesma recusa planilha parcial, preserva claims/linhas do site/pagas, aplica limite por execução e arquiva o que apagar.
+  // Se a função não existir (S1 não aplicado) NÃO apagamos nada: nunca há exclusão direta por este script.
   const totalExistentes = Object.values(existingMap).reduce((a, v) => a + v.length, 0);
-  if (rows.length < totalExistentes * 0.5) {
-    console.error(`Abortando prune: planilha retornou apenas ${rows.length} linhas vs ${totalExistentes} no banco. Possível CSV parcial.`);
-    return;
-  }
   const toDelete = [];
   for (const [key, items] of Object.entries(existingMap)) {
     const countInSheet = sheetKeyCount[key] || 0;
-    // Se a planilha tem menos ocorrências que o banco, deleta as extras
-    for (let i = countInSheet; i < items.length; i++) {
-      toDelete.push(items[i].id);
-    }
+    // Se a planilha tem menos ocorrências que o banco, as extras são CANDIDATAS (a função decide quais podem sair)
+    for (let i = countInSheet; i < items.length; i++) toDelete.push(items[i].id);
   }
 
-  if (toDelete.length > 0) {
-    console.log(`\nRemovendo ${toDelete.length} registro(s) ausentes da planilha...`);
-    let deletados = 0, delErros = 0;
-    for (let i = 0; i < toDelete.length; i += 100) {
-      const batch = toDelete.slice(i, i + 100);
-      const { error } = await supabase.from('masterlist').delete().in('id', batch);
-      if (error) { console.error('Erro ao deletar:', error.message); delErros += batch.length; }
-      else deletados += batch.length;
-    }
-    console.log(`✓ Removidos: ${deletados} · ${delErros} erros`);
-  } else {
-    console.log(`\n✓ Nenhum registro para remover`);
+  if (toDelete.length === 0) { console.log(`
+✓ Nenhum registro candidato à remoção`); return; }
+  console.log(`
+${toDelete.length} registro(s) ausentes da planilha (de ${totalExistentes} no banco): enviando para a exclusão protegida...`);
+  const { data: rel, error: errPrune } = await supabase.rpc('prune_masterlist', { p_ids: toDelete, p_linhas_planilha: rows.length, p_limite: 25 });
+  if (errPrune) { console.error('Exclusão protegida indisponível — NADA foi apagado:', errPrune.message); return; }
+  if (rel.abortado) {
+    console.error(`Exclusão ABORTADA pela proteção (${rel.motivo}) — nada foi apagado.`, JSON.stringify(rel));
+    process.exitCode = 3;   // o job fica vermelho para alguém olhar; as demais atualizações já foram feitas
+    return;
   }
+  console.log(`✓ Removidos: ${rel.apagadas} · preservados por proteção: ${rel.protegidas} ${JSON.stringify(rel.por_motivo)}`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
