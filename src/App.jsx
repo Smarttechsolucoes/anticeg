@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase from "./supabase.js";
+import { chamarPlanilha, mensagemPlanilha, esperadosConfirmacao } from "./planilhaApi.js";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
@@ -1611,11 +1612,11 @@ function ReportModal({ user, item, onClose, onReported, replyTo = null }) {
     setLoading(false);
     if (error) { alert("Erro ao enviar: " + error.message); return; }
     if (erros.recebido && item.id_linha) {
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ acao: "recebido", token: "anticeg-pag-2026", id_linha: item.id_linha }),
-      }).catch(() => {});
+      // a resposta da planilha NÃO é mais ignorada: se recusar (ex.: código repetido) ou falhar, a pessoa é avisada
+      chamarPlanilha("recebido", { id_linha: item.id_linha, ceg: item.ceg, nome_do_item: item.nome_do_item }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "joiner" });
+        if (msg) { console.error("planilha (recebido):", res); alert("Seu relato foi enviado.\n\n" + msg); }
+      });
     }
     onReported?.(replyTo ? { ...replyTo, ...campos } : item.id);
     setSent(true);
@@ -3518,6 +3519,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
   const [pagErro,         setPagErro]         = useState("");
   const [pagEmailMsg,     setPagEmailMsg]     = useState(null); // null | {ok,txt}
+  const [pagPlanilhaMsg,   setPagPlanilhaMsg]   = useState(null); // null | texto: a planilha não confirmou tudo
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
@@ -4043,12 +4045,14 @@ ${p.comprovante_url ? (() => {
             obs:               obsFinal,
           }]).select().single();
           if (error || !nova) { setPagStatus("idle"); setPagErro(error?.message || "Erro ao salvar demanda."); return; }
-          // Atualiza planilha automaticamente
-          fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-            method: "POST", redirect: "follow",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify({ acao: "confirmar", token: "anticeg-pag-2026", itens: itensPayload.filter(i => i.id_linha) }),
-          }).catch(() => {});
+          // Atualiza planilha automaticamente e INFORMA se não deu certo (recusa, atualização parcial, falha de rede ou de sincronização)
+          setPagPlanilhaMsg(null);
+          const itensNaPlanilha = itensPayload.filter(i => i.id_linha);
+          const itensSemCodigo = itensPayload.filter(i => i.id && !i.id_linha);
+          (itensNaPlanilha.length ? chamarPlanilha("confirmar", { itens: itensNaPlanilha }, { esperados: esperadosConfirmacao(itensNaPlanilha) }) : Promise.resolve(null)).then(res => {
+            const msg = mensagemPlanilha(res, { perfil: "joiner", itensSemId: itensSemCodigo });
+            if (msg) { console.error("planilha (confirmar):", res); setPagPlanilhaMsg(msg); }
+          });
           try {
             const corpoEmail = buildEmailConfirmacaoPagamento(user.nome_site || user.nome || user.cog, nova);
             await sendEmailJoiner(user.email, user.nome_site || user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
@@ -4139,6 +4143,11 @@ ${p.comprovante_url ? (() => {
             <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.8, marginBottom:10 }}>
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
+            {pagPlanilhaMsg && (
+              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", textAlign:"left", whiteSpace:"pre-line", marginBottom:16, letterSpacing:".03em", color:"rgba(255,184,0,.9)", padding:"8px 14px", background:"rgba(255,184,0,.07)", borderRadius:6, border:"1px solid rgba(255,184,0,.25)" }}>
+                {"⚠ Seu comprovante foi recebido, mas a marcação automática na planilha não foi concluída.\n\n" + pagPlanilhaMsg}
+              </div>
+            )}
             {pagEmailMsg && (
               <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em", color: pagEmailMsg.ok ? "rgba(186,255,57,.7)" : "rgba(255,92,26,.8)", padding:"8px 14px", background: pagEmailMsg.ok ? "rgba(186,255,57,.06)" : "rgba(255,92,26,.06)", borderRadius:6, border:`1px solid ${pagEmailMsg.ok ? "rgba(186,255,57,.15)" : "rgba(255,92,26,.15)"}` }}>
                 {pagEmailMsg.txt}
@@ -4146,7 +4155,7 @@ ${p.comprovante_url ? (() => {
             )}
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Map()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); }}
+              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Map()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); setPagPlanilhaMsg(null); }}
                 style={{ width:"100%", padding:"13px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:13, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
                 + Enviar novo comprovante
               </button>
@@ -7365,11 +7374,12 @@ async function executarAprovacaoRepasse(r, { notificar = true } = {}) {
     // Busca id_linha para atualizar planilha
     const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", r.item_id).single();
     if (mlItem?.id_linha) {
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ acao: "repassar", token: "anticeg-pag-2026", id_linha: mlItem.id_linha, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }),
-      }).catch(() => {});
+      chamarPlanilha("repassar", { id_linha: mlItem.id_linha, ceg: r.ceg, nome_do_item: r.nome_do_item, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Repasse" });
+        if (msg) { console.error("planilha (repassar):", res); alert(`Repasse aprovado no site, mas a planilha precisa de atenção:\n\n${msg}\n\nAtualize o novo dono na planilha à mão; sem isso a próxima sincronização pode devolver o item ao dono anterior.`); }
+      });
+    } else {
+      alert(`Repasse aprovado no site. "${r.nome_do_item}" não tem código (ID), então a planilha não pôde ser atualizada automaticamente. Se este item existe na planilha, atualize o novo dono lá à mão; sem isso a próxima sincronização pode devolver o item ao dono anterior.`);
     }
   }
   if (notificar) {
@@ -9559,12 +9569,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   }
                   // Reverte planilha para FALSE
                   const itensComId = (d.itens || []).filter(i => i.id_linha);
-                  if (itensComId.length > 0) {
-                    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-                      method: "POST", redirect: "follow",
-                      headers: { "Content-Type": "text/plain" },
-                      body: JSON.stringify({ acao: "cancelar", token: "anticeg-pag-2026", itens: itensComId }),
-                    }).catch(() => {});
+                  const itensSemCodigo = (d.itens || []).filter(i => i.id && !i.id_linha);
+                  if (itensComId.length > 0 || itensSemCodigo.length > 0) {
+                    (itensComId.length > 0 ? chamarPlanilha("cancelar", { itens: itensComId }, { esperados: esperadosConfirmacao(itensComId) }) : Promise.resolve(null)).then(res => {
+                      const msg = mensagemPlanilha(res, { perfil: "admin", itensSemId: itensSemCodigo, contexto: "Reversão do pagamento" });
+                      if (msg) { console.error("planilha (cancelar):", res); alert(`Comprovante recusado no site, mas desmarcar o pagamento na planilha precisa de atenção:\n\n${msg}\n\nConfira estes itens na planilha: eles podem continuar marcados como pagos.`); }
+                    });
                   }
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));
@@ -13528,11 +13538,11 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
     }
     await supabase.from("pre_cadastros").update({ status: "aprovado" }).eq("id", p.id);
     // Adiciona joiner na planilha (Dados + MASTERLIST)
-    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }),
-    }).catch(() => {});
+    chamarPlanilha("novo_joiner", { nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }).then(res => {
+      const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Cadastro na planilha" });
+      if (msg) { console.error("planilha (novo_joiner):", res); alert(`Cadastro aprovado no site, mas a planilha precisa de atenção:\n\n${msg}`); }
+      else if (res?.bruto?.codigo_gerado === false) alert(`Cadastro adicionado à planilha, mas a linha de ${p.nome} ficou SEM código (NUM/ID). Confira a MASTERLIST.`);
+    });
     onUpdatePre(prev => prev.filter(x => x.id !== p.id));
     setAprovando(null);
   }
@@ -14086,17 +14096,17 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     enviarPushJoiner(claim.joiner_cog, `✓ Claim aprovado — ${claim.ceg}`, `${claim.nome_do_item} foi confirmado e adicionado à sua lista!`, "/disponiveis");
     const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", claim.masterlist_id).maybeSingle();
     if (mlItem?.id_linha) {
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          acao: "aprovar_disponivel", token: "anticeg-pag-2026",
-          id_linha: mlItem.id_linha,
-          novo_nome: claim.joiner_nome,
-          novo_twitter: "@" + claim.joiner_cog,
-          vencimento: claim.vencimento || "",
-        }),
-      }).catch(() => {});
+      chamarPlanilha("aprovar_disponivel", {
+        id_linha: mlItem.id_linha, ceg: claim.ceg, nome_do_item: claim.nome_do_item,
+        novo_nome: claim.joiner_nome,
+        novo_twitter: "@" + claim.joiner_cog,
+        vencimento: claim.vencimento || "",
+      }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Claim" });
+        if (msg) { console.error("planilha (aprovar_disponivel):", res); alert(`Claim aprovado no site, mas a planilha precisa de atenção:\n\n${msg}\n\nAtualize o dono na planilha à mão; sem isso a próxima sincronização pode desfazer a aprovação.`); }
+      });
+    } else {
+      alert(`Claim aprovado no site. "${claim.nome_do_item}" não tem código (ID), então a planilha não pôde ser atualizada automaticamente. Se este item existe na planilha, atualize o dono lá à mão; sem isso a próxima sincronização pode desfazer a aprovação.`);
     }
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
     setItens(prev => prev.filter(i => i.id !== claim.masterlist_id));
@@ -17317,17 +17327,15 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         email_novo:   emailNovo,
       }]);
       // Atualiza planilha automaticamente
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          acao: "atualizar_joiner", token: "anticeg-pag-2026",
-          twitter_antigo: user.twitter || "",
-          twitter_novo: twitterNovo || "",
-          email_novo: emailNovo || "",
-          nome_novo: nome.trim(),
-        }),
-      }).catch(() => {});
+      chamarPlanilha("atualizar_joiner", {
+        twitter_antigo: user.twitter || "",
+        twitter_novo: twitterNovo || "",
+        email_novo: emailNovo || "",
+        nome_novo: nome.trim(),
+      }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "joiner" });
+        if (msg) { console.error("planilha (atualizar_joiner):", res); alert("Seus dados foram atualizados no site.\n\n" + msg); }
+      });
     }
     const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: twitterNovo, email: emailNovo, confirmado: true };
     localStorage.setItem("anticeg_user_v2", JSON.stringify(updated));
