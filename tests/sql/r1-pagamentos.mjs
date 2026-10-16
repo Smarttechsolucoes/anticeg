@@ -55,7 +55,8 @@ const permissoes = async d => JSON.stringify((await d.query("select relname, rel
   ok((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) === null, "R1 aplica sem erro");
   ok(await permissoes(d) === p0, "permissões de pagamento_demandas e masterlist idênticas (tabela e coluna)");
   const v = await ver(d);
-  ok(Object.keys(v).length === 8, "verificador devolve 8 linhas");
+  ok(Object.keys(v).length === 9, "verificador devolve 9 linhas");
+  ok(v["registro interno de marcações existe e é INACESSÍVEL a visitante/logado (esperado true)"] === "true", "verificador: registro interno inacessível");
   ok(v["funções novas seguras: security definer com search_path vazio (esperado 2)"] === "2", "verificador: 2 funções seguras");
   ok(v["o visitante executa alguma função nova (esperado false)"] === "false", "verificador: visitante não executa");
   ok(v["a administradora logada executa as duas (a negação a não-admin é feita dentro delas) (esperado true)"] === "true", "verificador: logada executa");
@@ -88,11 +89,15 @@ const permissoes = async d => JSON.stringify((await d.query("select relname, rel
   await d.exec(`update public.pagamento_demandas set status = 'em_analise' where id = ${t3}; update public.masterlist set pago_item = false where id = 3`);
   ok(/status inválido/.test((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'qualquer')")).erro || ""), "status inválido é recusado");
   ok(/não encontrada/.test((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(12345, 'pago')")).erro || ""), "demanda inexistente é recusada");
-  const c = await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'pago') r");
-  ok(c.rows?.[0].r.status === "pago" && c.rows[0].r.itens_marcados === 2 && c.rows[0].r.itens_nao_encontrados === 1, "administradora confirma: 2 itens marcados, 1 id inexistente apontado");
+  // item cujo id não existe mais na masterlist (999): NÃO confirma sem aceite explícito, e nada é alterado
+  const ca = await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'pago') r");
+  ok(ca.rows?.[0].r.status === "confirmar_itens_ausentes" && ca.rows[0].r.itens_nao_encontrados === 1 && JSON.stringify(ca.rows[0].r.ids) === "[999]", "item com id inexistente: devolve 'confirmar_itens_ausentes' (ids apontados)");
+  ok((await pag(d))[0].status === "em_analise" && (await ml(d)) === "1:000 2:000 3:000", "…e NADA foi alterado até o aceite");
+  const c = await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'pago', null, false, true) r");
+  ok(c.rows?.[0].r.status === "pago" && c.rows[0].r.itens_marcados === 2 && c.rows[0].r.itens_nao_encontrados === 1, "com aceitar_ausentes: confirma, 2 itens marcados, 1 id inexistente apontado");
   ok((await pag(d))[0].status === "pago", "status da demanda = pago");
   ok((await ml(d)) === "1:110 2:101 3:000", "masterlist: só o que tem valor foi marcado (item+frete / item+RF); a outra joiner não mudou");
-  ok((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'pago') r")).rows[0].r.alterado === false, "confirmar de novo é idempotente (sem alteração)");
+  ok((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(1, 'pago', null, false, true) r")).rows[0].r.alterado === false, "confirmar de novo é idempotente (sem alteração)");
   ok((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(2, 'rejeitado', '  comprovante ilegível  ') r")).rows[0].r.status === "rejeitado" && (await pag(d))[1].motivo_rejeicao === "comprovante ilegível" && (await ml(d)) === "1:110 2:101 3:000", "rejeitar guarda o motivo (aparado) e não marca nada");
   ok((await como(d, "authenticated", 1, "select public.admin_definir_status_pagamento(2, 'em_analise', 'ignorado') r")).rows[0].r.status === "em_analise" && (await pag(d))[1].motivo_rejeicao === null, "reabrir volta a em_analise e limpa o motivo");
   ok((await como(d, "authenticated", 1, "select public.admin_marcar_pago(3, true, false, false) r")).rows[0].r.status === "ok" && (await ml(d)) === "1:110 2:101 3:100", "marcar pago manual liga só o pedido");
@@ -106,6 +111,7 @@ const permissoes = async d => JSON.stringify((await d.query("select relname, rel
   ok((await rodar(d, "R1_admin_pagamentos_reverter_protegido.sql", "AUTORIZO REVERTER PAGAMENTOS ADMIN")) === null, "reversão COM a frase funciona");
   ok(!(await d.query("select to_regprocedure('public.admin_marcar_pago(bigint, boolean, boolean, boolean)') f")).rows[0].f, "funções novas removidas");
   ok((await como(d, "anon", null, "select public.set_pagamento_demanda_status(1, 'pago')")).erro === undefined, "a função antiga volta com as permissões de antes (como registrado)");
+  ok((await rodar(d, "R1_admin_pagamentos_aplicar.sql")) === null && (await ver(d))["funções novas seguras: security definer com search_path vazio (esperado 2)"] === "2", "depois de reverter, o R1 pode ser aplicado de novo (registro interno reaproveitado)");
 }
 { // guardas
   const d = await banco(); await d.exec("drop function public.is_admin()");

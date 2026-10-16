@@ -3,6 +3,7 @@
 --   ☆ visitante (anon)          → deve ser NEGADO pelo banco (permission denied, 42501), antes de qualquer leitura;
 --   ☆ logada que NÃO é admin    → deve ser NEGADA pela função ("sem permissão"), antes de qualquer leitura;
 --   ☆ administradora            → deve PASSAR pela autorização e parar em "demanda não encontrada" (nenhuma linha existe, nada é gravado) e em "nao_encontrado" (UPDATE em 0 linhas).
+-- Também confere que o registro interno de marcações (emergencia.pagamento_marcacoes) é inacessível a visitante e a logado (apenas tenta ler; nada é gravado).
 -- Nenhuma tabela é escrita (os UPDATE/SELECT FOR UPDATE casam com 0 linhas), nenhum gatilho dispara, nenhuma notificação/HTTP existe aqui. Para garantir, o bloco termina com um ERRO proposital ("R1 PERMISSÕES ...") que desfaz a transação
 --   inteira, e o texto do erro é o relatório. Não avança sequência alguma (não há INSERT). Se aparecer "R1 PERMISSÕES OK" tudo passou; "R1 PERMISSÕES FALHA" lista o que falhou.
 do $$
@@ -80,6 +81,30 @@ begin
   exception when others then
     get stacked diagnostics v_msg = message_text;
     if v_msg = 'status inválido' then rep := rep || E'OK    status inválido recusado\n'; else rep := rep || E'FALHA status inválido: mensagem inesperada: ' || v_msg || E'\n'; falhas := falhas + 1; end if;
+  end;
+  reset role;
+
+  -- 5) o registro interno de marcações (emergencia.pagamento_marcacoes) é inacessível a visitante e a logado (só leitura de teste; nada é gravado)
+  set local role anon;
+  begin
+    perform 1 from emergencia.pagamento_marcacoes limit 1;
+    rep := rep || E'FALHA visitante leu o registro interno de marcações
+'; falhas := falhas + 1;
+  exception when others then
+    if sqlstate = '42501' then rep := rep || E'OK    visitante NÃO acessa o registro interno de marcações (42501)
+'; else rep := rep || E'FALHA registro interno (visitante): erro inesperado ' || sqlstate || E'
+'; falhas := falhas + 1; end if;
+  end;
+  reset role;
+  set local role authenticated;
+  begin
+    perform 1 from emergencia.pagamento_marcacoes limit 1;
+    rep := rep || E'FALHA logada leu o registro interno de marcações
+'; falhas := falhas + 1;
+  exception when others then
+    if sqlstate = '42501' then rep := rep || E'OK    logada NÃO acessa o registro interno de marcações (42501)
+'; else rep := rep || E'FALHA registro interno (logada): erro inesperado ' || sqlstate || E'
+'; falhas := falhas + 1; end if;
   end;
   reset role;
 

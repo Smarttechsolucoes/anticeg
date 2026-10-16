@@ -56,7 +56,7 @@ const rodar = async (d, arq) => { try { await d.exec(sql(arq)); return "sem erro
 }
 { // 3) função liberada ao visitante por engano: a checagem de admin dentro dela ainda nega (defesa em camadas)
   const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
-  await d.exec(`grant execute on function public.admin_definir_status_pagamento(bigint, text, text, boolean) to anon;`);
+  await d.exec(`grant execute on function public.admin_definir_status_pagamento(bigint, text, text, boolean, boolean) to anon;`);
   const m = await rodar(d, "R1_teste_fumaca_desfeito.sql");
   ok(m.startsWith("R1 FUMAÇA OK") && m.includes("visitante negado (P0001)"), "mesmo com EXECUTE liberado ao visitante, a função nega (checagem de admin interna)");
 }

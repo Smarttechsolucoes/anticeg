@@ -41,12 +41,12 @@ const F = "R1_teste_permissoes_nao_destrutivo.sql";
 { const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
   const antes = await imp(d); const m = await rodar(d, F);
   ok(m.startsWith("R1 PERMISSÕES OK"), "passa com o R1 correto");
-  for (const t of ["visitante negado em admin_definir_status_pagamento", "visitante negado em admin_marcar_pago", "logada sem ser admin negada", "administradora passa pela autorização e para em", "nao_encontrado em admin_marcar_pago", "status inválido recusado"]) ok(m.includes(t), `relatório cobre: ${t}`);
+  for (const t of ["visitante negado em admin_definir_status_pagamento", "visitante negado em admin_marcar_pago", "logada sem ser admin negada", "administradora passa pela autorização e para em", "nao_encontrado em admin_marcar_pago", "status inválido recusado", "visitante NÃO acessa o registro interno", "logada NÃO acessa o registro interno"]) ok(m.includes(t), `relatório cobre: ${t}`);
   ok(await imp(d) === antes, "NADA mudou (dados, multas e até as sequências idênticas)"); }
 { const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
   await d.exec(`create or replace function public.admin_marcar_pago(p_item_id bigint, p_item boolean default false, p_frete boolean default false, p_rf boolean default false) returns jsonb language plpgsql security definer set search_path = '' as $f$ begin return jsonb_build_object('status', 'nao_encontrado'); end $f$; grant execute on function public.admin_marcar_pago(bigint, boolean, boolean, boolean) to authenticated;`);
   const m = await rodar(d, F); ok(m.startsWith("R1 PERMISSÕES FALHA") && m.includes("logada sem ser admin passou da autorização (admin_marcar_pago)"), "pega função sem checagem de admin"); }
-{ const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql")); await d.exec("grant execute on function public.admin_definir_status_pagamento(bigint, text, text, boolean) to anon;");
+{ const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql")); await d.exec("grant execute on function public.admin_definir_status_pagamento(bigint, text, text, boolean, boolean) to anon;");
   const m = await rodar(d, F); ok(m.startsWith("R1 PERMISSÕES FALHA") && m.includes("visitante: erro inesperado P0001"), "EXECUTE liberado ao visitante por engano é reportado (mesmo que a função ainda negue)"); }
 { const d = await banco(); const m = await rodar(d, F); ok(!m.startsWith("R1 PERMISSÕES OK"), "antes do R1 aplicado não passa"); }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

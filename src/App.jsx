@@ -9515,17 +9515,29 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
               async function confirmar(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                let resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null });
-                if (!resp.error && resp.data?.status === "confirmar_terceiros") {
-                  // itens de OUTRA joiner (pagamento feito por terceiros): só segue se a administradora confirmar de forma explícita
-                  const quem = (resp.data.outras_joiners || []).join(", ");
-                  if (!window.confirm(`Atenção: ${resp.data.itens_de_outra_joiner} item(ns) desta demanda pertencem a outra joiner (${quem}).
+                // o servidor confere ANTES de gravar: itens de OUTRA joiner (pagamento de terceiros) e itens que não existem mais na masterlist só seguem com aceite explícito
+                let aceitaTerceiros = false, aceitaAusentes = false, resp = null;
+                for (let tentativa = 0; tentativa < 3; tentativa++) {
+                  resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null, p_aceitar_terceiros: aceitaTerceiros, p_aceitar_ausentes: aceitaAusentes });
+                  if (resp.error) break;
+                  if (resp.data?.status === "confirmar_terceiros" && !aceitaTerceiros) {
+                    const quem = (resp.data.outras_joiners || []).join(", ");
+                    if (!window.confirm(`Atenção: ${resp.data.itens_de_outra_joiner} item(ns) desta demanda pertencem a outra joiner (${quem}).
 
 Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir esses itens.`)) return;
-                  resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null, p_aceitar_terceiros: true });
+                    aceitaTerceiros = true; continue;
+                  }
+                  if (resp.data?.status === "confirmar_itens_ausentes" && !aceitaAusentes) {
+                    if (!window.confirm(`Atenção: ${resp.data.itens_nao_encontrados} item(ns) desta demanda NÃO existem mais na MASTERLIST (podem ter sido renomeados ou removidos na planilha). Códigos: ${(resp.data.ids || []).join(", ")}.
+
+Confirmar mesmo assim? Os itens que existem serão marcados como pagos; esses você precisará marcar manualmente.`)) return;
+                    aceitaAusentes = true; continue;
+                  }
+                  break;
                 }
                 const { error } = resp;
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
+                if (resp.data?.itens_nao_encontrados > 0) alert(`Pagamento confirmado. Atenção: ${resp.data.itens_nao_encontrados} item(ns) não existem na masterlist e NÃO foram marcados (códigos: ${(resp.data.ids_nao_encontrados || []).join(", ")}). Marque-os manualmente.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   // pago_item/pago_frete/pago_rf dos itens são marcados pelo servidor, na mesma operação que confirma a demanda
@@ -9537,14 +9549,16 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
               }
               async function reabrir(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
+                const { data: dadosReabrir, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
+                if (dadosReabrir?.itens_mantidos > 0) alert(`Demanda reaberta. ${dadosReabrir.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "rejeitado", p_motivo: motivo.trim() || null });
+                const { data: dadosRejeitar, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "rejeitado", p_motivo: motivo.trim() || null });
                 if (error) { alert("Não foi possível rejeitar: " + error.message); return; }
+                if (dadosRejeitar?.itens_mantidos > 0) alert(`Comprovante rejeitado. ${dadosRejeitar.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const msg = motivo.trim()
