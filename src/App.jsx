@@ -9529,9 +9529,14 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                     aceitaTerceiros = true; continue;
                   }
                   if (resp.data?.status === "confirmar_itens_ausentes" && !aceitaAusentes) {
-                    if (!window.confirm(`Atenção: ${resp.data.itens_nao_encontrados} item(ns) desta demanda NÃO existem mais na MASTERLIST (podem ter sido renomeados ou removidos na planilha). Códigos: ${(resp.data.ids || []).join(", ")}.
-
-Confirmar mesmo assim? Os itens que existem serão marcados como pagos; esses você precisará marcar manualmente.`)) return;
+                    // o sync recria linhas da masterlist com id novo: o servidor acha o MESMO item pelo código da planilha (id_linha, mesmo CEG, nome e valores) e mostra aqui antes de marcar
+                    const reass = resp.data.reassociaveis || [];
+                    const semVinculo = resp.data.ids || [];
+                    const linhasReass = reass.map(x => `• ${x.ceg} — ${x.nome_do_item} (${x.cog}): código ${x.id_antigo} → ${x.id_novo}`).join("\n");
+                    const msg = (reass.length ? `${reass.length} item(ns) foram RECRIADOS na MASTERLIST com novo código (mesmo item, CEG e valor). Serão usados os itens atuais:\n${linhasReass}\n\n` : "")
+                      + (semVinculo.length ? `${semVinculo.length} item(ns) NÃO existem mais e não foi possível ligá-los com segurança a nenhum item atual (códigos: ${semVinculo.join(", ")}). Esses NÃO serão marcados; marque-os manualmente se for o caso.\n\n` : "")
+                      + "Confirmar o pagamento mesmo assim?";
+                    if (!window.confirm(msg)) return;
                     aceitaAusentes = true; continue;
                   }
                   break;
