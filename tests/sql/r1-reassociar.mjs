@@ -127,6 +127,28 @@ const acl = async d => (await d.query("select coalesce(proacl::text,'') a, pg_ge
   await d.exec("set role anon"); const e = await d.query("select public.admin_definir_status_pagamento(1, 'pago')").then(() => "executou", x => x.message); await d.exec("reset role");
   ok(/permission denied/.test(e), "H: visitante continua negado");
 }
+{ // J) item reassociado de OUTRA joiner: o aceite de "ausentes" NUNCA substitui a confirmação de terceiros
+  const d = await banco(); const D = await dem(d, "ana", [it(4020, "WM-D-1", "W MAG", "capa d", 70)]);   // WM-D-1 = 7304, da bia
+  const so_ausentes = await def(d, D, "pago", null, false, true);
+  ok(so_ausentes.status === "confirmar_terceiros" && JSON.stringify(so_ausentes.outras_joiners) === '["bia"]', "J: com SÓ o aceite de ausentes, a função devolve 'confirmar_terceiros' (não confirma)");
+  ok(await status(d, D) === "em_analise" && await flags(d, 7304) === "000" && (await d.query("select count(*)::int n from emergencia.pagamento_marcacoes")).rows[0].n === 0, "J: …e nada foi gravado (status, pago_* e registro intactos)");
+  const so_terceiros = await def(d, D, "pago", null, true, false);
+  ok(so_terceiros.status === "confirmar_itens_ausentes" && await flags(d, 7304) === "000", "J: com SÓ o aceite de terceiros, ainda para na reassociação e nada é gravado");
+  const ambos = await def(d, D, "pago", null, true, true);
+  ok(ambos.status === "pago" && await flags(d, 7304) === "100", "J: só com os DOIS aceites confirma e marca o item atual da outra joiner");
+}
+{ // K) código duplicado: mesmo com os dois aceites NUNCA reassocia nem marca nenhuma das linhas homônimas
+  const d = await banco(); const D = await dem(d, "ana", [it(4050, "DUP-1", "W MAG", "capa c", 50)]);   // DUP-1 = 7302 (ana) e 7303 (bia)
+  const b = await def(d, D, "pago", null, true, true);
+  ok(b.status === "pago" && b.itens_marcados === 0 && b.itens_reassociados === 0 && b.itens_nao_encontrados === 1, "K: código duplicado com os dois aceites: confirma a demanda, mas NÃO reassocia (1 ausente, 0 marcados)");
+  ok(await flags(d, 7302) === "000" && await flags(d, 7303) === "000" && (await d.query("select count(*)::int n from emergencia.pagamento_marcacoes")).rows[0].n === 0, "K: nenhuma das duas linhas com o código duplicado foi marcada e nada foi registrado");
+}
+{ // L) o aceite correto é por demanda: um aceite dado em uma não vale para outra (parâmetros por chamada, sem estado)
+  const d = await banco(); const A = await dem(d, "ana", [it(4060, "WM-A-1", "W MAG", "capa a", 100)]); const B = await dem(d, "ana", [it(4061, "WM-B-1", "W MAG", "capa b", 100)]);
+  await def(d, A, "pago", null, false, true);
+  const b = await def(d, B, "pago");
+  ok(b.status === "confirmar_itens_ausentes" && await flags(d, 7301) === "000", "L: o aceite dado à demanda A não vale para a B (a B continua parando antes de gravar)");
+}
 { // I) aplicar: permissões idênticas, guardas, verificador, reversão e reaplicação
   const d1 = await banco({ r11: false }); const antes = await acl(d1);
   ok(await tenta(d1, sql("R1_1_reassociar_itens_aplicar.sql")) === null, "I: R1.1 aplica");
