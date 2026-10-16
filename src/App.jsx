@@ -21965,8 +21965,8 @@ const DAZED_SM_CFG = {
 // ESQUIRE HYUNJIN — pedidos até 20/10, pagamento até 25/10
 const ESQUIRE_HJ_CAPAS = [
   { id:"a", label:"Versão A", img:"https://pbs.twimg.com/media/HUqe__XbAAAxuBl?format=jpg&name=large" },
-  { id:"b", label:"Versão B", img:"https://pbs.twimg.com/media/HUqe__gaMAA2LzM?format=jpg&name=large" },
-  { id:"c", label:"Versão C", img:"https://pbs.twimg.com/media/HUqe__VbsAAnqrY?format=jpg&name=large" },
+  { id:"b", label:"Versão B", img:"https://image.aladin.co.kr/product/40447/48/cover500/k042131818_1.jpg" },
+  { id:"c", label:"Versão C", img:"https://image.aladin.co.kr/product/40447/47/cover500/k082131818_1.jpg" },
 ];
 const ESQUIRE_HJ_CFG = {
   tabela: "pedidos_esquire_hyunjin", pasta: "esquire-hyunjin", produto: "ESQUIRE HYUNJIN",
