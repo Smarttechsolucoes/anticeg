@@ -2,12 +2,24 @@
 -- Como funciona: tudo roda dentro de UM bloco DO e ele termina de propósito com um ERRO ("R1 FUMAÇA ..."), o que desfaz a transação inteira (inclusive o gatilho de multa).
 --   O texto do erro é o relatório. Se aparecer "R1 FUMAÇA OK" tudo passou; "R1 FUMAÇA FALHA" lista o que falhou. Nenhuma notificação, e-mail ou chamada externa é disparada (só SQL).
 -- Usa: a primeira administradora de admin_roles e UM item real da masterlist ainda não pago (só para o teste; o estado dele é restaurado pelo desfazimento).
+-- GUARDAS DE SEGURANÇA (antes de gravar qualquer coisa, o próprio teste confere e ABORTA se algo for inesperado): (a) só pode haver ligado, nas tabelas tocadas, o gatilho trg_registrar_multa_paga; (b) o corpo dele
+--   não pode conter HTTP, NOTIFY, dblink, pg_net, COPY PROGRAM ou similares; (c) nenhuma regra (RULE) nessas tabelas. Tudo é transacional: o único efeito que NÃO é desfeito é o avanço da numeração (sequência) dos ids
+--   de pagamento_demandas e multas_pagas (ids "pulam" 2-3 números; nenhum dado). Há também um bloqueio de linha de milissegundos no item usado, até o desfazimento.
 -- Cobre: visitante negado · logada sem ser admin negada · admin confirma · item de outra joiner pede confirmação · reabrir · rejeitar com motivo · marcar pago manual · item inexistente.
 do $$
 declare
   rep text := ''; falhas int := 0; v_admin uuid; v_outra uuid := gen_random_uuid(); v_item bigint; v_cog text; v_dem bigint; v_dem2 bigint;
-  r jsonb; st text; mot text; v_pi boolean; v_pf boolean; v_msg text;
+  g record; r jsonb; st text; mot text; v_pi boolean; v_pf boolean; v_msg text;
 begin
+  -- guardas (nada foi gravado ainda)
+  for g in select t.tgname, t.tgfoid, c.relname from pg_trigger t join pg_class c on c.oid = t.tgrelid
+            where not t.tgisinternal and t.tgenabled <> 'D' and t.tgrelid in ('public.masterlist'::regclass, 'public.pagamento_demandas'::regclass, 'public.multas_pagas'::regclass) loop
+    if g.tgname <> 'trg_registrar_multa_paga' then raise exception 'R1 FUMAÇA ABORTADO (nada gravado): gatilho inesperado ligado: % em %. Não executo o teste.', g.tgname, g.relname; end if;
+    if pg_get_functiondef(g.tgfoid) ~* '(net\.|http_|pg_notify|\mnotify\M|dblink|pg_net|supabase_functions|copy[^;]*program|lo_import|lo_export|pg_read_file)' then
+      raise exception 'R1 FUMAÇA ABORTADO (nada gravado): o gatilho % parece ter efeito externo. Não executo o teste.', g.tgname; end if;
+  end loop;
+  if exists (select 1 from pg_rewrite r where r.ev_class in ('public.masterlist'::regclass, 'public.pagamento_demandas'::regclass, 'public.multas_pagas'::regclass) and r.rulename <> '_RETURN') then
+    raise exception 'R1 FUMAÇA ABORTADO (nada gravado): há regras (RULE) nas tabelas tocadas. Não executo o teste.'; end if;
   select user_id into v_admin from public.admin_roles order by user_id limit 1;
   if v_admin is null then raise exception 'R1 FUMAÇA: nenhuma administradora em admin_roles (nada gravado)'; end if;
   select m.id, m.cog into v_item, v_cog from public.masterlist m where m.pago_item is not true and m.pago_frete is not true and m.cog is not null and btrim(m.cog) <> '' order by m.id limit 1;

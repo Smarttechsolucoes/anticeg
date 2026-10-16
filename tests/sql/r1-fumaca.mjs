@@ -60,6 +60,28 @@ const rodar = async (d, arq) => { try { await d.exec(sql(arq)); return "sem erro
   const m = await rodar(d, "R1_teste_fumaca_desfeito.sql");
   ok(m.startsWith("R1 FUMAÇA OK") && m.includes("visitante negado (P0001)"), "mesmo com EXECUTE liberado ao visitante, a função nega (checagem de admin interna)");
 }
+{ // 3b) guardas: gatilho inesperado ligado => o teste ABORTA antes de gravar
+  const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
+  await d.exec(`create function public.f_estranha() returns trigger language plpgsql as $f$ begin return new; end $f$;
+                create trigger trg_estranho after update on public.masterlist for each row execute function public.f_estranha();`);
+  const antes = await imp(d); const m = await rodar(d, "R1_teste_fumaca_desfeito.sql");
+  ok(m.startsWith("R1 FUMAÇA ABORTADO") && m.includes("trg_estranho") && await imp(d) === antes, "gatilho inesperado ligado: aborta sem gravar nada");
+}
+{ // 3c) guardas: gatilho esperado, mas com efeito externo (pg_notify) => aborta
+  const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
+  await d.exec(`create or replace function public.registrar_multa_paga() returns trigger language plpgsql as $f$ begin perform pg_notify('x', 'y'); return new; end $f$;`);
+  const m = await rodar(d, "R1_teste_fumaca_desfeito.sql");
+  ok(m.startsWith("R1 FUMAÇA ABORTADO") && m.includes("efeito externo"), "gatilho de multa com pg_notify: aborta");
+}
+{ // 3d) guardas: gatilho desligado (como o B7 deixou o de pagamento) não bloqueia; regra (RULE) bloqueia
+  const d = await banco(); await d.exec(sql("R1_admin_pagamentos_aplicar.sql"));
+  await d.exec(`create function public.f_est() returns trigger language plpgsql as $f$ begin return new; end $f$;
+                create trigger trg_confirmar_pagamento after update on public.pagamento_demandas for each row execute function public.f_est();
+                alter table public.pagamento_demandas disable trigger trg_confirmar_pagamento;`);
+  ok((await rodar(d, "R1_teste_fumaca_desfeito.sql")).startsWith("R1 FUMAÇA OK"), "gatilho DESLIGADO (como o B7) não impede o teste");
+  await d.exec(`create rule r_x as on update to public.masterlist do also select 1;`);
+  ok((await rodar(d, "R1_teste_fumaca_desfeito.sql")).includes("regras (RULE)"), "regra (RULE) na tabela: aborta");
+}
 { // 4) sem o R1 aplicado
   const d = await banco(); const m = await rodar(d, "R1_teste_fumaca_desfeito.sql");
   ok(!m.startsWith("R1 FUMAÇA OK"), "antes do R1 o teste NÃO passa (" + m.split("\n")[0].slice(0, 70) + ")");
