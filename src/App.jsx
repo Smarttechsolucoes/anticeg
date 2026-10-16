@@ -5,6 +5,7 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
+import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -9574,11 +9575,8 @@ Confirmar mesmo assim? Os itens que existem serão marcados como pagos; esses vo
                   // Reverte planilha para FALSE
                   const itensComId = (d.itens || []).filter(i => i.id_linha);
                   if (itensComId.length > 0) {
-                    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-                      method: "POST", redirect: "follow",
-                      headers: { "Content-Type": "text/plain" },
-                      body: JSON.stringify({ acao: "cancelar", token: "anticeg-pag-2026", itens: itensComId }),
-                    }).catch(() => {});
+                    // sem bloquear a tela: lê a resposta e AVISA se a planilha pode ter ficado marcada (o sync de 9h/21h a devolveria ao site)
+                    cancelarNaPlanilha(itensComId).then(rc => { const aviso = mensagemCancelar(rc, itensComId); if (aviso) alert(aviso); });
                   }
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));

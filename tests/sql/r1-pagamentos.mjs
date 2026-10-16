@@ -11,9 +11,16 @@ async function banco({ funcaoAntiga = true } = {}) {
   await d.exec(`
     create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
     grant usage on schema public to anon, authenticated, service_role;
+    -- como no Supabase real: tudo o que o dono cria em public (e em emergencia) nasce com ALL para anon/authenticated/service_role (o R1 e o C0 é que fecham)
+    create schema if not exists emergencia; grant usage on schema emergencia to anon, authenticated;
+    alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+    alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+    alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+    alter default privileges in schema emergencia grant all on tables to anon, authenticated, service_role;
+    alter default privileges in schema emergencia grant all on functions to anon, authenticated, service_role;
     create schema auth; grant usage on schema auth to anon, authenticated, service_role;
     create table auth.users (id uuid primary key, email text);
-    create function auth.uid() returns uuid language sql stable as $f$ select nullif(coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'sub', '')::uuid $f$;
+    create function auth.uid() returns uuid language sql stable as $f$ select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''), (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'))::uuid $f$;
     grant execute on function auth.uid() to anon, authenticated, service_role;
     insert into auth.users values ('${U(1)}', 'dona@exemplo.com'), ('${U(2)}', 'joiner@exemplo.com');
     create table public.admin_roles (user_id uuid primary key);
@@ -27,7 +34,8 @@ async function banco({ funcaoAntiga = true } = {}) {
       ('ana', '[{"id":1,"valor_item":100,"frete_inter":20,"taxa_rf":0},{"id":2,"valor_item":50,"frete_inter":0,"taxa_rf":5},{"id":999,"valor_item":10}]', 175),
       ('bia', '[{"id":3,"valor_item":70}]', 70);
     -- como o C0: ninguém (nem logado) altera estas tabelas direto
-    grant select on public.masterlist, public.pagamento_demandas to anon, authenticated;
+    -- estado do C0: visitante e logado só leem estas duas tabelas
+    revoke all on all tables in schema public from anon, authenticated; grant select on public.masterlist, public.pagamento_demandas to anon, authenticated;
     grant select, update, insert on public.masterlist, public.pagamento_demandas to service_role;
     ${funcaoAntiga ? `create function public.set_pagamento_demanda_status(demanda_id bigint, novo_status text, motivo_rejeicao text default null) returns void language plpgsql security definer as $f$ begin update public.pagamento_demandas set status = novo_status where id = demanda_id; end $f$;
     grant execute on function public.set_pagamento_demanda_status(bigint, text, text) to anon, authenticated;` : ""}
