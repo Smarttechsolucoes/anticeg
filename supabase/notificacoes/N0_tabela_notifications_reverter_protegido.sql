@@ -1,4 +1,4 @@
--- N0 — REVERSÃO PROTEGIDA: apaga a tabela public.notifications SOMENTE se estiver VAZIA (nunca perde notificação). Se já tiver linhas, aborta: exporte-as antes.
+-- N0 — REVERSÃO PROTEGIDA: apaga as 2 funções e a tabela public.notifications SOMENTE se a tabela estiver VAZIA (nunca perde notificação real). Se já tiver linhas, aborta: exporte-as antes e decida.
 -- Atenção: depois do J4c-4c, reverter o N0 deixa o J4c-4c sem a tabela (ele abortaria). Reverta o J4c-4c antes.
 begin;
 do $$
@@ -11,6 +11,8 @@ begin
   if to_regclass('public.notifications') is null then raise exception 'public.notifications não existe.'; end if;
   execute 'select count(*) from public.notifications' into n;
   if n > 0 then raise exception 'notifications tem % linha(s): NÃO apago. Exporte-as e decida (nada foi alterado).', n; end if;
+  drop function if exists public.minhas_notificacoes(text);
+  drop function if exists public.marcar_notificacao_lida(bigint, text);
   drop table public.notifications;
   update emergencia.c0b_estado_anterior set etapa = 'N0-revertido' where etapa = 'N0';
 end $$;
