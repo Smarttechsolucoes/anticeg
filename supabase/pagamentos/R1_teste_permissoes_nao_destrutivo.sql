@@ -88,23 +88,17 @@ begin
   set local role anon;
   begin
     perform 1 from emergencia.pagamento_marcacoes limit 1;
-    rep := rep || E'FALHA visitante leu o registro interno de marcações
-'; falhas := falhas + 1;
+    rep := rep || E'FALHA visitante leu o registro interno de marcações\n'; falhas := falhas + 1;
   exception when others then
-    if sqlstate = '42501' then rep := rep || E'OK    visitante NÃO acessa o registro interno de marcações (42501)
-'; else rep := rep || E'FALHA registro interno (visitante): erro inesperado ' || sqlstate || E'
-'; falhas := falhas + 1; end if;
+    if sqlstate = '42501' then rep := rep || E'OK    visitante NÃO acessa o registro interno de marcações (42501)\n'; else rep := rep || E'FALHA registro interno (visitante): erro inesperado ' || sqlstate || E'\n'; falhas := falhas + 1; end if;
   end;
   reset role;
   set local role authenticated;
   begin
     perform 1 from emergencia.pagamento_marcacoes limit 1;
-    rep := rep || E'FALHA logada leu o registro interno de marcações
-'; falhas := falhas + 1;
+    rep := rep || E'FALHA logada leu o registro interno de marcações\n'; falhas := falhas + 1;
   exception when others then
-    if sqlstate = '42501' then rep := rep || E'OK    logada NÃO acessa o registro interno de marcações (42501)
-'; else rep := rep || E'FALHA registro interno (logada): erro inesperado ' || sqlstate || E'
-'; falhas := falhas + 1; end if;
+    if sqlstate = '42501' then rep := rep || E'OK    logada NÃO acessa o registro interno de marcações (42501)\n'; else rep := rep || E'FALHA registro interno (logada): erro inesperado ' || sqlstate || E'\n'; falhas := falhas + 1; end if;
   end;
   reset role;
 
