@@ -337,6 +337,13 @@ async function main() {
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
 
+  // Erros por linha NÃO podem passar por "sync íntegro": o job fica vermelho (código 4) para alguém olhar.
+  // Os logs de cada erro acima continuam como estavam, e as demais atualizações já foram feitas (nada é desfeito).
+  if (erros > 0 || jErros > 0) {
+    console.error(`✗ Sync com erros por linha: ${erros} na masterlist · ${jErros} em joiners — o job termina com falha (código 4).`);
+    process.exitCode = 4;
+  }
+
 
   // Remover registros do banco que não existem mais na planilha — SEMPRE pela função atômica prune_masterlist (supabase/sync/S1_*.sql).
   // Ela mesma recusa planilha parcial, preserva claims/linhas do site/pagas, aplica limite por execução e arquiva o que apagar.
