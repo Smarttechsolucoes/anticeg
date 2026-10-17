@@ -7268,7 +7268,7 @@ const PAGAMENTOS_SUSPENSO = false;
 const PAGAMENTOS_SUSPENSO_MSG = "Confirmar, Reabrir e Rejeitar estão suspensos temporariamente por manutenção de segurança.";
 const PAGAMENTOS_MANUAL_SUSPENSO_MSG = "Marcar pagamentos como pagos (item, frete e taxa RF) está suspenso temporariamente por manutenção de segurança.";
 
-function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarMotivo, setRejeitarMotivo, onConfirmar, onReabrir, onRejeitar }) {
+function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarMotivo, setRejeitarMotivo, onConfirmar, onReabrir, onRejeitar, planilhaPendente, onReenviarPlanilha }) {
   const isPend = d.status === "em_analise";
   const nome = (joinersData || []).find(j => j.cog === d.joiner_cog)?.nome || null;
   const fmtV = v => Number(v) > 0 ? `R$${Number(v).toFixed(2).replace(".",",")}` : null;
@@ -7328,6 +7328,12 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
           {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
           {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
+        </div>
+      )}
+      {planilhaPendente && (
+        <div role="alert" style={{ margin:"12px 0 0", padding:"10px 12px", borderRadius:7, border:"1px solid rgba(255,209,102,.4)", background:"rgba(255,209,102,.08)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:11, lineHeight:1.6 }}>
+          <strong>⚠ Planilha pendente.</strong> {planilhaPendente === "cancelar" ? "O site rejeitou, mas a planilha ainda pode estar marcada como paga." : "O site confirmou, mas a planilha ainda não confirmou todos os itens: o próximo sincronismo pode desfazer a marca."}
+          <div style={{ marginTop:8 }}><button onClick={() => onReenviarPlanilha?.(d.id)} style={{ padding:"6px 12px", background:"transparent", color:"#FFD166", border:"1px solid rgba(255,209,102,.5)", borderRadius:6, fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer" }}>↻ Reenviar à planilha</button></div>
         </div>
       )}
       <fieldset disabled={PAGAMENTOS_SUSPENSO} title={PAGAMENTOS_SUSPENSO ? PAGAMENTOS_SUSPENSO_MSG : undefined}
@@ -8517,6 +8523,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [corrigirOk,        setCorrigirOk]        = useState(null); // item id
   const [joinerUpdates,     setJoinerUpdates]     = useState([]);
   const [pagDemandas,       setPagDemandas]       = useState([]);
+  const [planilhaPend,      setPlanilhaPend]      = useState({});   // id da demanda -> "confirmar" | "cancelar": a planilha NÃO confirmou tudo (o cartão mostra o aviso até resolver)
   const [adminRepassos,     setAdminRepassos]     = useState(null);
   const [reportRespostas,   setReportRespostas]   = useState({});
   const [reportSaving,      setReportSaving]      = useState(new Set());
@@ -9573,9 +9580,28 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
                   // a PLANILHA é a fonte da verdade do sync: sem TRUE nela, o próximo sync desfaz a confirmação. "confirmar" só escreve TRUE (idempotente); a resposta é lida e qualquer falha/parcial é AVISADA
                   const { itens: paraPlanilha, semCodigo } = itensParaPlanilha(d);
-                  confirmarEAvisar(paraPlanilha, semCodigo);   // lê a resposta, oferece reenviar só o pendente e nunca mostra sucesso indevido
+                  setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
+                  const rp = await confirmarEAvisar(paraPlanilha, semCodigo);   // lê a resposta, oferece reenviar só o pendente e nunca mostra sucesso indevido
+                  setPlanilhaPend(prev => { const n = { ...prev }; if (rp.estado === "pendente") n[id] = "confirmar"; else delete n[id]; return n; });
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
+              }
+              async function reenviarPlanilha(id) {
+                const d = pagDemandas.find(x => x.id === id); if (!d) return;
+                if (d.status === "pago") {
+                  const { itens: paraPlanilha, semCodigo } = itensParaPlanilha(d);
+                  const rp = await confirmarEAvisar(paraPlanilha, semCodigo);
+                  setPlanilhaPend(prev => { const n = { ...prev }; if (rp.estado === "pendente") n[id] = "confirmar"; else delete n[id]; return n; });
+                } else if (d.status === "rejeitado") {
+                  const { itens: itensComId } = itensParaCancelar(d, pagDemandas);
+                  const res = itensComId.length ? await chamarPlanilha("cancelar", { itens: itensComId }, { esperados: esperadosConfirmacao(itensComId), admin: true }) : null;
+                  const msg = itensComId.length ? mensagemPlanilha(res, { perfil: "admin", itensSemId: [], contexto: "Reversão do pagamento" }) : "";
+                  setPlanilhaPend(prev => { const n = { ...prev }; if (msg) n[id] = "cancelar"; else delete n[id]; return n; });
+                  if (msg) alert(`Ainda não foi possível desmarcar na planilha:
+
+${msg}`);
+                  else alert("Planilha atualizada: os itens desta demanda foram desmarcados.");
+                } else { setPlanilhaPend(prev => { const n = { ...prev }; delete n[id]; return n; }); }
               }
               async function reabrir(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
@@ -9583,6 +9609,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
                 alert(mensagemReabrir(dadosReabrir));   // deixa claro: a planilha não é alterada ao reabrir; para desmarcar, rejeitar
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
+                setPlanilhaPend(prev => { const n = { ...prev }; delete n[id]; return n; });
               }
               async function rejeitar(id, motivo) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
@@ -9608,6 +9635,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   if (itensComId.length > 0 || itensSemCodigo.length > 0) {
                     (itensComId.length > 0 ? chamarPlanilha("cancelar", { itens: itensComId }, { esperados: esperadosConfirmacao(itensComId), admin: true }) : Promise.resolve(null)).then(res => {
                       const msg = mensagemPlanilha(res, { perfil: "admin", itensSemId: itensSemCodigo, contexto: "Reversão do pagamento" });
+                      setPlanilhaPend(prev => { const n = { ...prev }; if (msg) n[id] = "cancelar"; else delete n[id]; return n; });
                       if (msg) { console.error("planilha (cancelar):", res); alert(`Comprovante recusado no site, mas desmarcar o pagamento na planilha precisa de atenção:\n\n${msg}\n\nConfira estes itens na planilha: eles podem continuar marcados como pagos.`); }
                     });
                   }
@@ -9685,7 +9713,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                     ? <div style={{ textAlign:"center", padding:"40px 0", fontSize:12, color:"rgba(245,240,232,.25)", fontFamily:"'DM Mono',monospace" }}>
                         {formularioFiltro === "analise" ? "Nenhum formulário em análise." : formularioFiltro === "confirmados" ? "Nenhum pagamento confirmado ainda." : "Nenhum pagamento rejeitado."}
                       </div>
-                    : listaAtiva.map(d => <AdminCardDemanda key={d.id} d={d} joinersData={joinersData} rejeitarId={rejeitarId} setRejeitarId={setRejeitarId} rejeitarMotivo={rejeitarMotivo} setRejeitarMotivo={setRejeitarMotivo} onConfirmar={confirmar} onReabrir={reabrir} onRejeitar={rejeitar} />)
+                    : listaAtiva.map(d => <AdminCardDemanda key={d.id} d={d} joinersData={joinersData} rejeitarId={rejeitarId} setRejeitarId={setRejeitarId} rejeitarMotivo={rejeitarMotivo} setRejeitarMotivo={setRejeitarMotivo} onConfirmar={confirmar} onReabrir={reabrir} onRejeitar={rejeitar} planilhaPendente={planilhaPend[d.id]} onReenviarPlanilha={reenviarPlanilha} />)
                   }
                 </div>
               );
