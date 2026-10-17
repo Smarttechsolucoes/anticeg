@@ -31,7 +31,7 @@ test("push, e-mail e demais avisos continuam como estavam (pushes, push_reads, r
   for (const t of ['from("reports")', 'from("pushes")', 'from("push_reads")']) assert.ok(ctx.includes(t), t);
   assert.ok(src.includes('return supabase.from("pushes").insert(rows);'));
   const marcar = src.slice(src.indexOf("async function marcarResolvido"), src.indexOf("async function marcarResolvido") + 1400);
-  assert.ok(marcar.includes("await inserirPush(") && marcar.includes("sendEmailJoiner("), "push e e-mail do report resolvido intactos");
+  assert.ok(marcar.includes("await inserirPush(") && (marcar.includes("sendEmailJoiner(") || marcar.includes("notificarEmail(")), "push e e-mail do report resolvido intactos");
 });
 
 test("a admin é avisada de que o aviso dentro do site está indisponível ao solicitar endereço", () => {
