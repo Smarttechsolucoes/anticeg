@@ -44,24 +44,6 @@ export const SMOLMERCH_PRODUTOS = [
   { aba: "anterior", id: "house-id-holder", nome: "Boddaramji House ID Photo Holder", foto: "423228876/20260409_095606.jpg", opcoes: [
     { id: "house-id-holder", label: "ID Photo Holder", preco: 30 },
   ] },
-  { aba: "anterior", id: "washi-tapes", nome: "Washi Tapes", foto: "423230922/Washi+Tapes.jpg", opcoes: [
-    { id: "washi-minsung", label: "Minsung Quotes", preco: 18 },
-    { id: "washi-ditto",   label: "Skzoo Dittos",   preco: 18 },
-  ] },
-  { aba: "anterior", id: "skzoo-pc-holders", nome: "SKZOO Acrylic Photocard Holders (7x13)", foto: "423232119/PG3_PC+Holders.jpg", opcoes: [
-    { id: "skzoo-pc-wolfchan", label: "Wolf Chan",  preco: 40 },
-    { id: "skzoo-pc-leebit",   label: "Leebit",     preco: 40 },
-    { id: "skzoo-pc-dwaekki",  label: "Dwaekki",    preco: 40 },
-    { id: "skzoo-pc-jiniret",  label: "Jiniret",    preco: 40 },
-    { id: "skzoo-pc-quokka",   label: "Han Quokka", preco: 40 },
-    { id: "skzoo-pc-bbokari",  label: "BbokAri",    preco: 40 },
-    { id: "skzoo-pc-puppym",   label: "PuppyM",     preco: 40 },
-    { id: "skzoo-pc-foxiny",   label: "FoxI.Ny",    preco: 40 },
-  ] },
-  { aba: "anterior", id: "pudding-choco", nome: "Lino Pudding & Han Choco", foto: "423229755/PG1_pudding+choco.jpg", opcoes: [
-    { id: "lino-pudding", label: "Lino Pudding Keychain", preco: 30 },
-    { id: "han-choco",    label: "Han Choco Keychain",    preco: 30 },
-  ] },
   { aba: "anterior", id: "byeolbit-pvc", nome: "ByeolBit PVC PC Holder", foto: "423231669/PG3_Byeolbit+pc+holder.jpg", opcoes: [
     { id: "byeolbit-pvc", label: "PVC PC Holder", preco: 47 },
   ] },
