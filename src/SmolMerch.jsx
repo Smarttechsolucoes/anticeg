@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
-import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } from "./smolmerchDados.js";
+import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_ABAS, SMOLMERCH_CFG, fmtReais, foto } from "./smolmerchDados.js";
 
 const mono = "'DM Mono',monospace";
 
@@ -30,6 +30,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
   const [erro,        setErro]        = useState("");
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
+  const [aba,         setAba]         = useState(SMOLMERCH_ABAS[0].id);   // UPDATE | FORMS ANTERIOR (o carrinho vale para as duas)
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -153,8 +154,21 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                {SMOLMERCH_ABAS.map(ab => {
+                  const ativa = aba === ab.id;
+                  const noCarrinho = SMOLMERCH_OPCOES.filter(o => o.aba === ab.id).reduce((n, o) => n + (qtds[o.id] || 0), 0);
+                  return (
+                    <button key={ab.id} type="button" onClick={() => setAba(ab.id)}
+                      style={{ flex: 1, padding: "10px 0", borderRadius: 8, cursor: "pointer", fontFamily: mono, fontSize: 11, fontWeight: 700, letterSpacing: "1px",
+                        border: `1px solid ${ativa ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativa ? "rgba(255,92,26,.12)" : "transparent", color: ativa ? "var(--laranja)" : "rgba(245,240,232,.5)" }}>
+                      {ab.nome}{noCarrinho > 0 ? ` (${noCarrinho})` : ""}
+                    </button>
+                  );
+                })}
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {SMOLMERCH_PRODUTOS.map(p => (
+                {SMOLMERCH_PRODUTOS.filter(p => p.aba === aba).map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                     <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
                       <img src={foto(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(foto(p.foto, 2000))}

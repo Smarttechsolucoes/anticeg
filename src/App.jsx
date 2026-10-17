@@ -25781,11 +25781,11 @@ function PrevendaTab({ user }) {
       key: "smolmerch",
       ativo: true,
       titulo: "SMOL MERCH",
-      subtitulo: "Extended PO · Boddaramji House · Miso Candy Pouch · PC Holder",
+      subtitulo: "UPDATE (Extended PO) · Boddaramji · Han BDAY · Miso · Stickers e mais",
       url: "/smolmerch",
       img: "/smolmerch/itens-out-2026.jpg",
       tags: ["Pedidos até 19/10", "Pagamento dia 20/10"],
-      info: `${SMOLMERCH_OPCOES.length} itens · a partir de R$ 26,00 · pagamento depois do pedido`,
+      info: `${SMOLMERCH_OPCOES.length} opções em 2 abas (UPDATE + forms anterior) · a partir de R$ 5,50 · pagamento depois do pedido`,
     },
     {
       key: "wmag-leeknow",
