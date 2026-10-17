@@ -27325,8 +27325,8 @@ export default function App() {
           offset={i}
           user={user}
           onOk={async () => {
+            // "Lido" fica registrado em push_reads. Antes, o aviso pessoal também era apagado de pushes, mas push_reads aponta para pushes (FK sem cascata): o DELETE sempre falhava com 409 (78 vezes nos logs de 14-17/10) e o aviso já some pela leitura. Não apagamos mais.
             await supabase.from("push_reads").insert([{ push_id: p.id, joiner_cog: user.cog }]);
-            if (p.joiner_cog) await supabase.from("pushes").delete().eq("id", p.id);
             setPushAtivos(prev => prev.filter(x => x.id !== p.id));
           }}
           onX={() => setPushAtivos(prev => prev.filter(x => x.id !== p.id))}
