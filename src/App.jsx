@@ -57,6 +57,14 @@ async function registrarPush(joinerCog) {
 
 let _pushGlobalAtivo = true;
 
+// Notificações INTERNAS (tabela public.notifications): fechada ao site pelo N0 até o lançamento com login por conta (J4c-4c). Enquanto false, o site não lê, não grava e não mostra o aviso interno.
+// E-mail e push (tabela pushes) NÃO dependem disto. Ao reabrir no J4c-4c, trocar para true.
+const NOTIFICACOES_INTERNAS_ATIVAS = false;
+async function inserirNotificacaoInterna(rows) {
+  if (!NOTIFICACOES_INTERNAS_ATIVAS) return { data: null, error: null };
+  return supabase.from("notifications").insert(rows);
+}
+
 async function inserirPush(rows) {
   if (!_pushGlobalAtivo) return { data: null, error: null };
   return supabase.from("pushes").insert(rows);
@@ -7263,9 +7271,9 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
 }
 
 // ── SUSPENSÃO TEMPORÁRIA (contenção de segurança do C0) ───────────────────────────────────────────────
-// Enquanto true, Confirmar / Reabrir / Rejeitar ficam desabilitados e nada é enviado ao banco.
-// Para reativar: trocar para false (depois que a nova proteção de pagamentos estiver no ar).
-const PAGAMENTOS_SUSPENSO = true;
+// Era true durante a contenção. Agora as ações de pagamento passam por funções do servidor que só aceitam administradoras (admin_definir_status_pagamento e admin_marcar_pago).
+// Para suspender de novo em emergência: trocar para true.
+const PAGAMENTOS_SUSPENSO = false;
 const PAGAMENTOS_SUSPENSO_MSG = "Confirmar, Reabrir e Rejeitar estão suspensos temporariamente por manutenção de segurança.";
 const PAGAMENTOS_MANUAL_SUSPENSO_MSG = "Marcar pagamentos como pagos (item, frete e taxa RF) está suspenso temporariamente por manutenção de segurança.";
 
@@ -8905,7 +8913,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       active: true,
       joiner_cog: rep.joiner_cog,
     }]);
-    await supabase.from("notifications").insert([{
+    await inserirNotificacaoInterna([{
       joiner_cog: rep.joiner_cog,
       message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
       type: "report_resolved",
@@ -9532,20 +9540,37 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
               async function confirmar(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago", motivo_rejeicao: null });
+                // o servidor confere ANTES de gravar: itens de OUTRA joiner (pagamento de terceiros) e itens que não existem mais na masterlist só seguem com aceite explícito
+                let aceitaTerceiros = false, aceitaAusentes = false, resp = null;
+                for (let tentativa = 0; tentativa < 3; tentativa++) {
+                  resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null, p_aceitar_terceiros: aceitaTerceiros, p_aceitar_ausentes: aceitaAusentes });
+                  if (resp.error) break;
+                  if (resp.data?.status === "confirmar_terceiros" && !aceitaTerceiros) {
+                    const quem = (resp.data.outras_joiners || []).join(", ");
+                    if (!window.confirm(`Atenção: ${resp.data.itens_de_outra_joiner} item(ns) desta demanda pertencem a outra joiner (${quem}).
+
+Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir esses itens.`)) return;
+                    aceitaTerceiros = true; continue;
+                  }
+                  if (resp.data?.status === "confirmar_itens_ausentes" && !aceitaAusentes) {
+                    // o sync recria linhas da masterlist com id novo: o servidor acha o MESMO item pelo código da planilha (id_linha, mesmo CEG, nome e valores) e mostra aqui antes de marcar
+                    const reass = resp.data.reassociaveis || [];
+                    const semVinculo = resp.data.ids || [];
+                    const linhasReass = reass.map(x => `• ${x.ceg} — ${x.nome_do_item} (${x.cog}): código ${x.id_antigo} → ${x.id_novo}`).join("\n");
+                    const msg = (reass.length ? `${reass.length} item(ns) foram RECRIADOS na MASTERLIST com novo código (mesmo item, CEG e valor). Serão usados os itens atuais:\n${linhasReass}\n\n` : "")
+                      + (semVinculo.length ? `${semVinculo.length} item(ns) NÃO existem mais e não foi possível ligá-los com segurança a nenhum item atual (códigos: ${semVinculo.join(", ")}). Esses NÃO serão marcados; marque-os manualmente se for o caso.\n\n` : "")
+                      + "Confirmar o pagamento mesmo assim?";
+                    if (!window.confirm(msg)) return;
+                    aceitaAusentes = true; continue;
+                  }
+                  break;
+                }
+                const { error } = resp;
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
+                if (resp.data?.itens_nao_encontrados > 0) alert(`Pagamento confirmado. Atenção: ${resp.data.itens_nao_encontrados} item(ns) não existem na masterlist e NÃO foram marcados (códigos: ${(resp.data.ids_nao_encontrados || []).join(", ")}). Marque-os manualmente.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
-                  // Atualiza pago_item/pago_frete/pago_rf no masterlist para cada item da demanda
-                  for (const it of (d.itens || [])) {
-                    if (!it.id) continue;
-                    const updates = {};
-                    if (Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
-                    if (Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
-                    if (Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
-                    if (Object.keys(updates).length > 0)
-                      await supabase.from("masterlist").update(updates).eq("id", it.id);
-                  }
+                  // pago_item/pago_frete/pago_rf dos itens são marcados pelo servidor, na mesma operação que confirma a demanda
                   const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
                   await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
@@ -9554,14 +9579,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               }
               async function reabrir(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise", motivo_rejeicao: null });
+                const { data: dadosReabrir, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
+                if (dadosReabrir?.itens_mantidos > 0) alert(`Demanda reaberta. ${dadosReabrir.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado", motivo_rejeicao: motivo.trim() || null });
+                const { data: dadosRejeitar, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "rejeitado", p_motivo: motivo.trim() || null });
                 if (error) { alert("Não foi possível rejeitar: " + error.message); return; }
+                if (dadosRejeitar?.itens_mantidos > 0) alert(`Comprovante rejeitado. ${dadosRejeitar.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const msg = motivo.trim()
@@ -11161,9 +11188,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                         onClick={async () => {
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
                                           await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
-                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          await inserirNotificacaoInterna([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
-                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                          alert(`Solicitação enviada para @${m.joiner_cog}` + (NOTIFICACOES_INTERNAS_ATIVAS ? "" : " (por push. O aviso dentro do site fica indisponível até o lançamento)"));
                                         }}
                                         style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
                                         {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
@@ -11279,9 +11306,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                         onClick={async () => {
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
                                           await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
-                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          await inserirNotificacaoInterna([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
-                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                          alert(`Solicitação enviada para @${m.joiner_cog}` + (NOTIFICACOES_INTERNAS_ATIVAS ? "" : " (por push. O aviso dentro do site fica indisponível até o lançamento)"));
                                         }}
                                         style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
                                         {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
@@ -13763,7 +13790,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
     const key = `${itemId}_${tipo}`;
     setSaving(prev => ({ ...prev, [key]: true }));
     const campo = tipo === "item" ? "pago_item" : tipo === "frete" ? "pago_frete" : "pago_rf";
-    const { error } = await supabase.from("masterlist").update({ [campo]: true }).eq("id", itemId);
+    const { error } = await clienteAdmin().rpc("admin_marcar_pago", { p_item_id: itemId, p_item: tipo === "item", p_frete: tipo === "frete", p_rf: tipo === "rf" });
     if (error) {
       alert("Não foi possível marcar como pago: " + error.message);
       setSaving(prev => { const n = { ...prev }; delete n[key]; return n; });
@@ -13781,7 +13808,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
       if (isPendente(it.pago_frete) && Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
       if (isPendente(it.pago_rf)    && Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
       if (Object.keys(updates).length > 0) {
-        const { error } = await supabase.from("masterlist").update(updates).eq("id", it.id);
+        const { error } = await clienteAdmin().rpc("admin_marcar_pago", { p_item_id: it.id, p_item: !!updates.pago_item, p_frete: !!updates.pago_frete, p_rf: !!updates.pago_rf });
         if (error) { alert("Não foi possível marcar todos como pagos: " + error.message + "\nA tela não foi alterada; recarregue para ver o estado real."); return; }
       }
     }
@@ -22066,8 +22093,8 @@ const DAZED_SM_CFG = {
 // ESQUIRE HYUNJIN — pedidos até 20/10, pagamento até 25/10
 const ESQUIRE_HJ_CAPAS = [
   { id:"a", label:"Versão A", img:"https://pbs.twimg.com/media/HUqe__XbAAAxuBl?format=jpg&name=large" },
-  { id:"b", label:"Versão B", img:"https://pbs.twimg.com/media/HUqe__gaMAA2LzM?format=jpg&name=large" },
-  { id:"c", label:"Versão C", img:"https://pbs.twimg.com/media/HUqe__VbsAAnqrY?format=jpg&name=large" },
+  { id:"b", label:"Versão B", img:"https://image.aladin.co.kr/product/40447/48/cover500/k042131818_1.jpg" },
+  { id:"c", label:"Versão C", img:"https://image.aladin.co.kr/product/40447/47/cover500/k082131818_1.jpg" },
 ];
 const ESQUIRE_HJ_CFG = {
   tabela: "pedidos_esquire_hyunjin", pasta: "esquire-hyunjin", produto: "ESQUIRE HYUNJIN",
@@ -27125,9 +27152,11 @@ function AppPrincipal() {
   async function carregarAvisos(u) {
     if (!u || u.guest || u.pre_cadastro || !u.cog) return;
     try {
-      const { data: notifs } = await supabase.from("notifications")
-        .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
-      setNotificacoes(notifs || []);
+      if (NOTIFICACOES_INTERNAS_ATIVAS) {
+        const { data: notifs } = await supabase.from("notifications")
+          .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
+        setNotificacoes(notifs || []);
+      } else setNotificacoes([]);
 
       const { data: myReports } = await supabase.from("reports")
         .select("item_id, status").eq("joiner_cog", u.cog);
