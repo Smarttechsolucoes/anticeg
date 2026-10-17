@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 import ws from 'ws';
 import { montarUpsertJoiner, carregarIdsComConta } from './preservar-email.js';
+import { casarPorIdLinha, casarChavesRepetidas } from './casar-itens.js';
 
 const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
@@ -74,7 +75,7 @@ async function main() {
   while (true) {
     const { data: page } = await supabase
       .from('masterlist')
-      .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf')
+      .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog')
       .order('id', { ascending: true })
       .range(from, from + 999);
     if (!page || page.length === 0) break;
@@ -86,7 +87,8 @@ async function main() {
     if (page.length < 1000) break;
     from += 1000;
   }
-  console.log(`${Object.values(existingMap).reduce((a, v) => a + v.length, 0)} itens existentes no banco`);
+  const totalNoBanco = Object.values(existingMap).reduce((a, v) => a + v.length, 0); // ANTES do casamento por código: é a base da trava de planilha parcial
+  console.log(`${totalNoBanco} itens existentes no banco`);
 
   const rows = records.filter(r =>
     col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim() &&
@@ -95,13 +97,37 @@ async function main() {
 
   console.log(`${rows.length} linhas válidas após filtro`);
 
+  // Casa primeiro pelo CÓDIGO da planilha (coluna ID = id_linha): a linha continua a MESMA (mesmo id) mesmo que o nome do item, o nome de exibição ou o dono mudem.
+  // Sem isso a regra antiga (ceg|item|nome) insere uma linha nova e apaga a antiga, e as demandas de pagamento ficam apontando para um id que não existe mais.
+  // O DONO da linha da planilha é calculado como no laço abaixo (@ → joiner cadastrada; senão o próprio @/e-mail): um id NUNCA muda de dono por causa de um código.
+  const cogDe = r => {
+    const tw = col(r, colMap, '@').trim().replace(/^@/, '').toLowerCase();
+    const em = col(r, colMap, 'EMAIL').trim().toLowerCase();
+    return byTwitter[tw] || byEmail[em] || tw || em.split('@')[0] || null;
+  };
+  const casamento = casarPorIdLinha(
+    rows.map(r => ({ idLinha: col(r, colMap, 'ID').trim(), ceg: col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), cog: cogDe(r) })),
+    Object.values(existingMap).flat()
+  );
+  // as linhas já reivindicadas saem do casamento por chave/ordem (e, por consequência, nunca entram na exclusão)
+  for (const k of Object.keys(existingMap)) existingMap[k] = existingMap[k].filter(x => !casamento.reivindicados.has(x.id));
+  // Desempate pelo DONO entre linhas SEM código com a MESMA chave (ex.: duas joiners com o mesmo nome de exibição): evita que os donos TROQUEM de id quando a ordem da planilha muda.
+  const desempate = casarChavesRepetidas(
+    rows.map((r, indice) => ({ indice, r })).filter(x => !casamento.porIndice.has(x.indice))
+        .map(x => ({ indice: x.indice, chave: `${col(x.r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim()}|${col(x.r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim()}|${col(x.r, colMap, 'NOME').trim()}`.toLowerCase(), cog: cogDe(x.r) })),
+    Object.entries(existingMap).flatMap(([k, arr]) => arr.map(x => ({ id: x.id, chave: k, cog: x.cog, item: x })))
+  );
+  for (const k of Object.keys(existingMap)) existingMap[k] = existingMap[k].filter(x => !desempate.reivindicados.has(x.id));
+  let desempatadasPeloDono = 0;
+  let casadosPorCodigo = 0, renomeadosPorCodigo = 0;
+
   let updated = 0, inserted = 0, erros = 0, comData = 0;
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
 
-  for (const r of rows) {
+  for (const [idxLinha, r] of rows.entries()) {
     try {
       const ceg      = col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim();
       const nome     = col(r, colMap, 'NOME').trim();
@@ -154,11 +180,18 @@ async function main() {
                    : 'Comprado';
 
       const key = `${ceg}|${nomeItem}|${nome}`.toLowerCase();
-      sheetKeyCount[key] = (sheetKeyCount[key] || 0) + 1;
-      const occIdx = sheetKeyCount[key] - 1; // 0 = primeira ocorrência
-
-      const existingArr = existingMap[key] || [];
-      const existingItem = existingArr[occIdx]; // pega o item correspondente por ordem
+      let existingItem = casamento.porIndice.get(idxLinha); // 1º: pelo código da planilha (mesmo id e mesmo dono)
+      const doDesempate = !existingItem && desempate.porIndice.has(idxLinha);
+      if (doDesempate) { existingItem = desempate.porIndice.get(idxLinha).item; desempatadasPeloDono++; }
+      else if (existingItem) {
+        casadosPorCodigo++;
+        if (`${existingItem.ceg}|${existingItem.nome_do_item}|${existingItem.nome}`.toLowerCase() !== key) renomeadosPorCodigo++;
+      } else {
+        sheetKeyCount[key] = (sheetKeyCount[key] || 0) + 1;
+        const occIdx = sheetKeyCount[key] - 1; // 0 = primeira ocorrência
+        const existingArr = existingMap[key] || [];
+        existingItem = existingArr[occIdx]; // pega o item correspondente por ordem
+      }
 
       if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
@@ -180,7 +213,7 @@ async function main() {
     }
   }
 
-  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data`);
+  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data · ${casadosPorCodigo} casados pelo código (${renomeadosPorCodigo} com nome/CEG alterado, mantendo o id) · ${desempatadasPeloDono} desempatadas pelo dono`);
 
   const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/send-push`;
 
@@ -304,10 +337,11 @@ async function main() {
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
 
+
   // Remover registros do banco que não existem mais na planilha — SEMPRE pela função atômica prune_masterlist (supabase/sync/S1_*.sql).
   // Ela mesma recusa planilha parcial, preserva claims/linhas do site/pagas, aplica limite por execução e arquiva o que apagar.
   // Se a função não existir (S1 não aplicado) NÃO apagamos nada: nunca há exclusão direta por este script.
-  const totalExistentes = Object.values(existingMap).reduce((a, v) => a + v.length, 0);
+  const totalExistentes = totalNoBanco; // total REAL do banco (as linhas casadas pelo código saíram do existingMap)
   const toDelete = [];
   for (const [key, items] of Object.entries(existingMap)) {
     const countInSheet = sheetKeyCount[key] || 0;
