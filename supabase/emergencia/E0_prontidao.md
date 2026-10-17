@@ -24,3 +24,14 @@ Não há `.delete` dinâmico, nem em Edge Functions, nem em scripts (o sync só 
 
 ## O que continua dependendo de você
 ☆ O resultado dos logs de DELETE (a única fonte para automações externas) e/ou o código dos 4 Apps Scripts.
+
+## Resultado do gate de logs de DELETE (export de 14–17/10, 100 chamadas, `Downloads/supabase_logs.csv`)
+| Chamadas | Tabela / caminho | Origem | Papel | E0 afeta? |
+|---|---|---|---|---|
+| 78 (todas **409**) | `pushes` | navegadores (iPhone/Android) | anon | **Não**: `pushes` está entre as 12 preservadas. O 409 vem da FK `push_reads_push_id_fkey` (o site grava a leitura e tenta apagar o push; nunca funcionou). Corrigido localmente em `fix/push-banner-sem-409` (não apaga mais; push_reads já faz o aviso sumir) |
+| 5 (204) | `masterlist` | `node` (script do sync, 15–16/10 até 17:23, antes do S1) | `service_role` (chave de serviço do GitHub Actions) | **Não**: o E0 só revoga de `anon`/`authenticated`. Depois do S1 o sync só apaga pela função `prune_masterlist` (não aparece como DELETE REST) |
+| 5 (204) | `tentativas_acesso` | Edge Function (deno), 15/10 | `service_role` (a função usa `SUPABASE_SERVICE_ROLE_KEY`; no banco anon/authenticated nem têm privilégio na tabela) | **Não** |
+| 1 (204) | `joiner_storage` | navegador, 14/10 | anon | **Não**: tabela preservada |
+| 11 (200) | Storage `avatars` | navegadores | anon/authenticated via **políticas do Storage** (`storage.objects`) | **Não**: o E0 só mexe em tabelas do schema `public`; Storage é outro mecanismo (fica para o J5/Storage) |
+☆ Nenhuma outra tabela, nenhum `user_agent` de automação externa (Apps Script, curl, python) no período exportado.
+☆ **Conclusão do gate: sem incompatibilidade.** Limites: só mostra a janela exportada e a API REST; automações raras ou o Apps Script que use conexão direta não aparecem (por isso o código dos 4 scripts continua pedido).
