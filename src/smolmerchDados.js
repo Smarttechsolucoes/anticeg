@@ -55,10 +55,11 @@ export const SMOLMERCH_CFG = {
   // Para voltar a aceitar pagamento no formulário, troque para true.
   pagamentoAgora: false,
   // **texto** = negrito
+  // aviso em destaque (caixa amarela, fora da lista de avisos)
+  avisoDestaque: "Se você deseja ADICIONAR algum item no seu pedido anterior, coloque apenas o item novo. Não duplique seu pedido.",
   avisos: [
     "O formulário fica aberto até **19 de outubro**.",
     "O pagamento será no dia **20 de outubro** (a forma de pagar será avisada).",
-    "Se você deseja **ADICIONAR** algum item no seu pedido anterior, coloque **apenas o item novo**. **Não duplique** seu pedido.",
     "Ao fechar o pedido, ele **não poderá ser cancelado**.",
     "O frete e a previsão de envio serão **avisados em breve**.",
   ],

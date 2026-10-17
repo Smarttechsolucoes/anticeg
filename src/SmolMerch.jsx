@@ -108,6 +108,12 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
           {cfg.avisos.map((a, i) => <div key={i}>☆ {a.split("**").map((t, k) => k % 2 ? <strong key={k}>{t}</strong> : t)}</div>)}
         </div>
 
+        {cfg.avisoDestaque && !encerrado && (
+          <div role="note" style={{ background: "rgba(255,214,0,.14)", border: "1px solid rgba(255,214,0,.65)", borderRadius: 10, padding: "14px 16px", marginTop: -14, marginBottom: 28, fontSize: 13, lineHeight: 1.6, fontWeight: 700, color: "#FFD84D" }}>
+            ☆ {cfg.avisoDestaque}
+          </div>
+        )}
+
         {encerrado ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
