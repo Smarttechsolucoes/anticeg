@@ -185,6 +185,8 @@ export async function autorizar(acao: Acao, d: Record<string, unknown>, c: Chama
       // o @ antigo precisa ser da própria pessoa (ainda no cadastro dela) ou não ser de mais ninguém (já foi trocado no cadastro)
       const donosDoAntigo = (await db.joinersComTwitter(antigo)).map(j => norm(j.cog));
       if (donosDoAntigo.some(cog => cog !== dona)) return nega(403, "o @ informado pertence a outra pessoa");
+      // a planilha só ACOMPANHA o cadastro: o site grava o novo @ no cadastro da joiner ANTES de chamar a planilha; se o cadastro dela ainda não tem este @, não há o que espelhar
+      if (novo) { const j = await db.joinerPorCog(dona); if (!j || normTw(j.twitter) !== novo) return nega(403, "o cadastro desta joiner ainda não tem este @"); }
     }
     return { ok: true, corpo: { acao, twitter_antigo: texto(d.twitter_antigo, 65), twitter_novo: texto(d.twitter_novo, 65), email_novo: texto(d.email_novo, 254) } };
   }

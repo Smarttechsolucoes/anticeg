@@ -1,0 +1,55 @@
+--- PAGAMENTO-AUTOMATICO.gs (entregue em 17/10)
++++ PAGAMENTO-AUTOMATICO.gs (v2: token antes da trava + 2 tokens na rotação)
+@@ -2,7 +2,33 @@
+ const HEADER_ROW = 3;
+ const COL_ID_LINHA = 2;
+ 
++// ── AUTENTICAÇÃO (v2) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
++// Durante a rotação do token o Web App aceita DOIS valores: ANTICEG_TOKEN (o atual, ainda usado pelo site antigo) e ANTICEG_TOKEN_NOVO (o que só o servidor do site conhece).
++// Depois da migração: apagar a propriedade ANTICEG_TOKEN_NOVO e colocar o valor novo em ANTICEG_TOKEN (o token antigo deixa de valer). Nunca registra o valor de nenhum token.
++function comparar_(a, b) {
++  const x = String(a == null ? "" : a), y = String(b == null ? "" : b);
++  if (x.length !== y.length) return false;
++  let r = 0;
++  for (let i = 0; i < x.length; i++) r |= x.charCodeAt(i) ^ y.charCodeAt(i);
++  return r === 0;
++}
++function autenticar_(informado) {
++  const props = PropertiesService.getScriptProperties();
++  const atual = props.getProperty("ANTICEG_TOKEN"), novo = props.getProperty("ANTICEG_TOKEN_NOVO");
++  if (!atual && !novo) return { ok: false, erro: "ANTICEG_TOKEN não configurado" };
++  if (novo && comparar_(informado, novo)) return { ok: true, qual: "novo" };
++  if (atual && comparar_(informado, atual)) return { ok: true, qual: "atual" };
++  return { ok: false, erro: "Token inválido" };
++}
++
+ function doPost(e) {
++  // A autenticação vem ANTES da trava e da ação: quem não tem o token não ocupa a fila da planilha nem descobre quais ações existem.
++  let payloadPrevio;
++  try { payloadPrevio = JSON.parse(e.postData.contents); } catch (erroJson) { return resposta({ erro: "Requisição inválida" }); }
++  const auth = autenticar_(payloadPrevio && payloadPrevio.token);
++  if (!auth.ok) return resposta({ erro: auth.erro });
++  console.log("doPost: autenticado com o token " + auth.qual);   // só "atual"/"novo": mostra se o site antigo ainda chama direto (para decidir a hora de rotacionar)
++
+   const lock = LockService.getScriptLock();
+   try {
+     lock.waitLock(30000);
+@@ -36,17 +62,7 @@
+       return resposta({ erro: "Ação inválida" });
+     }
+ 
+-    const tokenEsperado = PropertiesService
+-      .getScriptProperties()
+-      .getProperty("ANTICEG_TOKEN");
+-
+-    if (!tokenEsperado) {
+-      return resposta({ erro: "ANTICEG_TOKEN não configurado" });
+-    }
+-
+-    if (payload.token !== tokenEsperado) {
+-      return resposta({ erro: "Token inválido" });
+-    }
++    // (token já validado por autenticar_ antes da trava)
+ 
+     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+ 

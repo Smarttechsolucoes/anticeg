@@ -188,6 +188,8 @@ test("atualizar_joiner: precisa de uma alteração de cadastro RECENTE com estes
   assert.equal((await montar({ ...cen, confirmacoes: [] }).chamar(corpo)).status, 403, "sem alteração de cadastro recente");
   assert.equal((await montar({ ...cen, confirmacoes: [{ ...cen.confirmacoes[0], created_at: min(90) }] }).chamar(corpo)).status, 403);
   assert.equal((await montar(cen).chamar({ ...corpo, email_novo: "golpe@x.com" })).status, 403, "e-mail diferente do registrado");
+  assert.equal((await montar({ ...cen, joiners: [{ cog: "ana", twitter: "@ana_velha" }, { cog: "bia", twitter: "@bia" }] }).chamar(corpo)).status, 403, "o cadastro da ana ainda tem o @ antigo: a planilha não segue um @ que o cadastro não tem");
+  assert.equal((await montar({ ...cen, joiners: [{ cog: "bia", twitter: "@bia" }] }).chamar(corpo)).status, 403, "cadastro da dona inexistente");
   const E = { PLANILHA_EXIGIR_CONTA: "true" };
   assert.equal((await montar(cen, { env: E }).chamar(corpo)).status, 401);
   assert.equal((await montar(cen, { env: E }).chamar(corpo, "token-ana")).status, 200);
@@ -216,4 +218,47 @@ test("token expirado/ inválido vira anônimo (não erro 500) e continua sujeito
   const cen = { linhas: [L(1, "X-1", "ana")], repassos: [{ item_id: 1 }] };
   const r = await montar(cen).chamar({ acao: "repassar", id_linha: "X-1", novo_nome: "Ana", novo_twitter: "@ana" }, "token-expirado");
   assert.equal(r.status, 403);
+});
+
+// ─────────────── MATRIZ: as 7 ações × identidade × modo (sem login das joiners | com login exigido) ───────────────
+test("MATRIZ de autorização: cada ação, para visitante, dona do item, outra joiner e administradora, nos dois modos", async () => {
+  const cen: Cenario = {
+    linhas: [L(1, "A-1", "ana"), L(2, "B-1", "bia"), L(3, "C-1", "dani"), L(4, "D-1", "eva")],
+    demandas: [DEM(1, "ana", "em_analise", [{ id_linha: "A-1", valor_item: 10 }]), DEM(2, "bia", "rejeitado", [{ id_linha: "B-1", valor_item: 10 }])],
+    reports: [{ item_id: 1, joiner_cog: "ana", created_at: min(5) }],
+    repassos: [{ item_id: 3 }], claims: [{ masterlist_id: 4, joiner_cog: "eva" }],
+    confirmacoes: [{ joiner_cog: "ana", twitter_novo: "@ana_nova", email_novo: null, created_at: min(3) }],
+    joiners: [{ cog: "ana", twitter: "@ana_nova" }, { cog: "bia", twitter: "@bia" }],
+    pre: { cog: "nova", nome: "Nova Joiner", email: null, created_at: min(2) },
+  };
+  const item = [{ id_linha: "A-1", ceg: "ABCD", nome_do_item: "Item 1", valor_item: 10, frete_inter: 0, taxa_rf: 0 }];
+  const itemB = [{ id_linha: "B-1", ceg: "ABCD", nome_do_item: "Item 2", valor_item: 10, frete_inter: 0, taxa_rf: 0 }];
+  const acoes: Record<string, Record<string, unknown>> = {
+    confirmar: { acao: "confirmar", itens: item },
+    cancelar: { acao: "cancelar", itens: itemB },
+    recebido: { acao: "recebido", id_linha: "A-1", ceg: "ABCD", nome_do_item: "Item 1" },
+    repassar: { acao: "repassar", id_linha: "C-1", novo_nome: "Dani", novo_twitter: "@dani" },
+    aprovar_disponivel: { acao: "aprovar_disponivel", id_linha: "D-1", novo_nome: "Eva", novo_twitter: "@eva", vencimento: "01/12" },
+    atualizar_joiner: { acao: "atualizar_joiner", twitter_antigo: "@ana_velha", twitter_novo: "@ana_nova" },
+    novo_joiner: { acao: "novo_joiner", nome: "Nova Joiner", twitter: "@nova", email: "" },
+  };
+  // [visitante, ana (dona), bia (outra joiner), administradora]
+  const esperado: Record<string, { legado: number[]; login: number[] }> = {
+    confirmar:          { legado: [200, 200, 403, 200], login: [401, 200, 403, 401] },   // com login exigido, confirmar/recebido são ações DA JOINER: a administradora não as usa (menor privilégio)
+    cancelar:           { legado: [403, 403, 403, 200], login: [403, 403, 403, 200] },
+    recebido:           { legado: [200, 200, 403, 200], login: [401, 200, 403, 401] },
+    repassar:           { legado: [403, 403, 403, 200], login: [403, 403, 403, 200] },
+    aprovar_disponivel: { legado: [403, 403, 403, 200], login: [403, 403, 403, 200] },
+    atualizar_joiner:   { legado: [200, 200, 403, 200], login: [401, 200, 403, 200] },
+    novo_joiner:        { legado: [200, 200, 200, 200], login: [200, 200, 200, 200] },
+  };
+  const ids = [undefined, "token-ana", "token-bia", "token-admin"];
+  for (const [nome, corpo] of Object.entries(acoes)) {
+    for (const modo of ["legado", "login"] as const) {
+      for (let i = 0; i < ids.length; i++) {
+        const r = await montar(cen, { env: modo === "login" ? { PLANILHA_EXIGIR_CONTA: "true" } : {} }).chamar(corpo, ids[i]);
+        assert.equal(r.status, esperado[nome][modo][i], `${nome} · ${modo} · ${["visitante", "ana (dona)", "bia (outra)", "administradora"][i]}`);
+      }
+    }
+  }
 });
