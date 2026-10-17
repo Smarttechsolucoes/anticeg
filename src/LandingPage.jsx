@@ -242,23 +242,16 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     if (joinErr) { setCadError("Erro ao criar conta. Tente novamente."); setCadLoading(false); return; }
 
     // log para admin (não bloqueia)
-    supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "aprovado" }]).then(() => {});
+    // o aviso à administração só sai DEPOIS de o pedido estar registrado (o servidor confere o registro antes de enviar)
+    supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "aprovado" }])
+      .then(() => supabase.functions.invoke("email-evento", { body: { evento: "novo_cadastro", joiner_cog: cog } }))
+      .catch(() => {});
 
     // adiciona na planilha (async)
     fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
       method: "POST", redirect: "follow",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome, twitter: "@" + cog, email: eml }),
-    }).catch(() => {});
-
-    // notifica admin por e-mail
-    supabase.functions.invoke("send-email", {
-      body: {
-        to_email: "nandadomarketing@gmail.com",
-        to_name: "Nanda",
-        assunto: "✦ Novo joiner adicionado — ANTICEG",
-        corpo: `<p style="font-family:monospace;font-size:13px;color:#F5F0E8;line-height:1.7">Novo joiner adicionado automaticamente:</p><ul style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.7);line-height:2"><li><b>Nome:</b> ${nome}</li><li><b>@:</b> ${cog}</li><li><b>E-mail:</b> ${eml}</li>${whats ? `<li><b>WhatsApp:</b> ${whats}</li>` : ""}</ul>`,
-      },
     }).catch(() => {});
 
     // loga direto com a conta recém-criada

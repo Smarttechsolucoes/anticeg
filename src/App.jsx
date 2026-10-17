@@ -74,13 +74,13 @@ async function inserirPush(rows) {
 
 async function enviarPushJoiner(joinerCog, title, body, url) {
   if (!_pushGlobalAtivo) return;
-  const { data: subs } = await supabase
+  const { data: subs } = await clienteAdmin()
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
     .eq("joiner_cog", joinerCog);
   if (!subs?.length) return;
   await Promise.allSettled(subs.map(s =>
-    supabase.functions.invoke("send-push", {
+    clienteAdmin().functions.invoke("push-evento", {
       body: {
         subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         title, body, url,
@@ -89,18 +89,15 @@ async function enviarPushJoiner(joinerCog, title, body, url) {
   ));
 }
 
-async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
-  if (!toEmail) throw new Error("sem_email");
-  const { error } = await supabase.functions.invoke("send-email", {
-    body: { to_email: toEmail, to_name: toNome || "joiner", assunto, corpo },
-  });
+// E-mail de notificação: o site só informa o TIPO do evento e o id do registro. Destinatário, assunto e conteúdo são decididos pelo servidor.
+// Eventos que a administradora aciona usam a sessão de administradora ({ admin: true }); o aviso de comprovante recebido pode ser acionado pela própria joiner.
+async function notificarEmail(evento, dados, { admin = false } = {}) {
+  const cliente = admin ? clienteAdmin() : supabase;
+  const { error } = await cliente.functions.invoke("email-evento", { body: { evento, ...dados } });
   if (error) {
-    let detail = error.message ?? String(error);
-    try {
-      const ctx = await error.context?.json();
-      if (ctx?.error) detail = ctx.error;
-    } catch {}
-    throw new Error(detail);
+    let detalhe = error.message ?? String(error);
+    try { const ctx = await error.context?.json(); if (ctx?.error) detalhe = ctx.error; } catch { /* resposta sem corpo */ }
+    throw new Error(detalhe);
   }
 }
 
@@ -4059,8 +4056,8 @@ ${p.comprovante_url ? (() => {
             body: JSON.stringify({ acao: "confirmar", token: "anticeg-pag-2026", itens: itensPayload.filter(i => i.id_linha) }),
           }).catch(() => {});
           try {
-            const corpoEmail = buildEmailConfirmacaoPagamento(user.nome_site || user.nome || user.cog, nova);
-            await sendEmailJoiner(user.email, user.nome_site || user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+            if (!user.email) throw new Error("sem_email");
+            await notificarEmail("comprovante_recebido", { demanda_id: nova.id });
             setPagEmailMsg({ ok: true, txt: `📧 Confirmação enviada para ${user.email}` });
           } catch (emailErr) {
             const motivo = emailErr.message === "sem_email"
@@ -8851,12 +8848,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setPmSending(true);
     setPmStatus(null);
     try {
-      let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth, joiner_cog");
+      let query = clienteAdmin().from("push_subscriptions").select("endpoint, p256dh, auth, joiner_cog");
       if (pmDest === "especifico") query = query.eq("joiner_cog", pmJoinerSel.cog);
       const { data: subs } = await query;
       if (!subs?.length) { setPmStatus({ ok: false, txt: "Nenhum dispositivo inscrito." }); setPmSending(false); return; }
       const results = await Promise.allSettled(subs.map(async s => {
-        const { error } = await supabase.functions.invoke("send-push", {
+        const { error } = await clienteAdmin().functions.invoke("push-evento", {
           body: { subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, title: pmTitulo.trim() || "ANTICEG", body: pmCorpo.trim(), url: "/" },
         });
         if (error) throw Object.assign(new Error(error.message || JSON.stringify(error)), { joiner_cog: s.joiner_cog });
@@ -8900,12 +8897,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     }]);
     const joinerInfo = (joinersData || []).find(j => j.cog === rep.joiner_cog);
     if (joinerInfo?.email) {
-      sendEmailJoiner(
-        joinerInfo.email,
-        joinerInfo.nome || rep.joiner_cog,
-        "Seu report foi resolvido ✓",
-        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
-      );
+      notificarEmail("report_resolvido", { report_id: rep.id }, { admin: true }).catch(err => console.error("e-mail do report", err.message));
     }
     setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido", resposta: resposta || null } : x));
     setReportRespostas(prev => { const n = { ...prev }; delete n[rep.id]; return n; });
@@ -9582,8 +9574,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   enviarPushJoiner(d.joiner_cog, "✕ Comprovante recusado", msg, "/");
                   const joiner = (joinersData || []).find(j => j.cog === d.joiner_cog);
                   if (joiner?.email) {
-                    const corpo = buildEmailRejeicaoPagamento(joiner.nome || joiner.cog, d, motivo.trim());
-                    sendEmailJoiner(joiner.email, joiner.nome || joiner.cog, "✕ Comprovante recusado — ANTICEG", corpo);
+                    notificarEmail("comprovante_recusado", { demanda_id: id }, { admin: true }).catch(err => console.error("e-mail de recusa", err.message));
                   }
                   // Reverte planilha para FALSE
                   const itensComId = (d.itens || []).filter(i => i.id_linha);
@@ -13997,8 +13988,6 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
                 })()}
                 {(() => {
                   const joinerInfo = (joiners || []).find(jn => jn.cog === j.cog);
-                  const itemRowsInd = j.itens.map(it => `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`).join("");
-                  const corpo = joinerInfo?.email ? buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(total)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table></td></tr>`) : null;
                   return (
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
                       <button onClick={e => { e.stopPropagation(); if (window.confirm(`Marcar TODOS os pagamentos pendentes de ${j.nome || j.cog} como pagos?`)) marcarTudoPago(j.cog, j.itens); }} disabled={PAGAMENTOS_SUSPENSO} title={PAGAMENTOS_SUSPENSO ? PAGAMENTOS_MANUAL_SUSPENSO_MSG : undefined} style={{ opacity: PAGAMENTOS_SUSPENSO ? .35 : 1,
@@ -14008,7 +13997,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
                       }}>✓ Marcar tudo pago</button>
                       {joinerInfo?.email && (
                         <>
-                          <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
+                          <button onClick={e => { e.stopPropagation(); notificarEmail("lembrete_pagamento", { joiner_cog: j.cog }, { admin: true }).then(() => alert("Lembrete enviado.")).catch(err => alert("Lembrete não enviado: " + err.message)); }} style={{
                             background:"none", border:"1px solid rgba(245,240,232,.12)",
                             color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
                             fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
