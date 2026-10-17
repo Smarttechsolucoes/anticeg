@@ -5,6 +5,7 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
+import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -57,6 +58,14 @@ async function registrarPush(joinerCog) {
 }
 
 let _pushGlobalAtivo = true;
+
+// Notificações INTERNAS (tabela public.notifications): fechada ao site pelo N0 até o lançamento com login por conta (J4c-4c). Enquanto false, o site não lê, não grava e não mostra o aviso interno.
+// E-mail e push (tabela pushes) NÃO dependem disto. Ao reabrir no J4c-4c, trocar para true.
+const NOTIFICACOES_INTERNAS_ATIVAS = false;
+async function inserirNotificacaoInterna(rows) {
+  if (!NOTIFICACOES_INTERNAS_ATIVAS) return { data: null, error: null };
+  return supabase.from("notifications").insert(rows);
+}
 
 async function inserirPush(rows) {
   if (!_pushGlobalAtivo) return { data: null, error: null };
@@ -7242,9 +7251,9 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
 }
 
 // ── SUSPENSÃO TEMPORÁRIA (contenção de segurança do C0) ───────────────────────────────────────────────
-// Enquanto true, Confirmar / Reabrir / Rejeitar ficam desabilitados e nada é enviado ao banco.
-// Para reativar: trocar para false (depois que a nova proteção de pagamentos estiver no ar).
-const PAGAMENTOS_SUSPENSO = true;
+// Era true durante a contenção. Agora as ações de pagamento passam por funções do servidor que só aceitam administradoras (admin_definir_status_pagamento e admin_marcar_pago).
+// Para suspender de novo em emergência: trocar para true.
+const PAGAMENTOS_SUSPENSO = false;
 const PAGAMENTOS_SUSPENSO_MSG = "Confirmar, Reabrir e Rejeitar estão suspensos temporariamente por manutenção de segurança.";
 const PAGAMENTOS_MANUAL_SUSPENSO_MSG = "Marcar pagamentos como pagos (item, frete e taxa RF) está suspenso temporariamente por manutenção de segurança.";
 
@@ -8332,6 +8341,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [revistaCount,      setRevistaCount]      = useState(0);
   const [wmagCount,         setWmagCount]         = useState(0);
   const [wmagLkCount,       setWmagLkCount]       = useState(0);
+  const [wmagDzCount,       setWmagDzCount]       = useState(0);
+  const [esqHjCount,        setEsqHjCount]        = useState(0);
   const [smolmerchCount,    setSmolmerchCount]    = useState(0);
   const [popupCount,        setPopupCount]        = useState(0);
   const [bazaarInCount,     setBazaarInCount]     = useState(0);
@@ -8689,6 +8700,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setWmagCount(count); });
     supabase.from("pedidos_wmag_leeknow").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setWmagLkCount(count); });
+    supabase.from("pedidos_dazed_seungmin").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setWmagDzCount(count); });
+    supabase.from("pedidos_esquire_hyunjin").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setEsqHjCount(count); });
     supabase.from("pedidos_smolmerch").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setSmolmerchCount(count); });
     supabase.from("pedidos_bazaar_in").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
@@ -8877,7 +8892,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       active: true,
       joiner_cog: rep.joiner_cog,
     }]);
-    await supabase.from("notifications").insert([{
+    await inserirNotificacaoInterna([{
       joiner_cog: rep.joiner_cog,
       message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
       type: "report_resolved",
@@ -9016,7 +9031,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + smolmerchCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + smolmerchCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9509,20 +9524,37 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
               async function confirmar(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "pago", motivo_rejeicao: null });
+                // o servidor confere ANTES de gravar: itens de OUTRA joiner (pagamento de terceiros) e itens que não existem mais na masterlist só seguem com aceite explícito
+                let aceitaTerceiros = false, aceitaAusentes = false, resp = null;
+                for (let tentativa = 0; tentativa < 3; tentativa++) {
+                  resp = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "pago", p_motivo: null, p_aceitar_terceiros: aceitaTerceiros, p_aceitar_ausentes: aceitaAusentes });
+                  if (resp.error) break;
+                  if (resp.data?.status === "confirmar_terceiros" && !aceitaTerceiros) {
+                    const quem = (resp.data.outras_joiners || []).join(", ");
+                    if (!window.confirm(`Atenção: ${resp.data.itens_de_outra_joiner} item(ns) desta demanda pertencem a outra joiner (${quem}).
+
+Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir esses itens.`)) return;
+                    aceitaTerceiros = true; continue;
+                  }
+                  if (resp.data?.status === "confirmar_itens_ausentes" && !aceitaAusentes) {
+                    // o sync recria linhas da masterlist com id novo: o servidor acha o MESMO item pelo código da planilha (id_linha, mesmo CEG, nome e valores) e mostra aqui antes de marcar
+                    const reass = resp.data.reassociaveis || [];
+                    const semVinculo = resp.data.ids || [];
+                    const linhasReass = reass.map(x => `• ${x.ceg} — ${x.nome_do_item} (${x.cog}): código ${x.id_antigo} → ${x.id_novo}`).join("\n");
+                    const msg = (reass.length ? `${reass.length} item(ns) foram RECRIADOS na MASTERLIST com novo código (mesmo item, CEG e valor). Serão usados os itens atuais:\n${linhasReass}\n\n` : "")
+                      + (semVinculo.length ? `${semVinculo.length} item(ns) NÃO existem mais e não foi possível ligá-los com segurança a nenhum item atual (códigos: ${semVinculo.join(", ")}). Esses NÃO serão marcados; marque-os manualmente se for o caso.\n\n` : "")
+                      + "Confirmar o pagamento mesmo assim?";
+                    if (!window.confirm(msg)) return;
+                    aceitaAusentes = true; continue;
+                  }
+                  break;
+                }
+                const { error } = resp;
                 if (error) { alert("Erro ao confirmar: " + error.message); return; }
+                if (resp.data?.itens_nao_encontrados > 0) alert(`Pagamento confirmado. Atenção: ${resp.data.itens_nao_encontrados} item(ns) não existem na masterlist e NÃO foram marcados (códigos: ${(resp.data.ids_nao_encontrados || []).join(", ")}). Marque-os manualmente.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
-                  // Atualiza pago_item/pago_frete/pago_rf no masterlist para cada item da demanda
-                  for (const it of (d.itens || [])) {
-                    if (!it.id) continue;
-                    const updates = {};
-                    if (Number(it.valor_item  || 0) > 0) updates.pago_item  = true;
-                    if (Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
-                    if (Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
-                    if (Object.keys(updates).length > 0)
-                      await supabase.from("masterlist").update(updates).eq("id", it.id);
-                  }
+                  // pago_item/pago_frete/pago_rf dos itens são marcados pelo servidor, na mesma operação que confirma a demanda
                   const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
                   await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
@@ -9531,14 +9563,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               }
               async function reabrir(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "em_analise", motivo_rejeicao: null });
+                const { data: dadosReabrir, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
+                if (dadosReabrir?.itens_mantidos > 0) alert(`Demanda reaberta. ${dadosReabrir.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
-                const { error } = await supabase.rpc("set_pagamento_demanda_status", { demanda_id: id, novo_status: "rejeitado", motivo_rejeicao: motivo.trim() || null });
+                const { data: dadosRejeitar, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "rejeitado", p_motivo: motivo.trim() || null });
                 if (error) { alert("Não foi possível rejeitar: " + error.message); return; }
+                if (dadosRejeitar?.itens_mantidos > 0) alert(`Comprovante rejeitado. ${dadosRejeitar.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   const msg = motivo.trim()
@@ -9554,11 +9588,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   // Reverte planilha para FALSE
                   const itensComId = (d.itens || []).filter(i => i.id_linha);
                   if (itensComId.length > 0) {
-                    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-                      method: "POST", redirect: "follow",
-                      headers: { "Content-Type": "text/plain" },
-                      body: JSON.stringify({ acao: "cancelar", token: "anticeg-pag-2026", itens: itensComId }),
-                    }).catch(() => {});
+                    // sem bloquear a tela: lê a resposta e AVISA se a planilha pode ter ficado marcada (o sync de 9h/21h a devolveria ao site)
+                    cancelarNaPlanilha(itensComId).then(rc => { const aviso = mensagemCancelar(rc, itensComId); if (aviso) alert(aviso); });
                   }
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));
@@ -9779,17 +9810,19 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","wmag-leeknow","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","smolmerch"].includes(adminMainTab) && (
+      {["revista","wmag","wmag-leeknow","dazed-seungmin","esquire-hyunjin","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","smolmerch"].includes(adminMainTab) && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
             ← Todos os drops
           </button>
-            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "smolmerch":"Smol Merch" }[adminMainTab]} />
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "smolmerch":"Smol Merch" }[adminMainTab]} />
         </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
       {adminMainTab === "wmag"      && <AdminWMag     onCountChange={setWmagCount} />}
       {adminMainTab === "wmag-leeknow" && <AdminWMag  cfg={WMAG_LK_CFG} onCountChange={setWmagLkCount} />}
+      {adminMainTab === "dazed-seungmin" && <AdminWMag cfg={DAZED_SM_CFG} onCountChange={setWmagDzCount} />}
+      {adminMainTab === "esquire-hyunjin" && <AdminWMag cfg={ESQUIRE_HJ_CFG} onCountChange={setEsqHjCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
       {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
@@ -9802,7 +9835,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       {adminMainTab === "odd-fresh-admin"   && <AdminWaveMaker cfg={ODD_CFG} onCountChange={setOddFreshCount} />}
       {adminMainTab === "promo-13-admin"    && <AdminWaveMaker cfg={PROMO13_CFG} onCountChange={setPromo13Count} />}
       {adminMainTab === "smolmerch"         && <AdminSmolMerch onCountChange={setSmolmerchCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} smolmerchCount={smolmerchCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} smolmerchCount={smolmerchCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -11137,9 +11170,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                         onClick={async () => {
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
                                           await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
-                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          await inserirNotificacaoInterna([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
-                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                          alert(`Solicitação enviada para @${m.joiner_cog}` + (NOTIFICACOES_INTERNAS_ATIVAS ? "" : " (por push. O aviso dentro do site fica indisponível até o lançamento)"));
                                         }}
                                         style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
                                         {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
@@ -11255,9 +11288,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                                         onClick={async () => {
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
                                           await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
-                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          await inserirNotificacaoInterna([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
-                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                          alert(`Solicitação enviada para @${m.joiner_cog}` + (NOTIFICACOES_INTERNAS_ATIVAS ? "" : " (por push. O aviso dentro do site fica indisponível até o lançamento)"));
                                         }}
                                         style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
                                         {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
@@ -13354,20 +13387,27 @@ function AdminMercari({ pedidos = [], onUpdate }) {
 
   const lista = filtro === "todos" ? pedidos : pedidos.filter(p => p.status === filtro);
 
-  async function mudarStatus(p, novoStatus) {
+  async function mudarStatus(p, novoStatus, msgKey = novoStatus) {
     setCarregando(p.id);
     await supabase.from("mercari_pedidos").update({ status: novoStatus }).eq("id", p.id);
     const msgs = {
       aprovado: `🎌 Seu pedido Mercari foi aprovado! Seu item estará finalizado assim que a proxy realizar a compra no Mercari.`,
       recusado: `🎌 Seu pedido Mercari não pôde ser realizado. Entre em contato com a admin para mais informações.`,
+      cancelado: `🎌 Seu pedido Mercari foi cancelado. Entre em contato com a admin para mais informações.`,
       pago:       `🎌 Pagamento do seu pedido Mercari confirmado! Acompanhe o status por aqui.`,
       finalizado: `🎌 Seu pedido Mercari foi finalizado! A compra no Mercari foi realizada. Em breve você receberá mais informações sobre o envio.`,
     };
-    if (msgs[novoStatus]) {
-      await inserirPush([{ message: msgs[novoStatus], active: true, joiner_cog: p.joiner_cog }]);
+    if (msgs[msgKey]) {
+      await inserirPush([{ message: msgs[msgKey], active: true, joiner_cog: p.joiner_cog }]);
     }
     onUpdate(prev => prev.map(x => x.id === p.id ? { ...x, status: novoStatus } : x));
     setCarregando(null);
+  }
+
+  // cancela a qualquer momento (aprovado, pago ou finalizado): grava como "recusado", o status que o portal da joiner já entende
+  function cancelarPedido(p) {
+    if (!window.confirm(`Cancelar o pedido Mercari de ${p.joiner_nome}? A joiner será avisada.`)) return;
+    mudarStatus(p, "recusado", "cancelado");
   }
 
   const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
@@ -13476,6 +13516,12 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                 <button onClick={() => mudarStatus(p, "finalizado")} disabled={carregando === p.id}
                   style={{ background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.3)", color:"#4ecb71", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", fontWeight:700 }}>
                   {carregando === p.id ? "..." : "✓ Finalizar"}
+                </button>
+              )}
+              {["aprovado", "pago", "finalizado"].includes(p.status) && (
+                <button onClick={() => cancelarPedido(p)} disabled={carregando === p.id}
+                  style={{ background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.2)", color:"#ff6b6b", borderRadius:6, padding:"6px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+                  ✗ Cancelar pedido
                 </button>
               )}
             </div>
@@ -13713,7 +13759,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
     const key = `${itemId}_${tipo}`;
     setSaving(prev => ({ ...prev, [key]: true }));
     const campo = tipo === "item" ? "pago_item" : tipo === "frete" ? "pago_frete" : "pago_rf";
-    const { error } = await supabase.from("masterlist").update({ [campo]: true }).eq("id", itemId);
+    const { error } = await clienteAdmin().rpc("admin_marcar_pago", { p_item_id: itemId, p_item: tipo === "item", p_frete: tipo === "frete", p_rf: tipo === "rf" });
     if (error) {
       alert("Não foi possível marcar como pago: " + error.message);
       setSaving(prev => { const n = { ...prev }; delete n[key]; return n; });
@@ -13731,7 +13777,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
       if (isPendente(it.pago_frete) && Number(it.frete_inter || 0) > 0) updates.pago_frete = true;
       if (isPendente(it.pago_rf)    && Number(it.taxa_rf     || 0) > 0) updates.pago_rf    = true;
       if (Object.keys(updates).length > 0) {
-        const { error } = await supabase.from("masterlist").update(updates).eq("id", it.id);
+        const { error } = await clienteAdmin().rpc("admin_marcar_pago", { p_item_id: it.id, p_item: !!updates.pago_item, p_frete: !!updates.pago_frete, p_rf: !!updates.pago_rf });
         if (error) { alert("Não foi possível marcar todos como pagos: " + error.message + "\nA tela não foi alterada; recarregue para ver o estado real."); return; }
       }
     }
@@ -21918,6 +21964,48 @@ const WMAG_LK_CFG = {
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
 };
 
+// DAZED & CONFUSED SEUNGMIN — pedidos até 20/10, pagamento até 25/10
+const DAZED_SM_CAPAS = [
+  { id:"a", label:"Versão A", img:"https://pbs.twimg.com/media/HUjnVaHa0AAyJU0?format=jpg&name=small" },
+  { id:"b", label:"Versão B", img:"https://pbs.twimg.com/media/HUjnOLQaoAAkTR5?format=jpg&name=small" },
+  { id:"c", label:"Versão C", img:"https://pbs.twimg.com/media/HUjnHH6bwAAh9Ow?format=jpg&name=small" },
+];
+const DAZED_SM_CFG = {
+  tabela: "pedidos_dazed_seungmin", pasta: "dazed-seungmin", produto: "DAZED & CONFUSED SEUNGMIN",
+  titulo: "DAZED & CONFUSED", sub: "SEUNGMIN", deadline: new Date("2026-10-20T23:59:59-03:00"), pedidosAte: "20/10/2026",
+  preco: 86, capas: DAZED_SM_CAPAS, pagarAte: "25/10",
+  avisos: [
+    <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
+    <>Envio previsto para o dia <strong>29 de outubro</strong>.</>,
+    <>Pagamento até o dia <strong>25 de outubro</strong>.</>,
+    <>Formulário fecha no dia <strong>20 de outubro</strong>.</>,
+    <>Frete internacional previsto entre <strong>R$80 e R$100</strong>, a depender da quantidade de pedidos.</>,
+    <>O frete internacional será <strong>adicionado ainda esse mês</strong> no valor final.</>,
+    <>Não terá <strong>taxa da Receita Federal</strong> nesse item.</>,
+    <>Dazed pesa aproximadamente <strong>950g</strong>, a depender da edição.</>,
+  ],
+  dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
+};
+
+// ESQUIRE HYUNJIN — pedidos até 20/10, pagamento até 25/10
+const ESQUIRE_HJ_CAPAS = [
+  { id:"a", label:"Versão A", img:"https://pbs.twimg.com/media/HUqe__XbAAAxuBl?format=jpg&name=large" },
+  { id:"b", label:"Versão B", img:"https://image.aladin.co.kr/product/40447/48/cover500/k042131818_1.jpg" },
+  { id:"c", label:"Versão C", img:"https://image.aladin.co.kr/product/40447/47/cover500/k082131818_1.jpg" },
+];
+const ESQUIRE_HJ_CFG = {
+  tabela: "pedidos_esquire_hyunjin", pasta: "esquire-hyunjin", produto: "ESQUIRE HYUNJIN",
+  titulo: "ESQUIRE", sub: "HYUNJIN", deadline: new Date("2026-10-20T23:59:59-03:00"), pedidosAte: "20/10/2026",
+  preco: 60, capas: ESQUIRE_HJ_CAPAS, pagarAte: "25/10",
+  avisos: [
+    <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
+    <>Pagamento até o dia <strong>25 de outubro</strong>.</>,
+    <>Formulário fecha no dia <strong>20 de outubro</strong>.</>,
+    <>O frete internacional será <strong>adicionado ainda esse mês</strong> no valor final.</>,
+  ],
+  dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
+};
+
 function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
   const { capas: WMAG_CAPAS, preco: WMAG_PRECO } = cfg;
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
@@ -24316,6 +24404,8 @@ function ExportarPedidosDrop({ dropId, label }) {
     "revista": { tabela:"pedidos_revista", linhas:p => [...rep(p.versao_regular, "Revista Nylon — Regular", REVISTA_PRECO), ...rep(p.versao_guys, "Revista Nylon — Guys", REVISTA_PRECO)] },
     "wmag":    { tabela:"pedidos_wmag",    linhas:p => [["Capa A", p.capa_a], ["Capa B", p.capa_b], ["Capa C", p.capa_c]].flatMap(([n, q]) => rep(q, `W Magazine Hyunjin — ${n}`, WMAG_PRECO)) },
     "wmag-leeknow": { tabela:"pedidos_wmag_leeknow", linhas:p => [["Capa A", p.capa_a], ["Capa B", p.capa_b], ["Capa C", p.capa_c]].flatMap(([n, q]) => rep(q, `W Magazine Lee Know — ${n}`, WMAG_LK_CFG.preco)) },
+    "dazed-seungmin": { tabela:"pedidos_dazed_seungmin", linhas:p => [["Versão A", p.capa_a], ["Versão B", p.capa_b], ["Versão C", p.capa_c]].flatMap(([n, q]) => rep(q, `Dazed & Confused Seungmin — ${n}`, DAZED_SM_CFG.preco)) },
+    "esquire-hyunjin": { tabela:"pedidos_esquire_hyunjin", linhas:p => [["Versão A", p.capa_a], ["Versão B", p.capa_b], ["Versão C", p.capa_c]].flatMap(([n, q]) => rep(q, `Esquire Hyunjin — ${n}`, ESQUIRE_HJ_CFG.preco)) },
     "smolmerch": { tabela:"pedidos_smolmerch", linhas:smolmerchLinhas },
     "popup":   { tabela:"pedidos_popup",   linhas:p => (p.itens || []).flatMap(i => rep(i.qtd || 1, `${i.item_nome}${i.versao ? " (" + i.versao + ")" : ""} [wk ${i.week}]`, POPUP_ITEMS.find(x => x.id === i.item_id)?.preco ?? null)) },
     "bazaar-in": { tabela:"pedidos_bazaar_in", linhas:p => [["capaA", p.capa_a], ["capaB", p.capa_b], ["capaC", p.capa_c], ["caixaF", p.caixa_f], ["caixaG", p.caixa_g]].flatMap(([id, q]) => { const b = BAZAAR_IN_TODOS.find(x => x.id === id); return rep(q, b.label, b.preco); }) },
@@ -24458,24 +24548,27 @@ function AdminRecrutadores() {
 }
 
 // ── Admin Todos os Drops ────────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, smolmerchCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, smolmerchCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
+  const agora = new Date();
   const DROPS = [
-    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" },
-    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" },
-    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" },
-    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" },
-    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento },
-    { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",         evento:ODD_CFG.evento },
-    { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento },
+    { id:"revista",          label:"Revista Nylon",       icon:"◈", count:revistaCount,     tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= REVISTA_DEADLINE },
+    { id:"wmag",             label:"W Magazine Hyunjin",  icon:"◈", count:wmagCount,        tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= WMAG_DEADLINE },
+    { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= WMAG_LK_CFG.deadline },
+    { id:"dazed-seungmin",   label:"Dazed & Confused Seungmin", icon:"◈", count:wmagDzCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= DAZED_SM_CFG.deadline },
+    { id:"esquire-hyunjin", label:"Esquire Hyunjin", icon:"◈", count:esqHjCount, tipo:"externo",  cor:"rgba(245,240,232,.7)", aberto:agora <= ESQUIRE_HJ_CFG.deadline },
+    { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
+    { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:POPUP_WEEKS.some(w => agora <= w.deadline) },
+    { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= BAZAAR_IN_DEADLINE },
+    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:false },
+    { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-09-08T12:00:00-03:00") },
+    { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" , aberto:agora <= POPCORN_SLEEVE_DEADLINE },
+    { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SINGBA_DEADLINE },
+    { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",         evento:"WAVE MAKER - SG JAPAN 2027" , aberto:!WM_CFG.fechado },
+    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" , aberto:true },
+    { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento , aberto:!PT_CFG.fechado },
+    { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",         evento:ODD_CFG.evento , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
+    { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
   ];
   const STATUS_COLS = [
     { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -24488,8 +24581,11 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, popupCou
       <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color:"rgba(245,240,232,.35)", marginBottom:4 }}>TODOS OS DROPS</div>
       <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)", marginBottom:20 }}>{DROPS.length} drops cadastrados</div>
 
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {DROPS.map(drop => {
+      {[["EM ABERTO", DROPS.filter(d => d.aberto)], ["ENCERRADOS", DROPS.filter(d => !d.aberto)]].map(([titulo, grupo]) => grupo.length > 0 && (
+        <div key={titulo} style={{ marginBottom:24 }}>
+          <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"2px", color: titulo === "EM ABERTO" ? "#4ade80" : "rgba(245,240,232,.3)", marginBottom:10 }}>{titulo} ({grupo.length})</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {grupo.map(drop => {
           const s = dropsStats?.[drop.evento] || null;
           const temPendentes = drop.count > 0;
           return (
@@ -24522,8 +24618,10 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, popupCou
               )}
             </div>
           );
-        })}
-      </div>
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -25700,6 +25798,26 @@ function PrevendaTab({ user }) {
       info: "R$ 50,00 por unidade · PIX ou cartão · envio previsto 28/10",
     },
     {
+      key: "dazed-seungmin",
+      ativo: true,
+      titulo: "DAZED & CONFUSED",
+      subtitulo: "Seungmin — 3 versões",
+      url: "/dazed-seungmin",
+      img: DAZED_SM_CAPAS[0].img,
+      tags: ["Pedidos até 20/10", "Pagamento até 25/10"],
+      info: "R$ 86,00 por unidade · PIX ou cartão · envio previsto 29/10",
+    },
+    {
+      key: "esquire-hyunjin",
+      ativo: true,
+      titulo: "ESQUIRE",
+      subtitulo: "Hyunjin — 3 versões",
+      url: "/esquire-hyunjin",
+      img: ESQUIRE_HJ_CAPAS[0].img,
+      tags: ["Pedidos até 20/10", "Pagamento até 25/10"],
+      info: "R$ 60,00 por unidade · PIX ou cartão",
+    },
+    {
       key: "singba",
       ativo: singbaAberto,
       titulo: "SINGBA",
@@ -26506,7 +26624,6 @@ function RevistaBazaarInPage({ onVoltar }) {
 const REVISTA_DEADLINE = new Date("2026-09-04T23:59:59-03:00");
 const REVISTA_PRECO    = 68;
 
-const WA_REVISTA       = WHATSAPP_NUM;
 
 function RevistaFormPage() {
   const encerrado = new Date() > REVISTA_DEADLINE;
@@ -26578,10 +26695,7 @@ function RevistaFormPage() {
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
 
-    if (pagamento === "cartao") {
-      const msg = encodeURIComponent(`Olá! Quero pagar meu pedido da NYLON HAN via cartão.\n\nNome: ${nome.trim()}\nE-mail: ${email.trim()}\nQuantidade: ${qtd}x\nTotal: R$${total.toFixed(2).replace(".",",")}`);
-      window.open(`https://wa.me/${WA_REVISTA}?text=${msg}`, "_blank");
-    }
+    if (pagamento === "cartao") window.open("https://linknabio.gg/anticeg-comu", "_blank");
     setStatus("sucesso");
   }
 
@@ -26628,7 +26742,7 @@ function RevistaFormPage() {
             <div style={{ fontSize:40, marginBottom:16 }}>🎉</div>
             <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Pedido registrado!</div>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", lineHeight:1.6, marginBottom:24 }}>
-              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Redirecionando para o WhatsApp para confirmar pagamento."}
+              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
             <a href="https://chat.whatsapp.com/Bs2rkIZ5Zpp1F1J4lFmBqk" target="_blank" rel="noopener noreferrer"
@@ -26711,7 +26825,7 @@ function RevistaFormPage() {
 
               {pagamento === "cartao" && (
                 <div style={{ background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"14px 16px", fontSize:12, color:"rgba(245,240,232,.6)", lineHeight:1.6 }}>
-                  Ao confirmar o pedido, você será redirecionada para o <strong>WhatsApp</strong> para combinar o pagamento via cartão de crédito.
+                  Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.
                 </div>
               )}
             </div>
@@ -26925,9 +27039,11 @@ export default function App() {
   async function carregarAvisos(u) {
     if (!u || u.guest || u.pre_cadastro || !u.cog) return;
     try {
-      const { data: notifs } = await supabase.from("notifications")
-        .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
-      setNotificacoes(notifs || []);
+      if (NOTIFICACOES_INTERNAS_ATIVAS) {
+        const { data: notifs } = await supabase.from("notifications")
+          .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
+        setNotificacoes(notifs || []);
+      } else setNotificacoes([]);
 
       const { data: myReports } = await supabase.from("reports")
         .select("item_id, status").eq("joiner_cog", u.cog);
@@ -27065,6 +27181,8 @@ export default function App() {
   if (window.location.pathname === "/prevenda/popcorn-sleeve") return <PopcornSleeveForm onVoltar={() => window.location.href = "/"} />;
   if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
   if (window.location.pathname === "/wmag-leeknow") return <WMagFormPage cfg={WMAG_LK_CFG} />;
+  if (window.location.pathname === "/dazed-seungmin") return <WMagFormPage cfg={DAZED_SM_CFG} />;
+  if (window.location.pathname === "/esquire-hyunjin") return <WMagFormPage cfg={ESQUIRE_HJ_CFG} />;
   if (window.location.pathname === "/smolmerch") return <SmolMerchFormPage pixKey={PIX_KEY} />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada

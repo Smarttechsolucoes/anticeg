@@ -10,6 +10,9 @@ export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || URL_PRODUCAO;
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || CHAVE_PRODUCAO;
 export const AMBIENTE_ENSAIO = SUPABASE_URL !== URL_PRODUCAO;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// O cliente principal só lê sessão que chegue pela URL (link de recuperação de senha) quando o login das joiners está LIGADO (VITE_JOINERS_AUTH=true).
+// Com a chave desligada nada muda para o site; a página /piloto-senha/ usa um cliente próprio e lê o link por conta própria.
+const LER_SESSAO_NA_URL = import.meta.env.VITE_JOINERS_AUTH === "true";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { detectSessionInUrl: LER_SESSAO_NA_URL } });
 
 export default supabase;
