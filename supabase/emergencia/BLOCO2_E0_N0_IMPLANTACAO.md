@@ -4,7 +4,7 @@
 | Etapa | Estado | Evidência |
 |---|---|---|
 | **N0 v3 (estrutural)** | **APLICADO em produção** (commit `503657a`) | verificador 9/9 (`true, true, 0, false, false, true, 0, 7, 1`); teste de fumaça `N0 FUMAÇA OK` (13 OK, nada gravado); RLS ligado, 0 policies, 0 gatilhos, 0 funções de notificação; ACL = só `postgres` e `service_role`; AUD_02: visitante e logado **bloqueados** em ler/inserir/alterar/apagar; 0 linhas; masterlist/claims/multas intactas |
-| **E00 / E0** | **não aplicados** | aguardam o gate de logs de DELETE (`E0_gate_logs_delete.md`, a cargo da usuária) e autorização própria |
+| **E00 / E0** | **APLICADOS em produção em 17/10/2026** (E00 → E0, sem erro) | pré-checagem ok (E00 ausente, 12 de 12, 0 concessões a PUBLIC); E0_verificar: bkp legíveis por anon 0, tabelas com DELETE para anon 12 (antes 79), com TRUNCATE 0; `authenticated` apaga `config`; fumaça `WHERE false`: 12 tabelas preservadas apagáveis, 8 outras negadas; SELECT/INSERT/UPDATE, concessões do `service_role`, ACL das funções e contagens idênticos antes/depois; N0, S1, R1 e R1.1 reverificados; `R1 PERMISSÕES OK` |
 | Front de notificações (`fix/notificacoes-isoladas-front`) | **SUSPENSO, não publicar** | depende de funções "por @" que foram descartadas: sem login, o @ é público e um visitante lia/marcava como lida a notificação de outra joiner só informando o @ (provado em teste local) |
 | Notificações do site | continuam **desligadas** (as chamadas diretas falham como antes, sem armazenar nem expor nada) | voltam no lançamento (J4c-4c, com login e policies por conta; testado sobre esta tabela) |
 Reversão do N0: `N0_tabela_notifications_reverter_protegido.sql` (frase `AUTORIZO APAGAR NOTIFICATIONS VAZIA`; recusa se houver linhas).
