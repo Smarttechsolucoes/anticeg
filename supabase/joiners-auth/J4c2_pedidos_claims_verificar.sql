@@ -1,0 +1,10 @@
+-- J4c-2 — VERIFICAÇÃO (somente leitura; só nomes e contagens). Esperado: 13 policies; visitante sem nada nas tabelas; visões públicas sem e-mail/COG; gatilhos ligados.
+select 'policies nas 3 tabelas (esperado 13)' as item, (select count(*) from pg_policies where schemaname = 'public' and tablename in ('claims', 'reports', 'envio_solicitacoes'))::text as valor
+union all select 'policies para visitante/PUBLIC (esperado 0)', (select count(*) from pg_policies where schemaname = 'public' and tablename in ('claims', 'reports', 'envio_solicitacoes') and ('anon' = any(roles) or 'public' = any(roles)))::text
+union all select 'visitante com algum privilégio nas 3 tabelas (esperado false)',
+       (select coalesce(bool_or(has_table_privilege('anon', x.nome, 'SELECT') or has_table_privilege('anon', x.nome, 'INSERT') or has_table_privilege('anon', x.nome, 'UPDATE') or has_table_privilege('anon', x.nome, 'DELETE') or has_any_column_privilege('anon', x.nome, 'SELECT') or has_any_column_privilege('anon', x.nome, 'UPDATE')), false)::text
+          from (values ('public.claims'), ('public.reports'), ('public.envio_solicitacoes')) x(nome))
+union all select 'colunas sensíveis nas visões públicas de claims (esperado 0)', (select count(*) from information_schema.columns where table_schema = 'public' and table_name in ('claims_quadro', 'claims_vendidos') and column_name ~* '(email|joiner_cog|cpf)')::text
+union all select 'gatilhos de campos ligados (esperado 3)', (select count(*) from pg_trigger where tgname in ('trg_reports_protege', 'trg_envio_protege_ins', 'trg_envio_protege_upd') and tgenabled = 'O')::text
+union all select 'impressão antes | agora (claims)', coalesce((select detalhe from emergencia.c0b_estado_anterior where etapa = 'J4c-2' and objeto = 'impressão claims'), 'sem registro') || ' | ' || (select 'linhas=' || count(*) || ' md5=' || md5(coalesce(string_agg(id::text || coalesce(status, ''), ',' order by id), '')) from public.claims)
+union all select 'estado registrado (linhas J4c-2, esperado >= 6)', (select count(*) from emergencia.c0b_estado_anterior where etapa = 'J4c-2')::text;

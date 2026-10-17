@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
+import { JOINERS_AUTH_ATIVO, buscarAcessoSimples, solicitarCadastro } from "./joinerAuth.js";
+import { chamarPlanilha, mensagemPlanilha } from "./planilhaApi.js";
 import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
 import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
@@ -97,6 +99,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   }
 
   async function buscarJoiner(input) {
+    // novo acesso: só pelo @ e pela função segura do servidor (nunca lê a linha da joiner nem aceita e-mail)
+    if (JOINERS_AUTH_ATIVO) return isEmail(input) ? null : buscarAcessoSimples(input);
     const handle = input.startsWith("@") ? input.slice(1) : input;
     // email: busca direto por email, sem passar pelo cog
     if (isEmail(input)) {
@@ -128,6 +132,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       setLoading(false);
       return;
     }
+
+    if (JOINERS_AUTH_ATIVO && isEmail(input)) { setError("Digite o seu @. O e-mail é usado só para ativar a conta."); setLoading(false); return; }
 
     try {
       const joiner = await buscarJoiner(input);
@@ -168,7 +174,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
   async function entrarCom(joiner) {
     const cogReal = joiner.cog === "ADMMODE" ? "nandaverseo_c" : joiner.cog;
-    const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", cogReal);
+    // no acesso simples os itens (dados privados) NÃO são carregados; eles vêm só depois do login com senha
+    const { data: itens } = JOINERS_AUTH_ATIVO && !joiner._senha_demo ? { data: [] } : await supabase.from("masterlist").select("*").eq("cog", cogReal);
     sairDaPaginaPublica();
     onLogin(joiner, itens || []);
   }
@@ -181,6 +188,32 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const whats = cadWhats.trim();
 
     if (!cog && !eml) { setCadError("Preencha pelo menos o @ ou o e-mail."); setCadLoading(false); return; }
+
+    // novo acesso: o e-mail NUNCA serve para entrar. Conta existente -> entra pelo @ (acesso simples) e ativa com o código enviado ao e-mail;
+    // conta nova -> pedido de cadastro pela função segura do servidor (resposta neutra: não revela se o @/e-mail já existiam).
+    if (JOINERS_AUTH_ATIVO) {
+      try {
+        if (!cog) { setCadError("Digite o seu @. O e-mail é usado só para ativar a conta."); setCadLoading(false); return; }
+        if (nome && eml) {
+          const r = await solicitarCadastro({ nome, cog, email: eml, whatsapp: whats, recrutador: cadRecrutador.trim() });
+          if (!r.ok) {
+            setCadError(r.motivo === "recrutador_invalido" ? "Recrutador não encontrado. Confira o @ ou deixe em branco."
+              : r.motivo === "tente_mais_tarde" ? "Muitos pedidos no momento. Tente de novo mais tarde."
+              : "Confira os dados: nome, @ (letras, números, _ ou .) e e-mail válidos.");
+            setCadLoading(false); return;
+          }
+          // aviso à administração (o servidor confere o pedido recente e usa o destinatário configurado; falha não atrapalha a entrada)
+          supabase.functions.invoke("email-evento", { body: { evento: "novo_cadastro", joiner_cog: cog } }).catch(() => {});
+        }
+        const acesso = await buscarAcessoSimples(cog);
+        if (!acesso) { setCadError("Acesso não encontrado. Preencha nome, @ e e-mail para solicitar cadastro ou fale com a admin pelo WhatsApp."); setCadLoading(false); return; }
+        await entrarCom(acesso);
+      } catch {
+        setCadError("Erro de conexão. Tente novamente.");
+      }
+      setCadLoading(false);
+      return;
+    }
 
     // tenta encontrar conta existente
     let joiner = null;
@@ -242,24 +275,28 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     if (joinErr) { setCadError("Erro ao criar conta. Tente novamente."); setCadLoading(false); return; }
 
     // log para admin (não bloqueia)
-    supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "aprovado" }]).then(() => {});
+    // o aviso à administração só sai DEPOIS de o pedido estar registrado (o servidor confere o registro antes de enviar)
+    supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "aprovado" }])
+      .then(() => supabase.functions.invoke("email-evento", { body: { evento: "novo_cadastro", joiner_cog: cog } }))
+      .catch(() => {});
 
-    // adiciona na planilha (async)
-    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome, twitter: "@" + cog, email: eml }),
-    }).catch(() => {});
-
-    // notifica admin por e-mail
-    supabase.functions.invoke("send-email", {
-      body: {
-        to_email: "nandadomarketing@gmail.com",
-        to_name: "Nanda",
-        assunto: "✦ Novo joiner adicionado — ANTICEG",
-        corpo: `<p style="font-family:monospace;font-size:13px;color:#F5F0E8;line-height:1.7">Novo joiner adicionado automaticamente:</p><ul style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.7);line-height:2"><li><b>Nome:</b> ${nome}</li><li><b>@:</b> ${cog}</li><li><b>E-mail:</b> ${eml}</li>${whats ? `<li><b>WhatsApp:</b> ${whats}</li>` : ""}</ul>`,
-      },
-    }).catch(() => {});
+    // adiciona na planilha (async). A resposta NÃO é ignorada: se a planilha recusar, falhar ou deixar a linha sem código,
+    // a admin recebe um segundo e-mail de alerta (a pessoa que se cadastrou não vê nada, a conta dela já foi criada).
+    chamarPlanilha("novo_joiner", { nome, twitter: "@" + cog, email: eml }).then(resPlanilha => {
+      const aviso = mensagemPlanilha(resPlanilha, { perfil: "admin", contexto: "Cadastro na planilha" })
+        || (resPlanilha?.bruto?.codigo_gerado === false ? "A linha do joiner foi criada na MASTERLIST, mas ficou SEM código (NUM/ID)." : null);
+      if (!aviso) return;
+      console.error("planilha (novo_joiner):", resPlanilha);
+      const seguro = String(aviso).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
+      supabase.functions.invoke("send-email", {
+        body: {
+          to_email: "nandadomarketing@gmail.com",
+          to_name: "Nanda",
+          assunto: "⚠ Conferir planilha — novo joiner " + cog,
+          corpo: `<p style="font-family:monospace;font-size:13px;color:#FF5C1A;line-height:1.7">⚠ O joiner <b>${nome}</b> (@${cog}) foi cadastrado no site, mas a planilha precisa de atenção:</p><p style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.8);line-height:1.8">${seguro}</p>`,
+        },
+      }).catch(() => {});
+    });
 
     // loga direto com a conta recém-criada
     const { data: novoJoiner } = await supabase.from("joiners").select("*").eq("cog", cog).maybeSingle();

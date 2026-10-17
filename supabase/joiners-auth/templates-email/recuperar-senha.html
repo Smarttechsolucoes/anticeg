@@ -1,0 +1,12 @@
+<!-- Supabase > Authentication > Emails > Templates > "Reset Password".
+     Assunto: Redefinir sua senha da Anti CEG
+     O site de hoje usa LINK de redefinição (não código): por isso o corpo tem {{ .ConfirmationURL }}. -->
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1a1a1a">
+  <h2 style="margin:0 0 16px;font-size:20px">Redefinir sua senha</h2>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.5">Recebemos um pedido para redefinir a senha do seu acesso à Anti CEG. Clique no botão para escolher uma senha nova:</p>
+  <p style="margin:0 0 20px;text-align:center"><a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ff5c1a;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 28px;border-radius:8px">Criar nova senha</a></p>
+  <p style="margin:0 0 8px;font-size:14px;line-height:1.5">Se o botão não abrir, copie e cole este endereço no navegador:</p>
+  <p style="margin:0 0 16px;font-size:12px;line-height:1.5;word-break:break-all;color:#555">{{ .ConfirmationURL }}</p>
+  <p style="margin:0 0 8px;font-size:14px;line-height:1.5">O link vale por tempo limitado e só pode ser usado uma vez.</p>
+  <p style="margin:16px 0 0;font-size:13px;color:#666;line-height:1.5">Se você não pediu a redefinição, ignore este e-mail: a sua senha atual continua valendo.</p>
+</div>

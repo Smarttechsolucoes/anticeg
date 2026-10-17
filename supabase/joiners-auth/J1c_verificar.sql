@@ -1,0 +1,10 @@
+-- J1c — VERIFICAÇÃO (somente leitura; sem e-mails nem COGs). Esperado: 6 linhas, todas como indicado.
+select 'J1c registrada (5 funções guardadas, esperado 5)' as item, (select count(*) from emergencia.c0b_estado_anterior where etapa = 'J1c')::text as valor
+union all select 'funções de administração com a checagem "is not true" (esperado 4)',
+       (select count(*) from pg_proc p where p.oid in (to_regprocedure('public.admin_vinculos_pendentes()'), to_regprocedure('public.admin_buscar_joiners(text)'), to_regprocedure('public.admin_resolver_vinculo(bigint, boolean, bigint)'), to_regprocedure('public.admin_desvincular_conta(uuid)')) and pg_get_functiondef(p.oid) like '%(select public.is_admin()) is not true%')::text
+union all select 'usuário logado executa ativar_minha_conta (esperado false ATÉ o J4d)', has_function_privilege('authenticated', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
+union all select 'o servidor (service_role) executa ativar_minha_conta (esperado true)', has_function_privilege('service_role', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
+union all select 'funções do J1 executáveis por anon (esperado 0)',
+       (select count(*) from pg_proc p where p.oid in (to_regprocedure('public.ativar_minha_conta(text)'), to_regprocedure('public.admin_vinculos_pendentes()'), to_regprocedure('public.admin_buscar_joiners(text)'), to_regprocedure('public.admin_resolver_vinculo(bigint, boolean, bigint)'), to_regprocedure('public.admin_desvincular_conta(uuid)')) and has_function_privilege('anon', p.oid, 'EXECUTE'))::text
+union all select 'funções de administração ainda executáveis pelo authenticated (esperado 4; a negação é feita dentro delas)',
+       (select count(*) from pg_proc p where p.oid in (to_regprocedure('public.admin_vinculos_pendentes()'), to_regprocedure('public.admin_buscar_joiners(text)'), to_regprocedure('public.admin_resolver_vinculo(bigint, boolean, bigint)'), to_regprocedure('public.admin_desvincular_conta(uuid)')) and has_function_privilege('authenticated', p.oid, 'EXECUTE'))::text;

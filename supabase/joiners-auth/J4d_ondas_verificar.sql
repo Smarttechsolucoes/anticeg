@@ -1,0 +1,10 @@
+-- J4d — VERIFICAÇÃO (somente leitura). Esperado: tabelas fechadas, 3 funções seguras, estado atual da liberação.
+select 'tabelas de ondas fechadas a visitante e joiner (esperado false)' as item, (has_table_privilege('anon', 'public.ativacao_ondas', 'SELECT') or has_table_privilege('authenticated', 'public.ativacao_ondas', 'SELECT') or has_table_privilege('anon', 'public.ativacao_estado', 'SELECT') or has_table_privilege('authenticated', 'public.ativacao_estado', 'SELECT'))::text as valor
+union all select 'funções do J4d seguras (esperado 3)', (select count(*) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('ativacao_liberada', 'ativar_minha_conta', 'entrar_com_arroba') and p.prosecdef and p.proconfig = array['search_path=""'])::text
+union all select 'ativacao_liberada fechada ao visitante e à joiner (esperado false)', (has_function_privilege('anon', 'public.ativacao_liberada(bigint)', 'EXECUTE') or has_function_privilege('authenticated', 'public.ativacao_liberada(bigint)', 'EXECUTE'))::text
+union all select 'onda liberada | liberar todas', (select onda_liberada::text || ' | ' || liberar_todas::text from public.ativacao_estado)
+union all select 'joiners por onda', coalesce((select string_agg('onda ' || onda || ': ' || c, ' · ' order by onda) from (select onda, count(*) as c from public.ativacao_ondas group by onda) x), 'nenhuma onda cadastrada')
+union all select 'joiners SEM onda (só ativam com "liberar todas")', (select count(*) from public.joiners j where not exists (select 1 from public.ativacao_ondas o where o.joiner_id = j.id))::text
+union all select 'usuário logado executa ativar_minha_conta (esperado true: o J4d reabre a execução, agora com a conferência das ondas)', has_function_privilege('authenticated', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
+union all select 'visitante executa ativar_minha_conta (esperado false)', has_function_privilege('anon', 'public.ativar_minha_conta(text)', 'EXECUTE')::text
+union all select 'contas já vinculadas (não são afetadas pelas ondas)', (select count(*) from public.contas_joiner)::text;

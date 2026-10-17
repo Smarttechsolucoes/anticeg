@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
+import { enviarComprovante, abrirComprovante } from "./comprovantes.js";
+import { criarPedidoLoja } from "./joinerAuth.js";
 import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } from "./smolmerchDados.js";
 
 const mono = "'DM Mono',monospace";
@@ -61,19 +63,19 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarComprovante("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
     }
 
-    const { error } = await supabase.from(cfg.tabela).insert([{
+    const { error } = await criarPedidoLoja(cfg.tabela, {
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: o.preco, qtd: qtds[o.id] })),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
-    }]);
+    });
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
 
@@ -339,7 +341,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
                 <div style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, color: "var(--laranja)", marginTop: 4 }}>
                   {p.qtd_total} un · {fmtReais(p.valor_total)}
                 </div>
-                {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: mono, fontSize: 10, color: "rgba(255,92,26,.7)", marginTop: 2 }}>ver comprovante ↗</a>}
+                {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily: mono, fontSize: 10, color: "rgba(255,92,26,.7)", marginTop: 2 }}>ver comprovante ↗</a>}
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
                 <span style={{ fontFamily: mono, fontSize: 10, color: cor(p.status) }}>{rotulo(p.status)}</span>
