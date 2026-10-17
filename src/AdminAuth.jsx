@@ -85,12 +85,12 @@ function FormSenha({ auth, onFechar }) {
 export function AdminAuthCard({ auth, bloqueante = false }) {
   const [aberto, setAberto] = useState(false);
   const [trocando, setTrocando] = useState(false);
-  const { estado, email } = auth.info;
+  const { estado, email, papel } = auth.info;
 
   if (estado === "ok") {
     return (
       <div data-testid="admin-auth-ok" style={{ ...barra, border: `1px solid ${C.borda}`, color: C.ok }}>
-        <span>🔒 Acesso de administrador verificado</span>
+        <span>{papel === "staff_pagamentos" ? "🔒 Acesso de staff (pagamentos) verificado" : "🔒 Acesso de administrador verificado"}</span>
         <span style={{ color: C.mudo }}>{email}</span>
         <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11, marginLeft: "auto" }} onClick={() => setTrocando(v => !v)}>Trocar senha</button>
         <button style={{ ...botaoSec, padding: "4px 10px", fontSize: 11 }} onClick={auth.sair} disabled={auth.ocupado}>Sair</button>
@@ -137,7 +137,7 @@ export function AdminAuthGate({ children }) {
   return (
     <>
       <div className="admin-auth-wrap"><AdminAuthCard auth={auth} /></div>
-      {children}
+      {typeof children === "function" ? children(auth.info.papel || "admin") : children}
     </>
   );
 }
