@@ -240,6 +240,8 @@
 <script>
   // Contador de online via Supabase Presence
   (function() {
+    // Preview da Vercel não conecta no Supabase de produção (página estática: sem o bloqueio do build)
+    if (location.hostname.endsWith('.vercel.app') && location.hostname !== 'anticeg.vercel.app') return;
     var { createClient } = window.supabase;
     var sb = createClient(
       'https://ghjfsmwwcfpfvrouyrka.supabase.co',

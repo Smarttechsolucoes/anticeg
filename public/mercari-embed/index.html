@@ -416,7 +416,10 @@ footer { text-align:center; padding:24px; font-family:'Barlow Condensed',sans-se
 <footer id="site-footer">Caixinha Mercari · ANTICEG · por @anticegs</footer>
 
 <script>
-const SUPA = 'https://ghjfsmwwcfpfvrouyrka.supabase.co';
+// Preview da Vercel (qualquer *.vercel.app que não seja o site oficial) NUNCA fala com o Supabase de produção: esta página estática não passa pelo build, então o bloqueio é feito aqui.
+const PREVIEW_BLOQUEADO = location.hostname.endsWith('.vercel.app') && location.hostname !== 'anticeg.vercel.app';
+const SUPA = PREVIEW_BLOQUEADO ? 'https://preview-bloqueado.invalid' : 'https://ghjfsmwwcfpfvrouyrka.supabase.co';
+if (PREVIEW_BLOQUEADO) document.addEventListener('DOMContentLoaded', () => { const f = document.getElementById('site-footer'); if (f) f.textContent = 'PREVIEW · esta página não grava nem lê dados reais'; });
 const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM';
 const PIX  = 'de1a489d-db81-4864-a8cf-74cdd79d9cdc';
 const WA   = '5524992782023';
