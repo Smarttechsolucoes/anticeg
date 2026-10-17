@@ -262,3 +262,47 @@ test("MATRIZ de autorização: cada ação, para visitante, dona do item, outra 
     }
   }
 });
+
+// ─────────────── tentativas de CONTORNAR as permissões administrativas ───────────────
+test("contorno: nenhuma combinação de cabeçalho, campo extra, caixa da ação, token expirado ou chave de serviço faz uma não-administradora executar cancelar/repassar/aprovar_disponivel", async () => {
+  const cen: Cenario = {
+    linhas: [L(2, "B-1", "bia"), L(3, "C-1", "dani"), L(4, "D-1", "eva")],
+    demandas: [DEM(2, "bia", "rejeitado", [{ id_linha: "B-1", valor_item: 10 }])],
+    repassos: [{ item_id: 3 }], claims: [{ masterlist_id: 4, joiner_cog: "eva" }],
+  };
+  const itemB = [{ id_linha: "B-1", ceg: "ABCD", nome_do_item: "Item 2", valor_item: 10, frete_inter: 0, taxa_rf: 0 }];
+  const admins: Record<string, unknown>[] = [
+    { acao: "cancelar", itens: itemB },
+    { acao: "repassar", id_linha: "C-1", novo_nome: "Dani", novo_twitter: "@dani" },
+    { acao: "aprovar_disponivel", id_linha: "D-1", novo_nome: "Eva", novo_twitter: "@eva", vencimento: "01/12" },
+  ];
+  const disfarces: { rotulo: string; token?: string; extra?: Record<string, string>; mais?: Record<string, unknown> }[] = [
+    { rotulo: "visitante com cabeçalho x-admin", extra: { "x-admin": "true", "x-user-role": "admin" } },
+    { rotulo: "visitante com campos admin/quem/cog no corpo", mais: { admin: true, quem: "admin", cog: "admin", role: "admin", is_admin: true } },
+    { rotulo: "joiner (ana) com os mesmos campos", token: "token-ana", mais: { admin: true, quem: "admin", cog: "ana" } },
+    { rotulo: "joiner (bia) dona do comprovante rejeitado", token: "token-bia" },
+    { rotulo: "token expirado de administradora", token: "token-expirado" },
+    { rotulo: "chave de serviço como credencial", token: "chave-de-servico-xyz" },
+    { rotulo: "cabeçalho Authorization malformado", extra: { authorization: "token-admin" } },
+  ];
+  for (const corpo of admins) for (const d of disfarces) {
+    const m = montar(cen, { env: { PLANILHA_EXIGIR_CONTA: "true" } });
+    const r = await m.chamar({ ...corpo, ...(d.mais ?? {}) }, d.token, d.extra);
+    assert.ok(r.status === 403 || r.status === 401, `${corpo.acao} · ${d.rotulo} -> ${r.status}`);
+    assert.equal(m.enviados.length, 0, `${corpo.acao} · ${d.rotulo}: nada pode ter ido ao Apps Script`);
+    const m2 = montar(cen);
+    const r2 = await m2.chamar({ ...corpo, ...(d.mais ?? {}) }, d.token, d.extra);
+    assert.ok(r2.status === 403 || r2.status === 401, `(modo legado) ${corpo.acao} · ${d.rotulo} -> ${r2.status}`);
+    assert.equal(m2.enviados.length, 0);
+  }
+  for (const acao of ["CANCELAR", "cancelar ", "Cancelar", "__proto__", "constructor", "toString", "", null, 1, ["cancelar"], { x: 1 }]) {
+    const m = montar(cen); const r = await m.chamar({ acao, itens: itemB }, "token-admin");
+    assert.equal(r.status, 400, `ação ${JSON.stringify(acao)} deve ser inválida`); assert.equal(m.enviados.length, 0);
+  }
+  // a administradora, mesmo com credencial válida, só consegue o que o BANCO já registrou (nada de item arbitrário)
+  const m = montar(cen);
+  assert.equal((await m.chamar({ acao: "cancelar", itens: [{ ...itemB[0], id_linha: "OUTRO-1" }] }, "token-admin")).status, 403, "item que não está em comprovante rejeitado");
+  assert.equal((await m.chamar({ acao: "repassar", id_linha: "C-1", novo_nome: "X", novo_twitter: "@outro" }, "token-admin")).status, 403, "novo dono diferente do gravado");
+  assert.equal((await m.chamar({ acao: "aprovar_disponivel", id_linha: "D-1", novo_nome: "X", novo_twitter: "@fulana", vencimento: "01/12" }, "token-admin")).status, 403, "claim de outra pessoa");
+  assert.equal(m.enviados.length, 0);
+});
