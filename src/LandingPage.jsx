@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
+import { chamarPlanilha, mensagemPlanilha } from "./planilhaApi.js";
 import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
 import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
@@ -244,12 +245,23 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     // log para admin (não bloqueia)
     supabase.from("pre_cadastros").insert([{ nome, cog, email: eml, whatsapp: whats || null, status: "aprovado" }]).then(() => {});
 
-    // adiciona na planilha (async)
-    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome, twitter: "@" + cog, email: eml }),
-    }).catch(() => {});
+    // adiciona na planilha (async). A resposta NÃO é ignorada: se a planilha recusar, falhar ou deixar a linha sem código,
+    // a admin recebe um segundo e-mail de alerta (a pessoa que se cadastrou não vê nada, a conta dela já foi criada).
+    chamarPlanilha("novo_joiner", { nome, twitter: "@" + cog, email: eml }).then(resPlanilha => {
+      const aviso = mensagemPlanilha(resPlanilha, { perfil: "admin", contexto: "Cadastro na planilha" })
+        || (resPlanilha?.bruto?.codigo_gerado === false ? "A linha do joiner foi criada na MASTERLIST, mas ficou SEM código (NUM/ID)." : null);
+      if (!aviso) return;
+      console.error("planilha (novo_joiner):", resPlanilha);
+      const seguro = String(aviso).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
+      supabase.functions.invoke("send-email", {
+        body: {
+          to_email: "nandadomarketing@gmail.com",
+          to_name: "Nanda",
+          assunto: "⚠ Conferir planilha — novo joiner " + cog,
+          corpo: `<p style="font-family:monospace;font-size:13px;color:#FF5C1A;line-height:1.7">⚠ O joiner <b>${nome}</b> (@${cog}) foi cadastrado no site, mas a planilha precisa de atenção:</p><p style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.8);line-height:1.8">${seguro}</p>`,
+        },
+      }).catch(() => {});
+    });
 
     // notifica admin por e-mail
     supabase.functions.invoke("send-email", {

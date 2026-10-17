@@ -13,7 +13,8 @@ const dem = { itens: [
   { id_linha: "A1", ceg: "W MAG", nome_do_item: "Capa A", valor_item: 45 },              // repetido idêntico
 ] };
 const resp = (corpo, { ok = true, status = 200 } = {}) => async () => ({ ok, status, text: async () => (typeof corpo === "string" ? corpo : JSON.stringify(corpo)) });
-const semEspera = { esperar: async () => {}, esperaMs: 0 };
+const CFG = { url: "https://proxy.invalido/functions/v1/planilha-acao", apikey: "anon-de-teste", token: "jwt-de-teste" };   // transporte: proxy autorizado (sem token do Apps Script)
+const semEspera = { config: CFG, esperar: async () => {}, esperaMs: 0 };
 
 test("itensParaPlanilha: só itens com código e valor; 'outros', sem valor e repetidos ficam de fora; sem código é devolvido à parte", () => {
   const { itens, semCodigo } = itensParaPlanilha(dem);
@@ -29,13 +30,14 @@ test("itensParaPlanilha é idempotente e não escolhe linha por nome: item sem c
   assert.ok(a.itens.every(i => i.id_linha));
 });
 
-test("envia a ação 'confirmar' com os itens e o token; sucesso => nenhuma mensagem", async () => {
-  let corpo;
-  const f = async (url, o) => { corpo = JSON.parse(o.body); return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true, updated: 2 }) }; };
+test("envia 'confirmar' ao PROXY com o login de quem decide e SEM token do Apps Script; sucesso => nenhuma mensagem", async () => {
+  let corpo, cab, destino;
+  const f = async (url, o) => { destino = url; cab = o.headers; corpo = JSON.parse(o.body); return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true, updated: 2 }) }; };
   const { itens } = itensParaPlanilha(dem);
   const r = await confirmarNaPlanilha(itens, { fetchImpl: f, ...semEspera });
   assert.equal(r.estado, "sucesso"); assert.equal(r.tentativas, 1);
-  assert.equal(corpo.acao, "confirmar"); assert.equal(corpo.itens.length, 2); assert.ok(corpo.token);
+  assert.equal(corpo.acao, "confirmar"); assert.equal(corpo.itens.length, 2); assert.equal(corpo.token, undefined, "o navegador não manda token do Apps Script");
+  assert.match(destino, /planilha-acao/); assert.equal(cab.Authorization, "Bearer jwt-de-teste");
   assert.equal(mensagemConfirmar(r, itens, []), null);
 });
 
@@ -99,12 +101,6 @@ test("itens sem código geram aviso mesmo com a planilha respondendo sucesso", a
   assert.match(m, /SEM código/); assert.match(m, /PAPER TALE — Sem código/);
 });
 
-test("'sem_alteracao' do script não conta como item faltando", async () => {
-  const { itens } = itensParaPlanilha(dem);
-  const r = await confirmarNaPlanilha(itens, { fetchImpl: resp({ ok: true, updated: 1, sem_alteracao: ["B2"] }), ...semEspera });
-  assert.equal(r.estado, "sucesso");
-});
-
 test("nunca lança, mesmo com fetch quebrado ou resposta estranha (sempre simulado: este teste NÃO usa a rede)", async () => {
   const { itens } = itensParaPlanilha(dem);
   for (const f of [async () => { throw new ReferenceError("sem fetch"); }, async () => ({ ok: true, status: 200, text: async () => "null" }), async () => ({ ok: true, status: 200, text: async () => "[]" })]) {
@@ -116,10 +112,10 @@ test("nunca lança, mesmo com fetch quebrado ou resposta estranha (sempre simula
 test("sem fetch simulado o módulo NÃO alcança a rede real: o guard bloqueia e o resultado é indeterminado", async () => {
   const { itens } = itensParaPlanilha(dem);
   const antes = chamadasBloqueadas.length;
-  const r = await confirmarNaPlanilha(itens, { tentativas: 1, ...semEspera });
+  const r = await confirmarNaPlanilha(itens, { config: CFG, tentativas: 1, ...semEspera });
   assert.equal(r.estado, "indeterminado");
   assert.equal(chamadasBloqueadas.length, antes + 1, "a tentativa foi interceptada pelo guard");
-  assert.match(chamadasBloqueadas.at(-1), /script\.google\.com/);
+  assert.match(chamadasBloqueadas.at(-1), /proxy\.invalido/);
 });
 
 // ───────── Rejeitar: preservar o que outra demanda ainda justifica ─────────

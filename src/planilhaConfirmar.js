@@ -1,16 +1,15 @@
 // Ao CONFIRMAR um pagamento no painel, o banco marca pago_item/pago_frete/pago_rf (RPC admin_definir_status_pagamento), mas a PLANILHA é a fonte da verdade do sync (9h/21h e a cada edição):
-// se a planilha não estiver TRUE, o próximo sync DESFAZ a confirmação. Este módulo pede ao Apps Script a ação "confirmar" (mesma já usada no envio do comprovante) e LÊ a resposta.
+// se a planilha não estiver TRUE, o próximo sync DESFAZ a confirmação. Este módulo pede a ação "confirmar" PELO PROXY AUTORIZADO (função planilha-acao, com o login de quem decide) e LÊ a resposta.
+// O navegador não conhece o token do Apps Script nem o endereço dele; o papel (admin ou staff_pagamentos) é decidido no servidor.
 //
 // Garantias:
 //  ☆ Idempotente: "confirmar" só escreve TRUE; repetir a chamada não muda nada além do que já está TRUE (por isso é seguro reenviar).
-//  ☆ Nunca lança: sempre devolve { estado: sucesso | parcial | falha | indeterminado, ... }.
-//  ☆ Falha de rede/HTTP/JSON inválido (indeterminado) é repetida até `tentativas` vezes; resposta DEFINITIVA do script (erro, ok:false, itens recusados) NÃO é repetida em loop.
+//  ☆ Nunca lança: sempre devolve { estado: sucesso | parcial | recusado | indeterminado, ... }.
+//  ☆ Falha de rede/HTTP 5xx/JSON inválido (indeterminado) é repetida até `tentativas` vezes; resposta DEFINITIVA (recusa do proxy, erro do script, itens recusados) NÃO é repetida em loop.
 //  ☆ Resposta parcial: separa os itens recusados em "reenviáveis" (erro_ao_gravar, escrita_parcial, nao_tentado) e "precisam de decisão humana" (id_ambiguo, nao_encontrado, sem_id_linha).
 //  ☆ Só envia itens com código (id_linha) e com algum valor > 0; o resto é devolvido em `semCodigo` para a administradora marcar à mão. Nunca escolhe linha por nome.
-import { interpretarCancelar } from "./planilhaCancelar.js";
+import { chamarPlanilha } from "./planilhaApi.js";
 
-const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec";
-const TOKEN_PLANILHA = "anticeg-pag-2026";
 const MOTIVOS_REENVIAVEIS = new Set(["erro_ao_gravar", "escrita_parcial", "nao_tentado"]);
 
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -44,32 +43,13 @@ export function separarRecusados(resultado, itens = []) {
   return { reenviaveis, decisaoHumana };
 }
 
-async function umaChamada(itens, { fetchImpl, url, token, timeoutMs }) {
-  const f = fetchImpl || globalThis.fetch;
-  const indet = erro => ({ estado: "indeterminado", atualizados: null, naoProcessados: [], erro });
-  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
-  let resp;
-  try {
-    resp = await f(url, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "confirmar", token, itens }), signal: ctrl?.signal });
-  } catch (e) {
-    return indet(e?.name === "AbortError" ? "A planilha demorou demais para responder." : "Sem resposta da planilha (conexão ou bloqueio do navegador).");
-  } finally { if (timer) clearTimeout(timer); }
-  if (!resp.ok) return indet(`A planilha respondeu com erro HTTP ${resp.status}.`);
-  let json;
-  try { json = JSON.parse(await resp.text()); } catch { return indet("A planilha respondeu algo que não foi possível entender."); }
-  // "sem_alteracao" (item sem valor a marcar) conta como atendido: o script não o inclui em `updated`
-  const semAlteracao = Array.isArray(json?.sem_alteracao) ? json.sem_alteracao.length : 0;
-  return interpretarCancelar(json, Math.max(0, itens.length - semAlteracao));
-}
-
-/** Confirma na planilha. SEMPRE devolve um resultado (nunca lança). Repete só o que é indeterminado (rede/HTTP/JSON), pois "confirmar" é idempotente. */
-export async function confirmarNaPlanilha(itens, { fetchImpl, url = URL_PLANILHA, token = TOKEN_PLANILHA, timeoutMs = 30000, tentativas = 3, esperaMs = 1500, esperar = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
+/** Confirma na planilha pelo proxy. SEMPRE devolve um resultado (nunca lança). Repete só o que é indeterminado, pois "confirmar" é idempotente. `chamar`/`fetchImpl`/`config` existem para teste. */
+export async function confirmarNaPlanilha(itens, { chamar = chamarPlanilha, fetchImpl, config, timeoutMs = 30000, tentativas = 3, esperaMs = 1500, esperar = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
   if (!Array.isArray(itens) || itens.length === 0) return { estado: "sucesso", atualizados: 0, naoProcessados: [], erro: null, tentativas: 0 };
   let r, n = 0;
   while (n < Math.max(1, tentativas)) {
     n++;
-    r = await umaChamada(itens, { fetchImpl, url, token, timeoutMs });
+    r = await chamar("confirmar", { itens }, { esperados: itens.length, admin: true, fetchImpl, config, timeoutMs });
     if (r.estado !== "indeterminado") break;
     if (n < tentativas) await esperar(esperaMs * n);
   }
