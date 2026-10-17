@@ -122,16 +122,40 @@ update storage.buckets set public = false, file_size_limit = 10485760,
        allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
  where id in ('comprovantes', 'mercari-comprovantes');
 
--- 4) o envio direto sai: as policies de INSERT específicas dos comprovantes caem e a "allow upload" passa a valer só para conta LOGADA e fora dos buckets de comprovantes
+-- 4) o envio direto sai: caem as policies de INSERT dos comprovantes E toda escrita ANÔNIMA no Storage (conjunto REAL de policies de 17/10/2026: avatars, storage-itens e popup-skzoo
+--    tinham INSERT/UPDATE/DELETE para o visitante). Quem escreve passa a ser só conta ATIVADA (vinculada a uma joiner) ou a administradora; avatars só na PRÓPRIA pasta (<cog>/avatar.jpg).
+--    O site novo usa UMA sessão para tudo (clienteAdmin() devolve o cliente principal quando o acesso novo está ligado), então a administradora também envia como "authenticated".
 do $$
 declare r record;
 begin
-  for r in select policyname from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname in ('anon upload comprovante', 'comprovantes upload', 'joiner upload comprovante') loop
+  for r in select policyname from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname in (
+      'anon upload comprovante', 'comprovantes upload', 'joiner upload comprovante',
+      'allow delete storage-itens', 'allow uploads storage-itens', 'anon_insert_popup_skzoo',
+      'anon upload avatars', 'allow anon upload', 'anon update avatars', 'allow anon update', 'anon delete avatars',
+      'avatars_enviar', 'avatars_trocar', 'avatars_apagar') loop      -- as três últimas são do AV1 (avatars endurecido antes do lançamento), trocadas pelas policies da dona
     execute format('drop policy %I on storage.objects', r.policyname);
   end loop;
 end $$;
 alter policy "allow upload" on storage.objects to authenticated
-  with check (bucket_id not in ('anti-store', 'comprovantes', 'mercari-comprovantes') and ((select public.meu_cog()) is not null or (select public.is_admin())));
+  with check (bucket_id not in ('anti-store', 'comprovantes', 'mercari-comprovantes', 'avatars') and ((select public.meu_cog()) is not null or (select public.is_admin())));
+-- avatars: só a dona do COG da pasta (ou a administradora) envia, troca e apaga; caminho fixo <cog>/avatar.jpg (a leitura pública continua como estava)
+create policy avatars_dona_enviar on storage.objects for insert to authenticated
+  with check (bucket_id = 'avatars' and name ~ '^[^/]+/avatar\.jpg$' and ((select public.is_admin()) or public.cog_e_da_conta(split_part(name, '/', 1))));
+create policy avatars_dona_trocar on storage.objects for update to authenticated
+  using (bucket_id = 'avatars' and name ~ '^[^/]+/avatar\.jpg$' and ((select public.is_admin()) or public.cog_e_da_conta(split_part(name, '/', 1))))
+  with check (bucket_id = 'avatars' and name ~ '^[^/]+/avatar\.jpg$' and ((select public.is_admin()) or public.cog_e_da_conta(split_part(name, '/', 1))));
+create policy avatars_dona_apagar on storage.objects for delete to authenticated
+  using (bucket_id = 'avatars' and name ~ '^[^/]+/avatar\.jpg$' and ((select public.is_admin()) or public.cog_e_da_conta(split_part(name, '/', 1))));
+-- storage-itens: apagar só com conta ativada ou administradora (antes qualquer visitante apagava)
+create policy storage_itens_apagar on storage.objects for delete to authenticated
+  using (bucket_id = 'storage-itens' and ((select public.meu_cog()) is not null or (select public.is_admin())));
+-- leitura (listar/achar) para a conta logada nos buckets que já são públicos: as policies de SELECT de hoje valem só para o visitante (anon), e quem entra com login vira "authenticated"
+--    (sem isto, remove()/upsert de avatars e storage-itens não encontrariam o arquivo). Não abre nada novo: os três buckets já são públicos.
+create policy avatars_ver_logada on storage.objects for select to authenticated using (bucket_id = 'avatars' and name ~ '^[^/]+/avatar\.jpg$');
+create policy storage_itens_ver_logada on storage.objects for select to authenticated using (bucket_id = 'storage-itens');
+create policy popup_skzoo_ver_logada on storage.objects for select to authenticated using (bucket_id = 'popup-skzoo');
+-- o bucket avatars passa a aceitar só JPEG de até 256 KB (igual ao AV1; sem efeito sobre as fotos existentes)
+update storage.buckets set file_size_limit = 262144, allowed_mime_types = array['image/jpeg'] where id = 'avatars';
 
 -- 5) conferência dentro da transação: qualquer falha desfaz tudo
 do $$
@@ -150,10 +174,10 @@ begin
   if n > 0 then raise exception 'Sobrou policy de escrita para o visitante no Storage (%). Transação desfeita.', n; end if;
   if not exists (select 1 from pg_proc p where p.oid = 'public.comprovante_assinavel(text,text)'::regprocedure and p.prosecdef and p.proconfig = array['search_path=""']) or has_function_privilege('anon', 'public.comprovante_assinavel(text,text)', 'EXECUTE') then raise exception 'comprovante_assinavel sem security definer/search_path vazio ou aberta ao visitante. Transação desfeita.'; end if;
   if has_table_privilege('anon', 'public.comprovantes_uploads', 'SELECT') or has_table_privilege('authenticated', 'public.comprovantes_uploads', 'SELECT') then raise exception 'A tabela de controle de envios está aberta. Transação desfeita.'; end if;
-  -- só as policies esperadas saíram (3 de INSERT dos comprovantes, se existiam)
+  -- só as policies esperadas saíram
   select count(*) into antes from emergencia.c0b_estado_anterior where etapa = 'J5' and objeto like 'policy %';
   select count(*) into depois from pg_policies where schemaname = 'storage' and tablename = 'objects';
-  if depois > antes or depois < antes - 3 then raise exception 'Quantidade inesperada de policies em storage.objects (% antes, % agora). Transação desfeita.', antes, depois; end if;
+  if depois > antes + 8 or depois < antes - 6 then raise exception 'Quantidade inesperada de policies em storage.objects (% antes, % agora). Transação desfeita.', antes, depois; end if;   -- saem no máximo 14 (3 de comprovantes, 8 anônimas, 3 do AV1) e entram 8
   -- nenhum arquivo foi tocado
   for b in select unnest(array['comprovantes', 'mercari-comprovantes']) loop
     select detalhe into v_a from emergencia.c0b_estado_anterior where etapa = 'J5' and objeto = 'arquivos ' || b;
