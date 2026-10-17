@@ -7,6 +7,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
+import { itensParaPlanilha, confirmarNaPlanilha, mensagemConfirmar } from "./planilhaConfirmar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -9559,6 +9560,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
                   await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
+                  // a PLANILHA é a fonte da verdade do sync: sem TRUE nela, o próximo sync desfaz a confirmação. "confirmar" só escreve TRUE (idempotente); a resposta é lida e qualquer falha/parcial é AVISADA
+                  const { itens: paraPlanilha, semCodigo } = itensParaPlanilha(d);
+                  confirmarNaPlanilha(paraPlanilha).then(rc => { const aviso = mensagemConfirmar(rc, paraPlanilha, semCodigo); if (aviso) alert(aviso); });
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
