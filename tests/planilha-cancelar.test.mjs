@@ -1,4 +1,5 @@
 // Testes do aviso de planilha ao rejeitar (sem rede, sem Supabase). Rodar:  node --test tests/planilha-cancelar.test.mjs
+import { chamadasBloqueadas } from "./helpers/sem-rede.mjs";   // nenhum fetch real nos testes (nunca chegar ao Apps Script de produção)
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

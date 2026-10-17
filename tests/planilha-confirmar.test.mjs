@@ -1,4 +1,5 @@
 // Testes da confirmação na planilha (sem rede, sem Supabase). Rodar:  node --test tests/planilha-confirmar.test.mjs
+import { chamadasBloqueadas } from "./helpers/sem-rede.mjs";   // nenhum fetch real nos testes (nunca chegar ao Apps Script de produção)
 import test from "node:test";
 import assert from "node:assert/strict";
 import { itensParaPlanilha, separarRecusados, confirmarNaPlanilha, mensagemConfirmar } from "../src/planilhaConfirmar.js";
@@ -110,4 +111,13 @@ test("nunca lança, mesmo com fetch quebrado ou resposta estranha (sempre simula
     const r = await confirmarNaPlanilha(itens, { fetchImpl: f, tentativas: 1, ...semEspera });
     assert.ok(["indeterminado", "falha", "sucesso", "parcial"].includes(r.estado));
   }
+});
+
+test("sem fetch simulado o módulo NÃO alcança a rede real: o guard bloqueia e o resultado é indeterminado", async () => {
+  const { itens } = itensParaPlanilha(dem);
+  const antes = chamadasBloqueadas.length;
+  const r = await confirmarNaPlanilha(itens, { tentativas: 1, ...semEspera });
+  assert.equal(r.estado, "indeterminado");
+  assert.equal(chamadasBloqueadas.length, antes + 1, "a tentativa foi interceptada pelo guard");
+  assert.match(chamadasBloqueadas.at(-1), /script\.google\.com/);
 });
