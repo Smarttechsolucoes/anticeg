@@ -28,3 +28,14 @@ Como entregar: copiar o código de cada projeto para `appsscripts/<NOME>.gs` (fo
 3. Mesclar o front. O token antigo continua válido até o passo 4.
 4. **Só então rotacionar o token** (propriedade `ANTICEG_TOKEN` no Apps Script + segredo `PLANILHA_TOKEN`). Enquanto o token antigo existir no histórico do site já publicado, ele deve ser considerado público.
 5. (Opcional, depois) fechar o acesso público ao CSV da planilha usando a fonte autenticada.
+
+## 5. Como exportar os 4 arquivos .gs (passo a passo)
+1. Abra `script.google.com` com a conta dona dos scripts → **Meus projetos** (ou, dentro da planilha: **Extensões → Apps Script**).
+2. Para **cada** projeto (GERADORDEIDS, PAGAMENTO-AUTOMATICO, SYNC-TRIGGER, STATUS-SYNC e o que recebe as chamadas do site, se for outro): abra o projeto → no painel **Arquivos** (esquerda) clique em cada arquivo `.gs` → selecione tudo (Ctrl+A) → copie → cole num arquivo de texto e salve em **`C:\Users\Nanda\anticeg\appsscripts\NOME-DO-PROJETO.gs`** (se o projeto tiver mais de um arquivo: `NOME-DO-PROJETO-1.gs`, `-2.gs`…). A pasta já existe e o git a ignora.
+3. Para o Web App (o da URL `.../exec`): em **Implantar → Gerenciar implantações** anote só **quem executa** e **quem tem acesso** (ex.: "Qualquer pessoa") e me diga. Não envie a URL nova se não for preciso.
+4. Em **Configurações do projeto (engrenagem) → Propriedades do script**: **não copie os valores**. Só me diga os **nomes** das propriedades que existem (ex.: `ANTICEG_TOKEN`, `GITHUB_TOKEN`).
+5. Em **Gatilhos** (relógio): anote, para cada projeto, o nome da função, o tipo (de tempo / ao editar a planilha) e a frequência.
+6. **Não cole segredos no chat.** Se o código tiver um segredo escrito (token do GitHub, chave do SendGrid, chave do Supabase), troque o valor por `XXXX` antes de salvar o arquivo.
+7. Quando os arquivos estiverem em `C:\Users\Nanda\anticeg\appsscripts\`, me avise. Eu rodo, somente leitura:
+   ☆ `node scripts/lancamento/auditar-appsscript.mjs C:\Users\Nanda\anticeg\appsscripts` (fala com o Supabase? com qual papel? em quais tabelas? quebra com o RLS?)
+   ☆ `node scripts/lancamento/inventariar-appsscript.mjs C:\Users\Nanda\anticeg\appsscripts` (Web App, ações, se verifica token, segredos escritos no código — só tipo e tamanho —, destinos, gatilhos, se apaga linhas).
