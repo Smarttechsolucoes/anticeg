@@ -26071,7 +26071,7 @@ function PrevendaTab({ user }) {
         {[
           { id:"ativos",      label:"◈ Abertas",     count: ativos.length },
           { id:"finalizados", label:"✕ Encerradas",  count: encerrados.length },
-          { id:"claims",      label:"◎ Meus claims", count: 0 },
+          { id:"claims",      label:"◎ Minhas claims", count: 0 },
         ].map(({ id, label, count }) => (
           <button key={id} onClick={() => setSubTabPv(id)} style={{
             background: subTabPv === id ? "rgba(255,92,26,.1)" : "transparent",
