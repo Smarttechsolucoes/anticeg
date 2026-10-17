@@ -25726,6 +25726,88 @@ function AdminSingba({ onCountChange }) {
   );
 }
 
+// ── Pré-vendas: histórico de claims da joiner ───────────────────
+// Lista TODAS as claims que a joiner logada fez (qualquer status), com filtro por situação e um resumo. Só leitura.
+function HistoricoClaimsPrevenda({ user }) {
+  const mono = "'DM Mono',monospace";
+  const [claims, setClaims] = useState(null);      // null = carregando
+  const [erro, setErro] = useState(false);
+  const [filtro, setFiltro] = useState("todas");
+  const cog = user && !user.guest ? user.cog : null;
+
+  useEffect(() => {
+    if (!cog) { setClaims([]); return; }
+    let vivo = true;
+    supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
+      .eq("joiner_cog", cog).order("created_at", { ascending: false })
+      .then(({ data, error }) => { if (!vivo) return; if (error) { setErro(true); setClaims([]); } else setClaims(data || []); });
+    return () => { vivo = false; };
+  }, [cog]);
+
+  if (!cog) return <div style={{ textAlign:"center", padding:"48px 0", fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.4)" }}>Entre na sua conta para ver o seu histórico de claims.</div>;
+  if (claims === null) return <div style={{ fontFamily:mono, fontSize:12, opacity:.4, padding:"24px 0" }}>carregando...</div>;
+  if (erro) return <div style={{ textAlign:"center", padding:"48px 0", fontFamily:mono, fontSize:12, color:"#ff6b6b" }}>Não foi possível carregar o seu histórico agora. Tente de novo em instantes.</div>;
+
+  const por = s => claims.filter(c => c.status === s);
+  const aprovadas = por("aprovado"), pendentes = por("pendente"), rejeitadas = por("rejeitado");
+  const totalAprovado = aprovadas.reduce((a, c) => a + Number(c.valor || 0), 0);
+  const lista = filtro === "todas" ? claims : claims.filter(c => c.status === filtro);
+  const filtros = [["todas", "Todas", claims.length], ["aprovado", "Aprovadas", aprovadas.length], ["pendente", "Em análise", pendentes.length], ["rejeitado", "Rejeitadas", rejeitadas.length]];
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+        {[["Total de claims", claims.length], ["Aprovadas", aprovadas.length], ["Em análise", pendentes.length], ["Valor aprovado", "R$" + fmtBRL(totalAprovado)]].map(([l, v]) => (
+          <div key={l} style={{ flex:"1 1 110px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.08)", borderRadius:8, padding:"10px 14px" }}>
+            <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.35)", marginBottom:4, textTransform:"uppercase" }}>{l}</div>
+            <div style={{ fontFamily:mono, fontSize:16, fontWeight:700 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+        {filtros.map(([id, label, n]) => (
+          <button key={id} onClick={() => setFiltro(id)} style={{ fontSize:10, fontFamily:mono, padding:"4px 12px", borderRadius:20, cursor:"pointer",
+            border: filtro === id ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: filtro === id ? "rgba(255,92,26,.12)" : "transparent",
+            color: filtro === id ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>
+            {label} ({n})
+          </button>
+        ))}
+      </div>
+
+      {lista.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"48px 0" }}>
+          <div style={{ fontSize:32, marginBottom:12 }}>◎</div>
+          <div style={{ fontSize:13, color:"rgba(245,240,232,.35)", fontFamily:mono }}>{claims.length === 0 ? "Você ainda não fez nenhum claim." : "Nenhum claim nesta situação."}</div>
+        </div>
+      ) : lista.map(c => {
+        const isAprov = c.status === "aprovado", isPend = c.status === "pendente", isRej = c.status === "rejeitado";
+        const cor = isAprov ? "var(--verde)" : isPend ? "var(--lilas)" : "rgba(245,240,232,.35)";
+        const borda = isAprov ? "rgba(186,255,57,.2)" : isPend ? "rgba(201,168,240,.2)" : "rgba(245,240,232,.06)";
+        const rotulo = isAprov ? "✓ aprovado" : isPend ? "◉ em análise" : isRej ? "✕ rejeitado" : c.status;
+        const venc = c.vencimento ? new Date(c.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : null;
+        const data = c.created_at ? new Date(c.created_at).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric" }) : null;
+        return (
+          <div key={c.id} style={{ background:"var(--card-bg)", border:`1px solid ${borda}`, borderRadius:10, padding:"12px 14px", marginBottom:8 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:6 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"var(--lilas)", letterSpacing:"1px" }}>{c.ceg === "CLAIM" ? "CLAIM · LOJINHA" : c.ceg}</div>
+              {data && <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", flexShrink:0 }}>{data}</div>}
+            </div>
+            <div style={{ fontSize:13, fontWeight:700, color: isRej ? "rgba(245,240,232,.4)" : "var(--offwhite)", marginBottom:6, textDecoration: isRej ? "line-through" : "none" }}>{c.nome_do_item}</div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                <span style={{ fontSize:9, fontFamily:mono, color:cor, letterSpacing:"1px", border:`1px solid ${borda}`, borderRadius:20, padding:"2px 8px" }}>{rotulo}</span>
+                {venc && <span style={{ fontSize:10, fontFamily:mono, color:"rgba(245,240,232,.35)" }}>venc. {venc}</span>}
+              </div>
+              {Number(c.valor) > 0 && <span style={{ fontSize:12, fontFamily:mono, fontWeight:700, color: isRej ? "rgba(245,240,232,.25)" : "var(--laranja)" }}>R${fmtBRL(c.valor)}</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Aba Pré-vendas ─────────────────────────────────────────────
 function PrevendaTab({ user }) {
   const mono = "'DM Mono',monospace";
@@ -25989,6 +26071,7 @@ function PrevendaTab({ user }) {
         {[
           { id:"ativos",      label:"◈ Abertas",     count: ativos.length },
           { id:"finalizados", label:"✕ Encerradas",  count: encerrados.length },
+          { id:"claims",      label:"◎ Meus claims", count: 0 },
         ].map(({ id, label, count }) => (
           <button key={id} onClick={() => setSubTabPv(id)} style={{
             background: subTabPv === id ? "rgba(255,92,26,.1)" : "transparent",
@@ -26003,8 +26086,10 @@ function PrevendaTab({ user }) {
         ))}
       </div>
 
+      {subTabPv === "claims" && <HistoricoClaimsPrevenda user={user} />}
+
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        {listaAtual.map(f => (
+        {subTabPv !== "claims" && listaAtual.map(f => (
           <div key={f.key} style={{ border:`1px solid ${f.ativo?(f.cor==="verde"?"rgba(186,255,57,.25)":f.cor==="lilas"?"rgba(201,168,240,.25)":"rgba(255,92,26,.25)"):"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
             <div style={{ display:"flex", gap:0 }}>
               {f.img && (
