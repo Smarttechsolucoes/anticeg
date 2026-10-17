@@ -30,8 +30,7 @@ linha("comprovante com id inexistente (modo legado 404 | depois do lançamento 4
 linha("aviso de cadastro novo para um @ inexistente (404; 401 depois do lançamento)", await chamar("email-evento", { evento: "novo_cadastro", joiner_cog: "__inexistente__" }), [404, 401]);
 linha("push sem login de administradora", await chamar("push-evento", { subscription: { endpoint: "https://fcm.googleapis.com/x", keys: { p256dh: "a", auth: "b" } }, title: "t", body: "b" }), [401]);
 
-console.log("
-== funções de COMPROVANTE (Fase A; visitante recebe 401 e NADA é criado) ==");
+console.log("\n== funções de COMPROVANTE (Fase A; visitante recebe 401 e NADA é criado) ==");
 const cu = await chamar("comprovante-upload", { bucket: "comprovantes", nome: "x.jpg", tipo: "image/jpeg", tamanho: 10 });
 if (cu.status === 404) console.log("AVISO comprovante-upload ainda NÃO está implantada (HTTP 404).");
 linha("comprovante-upload sem login é recusado", cu, [401]);
