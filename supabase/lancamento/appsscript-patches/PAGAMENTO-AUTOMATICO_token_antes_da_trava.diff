@@ -1,0 +1,16 @@
+--- PAGAMENTO-AUTOMATICO.gs (atual)
++++ PAGAMENTO-AUTOMATICO.gs (proposto)
+@@ -3,6 +3,13 @@
+ const COL_ID_LINHA = 2;
+ 
+ function doPost(e) {
++  // AUTENTICAÇÃO ANTES DA TRAVA: quem não tem o token não consegue nem ocupar a fila da planilha (antes, qualquer chamada pegava a trava por alguns instantes antes de ser recusada).
++  let payloadPrevio;
++  try { payloadPrevio = JSON.parse(e.postData.contents); } catch (erroJson) { return resposta({ erro: "Requisição inválida" }); }
++  const tokenPrevio = PropertiesService.getScriptProperties().getProperty("ANTICEG_TOKEN");
++  if (!tokenPrevio) return resposta({ erro: "ANTICEG_TOKEN não configurado" });
++  if (!payloadPrevio || payloadPrevio.token !== tokenPrevio) return resposta({ erro: "Token inválido" });
++
+   const lock = LockService.getScriptLock();
+   try {
+     lock.waitLock(30000);
