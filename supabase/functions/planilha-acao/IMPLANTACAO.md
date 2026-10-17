@@ -61,7 +61,7 @@ Identidade vem do login (token do Supabase Auth): **administradora** (`is_admin(
 ☆ Depois do S4: uma operação legítima falha com "negado" sem motivo (ex.: pagamento em análise legítimo recusado) ou "indeterminado" (502) repetido → reverter a PR #41 (o Web App não mudou, o site velho volta a funcionar).
 ☆ S6: o token atual deixa de ser aceito, ou o novo é recusado → recolar o arquivo anterior.
 ☆ S8: **não rotacionar** se ainda aparecer "token atual" nos registros do Apps Script, ou se o proxy ainda usa o token antigo.
-☆ Depois do S8: a sonda  aceita o token público antigo, ou recusa o novo → recolocar o valor anterior e investigar antes de seguir.
+☆ Depois do S8: a sonda `apos-rotacao` aceita o token público antigo, ou recusa o novo → recolocar o valor anterior e investigar antes de seguir.
 
 ## 7. Testes feitos (tudo local, sem tocar a planilha real)
 ☆ `planilha.test.ts` 16 testes (inclui a **matriz** 7×4×2 e a regra "a planilha só espelha o cadastro" no `atualizar_joiner`); `planilha-api.test.mjs` 19 (front: o navegador não contém o token nem o endereço; ações de administração usam o login da administradora); `appsscript-doPost.test.mjs` 10 (o **doPost v2 real** rodando num simulador: token antes da trava, dois tokens, token antigo recusado após a rotação, nenhum token em resposta ou log).
