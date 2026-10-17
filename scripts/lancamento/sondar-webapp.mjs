@@ -12,7 +12,8 @@ async function sondar(t) {
   const r = await fetch(url, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "confirmar", token: t, itens: [{ id_linha: "ZZZ-SONDA-INEXISTENTE", ceg: "X", nome_do_item: "X", valor_item: 1, frete_inter: 0, taxa_rf: 0 }] }) });
   const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch { /* ilegível */ }
   const recusado = !!j && /Token inválido|não configurado/.test(String(j.erro || ""));
-  const aceito = !!j && !recusado && Array.isArray(j.nao_processados) && j.nao_processados.some(n => n.motivo === "nao_encontrado") && Number(j.updated) === 0 && j.sync == null;
+  // versão nova do script: lista o item em nao_processados (nao_encontrado); versão antiga: apenas {updated:0}. Nas duas, nada é gravado e o sync não é pedido.
+  const aceito = !!j && !recusado && Number(j.updated) === 0 && (j.sync == null || j.sync === undefined) && (Array.isArray(j.nao_processados) ? j.nao_processados.some(n => n.motivo === "nao_encontrado") : !j.erro || /encontrad/i.test(String(j.erro)));
   return { status: r.status, recusado, aceito, bruto: txt.slice(0, 120).replace(/[A-Za-z0-9_-]{24,}/g, "***") };
 }
 const descr = r => r.recusado ? "TOKEN RECUSADO" : r.aceito ? "aceito (item inexistente: nada gravado, sem sync)" : "resposta inesperada: " + r.bruto;
