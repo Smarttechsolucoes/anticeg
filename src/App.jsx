@@ -59,6 +59,14 @@ async function registrarPush(joinerCog) {
 
 let _pushGlobalAtivo = true;
 
+// Notificações INTERNAS (tabela public.notifications): fechada ao site pelo N0 até o lançamento com login por conta (J4c-4c). Enquanto false, o site não lê, não grava e não mostra o aviso interno.
+// E-mail e push (tabela pushes) NÃO dependem disto. Ao reabrir no J4c-4c, trocar para true.
+const NOTIFICACOES_INTERNAS_ATIVAS = false;
+async function inserirNotificacaoInterna(rows) {
+  if (!NOTIFICACOES_INTERNAS_ATIVAS) return { data: null, error: null };
+  return supabase.from("notifications").insert(rows);
+}
+
 async function inserirPush(rows) {
   if (!_pushGlobalAtivo) return { data: null, error: null };
   return supabase.from("pushes").insert(rows);
@@ -8884,7 +8892,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       active: true,
       joiner_cog: rep.joiner_cog,
     }]);
-    await supabase.from("notifications").insert([{
+    await inserirNotificacaoInterna([{
       joiner_cog: rep.joiner_cog,
       message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
       type: "report_resolved",
@@ -11162,9 +11170,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                                         onClick={async () => {
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
                                           await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
-                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          await inserirNotificacaoInterna([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
-                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                          alert(`Solicitação enviada para @${m.joiner_cog}` + (NOTIFICACOES_INTERNAS_ATIVAS ? "" : " (por push. O aviso dentro do site fica indisponível até o lançamento)"));
                                         }}
                                         style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
                                         {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
@@ -11280,9 +11288,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                                         onClick={async () => {
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: true }));
                                           await inserirPush([{ message: "Precisamos do seu endereço para o envio! Acesse o portal → aba Envios e preencha o formulário.", active: true, joiner_cog: m.joiner_cog }]);
-                                          await supabase.from("notifications").insert([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
+                                          await inserirNotificacaoInterna([{ joiner_cog: m.joiner_cog, message: "Precisamos do seu endereço para processar seu envio. Acesse a aba Envios e preencha o formulário.", type: "envio_address_request" }]);
                                           setSolicitandoEndereco(prev => ({ ...prev, [m.joiner_cog]: false }));
-                                          alert(`Solicitação enviada para @${m.joiner_cog}`);
+                                          alert(`Solicitação enviada para @${m.joiner_cog}` + (NOTIFICACOES_INTERNAS_ATIVAS ? "" : " (por push. O aviso dentro do site fica indisponível até o lançamento)"));
                                         }}
                                         style={{ padding:"4px 10px", borderRadius:5, border:"1px solid rgba(255,209,102,.3)", background:"rgba(255,209,102,.07)", color:"#FFD166", fontFamily:"'DM Mono',monospace", fontSize:9, cursor:"pointer", opacity: solicitandoEndereco[m.joiner_cog] ? 0.5 : 1 }}>
                                         {solicitandoEndereco[m.joiner_cog] ? "enviando..." : "Solicitar endereço"}
@@ -27031,9 +27039,11 @@ export default function App() {
   async function carregarAvisos(u) {
     if (!u || u.guest || u.pre_cadastro || !u.cog) return;
     try {
-      const { data: notifs } = await supabase.from("notifications")
-        .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
-      setNotificacoes(notifs || []);
+      if (NOTIFICACOES_INTERNAS_ATIVAS) {
+        const { data: notifs } = await supabase.from("notifications")
+          .select("*").eq("joiner_cog", u.cog).is("read_at", null).order("created_at", { ascending: false });
+        setNotificacoes(notifs || []);
+      } else setNotificacoes([]);
 
       const { data: myReports } = await supabase.from("reports")
         .select("item_id, status").eq("joiner_cog", u.cog);
