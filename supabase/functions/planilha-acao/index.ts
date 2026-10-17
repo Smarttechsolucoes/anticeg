@@ -32,8 +32,11 @@ serve((req) => {
     db,
     resolverToken: async (token) => {
       const c = comoUsuario(token);
-      const { data: admin } = await c.rpc("is_admin");
-      if (admin === true) return { admin: true, cog: null };
+      // papel decidido pelo BANCO (nunca pelo navegador): admin | staff_pagamentos. Antes do ST1 a função não existe: cai no is_admin() como antes.
+      const { data: papel, error: erroPapel } = await c.rpc("meu_papel_admin");
+      if (!erroPapel && papel === "admin") return { admin: true, cog: null };
+      if (!erroPapel && papel === "staff_pagamentos") return { admin: false, staff: true, cog: null };
+      if (erroPapel) { const { data: admin } = await c.rpc("is_admin"); if (admin === true) return { admin: true, cog: null }; }
       const { data: cog, error } = await c.rpc("meu_cog");     // antes do J1 a função não existe: sem erro fatal, a pessoa segue como anônima
       return { admin: false, cog: !error && typeof cog === "string" ? cog : null };
     },

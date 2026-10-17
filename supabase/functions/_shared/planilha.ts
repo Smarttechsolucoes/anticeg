@@ -12,7 +12,7 @@
 // O corpo enviado ao Apps Script é montado aqui, campo a campo (lista branca): o navegador não escolhe token, URL nem campos extras.
 // Sem Deno, rede ou banco reais: tudo entra por "deps" (injeção), então dá para testar sem tocar em nada.
 
-export type Quem = "anonimo" | "joiner" | "admin";
+export type Quem = "anonimo" | "joiner" | "staff" | "admin";   // staff = papel staff_pagamentos (só confirmar e cancelar)
 export interface Chamada { quem: Quem; cog: string | null }
 export const ACOES = ["confirmar", "cancelar", "repassar", "recebido", "aprovar_disponivel", "atualizar_joiner", "novo_joiner"] as const;
 export type Acao = typeof ACOES[number];
@@ -32,7 +32,7 @@ export interface DbPlanilha {
 }
 export interface DepsPlanilha {
   env: (nome: string) => string | undefined;
-  resolverToken: (token: string) => Promise<{ admin: boolean; cog: string | null }>;
+  resolverToken: (token: string) => Promise<{ admin: boolean; staff?: boolean; cog: string | null }>;
   db: DbPlanilha;
   fetch: typeof fetch;
   agora?: () => Date;
@@ -99,21 +99,25 @@ function idadeMin(agora: Date, iso: string) { return (agora.getTime() - new Date
 
 export async function autorizar(acao: Acao, d: Record<string, unknown>, c: Chamada, db: DbPlanilha, agora: Date, exigirConta: boolean): Promise<Negado | Liberado> {
   const admin = c.quem === "admin";
+  const operaPagamento = admin || c.quem === "staff";   // confirmar/cancelar após a decisão da administração; staff_pagamentos NÃO herda as demais ações de admin
   const joinerOuLivre = (): Negado | null => (exigirConta && c.quem !== "joiner" ? nega(401, "entre na sua conta para continuar") : null);
 
   // ── confirmar: a joiner marca o que ela mesma acabou de pagar ──────────────────────────────────────────────────────
   if (acao === "confirmar") {
     const nao = joinerOuLivre(); if (nao) return nao;
     const itens = lerItens(d); if (!Array.isArray(itens)) return itens;
-    const dems = (await db.demandas({ status: ["em_analise"], desde: minutosAtras(agora, JANELA.pagamentoMin) }))
-      .filter(x => c.quem !== "joiner" || norm(x.joiner_cog) === norm(c.cog));
+    // a joiner marca o que ela acabou de pagar (em análise, janela curta, só dela). A ADMINISTRAÇÃO (admin ou staff_pagamentos) confirma DEPOIS da decisão:
+    // a demanda já está 'pago' (a RPC roda primeiro), sem janela de tempo; o item ainda precisa estar numa demanda paga/em análise, com valores cobertos pelo registro.
+    const dems = operaPagamento
+      ? await db.demandas({ status: ["pago", "em_analise"] })
+      : (await db.demandas({ status: ["em_analise"], desde: minutosAtras(agora, JANELA.pagamentoMin) })).filter(x => c.quem !== "joiner" || norm(x.joiner_cog) === norm(c.cog));
     const linhas = await db.linhasPorIdLinha([...new Set(itens.map(i => i.id_linha))]);
     for (const it of itens) {
       const alvo = linhasAlvo(linhas, it.id_linha, it.ceg, it.nome_do_item);
       if (!alvo.length) return nega(403, `item ${it.id_linha} não encontrado`);
       const ok = dems.some(dem => {
         const e = entradaDaDemanda(dem, it.id_linha);
-        return !!e && cobre(it.valor_item, e.valor_item) && cobre(it.frete_inter, e.frete_inter) && cobre(it.taxa_rf, e.taxa_rf) && alvo.every(l => norm(l.cog) === norm(dem.joiner_cog));
+        return !!e && cobre(it.valor_item, e.valor_item) && cobre(it.frete_inter, e.frete_inter) && cobre(it.taxa_rf, e.taxa_rf) && (operaPagamento || alvo.every(l => norm(l.cog) === norm(dem.joiner_cog)));   // pagamento de terceiro foi aceito de propósito pela administração
       });
       if (!ok) return nega(403, `item ${it.id_linha} não corresponde a um pagamento seu em análise`);
     }
@@ -122,7 +126,7 @@ export async function autorizar(acao: Acao, d: Record<string, unknown>, c: Chama
 
   // ── cancelar: a administradora desfaz depois de REJEITAR o comprovante ─────────────────────────────────────────────
   if (acao === "cancelar") {
-    if (!admin) return nega(403, "somente a administração");
+    if (!operaPagamento) return nega(403, "somente a administração");
     const itens = lerItens(d); if (!Array.isArray(itens)) return itens;
     const dems = await db.demandas({ status: ["rejeitado"] });
     for (const it of itens) {
@@ -229,7 +233,7 @@ export async function tratarPlanilha(req: Request, deps: DepsPlanilha): Promise<
       if (chaveServico && iguaisSeguro(tk, chaveServico)) return responder(403, { erro: "chave de serviço não é aceita aqui", negado: true }, cors);
       try {
         const r = await deps.resolverToken(tk);
-        if (r.admin) chamada = { quem: "admin", cog: null }; else if (r.cog) chamada = { quem: "joiner", cog: r.cog };
+        if (r.admin) chamada = { quem: "admin", cog: null }; else if (r.staff) chamada = { quem: "staff", cog: null }; else if (r.cog) chamada = { quem: "joiner", cog: r.cog };
       } catch { /* token da chave pública ou expirado: segue como anônimo */ }
     }
 
