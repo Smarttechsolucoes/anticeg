@@ -6,8 +6,8 @@ export const fmtReais = n => "R$" + Number(n).toFixed(2).replace(".", ",");
 // Formulário único: os itens do UPDATE (Extended PO) ficam no topo da lista e levam o selo UPDATE.
 export const SMOLMERCH_PRODUTOS = [
   // Extended PO (outubro/2026): 3 itens. Ids novos de propósito: os pedidos antigos continuam com o nome e o preço gravados neles.
-  { aba: "update", id: "house-id-holder-out", nome: "Boddaramji House ID Photo Holder", foto: "/smolmerch/house-id-holder-out.jpg", opcoes: [
-    { id: "house-id-holder-out", label: "ID Photo Holder (PVC 7x9cm + argola)", preco: 26 },
+  { aba: "update", id: "house-id-holder", nome: "Boddaramji House ID Photo Holder", foto: "/smolmerch/house-id-holder-out.jpg", opcoes: [
+    { id: "house-id-holder", label: "ID Photo Holder (PVC 7x9cm + argola)", preco: 30 },
   ] },
   { aba: "update", id: "miso-candy-pouch", nome: "Miso PVC Candy Pouch", foto: "/smolmerch/miso-candy-pouch.jpg", opcoes: [
     { id: "miso-candy-pouch", label: "Candy Pouch (8,8x10,4cm + O-ring + charm acrílico)", preco: 32 },
@@ -38,9 +38,6 @@ export const SMOLMERCH_PRODUTOS = [
   ] },
   { aba: "anterior", id: "miso-sticker-set", nome: "Miso Sticker Set", foto: "432580485/miso+orange+black.jpg", opcoes: [
     { id: "miso-sticker-set", label: "Miso Sticker Set", preco: 13 },
-  ] },
-  { aba: "anterior", id: "house-id-holder", nome: "Boddaramji House ID Photo Holder", foto: "423228876/20260409_095606.jpg", opcoes: [
-    { id: "house-id-holder", label: "ID Photo Holder", preco: 30 },
   ] },
   { aba: "anterior", id: "byeolbit-pvc", nome: "ByeolBit PVC PC Holder", foto: "423231669/PG3_Byeolbit+pc+holder.jpg", opcoes: [
     { id: "byeolbit-pvc", label: "PVC PC Holder", preco: 47 },
