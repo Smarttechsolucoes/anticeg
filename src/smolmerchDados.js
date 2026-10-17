@@ -3,9 +3,7 @@
 export const foto = (arq, w = 600) => (arq.startsWith("/") || arq.startsWith("http")) ? arq : `https://assets.bigcartel.com/product_images/${arq}?auto=format&fit=max&w=${w}`;
 export const fmtReais = n => "R$" + Number(n).toFixed(2).replace(".", ",");
 
-// Abas do formulário: UPDATE (itens novos do Extended PO) e o formulário anterior (itens que continuam à venda).
-export const SMOLMERCH_ABAS = [{ id: "update", nome: "UPDATE" }, { id: "anterior", nome: "FORMS ANTERIOR" }];
-
+// Formulário único: os itens do UPDATE (Extended PO) ficam no topo da lista e levam o selo UPDATE.
 export const SMOLMERCH_PRODUTOS = [
   // Extended PO (outubro/2026): 3 itens. Ids novos de propósito: os pedidos antigos continuam com o nome e o preço gravados neles.
   { aba: "update", id: "house-id-holder-out", nome: "Boddaramji House ID Photo Holder", foto: "/smolmerch/house-id-holder-out.jpg", opcoes: [
@@ -18,7 +16,7 @@ export const SMOLMERCH_PRODUTOS = [
     { id: "boddaramji-pc-holder", label: "PC Holder (acrílico 2mm x3, dupla face + beads)", preco: 32 },
   ] },
 
-  // ── formulário anterior (a administradora vai retirar alguns itens) ──
+  // ── itens do formulário anterior ──
   { aba: "anterior", id: "carabiner", nome: "Boddaramji UFO Carabiner", foto: "417132855/carabiner.jpg", opcoes: [
     { id: "carabiner-miso",     label: "Carabiner (miso)",             preco: 40 },
     { id: "carabiner-completo", label: "Completo (carabiner + pets)",  preco: 55 },

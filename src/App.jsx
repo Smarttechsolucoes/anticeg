@@ -25785,7 +25785,7 @@ function PrevendaTab({ user }) {
       url: "/smolmerch",
       img: "/smolmerch/itens-out-2026.jpg",
       tags: ["Pedidos até 19/10", "Pagamento dia 20/10"],
-      info: `${SMOLMERCH_OPCOES.length} opções em 2 abas (UPDATE + forms anterior) · a partir de R$ 5,50 · pagamento depois do pedido`,
+      info: `${SMOLMERCH_OPCOES.length} opções · a partir de R$ 5,50 · pagamento depois do pedido`,
     },
     {
       key: "wmag-leeknow",
