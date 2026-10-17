@@ -8278,7 +8278,7 @@ function ControleEstoqueTab() {
   );
 }
 
-function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
+function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange, papelAdmin = "admin" }) {
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
   const adminWinW = useWindowWidth();
   const adminIsMobile = adminWinW <= 680;
@@ -8432,7 +8432,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     return () => clearInterval(t);
   }, []);
   const [staffAcessos,     setStaffAcessos]      = useState(null);
-  const meuAcessoAdmin = !owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null;
+  // staff_pagamentos (papel do BANCO): só o menu de Pagamentos aparece; a trava de verdade é no servidor (RPCs e RLS), o menu é só conforto
+  const meuAcessoAdmin = papelAdmin === "staff_pagamentos" ? ["pagamentos"] : (!owner && staffAcessos ? (staffAcessos[userCog] || DEFAULT_STAFF_ACESSOS) : null);
   const temAcesso = (id) => owner || !meuAcessoAdmin || meuAcessoAdmin.includes(id);
   const [envioSolic,        setEnvioSolic]        = useState([]);
   const [envioLoading,      setEnvioLoading]      = useState(null);
@@ -27631,7 +27632,7 @@ export default function App() {
           {tab === "promo-13" && <WaveMakerTab user={user} cfg={PROMO13_CFG} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
-          {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}
+          {tab === "admin" && isAdminUser(user) && <AdminAuthGate>{papelAdmin => <AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} papelAdmin={papelAdmin} />}</AdminAuthGate>}
         </>
       )}
 
