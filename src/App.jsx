@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase, { SUPABASE_URL } from "./supabase.js";
+import HistoricoForms from "./HistoricoForms.jsx";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
@@ -26072,6 +26073,7 @@ function PrevendaTab({ user }) {
           { id:"ativos",      label:"◈ Abertas",     count: ativos.length },
           { id:"finalizados", label:"✕ Encerradas",  count: encerrados.length },
           { id:"claims",      label:"◎ Minhas claims", count: 0 },
+          { id:"forms",       label:"◧ Meus forms",    count: 0 },
         ].map(({ id, label, count }) => (
           <button key={id} onClick={() => setSubTabPv(id)} style={{
             background: subTabPv === id ? "rgba(255,92,26,.1)" : "transparent",
@@ -26087,9 +26089,10 @@ function PrevendaTab({ user }) {
       </div>
 
       {subTabPv === "claims" && <HistoricoClaimsPrevenda user={user} />}
+      {subTabPv === "forms" && <HistoricoForms user={user} />}
 
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        {subTabPv !== "claims" && listaAtual.map(f => (
+        {subTabPv !== "claims" && subTabPv !== "forms" && listaAtual.map(f => (
           <div key={f.key} style={{ border:`1px solid ${f.ativo?(f.cor==="verde"?"rgba(186,255,57,.25)":f.cor==="lilas"?"rgba(201,168,240,.25)":"rgba(255,92,26,.25)"):"rgba(245,240,232,.07)"}`, borderRadius:14, overflow:"hidden", opacity:f.ativo?1:.55, background:"rgba(245,240,232,.02)" }}>
             <div style={{ display:"flex", gap:0 }}>
               {f.img && (
