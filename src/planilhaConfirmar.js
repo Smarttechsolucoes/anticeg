@@ -96,3 +96,39 @@ export function mensagemConfirmar(r, itens = [], semCodigo = []) {
   if (!partes.length) return null;
   return partes.join("\n\n") + "\n\nEnquanto a planilha não estiver marcada, o próximo sincronismo pode desfazer este pagamento no site.";
 }
+
+/**
+ * REJEITAR: quais itens desmarcar na planilha. Puro. Um componente (ITEM/FRETE/RF) NÃO é desmarcado se OUTRA demanda `pago` ou `em_analise`
+ * ainda o cobre (mesmo código e valor > 0): o pagamento justificado por outra demanda é preservado. Itens sem código nunca entram.
+ * Devolve { itens: [{ id_linha, ceg, nome_do_item, valor_item, frete_inter, taxa_rf }] (só com os componentes a desmarcar), mantidos: [{ id_linha, componente, demanda }] }.
+ */
+const CAMPOS = [["valor_item", "ITEM"], ["frete_inter", "FRETE"], ["taxa_rf", "RF"]];
+export function itensParaCancelar(demanda, todasDemandas = []) {
+  const outras = (todasDemandas || []).filter(d => d && d.id !== demanda?.id && (d.status === "pago" || d.status === "em_analise"));
+  const cobertura = new Map();                                                  // `${código}|${campo}` -> id da demanda que ainda cobre
+  for (const d of outras) for (const i of (Array.isArray(d.itens) ? d.itens : [])) {
+    const cod = String(i?.id_linha || "").trim(); if (!cod) continue;
+    for (const [campo] of CAMPOS) if (num(i[campo]) > 0 && !cobertura.has(`${cod}|${campo}`)) cobertura.set(`${cod}|${campo}`, d.id);
+  }
+  const porCodigo = new Map(), mantidos = [];
+  for (const i of (Array.isArray(demanda?.itens) ? demanda.itens : [])) {
+    if (!i || i.ceg === "—" || !i.nome_do_item) continue;
+    const cod = String(i.id_linha || "").trim(); if (!cod) continue;
+    for (const [campo, rot] of CAMPOS) {
+      if (!(num(i[campo]) > 0)) continue;
+      const outra = cobertura.get(`${cod}|${campo}`);
+      if (outra != null) { mantidos.push({ id_linha: cod, componente: rot, demanda: outra }); continue; }
+      const it = porCodigo.get(cod) || { id_linha: cod, ceg: i.ceg, nome_do_item: i.nome_do_item, valor_item: 0, frete_inter: 0, taxa_rf: 0 };
+      it[campo] = num(i[campo]); porCodigo.set(cod, it);
+    }
+  }
+  return { itens: [...porCodigo.values()], mantidos };
+}
+
+/** Aviso à administradora sobre o que foi PRESERVADO ao rejeitar (null se nada foi preservado). */
+export function mensagemMantidos(mantidos = []) {
+  if (!mantidos.length) return null;
+  const linhas = mantidos.slice(0, 8).map(m => `• ${m.id_linha} (${m.componente}) — continua justificado pela demanda #${m.demanda}`);
+  if (mantidos.length > 8) linhas.push(`• … e mais ${mantidos.length - 8}`);
+  return ["Comprovante rejeitado. " + mantidos.length + " marcação(ões) de pagamento NÃO foram desmarcadas na planilha porque outra demanda ainda as cobre:", ...linhas].join("\n");
+}

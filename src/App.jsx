@@ -7,7 +7,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
-import { itensParaPlanilha, confirmarNaPlanilha, mensagemConfirmar } from "./planilhaConfirmar.js";
+import { itensParaPlanilha, confirmarNaPlanilha, mensagemConfirmar, itensParaCancelar, mensagemMantidos } from "./planilhaConfirmar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -9590,8 +9590,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                     const corpo = buildEmailRejeicaoPagamento(joiner.nome || joiner.cog, d, motivo.trim());
                     sendEmailJoiner(joiner.email, joiner.nome || joiner.cog, "✕ Comprovante recusado — ANTICEG", corpo);
                   }
-                  // Reverte planilha para FALSE
-                  const itensComId = (d.itens || []).filter(i => i.id_linha);
+                  // Reverte planilha para FALSE, SALVO o que outra demanda (paga ou em análise) ainda justifica
+                  const { itens: itensComId, mantidos } = itensParaCancelar(d, pagDemandas);
+                  const avisoMantidos = mensagemMantidos(mantidos); if (avisoMantidos) alert(avisoMantidos);
                   if (itensComId.length > 0) {
                     // sem bloquear a tela: lê a resposta e AVISA se a planilha pode ter ficado marcada (o sync de 9h/21h a devolveria ao site)
                     cancelarNaPlanilha(itensComId).then(rc => { const aviso = mensagemCancelar(rc, itensComId); if (aviso) alert(aviso); });

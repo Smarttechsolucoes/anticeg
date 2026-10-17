@@ -2,7 +2,7 @@
 import { chamadasBloqueadas } from "./helpers/sem-rede.mjs";   // nenhum fetch real nos testes (nunca chegar ao Apps Script de produção)
 import test from "node:test";
 import assert from "node:assert/strict";
-import { itensParaPlanilha, separarRecusados, confirmarNaPlanilha, mensagemConfirmar } from "../src/planilhaConfirmar.js";
+import { itensParaPlanilha, separarRecusados, confirmarNaPlanilha, mensagemConfirmar, itensParaCancelar, mensagemMantidos } from "../src/planilhaConfirmar.js";
 
 const dem = { itens: [
   { id_linha: "A1", ceg: "W MAG", nome_do_item: "Capa A", valor_item: 45, frete_inter: 0, taxa_rf: 0 },
@@ -120,4 +120,40 @@ test("sem fetch simulado o módulo NÃO alcança a rede real: o guard bloqueia e
   assert.equal(r.estado, "indeterminado");
   assert.equal(chamadasBloqueadas.length, antes + 1, "a tentativa foi interceptada pelo guard");
   assert.match(chamadasBloqueadas.at(-1), /script\.google\.com/);
+});
+
+// ───────── Rejeitar: preservar o que outra demanda ainda justifica ─────────
+const D = (id, status, itens) => ({ id, status, itens });
+const it = (id_linha, valor_item = 0, frete_inter = 0, taxa_rf = 0) => ({ id_linha, ceg: "C", nome_do_item: "N " + id_linha, valor_item, frete_inter, taxa_rf });
+
+test("rejeitar sem outras demandas: desmarca todos os componentes com valor, só os que a demanda cobra", () => {
+  const r = itensParaCancelar(D(1, "em_analise", [it("A", 10), it("B", 0, 5, 3)]), []);
+  assert.deepEqual(r.itens.map(i => [i.id_linha, i.valor_item, i.frete_inter, i.taxa_rf]), [["A", 10, 0, 0], ["B", 0, 5, 3]]);
+  assert.equal(r.mantidos.length, 0); assert.equal(mensagemMantidos(r.mantidos), null);
+});
+
+test("rejeitar preserva o componente que OUTRA demanda paga ainda cobre (mesmo código), mas desmarca os demais do item", () => {
+  const rej = D(1, "em_analise", [it("A", 10, 5)]);
+  const r = itensParaCancelar(rej, [rej, D(2, "pago", [it("A", 10)])]);
+  assert.deepEqual(r.itens, [{ id_linha: "A", ceg: "C", nome_do_item: "N A", valor_item: 0, frete_inter: 5, taxa_rf: 0 }]);   // ITEM preservado; FRETE desmarcado
+  assert.deepEqual(r.mantidos, [{ id_linha: "A", componente: "ITEM", demanda: 2 }]);
+  assert.match(mensagemMantidos(r.mantidos), /demanda #2/);
+});
+
+test("demanda em análise também justifica; rejeitada e a própria demanda NÃO justificam", () => {
+  const rej = D(1, "em_analise", [it("A", 10)]);
+  assert.equal(itensParaCancelar(rej, [D(3, "em_analise", [it("A", 10)])]).itens.length, 0);
+  assert.equal(itensParaCancelar(rej, [D(4, "rejeitado", [it("A", 10)]), rej]).itens.length, 1);
+});
+
+test("só vale o MESMO código e componente com valor > 0; código parecido ou valor 0 não preservam; sem código nunca entra", () => {
+  const rej = D(1, "pago", [it("A", 10), it("B", 7), { ...it("", 9) }, { id_linha: "X", ceg: "—", nome_do_item: "outros", valor_item: 5 }]);
+  const r = itensParaCancelar(rej, [D(2, "pago", [it("A", 0, 3), it("A2", 10), it("B", 7)])]);
+  assert.deepEqual(r.itens.map(i => i.id_linha), ["A"]);                       // A: a outra demanda cobre só FRETE; B: preservado; "" e "outros": fora
+  assert.deepEqual(r.mantidos.map(m => m.id_linha), ["B"]);
+});
+
+test("entradas estranhas não quebram", () => {
+  assert.deepEqual(itensParaCancelar(null, null), { itens: [], mantidos: [] });
+  assert.deepEqual(itensParaCancelar(D(1, "pago", null), [null, D(2, "pago", "x")]), { itens: [], mantidos: [] });
 });
