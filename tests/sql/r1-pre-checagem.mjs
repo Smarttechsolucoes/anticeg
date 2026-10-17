@@ -1,0 +1,36 @@
+// Valida o R1_pre_teste_suposicoes_leitura.sql em banco local (dados fictícios). Uso: node tests/sql/r1-pre-checagem.mjs
+import { PGlite } from "@electric-sql/pglite";
+import { readFileSync } from "node:fs";
+const R = new URL("../../supabase/pagamentos/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+let falhas = 0; const ok = (c, m) => { console.log((c ? "OK   " : "FALHA ") + m); if (!c) falhas++; };
+const d = new PGlite();
+await d.exec(`
+  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+  grant anon, authenticated to postgres;
+  grant usage on schema public to anon, authenticated;
+  create schema auth;
+  create function auth.uid() returns uuid language sql stable as $f$ select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''), (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'))::uuid $f$;
+  create table public.admin_roles (user_id uuid primary key); insert into public.admin_roles values (gen_random_uuid());
+  create function public.is_admin() returns boolean language sql stable security definer set search_path = '' as $f$ select exists (select 1 from public.admin_roles r where r.user_id = (select auth.uid())) $f$;
+  create table public.multas_pagas (id serial primary key);
+  create table public.masterlist (id bigint primary key, cog text, pago_item boolean, pago_frete boolean, pago_rf boolean);
+  create table public.pagamento_demandas (id bigint primary key, joiner_cog text, itens jsonb, status text, motivo_rejeicao text, constraint ck_status check (status in ('pago','em_analise','rejeitado')));
+  insert into public.pagamento_demandas values (1, 'ana', '[]', 'em_analise', null), (2, 'bia', '{"x":1}', 'em_analise', null);
+  create function public.registrar_multa_paga() returns trigger language plpgsql as $f$ begin insert into public.multas_pagas default values; return new; end $f$;
+  create trigger trg_registrar_multa_paga after update on public.masterlist for each row execute function public.registrar_multa_paga();
+`);
+const imp = async () => (await d.query(`select md5(coalesce((select string_agg(c.relname || coalesce(c.relacl::text, ''), ',' order by c.relname) from pg_class c where c.relnamespace = 'public'::regnamespace), '') || (select count(*)::text from public.pagamento_demandas) || (select count(*)::text from public.masterlist)) h`)).rows[0].h;
+const antes = await imp();
+const rows = (await d.query(readFileSync(R + "R1_pre_teste_suposicoes_leitura.sql", "utf8"))).rows;
+ok(rows.length === 17, "devolve 17 linhas");
+ok(await imp() === antes, "não altera nada");
+const v = n => rows.find(r => r.item.startsWith(n))?.valor;
+ok(v("este papel pode trocar para anon") === "true" && v("este papel pode trocar para authenticated") === "true", "SET ROLE anon/authenticated possível");
+ok(v("auth.uid() lê") === "true" && v("is_admin() é security definer") === "true", "auth.uid e is_admin conferidos");
+ok(v("tipo de pagamento_demandas.itens") === "jsonb" && v("demandas cujo itens NÃO é uma lista") === "1", "tipo jsonb e 1 demanda com itens fora do formato (só contagem)");
+ok(/pago/.test(v("CHECK constraints")) && /rejeitado/.test(v("CHECK constraints")), "mostra o CHECK de status (valores permitidos)");
+ok(v("gatilhos LIGADOS") === "masterlist.trg_registrar_multa_paga" && v("corpo do gatilho de multa") === "true" && v("regras (RULE)") === "0", "gatilhos, corpo do gatilho e regras");
+ok(v("postgres consegue ATUALIZAR masterlist") === "true" && v("postgres consegue ATUALIZAR pagamento_demandas") === "true", "dono consegue gravar nas colunas que as funções usam");
+ok(!JSON.stringify(rows).includes('"ana"') && !JSON.stringify(rows).includes('"bia"'), "nenhum dado de joiner no resultado (só contagens e nomes)");
+await d.exec("set role anon").catch(() => {}); await d.exec("reset role");
+console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
