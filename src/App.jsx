@@ -7,7 +7,8 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
-import { itensParaPlanilha, confirmarNaPlanilha, mensagemConfirmar, itensParaCancelar, mensagemMantidos } from "./planilhaConfirmar.js";
+import { itensParaPlanilha, itensParaCancelar, mensagemMantidos } from "./planilhaConfirmar.js";
+import { confirmarEAvisar, mensagemReabrir } from "./planilhaFluxos.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -9562,7 +9563,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
                   // a PLANILHA é a fonte da verdade do sync: sem TRUE nela, o próximo sync desfaz a confirmação. "confirmar" só escreve TRUE (idempotente); a resposta é lida e qualquer falha/parcial é AVISADA
                   const { itens: paraPlanilha, semCodigo } = itensParaPlanilha(d);
-                  confirmarNaPlanilha(paraPlanilha).then(rc => { const aviso = mensagemConfirmar(rc, paraPlanilha, semCodigo); if (aviso) alert(aviso); });
+                  confirmarEAvisar(paraPlanilha, semCodigo);   // lê a resposta, oferece reenviar só o pendente e nunca mostra sucesso indevido
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
               }
@@ -9570,7 +9571,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
                 const { data: dadosReabrir, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
-                if (dadosReabrir?.itens_mantidos > 0) alert(`Demanda reaberta. ${dadosReabrir.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
+                alert(mensagemReabrir(dadosReabrir));   // deixa claro: a planilha não é alterada ao reabrir; para desmarcar, rejeitar
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
               }
               async function rejeitar(id, motivo) {
