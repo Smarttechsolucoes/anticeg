@@ -13,6 +13,7 @@ const guarda = criarGuardaToken();
 export const capturarTokenEnvio = () => guarda.capturar();
 export const tokenEnvio = () => guarda.ler();
 export const temTokenEnvio = () => !!guarda.ler();
+export const salvarTokenEnvio = t => { const ok = guarda.salvar(t); _cliente = null; _clienteToken = null; return ok; };   // acesso conquistado pelo código do e-mail (autoatendimento)
 
 let _cliente = null, _clienteToken = null;
 export function limparTokenEnvio() { guarda.limpar(); _cliente = null; _clienteToken = null; }

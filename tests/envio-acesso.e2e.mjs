@@ -16,7 +16,7 @@ async function nova(cen) {
     localStorage.setItem("anticeg_user_v2", JSON.stringify(u)); localStorage.setItem("anticeg_session_at_v2", String(Date.now())); localStorage.setItem("anticeg_session_v", "4");
     localStorage.setItem("anticeg_tutorial_v1", "1"); localStorage.setItem("anticeg_push_asked", "1"); localStorage.setItem("anticeg_a2hs_asked", "1");
   }, [ANA]);
-  const reg = { envioReq: [], escritas: [], uploads: [], rpc: [], alerts: [], joinersGet: [], joinersWrite: [] };
+  const reg = { envioReq: [], escritas: [], uploads: [], rpc: [], alerts: [], joinersGet: [], joinersWrite: [], funcoes: [] };
   await ctx.route("**/*", route => {
     const req = route.request(), u = req.url(), m = req.method(), h = req.headers();
     if (u.startsWith(`http://localhost:${PORTA}`)) return route.continue();
@@ -24,12 +24,21 @@ async function nova(cen) {
     if (!u.includes("supabase.co")) return route.fulfill({ status: 204, body: "" });
     const tabelaEnvio = /\/rest\/v1\/(envio_solicitacoes|grupos_envio|joiner_storage|envio_requests|envio_rounds|joiner_conferencias|rastreios)/.exec(u);
     if (tabelaEnvio) reg.envioReq.push({ tabela: tabelaEnvio[1], metodo: m, token: h["x-envio-token"] || null });
+    if (u.includes("/functions/v1/envio-acesso")) {
+      if (m === "OPTIONS") return route.fulfill({ status: 200, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" }, body: "ok" });
+      let c = {}; try { c = JSON.parse(req.postData() || "{}"); } catch { /* ignora */ } reg.funcoes.push(c);
+      const CORS = { "access-control-allow-origin": "*" };
+      if (c.acao === "pedir") return route.fulfill({ status: 200, contentType: "application/json", headers: CORS, body: JSON.stringify({ ok: true, mensagem: "Se este @ tem e-mail cadastrado, enviamos um código de 6 dígitos para esse e-mail." }) });
+      if (c.acao === "validar") return route.fulfill({ status: 200, contentType: "application/json", headers: CORS, body: JSON.stringify(c.codigo === "123456" ? { ok: true, token: TOKEN } : { ok: false, erro: "Código inválido ou expirado. Confira o e-mail ou peça um código novo." }) });
+      return route.fulfill({ status: 400, contentType: "application/json", headers: CORS, body: "{}" });
+    }
     if (u.includes("/rest/v1/joiners")) { if (m === "GET") reg.joinersGet.push(u); else reg.joinersWrite.push({ m, corpo: req.postData() || "" }); }
     if (u.includes("/rest/v1/rpc/")) {
       const nome = u.split("/rpc/")[1].split("?")[0]; let corpoRpc = {}; try { corpoRpc = JSON.parse(req.postData() || "{}"); } catch { /* ignora */ } reg.rpc.push({ nome, token: h["x-envio-token"] || null, corpo: corpoRpc });
       if (nome === "envio_meu_acesso") return cen.acesso === "erro" ? json(404, { code: "PGRST202", message: "x" }) : json(200, cen.acesso === undefined ? { cog: "ana" } : cen.acesso);
       if (nome === "envio_meus_dados") return json(200, DADOS);
       if (nome === "envio_salvar_dados") return json(200, true);
+      if (nome === "envio_sair") return json(200, true);
       if (nome === "envio_solicitar_rodada") return json(200, { id: 1, joiner_cog: "ana", status: "aguardando", envio_rounds: { numero: 1, status: "em_processo" } });
       return json(200, null);
     }
@@ -58,7 +67,7 @@ const corpo = page => page.locator("body").innerText();
 {
   const T = await nova({}); await ir(T.page, "/envio");
   const txt = await corpo(T.page);
-  ok(txt.includes("LINK PESSOAL") && txt.includes("Pedir meu link pelo WhatsApp"), "sem link: a aba pede o link pessoal e oferece pedir pelo WhatsApp");
+  ok(txt.includes("CONFIRMAR O SEU ACESSO") && txt.includes("Enviar código ao meu e-mail") && !txt.includes("Pedir meu link") && !txt.includes("registrado@exemplo.com"), "sem acesso: a aba oferece o código por e-mail (sem WhatsApp, sem link manual) e não mostra e-mail");
   ok(T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0 && T.reg.envioReq.every(r => r.token === null), "sem link: a aba não consulta nenhuma tabela de envio (só os contadores do perfil, sem token, que o banco responde vazio)");
   ok(T.erros.length === 0, "sem link: nenhum erro de JavaScript" + (T.erros[0] ? ": " + T.erros[0] : ""));
   await T.browser.close();
@@ -69,7 +78,7 @@ const corpo = page => page.locator("body").innerText();
   ok(!(await T.page.evaluate(() => location.href)).includes("acesso="), "link válido: o token sai da barra de endereço");
   ok(await T.page.evaluate(() => Object.values(localStorage).includes("0123456789abcdef".repeat(3))), "link válido: o token fica guardado só neste aparelho");
   const txt = await corpo(T.page);
-  ok(!txt.includes("LINK PESSOAL") && txt.includes("Envio Nacional") && txt.includes("Minhas Solicitações"), "link válido: o envio abre (conferência, pedir envio e minhas solicitações)");
+  ok(!txt.includes("CONFIRMAR O SEU ACESSO") && txt.includes("Envio Nacional") && txt.includes("Minhas Solicitações"), "acesso válido: o envio abre (conferência, pedir envio e minhas solicitações)");
   ok(T.reg.rpc.some(r => r.nome === "envio_meu_acesso" && r.token === TOKEN) && T.reg.rpc.some(r => r.nome === "envio_meus_dados" && r.token === TOKEN), "o servidor confere o acesso e entrega os dados de entrega salvos, com o token no cabeçalho");
   ok(T.reg.envioReq.length > 0 && T.reg.envioReq.every(r => r.token === TOKEN), "TODAS as consultas às tabelas de envio levam o token (" + T.reg.envioReq.length + ")");
   // 2b) escolher a modalidade
@@ -136,17 +145,38 @@ const corpo = page => page.locator("body").innerText();
 {
   const T = await nova({ acesso: { cog: "outra_pessoa" } }); await ir(T.page, `/envio?acesso=${TOKEN}`);
   const txt = await corpo(T.page);
-  ok(txt.includes("pertence a outra joiner") && T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0, "link de outra joiner: recusado, a aba não consulta as tabelas de envio");
+  ok(txt.includes("acesso de outra joiner") && txt.includes("CONFIRMAR O SEU ACESSO") && T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0, "link de outra joiner: recusado, a aba não consulta as tabelas de envio");
   await T.browser.close();
 }
 {
   const T = await nova({ acesso: null }); await ir(T.page, `/envio?acesso=${TOKEN}`);
-  ok((await corpo(T.page)).includes("não está mais válido") && T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0, "link vencido/revogado: mensagem clara e a aba não consulta as tabelas de envio");
+  ok((await corpo(T.page)).includes("O seu acesso venceu") && T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0, "link vencido/revogado: mensagem clara e a aba não consulta as tabelas de envio");
   await T.browser.close();
 }
 {
   const T = await nova({ acesso: "erro" }); await ir(T.page, `/envio?acesso=${TOKEN}`);
-  ok(!(await corpo(T.page)).includes("LINK PESSOAL"), "pacote do banco ainda não aplicado (PGRST202): quem tem link continua entrando (ordem de publicação segura)");
+  ok(!(await corpo(T.page)).includes("CONFIRMAR O SEU ACESSO"), "pacote do banco ainda não aplicado (PGRST202): quem tem link continua entrando (ordem de publicação segura)");
+  await T.browser.close();
+}
+// ── 7) AUTOATENDIMENTO: código no e-mail cadastrado, sem login e senha, sem WhatsApp
+{
+  const T = await nova({ solicitacoes: [SOL()] }); await ir(T.page, "/envio");
+  ok((await corpo(T.page)).includes("CONFIRMAR O SEU ACESSO") && (await corpo(T.page)).includes("@ana"), "autoatendimento: a aba mostra o @ da sessão e oferece o código (o @ sozinho não abre nada)");
+  ok(T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0, "autoatendimento: antes do código nenhuma tabela de envio é consultada");
+  await T.page.getByRole("button", { name: /Enviar código ao meu e-mail/ }).click(); await T.page.waitForTimeout(700);
+  ok(T.reg.funcoes.length === 1 && T.reg.funcoes[0].acao === "pedir" && T.reg.funcoes[0].cog === "ana" && Object.keys(T.reg.funcoes[0]).sort().join() === "acao,cog", "autoatendimento: o pedido leva só {acao, cog}; nada de e-mail ou telefone trafega do navegador");
+  const txt = await corpo(T.page);
+  ok(txt.includes("enviamos um código de 6 dígitos") && /Reenviar código \(\d+s\)/.test(txt), "autoatendimento: mensagem neutra e reenvio com espera");
+  ok(!/[A-Za-z0-9._-]+@[A-Za-z0-9-]+\.[a-z]{2,}/.test(txt), "autoatendimento: nenhum e-mail aparece na tela antes da confirmação");
+  await T.page.getByLabel("Código de 6 dígitos").fill("000000"); await T.page.getByRole("button", { name: /Confirmar/ }).click(); await T.page.waitForTimeout(600);
+  ok((await corpo(T.page)).includes("Código inválido ou expirado") && T.reg.envioReq.filter(r => r.tabela !== "envio_solicitacoes").length === 0 && !(await T.page.evaluate(() => Object.values(localStorage).includes("0123456789abcdef".repeat(3)))), "código errado: mensagem genérica, nenhum acesso concedido");
+  await T.page.getByLabel("Código de 6 dígitos").fill("123 456"); await T.page.getByRole("button", { name: /Confirmar/ }).click(); await T.page.waitForTimeout(1800);
+  ok(T.reg.funcoes.at(-1).acao === "validar" && T.reg.funcoes.at(-1).codigo === "123456", "código certo: o navegador envia só {acao, cog, codigo}");
+  ok((await corpo(T.page)).includes("Minhas Solicitações") && !(await corpo(T.page)).includes("CONFIRMAR O SEU ACESSO"), "código certo: o Envio Nacional abre sozinho, sem a equipe");
+  ok(T.reg.rpc.some(r => r.nome === "envio_meu_acesso" && r.token === TOKEN) && T.reg.envioReq.length > 0 && T.reg.envioReq.slice(-3).every(r => r.token === TOKEN), "depois do código, as consultas passam a levar o acesso");
+  await T.page.getByRole("button", { name: /Sair deste acesso/ }).click(); await T.page.waitForTimeout(800);
+  ok(T.reg.rpc.some(r => r.nome === "envio_sair" && r.token === TOKEN) && (await corpo(T.page)).includes("CONFIRMAR O SEU ACESSO") && !(await T.page.evaluate(() => Object.values(localStorage).includes("0123456789abcdef".repeat(3)))), "sair: o acesso é revogado no servidor e apagado deste aparelho");
+  ok(T.erros.length === 0, "autoatendimento: nenhum erro de JavaScript" + (T.erros[0] ? ": " + T.erros[0] : ""));
   await T.browser.close();
 }
 // ── 6) JOINERS1: login por @ sem select(*), Perfil/Endereço só pelo link
@@ -155,7 +185,7 @@ const corpo = page => page.locator("body").innerText();
   ok(T.reg.joinersGet.length > 0 && T.reg.joinersGet.every(u => !/select=(\*|%2A)(&|$)/.test(u)), "nenhuma leitura de joiners usa select=* (" + T.reg.joinersGet.length + " leituras conferidas)");
   await T.page.getByRole("button", { name: /Endere/ }).first().click(); await T.page.waitForTimeout(500);
   const txt = await corpo(T.page);
-  ok(txt.includes("agora ficam protegidos") && !txt.includes("SALVAR ENDEREÇO"), "sem link: o Perfil não mostra nem permite editar CPF/endereço (aviso para usar o link pessoal)");
+  ok(txt.includes("ficam protegidos") && txt.includes("confirme o código") && !txt.includes("SALVAR ENDEREÇO"), "sem acesso: o Perfil não mostra nem permite editar CPF/endereço (aviso para confirmar o código do e-mail)");
   ok(!T.reg.joinersWrite.some(w => /cpf|cep|rua|numero|complemento|bairro|cidade|estado|nome_entrega/.test(w.corpo)), "sem link: nenhuma escrita de CPF/endereço na tabela joiners (só o last_seen de sempre)");
   await T.browser.close();
 }

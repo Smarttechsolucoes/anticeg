@@ -91,3 +91,15 @@ test("o Perfil grava CPF/endereço pelo servidor e não direto na tabela", () =>
   assert.ok(app.includes("rpc(\"envio_salvar_dados\""));
   assert.equal(/from\("joiners"\)\.update\(payload\)/.test(app), false);
 });
+
+// ---- ENV2: autoatendimento por código no e-mail
+test("salvar: só aceita token válido e fica disponível em seguida", () => {
+  const arm = armazenamentoFalso(); const g = criarGuardaToken({ armazenamento: arm, janela: null });
+  assert.equal(g.salvar("lixo"), false); assert.equal(g.ler(), null);
+  assert.equal(g.salvar(TOKEN), true); assert.equal(g.ler(), TOKEN); assert.equal(arm.getItem(CHAVE_TOKEN), TOKEN);
+});
+test("a porta do Envio usa o código do e-mail e não depende de WhatsApp nem de link distribuído", () => {
+  assert.ok(app.includes("function EnvioAcessoPorCodigo(") && app.includes("functions.invoke(\"envio-acesso\"") && app.includes("salvarTokenEnvio(t)"));
+  assert.equal(app.includes("Pedir meu link pelo WhatsApp"), false);
+  assert.equal(/user-email">\{user\.email/.test(app), false);
+});
