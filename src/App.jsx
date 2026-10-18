@@ -19666,7 +19666,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       <div style={{ fontSize:16, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>Solicitação enviada!</div>
       <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.9, background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"20px 24px", textAlign:"left" }}>
         Sua solicitação foi recebida com sucesso.<br /><br />
-        O prazo de cotação é de <strong style={{ color:"#F5F0E8" }}>5 dias úteis</strong> a partir do preenchimento deste formulário.<br /><br />
+        📅 Solicitações: <strong style={{ color:"#F5F0E8" }}>18 e 19 de outubro</strong><br />
+        💌 Cotações: <strong style={{ color:"#F5F0E8" }}>de 19 a 23 de outubro</strong><br />
+        📦 Envios: <strong style={{ color:"#F5F0E8" }}>em até 10 dias</strong> após a emissão da etiqueta.<br /><br />
         A cotação estará disponível dentro do seu acesso com os valores e taxas.
       </div>
       <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap", marginTop:16 }}>
