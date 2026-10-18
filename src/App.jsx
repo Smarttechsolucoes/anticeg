@@ -7,6 +7,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { supabaseEnvio, capturarTokenEnvio, temTokenEnvio, limparTokenEnvio, normalizarCogEnvio, ENVIO_EXIGE_ACESSO } from "./envioAcesso.js";
+import { COLUNAS_JOINER_PUBLICAS } from "./joinersColunas.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
@@ -3720,6 +3721,20 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [endCidade,      setEndCidade]      = useState(user.cidade      || "");
   const [endEstado,      setEndEstado]      = useState(user.estado      || "");
   const [endCepLoading,  setEndCepLoading]  = useState(false);
+  // CPF e endereço NÃO são mais lidos/gravados pelo visitante: só pelo link pessoal do Envio Nacional (servidor identifica a joiner)
+  const [endAcesso, setEndAcesso] = useState(() => temTokenEnvio() ? "verificando" : "sem_link");
+  useEffect(() => {
+    if (!temTokenEnvio()) return;
+    let vivo = true;
+    supabaseEnvio().rpc("envio_meus_dados").then(({ data, error }) => {
+      if (!vivo) return;
+      if (error || !data) { setEndAcesso("erro"); return; }
+      setEndNomeEntrega(data.nome_entrega || ""); setEndCpf(data.cpf || ""); setEndCep(data.cep || ""); setEndRua(data.rua || "");
+      setEndNumero(data.numero || ""); setEndComplemento(data.complemento || ""); setEndBairro(data.bairro || ""); setEndCidade(data.cidade || ""); setEndEstado(data.estado || "");
+      setEndAcesso("sim");
+    });
+    return () => { vivo = false; };
+  }, []);
   const [endSaving,      setEndSaving]      = useState(false);
   const [endSaved,       setEndSaved]       = useState(false);
   const [endErr,         setEndErr]         = useState("");
@@ -5880,7 +5895,16 @@ ${compHTML}
         </div>
       )}
 
-      {perfilSubTab === "endereco" && (
+      {perfilSubTab === "endereco" && endAcesso !== "sim" && (
+        <div className="login-box" style={{ gap:14 }}>
+          <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>Endereço de entrega</div>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
+            {endAcesso === "verificando" ? "Verificando o seu acesso…" : endAcesso === "erro" ? "Não foi possível carregar o seu endereço agora. Tente de novo em instantes." :
+              "Seu CPF e endereço agora ficam protegidos. Para cadastrá-los ou alterá-los, use o link pessoal do Envio Nacional que a equipe envia para você (peça pelo WhatsApp se ainda não recebeu)."}
+          </div>
+        </div>
+      )}
+      {perfilSubTab === "endereco" && endAcesso === "sim" && (
         <div className="login-box" style={{ gap:14 }}>
           <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>
             Endereço de entrega
@@ -5988,10 +6012,10 @@ ${compHTML}
               cidade:       endCidade,
               estado:       endEstado,
             };
-            const { error: err } = await supabase.from("joiners").update(payload).eq("cog", user.cog);
+            const { data: okSalvo, error: err } = await supabaseEnvio().rpc("envio_salvar_dados", { p_dados: payload });
             setEndSaving(false);
-            if (err) { setEndErr("Erro ao salvar. Tente novamente."); return; }
-            const updatedUser = { ...user, ...payload };
+            if (err || okSalvo !== true) { setEndErr("Erro ao salvar. Tente novamente."); return; }
+            const updatedUser = { ...user, telefone: payload.telefone };   // CPF e endereço não ficam guardados no aparelho
             localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
             onUpdate(updatedUser);
             setEndSaved(true);
@@ -8929,7 +8953,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const termo = badgesSearch.trim().replace(/^@/, "");
     if (!termo) return;
     setBadgesLoading(true); setBadgesErro(""); setBadgesJoiner(null);
-    const { data: joiner } = await supabase.from("joiners").select("*")
+    const { data: joiner } = await clienteAdmin().from("joiners").select(COLUNAS_JOINER_PUBLICAS)
       .or(`cog.ilike.%${termo}%,nome.ilike.%${termo}%`).limit(1).single();
     if (!joiner) { setBadgesErro("Joiner não encontrado."); setBadgesLoading(false); return; }
 
@@ -14639,11 +14663,11 @@ function ClaimGuestPage({ onLogin }) {
     const isEmail = val.indexOf("@") > 0;
     let joiner = null;
     if (isEmail) {
-      const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).maybeSingle();
+      const { data } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).eq("email", val.toLowerCase()).maybeSingle();
       joiner = data;
     } else {
       const handle = val.startsWith("@") ? val.slice(1) : val;
-      const { data } = await supabase.from("joiners").select("*").or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`).maybeSingle();
+      const { data } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`).maybeSingle();
       joiner = data;
     }
     if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
@@ -27058,7 +27082,7 @@ export default function App() {
     // Atualiza dados do joiner em cache (foto, nome, etc.)
     const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2")); } catch { return null; } })();
     if (cached?.cog && !cached?.guest) {
-      supabase.from("joiners").select("*").eq("cog", cached.cog).single()
+      supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).eq("cog", cached.cog).single()
         .then(({ data }) => {
           if (data) {
             localStorage.setItem("anticeg_user_v2", JSON.stringify(data));

@@ -16,7 +16,7 @@ async function nova(cen) {
     localStorage.setItem("anticeg_user_v2", JSON.stringify(u)); localStorage.setItem("anticeg_session_at_v2", String(Date.now())); localStorage.setItem("anticeg_session_v", "4");
     localStorage.setItem("anticeg_tutorial_v1", "1"); localStorage.setItem("anticeg_push_asked", "1"); localStorage.setItem("anticeg_a2hs_asked", "1");
   }, [ANA]);
-  const reg = { envioReq: [], escritas: [], uploads: [], rpc: [], alerts: [] };
+  const reg = { envioReq: [], escritas: [], uploads: [], rpc: [], alerts: [], joinersGet: [], joinersWrite: [] };
   await ctx.route("**/*", route => {
     const req = route.request(), u = req.url(), m = req.method(), h = req.headers();
     if (u.startsWith(`http://localhost:${PORTA}`)) return route.continue();
@@ -24,10 +24,12 @@ async function nova(cen) {
     if (!u.includes("supabase.co")) return route.fulfill({ status: 204, body: "" });
     const tabelaEnvio = /\/rest\/v1\/(envio_solicitacoes|grupos_envio|joiner_storage|envio_requests|envio_rounds|joiner_conferencias|rastreios)/.exec(u);
     if (tabelaEnvio) reg.envioReq.push({ tabela: tabelaEnvio[1], metodo: m, token: h["x-envio-token"] || null });
+    if (u.includes("/rest/v1/joiners")) { if (m === "GET") reg.joinersGet.push(u); else reg.joinersWrite.push({ m, corpo: req.postData() || "" }); }
     if (u.includes("/rest/v1/rpc/")) {
-      const nome = u.split("/rpc/")[1].split("?")[0]; reg.rpc.push({ nome, token: h["x-envio-token"] || null });
+      const nome = u.split("/rpc/")[1].split("?")[0]; let corpoRpc = {}; try { corpoRpc = JSON.parse(req.postData() || "{}"); } catch { /* ignora */ } reg.rpc.push({ nome, token: h["x-envio-token"] || null, corpo: corpoRpc });
       if (nome === "envio_meu_acesso") return cen.acesso === "erro" ? json(404, { code: "PGRST202", message: "x" }) : json(200, cen.acesso === undefined ? { cog: "ana" } : cen.acesso);
       if (nome === "envio_meus_dados") return json(200, DADOS);
+      if (nome === "envio_salvar_dados") return json(200, true);
       if (nome === "envio_solicitar_rodada") return json(200, { id: 1, joiner_cog: "ana", status: "aguardando", envio_rounds: { numero: 1, status: "em_processo" } });
       return json(200, null);
     }
@@ -145,6 +147,28 @@ const corpo = page => page.locator("body").innerText();
 {
   const T = await nova({ acesso: "erro" }); await ir(T.page, `/envio?acesso=${TOKEN}`);
   ok(!(await corpo(T.page)).includes("LINK PESSOAL"), "pacote do banco ainda não aplicado (PGRST202): quem tem link continua entrando (ordem de publicação segura)");
+  await T.browser.close();
+}
+// ── 6) JOINERS1: login por @ sem select(*), Perfil/Endereço só pelo link
+{
+  const T = await nova({}); await ir(T.page, "/perfil");
+  ok(T.reg.joinersGet.length > 0 && T.reg.joinersGet.every(u => !/select=(\*|%2A)(&|$)/.test(u)), "nenhuma leitura de joiners usa select=* (" + T.reg.joinersGet.length + " leituras conferidas)");
+  await T.page.getByRole("button", { name: /Endere/ }).first().click(); await T.page.waitForTimeout(500);
+  const txt = await corpo(T.page);
+  ok(txt.includes("agora ficam protegidos") && !txt.includes("SALVAR ENDEREÇO"), "sem link: o Perfil não mostra nem permite editar CPF/endereço (aviso para usar o link pessoal)");
+  ok(!T.reg.joinersWrite.some(w => /cpf|cep|rua|numero|complemento|bairro|cidade|estado|nome_entrega/.test(w.corpo)), "sem link: nenhuma escrita de CPF/endereço na tabela joiners (só o last_seen de sempre)");
+  await T.browser.close();
+}
+{
+  const T = await nova({}); await ir(T.page, `/perfil?acesso=${TOKEN}`);
+  await T.page.getByRole("button", { name: /Endere/ }).first().click(); await T.page.waitForTimeout(700);
+  const valores = await T.page.locator("input").evaluateAll(es => es.map(e => e.value));
+  ok(valores.includes("12345678901") && valores.includes("01001000"), "com link: CPF e endereço salvos chegam do servidor e preenchem o formulário");
+  await T.page.getByRole("button", { name: /SALVAR ENDEREÇO/ }).click(); await T.page.waitForTimeout(700);
+  const r = T.reg.rpc.find(x => x.nome === "envio_salvar_dados");
+  ok(!!r && r.token === TOKEN && r.corpo?.p_dados?.cpf === "12345678901" && r.corpo?.p_dados?.cep === "01001000", "com link: salvar vai ao servidor (envio_salvar_dados) com o token");
+  ok(!T.reg.joinersWrite.some(w => /cpf|cep/.test(w.corpo)), "com link: CPF/endereço NÃO são gravados direto na tabela joiners");
+  ok(!(await T.page.evaluate(() => localStorage.getItem("anticeg_user_v2") || "")).includes("12345678901"), "o CPF não fica guardado no aparelho");
   await T.browser.close();
 }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES DE NAVEGADOR PASSARAM");

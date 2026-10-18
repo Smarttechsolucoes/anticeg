@@ -70,3 +70,24 @@ test("comprovantes de envio vão para o bucket privado e o banco guarda só o ca
 test("o Envio Nacional tem porta de acesso por link pessoal", () => {
   assert.ok(app.includes("function EnvioTabInterno(") && app.includes("rpc(\"envio_meu_acesso\")") && app.includes("temTokenEnvio()"));
 });
+
+// ---- JOINERS1: CPF e endereço fora da leitura/gravação do visitante
+import { COLUNAS_JOINER_PUBLICAS } from "../src/joinersColunas.js";
+const sqlJ1 = readFileSync(new URL("../supabase/envio/JOINERS1_aplicar.sql", import.meta.url), "utf8");
+test("a lista de colunas públicas do front é igual à do SQL (grant select) e cobre as 24 colunas junto com as 9 protegidas", () => {
+  const grant = /grant select \(([^)]*)\) on public\.joiners to anon/.exec(sqlJ1)[1].split(",").map(x => x.trim()).sort();
+  assert.deepEqual(COLUNAS_JOINER_PUBLICAS.split(",").sort(), grant);
+  const protegidas = ["cpf", "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado", "nome_entrega"];
+  assert.equal(grant.length + protegidas.length, 24);
+  for (const c of protegidas) assert.equal(grant.includes(c), false, c);
+});
+test("nenhum select(*) em joiners fora da conta admin", () => {
+  for (const f of ["../src/App.jsx", "../src/LandingPage.jsx", "../src/recrutador.js", "../src/joinerAuth.js"]) {
+    const fonte = readFileSync(new URL(f, import.meta.url), "utf8");
+    for (const m of fonte.matchAll(/(\w+(?:\(\))?)\.from\("joiners"\)\s*\.select\("\*"\)/g)) assert.equal(m[1], "clienteAdmin()", f + ": " + m[0]);
+  }
+});
+test("o Perfil grava CPF/endereço pelo servidor e não direto na tabela", () => {
+  assert.ok(app.includes("rpc(\"envio_salvar_dados\""));
+  assert.equal(/from\("joiners"\)\.update\(payload\)/.test(app), false);
+});

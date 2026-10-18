@@ -1,5 +1,5 @@
 # ENV1 — Envio Nacional com link pessoal (sem login/senha) — PREPARADO, NÃO PUBLICADO, NÃO APLICADO
-Decisão, roteiro e reversão: ver `ENVIO_GO_NO-GO.md`.
+Decisão, roteiro e reversão: ver `ENVIO_GO_NO-GO.md`. **JOINERS1** (`JOINERS1_aplicar.sql`, `JOINERS1_reverter.sql`, ensaios `JOINERS1_*_rollback.sql`): esconde CPF e endereço de `joiners` do visitante (36 verificações em rollback, 0 falhas; reversão idêntica); o front usa colunas explícitas (`src/joinersColunas.js`) e o Perfil grava/lê CPF e endereço só pelo link pessoal.
 
 ## O que muda (e só isto)
 | Camada | Mudança |
@@ -15,11 +15,11 @@ Link `…/envio?acesso=<token>` (192 bits) gerado pela equipe técnica e enviado
 - **Banco, produção em rollback, papéis reais `anon`/`authenticated`** (`ENV1_ensaio_rollback.sql`): **64 verificações, 0 falhas.** Visitante, token errado/expirado/revogado: 0 linhas e sem escrita. Joiner A vê só o que é dela, não cria para outra, não muda status/cotação/CPF, não adultera preço, cancela só o que pode, retira só o próprio item de storage. Administradora lê, escreve, apaga e abre comprovantes. Conta logada: só as próprias. Bucket: caminho livre e solicitação inexistente recusados; `storage-itens` fechado para visitante.
 - **Reversão** (`ENV1_reversao_ensaio_rollback.sql`): aplicar + reverter = policies, privilégios, RLS e policies do Storage idênticos ao original.
 - **Navegador real, API simulada** (`tests/envio-acesso.e2e.mjs`, Playwright): **23 verificações, 0 falhas** (sem link, link válido, link de outra joiner, link vencido, banco ainda sem o pacote, CPF/endereço do servidor, pedido de envio, escolha de modalidade, escrita recusada sem sucesso falso, comprovante ao bucket privado com o token).
-- **Front:** `tests/envio-acesso.test.mjs` (12) + suíte 74/74; lint no nível da `main` (93); build ok.
+- **Front:** `tests/envio-acesso.test.mjs` (15) + suíte 77/77; navegador `tests/envio-acesso.e2e.mjs` com 30 verificações; lint no nível da `main` (93); build ok.
 - **Não testado:** o fluxo de navegador contra um Supabase de ensaio real (não existe projeto de ensaio ativo) e o painel admin no navegador (coberto por testes de banco e por varredura do código).
 
 ## Limites honestos
-1. `joiners` segue legível pelo visitante (ver `ENVIO_GO_NO-GO.md`, fase 2).
+1. Em `joiners`, **e-mail e WhatsApp continuam legíveis** pelo visitante (CPF e endereço, não): ver `ENVIO_GO_NO-GO.md`, seção 2.
 2. Fotos do storage abrem por quem tem o endereço exato; os 22 comprovantes antigos seguem públicos até a migração.
 3. A policy genérica de upload do Storage ("allow upload": qualquer bucket exceto os excluídos) continua; o ENV1 só exclui dela os buckets `envio-comprovantes` e `storage-itens`.
 4. Validação de pagamento **por item** no pedido: os itens do storage são fotos sem código da MASTERLIST; a equipe confere na cotação. Para automatizar é preciso selecionar a partir da MASTERLIST (fase 2).

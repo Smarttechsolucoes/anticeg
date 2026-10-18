@@ -1,6 +1,6 @@
 // SONDA SOMENTE LEITURA do que um VISITANTE (chave pública, sem token) enxerga nas tabelas de envio e nos buckets. Usa HEAD (sem baixar dados) e lê só o Content-Range.
 // GO/NO-GO: depois do ENV1, as 7 tabelas devem mostrar 0 (ou NEGADO); rastreios deve ser NEGADO; storage-itens não pode ser listável.
-//   node scripts/envio-sondar-visitante.mjs [--com-token <token>]     (com token: deve ver SÓ as linhas da dona do link)
+//   node scripts/envio-sondar-visitante.mjs [--com-token <token>] [--joiners]   (--joiners: confere também o JOINERS1)     (com token: deve ver SÓ as linhas da dona do link)
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -18,6 +18,15 @@ for (const [t, esperado] of [["envio_solicitacoes", "vazio"], ["grupos_envio", "
   const bom = token ? (esperado === "negado" ? r.startsWith("NEGADO") : true) : (esperado === "negado" ? r.startsWith("NEGADO") : /visível: 0$/.test(r) || r.startsWith("NEGADO"));
   if (!bom) falhas++;
   console.log((bom ? "OK    " : "FALHA ") + t.padEnd(22) + r);
+}
+// JOINERS1: CPF e endereço fechados; colunas públicas (login por @) continuam abertas; select=* deixa de funcionar para o visitante (de propósito)
+async function status(sel) { const r = await fetch(`${URL_BASE}/rest/v1/joiners?select=${sel}&limit=1`, { method: "HEAD", headers: cab }); return r.status; }
+const jo = [["cpf", false], ["cep,rua,numero,complemento,bairro,cidade,estado,nome_entrega", false], ["*", false], ["cog,nome,twitter,nome_site", true]];
+if (process.argv.includes("--joiners")) {
+  for (const [sel, deveAbrir] of jo) {
+    const st = await status(sel); const aberto = st < 400; const bom = aberto === deveAbrir; if (!bom) falhas++;
+    console.log((bom ? "OK    " : "FALHA ") + ("joiners?select=" + sel.slice(0, 22)).padEnd(40) + (aberto ? "legível" : "NEGADO (" + st + ")"));
+  }
 }
 const lista = await fetch(`${URL_BASE}/storage/v1/object/list/storage-itens`, { method: "POST", headers: { ...cab, "Content-Type": "application/json" }, body: JSON.stringify({ prefix: "", limit: 1 }) });
 const corpo = lista.ok ? await lista.json().catch(() => []) : [];
