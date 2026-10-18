@@ -20270,6 +20270,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       {/* ITENS DA CONFERÊNCIA — sempre clicável */}
       <div style={sec}>
         <div style={{ fontSize:10, letterSpacing:"1.5px", color:"var(--laranja)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:14 }}>Itens disponíveis para envio</div>
+        <div style={{ marginBottom:14, padding:"10px 12px", borderRadius:8, background:"rgba(255,92,26,.07)", border:"1px solid rgba(255,92,26,.25)", fontSize:12, color:"rgba(245,240,232,.82)", lineHeight:1.6 }}>
+          Atenção: nem todos os itens que estão na casa da GOM aparecem nas fotos desta lista, pois o storage está desatualizado. Se você tem itens em mãos que não aparecem aqui, solicite o envio normalmente.
+        </div>
         {storageLoadingForm ? (
           <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", padding:"20px 0" }}>Carregando...</div>
         ) : storageDisponivel.length === 0 ? (
