@@ -19419,7 +19419,7 @@ function ThisAndThatGallery() {
 }
 
 const INICIO_RODADA_ENVIO = "2026-10-18";
-function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
+function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
   const WA_GOM = WHATSAPP_NUM;
   const envioWinW = useWindowWidth();
   const envioIsMobile = envioWinW <= 680;
