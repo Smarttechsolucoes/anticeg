@@ -1,3 +1,4 @@
+import { COLUNAS_JOINER_PUBLICAS } from "./joinersColunas.js";
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
@@ -100,18 +101,18 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     const handle = input.startsWith("@") ? input.slice(1) : input;
     // email: busca direto por email, sem passar pelo cog
     if (isEmail(input)) {
-      const { data: byEmail } = await supabase.from("joiners").select("*")
+      const { data: byEmail } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS)
         .eq("email", input.toLowerCase())
         .maybeSingle();
       return byEmail || null;
     }
     // busca por cog exato (eq evita wildcards SQL do ilike)
-    const { data: byCog } = await supabase.from("joiners").select("*")
+    const { data: byCog } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS)
       .eq("cog", handle)
       .maybeSingle();
     if (byCog) return byCog;
     // fallback: twitter handle
-    const { data: byTw } = await supabase.from("joiners").select("*")
+    const { data: byTw } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS)
       .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`)
       .maybeSingle();
     return byTw || null;
@@ -185,11 +186,11 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     // tenta encontrar conta existente
     let joiner = null;
     if (eml) {
-      const { data } = await supabase.from("joiners").select("*").eq("email", eml).maybeSingle();
+      const { data } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).eq("email", eml).maybeSingle();
       if (data) joiner = data;
     }
     if (!joiner && cog) {
-      const { data } = await supabase.from("joiners").select("*")
+      const { data } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS)
         .or(`twitter.ilike.@${cog},twitter.ilike.${cog}`)
         .maybeSingle();
       if (data) joiner = data;
@@ -262,7 +263,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     }).catch(() => {});
 
     // loga direto com a conta recém-criada
-    const { data: novoJoiner } = await supabase.from("joiners").select("*").eq("cog", cog).maybeSingle();
+    const { data: novoJoiner } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).eq("cog", cog).maybeSingle();
     setCadLoading(false);
     if (novoJoiner) {
       await entrarCom(novoJoiner);

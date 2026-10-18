@@ -6,6 +6,8 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
+import { supabaseEnvio, capturarTokenEnvio, temTokenEnvio, limparTokenEnvio, normalizarCogEnvio, ENVIO_EXIGE_ACESSO } from "./envioAcesso.js";
+import { COLUNAS_JOINER_PUBLICAS } from "./joinersColunas.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
@@ -262,6 +264,7 @@ function buildEmailRejeicaoPagamento(toNome, recibo, motivo) {
 const pf = v => parseFloat(String(v ?? 0).replace(",", ".")) || 0;
 
 
+capturarTokenEnvio();   // link pessoal do envio nacional (?acesso=): guarda o token e limpa a barra de endereço
 const WHATSAPP_NUM = "5524992782023";
 const PIX_KEY      = "de1a489d-db81-4864-a8cf-74cdd79d9cdc";
 const SITE_URL     = "https://anticeg.vercel.app";
@@ -1963,7 +1966,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
   useEffect(() => {
     if (guest || !user.cog) return;
-    supabase.from("envio_solicitacoes").select("id,status,itens").eq("joiner_cog", user.cog)
+    supabaseEnvio().from("envio_solicitacoes").select("id,status,itens").eq("joiner_cog", user.cog)
       .then(({ data }) => {
         if (!data) return;
         const map = {};
@@ -1974,21 +1977,18 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
   useEffect(() => {
     if (guest || !user.cog) return;
-    supabase.from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
+    supabaseEnvio().from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
       .order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setStorageGom(data); });
   }, [user.cog, guest]);
 
   async function deletarStorageJoiner(item) {
     if (!window.confirm("Confirmar que você recebeu e quer remover esse item da galeria?")) return;
-    await supabase.from("joiner_storage").update({ ativo: false }).eq("id", item.id);
+    const { error: eSt } = await supabaseEnvio().from("joiner_storage").update({ ativo: false }).eq("id", item.id);
+    if (eSt) { alert("Não foi possível retirar o item agora. Tente de novo ou fale com a equipe."); return; }
     try {
-      const url = new URL(item.foto_url);
-      const raw = url.pathname;
-      const path = raw.replace(/.*\/storage-itens\//, "");
-      if (path && path !== raw) {
-        await supabase.storage.from("storage-itens").remove([path]);
-      }
+      // a foto permanece no bucket (a joiner não apaga arquivos; a administração faz a limpeza): aqui só sai da galeria dela
+      void item.foto_url;
     } catch {}
     setStorageGom(prev => prev.filter(x => x.id !== item.id));
   }
@@ -2857,7 +2857,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
                     const ev = [];
                     const [reps, envios, mercs, fbs] = await Promise.all([
                       supabase.from("reports").select("id,created_at,nome_item,ceg").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
-                      supabase.from("envio_solicitacoes").select("id,created_at,status,itens").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
+                      supabaseEnvio().from("envio_solicitacoes").select("id,created_at,status,itens").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
                       supabase.from("mercari_pedidos").select("id,created_at,valor_jpy_total,valor_brl_total,itens,status").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
                       supabase.from("feedbacks").select("id,created_at,mensagem").eq("joiner_cog", user.cog).order("created_at", { ascending:false }).limit(30),
                     ]);
@@ -3605,7 +3605,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: cashbackData },
         { data: antivBadgesData },
       ] = await Promise.all([
-        supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabaseEnvio().from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("reports").select("id, item_id, erro_repassado, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
@@ -3721,6 +3721,20 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [endCidade,      setEndCidade]      = useState(user.cidade      || "");
   const [endEstado,      setEndEstado]      = useState(user.estado      || "");
   const [endCepLoading,  setEndCepLoading]  = useState(false);
+  // CPF e endereço NÃO são mais lidos/gravados pelo visitante: só pelo link pessoal do Envio Nacional (servidor identifica a joiner)
+  const [endAcesso, setEndAcesso] = useState(() => temTokenEnvio() ? "verificando" : "sem_link");
+  useEffect(() => {
+    if (!temTokenEnvio()) return;
+    let vivo = true;
+    supabaseEnvio().rpc("envio_meus_dados").then(({ data, error }) => {
+      if (!vivo) return;
+      if (error || !data) { setEndAcesso("erro"); return; }
+      setEndNomeEntrega(data.nome_entrega || ""); setEndCpf(data.cpf || ""); setEndCep(data.cep || ""); setEndRua(data.rua || "");
+      setEndNumero(data.numero || ""); setEndComplemento(data.complemento || ""); setEndBairro(data.bairro || ""); setEndCidade(data.cidade || ""); setEndEstado(data.estado || "");
+      setEndAcesso("sim");
+    });
+    return () => { vivo = false; };
+  }, []);
   const [endSaving,      setEndSaving]      = useState(false);
   const [endSaved,       setEndSaved]       = useState(false);
   const [endErr,         setEndErr]         = useState("");
@@ -5332,7 +5346,8 @@ ${compHTML}
                                 const waMsg = encodeURIComponent(`Olá! Gostaria de confirmar meu envio.\n\nNome: ${s.joiner_nome}\nModalidade: ${chosen.forma} (até ${chosen.prazo})\nTotal: R$ ${totalChosen}\n\nVou realizar o PIX! 💚`);
                                 return (
                                   <button onClick={async () => {
-                                    await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"pagamento em aberto" }).eq("id", s.id);
+                                    const { error: eMod } = await supabaseEnvio().from("envio_solicitacoes").update({ modalidade_escolhida: chosen, status:"pagamento em aberto" }).eq("id", s.id);
+                                    if (eMod) { alert("Não foi possível confirmar a modalidade agora. Tente de novo ou fale com a equipe."); return; }
                                     setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: chosen, status:"pagamento em aberto" } : x));
                                     window.open(`https://wa.me/${WHATSAPP_NUM}?text=${waMsg}`, "_blank");
                                   }} style={{ width:"100%", marginTop:6, padding:"10px", background:"rgba(201,168,240,.15)", color:"#C9A8F0", border:"1px solid rgba(201,168,240,.35)", borderRadius:7, fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, cursor:"pointer" }}>
@@ -5360,7 +5375,8 @@ ${compHTML}
                 {["solicitação de envio","cotação em andamento","pagamento em aberto"].includes(s.status) && (
                   <button onClick={async () => {
                     if (!window.confirm("Cancelar esta solicitação de envio?")) return;
-                    await supabase.from("envio_solicitacoes").update({ status:"cancelado" }).eq("id", s.id);
+                    const { error: eCan } = await supabaseEnvio().from("envio_solicitacoes").update({ status:"cancelado" }).eq("id", s.id);
+                    if (eCan) { alert("Não foi possível cancelar agora. Tente de novo ou fale com a equipe."); return; }
                     setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, status:"cancelado" } : x));
                   }} style={{ marginTop:10, fontSize:10, fontFamily:"'DM Mono',monospace", background:"transparent", color:"rgba(245,240,232,.25)", border:"1px solid rgba(245,240,232,.1)", borderRadius:5, padding:"6px 14px", cursor:"pointer", width:"100%" }}>
                     Cancelar solicitação
@@ -5879,7 +5895,16 @@ ${compHTML}
         </div>
       )}
 
-      {perfilSubTab === "endereco" && (
+      {perfilSubTab === "endereco" && endAcesso !== "sim" && (
+        <div className="login-box" style={{ gap:14 }}>
+          <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>Endereço de entrega</div>
+          <div style={{ fontSize:12, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.7 }}>
+            {endAcesso === "verificando" ? "Verificando o seu acesso…" : endAcesso === "erro" ? "Não foi possível carregar o seu endereço agora. Tente de novo em instantes." :
+              "Seu CPF e endereço agora ficam protegidos. Para cadastrá-los ou alterá-los, use o link pessoal do Envio Nacional que a equipe envia para você (peça pelo WhatsApp se ainda não recebeu)."}
+          </div>
+        </div>
+      )}
+      {perfilSubTab === "endereco" && endAcesso === "sim" && (
         <div className="login-box" style={{ gap:14 }}>
           <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", letterSpacing:"1px", textTransform:"uppercase", color:"rgba(245,240,232,.28)", marginBottom:4 }}>
             Endereço de entrega
@@ -5987,10 +6012,10 @@ ${compHTML}
               cidade:       endCidade,
               estado:       endEstado,
             };
-            const { error: err } = await supabase.from("joiners").update(payload).eq("cog", user.cog);
+            const { data: okSalvo, error: err } = await supabaseEnvio().rpc("envio_salvar_dados", { p_dados: payload });
             setEndSaving(false);
-            if (err) { setEndErr("Erro ao salvar. Tente novamente."); return; }
-            const updatedUser = { ...user, ...payload };
+            if (err || okSalvo !== true) { setEndErr("Erro ao salvar. Tente novamente."); return; }
+            const updatedUser = { ...user, telefone: payload.telefone };   // CPF e endereço não ficam guardados no aparelho
             localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
             onUpdate(updatedUser);
             setEndSaved(true);
@@ -7613,7 +7638,7 @@ function RastreiosTab() {
   useEffect(() => { loadRastreios(); }, []);
 
   async function loadRastreios() {
-    const { data } = await supabase.from("rastreios").select("*").order("criado_em", { ascending: false });
+    const { data } = await clienteAdmin().from("rastreios").select("*").order("criado_em", { ascending: false });
     setLista(data || []);
   }
 
@@ -7679,9 +7704,9 @@ function RastreiosTab() {
     };
     let err2;
     if (editId) {
-      ({ error: err2 } = await supabase.from("rastreios").update(payload).eq("id", editId));
+      ({ error: err2 } = await clienteAdmin().from("rastreios").update(payload).eq("id", editId));
     } else {
-      ({ error: err2 } = await supabase.from("rastreios").insert(payload));
+      ({ error: err2 } = await clienteAdmin().from("rastreios").insert(payload));
     }
     if (err2) { setErro(err2.message); setSaving(false); return; }
     resetForm(); setAdding(false);
@@ -7690,7 +7715,7 @@ function RastreiosTab() {
 
   async function excluirRastreio(id) {
     if (!window.confirm("Excluir este rastreio?")) return;
-    await supabase.from("rastreios").delete().eq("id", id);
+    await clienteAdmin().from("rastreios").delete().eq("id", id);
     setExpanded(null); setAdding(false); setEditId(null);
     await loadRastreios();
   }
@@ -8522,9 +8547,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     if (!rastreioCodigo.trim()) { alert("Informe o código de rastreio antes de confirmar."); return; }
     setEnvioLoading(s.id);
     for (const it of (s.itens || [])) {
-      await supabase.from("masterlist").update({ status: "Enviado Nacional" }).eq("id", it.id);
+      // só linhas REAIS da MASTERLIST (com o código da planilha conferido); itens do storage têm id de OUTRA tabela e nunca podem atualizar linhas de ninguém
+      if (!it || it.ceg === "Storage GOM" || !it.id_linha || !Number.isFinite(Number(it.id))) continue;
+      await supabase.from("masterlist").update({ status: "Enviado Nacional" }).eq("id", it.id).eq("id_linha", it.id_linha);
     }
-    const { error } = await supabase.from("envio_solicitacoes").update({
+    const { error } = await clienteAdmin().from("envio_solicitacoes").update({
       status: "enviado",
       rastreio_codigo: rastreioCodigo.trim(),
       rastreio_link: rastreioLink.trim() || null,
@@ -8562,11 +8589,11 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
     if (s.grupo_envio_codigo) {
       // busca host_cog do grupo
-      const { data: grupoData } = await supabase.from("grupos_envio").select("host_cog").eq("codigo", s.grupo_envio_codigo).single();
+      const { data: grupoData } = await clienteAdmin().from("grupos_envio").select("host_cog").eq("codigo", s.grupo_envio_codigo).single();
       const hostCog = grupoData?.host_cog;
 
       // atualiza só o registro do host
-      const { error: errCot } = await supabase.from("envio_solicitacoes")
+      const { error: errCot } = await clienteAdmin().from("envio_solicitacoes")
         .update(payload)
         .eq("grupo_envio_codigo", s.grupo_envio_codigo)
         .eq("joiner_cog", hostCog);
@@ -8587,7 +8614,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         x.grupo_envio_codigo === s.grupo_envio_codigo && x.joiner_cog === hostCog ? { ...x, ...updFields } : x
       ));
     } else {
-      const { error: errCot } = await supabase.from("envio_solicitacoes").update(payload).eq("id", s.id);
+      const { error: errCot } = await clienteAdmin().from("envio_solicitacoes").update(payload).eq("id", s.id);
       if (errCot) { alert("Erro ao enviar cotação: " + errCot.message); return; }
       await inserirPush([{
         message: `Sua cotação de envio está disponível! A partir de R$ ${totalFmt} via ${bestOp.forma}. Acesse Meu Perfil → Envios para ver as opções.`,
@@ -8602,7 +8629,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   async function cancelarCotacao(s) {
     if (!window.confirm("Cancelar a cotação enviada? O joiner será notificado e a solicitação volta para 'em cotação'.")) return;
-    await supabase.from("envio_solicitacoes").update({
+    await clienteAdmin().from("envio_solicitacoes").update({
       status: "cotação em andamento", cotacao_opcoes: null, cotacao_frete: null, cotacao_forma: null,
       cotacao_embalagem: null, cotacao_valor: null, cotacao_prazo: null, cotacao_obs: null,
       cotacao_at: null, cotacao_seguro: null,
@@ -8616,7 +8643,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
 
   async function cancelarSolicitacaoAdmin(s) {
     if (!window.confirm("Cancelar esta solicitação de envio? O joiner será notificado.")) return;
-    const { error } = await supabase.from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
+    const { error } = await clienteAdmin().from("envio_solicitacoes").update({ status: "cancelado" }).eq("id", s.id);
     if (error) { alert("Erro ao cancelar: " + error.message); return; }
     await inserirPush([{
       message: "Sua solicitação de envio foi cancelada. Entre em contato com a GOM para mais informações.",
@@ -8683,7 +8710,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     supabase.from("pre_cadastros").select("*").or(`status.eq.pendente,and(status.eq.aprovado,created_at.gte.${seteDiasAtras})`).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setPreCadastros(data); });
-    supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
+    clienteAdmin().from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
     supabase.from("joiner_updates").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setJoinerUpdates(data); });
@@ -8926,14 +8953,14 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const termo = badgesSearch.trim().replace(/^@/, "");
     if (!termo) return;
     setBadgesLoading(true); setBadgesErro(""); setBadgesJoiner(null);
-    const { data: joiner } = await supabase.from("joiners").select("*")
+    const { data: joiner } = await clienteAdmin().from("joiners").select(COLUNAS_JOINER_PUBLICAS)
       .or(`cog.ilike.%${termo}%,nome.ilike.%${termo}%`).limit(1).single();
     if (!joiner) { setBadgesErro("Joiner não encontrado."); setBadgesLoading(false); return; }
 
     const recrutadosJoiner = await contarRecrutados(joiner.cog);
     const [{ data: itens }, { data: envios }, { data: reports }, { data: pagamentos }, { count: multasPagas }] = await Promise.all([
       supabase.from("masterlist").select("ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf").eq("cog", joiner.cog),
-      supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", joiner.cog),
+      clienteAdmin().from("envio_solicitacoes").select("status").eq("joiner_cog", joiner.cog),
       supabase.from("reports").select("id").eq("joiner_cog", joiner.cog),
       supabase.from("pagamento_demandas").select("id").eq("joiner_cog", joiner.cog),
       supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", joiner.cog).gte("created_at", BADGE_MULTAS_DESDE),
@@ -9849,10 +9876,10 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           setStorageItemSearch("");
           setStorageDesc("");
           const [{ data: itens }, { data: conf }, { data: ml }, { data: req }, { data: joinerFresh }] = await Promise.all([
-            supabase.from("joiner_storage").select("*").eq("joiner_cog", data.cog).eq("ativo", true).order("created_at", { ascending: false }),
-            supabase.from("joiner_conferencias").select("*").eq("joiner_cog", data.cog).order("iniciada_em", { ascending: false }).limit(1).maybeSingle(),
+            clienteAdmin().from("joiner_storage").select("*").eq("joiner_cog", data.cog).eq("ativo", true).order("created_at", { ascending: false }),
+            clienteAdmin().from("joiner_conferencias").select("*").eq("joiner_cog", data.cog).order("iniciada_em", { ascending: false }).limit(1).maybeSingle(),
             supabase.from("masterlist").select("id, ceg, nome_do_item").eq("cog", data.cog).order("ceg").order("nome_do_item"),
-            supabase.from("envio_requests").select("*, envio_rounds(*)").eq("joiner_cog", data.cog).order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
+            clienteAdmin().from("envio_requests").select("*, envio_rounds(*)").eq("joiner_cog", data.cog).order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
             supabase.from("joiners").select("cog, nome, email").eq("cog", data.cog).maybeSingle(),
           ]);
           if (joinerFresh) setStorageJoiner(joinerFresh);
@@ -9866,27 +9893,27 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           setStorageLibLoading(true);
           let req = storageEnvioReq;
           if (!req) {
-            const { data: openRounds } = await supabase.from("envio_rounds")
+            const { data: openRounds } = await clienteAdmin().from("envio_rounds")
               .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
             let roundId, posicao, roundNum;
             if (openRounds && openRounds.length > 0) {
               const round = openRounds[0];
-              const { count } = await supabase.from("envio_requests").select("id", { count: "exact", head: true }).eq("round_id", round.id);
+              const { count } = await clienteAdmin().from("envio_requests").select("id", { count: "exact", head: true }).eq("round_id", round.id);
               posicao = (count || 0) + 1; roundId = round.id; roundNum = round.numero;
             } else {
-              const { data: allRounds } = await supabase.from("envio_rounds").select("numero").order("numero", { ascending: false }).limit(1);
+              const { data: allRounds } = await clienteAdmin().from("envio_rounds").select("numero").order("numero", { ascending: false }).limit(1);
               roundNum = (allRounds?.[0]?.numero || 0) + 1;
-              const { data: newRound } = await supabase.from("envio_rounds").insert([{ numero: roundNum, status: "aberto" }]).select().single();
+              const { data: newRound } = await clienteAdmin().from("envio_rounds").insert([{ numero: roundNum, status: "aberto" }]).select().single();
               roundId = newRound.id; posicao = 1;
             }
-            const { data: newReq } = await supabase.from("envio_requests")
+            const { data: newReq } = await clienteAdmin().from("envio_requests")
               .insert([{ joiner_cog: storageJoiner.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando" }])
               .select("*, envio_rounds(*)").single();
             req = newReq;
             setStorageEnvioReq(req);
           }
           if (req?.round_id) {
-            await supabase.from("envio_rounds").update({ status: "em_processo" }).eq("id", req.round_id);
+            await clienteAdmin().from("envio_rounds").update({ status: "em_processo" }).eq("id", req.round_id);
             setStorageEnvioReq(prev => prev ? { ...prev, envio_rounds: { ...prev.envio_rounds, status: "em_processo" } } : prev);
             setStorageMsg("Envio liberado ✓");
           }
@@ -9895,7 +9922,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         async function iniciarConferencia() {
           if (!storageJoiner) return;
           setStorageConfIniciando(true);
-          const { data } = await supabase.from("joiner_conferencias")
+          const { data } = await clienteAdmin().from("joiner_conferencias")
             .insert([{ joiner_cog: storageJoiner.cog, prazo_dias: 5 }])
             .select().single();
           setStorageConferencia(data);
@@ -9907,10 +9934,10 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           setStorageUploading(true); setStorageMsg("");
           const ext  = storageFile.name.split(".").pop();
           const path = `${storageJoiner.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageFile, { upsert: true });
+          const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, storageFile, { upsert: true });
           if (upErr) { setStorageMsg("Erro ao enviar foto: " + upErr.message); setStorageUploading(false); return; }
-          const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
-          const { data: novo } = await supabase.from("joiner_storage")
+          const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
+          const { data: novo } = await clienteAdmin().from("joiner_storage")
             .insert([{ joiner_cog: storageJoiner.cog, foto_url: publicUrl, descricao: storageDesc.trim() }])
             .select().single();
           if (novo) {
@@ -9922,7 +9949,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         }
         async function removerStorage(id) {
           setStorageDeletando(id);
-          await supabase.from("joiner_storage").update({ ativo: false }).eq("id", id);
+          await clienteAdmin().from("joiner_storage").update({ ativo: false }).eq("id", id);
           setStorageItens(prev => prev.filter(i => i.id !== id));
           setStorageComItens(prev => prev ? prev.map(j => j.cog === storageJoiner?.cog ? { ...j, count: Math.max(0, j.count - 1) } : j) : prev);
           setStorageDeletando(null);
@@ -9958,7 +9985,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           const BASE   = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
           setStorageRecortando(true);
           setStorageRecortandoProg({ done: 0, total: 0, erros: 0 });
-          const { data: todos } = await supabase.from("joiner_storage").select("id, foto_url").eq("ativo", true);
+          const { data: todos } = await clienteAdmin().from("joiner_storage").select("id, foto_url").eq("ativo", true);
           const itens = (todos || []).filter(i => i.foto_url?.startsWith(BASE));
           setStorageRecortandoProg({ done: 0, total: itens.length, erros: 0 });
           let erros = 0;
@@ -10025,10 +10052,10 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           try {
             const ext = item.file.name.split(".").pop();
             const path = `${item.joiner.cog}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-            const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, item.file, { upsert: true });
+            const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, item.file, { upsert: true });
             if (upErr) throw upErr;
-            const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
-            await supabase.from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
+            const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
+            await clienteAdmin().from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
             inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: item.joiner.cog }]);
             enviarPushJoiner(item.joiner.cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
             setStorageComItens(prev => prev ? prev.map(j => j.cog === item.joiner.cog ? { ...j, count: j.count + 1 } : j) : prev);
@@ -10043,10 +10070,10 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
             try {
               const ext = item.file.name.split(".").pop();
               const path = `${item.joiner.cog}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-              const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, item.file, { upsert: true });
+              const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, item.file, { upsert: true });
               if (upErr) throw upErr;
-              const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
-              await supabase.from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
+              const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
+              await clienteAdmin().from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
               inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: item.joiner.cog }]);
               enviarPushJoiner(item.joiner.cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
               updQueueItem(item.id, { status: "enviado" });
@@ -10316,15 +10343,15 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 const ext  = storageCegFile.name.split(".").pop();
                 const slug = storageCegSel.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
                 const path = `broadcast/${slug}/${Date.now()}.${ext}`;
-                const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageCegFile, { upsert: true });
+                const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, storageCegFile, { upsert: true });
                 if (upErr) { alert("Erro ao enviar foto: " + upErr.message); setStorageCegEnviando(false); return; }
-                const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+                const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
 
                 let erros = 0;
                 for (let i = 0; i < cogs.length; i++) {
                   const cog = cogs[i];
                   try {
-                    await supabase.from("joiner_storage").insert([{ joiner_cog: cog, foto_url: publicUrl, descricao: storageCegDesc.trim() || storageCegSel }]);
+                    await clienteAdmin().from("joiner_storage").insert([{ joiner_cog: cog, foto_url: publicUrl, descricao: storageCegDesc.trim() || storageCegSel }]);
                     inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: cog }]);
                     enviarPushJoiner(cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
                   } catch { erros++; }
@@ -10428,7 +10455,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
 
               if (galeriaFotos === null) {
                 const gen = galeriaFetchGen;
-                supabase.from("joiner_storage").select("id, joiner_cog, foto_url, descricao, ativo").order("id", { ascending: false }).limit(300)
+                clienteAdmin().from("joiner_storage").select("id, joiner_cog, foto_url, descricao, ativo").order("id", { ascending: false }).limit(300)
                   .then(({ data, error }) => {
                     if (error) console.error("Galeria:", error.message);
                     setGaleriaFetchGen(cur => { if (cur === gen) setGaleriaFotos(data || []); return cur; });
@@ -10479,7 +10506,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                         });
                         const deletados = [];
                         for (const id of toDelete) {
-                          const { error } = await supabase.from("joiner_storage").delete().eq("id", id);
+                          const { error } = await clienteAdmin().from("joiner_storage").delete().eq("id", id);
                           if (!error) deletados.push(id);
                         }
                         if (deletados.length < toDelete.length) alert(`${toDelete.length - deletados.length} item(s) não puderam ser removidos.`);
@@ -10504,7 +10531,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                           <div style={{ position:"absolute", top:4, left:4, background:"rgba(0,0,0,.75)", borderRadius:4, padding:"2px 6px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.7)" }}>@{item.joiner_cog}</div>
                           <button onClick={async e => {
                             e.stopPropagation();
-                            const { error } = await supabase.from("joiner_storage").delete().eq("id", item.id);
+                            const { error } = await clienteAdmin().from("joiner_storage").delete().eq("id", item.id);
                             if (error) { alert("Erro ao apagar foto."); return; }
                             setGaleriaFotos(prev => prev.filter(f => f.id !== item.id));
                           }} style={{ position:"absolute", top:4, right:4, width:18, height:18, borderRadius:"50%", background:"rgba(0,0,0,.75)", border:"none", color:"rgba(245,240,232,.7)", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 }}>✕</button>
@@ -10576,7 +10603,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   if (storageComItens === null) {
                     setStorageComItens([]);
                     (async () => {
-                      const { data: itensRaw } = await supabase.from("joiner_storage").select("joiner_cog").eq("ativo", true);
+                      const { data: itensRaw } = await clienteAdmin().from("joiner_storage").select("joiner_cog").eq("ativo", true);
                       if (!itensRaw) return;
                       const cogs = [...new Set(itensRaw.map(d => d.joiner_cog))];
                       if (cogs.length === 0) { setStorageComItens([]); return; }
@@ -11025,7 +11052,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           {(() => {
             async function carregarRoundsLocal() {
               setRoundsLoading(true);
-              const { data } = await supabase.from("envio_rounds")
+              const { data } = await clienteAdmin().from("envio_rounds")
                 .select("*, envio_requests(joiner_cog, posicao_no_round, status, solicitado_em, itens_manuais)")
                 .order("numero", { ascending: false });
               setRoundsList(data || []);
@@ -11034,11 +11061,11 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
             if (roundsSecaoAberta && roundsList === null && !roundsLoading) carregarRoundsLocal();
 
             async function abrirRound(roundId) {
-              await supabase.from("envio_rounds").update({ status: "em_processo" }).eq("id", roundId);
+              await clienteAdmin().from("envio_rounds").update({ status: "em_processo" }).eq("id", roundId);
               setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "em_processo" } : r));
             }
             async function fecharRound(roundId) {
-              await supabase.from("envio_rounds").update({ status: "concluido" }).eq("id", roundId);
+              await clienteAdmin().from("envio_rounds").update({ status: "concluido" }).eq("id", roundId);
               setRoundsList(prev => prev.map(r => r.id === roundId ? { ...r, status: "concluido" } : r));
             }
 
@@ -11083,20 +11110,20 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                               if (!cog || !num) { alert("Preencha o cog e o número do round."); return; }
                               setAddRoundJoiner(v => ({ ...v, salvando: true }));
                               // busca ou cria o round
-                              let { data: rounds } = await supabase.from("envio_rounds").select("id, numero").eq("numero", num);
+                              let { data: rounds } = await clienteAdmin().from("envio_rounds").select("id, numero").eq("numero", num);
                               let roundId;
                               if (rounds && rounds.length > 0) {
                                 roundId = rounds[0].id;
                               } else {
-                                const { data: novo } = await supabase.from("envio_rounds").insert([{ numero: num, status: "em_processo" }]).select().single();
+                                const { data: novo } = await clienteAdmin().from("envio_rounds").insert([{ numero: num, status: "em_processo" }]).select().single();
                                 if (!novo) { alert("Erro ao criar round."); setAddRoundJoiner(v => ({ ...v, salvando: false })); return; }
                                 roundId = novo.id;
                               }
                               // verifica se já existe
-                              const { data: exist } = await supabase.from("envio_requests").select("id").eq("joiner_cog", cog).eq("round_id", roundId).maybeSingle();
+                              const { data: exist } = await clienteAdmin().from("envio_requests").select("id").eq("joiner_cog", cog).eq("round_id", roundId).maybeSingle();
                               if (exist) { alert(`@${cog} já está no round ${num}.`); setAddRoundJoiner(v => ({ ...v, salvando: false })); return; }
-                              const { count } = await supabase.from("envio_requests").select("id", { count:"exact", head:true }).eq("round_id", roundId);
-                              const { error } = await supabase.from("envio_requests").insert([{ joiner_cog: cog, round_id: roundId, posicao_no_round: (count||0)+1, status: "aguardando" }]);
+                              const { count } = await clienteAdmin().from("envio_requests").select("id", { count:"exact", head:true }).eq("round_id", roundId);
+                              const { error } = await clienteAdmin().from("envio_requests").insert([{ joiner_cog: cog, round_id: roundId, posicao_no_round: (count||0)+1, status: "aguardando" }]);
                               if (error) { alert("Erro: " + error.message); setAddRoundJoiner(v => ({ ...v, salvando: false })); return; }
                               setAddRoundJoiner({ aberto: false, cog:"", roundNum:"", salvando: false });
                               await carregarRoundsLocal();
@@ -11205,7 +11232,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                                           if (!f.destinatario || !f.cpf || !f.cep || !f.endereco || !f.numero || !f.bairro || !f.cidade || !f.estado) { alert("Preencha os campos obrigatórios."); return; }
                                           setEndManualSalvando(true);
                                           const ji = (joinersData||[]).find(j => j.cog === m.joiner_cog);
-                                          const { data: novo, error } = await supabase.from("envio_solicitacoes").insert([{ joiner_cog: m.joiner_cog, joiner_nome: ji?.nome || m.joiner_cog, joiner_handle: m.joiner_cog, destinatario: f.destinatario, cpf: f.cpf, cep: f.cep, endereco: f.endereco, numero: f.numero, complemento: f.complemento || null, bairro: f.bairro, cidade: f.cidade, estado: f.estado, metodo: f.metodo, seguro: "nao", itens: [], status: "solicitação de envio" }]).select().single();
+                                          const { data: novo, error } = await clienteAdmin().from("envio_solicitacoes").insert([{ joiner_cog: m.joiner_cog, joiner_nome: ji?.nome || m.joiner_cog, joiner_handle: m.joiner_cog, destinatario: f.destinatario, cpf: f.cpf, cep: f.cep, endereco: f.endereco, numero: f.numero, complemento: f.complemento || null, bairro: f.bairro, cidade: f.cidade, estado: f.estado, metodo: f.metodo, seguro: "nao", itens: [], status: "solicitação de envio" }]).select().single();
                                           setEndManualSalvando(false);
                                           if (error) { alert("Erro: " + error.message); return; }
                                           setEnvioSolic(prev => [novo, ...prev]);
@@ -11362,7 +11389,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                                           if (!f.destinatario || !f.cpf || !f.cep || !f.endereco || !f.numero || !f.bairro || !f.cidade || !f.estado) { alert("Preencha os campos obrigatórios."); return; }
                                           setEndManualSalvando(true);
                                           const ji = (joinersData||[]).find(j => j.cog === m.joiner_cog);
-                                          const { data: novo, error } = await supabase.from("envio_solicitacoes").insert([{
+                                          const { data: novo, error } = await clienteAdmin().from("envio_solicitacoes").insert([{
                                             joiner_cog: m.joiner_cog, joiner_nome: ji?.nome || m.joiner_cog, joiner_handle: m.joiner_cog,
                                             destinatario: f.destinatario, cpf: f.cpf, cep: f.cep, endereco: f.endereco, numero: f.numero,
                                             complemento: f.complemento || null, bairro: f.bairro, cidade: f.cidade, estado: f.estado,
@@ -11616,7 +11643,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 {s.comprovante_url && (
                   <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"9px 14px", marginBottom:12 }}>
                     <span style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>📎 Comprovante enviado</span>
-                    <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
+                    <LinkComprovanteEnvio valor={s.comprovante_url} admin />
                   </div>
                 )}
 
@@ -11731,7 +11758,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   {s.status === "solicitação de envio" && (
                     <button onClick={async () => {
-                      await supabase.from("envio_solicitacoes").update({ status:"cotação em andamento" }).eq("id", s.id);
+                      await clienteAdmin().from("envio_solicitacoes").update({ status:"cotação em andamento" }).eq("id", s.id);
                       await inserirPush([{ message:"Sua solicitação de envio está sendo processada — em até 5 dias úteis você receberá a cotação.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"cotação em andamento" } : x));
                     }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(255,92,26,.08)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.25)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
@@ -11771,7 +11798,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   )}
                   {s.status === "pagamento em aberto" && (
                     <button onClick={async () => {
-                      const { error: ePgto } = await supabase.from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
+                      const { error: ePgto } = await clienteAdmin().from("envio_solicitacoes").update({ status:"pagamento confirmado" }).eq("id", s.id);
                       if (ePgto) { alert("Erro: " + ePgto.message); return; }
                       await inserirPush([{ message:"Seu pagamento foi confirmado! Em breve seu pedido será enviado.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"pagamento confirmado" } : x));
@@ -11781,7 +11808,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   )}
                   {s.status === "pagamento confirmado" && (
                     <button onClick={async () => {
-                      const { error: eEmb } = await supabase.from("envio_solicitacoes").update({ status:"embalando" }).eq("id", s.id);
+                      const { error: eEmb } = await clienteAdmin().from("envio_solicitacoes").update({ status:"embalando" }).eq("id", s.id);
                       if (eEmb) { alert("Erro: " + eEmb.message); return; }
                       await inserirPush([{ message:"Seu pedido está sendo embalado! Em breve você receberá o código de rastreio.", active:true, joiner_cog:s.joiner_cog }]);
                       setEnvioSolic(prev => prev.map(x => x.id === s.id ? { ...x, status:"embalando" } : x));
@@ -11803,14 +11830,14 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                     const prev = storagePreview[s.id];
                     if (prev) { setStoragePreview(p => { const n={...p}; delete n[s.id]; return n; }); return; }
                     setStoragePreview(p => ({ ...p, [s.id]: { loading: true, itens: [] } }));
-                    const { data } = await supabase.from("joiner_storage").select("*").eq("joiner_cog", s.joiner_cog).eq("ativo", true).order("created_at", { ascending: false });
+                    const { data } = await clienteAdmin().from("joiner_storage").select("*").eq("joiner_cog", s.joiner_cog).eq("ativo", true).order("created_at", { ascending: false });
                     setStoragePreview(p => ({ ...p, [s.id]: { loading: false, itens: data || [] } }));
                   }} style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)", border:"1px solid rgba(245,240,232,.12)", borderRadius:5, padding:"6px 14px", cursor:"pointer" }}>
                     {storagePreview[s.id] ? "✕ Fechar storage" : "◧ Visualizar storage"}
                   </button>
                   {["cancelado","enviado"].includes(s.status) && (
                     <button onClick={async () => {
-                      await supabase.from("envio_solicitacoes").update({
+                      await clienteAdmin().from("envio_solicitacoes").update({
                         status:"solicitação de envio",
                         cotacao_opcoes:null, cotacao_valor:null, cotacao_frete:null,
                         cotacao_forma:null, cotacao_prazo:null, cotacao_embalagem:null,
@@ -14636,11 +14663,11 @@ function ClaimGuestPage({ onLogin }) {
     const isEmail = val.indexOf("@") > 0;
     let joiner = null;
     if (isEmail) {
-      const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).maybeSingle();
+      const { data } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).eq("email", val.toLowerCase()).maybeSingle();
       joiner = data;
     } else {
       const handle = val.startsWith("@") ? val.slice(1) : val;
-      const { data } = await supabase.from("joiners").select("*").or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`).maybeSingle();
+      const { data } = await supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`).maybeSingle();
       joiner = data;
     }
     if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
@@ -19418,15 +19445,72 @@ function ThisAndThatGallery() {
   );
 }
 
-function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
+function LinkComprovanteEnvio({ valor, admin = false }) {
+  const v = String(valor || "");
+  const estilo = { fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline", background:"transparent", border:"none", cursor:"pointer", padding:0 };
+  if (/^https?:/.test(v)) return <a href={v} target="_blank" rel="noopener noreferrer" style={estilo}>ver comprovante →</a>;
+  if (!admin) return null;   // comprovante novo é privado: só a administração abre (link assinado de 10 minutos)
+  return <button type="button" style={estilo} onClick={async () => {
+    const { data, error } = await clienteAdmin().storage.from("envio-comprovantes").createSignedUrl(v, 600);
+    if (error || !data?.signedUrl) { alert("Não foi possível abrir o comprovante agora."); return; }
+    window.open(data.signedUrl, "_blank", "noopener");
+  }}>ver comprovante →</button>;
+}
+
+// Porta do Envio Nacional: exige o LINK PESSOAL da joiner (token). O banco confere o token; aqui só se mostra o estado.
+function EnvioTab(props) {
+  const { user } = props;
+  const [acesso, setAcesso] = useState(() => !ENVIO_EXIGE_ACESSO ? "livre" : temTokenEnvio() ? "verificando" : "sem_link");
+  const [dadosEntrega, setDadosEntrega] = useState(null);   // endereço/CPF salvos da própria joiner, vindos do servidor pelo token
+  useEffect(() => {
+    if (!ENVIO_EXIGE_ACESSO || !temTokenEnvio()) return;
+    let vivo = true;
+    (async () => {
+      const cli = supabaseEnvio();
+      const { data, error } = await cli.rpc("envio_meu_acesso");
+      if (!vivo) return;
+      if (error) { setAcesso(error.code === "PGRST202" ? "livre" : "erro"); return; }   // PGRST202: o pacote do banco ainda não foi aplicado
+      if (!data || !data.cog) { setAcesso("invalido"); return; }
+      if (normalizarCogEnvio(data.cog) !== normalizarCogEnvio(user?.cog)) { setAcesso("outra"); return; }
+      const r = await cli.rpc("envio_meus_dados");
+      if (!vivo) return;
+      if (r.data && typeof r.data === "object") setDadosEntrega(Object.fromEntries(Object.entries(r.data).filter(([, v]) => v !== null && v !== undefined && v !== "")));
+      setAcesso("livre");
+    })();
+    return () => { vivo = false; };
+  }, [user?.cog]);
+  if (acesso === "livre") return <EnvioTabInterno {...props} user={dadosEntrega ? { ...user, ...dadosEntrega } : user} />;
+  const msg = {
+    verificando: "Verificando o seu acesso…",
+    sem_link: "Para pedir o seu envio nacional, use o LINK PESSOAL que a equipe enviou para você. Ele identifica você com segurança, sem senha.",
+    invalido: "Este link não está mais válido (venceu ou foi substituído). Peça um link novo à equipe.",
+    outra: "Este link pertence a outra joiner. Saia deste acesso e use o seu link pessoal.",
+    erro: "Não foi possível verificar o seu acesso agora. Tente de novo em instantes.",
+  }[acesso];
+  return (
+    <div className="admin-wrap">
+      <h2 className="admin-title" style={{ marginBottom:4 }}>◫ Envio Nacional</h2>
+      <div style={{ background:"var(--card-bg)", border:"1px solid rgba(201,168,240,.25)", borderRadius:10, padding:"22px 20px", marginTop:16, maxWidth:560, fontFamily:"'DM Mono',monospace", fontSize:12, lineHeight:1.8, color:"rgba(245,240,232,.75)" }}>
+        <div style={{ fontSize:9, letterSpacing:"2px", color:"#C9A8F0", marginBottom:8 }}>◧ ACESSO AO ENVIO NACIONAL</div>
+        {msg}
+        {acesso !== "verificando" && (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:14 }}>
+            <a href={`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent("Olá! Preciso do meu link pessoal para o Envio Nacional.")}`} target="_blank" rel="noopener noreferrer"
+               style={{ padding:"9px 16px", background:"var(--laranja)", color:"#111", borderRadius:6, fontSize:11, fontWeight:700, textDecoration:"none" }}>Pedir meu link pelo WhatsApp →</a>
+            {(acesso === "outra" || acesso === "invalido") && <button onClick={() => { limparTokenEnvio(); setAcesso("sem_link"); }} style={{ padding:"9px 16px", background:"transparent", color:"rgba(245,240,232,.6)", border:"1px solid rgba(245,240,232,.2)", borderRadius:6, fontSize:11, cursor:"pointer" }}>Sair deste acesso</button>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EnvioTabInterno({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
   const WA_GOM = WHATSAPP_NUM;
   const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
   const envioWinW = useWindowWidth();
   const envioIsMobile = envioWinW <= 680;
 
-  const [unlocked,    setUnlocked]    = useState(false);
-  const [senha,       setSenha]       = useState("");
-  const [senhaErr,    setSenhaErr]    = useState(false);
   const [nome]        = useState(user.nome    || "");
   const [handle]      = useState(user.twitter || "");
   const [whatsapp]    = useState(user.whatsapp || "");
@@ -19474,7 +19558,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const hoje = new Date().toISOString().slice(0, 10);
   const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
   const roundAberto = envioRequest?.envio_rounds?.status === "em_processo";
-  const efetivamenteUnlocked = unlocked || isAutoUnlocked || roundAberto;
+  const efetivamenteUnlocked = isAutoUnlocked || roundAberto;
 
   // quando o envio está aberto e ainda não há conferência registrada, cria uma conferência virtual
   const conferenciaEfetiva = envioConferencia || (isAutoUnlocked ? {
@@ -19501,7 +19585,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   async function criarGrupo() {
     setGrupoLoading(true);
     const codigo = gerarCodigoGrupo();
-    const { error } = await supabase.from("grupos_envio").insert([{
+    const { error } = await supabaseEnvio().from("grupos_envio").insert([{
       codigo, host_cog: user.cog,
       destinatario, cpf, cep, endereco, numero,
       complemento: complemento || null, bairro, cidade, estado,
@@ -19515,7 +19599,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     const codigo = grupoInput.trim().toUpperCase();
     if (!codigo) return;
     setGrupoLoading(true); setGrupoErr("");
-    const { data, error } = await supabase.from("grupos_envio").select("*").eq("codigo", codigo).single();
+    const { data, error } = await supabaseEnvio().rpc("envio_grupo_por_codigo", { p_codigo: codigo });
     if (error || !data) {
       setGrupoErr("Código não encontrado. Confira com a host do grupo.");
       setGrupoLoading(false); return;
@@ -19545,13 +19629,13 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   }
 
   useEffect(() => {
-    supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+    supabaseEnvio().from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMeuEnvios(data); });
   }, [user.cog]);
 
   useEffect(() => {
     setStorageLoadingForm(true);
-    supabase.from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
+    supabaseEnvio().from("joiner_storage").select("*").eq("joiner_cog", user.cog).eq("ativo", true)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setStorageDisponivel(data || []);
@@ -19562,8 +19646,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
   useEffect(() => {
     Promise.all([
-      supabase.from("joiner_conferencias").select("*").eq("joiner_cog", user.cog).order("iniciada_em", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("envio_requests").select("*, envio_rounds(*)").eq("joiner_cog", user.cog).order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
+      supabaseEnvio().from("joiner_conferencias").select("*").eq("joiner_cog", user.cog).order("iniciada_em", { ascending: false }).limit(1).maybeSingle(),
+      supabaseEnvio().from("envio_requests").select("*, envio_rounds(*)").eq("joiner_cog", user.cog).order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
     ]).then(([{ data: conf }, { data: req }]) => {
       setEnvioConferencia(conf || null);
       setEnvioRequest(req || null);
@@ -19615,10 +19699,10 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
     // se é host de grupo, salva o endereço no grupo para as amigas buscarem
     if (grupoCodigo && grupoMode === "criar") {
-      await supabase.from("grupos_envio").update({ destinatario, cpf, cep, endereco, numero, complemento: complemento || null, bairro, cidade, estado }).eq("codigo", grupoCodigo);
+      await supabaseEnvio().from("grupos_envio").update({ destinatario, cpf, cep, endereco, numero, complemento: complemento || null, bairro, cidade, estado }).eq("codigo", grupoCodigo);
     }
 
-    const { error } = await supabase.from("envio_solicitacoes").insert([{
+    const { error } = await supabaseEnvio().from("envio_solicitacoes").insert([{
       joiner_cog:    user.cog,
       joiner_nome:   nome,
       joiner_handle: handle,
@@ -19731,14 +19815,14 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             setEnvioConfirmando(true);
             let confId = envioConferencia?.id;
             if (!confId) {
-              const { data: novo } = await supabase.from("joiner_conferencias")
+              const { data: novo } = await supabaseEnvio().from("joiner_conferencias")
                 .insert([{ joiner_cog: user.cog, prazo_dias: conferenciaEfetiva.prazo_dias }])
                 .select().single();
               setEnvioConferencia(novo);
               confId = novo?.id;
             }
             if (!confId) { setEnvioConfirmando(false); return; }
-            const { data } = await supabase.from("joiner_conferencias")
+            const { data } = await supabaseEnvio().from("joiner_conferencias")
               .update({ confirmada_em: new Date().toISOString() })
               .eq("id", confId).select().single();
             setEnvioConferencia(data);
@@ -19747,31 +19831,10 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
           async function solicitarEnvio() {
             setEnvioSolicitando(true);
-            const { data: openRounds } = await supabase.from("envio_rounds")
-              .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
-            let roundId, posicao, roundNum;
-            if (openRounds && openRounds.length > 0) {
-              const round = openRounds[0];
-              const { count } = await supabase.from("envio_requests")
-                .select("id", { count: "exact", head: true }).eq("round_id", round.id);
-              posicao = (count || 0) + 1;
-              roundId = round.id;
-              roundNum = round.numero;
-              if (posicao >= 7) await supabase.from("envio_rounds").update({ status: "fechado" }).eq("id", round.id);
-            } else {
-              const { data: allRounds } = await supabase.from("envio_rounds")
-                .select("numero").order("numero", { ascending: false }).limit(1);
-              roundNum = (allRounds?.[0]?.numero || 0) + 1;
-              const { data: newRound } = await supabase.from("envio_rounds")
-                .insert([{ numero: roundNum, status: "aberto" }]).select().single();
-              roundId = newRound.id;
-              posicao = 1;
-            }
-            const { data: request } = await supabase.from("envio_requests")
-              .insert([{ joiner_cog: user.cog, round_id: roundId, posicao_no_round: posicao, status: "aguardando", itens_manuais: itensManual.trim() || null }])
-              .select("*, envio_rounds(*)").single();
-            setEnvioRequest(request);
+            const { data, error } = await supabaseEnvio().rpc("envio_solicitar_rodada", { p_itens_manuais: itensManual.trim() || null });
             setEnvioSolicitando(false);
+            if (error || !data) { alert("Não foi possível registrar o seu pedido agora. Tente de novo em instantes ou fale com a equipe."); return; }
+            setEnvioRequest(data);
           }
 
           const roundInfo = envioRequest?.envio_rounds;
@@ -19817,20 +19880,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                     Prévia dos seus itens · para solicitar envio aguarde a abertura
                   </div>
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
-                  <div style={{ display:"flex", gap:6 }}>
-                    <input type="password" placeholder="senha" value={senha}
-                      onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
-                      onKeyDown={e => { if (e.key === "Enter") { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); } }}
-                      style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
-                    />
-                    <button onClick={() => { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); }}
-                      style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
-                      ACESSAR →
-                    </button>
-                  </div>
-                  {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
-                </div>
+                
               </div>
             )}
 
@@ -19838,7 +19888,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <div style={{ background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.22)", borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"#BAFF39", marginBottom:7 }}>◧ FORMULÁRIO DE ENVIO NACIONAL ABERTO</div>
               <div style={{ fontSize:12, color:"rgba(245,240,232,.82)", lineHeight:1.6 }}>
-                O formulário de envios está aberto até <strong>19 de agosto (quarta-feira)</strong>.
+                {isAutoUnlocked ? <>O formulário de envios está aberto até <strong>{envioAberturaFim.split("-").reverse().join("/")}</strong>.</> : <>O formulário foi liberado pela equipe para a sua rodada de envio.</>}
               </div>
               <div style={{ marginTop:9, padding:"9px 12px", background:"rgba(245,240,232,.05)", borderRadius:7, fontSize:11.5, color:"rgba(245,240,232,.65)", lineHeight:1.65 }}>
                 ⚠ Os itens <strong>fotografados no storage</strong> são os itens disponíveis para envio. Se algum item estiver faltando na lista abaixo, aguarde o cadastro no storage para então solicitar o envio.
@@ -20082,20 +20132,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               Prévia dos seus itens · para solicitar envio aguarde a abertura
             </div>
           </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
-            <div style={{ display:"flex", gap:6 }}>
-              <input type="password" placeholder="senha" value={senha}
-                onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
-                onKeyDown={e => { if (e.key === "Enter") { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); } }}
-                style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
-              />
-              <button onClick={() => { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); }}
-                style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
-                ACESSAR →
-              </button>
-            </div>
-            {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
-          </div>
+          
         </div>
       )}
 
@@ -20559,7 +20596,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                         {s.comprovante_url ? (
                                           <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"10px 12px" }}>
                                             <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>✓ Comprovante enviado</span>
-                                            <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver →</a>
+                                            <LinkComprovanteEnvio valor={s.comprovante_url} />
                                           </div>
                                         ) : (() => {
                                           const cf = comprovFiles[s.id];
@@ -20582,13 +20619,14 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                                   </div>
                                                   <button disabled={uploading} onClick={async () => {
                                                     setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: true } }));
-                                                    const ext = cf.file.name.split(".").pop();
-                                                    const path = `envio/${s.id}/comprovante_${Date.now()}.${ext}`;
-                                                    const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, cf.file, { upsert: false });
+                                                    const ext = (cf.file.name.split(".").pop() || "").toLowerCase();
+                                                    if (!["jpg","jpeg","png","webp","heic","heif","pdf"].includes(ext)) { alert("Envie o comprovante em JPG, PNG, WEBP, HEIC ou PDF."); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
+                                                    const path = `${s.id}/comprovante_${Date.now()}.${ext}`;
+                                                    const { error: upErr } = await supabaseEnvio().storage.from("envio-comprovantes").upload(path, cf.file, { upsert: false });
                                                     if (upErr) { alert("Erro no upload: " + upErr.message); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
-                                                    const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
-                                                    await supabase.from("envio_solicitacoes").update({ comprovante_url: publicUrl }).eq("id", s.id);
-                                                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, comprovante_url: publicUrl } : x));
+                                                    const { error: dbErr } = await supabaseEnvio().from("envio_solicitacoes").update({ comprovante_url: path }).eq("id", s.id);
+                                                    if (dbErr) { alert("O arquivo foi enviado, mas não conseguimos registrá-lo agora. Tente de novo ou avise a equipe."); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
+                                                    setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, comprovante_url: path } : x));
                                                     setComprovFiles(prev => ({ ...prev, [s.id]: null }));
                                                   }} style={{ padding:"9px", background: uploading ? "rgba(186,255,57,.05)" : "rgba(186,255,57,.12)", color:"#BAFF39", border:"1px solid rgba(186,255,57,.3)", borderRadius:7, fontSize:11, fontWeight:700, cursor: uploading ? "not-allowed" : "pointer", fontFamily:"'DM Mono',monospace" }}>
                                                     {uploading ? "Enviando..." : "Enviar comprovante →"}
@@ -20631,7 +20669,8 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                                   {opcaoEscolhida[s.id] !== undefined && !["enviado","cancelado"].includes(s.status) && (
                                     <button onClick={async () => {
                                       const op = opcoes[opcaoEscolhida[s.id]];
-                                      await supabase.from("envio_solicitacoes").update({ modalidade_escolhida: op, status: "pagamento em aberto" }).eq("id", s.id);
+                                      const { error: eMod } = await supabaseEnvio().from("envio_solicitacoes").update({ modalidade_escolhida: op, status: "pagamento em aberto" }).eq("id", s.id);
+                                      if (eMod) { alert("Não foi possível confirmar a modalidade agora. Tente de novo ou fale com a equipe."); return; }
                                       setMeuEnvios(prev => prev.map(x => x.id === s.id ? { ...x, modalidade_escolhida: op, status: "pagamento em aberto" } : x));
                                     }} style={{ width:"100%", marginTop:10, padding:"10px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:7, fontSize:11, fontWeight:700, cursor:"pointer" }}>
                                       Confirmar modalidade →
@@ -27043,7 +27082,7 @@ export default function App() {
     // Atualiza dados do joiner em cache (foto, nome, etc.)
     const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2")); } catch { return null; } })();
     if (cached?.cog && !cached?.guest) {
-      supabase.from("joiners").select("*").eq("cog", cached.cog).single()
+      supabase.from("joiners").select(COLUNAS_JOINER_PUBLICAS).eq("cog", cached.cog).single()
         .then(({ data }) => {
           if (data) {
             localStorage.setItem("anticeg_user_v2", JSON.stringify(data));
@@ -27213,7 +27252,7 @@ export default function App() {
         { count: multasCount },
       ] = await Promise.all([
         supabase.from("masterlist").select("ceg, nome_do_item, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf").eq("cog", user.cog),
-        supabase.from("envio_solicitacoes").select("status").eq("joiner_cog", user.cog),
+        supabaseEnvio().from("envio_solicitacoes").select("status").eq("joiner_cog", user.cog),
         supabase.from("reports").select("id").eq("joiner_cog", user.cog),
         supabase.from("pagamento_demandas").select("id").eq("joiner_cog", user.cog),
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", user.cog).gte("created_at", BADGE_MULTAS_DESDE),
