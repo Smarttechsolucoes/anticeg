@@ -19424,9 +19424,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const envioWinW = useWindowWidth();
   const envioIsMobile = envioWinW <= 680;
 
-  const [unlocked,    setUnlocked]    = useState(false);
-  const [senha,       setSenha]       = useState("");
-  const [senhaErr,    setSenhaErr]    = useState(false);
   const [nome]        = useState(user.nome    || "");
   const [handle]      = useState(user.twitter || "");
   const [whatsapp]    = useState(user.whatsapp || "");
@@ -19474,7 +19471,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const hoje = new Date().toISOString().slice(0, 10);
   const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
   const roundAberto = envioRequest?.envio_rounds?.status === "em_processo";
-  const efetivamenteUnlocked = unlocked || isAutoUnlocked || roundAberto;
+  const efetivamenteUnlocked = true;   // formulário sempre aberto (sem senha)
 
   // quando o envio está aberto e ainda não há conferência registrada, cria uma conferência virtual
   const conferenciaEfetiva = envioConferencia || (isAutoUnlocked ? {
@@ -19817,20 +19814,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
                     Prévia dos seus itens · para solicitar envio aguarde a abertura
                   </div>
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
-                  <div style={{ display:"flex", gap:6 }}>
-                    <input type="password" placeholder="senha" value={senha}
-                      onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
-                      onKeyDown={e => { if (e.key === "Enter") { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); } }}
-                      style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
-                    />
-                    <button onClick={() => { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); }}
-                      style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
-                      ACESSAR →
-                    </button>
-                  </div>
-                  {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
-                </div>
+                
               </div>
             )}
 
@@ -19838,7 +19822,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
             <div style={{ background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.22)", borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"#BAFF39", marginBottom:7 }}>◧ FORMULÁRIO DE ENVIO NACIONAL ABERTO</div>
               <div style={{ fontSize:12, color:"rgba(245,240,232,.82)", lineHeight:1.6 }}>
-                O formulário de envios está aberto até <strong>19 de agosto (quarta-feira)</strong>.
+                O formulário de envios está aberto.
               </div>
               <div style={{ marginTop:9, padding:"9px 12px", background:"rgba(245,240,232,.05)", borderRadius:7, fontSize:11.5, color:"rgba(245,240,232,.65)", lineHeight:1.65 }}>
                 ⚠ Os itens <strong>fotografados no storage</strong> são os itens disponíveis para envio. Se algum item estiver faltando na lista abaixo, aguarde o cadastro no storage para então solicitar o envio.
@@ -20082,20 +20066,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
               Prévia dos seus itens · para solicitar envio aguarde a abertura
             </div>
           </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end" }}>
-            <div style={{ display:"flex", gap:6 }}>
-              <input type="password" placeholder="senha" value={senha}
-                onChange={e => { setSenha(e.target.value); setSenhaErr(false); }}
-                onKeyDown={e => { if (e.key === "Enter") { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); } }}
-                style={{ width:120, background:"#0d0d0d", border:`1px solid ${senhaErr ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius:6, padding:"6px 10px", color:"#F5F0E8", fontSize:11, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"center" }}
-              />
-              <button onClick={() => { if (senha === "ILOVE2MIN") setUnlocked(true); else setSenhaErr(true); }}
-                style={{ background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", padding:"6px 14px", whiteSpace:"nowrap" }}>
-                ACESSAR →
-              </button>
-            </div>
-            {senhaErr && <div style={{ fontSize:10, color:"var(--laranja)", fontFamily:"'DM Mono',monospace" }}>senha incorreta</div>}
-          </div>
+          
         </div>
       )}
 
