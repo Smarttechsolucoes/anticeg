@@ -19418,9 +19418,9 @@ function ThisAndThatGallery() {
   );
 }
 
-function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
+const INICIO_RODADA_ENVIO = "2026-10-18";
+function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAberturaFim = "" }) {
   const WA_GOM = WHATSAPP_NUM;
-  const antigomItens = itens.filter(i => ["ANTIGOM", "Envio Liberado"].includes(i.status));
   const envioWinW = useWindowWidth();
   const envioIsMobile = envioWinW <= 680;
 
@@ -19437,7 +19437,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const [cidade,      setCidade]      = useState(user.cidade      || "");
   const [estado,      setEstado]      = useState(user.estado      || "");
   const [cepLoading,  setCepLoading]  = useState(false);
-  const [, setSelecionados]= useState(() => antigomItens.map(i => i.id));
   const [metodo,      setMetodo]      = useState("");
   const [seguro,      setSeguro]      = useState("");
   const [valorSeguro, setValorSeguro] = useState("");
@@ -19604,6 +19603,9 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
     if (missing.length > 0) { setErro(`Preencha: ${missing.join(", ")}.`); return; }
 
     setLoading(true);
+    // uma solicitação por rodada: confere no banco antes de gravar (outra aba, duplo clique)
+    const { data: jaTem } = await supabase.from("envio_solicitacoes").select("id").eq("joiner_cog", user.cog).neq("status", "cancelado").gte("created_at", INICIO_RODADA_ENVIO).limit(1);
+    if (jaTem && jaTem.length > 0) { setLoading(false); setMeuEnvios(prev => prev.some(e => e.id === jaTem[0].id) ? prev : [{ id: jaTem[0].id, status:"solicitação de envio", created_at: new Date().toISOString() }, ...prev]); return; }
     const itensSel = storageDisponivel.filter(i => storageSelecionados.has(i.id))
       .flatMap(i => (i.descricao || "").split("\n").filter(Boolean).map(linha => ({
         id: i.id, ceg: "Storage GOM", nome: linha.trim(), valor: 0, taxa: 0, frete: 0
@@ -19640,6 +19642,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
     setLoading(false);
     if (error) { setErro("Erro ao enviar. Tente novamente."); return; }
+    setMeuEnvios(prev => [{ id:"novo", status:"solicitação de envio", created_at: new Date().toISOString() }, ...prev]);
     setEnviado(true);
   }
 
@@ -19660,6 +19663,22 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
   const fld  = { marginBottom:12 };
   const stat = { fontSize:12, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", padding:"9px 0", borderBottom:"1px solid rgba(245,240,232,.06)" };
 
+  const jaSolicitou = meuEnvios.some(e => e.status !== "cancelado" && (e.created_at || "") >= INICIO_RODADA_ENVIO);
+  const jaSolicitouScreen = (
+    <div style={{ textAlign:"center", padding:"40px 16px" }}>
+      <div style={{ fontSize:36, marginBottom:16 }}>📦</div>
+      <div style={{ fontSize:16, fontWeight:700, color:"#F5F0E8", fontFamily:"'DM Mono',monospace", marginBottom:14 }}>Você já enviou sua solicitação</div>
+      <div style={{ fontSize:12, color:"rgba(245,240,232,.55)", fontFamily:"'DM Mono',monospace", lineHeight:1.9, background:"var(--card-bg)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"18px 20px", maxWidth:520, margin:"0 auto", textAlign:"left" }}>
+        Só é possível preencher o formulário uma vez por rodada. Acompanhe sua solicitação e a cotação em "Minhas Solicitações".
+      </div>
+      <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap", marginTop:16 }}>
+        <button onClick={() => { setEnvioSubTab("solicitacoes"); }} style={{ padding:"9px 24px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>
+          Ver minhas solicitações →
+        </button>
+      </div>
+    </div>
+  );
+
   const enviadoScreen = (
     <div style={{ textAlign:"center", padding:"40px 16px" }}>
       <div style={{ fontSize:36, marginBottom:16 }}>📦</div>
@@ -19672,16 +19691,6 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
       <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap", marginTop:16 }}>
         <button onClick={() => { setEnvioSubTab("solicitacoes"); }} style={{ padding:"9px 24px", background:"var(--laranja)", color:"#111", border:"none", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
           Ver minhas solicitações →
-        </button>
-        <button onClick={() => {
-          setEnviado(false);
-          setSelecionados([]);
-          setMetodo(""); setSeguro(""); setValorSeguro("");
-          setConfirmou(false); setCiente1(false); setCiente2(false); setCiente3(false); setCiente4(false);
-          setStorageSelecionados(new Set());
-          setErro(""); setGrupoMode(null); setGrupoCodigo(""); setGrupoInput(""); setGrupoOk(false);
-        }} style={{ padding:"9px 24px", background:"transparent", color:"rgba(245,240,232,.55)", border:"1px solid rgba(245,240,232,.15)", borderRadius:6, fontSize:11, fontWeight:700, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em" }}>
-          + Fazer outra solicitação
         </button>
       </div>
     </div>
@@ -20052,7 +20061,7 @@ function EnvioTab({ user, itens, proximoEnvio = "", envioAberturaInicio = "", en
 
         {/* ── PEDIR ENVIO ── */}
         {envioSubTab === "form" && (
-          enviado ? enviadoScreen : (<div style={{ paddingBottom:60, position:"relative" }}>
+          enviado ? enviadoScreen : jaSolicitou ? jaSolicitouScreen : (<div style={{ paddingBottom:60, position:"relative" }}>
 
       {/* BANNER DE PRÉVIA quando formulário ainda não abriu */}
       {!efetivamenteUnlocked && (
