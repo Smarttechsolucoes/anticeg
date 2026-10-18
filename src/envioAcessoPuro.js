@@ -12,6 +12,7 @@ export function criarGuardaToken({ armazenamento = typeof localStorage !== "unde
     try { const t = armazenamento && armazenamento.getItem(CHAVE_TOKEN); if (tokenValido(t)) return t; } catch { /* ignora */ }
     return tokenValido(memoria) ? memoria : null;
   };
+  const salvar = t => { if (!tokenValido(t)) return false; guardar(t); return true; };
   const limpar = () => { memoria = null; try { if (armazenamento) armazenamento.removeItem(CHAVE_TOKEN); } catch { /* ignora */ } };
   // lê ?acesso= da URL, guarda o token e TIRA o parâmetro da barra de endereço (não fica no histórico nem vai em "Referer")
   const capturar = () => {
@@ -26,5 +27,5 @@ export function criarGuardaToken({ armazenamento = typeof localStorage !== "unde
     guardar(limpo);
     return limpo;
   };
-  return { capturar, ler, limpar };
+  return { capturar, ler, limpar, salvar };
 }
