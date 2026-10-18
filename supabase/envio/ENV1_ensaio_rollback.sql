@@ -238,8 +238,17 @@ language sql stable security definer set search_path = '' as $$
   select case when coalesce((select public.envio_token_cog()), (select public.meu_cog())) is null then null::jsonb
               else jsonb_build_object('cog', coalesce((select public.envio_token_cog()), (select public.meu_cog()))) end
 $$;
-revoke all on function public.envio_solicitar_rodada(text), public.envio_grupo_por_codigo(text), public.envio_meu_acesso() from public;
-grant execute on function public.envio_solicitar_rodada(text), public.envio_grupo_por_codigo(text), public.envio_meu_acesso() to anon, authenticated, service_role;
+create function public.envio_meus_dados() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  -- dados de entrega SALVOS da própria joiner (identificada pelo token ou pela conta): o envio não depende da leitura aberta da tabela joiners
+  select to_jsonb(x) from (
+    select j.nome, j.nome_entrega, j.cpf, j.cep, j.rua, j.numero, j.complemento, j.bairro, j.cidade, j.estado, j.whatsapp, j.twitter
+      from public.joiners j
+     where lower(btrim(j.cog)) = lower(btrim(coalesce((select public.envio_token_cog()), (select public.meu_cog()))))
+     order by (btrim(j.cog) = btrim(coalesce((select public.envio_token_cog()), (select public.meu_cog())))) desc, j.id limit 1) x
+$$;
+revoke all on function public.envio_solicitar_rodada(text), public.envio_grupo_por_codigo(text), public.envio_meu_acesso(), public.envio_meus_dados() from public;
+grant execute on function public.envio_solicitar_rodada(text), public.envio_grupo_por_codigo(text), public.envio_meu_acesso(), public.envio_meus_dados() to anon, authenticated, service_role;
 
 -- 7) comprovantes de envio: bucket PRIVADO novo (o bucket público "comprovantes" continua como está para o resto do site)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -252,7 +261,14 @@ revoke all on function public.envio_solicitacao_existe(text) from public;
 grant execute on function public.envio_solicitacao_existe(text) to anon, authenticated;
 -- a policy genérica "allow upload" (anon/authenticated, qualquer bucket exceto anti-store e avatars) deixaria enviar arquivo ao bucket novo por fora das regras abaixo: exclui SÓ o bucket novo (o resto continua igual)
 insert into emergencia.env1_backup (tipo, tabela, dados) select 'storage_policy', 'objects', to_jsonb(p) from pg_policies p where schemaname = 'storage' and tablename = 'objects' and policyname = 'allow upload';
-alter policy "allow upload" on storage.objects with check ((bucket_id <> 'anti-store'::text) and (bucket_id <> 'avatars'::text) and (bucket_id <> 'envio-comprovantes'::text));
+alter policy "allow upload" on storage.objects with check ((bucket_id <> 'anti-store'::text) and (bucket_id <> 'avatars'::text) and (bucket_id <> 'envio-comprovantes'::text) and (bucket_id <> 'storage-itens'::text));
+-- storage-itens (fotos do storage): o visitante deixa de LISTAR, APAGAR e ENVIAR arquivos; só a administração (conta admin). As fotos continuam abrindo pelos links já gravados (bucket público, sem policy de leitura).
+insert into emergencia.env1_backup (tipo, tabela, dados) select 'storage_policy', 'objects', to_jsonb(p) from pg_policies p where schemaname = 'storage' and tablename = 'objects' and policyname in ('allow delete storage-itens', 'allow select storage-itens', 'allow uploads storage-itens');
+drop policy "allow delete storage-itens" on storage.objects;
+drop policy "allow select storage-itens" on storage.objects;
+drop policy "allow uploads storage-itens" on storage.objects;
+create policy storage_itens_admin on storage.objects for all to authenticated
+  using (bucket_id = 'storage-itens' and (select public.is_admin())) with check (bucket_id = 'storage-itens' and (select public.is_admin()));
 create policy envio_comprovantes_enviar on storage.objects for insert to anon, authenticated
   with check (bucket_id = 'envio-comprovantes' and name ~ '^[0-9]{1,12}/comprovante_[0-9]{10,}\.(jpg|jpeg|png|webp|heic|heif|pdf)$' and public.envio_solicitacao_existe(split_part(name, '/', 1)));
 create policy envio_comprovantes_admin on storage.objects for all to authenticated
@@ -273,6 +289,8 @@ do $$ declare a record; tb text; n integer; begin
   if exists (select 1 from information_schema.role_table_grants where table_schema = 'public' and table_name = 'rastreios' and grantee in ('anon','public')) then raise exception 'ENV1: rastreios acessivel ao visitante'; end if;
   if has_table_privilege('anon', 'public.envio_solicitacoes', 'DELETE') or has_table_privilege('anon', 'public.joiner_storage', 'DELETE') then raise exception 'ENV1: visitante ainda pode apagar'; end if;
   if (select count(*) from emergencia.env1_backup where tipo = 'policy') < 7 then raise exception 'ENV1: backup de policies incompleto'; end if;
+  if exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and 'anon' = any(roles) and (coalesce(qual,'') ~ '= ''storage-itens''' or coalesce(with_check,'') ~ '= ''storage-itens''')) then raise exception 'ENV1: visitante ainda tem policy no bucket storage-itens'; end if;
+  if (select with_check from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'allow upload') !~ 'storage-itens' then raise exception 'ENV1: a policy generica de upload ainda aceita storage-itens'; end if;
 end $$;
 
 -- TESTES do ENV1 (rollback): simulam visitante sem token, token errado/expirado/revogado, joiner com token, conta logada e administradora, usando os PAPÉIS reais do banco (anon / authenticated).
@@ -402,6 +420,22 @@ begin
     perform set_config('request.jwt.claims', json_build_object('sub', v_conta, 'role', 'authenticated')::text, true); perform set_config('request.jwt.claim.sub', v_conta::text, true);
     select count(*) into n from public.envio_solicitacoes where lower(btrim(joiner_cog)) <> lower(btrim(v_conta_cog)); if n = 0 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T19 conta logada viu de outra ; '; end if;
   end if;
+  -- ---------- T20: dados de entrega pelo token e storage-itens isolado
+  execute 'reset role'; perform set_config('request.jwt.claims', '{"role":"anon"}', true); perform set_config('request.jwt.claim.role', 'anon', true);
+  execute 'set local role anon';
+  perform set_config('request.headers', '{}', true); perform set_config('request.jwt.claim.sub', '', true);
+  if public.envio_meus_dados() is null then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T20 envio_meus_dados sem token ; '; end if;
+  perform set_config('request.headers', json_build_object('x-envio-token', tok_a)::text, true);
+  if public.envio_meus_dados() is not null then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T20b envio_meus_dados com token ; '; end if;
+  begin insert into storage.objects (bucket_id, name) values ('storage-itens', 'ensaio/1760000000000.jpg'); bad := bad + 1; res := res || 'FALHA T21 visitante enviou ao storage-itens ; '; exception when others then ok := ok + 1; end;
+  begin select count(*) into n from storage.objects where bucket_id = 'storage-itens'; if n = 0 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T21b visitante lista storage-itens ; '; end if; exception when others then ok := ok + 1; end;
+  begin delete from storage.objects where bucket_id = 'storage-itens'; get diagnostics n = row_count; if n = 0 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T21c visitante apagou storage-itens ; '; end if; exception when others then ok := ok + 1; end;
+  execute 'reset role'; execute 'set local role authenticated';
+  perform set_config('request.headers', '{}', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin, 'role', 'authenticated')::text, true); perform set_config('request.jwt.claim.sub', v_admin::text, true); perform set_config('request.jwt.claim.role', 'authenticated', true);
+  begin insert into storage.objects (bucket_id, name) values ('storage-itens', 'ensaio/1760000000001.jpg'); ok := ok + 1; exception when others then bad := bad + 1; res := res || 'FALHA T22 admin nao envia ao storage-itens: ' || sqlerrm || ' ; '; end;
+  begin select count(*) into n from storage.objects where bucket_id = 'storage-itens'; if n >= 1 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T22b admin nao lista storage-itens ; '; end if; exception when others then bad := bad + 1; res := res || 'FALHA T22b ' || sqlerrm || ' ; '; end;
+  begin select count(*) into n from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'storage_itens_admin' and cmd = 'ALL'; if n = 1 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T22c policy admin do storage-itens ; '; end if; end;
   execute 'reset role';
   raise exception E'ENV1_ENSAIO % | aprovados=% falhas=% | %', case when bad = 0 then 'OK' else 'COM FALHAS' end, ok, bad, res;
 end $t$;

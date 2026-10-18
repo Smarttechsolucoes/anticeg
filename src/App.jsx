@@ -1983,14 +1983,11 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
 
   async function deletarStorageJoiner(item) {
     if (!window.confirm("Confirmar que você recebeu e quer remover esse item da galeria?")) return;
-    await supabaseEnvio().from("joiner_storage").update({ ativo: false }).eq("id", item.id);
+    const { error: eSt } = await supabaseEnvio().from("joiner_storage").update({ ativo: false }).eq("id", item.id);
+    if (eSt) { alert("Não foi possível retirar o item agora. Tente de novo ou fale com a equipe."); return; }
     try {
-      const url = new URL(item.foto_url);
-      const raw = url.pathname;
-      const path = raw.replace(/.*\/storage-itens\//, "");
-      if (path && path !== raw) {
-        await supabase.storage.from("storage-itens").remove([path]);
-      }
+      // a foto permanece no bucket (a joiner não apaga arquivos; a administração faz a limpeza): aqui só sai da galeria dela
+      void item.foto_url;
     } catch {}
     setStorageGom(prev => prev.filter(x => x.id !== item.id));
   }
@@ -9913,9 +9910,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           setStorageUploading(true); setStorageMsg("");
           const ext  = storageFile.name.split(".").pop();
           const path = `${storageJoiner.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageFile, { upsert: true });
+          const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, storageFile, { upsert: true });
           if (upErr) { setStorageMsg("Erro ao enviar foto: " + upErr.message); setStorageUploading(false); return; }
-          const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+          const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
           const { data: novo } = await clienteAdmin().from("joiner_storage")
             .insert([{ joiner_cog: storageJoiner.cog, foto_url: publicUrl, descricao: storageDesc.trim() }])
             .select().single();
@@ -10031,9 +10028,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
           try {
             const ext = item.file.name.split(".").pop();
             const path = `${item.joiner.cog}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-            const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, item.file, { upsert: true });
+            const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, item.file, { upsert: true });
             if (upErr) throw upErr;
-            const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+            const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
             await clienteAdmin().from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
             inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: item.joiner.cog }]);
             enviarPushJoiner(item.joiner.cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
@@ -10049,9 +10046,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
             try {
               const ext = item.file.name.split(".").pop();
               const path = `${item.joiner.cog}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-              const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, item.file, { upsert: true });
+              const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, item.file, { upsert: true });
               if (upErr) throw upErr;
-              const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+              const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
               await clienteAdmin().from("joiner_storage").insert([{ joiner_cog: item.joiner.cog, foto_url: publicUrl, descricao: item.desc.trim() || item.file.name }]);
               inserirPush([{ message: "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", active: true, joiner_cog: item.joiner.cog }]);
               enviarPushJoiner(item.joiner.cog, "ANTICEG — Storage", "Nanda adicionou uma foto no seu storage! Vem ver o que é 👀", "/masterlist");
@@ -10322,9 +10319,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 const ext  = storageCegFile.name.split(".").pop();
                 const slug = storageCegSel.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
                 const path = `broadcast/${slug}/${Date.now()}.${ext}`;
-                const { error: upErr } = await supabase.storage.from("storage-itens").upload(path, storageCegFile, { upsert: true });
+                const { error: upErr } = await clienteAdmin().storage.from("storage-itens").upload(path, storageCegFile, { upsert: true });
                 if (upErr) { alert("Erro ao enviar foto: " + upErr.message); setStorageCegEnviando(false); return; }
-                const { data: { publicUrl } } = supabase.storage.from("storage-itens").getPublicUrl(path);
+                const { data: { publicUrl } } = clienteAdmin().storage.from("storage-itens").getPublicUrl(path);
 
                 let erros = 0;
                 for (let i = 0; i < cogs.length; i++) {
@@ -19440,18 +19437,25 @@ function LinkComprovanteEnvio({ valor, admin = false }) {
 function EnvioTab(props) {
   const { user } = props;
   const [acesso, setAcesso] = useState(() => !ENVIO_EXIGE_ACESSO ? "livre" : temTokenEnvio() ? "verificando" : "sem_link");
+  const [dadosEntrega, setDadosEntrega] = useState(null);   // endereço/CPF salvos da própria joiner, vindos do servidor pelo token
   useEffect(() => {
     if (!ENVIO_EXIGE_ACESSO || !temTokenEnvio()) return;
     let vivo = true;
-    supabaseEnvio().rpc("envio_meu_acesso").then(({ data, error }) => {
+    (async () => {
+      const cli = supabaseEnvio();
+      const { data, error } = await cli.rpc("envio_meu_acesso");
       if (!vivo) return;
       if (error) { setAcesso(error.code === "PGRST202" ? "livre" : "erro"); return; }   // PGRST202: o pacote do banco ainda não foi aplicado
       if (!data || !data.cog) { setAcesso("invalido"); return; }
-      setAcesso(normalizarCogEnvio(data.cog) === normalizarCogEnvio(user?.cog) ? "livre" : "outra");
-    });
+      if (normalizarCogEnvio(data.cog) !== normalizarCogEnvio(user?.cog)) { setAcesso("outra"); return; }
+      const r = await cli.rpc("envio_meus_dados");
+      if (!vivo) return;
+      if (r.data && typeof r.data === "object") setDadosEntrega(Object.fromEntries(Object.entries(r.data).filter(([, v]) => v !== null && v !== undefined && v !== "")));
+      setAcesso("livre");
+    })();
     return () => { vivo = false; };
   }, [user?.cog]);
-  if (acesso === "livre") return <EnvioTabInterno {...props} />;
+  if (acesso === "livre") return <EnvioTabInterno {...props} user={dadosEntrega ? { ...user, ...dadosEntrega } : user} />;
   const msg = {
     verificando: "Verificando o seu acesso…",
     sem_link: "Para pedir o seu envio nacional, use o LINK PESSOAL que a equipe enviou para você. Ele identifica você com segurança, sem senha.",

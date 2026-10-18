@@ -19,6 +19,7 @@ drop trigger if exists trg_conferencia_protege_ins on public.joiner_conferencias
 drop trigger if exists trg_conferencia_protege_upd on public.joiner_conferencias;
 drop policy if exists envio_comprovantes_enviar on storage.objects;
 drop policy if exists envio_comprovantes_admin on storage.objects;
+drop policy if exists storage_itens_admin on storage.objects;
 
 -- 2) devolve as policies originais
 do $$ declare r record; q text; wc text; papeis text; begin
@@ -41,6 +42,16 @@ do $$ declare r record; begin
   end loop;
 end $$;
 
+-- 3b) policies do bucket storage-itens como eram
+do $$ declare r record; papeis text; q text; wc text; begin
+  for r in select dados from emergencia.env1_backup where tipo = 'storage_policy' and dados ->> 'policyname' <> 'allow upload' order by id loop
+    select string_agg(case when x = 'public' then 'public' else quote_ident(x) end, ', ') into papeis from jsonb_array_elements_text(r.dados -> 'roles') x;
+    q := r.dados ->> 'qual'; wc := r.dados ->> 'with_check';
+    execute format('create policy %I on storage.objects as %s for %s to %s%s%s', r.dados ->> 'policyname', r.dados ->> 'permissive', r.dados ->> 'cmd', papeis,
+                   case when q is not null then ' using (' || q || ')' else '' end, case when wc is not null then ' with check (' || wc || ')' else '' end);
+  end loop;
+end $$;
+
 -- 4) policy genérica de upload do Storage como era
 do $$ declare w text; begin
   select dados ->> 'with_check' into w from emergencia.env1_backup where tipo = 'storage_policy' and dados ->> 'policyname' = 'allow upload' order by id limit 1;
@@ -48,7 +59,7 @@ do $$ declare w text; begin
 end $$;
 
 -- 5) funções novas
-drop function if exists public.envio_solicitar_rodada(text), public.envio_grupo_por_codigo(text), public.envio_meu_acesso(), public.envio_solicitacao_existe(text);
+drop function if exists public.envio_solicitar_rodada(text), public.envio_grupo_por_codigo(text), public.envio_meu_acesso(), public.envio_meus_dados(), public.envio_solicitacao_existe(text);
 drop function if exists public.trg_envio_protege(), public.trg_storage_protege(), public.trg_conferencia_protege();
 drop function if exists public.envio_dona(text), public.envio_privilegiado(), public.envio_token_cog();
 

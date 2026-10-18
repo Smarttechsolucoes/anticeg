@@ -125,6 +125,22 @@ begin
     perform set_config('request.jwt.claims', json_build_object('sub', v_conta, 'role', 'authenticated')::text, true); perform set_config('request.jwt.claim.sub', v_conta::text, true);
     select count(*) into n from public.envio_solicitacoes where lower(btrim(joiner_cog)) <> lower(btrim(v_conta_cog)); if n = 0 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T19 conta logada viu de outra ; '; end if;
   end if;
+  -- ---------- T20: dados de entrega pelo token e storage-itens isolado
+  execute 'reset role'; perform set_config('request.jwt.claims', '{"role":"anon"}', true); perform set_config('request.jwt.claim.role', 'anon', true);
+  execute 'set local role anon';
+  perform set_config('request.headers', '{}', true); perform set_config('request.jwt.claim.sub', '', true);
+  if public.envio_meus_dados() is null then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T20 envio_meus_dados sem token ; '; end if;
+  perform set_config('request.headers', json_build_object('x-envio-token', tok_a)::text, true);
+  if public.envio_meus_dados() is not null then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T20b envio_meus_dados com token ; '; end if;
+  begin insert into storage.objects (bucket_id, name) values ('storage-itens', 'ensaio/1760000000000.jpg'); bad := bad + 1; res := res || 'FALHA T21 visitante enviou ao storage-itens ; '; exception when others then ok := ok + 1; end;
+  begin select count(*) into n from storage.objects where bucket_id = 'storage-itens'; if n = 0 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T21b visitante lista storage-itens ; '; end if; exception when others then ok := ok + 1; end;
+  begin delete from storage.objects where bucket_id = 'storage-itens'; get diagnostics n = row_count; if n = 0 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T21c visitante apagou storage-itens ; '; end if; exception when others then ok := ok + 1; end;
+  execute 'reset role'; execute 'set local role authenticated';
+  perform set_config('request.headers', '{}', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin, 'role', 'authenticated')::text, true); perform set_config('request.jwt.claim.sub', v_admin::text, true); perform set_config('request.jwt.claim.role', 'authenticated', true);
+  begin insert into storage.objects (bucket_id, name) values ('storage-itens', 'ensaio/1760000000001.jpg'); ok := ok + 1; exception when others then bad := bad + 1; res := res || 'FALHA T22 admin nao envia ao storage-itens: ' || sqlerrm || ' ; '; end;
+  begin select count(*) into n from storage.objects where bucket_id = 'storage-itens'; if n >= 1 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T22b admin nao lista storage-itens ; '; end if; exception when others then bad := bad + 1; res := res || 'FALHA T22b ' || sqlerrm || ' ; '; end;
+  begin select count(*) into n from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'storage_itens_admin' and cmd = 'ALL'; if n = 1 then ok := ok + 1; else bad := bad + 1; res := res || 'FALHA T22c policy admin do storage-itens ; '; end if; end;
   execute 'reset role';
   raise exception E'ENV1_ENSAIO % | aprovados=% falhas=% | %', case when bad = 0 then 'OK' else 'COM FALHAS' end, ok, bad, res;
 end $t$;
