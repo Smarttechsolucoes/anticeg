@@ -12496,7 +12496,7 @@ const ODD_POPUP_CFG = {
     { id: "SKZOO MOOD LAMP", foto: ODD_PU + "skzoo-mood-lamp.png", preco: 220, tipos: ODD_TIPOS_8 },
     { id: "SKZOO PLUSH MINI CAKE VER.", foto: ODD_PU + "skzoo-plush-mini-cake-ver.png", preco: 140, tipos: ODD_TIPOS_8 },
     { id: "SKZOO CAKE POUCH", foto: ODD_PU + "cake-pouch.png", preco: 135, tipos: ODD_TIPOS_9 },
-    { id: "SKZOO SCRUBBER", foto: ODD_PU + "scrubber.png", preco: 180, tipos: ODD_TIPOS_9 },
+    { id: "SKZOO SCRUBBER", foto: ODD_PU + "scrubber.png", preco: 80, tipos: ODD_TIPOS_9 },
     { id: "SKZOO RUG", foto: ODD_PU + "rug.png", preco: 200, tipos: ODD_TIPOS_9 },
     { id: "SKZOO SECRET MINI CHARM", foto: ODD_PU + "skzoo-secret-mini-charm.png", preco: 52, nota: "Aleatório: 1 de 8" },
   ],
