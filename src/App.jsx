@@ -15103,7 +15103,7 @@ function ClaimAreaTeste() {
 
           <div style={{ display:"flex", gap:6 }}>
             <button onClick={enviar} disabled={!temSelecionado}
-              style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background: temSelecionado?"rgba(186,255,57,.1)":"rgba(245,240,232,.04)", border:`1px solid ${temSelecionado?"rgba(186,255,57,.3)":"rgba(245,240,232,.08)"}`, borderRadius:6, color: temSelecionado?"#BAFF39":"rgba(245,240,232,.2)", cursor: temSelecionado?"pointer":"default", letterSpacing:".5px", transition:"all .15s" }}>
+              style={{ flex:1, minHeight:42, boxSizing:"border-box", fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background: temSelecionado?"rgba(186,255,57,.1)":"rgba(245,240,232,.04)", border:`1px solid ${temSelecionado?"rgba(186,255,57,.3)":"rgba(245,240,232,.08)"}`, borderRadius:6, color: temSelecionado?"#BAFF39":"rgba(245,240,232,.2)", cursor: temSelecionado?"pointer":"default", letterSpacing:".5px", transition:"all .15s" }}>
               {temSelecionado ? `Enviar claim (${totalSel})` : "Selecione membros"}
             </button>
             <button onClick={() => setQtds({})} disabled={!temSelecionado}
@@ -15792,14 +15792,12 @@ function ClaimPublicoPage({ user }) {
             </div>
 
             {/* Countdown + preview dos sets */}
-            {!aberto && (
-              <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-                <div style={{ padding:"18px 18px 12px", textAlign:"center" }}>
-                  <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:6 }}>ABRE EM</div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36, color:"var(--offwhite)", letterSpacing:2 }}>{hh}:{mm}:{ss}</div>
-                </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+              <div style={{ padding:"18px 18px 12px", textAlign:"center" }}>
+                <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:6 }}>{aberto ? "CLAIMS" : "ABRE EM"}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36, color: aberto ? "#BAFF39" : "var(--offwhite)", letterSpacing:2, fontVariantNumeric:"tabular-nums" }}>{aberto ? "ABERTO" : `${hh}:${mm}:${ss}`}</div>
               </div>
-            )}
+            </div>
 
             {/* Membros + quantidade — sempre visível para preparar antes do horário */}
             <div style={{ padding:"12px 18px 16px", display:"flex", flexDirection:"column", gap:12 }}>
@@ -15849,11 +15847,11 @@ function ClaimPublicoPage({ user }) {
                     <div style={{ display:"flex", gap:6 }}>
                       {aberto ? (
                         <button onClick={() => temSelecionado && enviarClaims(ev.id)} disabled={enviando || !temSelecionado}
-                          style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background: temSelecionado?"rgba(186,255,57,.1)":"rgba(245,240,232,.04)", border:`1px solid ${temSelecionado?"rgba(186,255,57,.3)":"rgba(245,240,232,.08)"}`, borderRadius:6, color: temSelecionado?"#BAFF39":"rgba(245,240,232,.2)", cursor: temSelecionado&&!enviando?"pointer":"default", letterSpacing:".5px", transition:"all .15s" }}>
+                          style={{ flex:1, minHeight:42, boxSizing:"border-box", fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background: temSelecionado?"rgba(186,255,57,.1)":"rgba(245,240,232,.04)", border:`1px solid ${temSelecionado?"rgba(186,255,57,.3)":"rgba(245,240,232,.08)"}`, borderRadius:6, color: temSelecionado?"#BAFF39":"rgba(245,240,232,.2)", cursor: temSelecionado&&!enviando?"pointer":"default", letterSpacing:".5px", transition:"all .15s" }}>
                           {enviando ? "enviando..." : temSelecionado ? "Enviar claim" : "Selecione membros"}
                         </button>
                       ) : (
-                        <div style={{ flex:1, fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                        <div style={{ flex:1, minHeight:42, boxSizing:"border-box", fontFamily:mono, fontSize:10, fontWeight:700, padding:"10px 14px", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:6, color:"rgba(245,240,232,.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
                           <span>🔒 abre em</span>
                           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:2, color:"var(--offwhite)" }}>{hh}:{mm}:{ss}</span>
                         </div>
