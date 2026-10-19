@@ -12472,8 +12472,8 @@ const ODD_POPUP_CFG = {
   capa: "/odd-fresh/capa.jpg",
   capaAltura: 320,
   proporcao: "1/1",
-  tags: ["PEDIDOS ATÉ 09/NOV"],
-  infos: ["Pedidos aceitos até: 09 de novembro", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)"],
+  tags: ["PEDIDOS ATÉ 08/NOV"],
+  infos: ["Pedidos aceitos até: 08 de novembro", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional"],
   box: null,
   itens: [
     { id: "HOODIE", foto: ODD_PU + "hoodie.png", preco: 395, nota: "Tamanho único | medidas não estão disponíveis" },
@@ -12503,7 +12503,7 @@ const ODD_POPUP_CFG = {
   kits: [],
   get fechado() { return new Date() > ODD_POPUP_PRAZO; },
 };
-const ODD_POPUP_PRAZO = new Date("2026-11-09T23:59:59-03:00");
+const ODD_POPUP_PRAZO = new Date("2026-11-08T23:59:59-03:00");
 
 // PROMO 13 — itens do Paper Tale e do Wave Maker com 13% de desconto, estoque limitado, sem data de fechamento.
 const PROMO13_CFG = {
@@ -25899,7 +25899,7 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "odd-fresh-popup",
       img: ODD_POPUP_CFG.capa,
-      tags: ["Pedidos até 09/11"],
+      tags: ["Pedidos até 08/11"],
       info: "Roupas em tamanho único · escolha o tipo de cada item no formulário",
     },
     {
