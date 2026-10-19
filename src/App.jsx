@@ -11442,6 +11442,12 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
             ];
             return (
               <div style={{ marginBottom:16 }}>
+              <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
+                <button onClick={() => { const n = exportarPlanilhaEnvios(envioSolic); if (!n) alert("Nenhuma solicitação para exportar."); }}
+                  style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39", cursor:"pointer", letterSpacing:".5px" }}>
+                  ↓ exportar planilha (Excel)
+                </button>
+              </div>
               <input
                 value={buscaEnvio}
                 onChange={e => setBuscaEnvio(e.target.value)}
@@ -24679,6 +24685,37 @@ function RunItVol2Tab({ user }) {
       </div>
     </div>
   );
+}
+
+// ── Planilha geral das solicitações de envio nacional (abre no Excel) ──
+function exportarPlanilhaEnvios(lista) {
+  const ativos = lista.filter(e => e.status !== "cancelado")
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const arroba = v => { const t = String(v || "").trim(); return t ? (t.startsWith("@") ? t : "@" + t) : ""; };
+  const hora = v => v ? new Date(v).toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }).replace(", ", " ") : "";
+  const pedidos = e => {
+    const itens = (Array.isArray(e.itens) ? e.itens : []).map(i => i?.nome).filter(Boolean);
+    if (itens.length) return itens.join(" | ");
+    const fotos = (Array.isArray(e.storage_selecionados) ? e.storage_selecionados : []).map(i => (i?.descricao || "").split("\n").filter(Boolean).join(" | ")).filter(Boolean);
+    return fotos.length ? fotos.join(" | ") : "(sem itens informados)";
+  };
+  const rows = [["JOINER", "@", "TIPO DE PEDIDO", "HORA QUE PEDIU", "GRUPO OU INDIVIDUAL", "TODOS OS PEDIDOS"]];
+  for (const e of ativos) {
+    rows.push([
+      e.joiner_nome || e.joiner_cog || "",
+      arroba(e.joiner_handle || e.joiner_cog),
+      e.metodo || "",
+      hora(e.created_at),
+      e.grupo_envio_codigo ? "Grupo (" + e.grupo_envio_codigo + ")" : "Individual",
+      pedidos(e),
+    ]);
+  }
+  const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type:"text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement("a"), { href:url, download:`envios_${new Date().toISOString().slice(0,10)}.csv` });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  return ativos.length;
 }
 
 // ── Botão de exportar planilha dos pedidos confirmados de um drop ──
