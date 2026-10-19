@@ -12608,7 +12608,7 @@ const SUIATSU_CFG = {
     { id: "EDIÇÃO LIMITADA A", foto: SU + "limitada-a.jpg", preco: 190, proporcao: "3/4", detalhes: SU_INFO_LIMITADA_A },
     { id: "EDIÇÃO LIMITADA B", foto: SU + "limitada-b.jpg", preco: 155, proporcao: "3/4", detalhes: SU_INFO_LIMITADA_B },
     { id: "EDIÇÃO REGULAR", foto: SU + "regular.jpg", preco: 110, proporcao: "3/4", detalhes: SU_INFO_REGULAR },
-    { id: "EDIÇÃO EXCLUSIVA DO FÃ-CLUBE", foto: SU + "fa-clube.svg", preco: 120, detalhes: SU_INFO_FA_CLUBE },
+    { id: "EDIÇÃO EXCLUSIVA DO FÃ-CLUBE", foto: SU + "fa-clube.jpg", preco: 120, detalhes: SU_INFO_FA_CLUBE },
     { id: "EDIÇÃO SOLO BANG CHAN", foto: SU + "bang-chan.jpg", preco: 125, detalhes: SU_INFO_SOLO },
     { id: "EDIÇÃO SOLO LEE KNOW", foto: SU + "lee-know.jpg", preco: 125, detalhes: SU_INFO_SOLO },
     { id: "EDIÇÃO SOLO CHANGBIN", foto: SU + "changbin.jpg", preco: 125, detalhes: SU_INFO_SOLO },
