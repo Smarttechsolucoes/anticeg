@@ -12482,7 +12482,7 @@ const ODD_POPUP_CFG = {
     { id: "SWEAT PANTS", foto: ODD_PU + "sweat-pants.png", preco: 378, nota: "Tamanho único | medidas não estão disponíveis" },
     { id: "WINDBREAKER", foto: ODD_PU + "windbreaker.png", preco: 415, nota: "Tamanho único | medidas não estão disponíveis" },
     { id: "BALL CAP SEOUL VER.", foto: ODD_PU + "ball-cap-seoul-ver.png", preco: 180 },
-    { id: "BANDANA SEOUL VER.", foto: ODD_PU + "bandana-seoul-ver.png", preco: 180 },
+    { id: "BANDANA SEOUL VER.", foto: ODD_PU + "bandana-seoul-ver.png", preco: 80 },
     { id: "TOTE BAG", foto: ODD_PU + "tote-bag.png", preco: 305 },
     { id: "POSTER BOOK", foto: ODD_PU + "poster-book.png", preco: 92 },
     { id: "PHOTO SET", foto: ODD_PU + "photo-set.png", preco: 68, tipos: ODD_TIPOS_8 },
