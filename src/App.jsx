@@ -12516,6 +12516,7 @@ const SUIATSU_PRAZO = new Date("2026-11-19T23:59:59-03:00");
 const SUIATSU_CFG = {
   slug: "suiatsu",
   get fechado() { return new Date() > SUIATSU_PRAZO; },
+  prazosPagamento: ["30 de outubro", "10 de novembro", "20 de novembro"],
   evento: "SUIATSU",
   tabelaEstoque: "suiatsu_estoque",
   titulo: "SUIATSU",
@@ -12524,7 +12525,7 @@ const SUIATSU_CFG = {
   capa: null,
   proporcao: "1/1",
   tags: ["PEDIDOS ATÉ 19/NOV", "LANÇAMENTO 25/NOV/2026", "ENVIO EM JAN/2027", "PAGAMENTO 30/OUT · 10/NOV · 20/NOV"],
-  infos: ["Lançamento: 25 de novembro de 2026", "Envio somente em janeiro de 2027", "O forms ficará aberto até o dia 19 de novembro", "Prazos de pagamento: 30 de outubro, 10 de novembro e 20 de novembro", "Poderão ser adicionados novos prazos de pagamento de acordo com a disponibilidade da GOM", "Ainda será adicionado FRETE INTERNACIONAL e TAXA DA RECEITA FEDERAL, previsto para janeiro e fevereiro", "Os valores dos álbuns podem DIMINUIR. Caso haja alteração de valor, será comunicado no grupo", "Os valores NÃO incluem POB de loja: valor apenas do álbum"],
+  infos: ["Lançamento: 25 de novembro de 2026", "Envio somente em janeiro de 2027", "O forms ficará aberto até o dia 19 de novembro", "Prazos de pagamento: 30 de outubro, 10 de novembro e 20 de novembro", "Ao escolher a data de pagamento, não será possível alterar, mesmo que existam novos prazos", "Poderão ser adicionados novos prazos de pagamento de acordo com a disponibilidade da GOM", "Ainda será adicionado FRETE INTERNACIONAL e TAXA DA RECEITA FEDERAL, previsto para janeiro e fevereiro", "Os valores dos álbuns podem DIMINUIR. Caso haja alteração de valor, será comunicado no grupo", "Os valores NÃO incluem POB de loja: valor apenas do álbum"],
   box: null,
   itens: [
     { id: "EDIÇÃO LIMITADA A", foto: SU + "limitada-a.jpg", preco: 190, proporcao: "3/4" },
@@ -12624,6 +12625,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   const [historico, setHistorico] = useState([]);
   const [fotoZoom, setFotoZoom] = useState(null);
   const [tipoModal, setTipoModal] = useState(null);
+  const [prazoPgto, setPrazoPgto] = useState("");
   const [estoqueMap, setEstoqueMap] = useState(null);
 
   // unidades restantes de um item/kit; null = sem controle de estoque
@@ -12675,6 +12677,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
     const modalFinal = itensSel.length > 0 ? "ITENS SOLTOS" : modalidade;
     if (cfg.fechado || !modalFinal || enviando) return;
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
+    if (cfg.prazosPagamento && !prazoPgto) { setErro("Escolha a data de pagamento."); return; }
     setEnviando(true); setErro(null); setEnviado(null);
     // confere o estoque de novo na hora de enviar (outra pessoa pode ter pedido antes)
     const mapaAtual = await carregarEstoqueWM(cfg);
@@ -12686,9 +12689,10 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
         setEnviando(false); return;
       }
     }
-    const obsFinal = modalFinal === "ITENS SOLTOS"
+    const obsBase = modalFinal === "ITENS SOLTOS"
       ? `Itens: ${itensSel.join(", ")} · Qtd: ${qtdEf}`
       : `Qtd: ${qtdEf}`;
+    const obsFinal = cfg.prazosPagamento ? `${obsBase} · Pagamento: ${prazoPgto}` : obsBase;
     const { error } = await supabase.from("formulario_pedidos").insert([{
       evento: cfg.evento,
       joiner_cog: user.cog,
@@ -12705,6 +12709,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       .eq("status", "pendente");
     const posicao = count || 1;
     setEnviado({ posicao });
+    setPrazoPgto("");
     carregarEstoqueWM(cfg).then(m => { if (m) setEstoqueMap(m); });
     const { data: hist } = await supabase.from("formulario_pedidos")
       .select("id, modalidade, observacoes, status, created_at")
@@ -12764,6 +12769,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
           {historico.map((h, i) => {
             const hQtd = h.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || "1";
             const itensStr = h.observacoes?.match(/Itens: ([^·]+)/)?.[1]?.trim();
+            const hPgto = h.observacoes?.match(/Pagamento:\s*([^·]+)/)?.[1]?.trim();
             return (
               <div key={h.id} style={{ background:"rgba(245,240,232,.02)", border:`1px solid ${h.status==="confirmado"?"rgba(74,222,128,.15)":h.status==="cancelado"?"rgba(255,107,107,.1)":"rgba(201,168,240,.15)"}`, borderRadius:12, padding:"14px 16px", marginBottom:8 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
@@ -12774,6 +12780,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
                       <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)" }}>{hQtd}x</span>
                     </div>
                     {itensStr && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{itensStr}</div>}
+                    {hPgto && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)" }}>Pagamento: {hPgto}</div>}
                     <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.22)" }}>{new Date(h.created_at).toLocaleDateString("pt-BR")} {new Date(h.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
                   </div>
                   <span style={{ fontFamily:mono, fontSize:10, color:corStatus(h.status), flexShrink:0 }}>{h.status}</span>
@@ -13012,6 +13019,25 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
               style={{ width:36, height:36, borderRadius:8, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color:"var(--offwhite)", fontSize:18, fontWeight:300, cursor: qtdEf >= qtdMax ? "default" : "pointer", opacity: qtdEf >= qtdMax ? .35 : 1, display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
             {qtdMax !== Infinity && <span style={{ fontFamily:mono, fontSize:9, color:"#f0c040" }}>máx. {qtdMax} (estoque)</span>}
           </div>
+        </div>
+      )}
+
+      {/* Data de pagamento (só nos drops com prazos de pagamento) */}
+      {modalidade && cfg.prazosPagamento && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.3)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:10 }}>Data de pagamento</div>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {cfg.prazosPagamento.map(d => {
+              const on = prazoPgto === d;
+              return (
+                <button key={d} onClick={() => setPrazoPgto(on ? "" : d)}
+                  style={{ border:`1px solid ${on?"var(--lilas)":"rgba(201,168,240,.3)"}`, borderRadius:8, padding:"9px 14px", background:on?"var(--lilas)":"transparent", color:on?"#000":"rgba(201,168,240,.9)", fontFamily:mono, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                  {on ? "✓ " : ""}{d}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontFamily:mono, fontSize:10, color:"#f0c040", marginTop:8, lineHeight:1.5 }}>⚠ Depois de enviar o pedido a data de pagamento não pode ser alterada, mesmo que existam novos prazos.</div>
         </div>
       )}
 
@@ -24196,6 +24222,7 @@ function AdminWaveMaker({ onCountChange, cfg = WM_CFG }) {
           const qtd = Number(p.observacoes?.match(/Qtd:\s*(\d+)/)?.[1] || 1);
           const itensStr = p.observacoes?.match(/Itens: ([^·]+)/)?.[1]?.trim();
           const itensList = itensStr ? itensStr.split(", ").map(s => s.trim()) : [];
+          const pgtoData = p.observacoes?.match(/Pagamento:\s*([^·]+)/)?.[1]?.trim();
           const wmInfo = WM_FOTOS[p.modalidade];
           const valorUnit = wmInfo ? wmInfo.preco
             : itensList.reduce((s, nome) => s + (WM_ITENS[nome]?.preco || 0), 0);
@@ -24222,6 +24249,7 @@ function AdminWaveMaker({ onCountChange, cfg = WM_CFG }) {
                     {valorTotal > 0 && <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>R${valorTotal}</span>}
                   </div>
                   {itensList.length > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{itensList.join(", ")}</div>}
+                  {pgtoData && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)" }}>Pagamento: {pgtoData}</div>}
                   <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}</div>
                 </div>
               </div>
