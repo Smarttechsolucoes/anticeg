@@ -8,6 +8,7 @@ import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
+import { lerPlanilha } from "./csvSimples.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
 import badgeFoxinyBronze  from "./assets/badges/foxiny_bronze.jpg.png";
@@ -8442,6 +8443,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [novoEvTipo,        setNovoEvTipo]        = useState("envio");
   const [savingEv,          setSavingEv]          = useState(false);
   const [filtroEnvio,       setFiltroEnvio]       = useState("todos");
+  const [exportandoEnvio,   setExportandoEnvio]   = useState(false);
   const [buscaEnvio,        setBuscaEnvio]        = useState("");
   const [verGrupos,         setVerGrupos]         = useState(false);
   const [expandedEnvio,     setExpandedEnvio]     = useState(new Set());
@@ -11443,9 +11445,14 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
             return (
               <div style={{ marginBottom:16 }}>
               <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-                <button onClick={() => { const n = exportarPlanilhaEnvios(envioSolic); if (!n) alert("Nenhuma solicitação para exportar."); }}
-                  style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39", cursor:"pointer", letterSpacing:".5px" }}>
-                  ↓ exportar planilha (Excel)
+                <button disabled={exportandoEnvio} onClick={async () => {
+                  setExportandoEnvio(true);
+                  try { const n = await exportarPlanilhaEnvios(envioSolic); if (!n) alert("Nenhuma solicitação para exportar."); }
+                  catch (e) { alert("Erro ao exportar: " + (e.message || e)); }
+                  setExportandoEnvio(false);
+                }}
+                  style={{ background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.25)", borderRadius:6, padding:"5px 14px", fontSize:10, fontFamily:"'DM Mono',monospace", color:"#BAFF39", cursor: exportandoEnvio ? "default" : "pointer", letterSpacing:".5px" }}>
+                  {exportandoEnvio ? "buscando na planilha…" : "↓ exportar planilha (Excel)"}
                 </button>
               </div>
               <input
@@ -24688,34 +24695,49 @@ function RunItVol2Tab({ user }) {
 }
 
 // ── Planilha geral das solicitações de envio nacional (abre no Excel) ──
-function exportarPlanilhaEnvios(lista) {
-  const ativos = lista.filter(e => e.status !== "cancelado")
-    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+// Cruza cada solicitante com as linhas dele na MASTERLIST, lida direto da planilha original (mesmos status).
+const PLANILHA_ORIGINAL_CSV = "https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995";
+async function exportarPlanilhaEnvios(lista) {
+  const ativos = lista.filter(e => e.status !== "cancelado");
+  if (!ativos.length) return 0;
+  const norm = v => String(v || "").trim().toLowerCase().replace(/^@/, "");
   const arroba = v => { const t = String(v || "").trim(); return t ? (t.startsWith("@") ? t : "@" + t) : ""; };
   const hora = v => v ? new Date(v).toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }).replace(", ", " ") : "";
-  const pedidos = e => {
-    const itens = (Array.isArray(e.itens) ? e.itens : []).map(i => i?.nome).filter(Boolean);
-    if (itens.length) return itens.join(" | ");
-    const fotos = (Array.isArray(e.storage_selecionados) ? e.storage_selecionados : []).map(i => (i?.descricao || "").split("\n").filter(Boolean).join(" | ")).filter(Boolean);
-    return fotos.length ? fotos.join(" | ") : "(sem itens informados)";
-  };
-  const rows = [["JOINER", "@", "TIPO DE PEDIDO", "HORA QUE PEDIU", "GRUPO OU INDIVIDUAL", "TODOS OS PEDIDOS"]];
+
+  const res = await fetch(PLANILHA_ORIGINAL_CSV);
+  if (!res.ok) throw new Error("não consegui abrir a planilha original (erro " + res.status + ")");
+  const { registros } = lerPlanilha(await res.text());
+  const porJoiner = {};
+  for (const r of registros) { const k = norm(r["@"]); if (k) (porJoiner[k] = porJoiner[k] || []).push(r); }
+
+  // uma linha de pedido por joiner: a solicitação mais recente dele (que não foi cancelada)
+  const maisRecente = {};
   for (const e of ativos) {
-    rows.push([
+    const k = norm(e.joiner_cog || e.joiner_handle);
+    if (!maisRecente[k] || new Date(e.created_at) > new Date(maisRecente[k].created_at)) maisRecente[k] = e;
+  }
+  const solicitantes = Object.entries(maisRecente).sort((a, b) => new Date(a[1].created_at) - new Date(b[1].created_at));
+
+  const COLS = ["ID", "STATUS", "ABA / CEG", "NOME DO ITEM", "ITEM DATA", "ITEM", "PREÇO ITEM", "FRETE DATA", "PREÇO FRETE", "FRETE", "RF DATA", "PREÇO RF", "RF", "NACIONAL", "CHEGOU?"];
+  const rows = [["JOINER", "@", "TIPO DE PEDIDO", "HORA QUE PEDIU", "GRUPO OU INDIVIDUAL", ...COLS]];
+  for (const [k, e] of solicitantes) {
+    const base = [
       e.joiner_nome || e.joiner_cog || "",
       arroba(e.joiner_handle || e.joiner_cog),
       e.metodo || "",
       hora(e.created_at),
       e.grupo_envio_codigo ? "Grupo (" + e.grupo_envio_codigo + ")" : "Individual",
-      pedidos(e),
-    ]);
+    ];
+    const itens = porJoiner[k] || [];
+    if (!itens.length) { rows.push([...base, ...COLS.map(c => c === "NOME DO ITEM" ? "(sem itens na MASTERLIST)" : "")]); continue; }
+    for (const it of itens) rows.push([...base, ...COLS.map(c => it[c] ?? "")]);
   }
   const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type:"text/csv;charset=utf-8;" });
+  const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement("a"), { href:url, download:`envios_${new Date().toISOString().slice(0,10)}.csv` });
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  return ativos.length;
+  return solicitantes.length;
 }
 
 // ── Botão de exportar planilha dos pedidos confirmados de um drop ──

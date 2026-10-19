@@ -1,0 +1,46 @@
+// ── Planilha geral das solicitações de envio nacional (abre no Excel) ──
+// Cruza cada solicitante com as linhas dele na MASTERLIST, lida direto da planilha original (mesmos status).
+const PLANILHA_ORIGINAL_CSV = "https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995";
+async function exportarPlanilhaEnvios(lista) {
+  const ativos = lista.filter(e => e.status !== "cancelado");
+  if (!ativos.length) return 0;
+  const norm = v => String(v || "").trim().toLowerCase().replace(/^@/, "");
+  const arroba = v => { const t = String(v || "").trim(); return t ? (t.startsWith("@") ? t : "@" + t) : ""; };
+  const hora = v => v ? new Date(v).toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }).replace(", ", " ") : "";
+
+  const res = await fetch(PLANILHA_ORIGINAL_CSV);
+  if (!res.ok) throw new Error("não consegui abrir a planilha original (erro " + res.status + ")");
+  const { registros } = lerPlanilha(await res.text());
+  const porJoiner = {};
+  for (const r of registros) { const k = norm(r["@"]); if (k) (porJoiner[k] = porJoiner[k] || []).push(r); }
+
+  // uma linha de pedido por joiner: a solicitação mais recente dele (que não foi cancelada)
+  const maisRecente = {};
+  for (const e of ativos) {
+    const k = norm(e.joiner_cog || e.joiner_handle);
+    if (!maisRecente[k] || new Date(e.created_at) > new Date(maisRecente[k].created_at)) maisRecente[k] = e;
+  }
+  const solicitantes = Object.entries(maisRecente).sort((a, b) => new Date(a[1].created_at) - new Date(b[1].created_at));
+
+  const COLS = ["ID", "STATUS", "ABA / CEG", "NOME DO ITEM", "ITEM DATA", "ITEM", "PREÇO ITEM", "FRETE DATA", "PREÇO FRETE", "FRETE", "RF DATA", "PREÇO RF", "RF", "NACIONAL", "CHEGOU?"];
+  const rows = [["JOINER", "@", "TIPO DE PEDIDO", "HORA QUE PEDIU", "GRUPO OU INDIVIDUAL", ...COLS]];
+  for (const [k, e] of solicitantes) {
+    const base = [
+      e.joiner_nome || e.joiner_cog || "",
+      arroba(e.joiner_handle || e.joiner_cog),
+      e.metodo || "",
+      hora(e.created_at),
+      e.grupo_envio_codigo ? "Grupo (" + e.grupo_envio_codigo + ")" : "Individual",
+    ];
+    const itens = porJoiner[k] || [];
+    if (!itens.length) { rows.push([...base, ...COLS.map(c => c === "NOME DO ITEM" ? "(sem itens na MASTERLIST)" : "")]); continue; }
+    for (const it of itens) rows.push([...base, ...COLS.map(c => it[c] ?? "")]);
+  }
+  const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement("a"), { href:url, download:`envios_${new Date().toISOString().slice(0,10)}.csv` });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  return solicitantes.length;
+}
+
