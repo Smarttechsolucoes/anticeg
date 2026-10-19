@@ -12521,8 +12521,8 @@ const SUIATSU_CFG = {
   subtitulo: "『SUIATSU』 — lançamento em 25 de novembro de 2026",
   capa: null,
   proporcao: "1/1",
-  tags: ["LANÇAMENTO 25/NOV/2026", "ENVIO EM JAN/2027", "VALOR APENAS DO ÁLBUM"],
-  infos: ["Lançamento: 25 de novembro de 2026", "Envio somente em janeiro de 2027", "Os valores NÃO incluem POB de loja: valor apenas do álbum"],
+  tags: ["LANÇAMENTO 25/NOV/2026", "ENVIO EM JAN/2027", "PAGAMENTO 30/OUT · 10/NOV · 20/NOV"],
+  infos: ["Lançamento: 25 de novembro de 2026", "Envio somente em janeiro de 2027", "Prazos de pagamento: 30 de outubro, 10 de novembro e 20 de novembro", "Os valores NÃO incluem POB de loja: valor apenas do álbum"],
   box: null,
   itens: [
     { id: "EDIÇÃO LIMITADA A", foto: SU + "limitada-a.jpg", preco: 190, proporcao: "3/4" },
@@ -25959,7 +25959,7 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "suiatsu",
       img: "/suiatsu/limitada-a.jpg",
-      tags: ["Lançamento 25/11", "Envio em janeiro/2027"],
+      tags: ["Lançamento 25/11", "Envio em janeiro/2027", "3 prazos de pagamento"],
       info: "Edições Limitada A e B, Regular, Fã-clube e 8 edições Solo",
     },
     {
