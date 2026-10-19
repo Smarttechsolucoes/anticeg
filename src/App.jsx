@@ -12512,8 +12512,10 @@ const ODD_POPUP_PRAZO = new Date("2026-11-05T23:59:59-03:00");
 
 // SUIATSU — Stray Kids JAPAN 4th Mini Album. Lançamento 25/11/2026, envio só em janeiro de 2027.
 const SU = "/suiatsu/";
+const SUIATSU_PRAZO = new Date("2026-11-19T23:59:59-03:00");
 const SUIATSU_CFG = {
   slug: "suiatsu",
+  get fechado() { return new Date() > SUIATSU_PRAZO; },
   evento: "SUIATSU",
   tabelaEstoque: "suiatsu_estoque",
   titulo: "SUIATSU",
@@ -12521,8 +12523,8 @@ const SUIATSU_CFG = {
   subtitulo: "『SUIATSU』 — lançamento em 25 de novembro de 2026",
   capa: null,
   proporcao: "1/1",
-  tags: ["LANÇAMENTO 25/NOV/2026", "ENVIO EM JAN/2027", "PAGAMENTO 30/OUT · 10/NOV · 20/NOV"],
-  infos: ["Lançamento: 25 de novembro de 2026", "Envio somente em janeiro de 2027", "Prazos de pagamento: 30 de outubro, 10 de novembro e 20 de novembro", "Os valores NÃO incluem POB de loja: valor apenas do álbum"],
+  tags: ["PEDIDOS ATÉ 19/NOV", "LANÇAMENTO 25/NOV/2026", "ENVIO EM JAN/2027", "PAGAMENTO 30/OUT · 10/NOV · 20/NOV"],
+  infos: ["Lançamento: 25 de novembro de 2026", "Envio somente em janeiro de 2027", "O forms ficará aberto até o dia 19 de novembro", "Prazos de pagamento: 30 de outubro, 10 de novembro e 20 de novembro", "Poderão ser adicionados novos prazos de pagamento de acordo com a disponibilidade da GOM", "Ainda será adicionado FRETE INTERNACIONAL e TAXA DA RECEITA FEDERAL, previsto para janeiro e fevereiro", "Os valores dos álbuns podem DIMINUIR. Caso haja alteração de valor, será comunicado no grupo", "Os valores NÃO incluem POB de loja: valor apenas do álbum"],
   box: null,
   itens: [
     { id: "EDIÇÃO LIMITADA A", foto: SU + "limitada-a.jpg", preco: 190, proporcao: "3/4" },
@@ -24684,7 +24686,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",         evento:ODD_CFG.evento , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
     { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
     { id:"odd-fresh-popup-admin", label:ODD_POPUP_CFG.titulo, icon:"🍋", count:oddPopupCount, tipo:"forms",    cor:"var(--lilas)",         evento:ODD_POPUP_CFG.evento , aberto:agora <= ODD_POPUP_PRAZO },
-    { id:"suiatsu-admin", label:SUIATSU_CFG.titulo, icon:"💿", count:suiatsuCount, tipo:"forms", cor:"var(--lilas)", evento:SUIATSU_CFG.evento , aberto:true },
+    { id:"suiatsu-admin", label:SUIATSU_CFG.titulo, icon:"💿", count:suiatsuCount, tipo:"forms", cor:"var(--lilas)", evento:SUIATSU_CFG.evento , aberto:agora <= SUIATSU_PRAZO },
   ];
   const STATUS_COLS = [
     { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -25952,14 +25954,14 @@ function PrevendaTab({ user }) {
     {
       key: "suiatsu",
       ativo: true,
-      fechado: false,
+      fechado: now > SUIATSU_PRAZO,
       cor: "lilas",
       titulo: "SUIATSU",
       subtitulo: "Stray Kids · JAPAN 4th Mini Album",
       url: null,
       tab: "suiatsu",
       img: "/suiatsu/limitada-a.jpg",
-      tags: ["Lançamento 25/11", "Envio em janeiro/2027", "3 prazos de pagamento"],
+      tags: ["Pedidos até 19/11", "Lançamento 25/11", "Envio em janeiro/2027", "3 prazos de pagamento"],
       info: "Edições Limitada A e B, Regular, Fã-clube e 8 edições Solo",
     },
     {
