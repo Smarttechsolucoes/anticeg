@@ -7,7 +7,7 @@ import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
-import { smolmerchLinhas, SMOLMERCH_OPCOES } from "./smolmerchDados.js";
+import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import bonequinha from "./assets/bonequinha.png";
 import badgeFoxinyBronze  from "./assets/badges/foxiny_bronze.jpg.png";
@@ -24634,7 +24634,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= WMAG_LK_CFG.deadline },
     { id:"dazed-seungmin",   label:"Dazed & Confused Seungmin", icon:"◈", count:wmagDzCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= DAZED_SM_CFG.deadline },
     { id:"esquire-hyunjin", label:"Esquire Hyunjin", icon:"◈", count:esqHjCount, tipo:"externo",  cor:"rgba(245,240,232,.7)", aberto:agora <= ESQUIRE_HJ_CFG.deadline },
-    { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
+    { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SMOLMERCH_CFG.deadline },
     { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:POPUP_WEEKS.some(w => agora <= w.deadline) },
     { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= BAZAAR_IN_DEADLINE },
     { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:false },
