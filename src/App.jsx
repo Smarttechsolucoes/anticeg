@@ -8355,6 +8355,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [paperTalesCount,  setPaperTalesCount]  = useState(0);
   const [oddFreshCount,    setOddFreshCount]    = useState(0);
   const [promo13Count,     setPromo13Count]     = useState(0);
+  const [oddPopupCount,   setOddPopupCount]   = useState(0);
   const [dropsStats,       setDropsStats]       = useState({});
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
@@ -8725,8 +8726,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setOddFreshCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", PROMO13_CFG.evento).eq("status", "pendente")
       .then(({ count }) => { if (count) setPromo13Count(count); });
+    supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", ODD_POPUP_CFG.evento).eq("status", "pendente")
+      .then(({ count }) => { if (count) setOddPopupCount(count); });
     supabase.from("formulario_pedidos").select("evento, status")
-      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2", PT_CFG.evento, ODD_CFG.evento, PROMO13_CFG.evento])
+      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2", PT_CFG.evento, ODD_CFG.evento, PROMO13_CFG.evento, ODD_POPUP_CFG.evento])
       .then(({ data }) => {
         if (!data) return;
         const stats = {};
@@ -9032,7 +9035,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + smolmerchCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + smolmerchCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9167,6 +9170,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 { evento:PT_CFG.evento,                label:PT_CFG.titulo,  tab:"paper-tales-admin", cor:"rgba(201,168,240,.85)", icon:"📜" },
                 { evento:ODD_CFG.evento,               label:ODD_CFG.titulo, tab:"odd-fresh-admin",   cor:"rgba(201,168,240,.85)", icon:"🍋" },
                 { evento:PROMO13_CFG.evento,           label:PROMO13_CFG.titulo, tab:"promo-13-admin", cor:"rgba(201,168,240,.85)", icon:"🏷️" },
+                { evento:ODD_POPUP_CFG.evento,         label:ODD_POPUP_CFG.titulo, tab:"odd-fresh-popup-admin", cor:"rgba(201,168,240,.85)", icon:"🍋" },
               ];
               const STATUS_COLS = [
                 { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -9811,12 +9815,12 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","wmag-leeknow","dazed-seungmin","esquire-hyunjin","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","smolmerch"].includes(adminMainTab) && (
+      {["revista","wmag","wmag-leeknow","dazed-seungmin","esquire-hyunjin","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","smolmerch"].includes(adminMainTab) && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
             ← Todos os drops
           </button>
-            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "smolmerch":"Smol Merch" }[adminMainTab]} />
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "smolmerch":"Smol Merch" }[adminMainTab]} />
         </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
@@ -9835,8 +9839,9 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "paper-tales-admin" && <AdminWaveMaker cfg={PT_CFG} onCountChange={setPaperTalesCount} />}
       {adminMainTab === "odd-fresh-admin"   && <AdminWaveMaker cfg={ODD_CFG} onCountChange={setOddFreshCount} />}
       {adminMainTab === "promo-13-admin"    && <AdminWaveMaker cfg={PROMO13_CFG} onCountChange={setPromo13Count} />}
+      {adminMainTab === "odd-fresh-popup-admin" && <AdminWaveMaker cfg={ODD_POPUP_CFG} onCountChange={setOddPopupCount} />}
       {adminMainTab === "smolmerch"         && <AdminSmolMerch onCountChange={setSmolmerchCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} smolmerchCount={smolmerchCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} smolmerchCount={smolmerchCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -12453,6 +12458,53 @@ const ODD_CFG = {
   kits: [],
 };
 
+// ODD & FRESH POP-UP — itens do pop-up, valores ainda a definir. Itens com "tipos" são escolhidos por tipo.
+const ODD_PU = "/odd-fresh-popup/";
+const ODD_TIPOS_8 = ["Wolf Chan", "Leebit", "Dwaekki", "Jiniret", "Han Quokka", "BbokAri", "PuppyM", "FoxI.Ny"];
+const ODD_TIPOS_9 = [...ODD_TIPOS_8, "Tasy"];
+const ODD_POPUP_CFG = {
+  slug: "odd-fresh-popup",
+  evento: "ODD & FRESH POP-UP",
+  tabelaEstoque: "odd_fresh_popup_estoque",
+  titulo: "ODD & FRESH POP-UP",
+  grupo: "STRAY KIDS · POP-UP",
+  subtitulo: "Itens do pop-up ODD & FRESH",
+  capa: "/odd-fresh/capa.jpg",
+  capaAltura: 320,
+  proporcao: "1/1",
+  tags: ["PEDIDOS ATÉ 09/NOV", "VALORES A DEFINIR"],
+  infos: ["Pedidos aceitos até: 09 de novembro", "Valores a definir", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)"],
+  box: null,
+  itens: [
+    { id: "HOODIE", foto: ODD_PU + "hoodie.png", preco: null, nota: "Tamanho único" },
+    { id: "LONG SLEEVE", foto: ODD_PU + "long-sleeve.png", preco: null, nota: "Tamanho único" },
+    { id: "T-SHIRT SEOUL VER.", foto: ODD_PU + "t-shirt-seoul-ver.png", preco: null, nota: "Tamanho único" },
+    { id: "SWEAT PANTS", foto: ODD_PU + "sweat-pants.png", preco: null, nota: "Tamanho único" },
+    { id: "WINDBREAKER", foto: ODD_PU + "windbreaker.png", preco: null, nota: "Tamanho único" },
+    { id: "BALL CAP SEOUL VER.", foto: ODD_PU + "ball-cap-seoul-ver.png", preco: null },
+    { id: "BANDANA SEOUL VER.", foto: ODD_PU + "bandana-seoul-ver.png", preco: null },
+    { id: "TOTE BAG", foto: ODD_PU + "tote-bag.png", preco: null },
+    { id: "POSTER BOOK", foto: ODD_PU + "poster-book.png", preco: null },
+    { id: "PHOTO SET", foto: ODD_PU + "photo-set.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "ACRYLIC STOPPER", foto: ODD_PU + "acrylic-stopper.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "PHOTOCARD HOLDER SET", foto: ODD_PU + "photocard-holder-set.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO BOWL", foto: ODD_PU + "skzoo-bowl.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO CAN BADGE HOLDER SET", foto: ODD_PU + "skzoo-can-badge-holder-set.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO CHARM HOOK", foto: ODD_PU + "skzoo-charm-hook.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO FIGURE PHONE STAND", foto: ODD_PU + "skzoo-figure-phone-stand.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO FIGURE TUMBLER", foto: ODD_PU + "skzoo-figure-tumbler.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO MOOD LAMP", foto: ODD_PU + "skzoo-mood-lamp.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "SKZOO PLUSH MINI CAKE VER.", foto: ODD_PU + "skzoo-plush-mini-cake-ver.png", preco: null, tipos: ODD_TIPOS_8 },
+    { id: "CAKE POUCH", foto: ODD_PU + "cake-pouch.png", preco: null, tipos: ODD_TIPOS_9 },
+    { id: "SCRUBBER", foto: ODD_PU + "scrubber.png", preco: null, tipos: ODD_TIPOS_9 },
+    { id: "RUG", foto: ODD_PU + "rug.png", preco: null, tipos: ODD_TIPOS_9 },
+    { id: "SKZOO SECRET MINI CHARM", foto: ODD_PU + "skzoo-secret-mini-charm.png", preco: null, nota: "Aleatório: 1 de 8" },
+  ],
+  kits: [],
+  get fechado() { return new Date() > ODD_POPUP_PRAZO; },
+};
+const ODD_POPUP_PRAZO = new Date("2026-11-09T23:59:59-03:00");
+
 // PROMO 13 — itens do Paper Tale e do Wave Maker com 13% de desconto, estoque limitado, sem data de fechamento.
 const PROMO13_CFG = {
   slug: "promo-13",
@@ -12522,7 +12574,7 @@ async function carregarEstoqueWM(cfg) {
 
 function WaveMakerTab({ user, cfg = WM_CFG }) {
   const mono = "'DM Mono', monospace";
-  const fmtPreco = n => `R$${n}`;
+  const fmtPreco = n => n == null ? "a definir" : `R$${n}`;
   const [modalidade, setModalidade] = useState(null);
   const [itensSel, setItensSel] = useState([]);
   const [quantidade, setQuantidade] = useState(1);
@@ -12540,6 +12592,8 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   const rotuloEstoque = (n) => `${n} ${n === 1 ? "unidade disponível" : "unidades disponíveis"}`;
 
   const ITENS_WM = cfg.itens;
+  // item pelo id; itens com tipos são guardados como "ITEM - TIPO"
+  const achaItem = id => ITENS_WM.find(x => x.id === id || (x.tipos && id.startsWith(x.id + " - ")));
   const KITS_WM = cfg.kits;
   const BOX_WM = cfg.box;
 
@@ -12776,7 +12830,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px,1fr))", gap:12, marginBottom:24 }}>
         {ITENS_WM.map(it => {
-          const sel = itensSel.includes(it.id);
+          const sel = it.tipos ? itensSel.some(x => x.startsWith(it.id + " - ")) : itensSel.includes(it.id);
           const rest = restante(it.id);
           const indisp = rest !== null && rest <= 0;
           return (
@@ -12789,10 +12843,26 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
                 <div style={{ fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(it.preco)}</div>
+                {it.nota && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.45)", letterSpacing:".3px", marginTop:2 }}>{it.nota}</div>}
                 {!indisp && rest !== null && (
                   <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
                 )}
-                {indisp ? (
+                {it.tipos ? (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:6 }}>
+                    {it.tipos.map(t => {
+                      const tid = it.id + " - " + t;
+                      const on = itensSel.includes(tid);
+                      const r = restante(tid);
+                      const off = r !== null && r <= 0;
+                      return (
+                        <button key={t} disabled={off} onClick={() => { setModalidade("ITENS SOLTOS"); toggleItem(tid); }}
+                          style={{ border:`1px solid ${on?"var(--lilas)":"rgba(201,168,240,.3)"}`, borderRadius:6, padding:"4px 7px", background:on?"var(--lilas)":"transparent", color:on?"#000":off?"rgba(245,240,232,.25)":"rgba(201,168,240,.85)", fontFamily:mono, fontSize:9, fontWeight:700, cursor:off?"not-allowed":"pointer", textDecoration:off?"line-through":"none" }}>
+                          {on ? "✓ " : ""}{t}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : indisp ? (
                   <button disabled style={{ marginTop:6, border:"1px solid rgba(245,240,232,.1)", borderRadius:8, padding:"6px 0", background:"rgba(245,240,232,.04)", color:"rgba(255,107,107,.7)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"1px", cursor:"not-allowed" }}>
                     INDISPONÍVEL
                   </button>
@@ -12853,16 +12923,17 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
           {modalidade === "ITENS SOLTOS" && itensSel.length > 0 ? (
             <>
               {itensSel.map(id => {
-                const it = ITENS_WM.find(x => x.id === id);
+                const it = achaItem(id);
                 return it ? (
                   <div key={id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingBottom:8, marginBottom:8, borderBottom:"1px solid rgba(245,240,232,.06)" }}>
-                    <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{it.id}</span>
+                    <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>{id}</span>
                     <span style={{ fontFamily:mono, fontSize:11, color:"var(--laranja)", fontWeight:700 }}>{fmtPreco(it.preco)}</span>
                   </div>
                 ) : null;
               })}
               {(() => {
-                const subtotal = itensSel.reduce((s,id) => { const it = ITENS_WM.find(x => x.id === id); return s + (it ? it.preco : 0); }, 0) * qtdEf;
+                const semPreco = itensSel.some(id => achaItem(id)?.preco == null);
+                const subtotal = itensSel.reduce((s,id) => { const it = achaItem(id); return s + (it ? (it.preco ?? 0) : 0); }, 0) * qtdEf;
                 const total = comDesconto(cfg, subtotal);
                 return (
                   <>
@@ -12880,7 +12951,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:4 }}>
                       <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>TOTAL</span>
                       <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"var(--lilas)" }}>
-                        {cfg.desconto ? fmtReais(total) : `R$${total}`}
+                        {semPreco ? "a definir" : cfg.desconto ? fmtReais(total) : `R$${total}`}
                       </span>
                     </div>
                   </>
@@ -23908,7 +23979,7 @@ function AdminWaveMaker({ onCountChange, cfg = WM_CFG }) {
   const mono = "'DM Mono',monospace";
   // modalidade -> {foto, preco} (box e kits) e item -> {foto, preco} (itens soltos)
   const WM_FOTOS = Object.fromEntries([cfg.box, ...cfg.kits].filter(Boolean).map(x => [x.id, { ...x, preco: comDesconto(cfg, x.preco) }]));
-  const WM_ITENS = Object.fromEntries(cfg.itens.map(x => [x.id, { ...x, preco: comDesconto(cfg, x.preco) }]));
+  const WM_ITENS = Object.fromEntries(cfg.itens.flatMap(x => (x.tipos ? x.tipos.map(t => [x.id + " - " + t, x]) : [[x.id, x]])).map(([k, x]) => [k, { ...x, preco: comDesconto(cfg, x.preco) }]));
   const [pedidos, setPedidos] = useState([]);
   const [filtro, setFiltro] = useState("pendente");
   const [erroAdmin, setErroAdmin] = useState(null);
@@ -24400,6 +24471,7 @@ function ExportarPedidosDrop({ dropId, label }) {
     "paper-tales-admin": { tabela:"formulario_pedidos", evento:PT_CFG.evento,               linhas:p => linhasForm(PT_CFG, p) },
     "odd-fresh-admin":   { tabela:"formulario_pedidos", evento:ODD_CFG.evento,              linhas:p => linhasForm(ODD_CFG, p) },
     "promo-13-admin":    { tabela:"formulario_pedidos", evento:PROMO13_CFG.evento,          linhas:p => linhasForm(PROMO13_CFG, p) },
+    "odd-fresh-popup-admin": { tabela:"formulario_pedidos", evento:ODD_POPUP_CFG.evento,       linhas:p => linhasForm(ODD_POPUP_CFG, p) },
   };
 
   async function exportarPedidosJoiners() {
@@ -24531,7 +24603,7 @@ function AdminRecrutadores() {
 }
 
 // ── Admin Todos os Drops ────────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, smolmerchCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, smolmerchCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const agora = new Date();
   const DROPS = [
@@ -24552,6 +24624,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",         evento:PT_CFG.evento , aberto:!PT_CFG.fechado },
     { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",         evento:ODD_CFG.evento , aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
     { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
+    { id:"odd-fresh-popup-admin", label:ODD_POPUP_CFG.titulo, icon:"🍋", count:oddPopupCount, tipo:"forms",    cor:"var(--lilas)",         evento:ODD_POPUP_CFG.evento , aberto:agora <= ODD_POPUP_PRAZO },
   ];
   const STATUS_COLS = [
     { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -25817,6 +25890,19 @@ function PrevendaTab({ user }) {
 
   const formularios = [
     {
+      key: "odd-fresh-popup",
+      ativo: true,
+      fechado: now > ODD_POPUP_PRAZO,
+      cor: "lilas",
+      titulo: "ODD & FRESH POP-UP",
+      subtitulo: "Stray Kids Pop-up · itens do pop-up",
+      url: null,
+      tab: "odd-fresh-popup",
+      img: ODD_POPUP_CFG.capa,
+      tags: ["Pedidos até 09/11", "Valores a definir"],
+      info: "Roupas em tamanho único · escolha o tipo de cada item no formulário",
+    },
+    {
       key: "promo-13",
       ativo: true,
       fechado: false,
@@ -26934,7 +27020,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2","paper-tales","odd-fresh","promo-13"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2","paper-tales","odd-fresh","promo-13","odd-fresh-popup"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -27605,6 +27691,7 @@ export default function App() {
           {tab === "paper-tales" && <WaveMakerTab user={user} cfg={PT_CFG} />}
           {tab === "odd-fresh" && <WaveMakerTab user={user} cfg={ODD_CFG} />}
           {tab === "promo-13" && <WaveMakerTab user={user} cfg={PROMO13_CFG} />}
+          {tab === "odd-fresh-popup" && <WaveMakerTab user={user} cfg={ODD_POPUP_CFG} />}
           {tab === "mercari" && <MercariTab />}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}
