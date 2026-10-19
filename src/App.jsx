@@ -15170,6 +15170,18 @@ function ClaimAreaTeste() {
   );
 }
 
+// O banco devolve no máximo 1000 linhas por consulta: busca em páginas até acabar (sem isso as mais novas somem).
+async function buscarPaginado(montar) {
+  const todas = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await montar().range(de, de + 999);
+    if (error || !data) break;
+    todas.push(...data);
+    if (data.length < 1000) break;
+  }
+  return todas;
+}
+
 function ClaimHistorico() {
   const mono = "'DM Mono',monospace";
   const [eventos, setEventos] = useState(null);
@@ -15184,15 +15196,15 @@ function ClaimHistorico() {
       if (!evData?.length) { setEventos([]); return; }
       setEventos(evData);
       const evIds = evData.map(e => e.id);
-      const { data: setsData } = await supabase.from("claim_sets")
-        .select("*").in("evento_id", evIds).neq("status","cancelado").order("numero");
+      const setsData = await buscarPaginado(() => supabase.from("claim_sets")
+        .select("*").in("evento_id", evIds).neq("status","cancelado").order("numero").order("id"));
       const setsMap = {};
       (setsData || []).forEach(s => { if (!setsMap[s.evento_id]) setsMap[s.evento_id] = []; setsMap[s.evento_id].push(s); });
       setSets(setsMap);
       const setIds = (setsData || []).map(s => s.id);
       if (!setIds.length) return;
-      const { data: resData } = await supabase.from("claim_reservas")
-        .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      const resData = await buscarPaginado(() => supabase.from("claim_reservas")
+        .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       const resMap = {};
       (resData || []).forEach(r => { if (!resMap[r.set_id]) resMap[r.set_id] = []; resMap[r.set_id].push(r); });
       setReservas(resMap);
@@ -15297,11 +15309,11 @@ function ClaimScoreboard() {
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const { data: resData } = await supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      const resData = await buscarPaginado(() => supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       (resData || []).forEach(r => { if (!newRes[r.set_id]) newRes[r.set_id] = []; newRes[r.set_id].push(r); });
     }
     setReservas(newRes);
-    const { data: sbData } = await supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at");
+    const sbData = await buscarPaginado(() => supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at").order("id"));
     const sbMap = {};
     (sbData || []).forEach(r => { if (!sbMap[r.evento_id]) sbMap[r.evento_id] = []; sbMap[r.evento_id].push(r); });
     setStandby(sbMap);
@@ -15466,8 +15478,8 @@ function ClaimPublicoPage({ user }) {
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const { data: resData } = await supabase.from("claim_reservas")
-        .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      const resData = await buscarPaginado(() => supabase.from("claim_reservas")
+        .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       (resData || []).forEach(r => {
         if (!newRes[r.set_id]) newRes[r.set_id] = [];
         newRes[r.set_id].push(r);
@@ -22701,18 +22713,18 @@ function AdminClaimEventos() {
     setEventos(evData || []);
     if (!evData?.length) return;
     const evIds = evData.map(e => e.id);
-    const { data: setsData } = await supabase.from("claim_sets").select("*").in("evento_id", evIds).order("numero");
+    const setsData = await buscarPaginado(() => supabase.from("claim_sets").select("*").in("evento_id", evIds).order("numero").order("id"));
     const setsMap = {};
     (setsData || []).forEach(s => { if (!setsMap[s.evento_id]) setsMap[s.evento_id] = []; setsMap[s.evento_id].push(s); });
     setSets(setsMap);
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const { data: resData } = await supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at");
+      const resData = await buscarPaginado(() => supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       (resData || []).forEach(r => { if (!newRes[r.set_id]) newRes[r.set_id] = []; newRes[r.set_id].push(r); });
     }
     setReservas(newRes);
-    const { data: sbData } = await supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at");
+    const sbData = await buscarPaginado(() => supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at").order("id"));
     const sbMap = {};
     (sbData || []).forEach(r => { if (!sbMap[r.evento_id]) sbMap[r.evento_id] = []; sbMap[r.evento_id].push(r); });
     setStandby(sbMap);
