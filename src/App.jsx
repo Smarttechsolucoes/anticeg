@@ -22666,11 +22666,17 @@ function AdminClaimEventos() {
   const [addClaimErro, setAddClaimErro] = useState("");
   const [novaTag, setNovaTag] = useState("");
 
+  // datetime-local vem sem fuso: o horário digitado é o de Brasília (UTC-3)
+  const aberturaPassada = (v) => { const d = new Date(v + ":00-03:00"); return d < new Date(Date.now() - 3600000) ? d : null; };
+  const avisoPassado = (d) => "O horário de abertura (" + d.toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }) + ") já passou, então a claim abre NA HORA. Confira o ano e o horário. Salvar assim mesmo?";
+
   async function salvarEdicaoEvento() {
     if (!editEvento) return;
+    const passada = editEvento.abertura ? aberturaPassada(editEvento.abertura) : null;
+    if (passada && !window.confirm(avisoPassado(passada))) return;
     setEditSalvando(true);
     const updates = { nome: editEvento.nome, valor: Number(editEvento.valor), prazo: editEvento.prazo };
-    if (editEvento.abertura) updates.abertura = new Date(editEvento.abertura).toISOString();
+    if (editEvento.abertura) updates.abertura = new Date(editEvento.abertura + ":00-03:00").toISOString();
     await supabase.from("claim_eventos").update(updates).eq("id", editEvento.id);
     await fetchTudo();
     setEditSalvando(false);
@@ -22751,6 +22757,8 @@ function AdminClaimEventos() {
   async function criarEvento() {
     if (!form.nome.trim() || !form.valor || !form.abertura || !membrosForm.length) { alert(ehItemForm ? "Preencha nome, valor, abertura e quantidade." : "Preencha nome, valor, abertura e membros."); return; }
     if (ehItemForm && membrosForm.some(m => MEMBROS_SK8.includes(m))) { alert("O nome da vaga não pode ser o nome de um membro. Use, por exemplo, \"Unidade\"."); return; }
+    const passadaNovo = aberturaPassada(form.abertura);
+    if (passadaNovo && !window.confirm(avisoPassado(passadaNovo))) return;
     setSalvando(true);
     const { data: ev, error } = await supabase.from("claim_eventos").insert([{
       nome: form.nome.trim(), valor: Number(form.valor), prazo: form.prazo || null,
@@ -23260,7 +23268,7 @@ function AdminClaimEventos() {
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background: ev.sem_novos_sets ? "rgba(255,107,107,.1)" : "rgba(245,240,232,.04)", border:`1px solid ${ev.sem_novos_sets ? "rgba(255,107,107,.35)" : "rgba(245,240,232,.12)"}`, borderRadius:4, color: ev.sem_novos_sets ? "rgba(255,107,107,.85)" : "rgba(245,240,232,.4)", cursor:"pointer", fontWeight: ev.sem_novos_sets ? 700 : 400 }}>
                       {ev.sem_novos_sets ? "⏸ SEM NOVOS SETS · retomar" : "⏸ PARAR NOVOS SETS"}
                     </button>
-                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(ev.abertura).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
+                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(new Date(ev.abertura).getTime() - 3 * 3600000).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
                       EDITAR
                     </button>
@@ -23415,7 +23423,7 @@ function AdminClaimEventos() {
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(ev.abertura).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
+                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(new Date(ev.abertura).getTime() - 3 * 3600000).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
                       EDITAR
                     </button>
