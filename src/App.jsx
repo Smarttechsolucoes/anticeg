@@ -12473,7 +12473,7 @@ const ODD_POPUP_CFG = {
   capaAltura: 320,
   proporcao: "1/1",
   tags: ["PEDIDOS ATÉ 08/NOV"],
-  infos: ["Pedidos aceitos até: 08 de novembro", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional"],
+  infos: ["Pedidos aceitos até: 08 de novembro", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional", "Ganhe POB online a cada R$190 (40,000KRW)"],
   box: null,
   itens: [
     { id: "HOODIE", foto: ODD_PU + "hoodie.png", preco: 395, nota: "Tamanho único | medidas não estão disponíveis" },
