@@ -2184,7 +2184,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
             <span>📬</span>
             <span style={{ flex:1 }}>
               {nEnvioLiberado === 1 ? "1 item" : `${nEnvioLiberado} itens`} aguardando Envio Nacional
-              {isEnvioAberto ? " · forms aberto!" : proximoEnvio ? <> · abertura: <strong>{proximoEnvio}</strong></> : " · aguarde a abertura do forms"}
+              {isEnvioAberto ? " · forms aberto!" : proximoEnvio ? <> · abertura: <strong>{proximoEnvio}</strong></> : " · formulário de Outubro fechado · envios em Novembro e Dezembro"}
             </span>
             {onOpenEnvio && isEnvioAberto && (
               <button onClick={onOpenEnvio} style={{ background:"rgba(100,181,246,.15)", border:"1px solid rgba(100,181,246,.4)", borderRadius:5, color:"#64B5F6", fontSize:11, fontFamily:"'DM Mono',monospace", padding:"3px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
@@ -20145,7 +20145,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
               <div style={{ position:"sticky", top:0, zIndex:20, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(100,181,246,.3)", padding:"12px 16px", backdropFilter:"blur(12px)", marginBottom:16, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10 }}>
                 <div style={{ flex:1, minWidth:180 }}>
                   <div style={{ fontFamily:"'DM Mono',monospace", fontSize:14, color:"#64B5F6" }}>
-                    {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário fechado · aguarde a abertura"}
+                    {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário de Outubro está fechado. Haverá envios em Novembro e Dezembro normalmente."}
                   </div>
                   <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)", marginTop:3 }}>
                     Prévia dos seus itens · para solicitar envio aguarde a abertura
@@ -20156,6 +20156,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
             )}
 
             {/* aviso formulário aberto */}
+            {efetivamenteUnlocked && (
             <div style={{ background:"rgba(186,255,57,.07)", border:"1px solid rgba(186,255,57,.22)", borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
               <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"#BAFF39", marginBottom:7 }}>◧ FORMULÁRIO DE ENVIO NACIONAL ABERTO</div>
               <div style={{ fontSize:12, color:"rgba(245,240,232,.82)", lineHeight:1.6 }}>
@@ -20165,6 +20166,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
                 Peço desculpa pelo transtorno.
               </div>
             </div>
+            )}
 
             {/* conteúdo — bloqueado antes do unlock */}
             <div style={!efetivamenteUnlocked ? { pointerEvents:"none", opacity:0.45, userSelect:"none" } : {}}>
@@ -20397,7 +20399,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
         <div style={{ position:"sticky", top:0, zIndex:20, background:"rgba(13,13,13,.97)", borderBottom:"1px solid rgba(100,181,246,.3)", padding:"12px 16px", backdropFilter:"blur(12px)", marginBottom:16, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10 }}>
           <div style={{ flex:1, minWidth:180 }}>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:14, color:"#64B5F6" }}>
-              {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário fechado · aguarde a abertura"}
+              {proximoEnvio ? <>📬 O formulário abre <strong>{proximoEnvio}</strong></> : "🔒 Formulário de Outubro está fechado. Haverá envios em Novembro e Dezembro normalmente."}
             </div>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.3)", marginTop:3 }}>
               Prévia dos seus itens · para solicitar envio aguarde a abertura
