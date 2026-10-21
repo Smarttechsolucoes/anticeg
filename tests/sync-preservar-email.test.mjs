@@ -53,8 +53,8 @@ test("carregarIdsComConta: lista os joiner_id; tabela inexistente = ninguém tem
 
 test("sync-masterlist.js usa a montagem segura em TODO upsert de joiners e lê o id das joiners", () => {
   const src = readFileSync(new URL("../scripts/sync-masterlist.js", import.meta.url), "utf8");
-  assert.match(src, /select\('id, cog, email, twitter'\)/);
-  assert.match(src, /montarUpsertJoiner\(j, atual, \{ idsComConta, contasIndisponiveis \}\)/);
+  assert.match(src, /select\('id, cog, email, twitter, confirmado'\)/);
+  assert.match(src, /montarUpsertJoiner\(\{ \.\.\.j, cog: cogDoUpsert\(j\.cog, idxJoiners\) \}, atual, \{ idsComConta, contasIndisponiveis \}\)/);
   assert.match(src, /\.upsert\(alvo, \{ onConflict: 'cog'/);
   assert.doesNotMatch(src, /\.upsert\(j, /, "nenhum upsert de joiner sem passar pela montagem");
 });

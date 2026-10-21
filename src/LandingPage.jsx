@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
+import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
 import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
 import foxinyPrata  from "./assets/badges/foxiny_prata.jpg.png";
@@ -98,23 +99,23 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
   async function buscarJoiner(input) {
     const handle = input.startsWith("@") ? input.slice(1) : input;
-    // email: busca direto por email, sem passar pelo cog
+    // email: busca direto por email, sem passar pelo cog (pode haver mais de um cadastro com o mesmo e-mail: escolherJoiner decide, sempre do mesmo jeito)
     if (isEmail(input)) {
       const { data: byEmail } = await supabase.from("joiners").select("*")
         .eq("email", input.toLowerCase())
-        .maybeSingle();
-      return byEmail || null;
+        .limit(10);
+      return escolherJoiner(byEmail, handle);
     }
-    // busca por cog exato (eq evita wildcards SQL do ilike)
+    // busca pelo cog IGNORANDO maiúsculas (escaparLike evita curingas do ilike: "_" e "%"); gêmeos só de maiúsculas viram um único acesso
     const { data: byCog } = await supabase.from("joiners").select("*")
-      .eq("cog", handle)
-      .maybeSingle();
-    if (byCog) return byCog;
+      .ilike("cog", escaparLike(handle))
+      .limit(10);
+    if (byCog && byCog.length) return escolherJoiner(byCog, handle);
     // fallback: twitter handle
     const { data: byTw } = await supabase.from("joiners").select("*")
-      .or(`twitter.ilike.@${handle},twitter.ilike.${handle}`)
-      .maybeSingle();
-    return byTw || null;
+      .or(`twitter.ilike.@${escaparLike(handle)},twitter.ilike.${escaparLike(handle)}`)
+      .limit(10);
+    return escolherJoiner(byTw, handle);
   }
 
   async function handleEntrar() {

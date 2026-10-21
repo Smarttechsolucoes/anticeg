@@ -15,7 +15,7 @@ const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 function prepararDiretorio() {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), "sync-erros-"));
   fs.writeFileSync(path.join(d, "package.json"), '{"type":"module"}');
-  for (const f of ["sync-masterlist.js", "preservar-email.js", "casar-itens.js"]) fs.copyFileSync(path.join(raiz, "scripts", f), path.join(d, f));
+  for (const f of ["sync-masterlist.js", "preservar-email.js", "casar-itens.js", "resolver-joiner.js"]) fs.copyFileSync(path.join(raiz, "scripts", f), path.join(d, f));
   const mod = (nome, arquivos) => { const p = path.join(d, "node_modules", ...nome.split("/")); fs.mkdirSync(p, { recursive: true }); for (const [f, c] of Object.entries(arquivos)) fs.writeFileSync(path.join(p, f), c); };
   mod("ws", { "package.json": '{"name":"ws","type":"module","main":"index.js"}', "index.js": "export default {};" });
   mod("csv-parse", { "package.json": '{"name":"csv-parse","type":"module","exports":{"./sync":"./sync.js"}}',
