@@ -3,6 +3,7 @@ import { parse } from 'csv-parse/sync';
 import ws from 'ws';
 import { montarUpsertJoiner, carregarIdsComConta } from './preservar-email.js';
 import { casarPorIdLinha, casarChavesRepetidas } from './casar-itens.js';
+import { indexarJoiners, cogDaLinha, cogDoUpsert, joinerExistente } from './resolver-joiner.js';
 
 const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
@@ -61,12 +62,9 @@ async function main() {
   console.log('Colunas:', Object.keys(colMap).join(' | '));
 
   // Carregar joiners para lookup
-  const { data: joiners } = await supabase.from('joiners').select('id, cog, email, twitter');
-  const byTwitter = {}, byEmail = {};
-  (joiners || []).forEach(j => {
-    if (j.twitter) byTwitter[j.twitter.replace(/^@/, '').toLowerCase()] = j.cog;
-    if (j.email)   byEmail[j.email.toLowerCase()] = j.cog;
-  });
+  const { data: joiners } = await supabase.from('joiners').select('id, cog, email, twitter, confirmado').order('id', { ascending: true });
+  // Quem disputa o mesmo @/e-mail (ex.: "Seopookie" e "seopookie"): a regra de desempate é fixa e o upsert nunca cria gêmeo (ver resolver-joiner.js).
+  const idxJoiners = indexarJoiners(joiners);
 
   // Carregar masterlist existente paginada (Supabase limita 1000 por query)
   // existingMap: chave → array de itens (suporta duplicatas)
@@ -100,11 +98,7 @@ async function main() {
   // Casa primeiro pelo CÓDIGO da planilha (coluna ID = id_linha): a linha continua a MESMA (mesmo id) mesmo que o nome do item, o nome de exibição ou o dono mudem.
   // Sem isso a regra antiga (ceg|item|nome) insere uma linha nova e apaga a antiga, e as demandas de pagamento ficam apontando para um id que não existe mais.
   // O DONO da linha da planilha é calculado como no laço abaixo (@ → joiner cadastrada; senão o próprio @/e-mail): um id NUNCA muda de dono por causa de um código.
-  const cogDe = r => {
-    const tw = col(r, colMap, '@').trim().replace(/^@/, '').toLowerCase();
-    const em = col(r, colMap, 'EMAIL').trim().toLowerCase();
-    return byTwitter[tw] || byEmail[em] || tw || em.split('@')[0] || null;
-  };
+  const cogDe = r => cogDaLinha({ twitter: col(r, colMap, '@'), email: col(r, colMap, 'EMAIL') }, idxJoiners);
   const casamento = casarPorIdLinha(
     rows.map(r => ({ idLinha: col(r, colMap, 'ID').trim(), ceg: col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), cog: cogDe(r) })),
     Object.values(existingMap).flat()
@@ -141,7 +135,7 @@ async function main() {
       const pagoRf    = col(r, colMap, 'RF').trim().toUpperCase() === 'TRUE';
       const idLinha   = col(r, colMap, 'ID').trim() || null;
 
-      const cog = byTwitter[twitter] || byEmail[email] || twitter || email.split('@')[0] || null;
+      const cog = cogDaLinha({ twitter, email }, idxJoiners);
 
       const parseDate = str => {
         if (!str || !str.trim()) return null;
@@ -321,13 +315,12 @@ async function main() {
   // E-mail: célula vazia da planilha nunca apaga o e-mail do banco, e quem já tem conta ativada (e-mail verificado) não tem o e-mail trocado pelo sync.
   const { idsComConta, contasIndisponiveis } = await carregarIdsComConta(supabase);
   if (contasIndisponiveis) console.error('Aviso: não foi possível consultar contas_joiner — nenhum e-mail será enviado pelo sync nesta rodada (preservação total).');
-  const joinerPorCog = {}, joinerPorCogMin = {};
-  (joiners || []).forEach(x => { if (x.cog) { joinerPorCog[x.cog] = x; joinerPorCogMin[x.cog.toLowerCase()] = joinerPorCogMin[x.cog.toLowerCase()] || x; } });
   let emailsPreservados = 0;
 
   for (const j of joinersList) {
-    const atual = joinerPorCog[j.cog] || joinerPorCogMin[String(j.cog || '').toLowerCase()];
-    const alvo = montarUpsertJoiner(j, atual, { idsComConta, contasIndisponiveis });
+    const atual = joinerExistente(j.cog, idxJoiners);
+    // Joiner que já existe (mesmo @ com outras maiúsculas) é atualizada pelo COG que ela já tem: o upsert nunca cria um gêmeo.
+    const alvo = montarUpsertJoiner({ ...j, cog: cogDoUpsert(j.cog, idxJoiners) }, atual, { idsComConta, contasIndisponiveis });
     if (atual?.email && !('email' in alvo)) emailsPreservados++;
     const { error } = await supabase.from('joiners')
       .upsert(alvo, { onConflict: 'cog', ignoreDuplicates: false });

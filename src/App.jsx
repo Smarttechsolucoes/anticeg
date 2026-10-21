@@ -10,6 +10,7 @@ import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
 import { lerPlanilha } from "./csvSimples.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
+import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
 import bonequinha from "./assets/bonequinha.png";
 import badgeFoxinyBronze  from "./assets/badges/foxiny_bronze.jpg.png";
 import badgeFoxinyPrata   from "./assets/badges/foxiny_prata.jpg.png";
@@ -1394,6 +1395,7 @@ function CegTab({ user, itens }) {
         const { data } = await supabase.from("masterlist")
           .select("ceg, cog, status")
           .or("nome.neq.Disponivel,nome.is.null")
+          .order("id", { ascending: true })   // sem ordem fixa, a paginação pode repetir/pular linhas quando o sync atualiza a tabela
           .range(from, from + 999);
         if (!data || data.length === 0) break;
         all = [...all, ...data];
@@ -6230,6 +6232,7 @@ function CalendarTab({ user, itens, calEventos, setCalEventos }) {
         const { data } = await supabase.from("masterlist")
           .select("ceg, venc_item, venc_frete, venc_rf, pago_item, pago_frete, pago_rf")
           .or("venc_item.not.is.null,venc_frete.not.is.null,venc_rf.not.is.null")
+          .order("id", { ascending: true })
           .range(from, from + 999);
         if (!data || data.length === 0) break;
         all = [...all, ...data];
@@ -8814,7 +8817,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setPendentesData(null);
     let all = [], from = 0;
     while (true) {
-      const { data } = await supabase.from("masterlist").select(sel).neq("cog","disponivel").range(from, from + 999);
+      const { data } = await supabase.from("masterlist").select(sel).neq("cog","disponivel").order("id", { ascending: true }).range(from, from + 999);
       if (!data || data.length === 0) break;
       all = [...all, ...data];
       if (data.length < 1000) break;
@@ -14953,12 +14956,13 @@ function ClaimGuestPage({ onLogin }) {
     const isEmail = val.indexOf("@") > 0;
     let joiner = null;
     if (isEmail) {
-      const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).maybeSingle();
-      joiner = data;
+      const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).limit(10);
+      joiner = escolherJoiner(data, val);
     } else {
       const handle = val.startsWith("@") ? val.slice(1) : val;
-      const { data } = await supabase.from("joiners").select("*").or(`twitter.ilike.@${handle},twitter.ilike.${handle},cog.ilike.${handle}`).maybeSingle();
-      joiner = data;
+      const h = escaparLike(handle);
+      const { data } = await supabase.from("joiners").select("*").or(`twitter.ilike.@${h},twitter.ilike.${h},cog.ilike.${h}`).limit(10);
+      joiner = escolherJoiner(data, handle);
     }
     if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
     const { data: itens } = await supabase.from("masterlist").select("*").eq("cog", joiner.cog);
