@@ -115,10 +115,36 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
         )}
 
         {encerrado ? (
-          <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
-            <div style={{ fontFamily: mono, fontSize: 13, color: "rgba(245,240,232,.5)" }}>Pedidos encerrados em {cfg.pedidosAte}.</div>
-          </div>
+          <>
+            <div style={{ textAlign: "center", padding: "10px 0 28px" }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
+              <div style={{ fontFamily: mono, fontSize: 13, color: "rgba(245,240,232,.5)" }}>Pedidos encerrados em {cfg.pedidosAte}.</div>
+            </div>
+            <div style={labelStyle}>Itens da pré-venda</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {SMOLMERCH_PRODUTOS.map(p => (
+                <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
+                  <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
+                    <img src={foto(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(foto(p.foto, 2000))}
+                      style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
+                      onError={e => { e.target.style.visibility = "hidden"; }} />
+                    <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
+                      {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
+                      {p.nome}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {p.opcoes.map(o => (
+                      <div key={o.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)" }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+                        <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)" }}>{fmtReais(o.preco)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : status === "sucesso" ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
