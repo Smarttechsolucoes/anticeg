@@ -22706,7 +22706,18 @@ function AdminClaimEventos() {
     setEditSalvando(true);
     const updates = { nome: editEvento.nome, valor: Number(editEvento.valor), prazo: editEvento.prazo };
     if (editEvento.abertura) updates.abertura = new Date(editEvento.abertura + ":00-03:00").toISOString();
-    await supabase.from("claim_eventos").update(updates).eq("id", editEvento.id);
+    if (editEvento.foto) {
+      const ext = editEvento.foto.name.split(".").pop().toLowerCase();
+      const path = `claim/${editEvento.id}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, editEvento.foto, { upsert: true });
+      if (upErr) { alert("Erro ao enviar a foto: " + upErr.message); setEditSalvando(false); return; }
+      const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
+      updates.foto_url = `${publicUrl}?v=${Date.now()}`;
+    } else if (editEvento.removerFoto) {
+      updates.foto_url = null;
+    }
+    const { error } = await supabase.from("claim_eventos").update(updates).eq("id", editEvento.id);
+    if (error) { alert("Erro: " + error.message); setEditSalvando(false); return; }
     await fetchTudo();
     setEditSalvando(false);
     setEditEvento(null);
@@ -23073,7 +23084,7 @@ function AdminClaimEventos() {
       {editEvento && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
           onClick={() => setEditEvento(null)}>
-          <div style={{ background:"#141412", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"24px 22px", width:"100%", maxWidth:400, display:"flex", flexDirection:"column", gap:14 }}
+          <div style={{ background:"#141412", border:"1px solid rgba(245,240,232,.12)", borderRadius:14, padding:"24px 22px", width:"100%", maxWidth:400, maxHeight:"90vh", overflowY:"auto", display:"flex", flexDirection:"column", gap:14 }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px" }}>EDITAR EVENTO</div>
             <div>
@@ -23098,6 +23109,28 @@ function AdminClaimEventos() {
               <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:4 }}>HORÁRIO DE ABERTURA</div>
               <input type="datetime-local" value={editEvento.abertura} onChange={e => setEditEvento(p => ({ ...p, abertura:e.target.value }))}
                 style={{ background:"#0d0d0d", border:"1px solid rgba(245,240,232,.15)", borderRadius:7, color:"var(--offwhite)", fontFamily:mono, fontSize:12, padding:"8px 12px", width:"100%", boxSizing:"border-box", outline:"none", colorScheme:"dark" }} />
+            </div>
+            <div>
+              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", marginBottom:6 }}>FOTO</div>
+              <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
+                <div style={{ width:64, height:64, borderRadius:8, border:"1px dashed rgba(245,240,232,.15)", background:"rgba(245,240,232,.03)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {(editEvento.fotoPreview || (!editEvento.removerFoto && editEvento.fotoAtual))
+                    ? <img src={editEvento.fotoPreview || editEvento.fotoAtual} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="foto" />
+                    : <span style={{ fontFamily:mono, fontSize:22, color:"rgba(245,240,232,.15)" }}>+</span>}
+                </div>
+                <div>
+                  <div style={{ fontFamily:mono, fontSize:10, color: editEvento.foto ? "var(--offwhite)" : "rgba(245,240,232,.35)" }}>{editEvento.foto ? editEvento.foto.name : "clique para trocar a foto"}</div>
+                  {(editEvento.fotoPreview || (!editEvento.removerFoto && editEvento.fotoAtual)) && (
+                    <button type="button" onClick={e => { e.preventDefault(); setEditEvento(p => ({ ...p, foto:null, fotoPreview:null, removerFoto:true })); }}
+                      style={{ marginTop:6, fontFamily:mono, fontSize:8, background:"none", border:"none", color:"rgba(255,107,107,.5)", cursor:"pointer", padding:0 }}>remover</button>
+                  )}
+                </div>
+                <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setEditEvento(p => ({ ...p, foto:f, fotoPreview:URL.createObjectURL(f), removerFoto:false }));
+                }} />
+              </label>
             </div>
             <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:4 }}>
               <button onClick={() => setEditEvento(null)}
@@ -23297,7 +23330,7 @@ function AdminClaimEventos() {
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background: ev.sem_novos_sets ? "rgba(255,107,107,.1)" : "rgba(245,240,232,.04)", border:`1px solid ${ev.sem_novos_sets ? "rgba(255,107,107,.35)" : "rgba(245,240,232,.12)"}`, borderRadius:4, color: ev.sem_novos_sets ? "rgba(255,107,107,.85)" : "rgba(245,240,232,.4)", cursor:"pointer", fontWeight: ev.sem_novos_sets ? 700 : 400 }}>
                       {ev.sem_novos_sets ? "⏸ SEM NOVOS SETS · retomar" : "⏸ PARAR NOVOS SETS"}
                     </button>
-                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(new Date(ev.abertura).getTime() - 3 * 3600000).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
+                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(new Date(ev.abertura).getTime() - 3 * 3600000).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab, fotoAtual:ev.foto_url||null, foto:null, fotoPreview:null, removerFoto:false }); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
                       EDITAR
                     </button>
@@ -23452,7 +23485,7 @@ function AdminClaimEventos() {
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(new Date(ev.abertura).getTime() - 3 * 3600000).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab }); }}
+                    <button onClick={e => { e.stopPropagation(); const ab = ev.abertura ? new Date(new Date(ev.abertura).getTime() - 3 * 3600000).toISOString().slice(0,16) : ""; setEditEvento({ id:ev.id, nome:ev.nome, valor:String(ev.valor||""), prazo:ev.prazo||"", abertura:ab, fotoAtual:ev.foto_url||null, foto:null, fotoPreview:null, removerFoto:false }); }}
                       style={{ fontFamily:mono, fontSize:8, padding:"3px 10px", background:"rgba(245,240,232,.04)", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>
                       EDITAR
                     </button>
