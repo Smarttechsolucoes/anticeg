@@ -19801,7 +19801,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
   const hoje = new Date().toISOString().slice(0, 10);
   const isAutoUnlocked = !!(envioAberturaInicio && envioAberturaFim && hoje >= envioAberturaInicio && hoje <= envioAberturaFim);
   const roundAberto = envioRequest?.envio_rounds?.status === "em_processo";
-  const efetivamenteUnlocked = true;   // formulário sempre aberto (sem senha)
+  const efetivamenteUnlocked = isAutoUnlocked;   // aberto só dentro do período configurado (config: envio_abertura_inicio/fim); sem período = fechado
 
   // quando o envio está aberto e ainda não há conferência registrada, cria uma conferência virtual
   const conferenciaEfetiva = envioConferencia || (isAutoUnlocked ? {
@@ -19919,6 +19919,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
 
   async function handleSubmit() {
     setErro("");
+    if (!efetivamenteUnlocked) { setErro("O formulário de envio está fechado no momento."); return; }
     const missing = [];
     if (!destinatario) missing.push("nome do destinatário");
     if (!cpf)          missing.push("CPF");
