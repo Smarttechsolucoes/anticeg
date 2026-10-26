@@ -26327,7 +26327,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "smolmerch",
-      ativo: true,
+      ativo: false,
       titulo: "SMOL MERCH",
       subtitulo: "UPDATE (Extended PO) · Boddaramji · Han BDAY · Miso · Stickers e mais",
       url: "/smolmerch",
