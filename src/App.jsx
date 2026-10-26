@@ -26324,7 +26324,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "odd-fresh",
-      ativo: true,
+      ativo: false,
       fechado: false,
       cor: "lilas",
       titulo: "ODD & FRESH",
