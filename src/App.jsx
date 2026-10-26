@@ -26357,7 +26357,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "dazed-han",
-      ativo: false,
+      ativo: true,
       titulo: "DAZED & CONFUSED",
       subtitulo: "Han — 3 versões",
       url: "/dazed-han",
