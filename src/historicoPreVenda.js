@@ -18,6 +18,8 @@ export const FORMS_PREVENDA = [
     linhas: p => [cap("Capa A", p.capa_a), cap("Capa B", p.capa_b), cap("Capa C", p.capa_c)].filter(Boolean) },
   { chave: "dazed-seungmin", rotulo: "DAZED & CONFUSED · SEUNGMIN", tabela: "pedidos_dazed_seungmin", dono: ["email", "social"],
     linhas: p => [cap("Capa A", p.capa_a), cap("Capa B", p.capa_b), cap("Capa C", p.capa_c)].filter(Boolean) },
+  { chave: "dazed-han", rotulo: "DAZED & CONFUSED · HAN", tabela: "pedidos_dazed_han", dono: ["email", "social"],
+    linhas: p => [cap("Capa A", p.capa_a), cap("Capa B", p.capa_b), cap("Capa C", p.capa_c)].filter(Boolean) },
   { chave: "esquire-hyunjin", rotulo: "ESQUIRE · HYUNJIN", tabela: "pedidos_esquire_hyunjin", dono: ["email", "social"],
     linhas: p => [cap("Capa A", p.capa_a), cap("Capa B", p.capa_b), cap("Capa C", p.capa_c)].filter(Boolean) },
   { chave: "bazaar-in", rotulo: "BAZAAR IN", tabela: "pedidos_bazaar_in", dono: ["email", "social"],

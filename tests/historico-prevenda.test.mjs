@@ -22,10 +22,10 @@ test("filtro: cada tabela só usa as colunas de dono que ela tem; curingas do il
   assert.equal(filtroDoDono(F("smolmerch"), null), null);
 });
 test("nenhuma tabela é consultada por uma coluna que ela não tem (colunas de dono conferidas contra o esquema real de 17/10)", () => {
-  const colunas = { pedidos_smolmerch: ["email", "social"], pedidos_wmag: ["email", "social"], pedidos_wmag_leeknow: ["email", "social"], pedidos_dazed_seungmin: ["email", "social"], pedidos_esquire_hyunjin: ["email", "social"], pedidos_bazaar_in: ["email", "social"],
+  const colunas = { pedidos_smolmerch: ["email", "social"], pedidos_wmag: ["email", "social"], pedidos_wmag_leeknow: ["email", "social"], pedidos_dazed_seungmin: ["email", "social"], pedidos_dazed_han: ["email", "social"], pedidos_esquire_hyunjin: ["email", "social"], pedidos_bazaar_in: ["email", "social"],
     pedidos_revista: ["email", "social", "joiner_cog"], pedidos_singba: ["joiner_cog"], pedidos_popcorn_sleeve: ["joiner_cog"], pedidos_lightstick: ["joiner_cog"], pedidos_skzoo_rio: ["cog"], pedidos_popup: ["email", "social", "claim"], mercari_pedidos: ["joiner_cog"], formulario_pedidos: ["joiner_cog"] };
   for (const f of FORMS_PREVENDA) { assert.ok(colunas[f.tabela], f.tabela); assert.deepEqual([...f.dono].sort(), [...colunas[f.tabela]].sort(), f.tabela); }
-  assert.equal(FORMS_PREVENDA.length, 14);
+  assert.equal(FORMS_PREVENDA.length, 15);
 });
 test("resumo: SMOL MERCH lista item e quantidade; capas só as pedidas; valor e pagamento", () => {
   const s = normalizarPedido(F("smolmerch"), { id: 7, created_at: "2026-10-17T12:00:00Z", status: "pendente", valor_total: 62, qtd_total: 2, forma_pagamento: "depois", itens: [{ produto: "Miso PVC Candy Pouch", opcao: "Candy Pouch", qtd: 2, preco: 32 }, { produto: "Han BDAY", opcao: "Adesivo", qtd: 1 }] });
