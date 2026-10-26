@@ -21969,7 +21969,7 @@ function PopupThisAndThatPage() {
             <div key={i} style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>☆ {t}</div>
           ))}
           <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>
-            ☆ <a href="https://chat.whatsapp.com/DLenhliVlQE8WcUapjLgY8" target="_blank" rel="noopener noreferrer" style={{ color:"var(--laranja)" }}>Grupo da CEG no WhatsApp</a> — acompanhe as atualizações.
+            ☆ <a href={cfg.grupoWpp || "https://chat.whatsapp.com/DLenhliVlQE8WcUapjLgY8"} target="_blank" rel="noopener noreferrer" style={{ color:"var(--laranja)" }}>Grupo da CEG no WhatsApp</a> — acompanhe as atualizações.
           </div>
           <div style={{ borderTop:"1px solid rgba(245,240,232,.06)", marginTop:4, paddingTop:8, display:"flex", flexDirection:"column", gap:6 }}>
             <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.3)" }}>REGRAS</div>
@@ -22319,7 +22319,7 @@ const DAZED_HAN_CAPAS = [
 const DAZED_HAN_CFG = {
   tabela: "pedidos_dazed_han", pasta: "dazed-han", produto: "DAZED & CONFUSED HAN",
   titulo: "DAZED & CONFUSED", sub: "HAN", deadline: new Date("2026-10-31T23:59:59-03:00"), pedidosAte: "31/10/2026",
-  preco: 86, capas: DAZED_HAN_CAPAS, pagarAte: "06/11",
+  preco: 86, capas: DAZED_HAN_CAPAS, pagarAte: "06/11", grupoWpp: "https://chat.whatsapp.com/Bjnhika4U19GLVY0PyEqMi",
   avisos: [
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
     <>Envio internacional previsto para o dia <strong>10 de novembro</strong>.</>,
@@ -22489,7 +22489,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
               {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação." : pagamento === "depois" ? "Pedido registrado! Aguarde as instruções de pagamento." : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop:8, fontSize:10, opacity:.5 }}>#{pedidoId}</div>}
             </div>
-            <a href="https://chat.whatsapp.com/CGHeelexfjp7ckWfWwEjz5" target="_blank" rel="noopener noreferrer"
+            <a href={cfg.grupoWpp || "https://chat.whatsapp.com/CGHeelexfjp7ckWfWwEjz5"} target="_blank" rel="noopener noreferrer"
               style={{ display:"inline-block", padding:"12px 24px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px" }}>
               Entrar no grupo de atualizações
             </a>
