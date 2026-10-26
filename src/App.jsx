@@ -26337,7 +26337,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "wmag-leeknow",
-      ativo: true,
+      ativo: false,
       titulo: "W MAGAZINE",
       subtitulo: "Lee Know — 3 capas",
       url: "/wmag-leeknow",
@@ -26347,7 +26347,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "dazed-seungmin",
-      ativo: true,
+      ativo: false,
       titulo: "DAZED & CONFUSED",
       subtitulo: "Seungmin — 3 versões",
       url: "/dazed-seungmin",
