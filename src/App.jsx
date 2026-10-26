@@ -26357,8 +26357,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "dazed-han",
-      ativo: true,
-      fechado: true,
+      ativo: false,
       titulo: "DAZED & CONFUSED",
       subtitulo: "Han — 3 versões",
       url: "/dazed-han",
@@ -26368,7 +26367,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "esquire-hyunjin",
-      ativo: true,
+      ativo: false,
       titulo: "ESQUIRE",
       subtitulo: "Hyunjin — 3 versões",
       url: "/esquire-hyunjin",
