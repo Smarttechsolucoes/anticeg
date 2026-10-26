@@ -26274,6 +26274,16 @@ function PrevendaTab({ user }) {
 
   const formularios = [
     {
+      key: "dazed-han",
+      ativo: true,
+      titulo: "DAZED & CONFUSED",
+      subtitulo: "Han — 3 versões",
+      url: "/dazed-han",
+      img: DAZED_HAN_CAPAS[0].img,
+      tags: ["Pedidos até 31/10", "Pagamento até 06/11"],
+      info: "R$ 86,00 por unidade · PIX ou cartão · envio previsto 10/11",
+    },
+    {
       key: "suiatsu",
       ativo: true,
       fechado: now > SUIATSU_PRAZO,
@@ -26354,16 +26364,6 @@ function PrevendaTab({ user }) {
       img: DAZED_SM_CAPAS[0].img,
       tags: ["Pedidos até 20/10", "Pagamento até 25/10"],
       info: "R$ 86,00 por unidade · PIX ou cartão · envio previsto 29/10",
-    },
-    {
-      key: "dazed-han",
-      ativo: true,
-      titulo: "DAZED & CONFUSED",
-      subtitulo: "Han — 3 versões",
-      url: "/dazed-han",
-      img: DAZED_HAN_CAPAS[0].img,
-      tags: ["Pedidos até 31/10", "Pagamento até 06/11"],
-      info: "R$ 86,00 por unidade · PIX ou cartão · envio previsto 10/11",
     },
     {
       key: "esquire-hyunjin",
