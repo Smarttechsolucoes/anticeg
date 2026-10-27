@@ -73,31 +73,36 @@ function PainelPublico({ aba, cfg, produtos }) {
   const validos = pedidos.filter(p => p.status !== "cancelado");
   const hora = d => new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
+  // mesmo cartão nas duas abas: o @ é sempre "@***" (a consulta nem traz o nome, e-mail ou @)
+  const cartoes = lista => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {lista.map(p => (
+        <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
+            <span style={{ fontWeight: 700 }}>@***</span>
+            <span style={{ color: "rgba(245,240,232,.4)" }}>{hora(p.created_at)}</span>
+          </div>
+          {(p.itens || []).map((i, k) => (
+            <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, marginTop: 6 }}>
+            <span style={{ color: p.status === "confirmado" ? "#4ade80" : p.status === "cancelado" ? "#ff6b6b" : "rgba(245,240,232,.4)" }}>{p.status === "confirmado" ? "confirmado" : p.status === "cancelado" ? "cancelado" : "aguardando confirmação"}</span>
+            <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{p.qtd_total} un · {fmtReais(p.valor_total)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+  const vazio = <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>;
+
   if (aba === "aovivo") {
-    // quantas unidades já foram pedidas de cada opção
-    const qtdPor = {};
-    validos.forEach(p => (p.itens || []).forEach(i => { qtdPor[i.id] = (qtdPor[i.id] || 0) + (Number(i.qtd) || 0); }));
-    const grupos = produtos.map(p => ({ p, linhas: p.opcoes.filter(o => qtdPor[o.id] > 0) })).filter(g => g.linhas.length);
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>
           <span><span style={{ color: "#4ade80" }}>●</span> AO VIVO · atualiza a cada 15s</span>
           <span>{validos.length} pedido{validos.length !== 1 ? "s" : ""} · {validos.reduce((a, p) => a + (Number(p.qtd_total) || 0), 0)} un</span>
         </div>
-        {!grupos.length && <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {grupos.map(({ p, linhas }) => (
-            <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px" }}>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{p.nome}</div>
-              {linhas.map(o => (
-                <div key={o.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9, color: "rgba(245,240,232,.7)" }}>
-                  <span>☆ {o.label}</span>
-                  <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{qtdPor[o.id]} pedido{qtdPor[o.id] !== 1 ? "s" : ""}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        {validos.length ? cartoes(validos) : vazio}
         {atualizado && <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.25)", textAlign: "center", marginTop: 14 }}>atualizado às {atualizado.toLocaleTimeString("pt-BR")}</div>}
       </div>
     );
@@ -106,24 +111,7 @@ function PainelPublico({ aba, cfg, produtos }) {
   return (
     <div>
       <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}</div>
-      {!pedidos.length && <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {pedidos.map(p => (
-          <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
-              <span style={{ fontWeight: 700 }}>@***</span>
-              <span style={{ color: "rgba(245,240,232,.4)" }}>{hora(p.created_at)}</span>
-            </div>
-            {(p.itens || []).map((i, k) => (
-              <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
-            ))}
-            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, marginTop: 6 }}>
-              <span style={{ color: p.status === "confirmado" ? "#4ade80" : p.status === "cancelado" ? "#ff6b6b" : "rgba(245,240,232,.4)" }}>{p.status === "confirmado" ? "confirmado" : p.status === "cancelado" ? "cancelado" : "aguardando confirmação"}</span>
-              <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{p.qtd_total} un · {fmtReais(p.valor_total)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {pedidos.length ? cartoes(pedidos) : vazio}
     </div>
   );
 }
