@@ -37,6 +37,7 @@ export const PHOTOCARD_CFG = {
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   bloqueado: false,
   abreEm: new Date("2026-10-27T19:00:00-03:00"), abreEmRotulo: "19H", // pedidos só a partir das 19h; o botão mostra a contagem
+  ocultarSeCadastrada: true, // joiner cadastrada: sem os campos de claim, nome, e-mail e @
   cabecalho: true,   // barra ANTICEG no topo
   aoVivo: true,      // abas Pedido · Ao vivo · Histórico (@ sempre como @***)
   resumoPedido: true, // lista os itens marcados embaixo, para conferência
