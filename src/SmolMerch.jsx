@@ -18,6 +18,12 @@ function Qty({ valor, onMenos, onMais }) {
 // topo do card do produto: miniatura ao lado do nome ou, com fotoGrande, a foto inteira em largura total
 function CabProduto({ p, fotoDe, grande, onZoom }) {
   const img = { cursor: "zoom-in", background: "rgba(245,240,232,.06)" };
+  // regras específicas do produto (opcional): p.avisos = ["texto", ...]
+  const notas = p.avisos?.length ? (
+    <div style={{ margin: "0 14px 10px", padding: "8px 10px", borderRadius: 8, background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", fontFamily: mono, fontSize: 10, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
+      {p.avisos.map((a, i) => <div key={i}>☆ {a}</div>)}
+    </div>
+  ) : null;
   if (grande) return (
     <div>
       <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
@@ -27,9 +33,11 @@ function CabProduto({ p, fotoDe, grande, onZoom }) {
         {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
         {p.nome}
       </div>
+      {notas}
     </div>
   );
   return (
+    <>
     <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
       <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
         style={{ ...img, width: 84, height: 84, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
@@ -39,6 +47,8 @@ function CabProduto({ p, fotoDe, grande, onZoom }) {
         {p.nome}
       </div>
     </div>
+    {notas && <div style={{ paddingTop: 2 }}>{notas}</div>}
+    </>
   );
 }
 
