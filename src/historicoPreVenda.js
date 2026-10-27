@@ -12,6 +12,8 @@ const itemQtd = (nome, qtd, extra) => `${num(qtd) || 1}× ${[nome, extra].filter
 export const FORMS_PREVENDA = [
   { chave: "smolmerch", rotulo: "SMOL MERCH", tabela: "pedidos_smolmerch", dono: ["email", "social"],
     linhas: p => lista(p.itens).map(i => itemQtd(i.produto, i.qtd, i.opcao)) },
+  { chave: "murce-itens", rotulo: "MURCEKALY ITENS", tabela: "pedidos_murce_itens", dono: ["email", "social"],
+    linhas: p => lista(p.itens).map(i => itemQtd(i.produto, i.qtd, i.opcao)) },
   { chave: "wmag-hyunjin", rotulo: "W MAGAZINE · HYUNJIN", tabela: "pedidos_wmag", dono: ["email", "social"],
     linhas: p => [cap("Capa A", p.capa_a), cap("Capa B", p.capa_b), cap("Capa C", p.capa_c)].filter(Boolean) },
   { chave: "wmag-leeknow", rotulo: "W MAGAZINE · LEE KNOW", tabela: "pedidos_wmag_leeknow", dono: ["email", "social"],

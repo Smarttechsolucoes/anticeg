@@ -52,6 +52,82 @@ function CabProduto({ p, fotoDe, grande, onZoom }) {
   );
 }
 
+// ── Ao vivo e histórico públicos ─────────────────────────────────────────────
+// Lê só colunas sem dados pessoais (nada de nome, e-mail ou @): quem pediu aparece sempre como "@***".
+function PainelPublico({ aba, cfg, produtos }) {
+  const [pedidos, setPedidos] = useState(null);
+  const [atualizado, setAtualizado] = useState(null);
+
+  useEffect(() => {
+    let vivo = true;
+    const buscar = () => supabase.from(cfg.tabela).select("id, itens, qtd_total, valor_total, status, created_at")
+      .order("created_at", { ascending: false }).limit(500)
+      .then(({ data }) => { if (vivo && data) { setPedidos(data); setAtualizado(new Date()); } });
+    buscar();
+    const t = setInterval(buscar, 15000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [cfg.tabela]);
+
+  if (!pedidos) return <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.3)", padding: "20px 0", textAlign: "center" }}>carregando...</div>;
+
+  const validos = pedidos.filter(p => p.status !== "cancelado");
+  const hora = d => new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  if (aba === "aovivo") {
+    // quantas unidades já foram pedidas de cada opção
+    const qtdPor = {};
+    validos.forEach(p => (p.itens || []).forEach(i => { qtdPor[i.id] = (qtdPor[i.id] || 0) + (Number(i.qtd) || 0); }));
+    const grupos = produtos.map(p => ({ p, linhas: p.opcoes.filter(o => qtdPor[o.id] > 0) })).filter(g => g.linhas.length);
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>
+          <span><span style={{ color: "#4ade80" }}>●</span> AO VIVO · atualiza a cada 15s</span>
+          <span>{validos.length} pedido{validos.length !== 1 ? "s" : ""} · {validos.reduce((a, p) => a + (Number(p.qtd_total) || 0), 0)} un</span>
+        </div>
+        {!grupos.length && <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {grupos.map(({ p, linhas }) => (
+            <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{p.nome}</div>
+              {linhas.map(o => (
+                <div key={o.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9, color: "rgba(245,240,232,.7)" }}>
+                  <span>☆ {o.label}</span>
+                  <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{qtdPor[o.id]} pedido{qtdPor[o.id] !== 1 ? "s" : ""}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {atualizado && <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.25)", textAlign: "center", marginTop: 14 }}>atualizado às {atualizado.toLocaleTimeString("pt-BR")}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}</div>
+      {!pedidos.length && <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {pedidos.map(p => (
+          <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
+              <span style={{ fontWeight: 700 }}>@***</span>
+              <span style={{ color: "rgba(245,240,232,.4)" }}>{hora(p.created_at)}</span>
+            </div>
+            {(p.itens || []).map((i, k) => (
+              <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, marginTop: 6 }}>
+              <span style={{ color: p.status === "confirmado" ? "#4ade80" : p.status === "cancelado" ? "#ff6b6b" : "rgba(245,240,232,.4)" }}>{p.status === "confirmado" ? "confirmado" : p.status === "cancelado" ? "cancelado" : "aguardando confirmação"}</span>
+              <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{p.qtd_total} un · {fmtReais(p.valor_total)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Formulário público ───────────────────────────────────────────────────────
 export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto }) {
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
@@ -67,6 +143,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [erro,        setErro]        = useState("");
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
+  const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -143,6 +220,12 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           <img src={lightbox} alt="produto" style={{ maxWidth: "92vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain" }} />
         </div>
       )}
+      {cfg.cabecalho && (
+        <div style={{ width: "calc(100% + 32px)", margin: "-40px -16px 28px", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(245,240,232,.04)", borderBottom: "1px solid rgba(245,240,232,.1)", boxSizing: "border-box" }}>
+          <a href="/" style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 26, letterSpacing: 1, textDecoration: "none", color: "var(--offwhite)", lineHeight: 1 }}>ANTI<span style={{ color: "var(--laranja)" }}>CEG</span></a>
+          <a href="/" style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1px", color: "rgba(245,240,232,.55)", textDecoration: "none", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 12px" }}>← VOLTAR AO SITE</a>
+        </div>
+      )}
       <div style={{ width: "100%", maxWidth: 520 }}>
         <div style={{ marginBottom: 28, textAlign: "center" }}>
           {cfg.selo !== "" && <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "4px", color: "rgba(245,240,232,.3)", marginBottom: 8 }}>{cfg.selo ?? "ANTI CEGS × PRÉ-VENDA"}</div>}
@@ -153,6 +236,16 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           )}
         </div>
 
+        {cfg.aoVivo && (
+          <div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
+            {[["pedido", "PEDIDO"], ["aovivo", "AO VIVO ●"], ["historico", "HISTÓRICO"]].map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setAba(v)}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: `1px solid ${aba === v ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: aba === v ? "rgba(255,92,26,.12)" : "transparent", color: aba === v ? "var(--laranja)" : "rgba(245,240,232,.5)", fontFamily: mono, fontSize: 10, fontWeight: aba === v ? 700 : 400, letterSpacing: "1px", cursor: "pointer" }}>{l}</button>
+            ))}
+          </div>
+        )}
+
+        {cfg.aoVivo && aba !== "pedido" ? <PainelPublico aba={aba} cfg={cfg} produtos={produtos} /> : (<>
         <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "14px 16px", marginBottom: 28, fontSize: 12, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "var(--laranja)", marginBottom: 8 }}>⚠ AVISOS IMPORTANTES</div>
           {cfg.avisos.map((a, i) => <div key={i}>☆ {a.split("**").map((t, k) => k % 2 ? <strong key={k}>{t}</strong> : t)}</div>)}
@@ -343,6 +436,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             </button>
           </form>
         )}
+        </>)}
       </div>
     </div>
   );
