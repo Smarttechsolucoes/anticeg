@@ -1,7 +1,7 @@
 // ── Catálogo ─────────────────────────────────────────────────────────────────
 // Fotos da loja (BigCartel). `w=600` nos cards e `w=2000` só ao ampliar, para carregar rápido no celular.
 export const foto = (arq, w = 600) => (arq.startsWith("/") || arq.startsWith("http")) ? arq : `https://assets.bigcartel.com/product_images/${arq}?auto=format&fit=max&w=${w}`;
-export const fmtReais = n => "R$" + Number(n).toFixed(2).replace(".", ",");
+export const fmtReais = n => n == null ? "preço em breve" : "R$" + Number(n).toFixed(2).replace(".", ",");
 
 // Formulário único: os itens do UPDATE (Extended PO) ficam no topo da lista e levam o selo UPDATE.
 export const SMOLMERCH_PRODUTOS = [

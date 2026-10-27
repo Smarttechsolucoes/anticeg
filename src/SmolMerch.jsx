@@ -16,7 +16,7 @@ function Qty({ valor, onMenos, onMais }) {
 }
 
 // ── Formulário público ───────────────────────────────────────────────────────
-export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
+export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto }) {
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
   const [claim,       setClaim]       = useState(() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog || ""; } catch { return ""; } });
   const [nome,        setNome]        = useState("");
@@ -43,7 +43,8 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- só no primeiro carregamento
   }, []);
 
-  const escolhidos = SMOLMERCH_OPCOES.filter(o => (qtds[o.id] || 0) > 0);
+  const todasOpcoes = produtos.flatMap(p => p.opcoes.map(o => ({ ...o, produto: p.nome })));
+  const escolhidos = todasOpcoes.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
   const total = escolhidos.reduce((a, o) => a + qtds[o.id] * o.preco, 0);
   const ajustar = (id, delta) => setQtds(q => ({ ...q, [id]: Math.min(20, Math.max(0, (q[id] || 0) + delta)) }));
@@ -122,10 +123,10 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
             </div>
             <div style={labelStyle}>Itens da pré-venda</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {SMOLMERCH_PRODUTOS.map(p => (
+              {produtos.map(p => (
                 <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                   <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
-                    <img src={foto(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(foto(p.foto, 2000))}
+                    <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(fotoDe(p.foto, 2000))}
                       style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
                       onError={e => { e.target.style.visibility = "hidden"; }} />
                     <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
@@ -186,10 +187,10 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {SMOLMERCH_PRODUTOS.map(p => (
+                {produtos.map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                     <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
-                      <img src={foto(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(foto(p.foto, 2000))}
+                      <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(fotoDe(p.foto, 2000))}
                         style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
                         onError={e => { e.target.style.visibility = "hidden"; }} />
                       <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
