@@ -70,8 +70,12 @@ function PainelPublico({ aba, cfg, produtos }) {
 
   if (!pedidos) return <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.3)", padding: "20px 0", textAlign: "center" }}>carregando...</div>;
 
-  const validos = pedidos.filter(p => p.status !== "cancelado");
   const hora = d => new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  // pedidos feitos antes da abertura (testes) ficam fora das abas públicas até a hora de abrir; depois aparecem com o horário da abertura (o painel admin mantém o horário real)
+  const abre = cfg.abreEm ? cfg.abreEm.getTime() : 0;
+  const publicos = abre && Date.now() < abre ? [] : pedidos;
+  const horaDe = p => hora(abre && new Date(p.created_at).getTime() < abre ? cfg.abreEm : p.created_at);
+  const validos = publicos.filter(p => p.status !== "cancelado");
 
   // mesmo cartão nas duas abas: o @ é sempre "@***" (a consulta nem traz o nome, e-mail ou @)
   const cartoes = lista => (
@@ -80,7 +84,7 @@ function PainelPublico({ aba, cfg, produtos }) {
         <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
             <span style={{ fontWeight: 700 }}>@***</span>
-            <span style={{ color: "rgba(245,240,232,.4)" }}>{hora(p.created_at)}</span>
+            <span style={{ color: "rgba(245,240,232,.4)" }}>{horaDe(p)}</span>
           </div>
           {(p.itens || []).map((i, k) => (
             <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
@@ -113,8 +117,8 @@ function PainelPublico({ aba, cfg, produtos }) {
       <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontFamily: mono, fontSize: 11, lineHeight: 1.7, color: "rgba(245,240,232,.75)" }}>
         ☆ Seu item estará disponível para o pagamento <strong>somente após a confirmação da seller</strong>.
       </div>
-      <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}</div>
-      {pedidos.length ? cartoes(pedidos) : vazio}
+      <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {publicos.length} pedido{publicos.length !== 1 ? "s" : ""}</div>
+      {publicos.length ? cartoes(publicos) : vazio}
     </div>
   );
 }
