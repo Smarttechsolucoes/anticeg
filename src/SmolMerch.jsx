@@ -84,7 +84,13 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const escolhidos = todasOpcoes.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
   const total = escolhidos.reduce((a, o) => a + qtds[o.id] * o.preco, 0);
-  const ajustar = (id, delta) => setQtds(q => ({ ...q, [id]: Math.min(20, Math.max(0, (q[id] || 0) + delta)) }));
+  // regras por produto (opcionais): maxPorOpcao = limite por opção; todasOuNenhuma = as opções só saem juntas (ex.: set de 3 membros)
+  const ajustar = (id, delta) => setQtds(q => {
+    const p = produtos.find(pr => pr.opcoes.some(o => o.id === id));
+    const novo = Math.min(p?.maxPorOpcao || 20, Math.max(0, (q[id] || 0) + delta));
+    if (p?.todasOuNenhuma) return { ...q, ...Object.fromEntries(p.opcoes.map(o => [o.id, novo])) };
+    return { ...q, [id]: novo };
+  });
 
   async function handleSubmit(e) {
     e.preventDefault();
