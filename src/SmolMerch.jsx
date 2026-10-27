@@ -132,6 +132,16 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
+  // cfg.abreEm: o formulário só aceita pedidos a partir dessa hora; até lá o botão mostra a contagem regressiva
+  const [relogio,     setRelogio]     = useState(() => Date.now());
+  useEffect(() => {
+    if (!cfg.abreEm || Date.now() >= cfg.abreEm.getTime()) return;
+    const t = setInterval(() => { setRelogio(Date.now()); if (Date.now() >= cfg.abreEm.getTime()) clearInterval(t); }, 1000);
+    return () => clearInterval(t);
+  }, [cfg.abreEm]);
+  const faltamMs = cfg.abreEm ? Math.max(0, cfg.abreEm.getTime() - relogio) : 0;
+  const aindaNaoAbriu = faltamMs > 0;
+  const contagem = (() => { const s = Math.ceil(faltamMs / 1000), p = n => String(n).padStart(2, "0"); return `${p(Math.floor(s / 3600))}:${p(Math.floor(s % 3600 / 60))}:${p(s % 60)}`; })();
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -165,7 +175,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (cfg.bloqueado) return;
+    if (cfg.bloqueado || aindaNaoAbriu) return;
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 item."); return; }
     if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
@@ -282,6 +292,12 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               style={{ display: "inline-block", padding: "12px 24px", borderRadius: 10, background: "rgba(37,211,102,.15)", border: "1px solid rgba(37,211,102,.35)", color: "#25d366", fontFamily: mono, fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: "0.5px" }}>
               Entrar no grupo de atualizações
             </a>
+            <div>
+              <button type="button" onClick={() => { setStatus("idle"); setQtds({}); setComprovante(null); setErro(""); setPedidoId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                style={{ marginTop: 14, padding: "12px 24px", borderRadius: 10, background: "transparent", border: "1px solid var(--laranja)", color: "var(--laranja)", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.5px", cursor: "pointer" }}>
+                + Comprar novamente
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -418,9 +434,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             )}
 
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}</div>}
-            <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado}
-              style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado ? "pointer" : "not-allowed", letterSpacing: "1px" }}>
-              {cfg.bloqueado ? "AINDA NÃO DISPONÍVEL" : status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
+            <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado || aindaNaoAbriu}
+              style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "pointer" : "not-allowed", letterSpacing: "1px" }}>
+              {cfg.bloqueado ? "AINDA NÃO DISPONÍVEL" : aindaNaoAbriu ? `ABRE ÀS ${cfg.abreEmRotulo || "—"} · ${contagem}` : status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
             </button>
           </form>
         )}
