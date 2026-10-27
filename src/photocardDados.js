@@ -24,7 +24,7 @@ export const PHOTOCARD_PRODUTOS = [
   { id: "hop-monochrome",     nome: "HOP — MONOCHROME VER.",    foto: "monochrome-ver-hop.png",    opcoes: porNome("hop-monochrome", MEMBROS, 15) },
   { id: "hop-pc-album",       nome: "HOP — PC ALBUM VER.",      foto: "pc-album-ver-hop.png",      opcoes: porNome("hop-pc-album", MEMBROS, 15) },
   { id: "hop-pob-pc-album",   nome: "HOP — POB PC ALBUM VER.",  foto: "pob-pc-album-ver-hop.png",  opcoes: porNome("hop-pob-pc-album", MEMBROS, 15) },
-  { id: "limited-pc-album",   nome: "LIMITED PC ALBUM SET",     foto: "limited-pc-album-set.png",  opcoes: [...porNome("limited-pc-album", ["Bang Chan", "Lee Know", "Hyunjin", "Han", "Felix"], 25), { id: "limited-pc-album-set", label: "Set completo (5 cards)", preco: 125 }] },
+  { id: "limited-pc-album",   nome: "LIMITED PC ALBUM SET",     foto: "limited-pc-album-set.png",  maxPorOpcao: 3, todasOuNenhuma: true, avisos: ["Os 5 cards saem juntos (set de R$125).", "Disponível: 3 de cada card."], opcoes: porNome("limited-pc-album", ["Bang Chan", "Lee Know", "Hyunjin", "Han", "Felix"], 25) },
   { id: "bdm-pob",            nome: "BDM — POB",                foto: "bdm-pob.png",               maxPorOpcao: 1, todasOuNenhuma: true, avisos: ["Os 3 membros saem juntos: 1 set disponível (1 de cada)."], opcoes: porNome("bdm-pob", ["Lee Know", "Hyunjin", "Felix"], 50) },
   { id: "tin-case-skzoo",     nome: "TIN CASE SKZOO",           foto: "tin-case-skzoo.png",        avisos: ["Pode esgotar a qualquer momento.", "Não precisa fechar set: pode pedir só as unidades que quiser."], opcoes: porNome("tin-case-skzoo", SKZOO, 15) },
 ];
