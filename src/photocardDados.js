@@ -20,7 +20,7 @@ export const PHOTOCARD_PRODUTOS = [
   { id: "karma-limited-unit", nome: "KARMA — LIMITED UNIT",     foto: "karma-limited-unit.png",    avisos: AVISOS_UNIT, opcoes: unit("karma-limited-unit", ["Lee Know + Changbin + Bang Chan","Hyunjin + I.N","Felix + Han + Seungmin"]) },
   { id: "rockstar-unit",      nome: "ROCKSTAR — UNIT",          foto: "rockstar-unit.png",         avisos: AVISOS_UNIT, opcoes: unit("rockstar-unit", ["Bang Chan + Changbin","Felix + Lee Know","Han + Hyunjin","Seungmin + I.N"]) },
   { id: "hop-pc",             nome: "Standard Album Photocard HOP", foto: "hop-pc.png",                opcoes: porNome("hop-pc", MEMBROS, 15) },
-  { id: "hop-pc-random",      nome: "HOP — PC RANDOM",          foto: "hop-pc-random.png",         opcoes: porNome("hop-pc-random", MEMBROS, 20) },
+  { id: "hop-pc-random",      nome: "HOP — PC RANDOM",          foto: "hop-pc-random.png",         avisos: ["Hyunjin só sai se fechar o set OT8 (os 8 membros)."], opcoes: porNome("hop-pc-random", MEMBROS, 20).map(o => o.label === "Hyunjin" ? { ...o, exigeTodos: true, exigeTodosTexto: "só sai fechando o set OT8" } : o) },
   { id: "hop-set",            nome: "HOP — SET",                foto: "hop-set.png",               opcoes: [{ id: "hop-set-ot8", label: "OT8 (set completo)", preco: 50 }, ...porNome("hop-set", MEMBROS, 7).map(o => ({ ...o, label: o.label + " (member claim)" }))] },
   { id: "hop-monochrome",     nome: "HOP — MONOCHROME VER.",    foto: "monochrome-ver-hop.png",    opcoes: porNome("hop-monochrome", MEMBROS, 15) },
   { id: "hop-pc-album",       nome: "HOP — PC ALBUM VER.",      foto: "pc-album-ver-hop.png",      opcoes: porNome("hop-pc-album", MEMBROS, 15) },

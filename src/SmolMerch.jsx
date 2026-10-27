@@ -88,8 +88,14 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const ajustar = (id, delta) => setQtds(q => {
     const p = produtos.find(pr => pr.opcoes.some(o => o.id === id));
     const novo = Math.min(p?.maxPorOpcao || 20, Math.max(0, (q[id] || 0) + delta));
-    if (p?.todasOuNenhuma) return { ...q, ...Object.fromEntries(p.opcoes.map(o => [o.id, novo])) };
-    return { ...q, [id]: novo };
+    const prox = p?.todasOuNenhuma ? { ...q, ...Object.fromEntries(p.opcoes.map(o => [o.id, novo])) } : { ...q, [id]: novo };
+    // exigeTodos (na opção): só sai junto com todas as outras do produto e em no máximo a menor quantidade delas (ex.: Hyunjin só fechando o set OT8)
+    const dep = p?.opcoes.filter(o => o.exigeTodos) || [];
+    if (dep.length) {
+      const menorBase = Math.min(...p.opcoes.filter(o => !o.exigeTodos).map(o => prox[o.id] || 0));
+      dep.forEach(o => { prox[o.id] = Math.min(prox[o.id] || 0, menorBase); });
+    }
+    return prox;
   });
 
   async function handleSubmit(e) {
@@ -233,6 +239,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
                               <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(o.preco)}</div>
+                              {o.exigeTodos && <div style={{ fontFamily: mono, fontSize: 10, color: "var(--laranja)", marginTop: 3 }}>{o.exigeTodosTexto || "só sai fechando o set completo"}</div>}
                             </div>
                             <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} />
                           </div>
