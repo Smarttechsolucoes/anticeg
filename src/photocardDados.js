@@ -32,15 +32,22 @@ export const PHOTOCARD_PRODUTOS = [
 
 export const PHOTOCARD_CFG = {
   tabela: "pedidos_photocard", pasta: "photocard", produto: "PHOTOCARDS",
-  titulo: "PHOTOCARDS", sub: "Stray Kids · ATE · HOP · KARMA · ROCKSTAR · BDM · Tin Case SKZOO",
-  deadline: null, pedidosAte: null, pagarAte: null,
+  titulo: "PHOTOCARDS", sub: "CEG: anticeg ☆ tin case skzoo",
+  deadline: new Date("2026-10-28T09:00:00-03:00"), pedidosAte: "28/10 às 9h", pagarAte: null,
+  grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   // rascunho: o formulário ainda não recebe pedidos
   bloqueado: true,
   resumoPedido: true, // lista os itens marcados embaixo, para conferência
   fotoGrande: true, // mostra a foto inteira (sem cortar) em cada produto
   pagamentoAgora: false,
   avisos: [
-    "Formulário **em montagem**: preços e prazos serão informados em breve.",
-    "Ao fechar o pedido, ele **não poderá ser cancelado**.",
+    "Alguns cards estão amarrados em set por regras de compra da seller.",
+    "**CEG DEMORADA**.",
+    "Pagamento imediato **APÓS a confirmação dos itens**.",
+    "O formulário fecha no dia **28 de outubro às 9h da manhã** e não será reaberto novamente.",
+    "O estoque é **LIMITADO** e não foi informada a quantidade de cada item: o risco de sold-out é grande.",
+    "Os itens saem da **Indonésia** para o **Brasil**.",
+    "Haverá **frete internacional** e **taxa da Receita Federal**.",
+    "**Não haverá possibilidade de cancelar** a claim. Se estiver em dúvida, não marque.",
   ],
 };
