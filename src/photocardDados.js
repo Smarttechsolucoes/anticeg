@@ -10,8 +10,6 @@ const porNome = (idProduto, nomes) => nomes.map(n => ({ id: `${idProduto}-${slug
 // UNIT: cada dupla/trio é uma opção, R$7
 const PRECO_UNIT = 7;
 const unit = (idProduto, combos) => combos.map(c => ({ id: `${idProduto}-${slug(c)}`, label: c, preco: PRECO_UNIT }));
-// sem opções definidas ainda
-const aDefinir = idProduto => [{ id: `${idProduto}-a-definir`, label: "Opções em breve", preco: null }];
 
 export const PHOTOCARD_PRODUTOS = [
   { id: "ate-boom-unit",      nome: "ATE — BOOM UNIT",          foto: "ate-boom-unit.png",         opcoes: unit("ate-boom-unit", ["Bang Chan + Changbin","I.N + Lee Know","Seungmin + Hyunjin","Felix + Han"]) },
@@ -19,7 +17,7 @@ export const PHOTOCARD_PRODUTOS = [
   { id: "hop-limited-unit",   nome: "HOP — LIMITED UNIT",       foto: "hop-limited-unit.png",      opcoes: unit("hop-limited-unit", ["Bang Chan + Felix","Lee Know + Seungmin","Changbin + Hyunjin","I.N + Han"]) },
   { id: "hop-standard-unit",  nome: "HOP — STANDARD UNIT",      foto: "hop-standard-unit.png",     opcoes: unit("hop-standard-unit", ["Bang Chan + Lee Know","Felix + Changbin","Hyunjin + Han","I.N + Seungmin"]) },
   { id: "karma-limited-unit", nome: "KARMA — LIMITED UNIT",     foto: "karma-limited-unit.png",    opcoes: unit("karma-limited-unit", ["Lee Know + Changbin + Bang Chan","Hyunjin + I.N","Felix + Han + Seungmin"]) },
-  { id: "rockstar-unit",      nome: "ROCKSTAR — UNIT",          foto: "rockstar-unit.png",         opcoes: aDefinir("rockstar-unit") },
+  { id: "rockstar-unit",      nome: "ROCKSTAR — UNIT",          foto: "rockstar-unit.png",         opcoes: unit("rockstar-unit", ["Bang Chan + Changbin","Felix + Lee Know","Han + Hyunjin","Seungmin + I.N"]) },
   { id: "hop-pc",             nome: "HOP — PC",                 foto: "hop-pc.png",                opcoes: porNome("hop-pc", MEMBROS) },
   { id: "hop-pc-random",      nome: "HOP — PC RANDOM",          foto: "hop-pc-random.png",         opcoes: porNome("hop-pc-random", MEMBROS) },
   { id: "hop-set",            nome: "HOP — SET",                foto: "hop-set.png",               opcoes: porNome("hop-set", MEMBROS) },
