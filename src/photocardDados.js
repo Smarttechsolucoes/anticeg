@@ -9,15 +9,16 @@ const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, 
 const porNome = (idProduto, nomes, preco = null) => nomes.map(n => ({ id: `${idProduto}-${slug(n)}`, label: n, preco }));
 // UNIT: cada dupla/trio é uma opção, R$7
 const PRECO_UNIT = 7;
+const AVISOS_UNIT = ["Não precisa fechar set: pode pedir só as duplas/trios que quiser.", "Se chegarmos a 30 unidades de photocard de unit, o valor diminui."];
 const unit = (idProduto, combos) => combos.map(c => ({ id: `${idProduto}-${slug(c)}`, label: c, preco: PRECO_UNIT }));
 
 export const PHOTOCARD_PRODUTOS = [
-  { id: "ate-boom-unit",      nome: "ATE — BOOM UNIT",          foto: "ate-boom-unit.png",         opcoes: unit("ate-boom-unit", ["Bang Chan + Changbin","I.N + Lee Know","Seungmin + Hyunjin","Felix + Han"]) },
-  { id: "ate-chk-chk-unit",   nome: "ATE — CHK CHK UNIT",       foto: "ate-chk-chk-unit.png",      opcoes: unit("ate-chk-chk-unit", ["Bang Chan + Felix","Hyunjin + Lee Know","I.N + Changbin","Han + Seungmin"]) },
-  { id: "hop-limited-unit",   nome: "HOP — LIMITED UNIT",       foto: "hop-limited-unit.png",      opcoes: unit("hop-limited-unit", ["Bang Chan + Felix","Lee Know + Seungmin","Changbin + Hyunjin","I.N + Han"]) },
-  { id: "hop-standard-unit",  nome: "HOP — STANDARD UNIT",      foto: "hop-standard-unit.png",     opcoes: unit("hop-standard-unit", ["Bang Chan + Lee Know","Felix + Changbin","Hyunjin + Han","I.N + Seungmin"]) },
-  { id: "karma-limited-unit", nome: "KARMA — LIMITED UNIT",     foto: "karma-limited-unit.png",    opcoes: unit("karma-limited-unit", ["Lee Know + Changbin + Bang Chan","Hyunjin + I.N","Felix + Han + Seungmin"]) },
-  { id: "rockstar-unit",      nome: "ROCKSTAR — UNIT",          foto: "rockstar-unit.png",         opcoes: unit("rockstar-unit", ["Bang Chan + Changbin","Felix + Lee Know","Han + Hyunjin","Seungmin + I.N"]) },
+  { id: "ate-boom-unit",      nome: "ATE — BOOM UNIT",          foto: "ate-boom-unit.png",         avisos: AVISOS_UNIT, opcoes: unit("ate-boom-unit", ["Bang Chan + Changbin","I.N + Lee Know","Seungmin + Hyunjin","Felix + Han"]) },
+  { id: "ate-chk-chk-unit",   nome: "ATE — CHK CHK UNIT",       foto: "ate-chk-chk-unit.png",      avisos: AVISOS_UNIT, opcoes: unit("ate-chk-chk-unit", ["Bang Chan + Felix","Hyunjin + Lee Know","I.N + Changbin","Han + Seungmin"]) },
+  { id: "hop-limited-unit",   nome: "HOP — LIMITED UNIT",       foto: "hop-limited-unit.png",      avisos: AVISOS_UNIT, opcoes: unit("hop-limited-unit", ["Bang Chan + Felix","Lee Know + Seungmin","Changbin + Hyunjin","I.N + Han"]) },
+  { id: "hop-standard-unit",  nome: "HOP — STANDARD UNIT",      foto: "hop-standard-unit.png",     avisos: AVISOS_UNIT, opcoes: unit("hop-standard-unit", ["Bang Chan + Lee Know","Felix + Changbin","Hyunjin + Han","I.N + Seungmin"]) },
+  { id: "karma-limited-unit", nome: "KARMA — LIMITED UNIT",     foto: "karma-limited-unit.png",    avisos: AVISOS_UNIT, opcoes: unit("karma-limited-unit", ["Lee Know + Changbin + Bang Chan","Hyunjin + I.N","Felix + Han + Seungmin"]) },
+  { id: "rockstar-unit",      nome: "ROCKSTAR — UNIT",          foto: "rockstar-unit.png",         avisos: AVISOS_UNIT, opcoes: unit("rockstar-unit", ["Bang Chan + Changbin","Felix + Lee Know","Han + Hyunjin","Seungmin + I.N"]) },
   { id: "hop-pc",             nome: "HOP — PC",                 foto: "hop-pc.png",                opcoes: porNome("hop-pc", MEMBROS, 15) },
   { id: "hop-pc-random",      nome: "HOP — PC RANDOM",          foto: "hop-pc-random.png",         opcoes: porNome("hop-pc-random", MEMBROS, 20) },
   { id: "hop-set",            nome: "HOP — SET",                foto: "hop-set.png",               opcoes: [{ id: "hop-set-ot8", label: "OT8 (set completo)", preco: 50 }, ...porNome("hop-set", MEMBROS, 7).map(o => ({ ...o, label: o.label + " (member claim)" }))] },
