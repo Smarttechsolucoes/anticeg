@@ -6,7 +6,7 @@ const MEMBROS = ["Bang Chan", "Lee Know", "Changbin", "Hyunjin", "Han", "Felix",
 const SKZOO   = ["Wolf Chan", "Leebit", "Dwaekki", "Foxl.ny", "Han Quokka", "Bbokari", "PuppyM", "Jiniret"];
 
 const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-const porNome = (idProduto, nomes) => nomes.map(n => ({ id: `${idProduto}-${slug(n)}`, label: n, preco: null }));
+const porNome = (idProduto, nomes, preco = null) => nomes.map(n => ({ id: `${idProduto}-${slug(n)}`, label: n, preco }));
 // UNIT: cada dupla/trio é uma opção, R$7
 const PRECO_UNIT = 7;
 const unit = (idProduto, combos) => combos.map(c => ({ id: `${idProduto}-${slug(c)}`, label: c, preco: PRECO_UNIT }));
@@ -25,8 +25,8 @@ export const PHOTOCARD_PRODUTOS = [
   { id: "hop-pc-album",       nome: "HOP — PC ALBUM VER.",      foto: "pc-album-ver-hop.png",      opcoes: porNome("hop-pc-album", MEMBROS) },
   { id: "hop-pob-pc-album",   nome: "HOP — POB PC ALBUM VER.",  foto: "pob-pc-album-ver-hop.png",  opcoes: porNome("hop-pob-pc-album", MEMBROS) },
   { id: "limited-pc-album",   nome: "LIMITED PC ALBUM SET",     foto: "limited-pc-album-set.png",  opcoes: porNome("limited-pc-album", MEMBROS) },
-  { id: "bdm-pob",            nome: "BDM — POB",                foto: "bdm-pob.png",               opcoes: porNome("bdm-pob", MEMBROS) },
-  { id: "tin-case-skzoo",     nome: "TIN CASE SKZOO",           foto: "tin-case-skzoo.png",        opcoes: porNome("tin-case-skzoo", SKZOO) },
+  { id: "bdm-pob",            nome: "BDM — POB",                foto: "bdm-pob.png",               opcoes: [...porNome("bdm-pob", ["Lee Know", "Hyunjin", "Felix"], 50), { id: "bdm-pob-set", label: "Set completo (Lee Know + Hyunjin + Felix)", preco: 150 }] },
+  { id: "tin-case-skzoo",     nome: "TIN CASE SKZOO",           foto: "tin-case-skzoo.png",        opcoes: porNome("tin-case-skzoo", SKZOO, 15) },
 ];
 
 export const PHOTOCARD_CFG = {
