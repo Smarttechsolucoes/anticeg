@@ -145,9 +145,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
       )}
       <div style={{ width: "100%", maxWidth: 520 }}>
         <div style={{ marginBottom: 28, textAlign: "center" }}>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "4px", color: "rgba(245,240,232,.3)", marginBottom: 8 }}>ANTI CEGS × PRÉ-VENDA</div>
+          {cfg.selo !== "" && <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "4px", color: "rgba(245,240,232,.3)", marginBottom: 8 }}>{cfg.selo ?? "ANTI CEGS × PRÉ-VENDA"}</div>}
           <div style={{ fontSize: "clamp(22px,6vw,32px)", fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 }}>{cfg.titulo}</div>
-          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 6 }}>{cfg.sub}</div>
+          {cfg.sub && <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 6 }}>{cfg.sub}</div>}
           {!encerrado && cfg.pedidosAte && (
             <div style={{ marginTop: 10, fontFamily: mono, fontSize: 10, color: "rgba(255,92,26,.7)", letterSpacing: "1px" }}>PEDIDOS ATÉ {cfg.pedidosAte}</div>
           )}
@@ -349,7 +349,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 }
 
 // ── Painel admin ─────────────────────────────────────────────────────────────
-export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
+export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS }) {
   const [pedidos, setPedidos] = useState([]);
   const [filtro,  setFiltro]  = useState("abertos");
   const [erro,    setErro]    = useState("");
@@ -374,7 +374,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
   const rotulo = s => ({ confirmado: "confirmado", cancelado: "cancelado", cartao: "cartão — confirmar no linknabio", pendente: "pagamento pendente", aguardando: "aguardando confirmação do PIX" }[s] || s);
 
   // resumo por item (para fazer a compra): tudo que não foi cancelado, e quanto já está confirmado
-  const porId = new Map(SMOLMERCH_OPCOES.map(o => [o.id, { ...o, pedido: 0, confirmado: 0 }]));
+  const porId = new Map(produtos.flatMap(p => p.opcoes.map(o => ({ ...o, produto: p.nome }))).map(o => [o.id, { ...o, pedido: 0, confirmado: 0 }]));
   pedidos.forEach(p => {
     if (p.status === "cancelado") return;
     (p.itens || []).forEach(i => {
@@ -394,7 +394,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
 
   return (
     <div style={{ padding: "24px 0" }}>
-      <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "2px", color: "rgba(245,240,232,.35)", marginBottom: 16 }}>{cfg.titulo} — {cfg.sub}</div>
+      <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "2px", color: "rgba(245,240,232,.35)", marginBottom: 16 }}>{cfg.titulo}{cfg.sub ? ` — ${cfg.sub}` : ""}</div>
       {erro && <div style={{ fontFamily: mono, fontSize: 11, color: "#ff6b6b", marginBottom: 12 }}>{erro}</div>}
 
       {resumo.length > 0 && (

@@ -31,12 +31,11 @@ export const PHOTOCARD_PRODUTOS = [
 ];
 
 export const PHOTOCARD_CFG = {
-  tabela: "pedidos_photocard", pasta: "photocard", produto: "PHOTOCARDS",
-  titulo: "PHOTOCARDS", sub: "CEG: anticeg ☆ tin case skzoo",
+  tabela: "pedidos_murce_itens", pasta: "murce-itens", produto: "MURCEKALY ITENS",
+  titulo: "MURCEKALY ITENS", sub: "", selo: "",
   deadline: new Date("2026-10-28T09:00:00-03:00"), pedidosAte: "28/10 às 9h", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
-  // rascunho: o formulário ainda não recebe pedidos
-  bloqueado: true,
+  bloqueado: false,
   resumoPedido: true, // lista os itens marcados embaixo, para conferência
   fotoGrande: true, // mostra a foto inteira (sem cortar) em cada produto
   pagamentoAgora: false,
