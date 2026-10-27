@@ -35,6 +35,7 @@ export const PHOTOCARD_CFG = {
   deadline: null, pedidosAte: null, pagarAte: null,
   // rascunho: o formulário ainda não recebe pedidos
   bloqueado: true,
+  fotoGrande: true, // mostra a foto inteira (sem cortar) em cada produto
   pagamentoAgora: false,
   avisos: [
     "Formulário **em montagem**: preços e prazos serão informados em breve.",

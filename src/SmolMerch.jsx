@@ -15,6 +15,33 @@ function Qty({ valor, onMenos, onMais }) {
   );
 }
 
+// topo do card do produto: miniatura ao lado do nome ou, com fotoGrande, a foto inteira em largura total
+function CabProduto({ p, fotoDe, grande, onZoom }) {
+  const img = { cursor: "zoom-in", background: "rgba(245,240,232,.06)" };
+  if (grande) return (
+    <div>
+      <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
+        style={{ ...img, display: "block", width: "100%", height: "auto", maxHeight: 420, objectFit: "contain" }}
+        onError={e => { e.target.style.visibility = "hidden"; }} />
+      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3, padding: "10px 14px 8px" }}>
+        {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
+        {p.nome}
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
+      <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
+        style={{ ...img, width: 84, height: 84, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
+        onError={e => { e.target.style.visibility = "hidden"; }} />
+      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
+        {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
+        {p.nome}
+      </div>
+    </div>
+  );
+}
+
 // ── Formulário público ───────────────────────────────────────────────────────
 export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto }) {
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
@@ -125,15 +152,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {produtos.map(p => (
                 <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                  <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
-                    <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(fotoDe(p.foto, 2000))}
-                      style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
-                      onError={e => { e.target.style.visibility = "hidden"; }} />
-                    <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
-                      {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
-                      {p.nome}
-                    </div>
-                  </div>
+                  <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {p.opcoes.map(o => (
                       <div key={o.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)" }}>
@@ -189,15 +208,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {produtos.map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
-                      <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(fotoDe(p.foto, 2000))}
-                        style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
-                        onError={e => { e.target.style.visibility = "hidden"; }} />
-                      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
-                        {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
-                        {p.nome}
-                      </div>
-                    </div>
+                    <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {p.opcoes.map(o => {
                         const q = qtds[o.id] || 0;
