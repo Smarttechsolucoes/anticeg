@@ -110,6 +110,9 @@ function PainelPublico({ aba, cfg, produtos }) {
 
   return (
     <div>
+      <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontFamily: mono, fontSize: 11, lineHeight: 1.7, color: "rgba(245,240,232,.75)" }}>
+        ☆ Seu item estará disponível para o pagamento <strong>somente após a confirmação da seller</strong>.
+      </div>
       <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}</div>
       {pedidos.length ? cartoes(pedidos) : vazio}
     </div>
