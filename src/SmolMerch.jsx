@@ -249,7 +249,31 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                   </div>
                 ))}
               </div>
-              {total > 0 && (
+              {cfg.resumoPedido && escolhidos.length > 0 && (
+                <div style={{ marginTop: 18, background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 12, padding: "14px 16px" }}>
+                  <div style={{ ...labelStyle, marginBottom: 10 }}>Seu pedido · confira antes de enviar</div>
+                  {produtos.map(p => {
+                    const linhas = escolhidos.filter(o => o.produto === p.nome);
+                    if (!linhas.length) return null;
+                    return (
+                      <div key={p.id} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{p.nome}</div>
+                        {linhas.map(o => (
+                          <div key={o.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: mono, fontSize: 11, lineHeight: 1.8, color: "rgba(245,240,232,.7)" }}>
+                            <span>☆ {o.label}{qtds[o.id] > 1 ? ` × ${qtds[o.id]}` : ""}</span>
+                            <span style={{ color: "rgba(245,240,232,.5)", whiteSpace: "nowrap" }}>{o.preco == null ? "—" : fmtReais(qtds[o.id] * o.preco)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  <div style={{ borderTop: "1px solid rgba(245,240,232,.1)", paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)" }}>
+                    <span>Total · {qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""}</span>
+                    <span>{fmtReais(total)}</span>
+                  </div>
+                </div>
+              )}
+              {!cfg.resumoPedido && total > 0 && (
                 <div style={{ marginTop: 14, fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)", textAlign: "right" }}>
                   Total: {fmtReais(total)} ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})
                 </div>
