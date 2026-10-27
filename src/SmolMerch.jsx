@@ -73,31 +73,36 @@ function PainelPublico({ aba, cfg, produtos }) {
   const validos = pedidos.filter(p => p.status !== "cancelado");
   const hora = d => new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
+  // mesmo cartão nas duas abas: o @ é sempre "@***" (a consulta nem traz o nome, e-mail ou @)
+  const cartoes = lista => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {lista.map(p => (
+        <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
+            <span style={{ fontWeight: 700 }}>@***</span>
+            <span style={{ color: "rgba(245,240,232,.4)" }}>{hora(p.created_at)}</span>
+          </div>
+          {(p.itens || []).map((i, k) => (
+            <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, marginTop: 6 }}>
+            <span style={{ color: p.status === "confirmado" ? "#4ade80" : p.status === "cancelado" ? "#ff6b6b" : "rgba(245,240,232,.4)" }}>{p.status === "confirmado" ? "confirmado" : p.status === "cancelado" ? "cancelado" : "aguardando confirmação"}</span>
+            <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{p.qtd_total} un · {fmtReais(p.valor_total)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+  const vazio = <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>;
+
   if (aba === "aovivo") {
-    // quantas unidades já foram pedidas de cada opção
-    const qtdPor = {};
-    validos.forEach(p => (p.itens || []).forEach(i => { qtdPor[i.id] = (qtdPor[i.id] || 0) + (Number(i.qtd) || 0); }));
-    const grupos = produtos.map(p => ({ p, linhas: p.opcoes.filter(o => qtdPor[o.id] > 0) })).filter(g => g.linhas.length);
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>
           <span><span style={{ color: "#4ade80" }}>●</span> AO VIVO · atualiza a cada 15s</span>
           <span>{validos.length} pedido{validos.length !== 1 ? "s" : ""} · {validos.reduce((a, p) => a + (Number(p.qtd_total) || 0), 0)} un</span>
         </div>
-        {!grupos.length && <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {grupos.map(({ p, linhas }) => (
-            <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px" }}>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{p.nome}</div>
-              {linhas.map(o => (
-                <div key={o.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9, color: "rgba(245,240,232,.7)" }}>
-                  <span>☆ {o.label}</span>
-                  <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{qtdPor[o.id]} pedido{qtdPor[o.id] !== 1 ? "s" : ""}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        {validos.length ? cartoes(validos) : vazio}
         {atualizado && <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.25)", textAlign: "center", marginTop: 14 }}>atualizado às {atualizado.toLocaleTimeString("pt-BR")}</div>}
       </div>
     );
@@ -106,24 +111,7 @@ function PainelPublico({ aba, cfg, produtos }) {
   return (
     <div>
       <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}</div>
-      {!pedidos.length && <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {pedidos.map(p => (
-          <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
-              <span style={{ fontWeight: 700 }}>@***</span>
-              <span style={{ color: "rgba(245,240,232,.4)" }}>{hora(p.created_at)}</span>
-            </div>
-            {(p.itens || []).map((i, k) => (
-              <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
-            ))}
-            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, marginTop: 6 }}>
-              <span style={{ color: p.status === "confirmado" ? "#4ade80" : p.status === "cancelado" ? "#ff6b6b" : "rgba(245,240,232,.4)" }}>{p.status === "confirmado" ? "confirmado" : p.status === "cancelado" ? "cancelado" : "aguardando confirmação"}</span>
-              <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{p.qtd_total} un · {fmtReais(p.valor_total)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {pedidos.length ? cartoes(pedidos) : vazio}
     </div>
   );
 }
@@ -144,6 +132,16 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
+  // cfg.abreEm: o formulário só aceita pedidos a partir dessa hora; até lá o botão mostra a contagem regressiva
+  const [relogio,     setRelogio]     = useState(() => Date.now());
+  useEffect(() => {
+    if (!cfg.abreEm || Date.now() >= cfg.abreEm.getTime()) return;
+    const t = setInterval(() => { setRelogio(Date.now()); if (Date.now() >= cfg.abreEm.getTime()) clearInterval(t); }, 1000);
+    return () => clearInterval(t);
+  }, [cfg.abreEm]);
+  const faltamMs = cfg.abreEm ? Math.max(0, cfg.abreEm.getTime() - relogio) : 0;
+  const aindaNaoAbriu = faltamMs > 0;
+  const contagem = (() => { const s = Math.ceil(faltamMs / 1000), p = n => String(n).padStart(2, "0"); return `${p(Math.floor(s / 3600))}:${p(Math.floor(s % 3600 / 60))}:${p(s % 60)}`; })();
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -177,7 +175,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (cfg.bloqueado) return;
+    if (cfg.bloqueado || aindaNaoAbriu) return;
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 item."); return; }
     if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
@@ -294,6 +292,12 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               style={{ display: "inline-block", padding: "12px 24px", borderRadius: 10, background: "rgba(37,211,102,.15)", border: "1px solid rgba(37,211,102,.35)", color: "#25d366", fontFamily: mono, fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: "0.5px" }}>
               Entrar no grupo de atualizações
             </a>
+            <div>
+              <button type="button" onClick={() => { setStatus("idle"); setQtds({}); setComprovante(null); setErro(""); setPedidoId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                style={{ marginTop: 14, padding: "12px 24px", borderRadius: 10, background: "transparent", border: "1px solid var(--laranja)", color: "var(--laranja)", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.5px", cursor: "pointer" }}>
+                + Comprar novamente
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -430,9 +434,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             )}
 
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}</div>}
-            <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado}
-              style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado ? "pointer" : "not-allowed", letterSpacing: "1px" }}>
-              {cfg.bloqueado ? "AINDA NÃO DISPONÍVEL" : status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
+            <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado || aindaNaoAbriu}
+              style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "pointer" : "not-allowed", letterSpacing: "1px" }}>
+              {cfg.bloqueado ? "AINDA NÃO DISPONÍVEL" : aindaNaoAbriu ? `ABRE ÀS ${cfg.abreEmRotulo || "—"} · ${contagem}` : status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
             </button>
           </form>
         )}

@@ -36,12 +36,14 @@ export const PHOTOCARD_CFG = {
   deadline: new Date("2026-10-28T09:00:00-03:00"), pedidosAte: "28/10 às 9h", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   bloqueado: false,
+  abreEm: new Date("2026-10-27T19:00:00-03:00"), abreEmRotulo: "19H", // pedidos só a partir das 19h; o botão mostra a contagem
   cabecalho: true,   // barra ANTICEG no topo
   aoVivo: true,      // abas Pedido · Ao vivo · Histórico (@ sempre como @***)
   resumoPedido: true, // lista os itens marcados embaixo, para conferência
   fotoGrande: true, // mostra a foto inteira (sem cortar) em cada produto
   pagamentoAgora: false,
   avisos: [
+    "Os pedidos abrem hoje, **27 de outubro às 19h**.",
     "Alguns cards estão amarrados em set por regras de compra da seller.",
     "**CEG DEMORADA**.",
     "Pagamento imediato **APÓS a confirmação dos itens**.",
