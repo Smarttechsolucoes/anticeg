@@ -181,6 +181,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     return prox;
   });
 
+  // cadastrada: os dados vieram do cadastro, então os campos de identificação não precisam aparecer
+  const cadastrada = !!cfg.ocultarSeCadastrada && !!claim && !!nome.trim() && !!email.trim();
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (cfg.bloqueado || aindaNaoAbriu) return;
@@ -309,6 +312,11 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
+            {cadastrada ? (
+              <div style={{ marginBottom: 24, padding: "10px 14px", borderRadius: 10, background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)" }}>
+                Pedido em nome de <strong style={{ color: "var(--offwhite)" }}>{nome}</strong>{social ? <> · {social}</> : null}
+              </div>
+            ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
               {claim && (
                 <div>
@@ -329,6 +337,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                 <input style={inputStyle} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
               </div>
             </div>
+            )}
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
