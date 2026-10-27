@@ -26286,6 +26286,17 @@ function PrevendaTab({ user }) {
 
   const formularios = [
     {
+      key: "murce-itens",
+      ativo: true,
+      fechado: now > PHOTOCARD_CFG.deadline,
+      titulo: "MURCEKALY ITENS",
+      subtitulo: "Photocards ATE · HOP · KARMA · ROCKSTAR · BDM · Tin Case SKZOO",
+      url: "/murce-itens",
+      img: "/photocard/tin-case-skzoo.png",
+      tags: ["Pedidos até 28/10 às 9h", "Pagamento após a confirmação"],
+      info: "A partir de R$ 7,00 · CEG demorada · itens da Indonésia · estoque limitado",
+    },
+    {
       key: "dazed-han",
       ativo: true,
       titulo: "DAZED & CONFUSED",
