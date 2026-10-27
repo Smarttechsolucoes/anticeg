@@ -1930,15 +1930,21 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         if (!data) return;
         const map = {};
         const confirm = {};
+        // a demanda guarda o id do item na época do envio; o id pode mudar no sync, então também casa por ceg+nome (igual à aba Pagamentos)
+        const idsPorNome = {};
+        (itens || []).forEach(m => { (idsPorNome[`${m.ceg}::${m.nome_do_item}`] ||= []).push(m.id); });
         data.forEach(d => {
           (d.itens || []).forEach(it => {
-            if (!map[it.id] || (d.status === "em_analise" && map[it.id] !== "pago")) map[it.id] = d.status;
-            if (d.status === "pago") {
-              if (!confirm[it.id]) confirm[it.id] = {};
-              if (Number(it.valor_item  || 0) > 0) confirm[it.id].item  = true;
-              if (Number(it.frete_inter || 0) > 0) confirm[it.id].frete = true;
-              if (Number(it.taxa_rf     || 0) > 0) confirm[it.id].rf    = true;
-            }
+            const ids = new Set([it.id, ...(it.ceg && it.nome_do_item ? (idsPorNome[`${it.ceg}::${it.nome_do_item}`] || []) : [])]);
+            ids.forEach(id => {
+              if (!map[id] || (d.status === "em_analise" && map[id] !== "pago")) map[id] = d.status;
+              if (d.status === "pago") {
+                if (!confirm[id]) confirm[id] = {};
+                if (Number(it.valor_item  || 0) > 0) confirm[id].item  = true;
+                if (Number(it.frete_inter || 0) > 0) confirm[id].frete = true;
+                if (Number(it.taxa_rf     || 0) > 0) confirm[id].rf    = true;
+              }
+            });
           });
         });
         setPagDemandaMap(map);
@@ -1952,7 +1958,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
         data.forEach(d => { if (d.item_id && d.status === "pendente") map[d.item_id] = "pendente"; });
         setRepasseMap(map);
       });
-  }, [user.cog]);
+  }, [user.cog, itens.length]);
   const [avisos, setAvisos] = useState([]);
   const [avisosModal, setAvisosModal] = useState(false);
   const [avisosHistorico, setAvisosHistorico] = useState(null);
@@ -3600,7 +3606,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: envios },
         { data: reports },
         { data: feedbacksData },
-        { data: pendentes },
+        { data: pendentesRaw },
         { data: pagamentos },
         { data: itensData },
         { data: repassosData },
@@ -3614,7 +3620,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, id_linha, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
           .eq("cog", dataCog(user.cog))
-          .or("and(pago_item.eq.false,valor_item.gt.0),and(pago_frete.eq.false,frete_inter.gt.0),and(pago_rf.eq.false,taxa_rf.gt.0)"),
+          .or("valor_item.gt.0,frete_inter.gt.0,taxa_rf.gt.0"),
         supabase.from("pagamento_demandas").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
           .eq("cog", dataCog(user.cog)).order("ceg").order("nome_do_item"),
@@ -3629,9 +3635,11 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       setMeusFeedbacks(feedbacksData || []);
       setSaldoCashback(Number(cashbackData?.saldo_cashback || 0));
       setBadgesAntiv((antivBadgesData || []).map(r => r.badge_slug));
-      if (pendentes && pagamentos) {
+      // mesmo critério do modal "Pendências": vazio (null) também é pendente; normaliza para boolean
+      const pendentes = pendentesRaw && pendentesRaw.map(i => ({ ...i, pago_item: !isPendente(i.pago_item), pago_frete: !isPendente(i.pago_frete), pago_rf: !isPendente(i.pago_rf) }));
+      if (pendentes) {
         const cfm = {};
-        pagamentos.filter(d => d.status === "pago").forEach(d => {
+        (pagamentos || []).filter(d => d.status === "pago").forEach(d => {
           (d.itens || []).filter(it => it.ceg && it.nome_do_item).forEach(it => {
             const k = `${it.ceg}::${it.nome_do_item}`;
             if (!cfm[k]) cfm[k] = {};
@@ -3647,9 +3655,6 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
               || (!i.pago_rf    && Number(i.taxa_rf    ||0) > 0 && !c.rf);
         });
         setItensPendentes(sortPendentes(stillPending));
-        setPagSelecionados(new Map());
-      } else if (pendentes) {
-        setItensPendentes(sortPendentes(pendentes));
         setPagSelecionados(new Map());
       }
       if (pagamentos) setMeusPagamentos(pagamentos);
