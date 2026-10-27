@@ -117,7 +117,8 @@ function PainelPublico({ aba, cfg, produtos }) {
 }
 
 // ── Formulário público ───────────────────────────────────────────────────────
-export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto }) {
+// interno: renderizada dentro do app (que já tem cabeçalho e abas), então sem a barra própria nem a altura de tela cheia
+export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto, interno = false }) {
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
   const [claim,       setClaim]       = useState(() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog || ""; } catch { return ""; } });
   const [nome,        setNome]        = useState("");
@@ -212,13 +213,13 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const agora = pagamento !== "depois";
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--offwhite)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 16px 80px" }}>
+    <div style={{ minHeight: interno ? 0 : "100vh", background: "var(--bg)", color: "var(--offwhite)", display: "flex", flexDirection: "column", alignItems: "center", padding: interno ? "28px 16px 80px" : "40px 16px 80px" }}>
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
           <img src={lightbox} alt="produto" style={{ maxWidth: "92vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain" }} />
         </div>
       )}
-      {cfg.cabecalho && (
+      {cfg.cabecalho && !interno && (
         <div style={{ width: "calc(100% + 32px)", margin: "-40px -16px 28px", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(245,240,232,.04)", borderBottom: "1px solid rgba(245,240,232,.1)", boxSizing: "border-box" }}>
           <a href="/" style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 26, letterSpacing: 1, textDecoration: "none", color: "var(--offwhite)", lineHeight: 1 }}>ANTI<span style={{ color: "var(--laranja)" }}>CEG</span></a>
           <a href="/" style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1px", color: "rgba(245,240,232,.55)", textDecoration: "none", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 12px" }}>← VOLTAR AO SITE</a>

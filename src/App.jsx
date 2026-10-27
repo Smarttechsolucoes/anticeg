@@ -27459,7 +27459,9 @@ export default function App() {
     const tab = TAB_SLUGS.includes(pathTab) ? pathTab : TAB_SLUGS.includes(qTab) ? qTab : "masterlist";
     return { tab, sub };
   };
-  const [tab, setTab] = useState(() => parseUrlParts().tab);
+  // /murce-itens abre DENTRO do app (cabeçalho e abas do site); deslogada, segue a página solta
+  const [formInterno, setFormInterno] = useState(() => window.location.pathname === "/murce-itens");
+  const [tab, setTab] = useState(() => window.location.pathname === "/murce-itens" ? "prevenda" : parseUrlParts().tab);
   const [initAdminSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "admin"  ? p.sub : null; });
   const [initPerfilSubTab] = useState(() => { const p = parseUrlParts(); return p.tab === "perfil" ? p.sub : null; });
   const [initCegSlug, setInitCegSlug] = useState(() => { const parts = window.location.pathname.split("/").filter(Boolean); return parts[0] === "cegs" && parts[1] ? parts[1] : null; });
@@ -27560,12 +27562,14 @@ export default function App() {
   function changeTab(newTab) {
     setTab(newTab);
     setInitCegSlug(null);
+    setFormInterno(false);
     history.pushState(null, "", "/" + newTab);
   }
 
   useEffect(() => {
     const handler = () => {
       const { tab: slug } = parseUrlParts();
+      setFormInterno(window.location.pathname === "/murce-itens");
       if (TAB_SLUGS.includes(slug)) setTab(slug);
       const parts = window.location.pathname.split("/").filter(Boolean);
       setInitCegSlug(parts[0] === "cegs" && parts[1] ? parts[1] : null);
@@ -27771,7 +27775,7 @@ export default function App() {
   if (window.location.pathname === "/esquire-hyunjin") return <WMagFormPage cfg={ESQUIRE_HJ_CFG} />;
   if (window.location.pathname === "/dazed-han") return <WMagFormPage cfg={DAZED_HAN_CFG} />;
   if (window.location.pathname === "/smolmerch") return <SmolMerchFormPage pixKey={PIX_KEY} />;
-  if (window.location.pathname === "/murce-itens") return <SmolMerchFormPage pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} />;
+  if (window.location.pathname === "/murce-itens" && !user) return <SmolMerchFormPage pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
   if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
@@ -28077,7 +28081,9 @@ export default function App() {
           </div>
         );
       })()}
-      {window.location.pathname === "/claim" ? (
+      {formInterno ? (
+        <SmolMerchFormPage interno pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} />
+      ) : window.location.pathname === "/claim" ? (
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
