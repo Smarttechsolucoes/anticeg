@@ -63,6 +63,31 @@ async function registrarPush(joinerCog) {
 
 let _pushGlobalAtivo = true;
 
+// Envia o comprovante ao bucket. No celular o arquivo escolhido pode deixar de ser legível (volta do app do banco, galeria que muda o arquivo) e a rede oscila:
+// o arquivo é copiado para a memória antes de subir e uma falha de rede tem mais duas tentativas.
+async function enviarComprovante(path, arquivo) {
+  let corpo;
+  try {
+    corpo = new Blob([await arquivo.arrayBuffer()], { type: arquivo.type || "application/octet-stream" });
+  } catch {
+    return { error: { message: "não consegui ler o arquivo no seu aparelho. Escolha o comprovante de novo (ou use \"Não consigo enviar o comprovante\")" } };
+  }
+  let ultimo = null;
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    if (tentativa > 0) await new Promise(r => setTimeout(r, 1500 * tentativa));
+    const { error } = await supabase.storage.from("comprovantes").upload(path, corpo, { upsert: false, contentType: corpo.type });
+    if (!error) return { error: null };
+    // a tentativa anterior chegou ao servidor e só a resposta se perdeu
+    if (tentativa > 0 && /already exists|duplicate/i.test(error.message || "")) return { error: null };
+    ultimo = error;
+    if (!/failed to fetch|network|load failed/i.test(error.message || "")) break;
+  }
+  if (/failed to fetch|network|load failed/i.test(ultimo?.message || "")) {
+    return { error: { message: "sem conexão com o servidor. Confira a internet e tente de novo" } };
+  }
+  return { error: ultimo };
+}
+
 // Notificações INTERNAS (tabela public.notifications): fechada ao site pelo N0 até o lançamento com login por conta (J4c-4c). Enquanto false, o site não lê, não grava e não mostra o aviso interno.
 // E-mail e push (tabela pushes) NÃO dependem disto. Ao reabrir no J4c-4c, trocar para true.
 const NOTIFICACOES_INTERNAS_ATIVAS = false;
@@ -4043,7 +4068,7 @@ ${p.comprovante_url ? (() => {
           } else {
             const ext  = pagComprovante.name.split(".").pop();
             const path = `${user.cog}/${Date.now()}.${ext}`;
-            const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, pagComprovante, { upsert: false });
+            const { error: upErr } = await enviarComprovante(path, pagComprovante);
             if (upErr) { setPagStatus("idle"); setPagErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
             const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
             comprovanteUrl = publicUrl;
@@ -4714,7 +4739,7 @@ ${p.comprovante_url ? (() => {
           setRepasseStatus("enviando"); setRepasseErro("");
           const ext  = repasseComprovante.name.split(".").pop();
           const path = `repassos/${user.cog}/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, repasseComprovante, { upsert: false });
+          const { error: upErr } = await enviarComprovante(path, repasseComprovante);
           if (upErr) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar arquivo: ${upErr.message}`); return; }
           const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
           const custosPagosArr = [...repasseCustos];
