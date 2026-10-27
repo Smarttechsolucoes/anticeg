@@ -15,8 +15,45 @@ function Qty({ valor, onMenos, onMais }) {
   );
 }
 
+// topo do card do produto: miniatura ao lado do nome ou, com fotoGrande, a foto inteira em largura total
+function CabProduto({ p, fotoDe, grande, onZoom }) {
+  const img = { cursor: "zoom-in", background: "rgba(245,240,232,.06)" };
+  // regras específicas do produto (opcional): p.avisos = ["texto", ...]
+  const notas = p.avisos?.length ? (
+    <div style={{ margin: "0 14px 10px", padding: "8px 10px", borderRadius: 8, background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", fontFamily: mono, fontSize: 10, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
+      {p.avisos.map((a, i) => <div key={i}>☆ {a}</div>)}
+    </div>
+  ) : null;
+  if (grande) return (
+    <div>
+      <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
+        style={{ ...img, display: "block", width: "100%", height: "auto", maxHeight: 420, objectFit: "contain" }}
+        onError={e => { e.target.style.visibility = "hidden"; }} />
+      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3, padding: "10px 14px 8px" }}>
+        {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
+        {p.nome}
+      </div>
+      {notas}
+    </div>
+  );
+  return (
+    <>
+    <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
+      <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
+        style={{ ...img, width: 84, height: 84, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
+        onError={e => { e.target.style.visibility = "hidden"; }} />
+      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
+        {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
+        {p.nome}
+      </div>
+    </div>
+    {notas && <div style={{ paddingTop: 2 }}>{notas}</div>}
+    </>
+  );
+}
+
 // ── Formulário público ───────────────────────────────────────────────────────
-export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
+export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto }) {
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
   const [claim,       setClaim]       = useState(() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog || ""; } catch { return ""; } });
   const [nome,        setNome]        = useState("");
@@ -43,10 +80,23 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- só no primeiro carregamento
   }, []);
 
-  const escolhidos = SMOLMERCH_OPCOES.filter(o => (qtds[o.id] || 0) > 0);
+  const todasOpcoes = produtos.flatMap(p => p.opcoes.map(o => ({ ...o, produto: p.nome })));
+  const escolhidos = todasOpcoes.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
   const total = escolhidos.reduce((a, o) => a + qtds[o.id] * o.preco, 0);
-  const ajustar = (id, delta) => setQtds(q => ({ ...q, [id]: Math.min(20, Math.max(0, (q[id] || 0) + delta)) }));
+  // regras por produto (opcionais): maxPorOpcao = limite por opção; todasOuNenhuma = as opções só saem juntas (ex.: set de 3 membros)
+  const ajustar = (id, delta) => setQtds(q => {
+    const p = produtos.find(pr => pr.opcoes.some(o => o.id === id));
+    const novo = Math.min(p?.maxPorOpcao || 20, Math.max(0, (q[id] || 0) + delta));
+    const prox = p?.todasOuNenhuma ? { ...q, ...Object.fromEntries(p.opcoes.map(o => [o.id, novo])) } : { ...q, [id]: novo };
+    // exigeTodos (na opção): só sai junto com todas as outras do produto e em no máximo a menor quantidade delas (ex.: Hyunjin só fechando o set OT8)
+    const dep = p?.opcoes.filter(o => o.exigeTodos) || [];
+    if (dep.length) {
+      const menorBase = Math.min(...p.opcoes.filter(o => !o.exigeTodos).map(o => prox[o.id] || 0));
+      dep.forEach(o => { prox[o.id] = Math.min(prox[o.id] || 0, menorBase); });
+    }
+    return prox;
+  });
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -95,9 +145,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
       )}
       <div style={{ width: "100%", maxWidth: 520 }}>
         <div style={{ marginBottom: 28, textAlign: "center" }}>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "4px", color: "rgba(245,240,232,.3)", marginBottom: 8 }}>ANTI CEGS × PRÉ-VENDA</div>
+          {cfg.selo !== "" && <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "4px", color: "rgba(245,240,232,.3)", marginBottom: 8 }}>{cfg.selo ?? "ANTI CEGS × PRÉ-VENDA"}</div>}
           <div style={{ fontSize: "clamp(22px,6vw,32px)", fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 }}>{cfg.titulo}</div>
-          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 6 }}>{cfg.sub}</div>
+          {cfg.sub && <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", marginTop: 6 }}>{cfg.sub}</div>}
           {!encerrado && cfg.pedidosAte && (
             <div style={{ marginTop: 10, fontFamily: mono, fontSize: 10, color: "rgba(255,92,26,.7)", letterSpacing: "1px" }}>PEDIDOS ATÉ {cfg.pedidosAte}</div>
           )}
@@ -122,17 +172,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
             </div>
             <div style={labelStyle}>Itens da pré-venda</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {SMOLMERCH_PRODUTOS.map(p => (
+              {produtos.map(p => (
                 <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                  <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
-                    <img src={foto(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(foto(p.foto, 2000))}
-                      style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
-                      onError={e => { e.target.style.visibility = "hidden"; }} />
-                    <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
-                      {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
-                      {p.nome}
-                    </div>
-                  </div>
+                  <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {p.opcoes.map(o => (
                       <div key={o.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)" }}>
@@ -155,7 +197,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
                 : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {pedidoId && <div style={{ marginTop: 8, fontSize: 10, opacity: .5 }}>#{pedidoId}</div>}
             </div>
-            <a href="https://chat.whatsapp.com/FqcEhq1039j3ZH0YntnCHD" target="_blank" rel="noopener noreferrer"
+            <a href={cfg.grupoWhatsapp || "https://chat.whatsapp.com/FqcEhq1039j3ZH0YntnCHD"} target="_blank" rel="noopener noreferrer"
               style={{ display: "inline-block", padding: "12px 24px", borderRadius: 10, background: "rgba(37,211,102,.15)", border: "1px solid rgba(37,211,102,.35)", color: "#25d366", fontFamily: mono, fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: "0.5px" }}>
               Entrar no grupo de atualizações
             </a>
@@ -186,17 +228,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {SMOLMERCH_PRODUTOS.map(p => (
+                {produtos.map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ display: "flex", gap: 12, padding: "12px 12px 8px", alignItems: "center" }}>
-                      <img src={foto(p.foto)} alt={p.nome} loading="lazy" onClick={() => setLightbox(foto(p.foto, 2000))}
-                        style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, cursor: "zoom-in", flexShrink: 0, background: "rgba(245,240,232,.06)" }}
-                        onError={e => { e.target.style.visibility = "hidden"; }} />
-                      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>
-                        {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
-                        {p.nome}
-                      </div>
-                    </div>
+                    <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {p.opcoes.map(o => {
                         const q = qtds[o.id] || 0;
@@ -205,6 +239,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
                               <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(o.preco)}</div>
+                              {o.exigeTodos && <div style={{ fontFamily: mono, fontSize: 10, color: "var(--laranja)", marginTop: 3 }}>{o.exigeTodosTexto || "só sai fechando o set completo"}</div>}
                             </div>
                             <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} />
                           </div>
@@ -214,7 +249,31 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
                   </div>
                 ))}
               </div>
-              {total > 0 && (
+              {cfg.resumoPedido && escolhidos.length > 0 && (
+                <div style={{ marginTop: 18, background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 12, padding: "14px 16px" }}>
+                  <div style={{ ...labelStyle, marginBottom: 10 }}>Seu pedido · confira antes de enviar</div>
+                  {produtos.map(p => {
+                    const linhas = escolhidos.filter(o => o.produto === p.nome);
+                    if (!linhas.length) return null;
+                    return (
+                      <div key={p.id} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{p.nome}</div>
+                        {linhas.map(o => (
+                          <div key={o.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: mono, fontSize: 11, lineHeight: 1.8, color: "rgba(245,240,232,.7)" }}>
+                            <span>☆ {o.label}{qtds[o.id] > 1 ? ` × ${qtds[o.id]}` : ""}</span>
+                            <span style={{ color: "rgba(245,240,232,.5)", whiteSpace: "nowrap" }}>{o.preco == null ? "—" : fmtReais(qtds[o.id] * o.preco)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  <div style={{ borderTop: "1px solid rgba(245,240,232,.1)", paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)" }}>
+                    <span>Total · {qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""}</span>
+                    <span>{fmtReais(total)}</span>
+                  </div>
+                </div>
+              )}
+              {!cfg.resumoPedido && total > 0 && (
                 <div style={{ marginTop: 14, fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)", textAlign: "right" }}>
                   Total: {fmtReais(total)} ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})
                 </div>
@@ -290,7 +349,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG }) {
 }
 
 // ── Painel admin ─────────────────────────────────────────────────────────────
-export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
+export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS }) {
   const [pedidos, setPedidos] = useState([]);
   const [filtro,  setFiltro]  = useState("abertos");
   const [erro,    setErro]    = useState("");
@@ -315,7 +374,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
   const rotulo = s => ({ confirmado: "confirmado", cancelado: "cancelado", cartao: "cartão — confirmar no linknabio", pendente: "pagamento pendente", aguardando: "aguardando confirmação do PIX" }[s] || s);
 
   // resumo por item (para fazer a compra): tudo que não foi cancelado, e quanto já está confirmado
-  const porId = new Map(SMOLMERCH_OPCOES.map(o => [o.id, { ...o, pedido: 0, confirmado: 0 }]));
+  const porId = new Map(produtos.flatMap(p => p.opcoes.map(o => ({ ...o, produto: p.nome }))).map(o => [o.id, { ...o, pedido: 0, confirmado: 0 }]));
   pedidos.forEach(p => {
     if (p.status === "cancelado") return;
     (p.itens || []).forEach(i => {
@@ -335,7 +394,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG }) {
 
   return (
     <div style={{ padding: "24px 0" }}>
-      <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "2px", color: "rgba(245,240,232,.35)", marginBottom: 16 }}>{cfg.titulo} — {cfg.sub}</div>
+      <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "2px", color: "rgba(245,240,232,.35)", marginBottom: 16 }}>{cfg.titulo}{cfg.sub ? ` — ${cfg.sub}` : ""}</div>
       {erro && <div style={{ fontFamily: mono, fontSize: 11, color: "#ff6b6b", marginBottom: 12 }}>{erro}</div>}
 
       {resumo.length > 0 && (
