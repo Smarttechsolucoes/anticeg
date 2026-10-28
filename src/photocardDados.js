@@ -31,7 +31,10 @@ export const PHOTOCARD_PRODUTOS = [
 ];
 
 // Reabertura (29/10): o formulário público oferece só estes produtos. O painel admin continua com o catálogo inteiro (pedidos e fotos antigos).
-export const PHOTOCARD_PRODUTOS_ABERTOS = PHOTOCARD_PRODUTOS.filter(p => p.id === "ate-boom-unit");
+// maxTotal = quanto ainda há de cada opção na reabertura (conta só os pedidos feitos depois de PHOTOCARD_CFG.contarDesde). 0 = esgotado.
+const ESTOQUE_REABERTURA = { "ate-boom-unit-bang-chan-changbin": 9, "ate-boom-unit-i-n-lee-know": 1, "ate-boom-unit-seungmin-hyunjin": 8, "ate-boom-unit-felix-han": 0 };
+export const PHOTOCARD_PRODUTOS_ABERTOS = PHOTOCARD_PRODUTOS.filter(p => p.id === "ate-boom-unit")
+  .map(p => ({ ...p, opcoes: p.opcoes.map(o => ({ ...o, maxTotal: ESTOQUE_REABERTURA[o.id] ?? 0 })) }));
 
 export const PHOTOCARD_CFG = {
   tabela: "pedidos_murce_itens", pasta: "murce-itens", produto: "MURCEKALY ITENS",
@@ -39,6 +42,7 @@ export const PHOTOCARD_CFG = {
   deadline: new Date("2026-10-29T23:59:00-03:00"), pedidosAte: "29/10 às 23h59", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   bloqueado: false,
+  contarDesde: new Date("2026-10-28T09:00:00-03:00"), // limites de estoque (maxTotal) contam só os pedidos feitos depois do fim da 1ª rodada
   abreEm: new Date("2026-10-27T19:00:00-03:00"), abreEmRotulo: "19H", // pedidos só a partir das 19h; o botão mostra a contagem
   itensComFoto: true, // painel admin: visão "Itens" com foto, nome e quantidade pedida
   ocultarSeCadastrada: true, // joiner cadastrada: sem os campos de claim, nome, e-mail e @
@@ -48,7 +52,7 @@ export const PHOTOCARD_CFG = {
   fotoGrande: true, // mostra a foto inteira (sem cortar) em cada produto
   pagamentoAgora: false,
   avisos: [
-    "Reabrimos o formulário **só para o ATE — BOOM UNIT**: precisamos de mais pedidos desse set.",
+    "Reabrimos o formulário **só para o ATE — BOOM UNIT**, com estoque limitado: **Bang Chan + Changbin (9)**, **I.N + Lee Know (1)** e **Seungmin + Hyunjin (8)**. Felix + Han está esgotado.",
     "O formulário fecha no dia **29 de outubro às 23h59**.",
     "**CEG DEMORADA**.",
     "Pagamento imediato **APÓS a confirmação dos itens**.",
