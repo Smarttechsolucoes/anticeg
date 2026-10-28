@@ -26312,8 +26312,7 @@ function PrevendaTab({ user }) {
   const formularios = [
     {
       key: "murce-itens",
-      ativo: true,
-      fechado: now > PHOTOCARD_CFG.deadline,
+      ativo: now <= PHOTOCARD_CFG.deadline,
       titulo: "MURCEKALY ITENS",
       subtitulo: "Photocards ATE · HOP · KARMA · ROCKSTAR · BDM · Tin Case SKZOO",
       url: "/murce-itens",
