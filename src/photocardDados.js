@@ -30,10 +30,13 @@ export const PHOTOCARD_PRODUTOS = [
   { id: "tin-case-skzoo",     nome: "TIN CASE SKZOO",           foto: "tin-case-skzoo.png",        avisos: ["Pode esgotar a qualquer momento.", "Não precisa fechar set: pode pedir só as unidades que quiser."], opcoes: porNome("tin-case-skzoo", SKZOO, 15) },
 ];
 
+// Reabertura (29/10): o formulário público oferece só estes produtos. O painel admin continua com o catálogo inteiro (pedidos e fotos antigos).
+export const PHOTOCARD_PRODUTOS_ABERTOS = PHOTOCARD_PRODUTOS.filter(p => p.id === "ate-boom-unit");
+
 export const PHOTOCARD_CFG = {
   tabela: "pedidos_murce_itens", pasta: "murce-itens", produto: "MURCEKALY ITENS",
   titulo: "MURCEKALY ITENS", sub: "", selo: "",
-  deadline: new Date("2026-10-28T09:00:00-03:00"), pedidosAte: "28/10 às 9h", pagarAte: null,
+  deadline: new Date("2026-10-29T23:59:00-03:00"), pedidosAte: "29/10 às 23h59", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   bloqueado: false,
   abreEm: new Date("2026-10-27T19:00:00-03:00"), abreEmRotulo: "19H", // pedidos só a partir das 19h; o botão mostra a contagem
@@ -45,11 +48,10 @@ export const PHOTOCARD_CFG = {
   fotoGrande: true, // mostra a foto inteira (sem cortar) em cada produto
   pagamentoAgora: false,
   avisos: [
-    "Os pedidos abrem hoje, **27 de outubro às 19h**.",
-    "Alguns cards estão amarrados em set por regras de compra da seller.",
+    "Reabrimos o formulário **só para o ATE — BOOM UNIT**: precisamos de mais pedidos desse set.",
+    "O formulário fecha no dia **29 de outubro às 23h59**.",
     "**CEG DEMORADA**.",
     "Pagamento imediato **APÓS a confirmação dos itens**.",
-    "O formulário fecha no dia **28 de outubro às 9h da manhã** e não será reaberto novamente.",
     "O estoque é **LIMITADO** e não foi informada a quantidade de cada item: o risco de sold-out é grande.",
     "Os itens saem da **Indonésia** para o **Brasil**.",
     "Haverá **frete internacional** e **taxa da Receita Federal**.",

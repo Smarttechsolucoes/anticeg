@@ -8,7 +8,7 @@ import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
-import { PHOTOCARD_PRODUTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
+import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
 import { lerPlanilha } from "./csvSimples.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
@@ -26314,10 +26314,10 @@ function PrevendaTab({ user }) {
       key: "murce-itens",
       ativo: now <= PHOTOCARD_CFG.deadline,
       titulo: "MURCEKALY ITENS",
-      subtitulo: "Photocards ATE · HOP · KARMA · ROCKSTAR · BDM · Tin Case SKZOO",
+      subtitulo: "Reaberto só para o ATE — BOOM UNIT",
       url: "/murce-itens",
-      img: "/photocard/tin-case-skzoo.png",
-      tags: ["Pedidos até 28/10 às 9h", "Pagamento após a confirmação"],
+      img: "/photocard/ate-boom-unit.png",
+      tags: ["Pedidos até 29/10 às 23h59", "Pagamento após a confirmação"],
       info: "A partir de R$ 7,00 · CEG demorada · itens da Indonésia · estoque limitado",
     },
     {
@@ -27799,7 +27799,7 @@ export default function App() {
   if (window.location.pathname === "/esquire-hyunjin") return <WMagFormPage cfg={ESQUIRE_HJ_CFG} />;
   if (window.location.pathname === "/dazed-han") return <WMagFormPage cfg={DAZED_HAN_CFG} />;
   if (window.location.pathname === "/smolmerch") return <SmolMerchFormPage pixKey={PIX_KEY} />;
-  if (window.location.pathname === "/murce-itens" && !user) return <SmolMerchFormPage pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} />;
+  if (window.location.pathname === "/murce-itens" && !user) return <SmolMerchFormPage pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS_ABERTOS} fotoDe={fotoPc} />;
   if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
   if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
@@ -28106,7 +28106,7 @@ export default function App() {
         );
       })()}
       {formInterno ? (
-        <SmolMerchFormPage interno pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} />
+        <SmolMerchFormPage interno pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS_ABERTOS} fotoDe={fotoPc} />
       ) : window.location.pathname === "/claim" ? (
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
