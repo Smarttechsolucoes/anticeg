@@ -26317,7 +26317,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Reaberto só para o ATE — BOOM UNIT",
       url: "/murce-itens",
       img: "/photocard/ate-boom-unit.png",
-      tags: ["Pedidos até 29/10 às 23h59", "Pagamento após a confirmação"],
+      tags: ["Encerrado — estoque esgotado", "Pagamento após a confirmação"],
       info: "A partir de R$ 7,00 · CEG demorada · itens da Indonésia · estoque limitado",
     },
     {
