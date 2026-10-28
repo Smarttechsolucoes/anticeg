@@ -540,7 +540,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
       {visaoItens && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>
-            {porProduto.length} produto{porProduto.length !== 1 ? "s" : ""} · {porProduto.reduce((a, g) => a + g.pedido, 0)} un pedidas · {porProduto.reduce((a, g) => a + g.confirmado, 0)} já confirmadas (sem cancelados)
+            {porProduto.length} produto{porProduto.length !== 1 ? "s" : ""} · {porProduto.reduce((a, g) => a + g.pedido, 0)} un pedidas (sem cancelados)
           </div>
           {porProduto.length === 0 && <div style={{ fontFamily: mono, fontSize: 12, opacity: .4, padding: "20px 0" }}>Nenhum pedido ainda.</div>}
           {porProduto.map(g => (
@@ -551,14 +551,13 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
                   onError={e => { e.target.style.visibility = "hidden"; }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", marginBottom: 6 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0 10px", alignItems: "baseline", marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>{g.nome}</span>
-                  <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, color: "var(--laranja)", flexShrink: 0 }}>{g.pedido} un</span>
+                  <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, color: "var(--laranja)" }}>{g.pedido} un</span>
                 </div>
                 {g.linhas.map(r => (
-                  <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, padding: "2px 0", color: "rgba(245,240,232,.7)" }}>
-                    <span>{r.label}</span>
-                    <span><strong style={{ color: "var(--offwhite)" }}>{r.pedido}×</strong>{r.confirmado > 0 && <span style={{ color: "#4ade80" }}> · {r.confirmado} conf.</span>}</span>
+                  <div key={r.id} style={{ fontFamily: mono, fontSize: 11, lineHeight: 1.6, color: "rgba(245,240,232,.7)" }}>
+                    {r.label} <strong style={{ color: "var(--offwhite)" }}>· {r.pedido}×</strong>
                   </div>
                 ))}
               </div>
