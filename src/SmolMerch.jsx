@@ -4,13 +4,13 @@ import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } f
 
 const mono = "'DM Mono',monospace";
 
-function Qty({ valor, onMenos, onMais }) {
+function Qty({ valor, onMenos, onMais, maisDesligado = false }) {
   const b = { width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "var(--offwhite)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <button type="button" aria-label="diminuir" onClick={onMenos} style={b}>−</button>
       <span style={{ fontFamily: mono, fontSize: 18, fontWeight: 700, minWidth: 22, textAlign: "center" }}>{valor}</span>
-      <button type="button" aria-label="aumentar" onClick={onMais} style={b}>+</button>
+      <button type="button" aria-label="aumentar" onClick={onMais} disabled={maisDesligado} style={maisDesligado ? { ...b, opacity: .25, cursor: "not-allowed" } : b}>+</button>
     </div>
   );
 }
@@ -50,6 +50,19 @@ function CabProduto({ p, fotoDe, grande, onZoom }) {
     {notas && <div style={{ paddingTop: 2 }}>{notas}</div>}
     </>
   );
+}
+
+// Quanto já foi pedido de cada opção (por id), para os limites de estoque (opção.maxTotal).
+// Ficam de fora os cancelados e os pedidos anteriores a cfg.contarDesde (ou, sem ele, a cfg.abreEm). null = não consegui ler (o formulário não trava).
+async function contarPedidos(cfg) {
+  const desde = cfg.contarDesde || cfg.abreEm;
+  let q = supabase.from(cfg.tabela).select("itens").neq("status", "cancelado");
+  if (desde) q = q.gte("created_at", desde.toISOString());
+  const { data, error } = await q.limit(1000);
+  if (error || !data) return null;
+  const soma = {};
+  data.forEach(p => (p.itens || []).forEach(i => { soma[i.id] = (soma[i.id] || 0) + (Number(i.qtd) || 0); }));
+  return soma;
 }
 
 // ── Ao vivo e histórico públicos ─────────────────────────────────────────────
@@ -140,6 +153,18 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
+  // limites de estoque por opção (maxTotal): quanto já foi pedido por todo mundo, atualizado a cada 15s
+  const [vendidos,    setVendidos]    = useState({});
+  const temLimite = produtos.some(p => p.opcoes.some(o => o.maxTotal != null));
+  useEffect(() => {
+    if (!temLimite) return;
+    let vivo = true;
+    const buscar = () => contarPedidos(cfg).then(v => { if (vivo && v) setVendidos(v); });
+    buscar();
+    const t = setInterval(buscar, 15000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [temLimite, cfg]);
+  const restam = (o, v = vendidos) => o.maxTotal == null ? Infinity : Math.max(0, o.maxTotal - (v[o.id] || 0));
   // cfg.abreEm: o formulário só aceita pedidos a partir dessa hora; até lá o botão mostra a contagem regressiva
   const [relogio,     setRelogio]     = useState(() => Date.now());
   useEffect(() => {
@@ -170,7 +195,8 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   // regras por produto (opcionais): maxPorOpcao = limite por opção; todasOuNenhuma = as opções só saem juntas (ex.: set de 3 membros)
   const ajustar = (id, delta) => setQtds(q => {
     const p = produtos.find(pr => pr.opcoes.some(o => o.id === id));
-    const novo = Math.min(p?.maxPorOpcao || 20, Math.max(0, (q[id] || 0) + delta));
+    const op = p?.opcoes.find(o => o.id === id);
+    const novo = Math.min(p?.maxPorOpcao || 20, restam(op || {}), Math.max(0, (q[id] || 0) + delta));
     const prox = p?.todasOuNenhuma ? { ...q, ...Object.fromEntries(p.opcoes.map(o => [o.id, novo])) } : { ...q, [id]: novo };
     // exigeTodos (na opção): só sai junto com todas as outras do produto e em no máximo a menor quantidade delas (ex.: Hyunjin só fechando o set OT8)
     const dep = p?.opcoes.filter(o => o.exigeTodos) || [];
@@ -190,6 +216,21 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 item."); return; }
     if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
+
+    // alguém pode ter pedido o último enquanto esta pessoa preenchia: confere o limite de novo antes de gravar
+    if (temLimite) {
+      const v = await contarPedidos(cfg);
+      if (v) {
+        setVendidos(v);
+        const estourou = escolhidos.find(o => qtds[o.id] > restam(o, v));
+        if (estourou) {
+          const r = restam(estourou, v);
+          setStatus("idle");
+          setErro(r === 0 ? `${estourou.produto} — ${estourou.label} acabou de esgotar. Tire esse item do pedido.` : `${estourou.produto} — ${estourou.label}: restam só ${r}. Ajuste a quantidade.`);
+          return;
+        }
+      }
+    }
 
     // o id é gerado aqui (não precisa ler o pedido de volta do banco) e também dá nome ao comprovante
     const id = crypto.randomUUID();
@@ -348,14 +389,16 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {p.opcoes.map(o => {
                         const q = qtds[o.id] || 0;
+                        const resta = restam(o);
                         return (
                           <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)", background: q > 0 ? "rgba(255,92,26,.06)" : "transparent", transition: "background .15s" }}>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
                               <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(o.preco)}</div>
+                              {o.maxTotal != null && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: resta === 0 ? "#ff6b6b" : "rgba(245,240,232,.45)" }}>{resta === 0 ? "ESGOTADO" : `restam ${resta} de ${o.maxTotal}`}</div>}
                               {o.exigeTodos && <div style={{ fontFamily: mono, fontSize: 10, color: "var(--laranja)", marginTop: 3 }}>{o.exigeTodosTexto || "só sai fechando o set completo"}</div>}
                             </div>
-                            <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} />
+                            <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} maisDesligado={q >= resta} />
                           </div>
                         );
                       })}
