@@ -464,10 +464,12 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 }
 
 // ── Painel admin ─────────────────────────────────────────────────────────────
-export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS }) {
+export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = SMOLMERCH_PRODUTOS, fotoDe = foto }) {
   const [pedidos, setPedidos] = useState([]);
   const [filtro,  setFiltro]  = useState("abertos");
   const [erro,    setErro]    = useState("");
+  const [visao,   setVisao]   = useState("pedidos"); // pedidos | itens (só com cfg.itensComFoto)
+  const [zoom,    setZoom]    = useState(null);
 
   useEffect(() => {
     supabase.from(cfg.tabela).select("*").order("created_at", { ascending: false })
@@ -502,6 +504,15 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
   });
   const resumo = [...porId.values()].filter(r => r.pedido > 0);
 
+  // visão "Itens": uma linha por produto, com a foto e quanto foi pedido de cada opção (cancelados ficam de fora)
+  const porProduto = [];
+  resumo.forEach(r => {
+    let g = porProduto.find(x => x.nome === r.produto);
+    if (!g) { g = { nome: r.produto, foto: produtos.find(p => p.nome === r.produto)?.foto, linhas: [], pedido: 0, confirmado: 0 }; porProduto.push(g); }
+    g.linhas.push(r); g.pedido += r.pedido; g.confirmado += r.confirmado;
+  });
+  const visaoItens = !!cfg.itensComFoto && visao === "itens";
+
   const lista = pedidos.filter(p => filtro === "todos" ? true : filtro === "abertos" ? emAberto(p) : p.status === filtro);
   const tab = (id, texto) => (
     <button key={id} onClick={() => setFiltro(id)} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${filtro === id ? "var(--laranja)" : "rgba(245,240,232,.12)"}`, background: filtro === id ? "rgba(255,92,26,.1)" : "transparent", color: filtro === id ? "var(--laranja)" : "rgba(245,240,232,.5)", fontFamily: mono, fontSize: 10, cursor: "pointer" }}>{texto}</button>
@@ -512,7 +523,51 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
       <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "2px", color: "rgba(245,240,232,.35)", marginBottom: 16 }}>{cfg.titulo}{cfg.sub ? ` — ${cfg.sub}` : ""}</div>
       {erro && <div style={{ fontFamily: mono, fontSize: 11, color: "#ff6b6b", marginBottom: 12 }}>{erro}</div>}
 
-      {resumo.length > 0 && (
+      {zoom && (
+        <div onClick={() => setZoom(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
+          <img src={zoom} alt="item" style={{ maxWidth: "92vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain" }} />
+        </div>
+      )}
+
+      {cfg.itensComFoto && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {[["pedidos", "Pedidos"], ["itens", "Itens (com foto)"]].map(([id, texto]) => (
+            <button key={id} onClick={() => setVisao(id)} style={{ padding: "8px 16px", borderRadius: 6, border: `1px solid ${visao === id ? "var(--laranja)" : "rgba(245,240,232,.12)"}`, background: visao === id ? "rgba(255,92,26,.1)" : "transparent", color: visao === id ? "var(--laranja)" : "rgba(245,240,232,.5)", fontFamily: mono, fontSize: 11, cursor: "pointer" }}>{texto}</button>
+          ))}
+        </div>
+      )}
+
+      {visaoItens && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>
+            {porProduto.length} produto{porProduto.length !== 1 ? "s" : ""} · {porProduto.reduce((a, g) => a + g.pedido, 0)} un pedidas · {porProduto.reduce((a, g) => a + g.confirmado, 0)} já confirmadas (sem cancelados)
+          </div>
+          {porProduto.length === 0 && <div style={{ fontFamily: mono, fontSize: 12, opacity: .4, padding: "20px 0" }}>Nenhum pedido ainda.</div>}
+          {porProduto.map(g => (
+            <div key={g.nome} style={{ display: "flex", gap: 14, background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: 12, alignItems: "flex-start" }}>
+              {g.foto && (
+                <img src={fotoDe(g.foto)} alt={g.nome} loading="lazy" onClick={() => setZoom(fotoDe(g.foto, 2000))}
+                  style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "zoom-in", background: "rgba(245,240,232,.06)" }}
+                  onError={e => { e.target.style.visibility = "hidden"; }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", marginBottom: 6 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>{g.nome}</span>
+                  <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, color: "var(--laranja)", flexShrink: 0 }}>{g.pedido} un</span>
+                </div>
+                {g.linhas.map(r => (
+                  <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, padding: "2px 0", color: "rgba(245,240,232,.7)" }}>
+                    <span>{r.label}</span>
+                    <span><strong style={{ color: "var(--offwhite)" }}>{r.pedido}×</strong>{r.confirmado > 0 && <span style={{ color: "#4ade80" }}> · {r.confirmado} conf.</span>}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!visaoItens && resumo.length > 0 && (
         <div style={{ background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "12px 14px", marginBottom: 18 }}>
           <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.4)", marginBottom: 8 }}>RESUMO POR ITEM (pedido · já confirmado)</div>
           {resumo.map(r => (
@@ -524,6 +579,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
         </div>
       )}
 
+      {!visaoItens && <>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
         {tab("abertos", "em aberto")}{tab("confirmado", "confirmados")}{tab("cancelado", "cancelados")}{tab("todos", "todos")}
       </div>
@@ -563,6 +619,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
           </div>
         ))}
       </div>
+      </>}
     </div>
   );
 }

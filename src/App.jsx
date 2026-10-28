@@ -9889,7 +9889,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "odd-fresh-popup-admin" && <AdminWaveMaker cfg={ODD_POPUP_CFG} onCountChange={setOddPopupCount} />}
       {adminMainTab === "suiatsu-admin" && <AdminWaveMaker cfg={SUIATSU_CFG} onCountChange={setSuiatsuCount} />}
       {adminMainTab === "smolmerch"         && <AdminSmolMerch onCountChange={setSmolmerchCount} />}
-      {adminMainTab === "murce-itens"       && <AdminSmolMerch cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} onCountChange={setMurceCount} />}
+      {adminMainTab === "murce-itens"       && <AdminSmolMerch cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} onCountChange={setMurceCount} />}
       {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} smolmerchCount={smolmerchCount} murceCount={murceCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
