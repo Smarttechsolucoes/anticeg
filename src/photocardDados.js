@@ -39,7 +39,7 @@ export const PHOTOCARD_PRODUTOS_ABERTOS = PHOTOCARD_PRODUTOS.filter(p => p.id ==
 export const PHOTOCARD_CFG = {
   tabela: "pedidos_murce_itens", pasta: "murce-itens", produto: "MURCEKALY ITENS",
   titulo: "MURCEKALY ITENS", sub: "", selo: "",
-  deadline: new Date("2026-10-29T23:59:00-03:00"), pedidosAte: "29/10 às 23h59", pagarAte: null,
+  deadline: new Date("2026-10-28T00:00:00-03:00"), pedidosAte: "28/10 (estoque esgotado)", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   bloqueado: false,
   contarDesde: new Date("2026-10-28T09:00:00-03:00"), // limites de estoque (maxTotal) contam só os pedidos feitos depois do fim da 1ª rodada
