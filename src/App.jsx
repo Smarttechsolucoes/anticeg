@@ -435,8 +435,8 @@ function fmtVenc(v) {
   return new Date(v + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-// multas pagas contam para o badge Jiniret a partir desta data (reiniciado em 29/10/2026: todo mundo volta a Ouro e só as multas novas contam)
-const BADGE_MULTAS_DESDE = "2026-10-29";
+// multas pagas contam para o badge Jiniret a partir desta data
+const BADGE_MULTAS_DESDE = "2026-09-01";
 
 // regra de multa (dias de atraso, R$/dia) em src/multa.js
 
@@ -460,7 +460,7 @@ const BADGES_DEF = [
   { id: "puppym",   img: badgePuppymBronze,  imgBronze: badgePuppymBronze,  imgPrata: badgePuppymPrata,  imgOuro: badgePuppymOuro,   label: "Puppym",   titulo: "Joiner Fiel",       desc: "Joiner fiel — Bronze 5+ · Prata 15+ · Ouro 30+ CEGs" },
   { id: "wolfchan", img: badgeWolfchanBronze, imgBronze: badgeWolfchanBronze, imgPrata: badgeWolfchanPrata, imgOuro: badgeWolfchanOuro, label: "Wolfchan", titulo: "Polivalente",        desc: "Polivalente — Bronze 1-4 · Prata 5-9 · Ouro 10+ interações" },
   { id: "bbokari",  img: badgeBbokari,       imgBronze: badgeBbokari,       imgPrata: badgeBbokariPrata, imgOuro: badgeBbokariOuro,  label: "Bbokari",  titulo: "Veterana do Envio", desc: "Veterana do envio — Bronze 1+ · Prata 3+ · Ouro 5+ envios" },
-  { id: "jiniret",  img: badgeJiniretBronze, imgBronze: badgeJiniretBronze, imgPrata: badgeJiniretPrata, imgOuro: badgeJiniretOuro,  label: "Jiniret",  titulo: "Pagadora Exemplar", desc: "Pagadora exemplar — Ouro 0-3 multas · Prata 4-6 · Bronze 7-9" },
+  { id: "jiniret",  img: badgeJiniretBronze, imgBronze: badgeJiniretBronze, imgPrata: badgeJiniretPrata, imgOuro: badgeJiniretOuro,  label: "Jiniret",  titulo: "Pagadora Exemplar", desc: "Pagadora exemplar — Ouro 0-3 multas · Prata 4-6 · Bronze 7 ou mais" },
   { id: "dwaekki",  img: badgeDwaekkiBronze, imgBronze: badgeDwaekkiBronze, imgPrata: badgeDwaekiPrata,  imgOuro: badgeDwaekiOuro,   label: "Dwaekki",  titulo: "Colecionadora 3D",  desc: "Colecionadora 3D — Bronze 1 · Prata 2 · Ouro 3+ itens" },
   { id: "quokka",   img: badgeQuokkaBronze,  imgBronze: badgeQuokkaBronze,  imgPrata: badgeQuokkaPrata,  imgOuro: badgeQuokkaOuro,   label: "Quokka",   titulo: "Multifandom",        desc: "Multifandom — Prata 2 grupos · Ouro 3+ grupos" },
   { id: "leebit",   img: badgeLeebit,        imgBronze: badgeLeebit,        imgPrata: badgeLeebitPrata,  imgOuro: badgeLeebitOuro,   label: "Leebit",   titulo: "Mega Investidora",  desc: "Mega investidora — Bronze R$2k · Prata R$5k · Ouro R$12k" },
@@ -498,7 +498,7 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
       case "puppym":   return cegsDistintos >= 30 ? "ouro" : cegsDistintos >= 15 ? "prata" : cegsDistintos >= 5 ? "bronze" : null;
       case "wolfchan": return totalInteracoes >= 10 ? "ouro" : totalInteracoes >= 5 ? "prata" : totalInteracoes >= 1 ? "bronze" : null;
       case "bbokari":  return enviosFeitos >= 5 ? "ouro" : enviosFeitos >= 3 ? "prata" : enviosFeitos >= 1 ? "bronze" : null;
-      case "jiniret":  return multasPagas <= 3 ? "ouro" : multasPagas <= 6 ? "prata" : multasPagas <= 9 ? "bronze" : null;
+      case "jiniret":  return multasPagas <= 3 ? "ouro" : multasPagas <= 6 ? "prata" : "bronze";
       case "dwaekki":  return itens3D >= 3 ? "ouro" : itens3D >= 2 ? "prata" : itens3D >= 1 ? "bronze" : null;
       case "quokka":   return gruposDistintos >= 3 ? "ouro" : gruposDistintos >= 2 ? "prata" : null;
       case "leebit":   return totalPago >= 12000 ? "ouro" : totalPago >= 5000 ? "prata" : totalPago >= 2000 ? "bronze" : null;
@@ -531,8 +531,8 @@ function computeBadges({ itens = [], envios = [], pagamentos = [], reports = [],
       case "jiniret":
         return tier === "ouro"   ? `🥇 ${multasPagas} multa(s) — dentro do Ouro (0–3). Pague sempre em dia!`
              : tier === "prata"  ? `🥈 ${multasPagas} multas — Prata (4–6). Abaixo de 4 pra Ouro.`
-             : tier === "bronze" ? `🥉 ${multasPagas} multas — Bronze (7–9). Abaixo de 7 pra Prata.`
-             : `${multasPagas} multas pagas. Acima de 9 perde o badge.`;
+             : tier === "bronze" ? `🥉 ${multasPagas} multas — Bronze (7 ou mais). Abaixo de 7 pra Prata.`
+             : `${multasPagas} multa(s) pagas.`;
       case "dwaekki":
         return tier === "ouro"   ? `🥇 ${itens3D} itens 3D!`
              : tier === "prata"  ? `🥈 ${itens3D} itens 3D — mais 1 pra Ouro (3).`
