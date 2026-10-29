@@ -10,6 +10,7 @@ import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
 import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
 import { lerPlanilha } from "./csvSimples.js";
+import { diasAtraso, multaPorDia, multaAtraso, diasParaVencer } from "./multa.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -434,32 +435,10 @@ function fmtVenc(v) {
   return new Date(v + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-function diasAtraso(vencimento) {
-  if (!vencimento) return 0;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const venc = new Date(vencimento + "T12:00:00");
-  const diff = Math.floor((hoje - venc) / 86400000);
-  return diff > 0 ? diff : 0;
-}
-
 // multas pagas contam para o badge Jiniret a partir desta data
 const BADGE_MULTAS_DESDE = "2026-09-01";
 
-// multa por dia de atraso, por item (R$): R$3 para prazos a partir de 01/10/2026, R$1 para os anteriores
-const MULTA_NOVA_DESDE = "2026-10-01";
-function multaPorDia(vencimento) {
-  return vencimento && String(vencimento).slice(0, 10) >= MULTA_NOVA_DESDE ? 3 : 1;
-}
-function multaAtraso(vencimento) {
-  return diasAtraso(vencimento) * multaPorDia(vencimento);
-}
-
-function diasParaVencer(vencimento) {
-  if (!vencimento) return null;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const venc = new Date(vencimento + "T12:00:00");
-  return Math.floor((venc - hoje) / 86400000);
-}
+// regra de multa (dias de atraso, R$/dia) em src/multa.js
 
 // ── Badges de gamificação (SKZOO) ──────────────────────────────
 const CEG_GRUPO = {
