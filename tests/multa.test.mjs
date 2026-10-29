@@ -53,3 +53,13 @@ test("virada de horário de verão / mês / ano não quebra a contagem", () => {
   assert.equal(diasAtraso("2026-12-31", em("2027-01-02T15:00:00Z")), 2);
   assert.equal(diasAtraso("2026-02-27", em("2026-03-01T15:00:00Z")), 2);
 });
+
+test("joiner isento (ifelixcollector) nunca tem multa", async () => {
+  const { multaDoItem, isentoMulta } = await import("../src/multa.js");
+  const agora = new Date("2026-10-29T15:00:00Z");
+  assert.equal(isentoMulta("ifelixcollector"), true);
+  assert.equal(isentoMulta("IFelixCollector"), true);
+  assert.equal(isentoMulta("outra"), false);
+  assert.equal(multaDoItem({ cog: "ifelixcollector" }, "2026-10-15", agora), 0);
+  assert.equal(multaDoItem({ cog: "outra" }, "2026-10-15", agora), 14 * 3);
+});
