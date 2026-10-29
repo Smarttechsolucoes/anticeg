@@ -5,6 +5,10 @@
 // R$3 por dia para prazos a partir de 01/10/2026, R$1 para os anteriores
 export const MULTA_NOVA_DESDE = "2026-10-01";
 
+// Joiners que NUNCA pagam multa (o mesmo vale no banco: supabase/p0-02/V6_sem_multa_ifelixcollector_aplicar.sql)
+export const COGS_ISENTOS_MULTA = ["ifelixcollector"];
+export const isentoMulta = cog => !!cog && COGS_ISENTOS_MULTA.includes(String(cog).toLowerCase());
+
 const MS_DIA = 86400000;
 const hojeBR = (agora = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(agora); // "2026-10-28"
 const emDias = iso => Date.parse(String(iso).slice(0, 10) + "T00:00:00Z") / MS_DIA;
@@ -21,6 +25,11 @@ export function multaPorDia(vencimento) {
 
 export function multaAtraso(vencimento, agora = new Date()) {
   return diasAtraso(vencimento, agora) * multaPorDia(vencimento);
+}
+
+// multa do item de um joiner (0 para os isentos); `item` é a linha da masterlist (precisa do cog)
+export function multaDoItem(item, vencimento, agora = new Date()) {
+  return isentoMulta(item && item.cog) ? 0 : multaAtraso(vencimento, agora);
 }
 
 // dias até vencer: 0 = vence hoje, 1 = amanhã, -1 = venceu ontem
