@@ -435,8 +435,8 @@ function fmtVenc(v) {
   return new Date(v + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-// multas pagas contam para o badge Jiniret a partir desta data
-const BADGE_MULTAS_DESDE = "2026-09-01";
+// multas pagas contam para o badge Jiniret a partir desta data (reiniciado em 29/10/2026: todo mundo volta a Ouro e só as multas novas contam)
+const BADGE_MULTAS_DESDE = "2026-10-29";
 
 // regra de multa (dias de atraso, R$/dia) em src/multa.js
 
