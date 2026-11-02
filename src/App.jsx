@@ -12567,6 +12567,7 @@ const SU_COMPARAR = {
   ],
 };
 const SU_INFO_LIMITADA_A = {
+  inclusoes: SU + "inclusoes/limitada-a.jpg",
   secoes: [
     { titulo: "CD + Blu-ray", itens: [
       "Photobook de 24 páginas — tipo A.",
@@ -12585,6 +12586,7 @@ const SU_INFO_LIMITADA_A = {
   ],
 };
 const SU_INFO_LIMITADA_B = {
+  inclusoes: SU + "inclusoes/limitada-b.jpg",
   secoes: [
     { titulo: "CD + ZINE especial", itens: [
       "Photobook de 32 páginas — tipo B.",
@@ -12598,6 +12600,7 @@ const SU_INFO_LIMITADA_B = {
   ],
 };
 const SU_INFO_REGULAR = {
+  inclusoes: SU + "inclusoes/regular.jpg",
   secoes: [
     { titulo: "Somente CD", itens: [
       "Photobook de 12 páginas.",
@@ -12606,6 +12609,8 @@ const SU_INFO_REGULAR = {
   ],
 };
 const SU_INFO_SOLO = {
+  inclusoes: SU + "inclusoes/solo.jpg",
+  inclusoesLegenda: "A imagem mostra as 8 versões solo; a sua é a do membro escolhido.",
   secoes: [
     { titulo: "Somente CD · Produção limitada por período · 8 versões", itens: [
       "Cada versão contém itens do respectivo membro:",
@@ -12617,6 +12622,7 @@ const SU_INFO_SOLO = {
   ],
 };
 const SU_INFO_FA_CLUBE = {
+  inclusoes: SU + "inclusoes/fa-clube.jpg",
   secoes: [
     { titulo: "Somente CD", itens: [
       "Photobook de 12 páginas.",
@@ -13243,6 +13249,17 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
                 ))}
               </div>
             ))}
+            {infoModal.detalhes.inclusoes && (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontFamily:mono, fontSize:10, letterSpacing:"1px", color:"var(--lilas)", fontWeight:700, marginBottom:6 }}>O QUE VEM NA EDIÇÃO</div>
+                <a href={infoModal.detalhes.inclusoes} target="_blank" rel="noopener noreferrer" style={{ display:"block" }}>
+                  <img src={infoModal.detalhes.inclusoes} alt={"Inclusões — " + infoModal.id} loading="lazy" style={{ width:"100%", height:"auto", display:"block", borderRadius:10, background:"rgba(245,240,232,.04)" }} />
+                </a>
+                <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", lineHeight:1.5, marginTop:5 }}>
+                  Imagem oficial de divulgação (fotos dos photocards ainda borradas pela gravadora). Toque para ampliar.{infoModal.detalhes.inclusoesLegenda ? " " + infoModal.detalhes.inclusoesLegenda : ""}
+                </div>
+              </div>
+            )}
             {infoModal.detalhes.nota && <div style={{ fontFamily:mono, fontSize:10, color:"#f0c040", lineHeight:1.5, marginBottom:14 }}>⚠ {infoModal.detalhes.nota}</div>}
             <button onClick={() => setInfoModal(null)} style={{ width:"100%", background:"none", border:"1px solid rgba(245,240,232,.15)", color:"rgba(245,240,232,.5)", borderRadius:8, padding:"9px", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar</button>
           </div>
