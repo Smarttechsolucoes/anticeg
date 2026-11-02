@@ -26357,12 +26357,12 @@ function PrevendaTab({ user }) {
     },
     {
       key: "dazed-han",
-      ativo: true,
+      ativo: now <= DAZED_HAN_CFG.deadline,
       titulo: "DAZED & CONFUSED",
       subtitulo: "Han — 3 versões",
       url: "/dazed-han",
       img: DAZED_HAN_CAPAS[0].img,
-      tags: ["Pedidos até 31/10", "Pagamento até 06/11"],
+      tags: ["Pedidos encerrados em 31/10", "Pagamento até 06/11"],
       info: "R$ 86,00 por unidade · PIX ou cartão · envio previsto 10/11",
     },
     {
