@@ -5,7 +5,7 @@ import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { AdminAuthGate } from "./AdminAuth.jsx";
-import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin } from "./adminAuth.js";
+import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin, buscarNomeAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
 import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
@@ -1655,7 +1655,7 @@ function ReportModal({ user, item, onClose, onReported, replyTo = null }) {
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}><InfoContent info={item.nome_do_item} /></div>
             {replyTo?.resposta && (
               <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.2)", borderRadius:8, padding:"10px 12px", marginBottom:16 }}>
-                <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>↩ Resposta da admin</div>
+                <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>{replyTo.respondido_por ? `↩ Resposta de ${replyTo.respondido_por}` : "↩ Resposta da admin"}</div>
                 <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", lineHeight:1.65 }}>{replyTo.resposta}</div>
               </div>
             )}
@@ -3620,7 +3620,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: antivBadgesData },
       ] = await Promise.all([
         supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
-        supabase.from("reports").select("id, item_id, erro_repassado, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("reports").select("id, item_id, erro_repassado, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta, respondido_por, respondido_em").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, id_linha, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
@@ -3956,6 +3956,12 @@ ${p.comprovante_url ? (() => {
                     {p.status==="pago" ? "✓ Pago" : p.status==="rejeitado" ? "✕ Recusado" : "◉ Em análise"}
                   </span>
                 </div>
+                {p.analisado_por && p.status !== "em_analise" && (
+                  <div style={{ padding:"7px 16px", borderBottom:"1px solid rgba(245,240,232,.05)", fontSize:10, fontFamily:"'DM Mono',monospace", color: p.status === "pago" ? "rgba(186,255,57,.85)" : "rgba(255,150,150,.85)" }}>
+                    {p.status === "pago" ? "✓ Confirmado por" : "✕ Recusado por"} <strong>{p.analisado_por}</strong>
+                    {p.analisado_em && <span style={{ color:"rgba(245,240,232,.3)" }}> · {new Date(p.analisado_em).toLocaleDateString("pt-BR")}</span>}
+                  </div>
+                )}
                 {p.status === "rejeitado" && p.motivo_rejeicao && (
                   <div style={{ padding:"8px 16px", background:"rgba(255,107,107,.06)", borderBottom:"1px solid rgba(255,107,107,.12)", display:"flex", alignItems:"flex-start", gap:6 }}>
                     <span style={{ fontSize:9, color:"#ff6b6b", fontFamily:"'DM Mono',monospace", letterSpacing:".5px", flexShrink:0, marginTop:1 }}>MOTIVO</span>
@@ -6181,7 +6187,7 @@ ${compHTML}
                       {r.observacao     && <div><div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:3 }}>Observação</div><div style={{ fontSize:11, color:"rgba(245,240,232,.6)", fontFamily:"'DM Mono',monospace", lineHeight:1.6, fontStyle:"italic", whiteSpace:"pre-wrap" }}>{r.observacao}</div></div>}
                       {r.resposta && (
                         <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.2)", borderRadius:8, padding:"10px 12px" }}>
-                          <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>↩ Resposta da admin</div>
+                          <div style={{ fontSize:9, letterSpacing:"1px", color:"rgba(167,139,250,.6)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", marginBottom:5 }}>{r.respondido_por ? `↩ Resposta de ${r.respondido_por}` : "↩ Resposta da admin"}{r.respondido_em ? ` · ${new Date(r.respondido_em).toLocaleDateString("pt-BR")}` : ""}</div>
                           <div style={{ fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace", lineHeight:1.65 }}>{r.resposta}</div>
                           {!resolvido && (
                             <button onClick={async () => {
@@ -7231,7 +7237,7 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
       <div style={{ marginTop:10 }}>
         {r.resposta && !(r.id in reportRespostas) && (
           <div style={{ background:"rgba(167,139,250,.07)", border:"1px solid rgba(167,139,250,.18)", borderRadius:6, padding:"8px 10px", marginBottom:6 }}>
-            <div style={{ fontSize:8, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", marginBottom:4 }}>Resposta enviada</div>
+            <div style={{ fontSize:8, color:"rgba(167,139,250,.55)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:"1px", marginBottom:4 }}>Resposta enviada{r.respondido_por ? ` · por ${r.respondido_por}` : ""}{r.respondido_em ? ` · ${new Date(r.respondido_em).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}` : ""}</div>
             <div style={{ fontSize:11, color:"rgba(245,240,232,.7)", fontFamily:"'DM Mono',monospace", lineHeight:1.55 }}>{r.resposta}</div>
           </div>
         )}
@@ -7258,7 +7264,7 @@ function AdminReportCard({ r, reportRespostas, setReportRespostas, reportSaving,
           </div>
         ) : (
           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ fontSize:10, color:"#4ade80" }}>✓ resolvido</span>
+            <span style={{ fontSize:10, color:"#4ade80" }}>✓ resolvido{r.respondido_por ? ` por ${r.respondido_por}` : ""}</span>
             <button onClick={() => onDesfazer(r.id)} style={{ background:"none", border:"1px solid rgba(245,240,232,.1)", color:"rgba(245,240,232,.3)", borderRadius:5, padding:"3px 8px", fontSize:9, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}>desfazer</button>
           </div>
         )}
@@ -7293,6 +7299,12 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
           <div style={{ fontSize:9, color:"rgba(245,240,232,.28)", fontFamily:"'DM Mono',monospace" }}>
             {new Date(d.created_at).toLocaleDateString("pt-BR")} às {new Date(d.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
           </div>
+          {d.analisado_por && (
+            <div style={{ fontSize:10, fontWeight:700, marginTop:3, fontFamily:"'DM Mono',monospace", color: d.status === "pago" ? "#BAFF39" : "#ff6b6b" }}>
+              {d.status === "pago" ? "✓ Confirmado" : "✕ Recusado"} por {d.analisado_por}
+              {d.analisado_em && <span style={{ fontWeight:400, color:"rgba(245,240,232,.3)" }}> · {new Date(d.analisado_em).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</span>}
+            </div>
+          )}
         </div>
         <div style={{ fontSize:18, fontWeight:900, color: isPend ? "#F5F0E8" : "rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", flexShrink:0, marginLeft:12 }}>
           R$ {Number(d.valor_total).toFixed(2).replace(".",",")}
@@ -8296,6 +8308,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
   const adminWinW = useWindowWidth();
   const adminIsMobile = adminWinW <= 680;
+  // quem está respondendo (nome da conta de login, vindo do servidor); undefined = carregando, null = conta sem nome cadastrado
+  const [adminNome, setAdminNome] = useState(undefined);
+  useEffect(() => { let vivo = true; buscarNomeAdmin().then(n => { if (vivo) setAdminNome(n); }); return () => { vivo = false; }; }, []);
   const [manutencaoAdmin, setManutencaoAdmin] = useState(false);
   const [senhaManutAdmin,     setSenhaManutAdmin]     = useState("");
   const [senhaManutInput,     setSenhaManutInput]     = useState("");
@@ -8904,27 +8919,41 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setPmSending(false);
   }
 
+  // Grava resposta/status do report. Com nome cadastrado na conta, passa pela função do servidor que registra QUEM respondeu;
+  // sem nome (ou antes do SQL R2), segue o caminho antigo. Devolve { error, quem } (quem = campos de responsável já gravados).
+  async function gravarRespostaReport(rep, resposta, status = null) {
+    if (adminNome) {
+      const { data, error } = await clienteAdmin().rpc("admin_responder_report", { p_report_id: String(rep.id), p_resposta: resposta || "", p_status: status });
+      if (error) return { error };
+      return { error: null, quem: { respondido_por: data?.respondido_por || adminNome, respondido_em: data?.respondido_em || new Date().toISOString() } };
+    }
+    const campos = status ? { status, resposta: resposta || null } : { resposta: resposta || null };
+    const { error } = await supabase.from("reports").update(campos).eq("id", rep.id);
+    return { error, quem: {} };
+  }
   async function salvarRespostaReport(rep, resposta) {
     setReportSaving(prev => new Set([...prev, rep.id]));
-    const { error } = await supabase.from("reports").update({ resposta: resposta || null }).eq("id", rep.id);
-    if (!error) {
-      setReports(r => r.map(x => x.id === rep.id ? { ...x, resposta: resposta || null } : x));
+    const { error, quem } = await gravarRespostaReport(rep, resposta);
+    if (error) alert("Erro ao salvar resposta: " + error.message);
+    else {
+      setReports(r => r.map(x => x.id === rep.id ? { ...x, resposta: resposta || null, ...quem } : x));
       setReportRespostas(prev => { const n = { ...prev }; delete n[rep.id]; return n; });
     }
     setReportSaving(prev => { const n = new Set(prev); n.delete(rep.id); return n; });
   }
   async function marcarResolvido(rep) {
     const resposta = reportRespostas[rep.id] ?? rep.resposta ?? null;
-    const { error } = await supabase.from("reports").update({ status: "resolvido", resposta: resposta || null }).eq("id", rep.id);
+    const { error, quem } = await gravarRespostaReport(rep, resposta, "resolvido");
     if (error) { alert("Erro ao resolver report: " + error.message); return; }
+    const porQuem = adminNome ? ` por ${adminNome}` : "";
     await inserirPush([{
-      message: `Seu report sobre "${rep.item_nome}" foi atualizado! Acesse a aba Suporte e verifique se está correto.`,
+      message: `Seu report sobre "${rep.item_nome}" foi atualizado${porQuem}! Acesse a aba Suporte e verifique se está correto.`,
       active: true,
       joiner_cog: rep.joiner_cog,
     }]);
     await inserirNotificacaoInterna([{
       joiner_cog: rep.joiner_cog,
-      message: `Seu report sobre "${rep.item_nome}" foi resolvido.`,
+      message: `Seu report sobre "${rep.item_nome}" foi resolvido${porQuem}.`,
       type: "report_resolved",
       report_id: rep.id,
     }]);
@@ -8934,10 +8963,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
         joinerInfo.email,
         joinerInfo.nome || rep.joiner_cog,
         "Seu report foi resolvido ✓",
-        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
+        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>${adminNome ? ` por <strong style="color:#F5F0E8">${adminNome}</strong>` : ""}:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
       );
     }
-    setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido", resposta: resposta || null } : x));
+    setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido", resposta: resposta || null, ...quem } : x));
     setReportRespostas(prev => { const n = { ...prev }; delete n[rep.id]; return n; });
   }
   async function desfazerResolvido(id) {
@@ -8992,6 +9021,13 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
           👁 MODO DEMONSTRAÇÃO — painel completo com dados fictícios · masterlist exibe itens reais de exemplo · nenhum dado de joiner real é exposto · interações desativadas
         </div>
       )}
+      {/* Área fixa: quem está respondendo (nome da conta de login; o servidor grava o mesmo nome nas respostas e pagamentos) */}
+      {adminNome !== undefined && <div style={{ position:"sticky", top:0, zIndex:50, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:10, padding:"8px 12px", borderRadius:8, fontFamily:"'DM Mono',monospace", fontSize:11, letterSpacing:".04em",
+        background: adminNome ? "rgba(186,255,57,.08)" : "rgba(255,209,102,.08)", border: adminNome ? "1px solid rgba(186,255,57,.25)" : "1px solid rgba(255,209,102,.35)", color: adminNome ? "var(--verde)" : "#FFD166", backdropFilter:"blur(6px)" }}>
+        {adminNome
+          ? <><span style={{ opacity:.6 }}>Respondendo como:</span><strong style={{ fontSize:13 }}>{adminNome}</strong><span style={{ opacity:.45, fontSize:10 }}>· seu nome aparece para a joiner nas respostas e pagamentos</span></>
+          : <span>Sua conta ainda não tem nome cadastrado: as respostas não mostram quem respondeu. Fale com a administração.</span>}
+      </div>}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
         <h2 className="admin-title" style={{ margin:0 }}>⚙ Admin</h2>
         <a href="https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/edit?gid=2116437995#gid=2116437995" target="_blank" rel="noopener noreferrer" style={{
@@ -9587,18 +9623,18 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
                   // pago_item/pago_frete/pago_rf dos itens são marcados pelo servidor, na mesma operação que confirma a demanda
-                  const pushMsg = `Seu pagamento foi confirmado! R$ ${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
+                  const pushMsg = `Seu pagamento foi confirmado${adminNome ? ` por ${adminNome}` : ""}! R$${Number(d.valor_total).toFixed(2).replace(".",",")} — ${d.itens.length} item(s).`;
                   await inserirPush([{ message: pushMsg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✓ Pagamento confirmado", pushMsg, "/");
                 }
-                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago" } : x));
+                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"pago", analisado_por: adminNome, analisado_em: adminNome ? new Date().toISOString() : null } : x));
               }
               async function reabrir(id) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
                 const { data: dadosReabrir, error } = await clienteAdmin().rpc("admin_definir_status_pagamento", { p_demanda_id: id, p_novo_status: "em_analise", p_motivo: null });
                 if (error) { alert("Não foi possível reabrir: " + error.message); return; }
                 if (dadosReabrir?.itens_mantidos > 0) alert(`Demanda reaberta. ${dadosReabrir.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
-                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise" } : x));
+                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"em_analise", analisado_por: null, analisado_em: null } : x));
               }
               async function rejeitar(id, motivo) {
                 if (PAGAMENTOS_SUSPENSO) { alert(PAGAMENTOS_SUSPENSO_MSG); return; }
@@ -9607,9 +9643,10 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 if (dadosRejeitar?.itens_mantidos > 0) alert(`Comprovante rejeitado. ${dadosRejeitar.itens_mantidos} marcação(ões) de pagamento foram MANTIDAS porque outra demanda paga ou uma marcação manual também as justifica.`);
                 const d = pagDemandas.find(x => x.id === id);
                 if (d) {
+                  const porQuemRec = adminNome ? ` por ${adminNome}` : "";
                   const msg = motivo.trim()
-                    ? `Seu comprovante foi recusado: "${motivo.trim()}". Envie novamente pelo portal.`
-                    : "Seu comprovante foi recusado. Por favor, envie novamente pelo portal.";
+                    ? `Seu comprovante foi recusado${porQuemRec}: "${motivo.trim()}". Envie novamente pelo portal.`
+                    : `Seu comprovante foi recusado${porQuemRec}. Por favor, envie novamente pelo portal.`;
                   await inserirPush([{ message: msg, active: true, joiner_cog: d.joiner_cog }]);
                   enviarPushJoiner(d.joiner_cog, "✕ Comprovante recusado", msg, "/");
                   const joiner = (joinersData || []).find(j => j.cog === d.joiner_cog);
@@ -9624,7 +9661,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                     cancelarNaPlanilha(itensComId).then(rc => { const aviso = mensagemCancelar(rc, itensComId); if (aviso) alert(aviso); });
                   }
                 }
-                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null } : x));
+                setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null, analisado_por: adminNome, analisado_em: adminNome ? new Date().toISOString() : null } : x));
                 setRejeitarId(null); setRejeitarMotivo("");
               }
               const listaAtiva = formularioFiltro === "analise" ? pendentes : formularioFiltro === "confirmados" ? resolvidas : rejeitados;

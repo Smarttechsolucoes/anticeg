@@ -71,3 +71,13 @@ export function criarAdminAuth(client) {
 
   return { avaliar, entrar, trocarSenha, sair };
 }
+
+// Nome cadastrado para a conta de admin logada (admin_roles.nome), como o servidor responde. Nulo se a conta não tem nome
+// ou se o SQL R2 ainda não foi aplicado (a função não existe): nesse caso o painel segue funcionando como antes.
+export async function buscarNomeAdmin() {
+  try {
+    const { data, error } = await clienteAdmin().rpc("admin_nome");
+    if (error) return null;
+    return typeof data === "string" && data.trim() ? data.trim() : null;
+  } catch { return null; }
+}
