@@ -41,7 +41,30 @@ import badgeLeebitOuro     from "./assets/badges/leebit_ouro.jpg.png";
 
 const VAPID_PUBLIC_KEY = "BMjVVcd389vauJzDpbAR5obTCX2UZtmRnVnsDJoE9T0Bc4Biyb7AGWSyNxyvxTySrr6HpXBf5yLCPWHGCOQx4lY";
 
+// Interruptor geral das notificações push (03/11: contenção de itens duplicados). true = ninguém recebe nem consegue ativar.
+// Para religar: trocar para false e publicar (quem foi desinscrito precisa ativar de novo no perfil).
+const PUSH_DESLIGADO = true;
+
+// Tira a inscrição de push deste aparelho (uma vez por aparelho): cancela no navegador e apaga a linha em push_subscriptions.
+async function desligarPushNesteAparelho() {
+  try {
+    if (localStorage.getItem("anticeg_push_off_v") === "1") return;
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      if (sub) {
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        try { await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint); } catch { /* sem permissão: o aparelho já está desinscrito */ }
+      }
+    }
+    localStorage.setItem("anticeg_push_asked", "1");
+    localStorage.setItem("anticeg_push_off_v", "1");
+  } catch (e) { console.error("[push] desligar erro:", e); }
+}
+
 async function registrarPush(joinerCog) {
+  if (PUSH_DESLIGADO) return;
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
   try {
     const reg = await navigator.serviceWorker.register("/sw.js");
@@ -27509,6 +27532,7 @@ export default function App() {
     } catch { return null; }
   });
   const [itens, setItens] = useState([]);
+  useEffect(() => { if (PUSH_DESLIGADO) desligarPushNesteAparelho(); }, []);
   const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2","paper-tales","odd-fresh","promo-13","odd-fresh-popup","suiatsu"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
@@ -27726,7 +27750,9 @@ export default function App() {
     if (!u.guest && !u.pre_cadastro) {
       localStorage.setItem("anticeg_tutorial_v1", "1");
       if (!u.confirmado) setShowPerfilModal(true);
-      if ("serviceWorker" in navigator && "PushManager" in window && Notification.permission === "default" && !localStorage.getItem("anticeg_push_asked")) {
+      if (PUSH_DESLIGADO) {
+        /* push desligado: não oferece nem ativa */
+      } else if ("serviceWorker" in navigator && "PushManager" in window && Notification.permission === "default" && !localStorage.getItem("anticeg_push_asked")) {
         setShowPushBanner(true);
       } else if (Notification.permission === "granted" && !localStorage.getItem("anticeg_push_asked")) {
         registrarPush(u.cog);
@@ -28105,7 +28131,7 @@ export default function App() {
           }}>⚙ Admin</button>
         )}
       </div>
-      {!nudgeDismissed && !user.guest && !user.pre_cadastro && !isAdminUser(user) && (() => {
+      {!PUSH_DESLIGADO && !nudgeDismissed && !user.guest && !user.pre_cadastro && !isAdminUser(user) && (() => {
         const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const pushOk = nudgePushPerm === "granted";

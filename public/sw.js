@@ -1,13 +1,8 @@
+// Push desligado (03/11, contenção de itens duplicados): este service worker não mostra mais notificações
+// e cancela a própria inscrição do aparelho. Para religar, restaurar o showNotification da versão anterior (git).
 self.addEventListener("push", function (event) {
-  const data = event.data ? event.data.json() : {};
   event.waitUntil(
-    self.registration.showNotification(data.title || "ANTICEG", {
-      body: data.body || "",
-      icon: "/favicon.png",
-      badge: "/favicon.png",
-      data: { url: data.url || "/" },
-      vibrate: [200, 100, 200],
-    })
+    self.registration.pushManager.getSubscription().then(function (sub) { return sub ? sub.unsubscribe() : null; }).catch(function () {})
   );
 });
 
