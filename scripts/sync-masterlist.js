@@ -236,9 +236,13 @@ async function main() {
   }
 
   const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/send-push`;
+  // Interruptor das notificações do sync: DESLIGADO por padrão. Só envia push (mudança de status e item novo) com SYNC_ENVIAR_PUSH=1
+  // (no GitHub: Settings > Secrets and variables > Actions > Variables > SYNC_ENVIAR_PUSH = 1).
+  const ENVIAR_PUSH = process.env.SYNC_ENVIAR_PUSH === '1';
+  if (!ENVIAR_PUSH) console.log(`Push desligado (SYNC_ENVIAR_PUSH != 1): ${mudancasStatus.length} mudança(s) de status e ${novosItens.length} item(ns) novo(s) NÃO serão notificados.`);
 
   // Enviar push para joiners com mudança de status
-  if (mudancasStatus.length > 0) {
+  if (ENVIAR_PUSH && mudancasStatus.length > 0) {
     const STATUS_LABEL = {
       'Comprado':        'Comprado ✓',
       'A Caminho':       'A Caminho 🚛',
@@ -282,7 +286,7 @@ async function main() {
   }
 
   // Enviar push para joiners com novo item inserido
-  if (novosItens.length > 0) {
+  if (ENVIAR_PUSH && novosItens.length > 0) {
     const cogsNovos = [...new Set(novosItens.map(m => m.cog))];
     const { data: subsNovos } = await supabase.from('push_subscriptions')
       .select('joiner_cog, endpoint, p256dh, auth')

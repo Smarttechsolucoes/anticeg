@@ -30,3 +30,4 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SYNC_ENVIAR_PUSH: ${{ vars.SYNC_ENVIAR_PUSH }}  # vazio = sem push; 1 = envia push de status e item novo
