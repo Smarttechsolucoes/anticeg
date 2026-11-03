@@ -86,7 +86,7 @@ test("desempate: dono vazio nunca casa; chaves diferentes não se misturam", () 
 test("o sync usa o casamento ANTES do laço, com o dono, tira as reivindicadas do mapa e só conta a chave antiga nas não casadas", () => {
   const src = readFileSync(new URL("../scripts/sync-masterlist.js", import.meta.url), "utf8");
   assert.ok(src.includes("import { casarPorIdLinha, casarChavesRepetidas } from './casar-itens.js'"), "importa os dois módulos");
-  assert.ok(/select\('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog'\)/.test(src), "lê id_linha e cog do banco");
+  assert.ok(/select\('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog(, [a-z_]+)*'\)/.test(src), "lê id_linha e cog do banco (e as colunas que o sync compara para só atualizar o que mudou)");
   assert.ok(/cog: cogDe\(r\)/.test(src), "o dono da linha da planilha entra no casamento por código");
   const iCasar = src.indexOf("casarPorIdLinha(", src.indexOf("const casamento"));
   const iLaco = src.indexOf("for (const [idxLinha, r] of rows.entries())");

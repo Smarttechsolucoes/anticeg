@@ -23,12 +23,12 @@ function prepararDiretorio() {
   mod("@supabase/supabase-js", { "package.json": '{"name":"@supabase/supabase-js","type":"module","main":"index.js"}', "index.js": `
 const modo = process.env.MODO_TESTE;
 class Q { constructor(t){this.t=t;this.op="select";}
-  select(){return this;} order(){return this;} range(a){this.pagina=a;return this;} eq(){return this;} in(){return this;} limit(){return this;}
+  select(c,o){if(o&&o.head)this.head=true;return this;} order(){return this;} range(a){this.pagina=a;return this;} eq(){return this;} in(){return this;} limit(){return this;}
   update(){this.op="update";return this;} insert(){this.op="insert";return this;} upsert(){this.op="upsert";return this;}
   then(ok,no){ return Promise.resolve(this.resolver()).then(ok,no); }
   resolver(){
     if(this.t==="joiners"&&this.op==="select")return{data:[]};
-    if(this.t==="masterlist"&&this.op==="select"){ if(this.pagina>0)return{data:[]};
+    if(this.t==="masterlist"&&this.op==="select"){ if(this.head)return{count:(modo==="prune_aborta"||modo==="erro_linha_e_prune")?2:1}; if(this.pagina>0)return{data:[]};
       const ex=[{id:1,ceg:"CEG A",nome_do_item:"ITEM 1",nome:"ANA",status:"Comprado",pago_item:false,pago_frete:false,pago_rf:false}];
       if(modo==="prune_aborta"||modo==="erro_linha_e_prune")ex.push({id:9,ceg:"CEG Z",nome_do_item:"SUMIU",nome:"BIA",status:"Comprado",pago_item:false,pago_frete:false,pago_rf:false});
       return{data:ex}; }

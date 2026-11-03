@@ -25,6 +25,24 @@ function parseBRL(str) {
   return parseFloat(cleaned) || 0;
 }
 
+// O sync só manda UPDATE para a linha que MUDOU (antes mandava 7,5 mil UPDATEs por execução, mesmo sem mudança nenhuma: ~20 min de carga no banco).
+// Compara exatamente os campos que o UPDATE gravaria. Na dúvida, atualiza: coluna que não veio do banco (undefined) ou valor que não bate = "mudou".
+// SYNC_ATUALIZAR_TUDO=1 volta ao comportamento antigo (atualiza todas).
+const CAMPOS_COMPARADOS = ['ceg', 'cog', 'nome', 'nome_do_item', 'id_linha', 'valor_item', 'frete_inter', 'taxa_rf', 'info_adicionais',
+  'pago_item', 'pago_frete', 'pago_rf', 'venc_item', 'venc_frete', 'venc_rf', 'status'];
+const CAMPOS_NUMERICOS = new Set(['valor_item', 'frete_inter', 'taxa_rf']);
+function linhaMudou(existente, novo) {
+  for (const c of CAMPOS_COMPARADOS) {
+    const noBanco = existente[c];
+    if (noBanco === undefined) return true;
+    const daPlanilha = novo[c] ?? null;
+    if (CAMPOS_NUMERICOS.has(c)) {
+      if (noBanco === null || daPlanilha === null || Math.round(Number(noBanco) * 100) !== Math.round(Number(daPlanilha) * 100)) return true;
+    } else if (noBanco !== daPlanilha) return true;
+  }
+  return false;
+}
+
 // Normaliza nome de coluna: minúsculo, sem espaços extras, sem BOM
 function norm(str) {
   return str.replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -78,7 +96,7 @@ async function main() {
     for (let tentativa = 1; tentativa <= 3; tentativa++) {
       ({ data: page, error: erroPagina } = await supabase
         .from('masterlist')
-        .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog')
+        .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog, valor_item, frete_inter, taxa_rf, info_adicionais, venc_item, venc_frete, venc_rf')
         .order('id', { ascending: true })
         .range(from, from + 999));
       if (!erroPagina) break;
@@ -135,7 +153,8 @@ async function main() {
   let desempatadasPeloDono = 0;
   let casadosPorCodigo = 0, renomeadosPorCodigo = 0;
 
-  let updated = 0, inserted = 0, erros = 0, comData = 0;
+  let updated = 0, inserted = 0, erros = 0, comData = 0, semMudanca = 0;
+  const atualizarTudo = process.env.SYNC_ATUALIZAR_TUDO === '1';
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
@@ -209,12 +228,16 @@ async function main() {
 
       if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
-        const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
-        if (error) throw error;
-        if (existingItem.status !== status && cog) {
-          mudancasStatus.push({ cog, nomeItem, ceg, statusNovo: status });
+        if (!atualizarTudo && !linhaMudou(existingItem, { ...baseFields, status })) {
+          semMudanca++;
+        } else {
+          const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
+          if (error) throw error;
+          if (existingItem.status !== status && cog) {
+            mudancasStatus.push({ cog, nomeItem, ceg, statusNovo: status });
+          }
+          updated++;
         }
-        updated++;
       } else {
         if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }
         const { error } = await supabase.from('masterlist').insert([{ ...baseFields, status }]);
@@ -228,6 +251,7 @@ async function main() {
     }
   }
 
+  console.log(`Sem mudança (nenhum UPDATE enviado): ${semMudanca}`);
   console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data · ${casadosPorCodigo} casados pelo código (${renomeadosPorCodigo} com nome/CEG alterado, mantendo o id) · ${desempatadasPeloDono} desempatadas pelo dono`);
 
   if (bloqueadasPorLimite > 0) {
