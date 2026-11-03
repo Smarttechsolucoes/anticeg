@@ -68,14 +68,23 @@ async function main() {
 
   // Carregar masterlist existente paginada (Supabase limita 1000 por query)
   // existingMap: chave → array de itens (suporta duplicatas)
+  // Um erro ou uma leitura vazia NUNCA pode virar "o banco está vazio": em 03/11 uma leitura vazia fez este sync inserir 7.532 cópias de linhas que já existiam.
+  const { count: totalEsperado, error: erroContagem } = await supabase.from('masterlist').select('id', { count: 'exact', head: true });
+  if (erroContagem || totalEsperado == null) throw new Error(`Não consegui contar a masterlist (${erroContagem?.message || 'sem contagem'}). Nada foi gravado.`);
   const existingMap = {};
   let from = 0;
   while (true) {
-    const { data: page } = await supabase
-      .from('masterlist')
-      .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog')
-      .order('id', { ascending: true })
-      .range(from, from + 999);
+    let page = null, erroPagina = null;
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      ({ data: page, error: erroPagina } = await supabase
+        .from('masterlist')
+        .select('id, ceg, nome_do_item, nome, status, pago_item, pago_frete, pago_rf, id_linha, cog')
+        .order('id', { ascending: true })
+        .range(from, from + 999));
+      if (!erroPagina) break;
+      await new Promise(r => setTimeout(r, 2000 * tentativa));
+    }
+    if (erroPagina) throw new Error(`Falha ao ler a masterlist a partir da linha ${from}: ${erroPagina.message}. Nada foi gravado.`);
     if (!page || page.length === 0) break;
     page.forEach(item => {
       const key = `${item.ceg}|${item.nome_do_item}|${item.nome}`.toLowerCase();
@@ -87,6 +96,10 @@ async function main() {
   }
   const totalNoBanco = Object.values(existingMap).reduce((a, v) => a + v.length, 0); // ANTES do casamento por código: é a base da trava de planilha parcial
   console.log(`${totalNoBanco} itens existentes no banco`);
+  // A leitura tem que bater com a contagem do banco (tolera a diferença de linhas criadas pelo site no meio do caminho).
+  if (Math.abs(totalNoBanco - totalEsperado) > Math.max(25, totalEsperado * 0.01)) {
+    throw new Error(`Leitura incompleta: li ${totalNoBanco} linhas, mas o banco tem ${totalEsperado}. Nada foi gravado.`);
+  }
 
   const rows = records.filter(r =>
     col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim() &&
@@ -94,6 +107,13 @@ async function main() {
   );
 
   console.log(`${rows.length} linhas válidas após filtro`);
+
+  // Trava contra inserção em massa: banco muito menor que a planilha = leitura falhou ou banco vazio, não "tudo é novo".
+  if (totalNoBanco < rows.length * 0.5 && process.env.SYNC_PERMITIR_BANCO_VAZIO !== '1') {
+    throw new Error(`O banco tem ${totalNoBanco} linhas e a planilha ${rows.length}: parece leitura incompleta ou banco vazio. Nada foi gravado. Se for uma carga inicial de verdade, rode com SYNC_PERMITIR_BANCO_VAZIO=1.`);
+  }
+  const MAX_INSERCOES = Number(process.env.SYNC_MAX_INSERCOES || 500); // limite de linhas novas por execução (a maior carga legítima de 2026 foi 299)
+  let bloqueadasPorLimite = 0;
 
   // Casa primeiro pelo CÓDIGO da planilha (coluna ID = id_linha): a linha continua a MESMA (mesmo id) mesmo que o nome do item, o nome de exibição ou o dono mudem.
   // Sem isso a regra antiga (ceg|item|nome) insere uma linha nova e apaga a antiga, e as demandas de pagamento ficam apontando para um id que não existe mais.
@@ -196,6 +216,7 @@ async function main() {
         }
         updated++;
       } else {
+        if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }
         const { error } = await supabase.from('masterlist').insert([{ ...baseFields, status }]);
         if (error) throw error;
         if (cog && cog.toLowerCase() !== 'disponivel') novosItens.push({ cog, nomeItem, ceg });
@@ -208,6 +229,11 @@ async function main() {
   }
 
   console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data · ${casadosPorCodigo} casados pelo código (${renomeadosPorCodigo} com nome/CEG alterado, mantendo o id) · ${desempatadasPeloDono} desempatadas pelo dono`);
+
+  if (bloqueadasPorLimite > 0) {
+    console.error(`LIMITE DE INSERÇÕES (${MAX_INSERCOES}) ATINGIDO: ${bloqueadasPorLimite} linha(s) novas NÃO foram inseridas. Confira a planilha e o banco; para liberar de propósito, rode com SYNC_MAX_INSERCOES maior.`);
+    process.exitCode = 5;
+  }
 
   const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/send-push`;
 
