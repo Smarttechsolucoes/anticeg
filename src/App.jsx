@@ -308,7 +308,7 @@ const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd", "lyrichangbin"];
-const SESSION_VERSION = "4";
+const SESSION_VERSION = "5"; // 5: todas as joiners saem (manutenção 03/11: itens duplicados); admin também precisa entrar de novo
 // Cogs de demonstração: mapeiam para o cog real cujos dados serão exibidos
 const DEMO_COG_MAP = { "ADMMODE": "nandaverseo_c" };
 function dataCog(cog) { return DEMO_COG_MAP[cog] || cog; }
@@ -27922,7 +27922,7 @@ export default function App() {
               EM MANUTENÇÃO
             </div>
             <div style={{ fontSize: 13, color: "rgba(245,240,232,.5)", lineHeight: 1.6 }}>
-              Estamos atualizando os pagamentos e a base de dados. Voltaremos às 20h!
+              Site em manutenção: itens estão sendo duplicados. Estamos corrigindo a base de dados e avisaremos quando o site voltar.
             </div>
 
             {senhaManutencao && (
