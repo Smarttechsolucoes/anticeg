@@ -215,7 +215,8 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             {agora && <ResumoLinha k="Valor agora" v={fmtReais(parcelas[0].valor)} />}
             {pagamento === "pix" && <ResumoLinha k="Comprovante" v={comprovante ? comprovante.name : "—"} />}
 
-            <div style={{ ...caixa, marginTop: 16 }}>Ao confirmar, o pedido <strong style={{ color: "var(--offwhite)" }}>não poderá ser cancelado</strong>. Se algo estiver errado, volte e corrija.</div>
+            {nSemPob < qtdTotal && <div style={{ ...caixa, marginTop: 16 }}>O <strong style={{ color: "var(--offwhite)" }}>POB é aleatório</strong> e não é respectivo ao membro da capa.</div>}
+            <div style={{ ...caixa, marginTop: 12 }}>Ao confirmar, o pedido <strong style={{ color: "var(--offwhite)" }}>não poderá ser cancelado</strong>. Se algo estiver errado, volte e corrija.</div>
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginTop: 12 }}>{erro}</div>}
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button type="button" disabled={status === "enviando"} onClick={() => setRevisando(false)}
@@ -399,7 +400,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Loja do POB</div>
-              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a loja de <strong style={{ color: "var(--offwhite)" }}>cada capa</strong>: pode ser uma de cada loja ou todas da mesma.{semPobCfg && <> Se preferir, escolha <strong style={{ color: "var(--offwhite)" }}>SEM POB</strong> ({fmtReais(semPobCfg.preco)}, pagamento até {semPobCfg.ate}).</>}</div>
+              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a loja de <strong style={{ color: "var(--offwhite)" }}>cada capa</strong>: pode ser uma de cada loja ou todas da mesma. O <strong style={{ color: "var(--offwhite)" }}>POB é aleatório</strong> e não é respectivo ao membro da capa.{semPobCfg && <> Se preferir, escolha <strong style={{ color: "var(--offwhite)" }}>SEM POB</strong> ({fmtReais(semPobCfg.preco)}, pagamento até {semPobCfg.ate}).</>}</div>
               {unidades.length === 0 ? (
                 <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>Escolha as capas acima para definir a loja de cada uma.</div>
               ) : (

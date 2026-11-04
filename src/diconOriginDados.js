@@ -68,6 +68,7 @@ export const DICON_CFG = {
       "Opção **SEM POB**: **R$190** (pagamento até **13/11**).",
       "Prazo de **PEDIDO**: **10 de novembro**.",
       "Todas as revistas acompanham **POB** (escolha a loja), a não ser que você escolha **SEM POB**.",
+      "O **POB é aleatório** e **não é respectivo ao membro da capa**.",
     ],
     [
       "A DICON é uma revista pesada, com mais de **1,5 kg**; por isso, o **frete será alto**.",
