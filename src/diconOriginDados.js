@@ -39,7 +39,8 @@ export const DICON_CFG = {
   // **texto** = negrito
   avisos: [
     "Cada revista custa **R$ 200,00**.",
-    "O envio será **somente em 2027**.",
+    "A DICON é uma revista pesada, com mais de **1,5 kg**; por isso, o **frete será alto**.",
+    "O envio **INTERNACIONAL** será apenas em **2027**. A data será **definida pela GOM dentro do grupo da CEG**.",
     "O prazo de pagamento é **a definir** e será avisado.",
     "Você pode **pagar agora** (PIX ou cartão) ou **pagar depois**.",
     "Ao fechar o pedido, ele **não poderá ser cancelado**.",
