@@ -26477,7 +26477,7 @@ function PrevendaTab({ user }) {
       url: "/dicon-origin",
       img: DICON_GRUPOS[0].completaMiniatura,
       tags: ["Envio somente em 2027", "Pedidos até 10/11"],
-      info: `${DICON_CFG.valorADefinir ? "Valor a definir" : `R$ ${DICON_CFG.prazos[0].preco} à vista ou R$ ${DICON_CFG.prazos[1].preco} em 2x`} · ${DICON_OPCOES.length} capas · POB · PIX ou cartão · pague agora ou depois`,
+      info: `${DICON_CFG.valorADefinir ? "Valor a definir" : `R$ ${DICON_CFG.prazos[0].preco} à vista ou R$ ${DICON_CFG.prazos[1].preco} em 2x ou R$ ${DICON_CFG.lojas.find(l => l.semPob).preco} sem POB`} · ${DICON_OPCOES.length} capas · POB · PIX ou cartão · pague agora ou depois`,
     },
     {
       key: "smolmerch",
