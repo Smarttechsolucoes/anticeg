@@ -3,8 +3,10 @@
 //  1) casarPorIdLinha — pelo CÓDIGO da planilha (coluna ID => masterlist.id_linha).
 //     Problema que resolve: a regra antiga identifica a linha por ceg|nome_do_item|nome. Se alguém edita o nome do item, o nome de exibição ou o CEG na planilha, a chave muda: o sync INSERE uma linha nova (id novo)
 //     e apaga a antiga. As demandas de pagamento guardam o masterlist.id antigo e passam a apontar para uma linha que não existe mais (413 de 3.811 itens em 2026-10-16).
-//     Regras: o código existe e é ÚNICO na planilha; exatamente UMA linha da masterlist o tem; mesmo CEG; **o DONO (@/cog) é o MESMO** (um id NUNCA muda de dono por causa de um código: se outra joiner
+//     Regras: o código existe e é ÚNICO na planilha; exatamente UMA linha da masterlist o tem; mesmo CEG (OU, se a planilha MOVEU a linha de CEG, o mesmo ITEM: ver abaixo); **o DONO (@/cog) é o MESMO** (um id NUNCA muda de dono por causa de um código: se outra joiner
 //     aparece com o mesmo código, vale a regra antiga e ela recebe uma linha nova); a linha do banco ainda não foi reivindicada.
+//     CEG MOVIDO (04/11): se a planilha só mudou a linha de CEG (mesmo código, mesmo dono, MESMO nome de item, informado dos dois lados), a linha continua a MESMA e o sync atualiza o CEG nela.
+//     Antes, mudar o CEG fazia o sync inserir uma linha nova e deixar a velha para trás (a joiner via o item em dobro: 11 casos em 03/11). CEG diferente E item diferente continua sem casar.
 //
 //  2) casarChavesRepetidas — DESEMPATE PELO DONO entre linhas SEM código que têm a MESMA chave (ex.: duas joiners com o mesmo nome de exibição e o mesmo item "PERFIL NOVO").
 //     A regra antiga casa essas linhas só pela ORDEM; se a ordem da planilha mudar, os DONOS (@) trocam entre os ids. Aqui cada linha da planilha é ligada à linha do banco que já pertence ao MESMO @.
@@ -30,7 +32,11 @@ export function casarPorIdLinha(linhasPlanilha, existentes) {
     const candidatos = noBanco.get(c);
     if (!candidatos || candidatos.length !== 1) return; // inexistente ou ambíguo no banco
     const e = candidatos[0];
-    if (norm(e.ceg).toLowerCase() !== norm(l.ceg).toLowerCase()) return;
+    if (norm(e.ceg).toLowerCase() !== norm(l.ceg).toLowerCase()) {
+      // CEG mudou: só casa se for o MESMO item (a planilha moveu a linha). Sem o item dos dois lados, não casa.
+      const itemPlanilha = norm(l.item).toLowerCase(), itemBanco = norm(e.item ?? e.nome_do_item).toLowerCase();
+      if (!itemPlanilha || itemPlanilha !== itemBanco) return;
+    }
     const dono = norm(l.cog);
     if (!dono || dono !== norm(e.cog)) return;        // o id NUNCA troca de dono por causa de um código (comparação exata: Ela e ela são pessoas diferentes)
     if (reivindicados.has(e.id)) return;

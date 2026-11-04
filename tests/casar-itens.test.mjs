@@ -44,6 +44,32 @@ test("NÃO casa: código inexistente no banco, nem CEG diferente", () => {
   assert.equal(casarPorIdLinha([L("A-1", "OUTRO CEG")], [E(10, "A-1", "W MAG")]).porIndice.size, 0);
 });
 
+// ── CEG movido (04/11): a planilha mudou a linha de CEG; antes o sync inseria uma linha nova e deixava a velha (item em dobro) ──
+const EI = (id, id_linha, ceg, item, cog = "ana") => ({ id, id_linha, ceg, cog, nome_do_item: item });
+const LI = (idLinha, ceg, item, cog = "ana") => ({ idLinha, ceg, item, cog });
+
+test("CEG movido: mesmo código, mesmo dono e MESMO item => continua a mesma linha (mesmo id)", () => {
+  const { porIndice, reivindicados } = casarPorIdLinha([LI("A-1", "RUN IT", "Bang Chan RING POB")], [EI(10, "A-1", "SANRIO", "Bang Chan RING POB")]);
+  assert.equal(porIndice.get(0)?.id, 10);
+  assert.deepEqual([...reivindicados], [10]);
+});
+
+test("CEG movido: o item compara sem diferenciar maiúsculas e ignora espaços nas pontas", () => {
+  assert.equal(casarPorIdLinha([LI("A-1", "RUN IT", "  bang chan ring pob ")], [EI(10, "A-1", "SANRIO", "Bang Chan RING POB")]).porIndice.get(0)?.id, 10);
+});
+
+test("CEG movido NÃO casa: CEG diferente E item diferente (pode ser outro produto com o código reaproveitado)", () => {
+  assert.equal(casarPorIdLinha([LI("A-1", "RUN IT", "OUTRO ITEM")], [EI(10, "A-1", "SANRIO", "Bang Chan RING POB")]).porIndice.size, 0);
+});
+
+test("CEG movido NÃO casa: o dono é outro, o código está repetido ou o item não foi informado", () => {
+  assert.equal(casarPorIdLinha([LI("A-1", "RUN IT", "X", "bia")], [EI(10, "A-1", "SANRIO", "X", "ana")]).porIndice.size, 0, "dono diferente");
+  assert.equal(casarPorIdLinha([LI("A-1", "RUN IT", "X")], [EI(10, "A-1", "SANRIO", "X"), EI(11, "A-1", "RUN IT", "X")]).porIndice.size, 0, "código em 2 linhas do banco (já há gêmeo)");
+  assert.equal(casarPorIdLinha([LI("A-1", "RUN IT", "X"), LI("A-1", "RUN IT", "X")], [EI(10, "A-1", "SANRIO", "X")]).porIndice.size, 0, "código repetido na planilha");
+  assert.equal(casarPorIdLinha([L("A-1", "RUN IT")], [E(10, "A-1", "SANRIO")]).porIndice.size, 0, "sem o item dos dois lados");
+  assert.equal(casarPorIdLinha([LI("A-1", "RUN IT", "")], [EI(10, "A-1", "SANRIO", "")]).porIndice.size, 0, "item vazio");
+});
+
 test("cada linha do banco é reivindicada UMA vez; só as casadas entram no conjunto; entradas vazias não quebram", () => {
   const { porIndice, reivindicados } = casarPorIdLinha([L("A-1"), L("B-2"), L("C-3")], [E(10, "A-1"), E(11, "B-2"), E(12, "OUTRO")]);
   assert.equal(porIndice.size, 2); assert.deepEqual([...reivindicados].sort(), [10, 11]);
