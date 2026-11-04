@@ -386,7 +386,20 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                   );
                 })}
               </div>
-              {lojaSel?.pob && <div style={{ ...caixa, marginTop: 10 }}>{lojaSel.pob}</div>}
+              {lojaSel ? (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.45)", marginBottom: 8 }}>POB {lojaSel.nome.toUpperCase()} · TOQUE PARA AMPLIAR</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                    {DICON_GRUPOS.map(g => (
+                      <button key={g.id} type="button" aria-label={`POB ${lojaSel.nome} — ${g.nome}`} onClick={() => ampliar({ src: g.pobs[lojaSel.id].grande, legenda: `POB ${lojaSel.nome} — ${g.nome}` })}
+                        style={{ padding: 0, border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, background: "rgba(245,240,232,.05)", overflow: "hidden", cursor: "zoom-in", textAlign: "left" }}>
+                        <img src={g.pobs[lojaSel.id].miniatura} alt="" loading="lazy" style={{ display: "block", width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }} onError={e => { e.target.style.visibility = "hidden"; }} />
+                        <div style={{ padding: "6px 8px", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.7)" }}>{g.nome}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : <div style={{ marginTop: 8, fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>Toque numa loja para ver o POB de cada grupo.</div>}
             </div>
 
             <div style={{ marginBottom: 24 }}>

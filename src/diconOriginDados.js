@@ -4,6 +4,13 @@
 // preço-base (opção à vista); o valor de cada pedido vem da opção de prazo escolhida (DICON_CFG.prazos)
 export const DICON_PRECO = 210;
 const tw = (arq, tamanho) => `https://pbs.twimg.com/media/${arq}?format=jpg&name=${tamanho}`;
+// POB de cada loja, por grupo (imagens do Twitter, como a visualização completa)
+const POB = {
+  skz:    { weverse: "HWQawyRWkAEWj5m", kakaotalk: "HWQawyXW4AAwhCw", diconmall: "HWQawyPWUAEk2Q3" },
+  bts:    { weverse: "HWQYjAFaQAAdgpy", kakaotalk: "HWQYkvGb0AAtOLU", diconmall: "HWQYoYIaEAAeyDr" },
+  cortis: { weverse: "HWQZHpRaQAE1ruE", kakaotalk: "HWQZKKxb0AAsPkM", diconmall: "HWQZNuXbAAAJrG0" },
+  gd:     { weverse: "HWQYQ7Xa8AAj4Ma", kakaotalk: "HWQYTqxa0AAR1Kn", diconmall: "HWQYXCybQAAiYUD" },
+};
 const COMPLETA = { skz: "HWPm2EOaQAAfVnX", bts: "HWPmuTnboAA9Nof", cortis: "HWPm74IaEAAcMkM", gd: "HWPmm4iaMAAUAgv" };
 export const fmtReais = n => "R$" + Number(n).toFixed(2).replace(".", ",");
 
@@ -21,7 +28,9 @@ const GRUPOS_BASE = [
 export const DICON_GRUPOS = GRUPOS_BASE.map(g => {
   const membros = g.membros.map(m => ({ ...m, foto: `/dicon-origin/${m.id}.jpg`, preco: DICON_PRECO }));
   // "opcoes" é o nome que o painel admin (AdminSmolMerch) espera em cada produto
-  return { ...g, membros, opcoes: membros, completa: tw(COMPLETA[g.id], "large"), completaMiniatura: tw(COMPLETA[g.id], "medium") };
+  return { ...g, membros, opcoes: membros, completa: tw(COMPLETA[g.id], "large"), completaMiniatura: tw(COMPLETA[g.id], "medium"),
+    // pobs[idDaLoja] = { miniatura, grande }
+    pobs: Object.fromEntries(Object.entries(POB[g.id]).map(([loja, arq]) => [loja, { miniatura: tw(arq, "medium"), grande: tw(arq, "large") }])) };
 });
 
 // uma linha por capa, com o grupo junto (usada no formulário, no painel e na exportação)
@@ -44,11 +53,11 @@ export const DICON_CFG = {
     { id: "avista",    titulo: "À vista",         preco: 210, parcelas: [{ valor: 210, ate: "13/11" }] },
     { id: "parcelado", titulo: "Parcelado em 2x", preco: 300, parcelas: [{ valor: 150, ate: "10/11" }, { valor: 150, ate: "10/12" }] },
   ],
-  // todas as revistas acompanham POB; a pessoa escolhe em qual loja. Para detalhes de cada POB: preencher "pob".
+  // todas as revistas acompanham POB; a pessoa escolhe em qual loja (as imagens do POB de cada grupo estão em DICON_GRUPOS[].pobs)
   lojas: [
-    { id: "weverse",   nome: "WeVerse",   pob: "" },
-    { id: "kakaotalk", nome: "KakaoTalk", pob: "" },
-    { id: "diconmall", nome: "DiconMall", pob: "" },
+    { id: "weverse",   nome: "WeVerse" },
+    { id: "kakaotalk", nome: "KakaoTalk" },
+    { id: "diconmall", nome: "DiconMall" },
   ],
   // dois blocos de avisos; **texto** = negrito
   avisos: [
