@@ -25,14 +25,14 @@ export const PROMO_MURCE_50_PRODUTOS = [
   },
   { id: "acrylic-carabiner", nome: "ACRYLIC CARABINER", foto: "ACRYLIC CARABINER.png",
     opcoes: [...opcoes("acrylic-carabiner-circle", SKZOO, 15).map(o => ({ ...o, label: `Circle — ${o.label}` })), ...opcoes("acrylic-carabiner-heart", SKZOO, 15).map(o => ({ ...o, label: `Heart — ${o.label}` }))] },
-  { id: "collect-plush-case", nome: "COLLECT PLUSH CASE", foto: "COLLECT PLUSH CASE.png", avisos: ["Somente a case (sem o plush)."], opcoes: opcoes("collect-plush-case", SKZOO, 37) },
+  { id: "collect-plush-case", nome: "COLLECT PLUSH CASE", foto: "COLLECT PLUSH CASE.png", avisos: ["Somente a case (sem o plush).", "Sem o PHOTOCARD."], opcoes: opcoes("collect-plush-case", SKZOO, 37) },
   { id: "skzoo-magnetic-holder", nome: "SKZOO MAGNETIC HOLDER", foto: "SKZOO MAGNETIC HOLDER.png", opcoes: opcoes("skzoo-magnetic-holder", SKZOO, 37) },
-  { id: "skzoo-hippers", nome: "SKZOO HIPPERS — DO IT POP-UP", foto: "skzoo hippers do it pop-up.png", opcoes: opcoes("skzoo-hippers", SKZOO, 22) },
+  { id: "skzoo-hippers", nome: "SKZOO HIPPERS — DO IT POP-UP", foto: "skzoo hippers do it pop-up.png", avisos: ["Sem o PHOTOCARD."], opcoes: opcoes("skzoo-hippers", SKZOO, 22) },
   { id: "mini-block-keyring", nome: "MINI BLOCK KEYRING", foto: "mini block keyring.png", opcoes: opcoes("mini-block-keyring", MEMBROS, 22) },
   { id: "outfit", nome: "OUTFIT (ROUPINHA DE PLUSH)", foto: "OUTFIT.jpg", opcoes: opcoes("outfit", SKZOO, 45) },
   // Itens em que a foto não mostra todos os personagens: só os disponíveis (os que aparecem com SOLD ou riscados ficaram de fora).
   { id: "sleep-mask", nome: "SLEEP MASK", foto: "SLEEP MASK.png", opcoes: opcoes("sleep-mask", ["Leebit", "Dwaekki", "Jiniret", "Han Quokka", "BbokAri", "FoxI.Ny"], 45) },
-  { id: "plush-bagpack", nome: "PLUSH BAGPACK", foto: "plush bagpack.png", opcoes: opcoes("plush-bagpack", ["Wolf Chan", "Leebit", "Han Quokka", "FoxI.Ny"], 115) },
+  { id: "plush-bagpack", nome: "PLUSH BACKPACK", foto: "plush bagpack.png", avisos: ["Sem o PHOTOCARD."], opcoes: opcoes("plush-bagpack", ["Wolf Chan", "Leebit", "Han Quokka", "FoxI.Ny"], 115) },
   { id: "reversible-face-pouch", nome: "REVERSIBLE FACE POUCH", foto: "REVERSIBLE face pouch.png", opcoes: opcoes("reversible-face-pouch", ["Leebit", "Dwaekki", "Jiniret", "BbokAri", "PuppyM", "FoxI.Ny"], 60) },
   // CONFIRMAR: na foto só 4 chaveiros estão sem SOLD e os plushes brancos são parecidos
   { id: "silver-keyring", nome: "SILVER KEYRING", foto: "SILVER KEYRING.png", opcoes: opcoes("silver-keyring", ["Dwaekki", "Han Quokka", "PuppyM", "FoxI.Ny"], 37) },
@@ -41,10 +41,8 @@ export const PROMO_MURCE_50_PRODUTOS = [
   // Itens novos. Só entram os que aparecem em estoque na foto (o que está com SOLD ou ausente ficou de fora).
   { id: "standing-skzoo", nome: "STANDING SKZOO (PLUSH)", foto: "STANDING SKZOO.png", avisos: ["Na foto, o Jiniret aparece como SOLD."], opcoes: opcoes("standing-skzoo", ["Wolf Chan", "Leebit", "Dwaekki", "Han Quokka", "BbokAri", "PuppyM", "FoxI.Ny"], 60) },
   { id: "ball-cap", nome: "BALL CAP (BONÉ)", foto: "BALLCAP.png", avisos: ["Último estoque."], opcoes: opcoes("ball-cap", ["Wolf Chan", "Leebit", "Dwaekki", "Jiniret", "Han Quokka", "BbokAri", "PuppyM"], 80) },
-  // CONFIRMAR: os personagens de cada beanie não estão identificados na foto; os modelos seguem a ordem da foto
-  { id: "beanie", nome: "BEANIE", foto: "BEANIE.png", avisos: ["Modelos 1 a 8 na ordem da foto: da esquerda para a direita, de cima para baixo."], opcoes: opcoes("beanie", ["Modelo 1", "Modelo 2", "Modelo 3", "Modelo 4", "Modelo 5", "Modelo 6", "Modelo 7", "Modelo 8"], 65) },
-  // CONFIRMAR: cores que aparecem na foto (branco, rosa e bege)
-  { id: "hood-blanket-leebit", nome: "HOOD BLANKET — LEEBIT", foto: "BLANKET LEEBIT.png", opcoes: opcoes("hood-blanket-leebit", ["Branco", "Rosa", "Bege"], 110) },
+  { id: "beanie", nome: "BEANIE", foto: "BEANIE.png", opcoes: opcoes("beanie", SKZOO, 65) },
+  { id: "hood-blanket-leebit", nome: "HOOD BLANKET — LEEBIT", foto: "BLANKET LEEBIT.png", opcoes: [{ id: "hood-blanket-leebit", label: "Leebit", preco: 110 }] },
   { id: "fankit-5th-gen", nome: "FANKIT 5TH GEN — OVER THE STAY RAIN", foto: "fankit 5th gen.png", opcoes: [{ id: "fankit-5th-gen", label: "Fankit", preco: 165 }] },
   { id: "force-sg-2026", nome: "FORCE — SEASON'S GREETINGS 2026 (JAPÃO)", foto: "force sg 2026.png", opcoes: [{ id: "force-sg-2026", label: "Season's Greetings", preco: 135 }] },
 ];
