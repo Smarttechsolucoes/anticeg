@@ -45,7 +45,8 @@ export const PHOTOCARD_CFG = {
   contarDesde: new Date("2026-10-28T09:00:00-03:00"), // limites de estoque (maxTotal) contam só os pedidos feitos depois do fim da 1ª rodada
   abreEm: new Date("2026-10-27T19:00:00-03:00"), abreEmRotulo: "19H", // pedidos só a partir das 19h; o botão mostra a contagem
   itensComFoto: true, // painel admin: visão "Itens" com foto, nome e quantidade pedida
-  ocultarSeCadastrada: true, // joiner cadastrada: sem os campos de claim, nome, e-mail e @
+  ocultarSeCadastrada: false,
+  dadosTravados: true, // joiner cadastrada: dados do cadastro travados, com o botão "Editar" (igual ao DICON e ao PROMO-MURCE-50)
   cabecalho: true,   // barra ANTICEG no topo
   aoVivo: true,      // abas Pedido · Ao vivo · Histórico (@ sempre como @***)
   resumoPedido: true, // lista os itens marcados embaixo, para conferência
