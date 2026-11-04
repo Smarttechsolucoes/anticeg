@@ -65,11 +65,34 @@ async function contarPedidos(cfg) {
   return soma;
 }
 
+// aviso com **negrito** e links (http/https) clicáveis
+function avisoComLinks(texto) {
+  return texto.split("**").map((trecho, k) => {
+    const partes = trecho.split(/(https?:\/\/[^\s]*[^\s.,;:!?)])/g).map((parte, j) => /^https?:\/\//.test(parte)
+      ? <a key={j} href={parte} target="_blank" rel="noopener noreferrer" style={{ color: "var(--laranja)", textDecoration: "underline", wordBreak: "break-all" }}>{parte}</a>
+      : parte);
+    return k % 2 ? <strong key={k}>{partes}</strong> : <span key={k}>{partes}</span>;
+  });
+}
+
 // ── Ao vivo e histórico públicos ─────────────────────────────────────────────
 // Lê só colunas sem dados pessoais (nada de nome, e-mail ou @): quem pediu aparece sempre como "@***".
-function PainelPublico({ aba, cfg, produtos }) {
+// Única exceção: os pedidos da própria joiner logada (achados pelo @ dela) aparecem com o @ real e a marca "seu pedido".
+function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
   const [pedidos, setPedidos] = useState(null);
   const [atualizado, setAtualizado] = useState(null);
+  const [meusIds, setMeusIds] = useState({});   // id do pedido -> @ gravado nele
+
+  useEffect(() => {
+    const bruto = (meuSocial || "").trim(), sem = bruto.replace(/^@/, "");
+    if (!sem) { setMeusIds({}); return; }
+    let vivo = true;
+    const buscar = () => supabase.from(cfg.tabela).select("id, social").in("social", [...new Set([bruto, sem, "@" + sem])]).limit(200)
+      .then(({ data }) => { if (vivo && data) setMeusIds(Object.fromEntries(data.map(r => [r.id, r.social]))); });
+    buscar();
+    const t = setInterval(buscar, 15000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [cfg.tabela, meuSocial]);
 
   useEffect(() => {
     let vivo = true;
@@ -90,13 +113,15 @@ function PainelPublico({ aba, cfg, produtos }) {
   const horaDe = p => hora(abre && new Date(p.created_at).getTime() < abre ? cfg.abreEm : p.created_at);
   const validos = publicos.filter(p => p.status !== "cancelado");
 
-  // mesmo cartão nas duas abas: o @ é sempre "@***" (a consulta nem traz o nome, e-mail ou @)
+  // mesmo cartão nas duas abas: o @ é "@***" (a consulta nem traz o nome, e-mail ou @), menos nos pedidos da própria joiner
   const cartoes = lista => (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {lista.map(p => (
-        <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .45 : 1 }}>
+      {lista.map(p => {
+        const meu = meusIds[p.id];
+        return (
+        <div key={p.id} style={{ background: meu ? "rgba(255,92,26,.06)" : "rgba(245,240,232,.03)", border: `1px solid ${meu ? "rgba(255,92,26,.35)" : "rgba(245,240,232,.08)"}`, borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .6 : 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
-            <span style={{ fontWeight: 700 }}>@***</span>
+            <span style={{ fontWeight: 700 }}>{meu ? <>{meu} <span style={{ fontSize: 9, fontWeight: 400, color: "var(--laranja)", border: "1px solid rgba(255,92,26,.45)", borderRadius: 10, padding: "1px 7px", marginLeft: 4 }}>seu pedido</span></> : "@***"}</span>
             <span style={{ color: "rgba(245,240,232,.4)" }}>{horaDe(p)}</span>
           </div>
           {(p.itens || []).map((i, k) => (
@@ -107,7 +132,8 @@ function PainelPublico({ aba, cfg, produtos }) {
             <span style={{ color: "var(--laranja)", fontWeight: 700 }}>{p.qtd_total} un · {fmtReais(p.valor_total)}</span>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
   const vazio = <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Nenhum pedido ainda.</div>;
@@ -156,6 +182,8 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   // cfg.dadosTravados: quem está logada vê os dados do cadastro travados, com o botão "Editar" (vale só para este pedido), como no DICON
   const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
   const [editando,    setEditando]    = useState(false);
+  const [cadastroCompleto, setCadastroCompleto] = useState(false);   // o cadastro já tem nome do site e e-mail
+  const [socialDoCadastro, setSocialDoCadastro] = useState(false);   // o cadastro já tem o @
   // limites de estoque por opção (maxTotal): quanto já foi pedido por todo mundo, atualizado a cada 15s
   const [vendidos,    setVendidos]    = useState({});
   const temLimite = produtos.some(p => p.opcoes.some(o => o.maxTotal != null));
@@ -187,6 +215,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
         if (j?.nome_site) setNome(j.nome_site);
         if (j?.email)     setEmail(j.email);
         if (j?.twitter)   setSocial(j.twitter);
+        // a trava vale pelo que veio do CADASTRO (não pelo que a pessoa digita): cadastro sem nome do site/e-mail fica livre para preencher
+        setCadastroCompleto(!!j?.nome_site?.trim() && !!j?.email?.trim());
+        setSocialDoCadastro(!!j?.twitter?.trim());
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- só no primeiro carregamento
   }, []);
@@ -211,7 +242,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   });
 
   // cadastrada: os dados vieram do cadastro, então os campos de identificação não precisam aparecer
-  const cadastrada = !!cfg.ocultarSeCadastrada && !!claim && !!nome.trim() && !!email.trim();
+  const cadastrada = !!cfg.ocultarSeCadastrada && !!claim && cadastroCompleto && !!nome.trim() && !!email.trim();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -265,7 +296,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const labelStyle = { fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.4)", textTransform: "uppercase", marginBottom: 6, display: "block" };
   // campo travado fica mais apagado e sem cursor de digitação; sem nome ou e-mail (cadastro incompleto) os campos ficam livres
   const campo = trava => trava ? { ...inputStyle, background: "rgba(245,240,232,.03)", color: "rgba(245,240,232,.7)", cursor: "default" } : inputStyle;
-  const travado = !!cfg.dadosTravados && logado && !editando && !!nome.trim() && !!email.trim();
+  const travado = !!cfg.dadosTravados && logado && cadastroCompleto && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
   const agora = pagamento !== "depois";
 
@@ -301,10 +332,10 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           </div>
         )}
 
-        {cfg.aoVivo && aba !== "pedido" ? <PainelPublico aba={aba} cfg={cfg} produtos={produtos} /> : (<>
+        {cfg.aoVivo && aba !== "pedido" ? <PainelPublico aba={aba} cfg={cfg} produtos={produtos} meuSocial={logado ? social : ""} /> : (<>
         <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "14px 16px", marginBottom: 28, fontSize: 12, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "var(--laranja)", marginBottom: 8 }}>⚠ AVISOS IMPORTANTES</div>
-          {cfg.avisos.map((a, i) => <div key={i}>☆ {a.split("**").map((t, k) => k % 2 ? <strong key={k}>{t}</strong> : t)}</div>)}
+          {cfg.avisos.map((a, i) => <div key={i}>☆ {avisoComLinks(a)}</div>)}
         </div>
 
         {cfg.avisoDestaque && !encerrado && (
@@ -368,7 +399,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               {cfg.dadosTravados && logado && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", lineHeight: 1.5 }}>
-                    {travado ? "Dados do seu cadastro. Algo errado? Toque em Editar (vale só para este pedido)." : "Editando os dados deste pedido."}
+                    {travado ? "Dados do seu cadastro. Algo errado? Toque em Editar (vale só para este pedido)." : editando ? "Editando os dados deste pedido." : "Seu cadastro está sem nome do site ou e-mail: preencha para este pedido."}
                   </div>
                   {(travado || editando) && (
                     <button type="button" onClick={() => setEditando(e => !e)}
@@ -394,7 +425,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               </div>
               <div>
                 <label style={labelStyle}>@ Rede Social</label>
-                <input style={campo(travado && !!social.trim())} readOnly={travado && !!social.trim()} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
+                <input style={campo(travado && socialDoCadastro)} readOnly={travado && socialDoCadastro} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
               </div>
             </div>
             )}

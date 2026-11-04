@@ -60,6 +60,8 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const [aba,         setAba]         = useState(DICON_GRUPOS[0].id);   // grupo mostrado
   const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
   const [editando,    setEditando]    = useState(false);
+  const [cadastroCompleto, setCadastroCompleto] = useState(false);   // o cadastro já tem nome do site e e-mail
+  const [socialDoCadastro, setSocialDoCadastro] = useState(false);   // o cadastro já tem o @
   const [prazo,       setPrazo]       = useState(cfg.prazos[0].id);   // opção de prazo/valor
   const [lojaUn,      setLojaUn]      = useState({});                 // loja do POB de cada unidade: { "<idCapa>#<n>": idLoja }
   const [pobVer,      setPobVer]      = useState("");                 // loja cujo POB está aberto para ver
@@ -73,6 +75,9 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
         if (j?.nome_site) setNome(j.nome_site);
         if (j?.email)     setEmail(j.email);
         if (j?.twitter)   setSocial(j.twitter);
+        // a trava vale pelo que veio do CADASTRO (não pelo que a pessoa digita): cadastro sem nome do site/e-mail fica livre para preencher
+        setCadastroCompleto(!!j?.nome_site?.trim() && !!j?.email?.trim());
+        setSocialDoCadastro(!!j?.twitter?.trim());
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- só no primeiro carregamento
   }, []);
@@ -167,7 +172,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   // campo do cadastro: travado fica mais apagado e sem cursor de digitação
   const campo = trava => trava ? { ...inputStyle, background: "rgba(245,240,232,.03)", color: "rgba(245,240,232,.7)", cursor: "default" } : inputStyle;
   // quem está logada tem os dados vindos do cadastro travados; sem nome ou e-mail (cadastro incompleto) os campos ficam livres
-  const travado = logado && !editando && !!nome.trim() && !!email.trim();
+  const travado = logado && cadastroCompleto && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
   const agora = pagamento !== "depois";
   const pill = ativo => ({ padding: "6px 9px", borderRadius: 6, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.18)"}`, background: ativo ? "rgba(255,92,26,.14)" : "transparent", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 10, fontWeight: ativo ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap" });
@@ -292,7 +297,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
               {logado && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", lineHeight: 1.5 }}>
-                    {travado ? "Dados do seu cadastro. Algo errado? Toque em Editar (vale só para este pedido)." : "Editando os dados deste pedido."}
+                    {travado ? "Dados do seu cadastro. Algo errado? Toque em Editar (vale só para este pedido)." : editando ? "Editando os dados deste pedido." : "Seu cadastro está sem nome do site ou e-mail: preencha para este pedido."}
                   </div>
                   {(travado || editando) && (
                     <button type="button" onClick={() => setEditando(e => !e)}
@@ -318,7 +323,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
               </div>
               <div>
                 <label style={labelStyle}>@ Rede Social</label>
-                <input style={campo(travado && !!social.trim())} readOnly={travado && !!social.trim()} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
+                <input style={campo(travado && socialDoCadastro)} readOnly={travado && socialDoCadastro} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
               </div>
             </div>
 
