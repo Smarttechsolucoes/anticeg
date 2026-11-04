@@ -26461,11 +26461,11 @@ function PrevendaTab({ user }) {
       fechado: PROMO_MURCE_50_CFG.bloqueado,
       emBreve: PROMO_MURCE_50_CFG.bloqueado,
       titulo: "PROMO-MURCE-50",
-      subtitulo: "Merchs Murcekaly · Photocard Set, Hoodie, plushes, keyrings e mais",
+      subtitulo: "Merchs Murcekaly · Zip Up Hoodie, Photocard, plushes, keyrings e mais",
       url: "/promo-murce-50",
       img: fotoPm("HOODIE DO IT.png"),
       tags: ["Pagamento depois", "Prazo imediato após a confirmação da seller"],
-      info: `${PROMO_MURCE_50_PRODUTOS.length} itens · de R$ ${PROMO_MURCE_50_FAIXA.min} a R$ ${PROMO_MURCE_50_FAIXA.max} · Photocard Set R$ 30 por membro · Zip Up Hoodie R$ 95`,
+      info: `${PROMO_MURCE_50_PRODUTOS.length} itens · de R$ ${PROMO_MURCE_50_FAIXA.min} a R$ ${PROMO_MURCE_50_FAIXA.max} · Photocard Zip Up Hoodie R$ 20 por membro · Zip Up Hoodie R$ 90`,
     },
     {
       key: "dicon-origin",

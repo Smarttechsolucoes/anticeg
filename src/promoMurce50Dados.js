@@ -13,15 +13,15 @@ const SKZOO = ["Wolf Chan", "Leebit", "Dwaekki", "Jiniret", "Han Quokka", "BbokA
 
 export const PROMO_MURCE_50_PRODUTOS = [
   {
-    id: "photocard-set", nome: "PHOTOCARD SET", foto: "PHOTOCARD SET.png",
+    id: "photocard-set", nome: "PHOTOCARD ZIP UP HOODIE", foto: "PHOTOCARD SET.png",
     avisos: ["Precisa sair OT8: o set só sai se os 8 membros forem fechados."],
-    opcoes: opcoes("photocard-set", MEMBROS, 30),
+    opcoes: opcoes("photocard-set", MEMBROS, 20),
   },
   {
     id: "zip-hoodie-do-it", nome: "ZIP UP HOODIE — DO IT POP-UP", foto: "HOODIE DO IT.png",
     // quando a quantidade for definida, colocar maxTotal na opção (o formulário passa a mostrar "restam N" e trava quando esgotar)
     avisos: ["Estoque limitado."],
-    opcoes: [{ id: "zip-hoodie-do-it", label: "Zip Up Hoodie", preco: 95 }],
+    opcoes: [{ id: "zip-hoodie-do-it", label: "Zip Up Hoodie", preco: 90 }],
   },
   { id: "acrylic-carabiner", nome: "ACRYLIC CARABINER", foto: "ACRYLIC CARABINER.png",
     opcoes: [...opcoes("acrylic-carabiner-circle", SKZOO, 15).map(o => ({ ...o, label: `Circle — ${o.label}` })), ...opcoes("acrylic-carabiner-heart", SKZOO, 15).map(o => ({ ...o, label: `Heart — ${o.label}` }))] },
