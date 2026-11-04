@@ -36,14 +36,21 @@ export const DICON_CFG = {
   bloqueado: true,
   // link do grupo de atualizações; se for null o botão não aparece
   grupoWhatsapp: "https://chat.whatsapp.com/E0KKDrRGuUAI7oofzMtPgs",
-  // **texto** = negrito
+  // true = o valor ainda não foi definido: a página mostra "A DEFINIR" no lugar de R$ e não calcula total.
+  // Quando definir, ajustar DICON_PRECO e trocar para false.
+  valorADefinir: true,
+  // dois blocos de avisos; **texto** = negrito
   avisos: [
-    "Cada revista custa **R$ 200,00**.",
-    "A DICON é uma revista pesada, com mais de **1,5 kg**; por isso, o **frete será alto**.",
-    "O envio **INTERNACIONAL** será apenas em **2027**. A data será **definida pela GOM dentro do grupo da CEG**.",
-    "O prazo de pagamento é **a definir** e será avisado.",
-    "Você pode **pagar agora** (PIX ou cartão) ou **pagar depois**.",
-    "Ao fechar o pedido, ele **não poderá ser cancelado**.",
+    [
+      "Cada revista: **A DEFINIR**.",
+      "Prazo de pagamento: **A DEFINIR**.",
+    ],
+    [
+      "A DICON é uma revista pesada, com mais de **1,5 kg**; por isso, o **frete será alto**.",
+      "O envio **INTERNACIONAL** será apenas em **2027**. A data será **definida pela GOM dentro do grupo da CEG**.",
+      "Você pode **pagar agora** (PIX ou cartão) ou **pagar depois**.",
+      "Ao fechar o pedido, ele **não poderá ser cancelado**.",
+    ],
   ],
 };
 

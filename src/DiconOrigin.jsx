@@ -137,7 +137,11 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
         <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "14px 16px", marginBottom: 28, fontSize: 12, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "var(--laranja)", marginBottom: 8 }}>⚠ AVISOS IMPORTANTES</div>
-          {cfg.avisos.map((a, i) => <div key={i}>☆ {a.split("**").map((t, k) => k % 2 ? <strong key={k}>{t}</strong> : t)}</div>)}
+          {cfg.avisos.map((bloco, b) => (
+            <div key={b} style={b > 0 ? { marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,92,26,.2)" } : undefined}>
+              {bloco.map((a, i) => <div key={i}>☆ {a.split("**").map((t, k) => k % 2 ? <strong key={k}>{t}</strong> : t)}</div>)}
+            </div>
+          ))}
         </div>
 
         {encerrado ? (
@@ -199,7 +203,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             </div>
 
             <div style={{ marginBottom: 28 }}>
-              <div style={labelStyle}>Escolha as capas — {fmtReais(cfg.preco)} cada</div>
+              <div style={labelStyle}>Escolha as capas{cfg.valorADefinir ? "" : ` — ${fmtReais(cfg.preco)} cada`}</div>
               {/* abas dos grupos: a quantidade escolhida em cada um aparece na aba, mesmo com outra aberta */}
               <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
                 {DICON_GRUPOS.map(g => {
@@ -237,7 +241,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                         <Capa m={m} onAmpliar={ampliar} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
-                          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(m.preco)}</div>
+                          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{cfg.valorADefinir ? "valor a definir" : fmtReais(m.preco)}</div>
                         </div>
                         <Qty valor={q} onMenos={() => ajustar(m.id, -1)} onMais={() => ajustar(m.id, 1)} />
                       </div>
@@ -245,7 +249,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                   })}
                 </div>
               </div>
-              {total > 0 && (
+              {total > 0 && !cfg.valorADefinir && (
                 <div style={{ marginTop: 14, fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)", textAlign: "right" }}>
                   Total: {fmtReais(total)} ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})
                 </div>
