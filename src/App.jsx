@@ -6,7 +6,7 @@ import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
 import { DiconOriginFormPage } from "./DiconOrigin.jsx";
 import { DICON_GRUPOS, DICON_OPCOES, DICON_CFG, diconLinhas } from "./diconOriginDados.js";
-import { PROMO_MURCE_50_PRODUTOS, PROMO_MURCE_50_CFG, fotoPm } from "./promoMurce50Dados.js";
+import { PROMO_MURCE_50_PRODUTOS, PROMO_MURCE_50_CFG, PROMO_MURCE_50_FAIXA, fotoPm } from "./promoMurce50Dados.js";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin, buscarNomeAdmin } from "./adminAuth.js";
 import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
@@ -26465,7 +26465,7 @@ function PrevendaTab({ user }) {
       url: "/promo-murce-50",
       img: fotoPm("HOODIE DO IT.png"),
       tags: ["Pagamento depois", "Prazo imediato após a confirmação da seller"],
-      info: `${PROMO_MURCE_50_PRODUTOS.length} itens · Photocard Set R$ 30 por membro · Zip Up Hoodie R$ 95 · demais valores em breve`,
+      info: `${PROMO_MURCE_50_PRODUTOS.length} itens · de R$ ${PROMO_MURCE_50_FAIXA.min} a R$ ${PROMO_MURCE_50_FAIXA.max} · Photocard Set R$ 30 por membro · Zip Up Hoodie R$ 95`,
     },
     {
       key: "dicon-origin",
