@@ -58,9 +58,10 @@ export const PROMO_MURCE_50_CFG = {
   deadline: new Date("2026-11-05T12:00:00-03:00"), pedidosAte: "05/11 às 12h", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando abrir.
-  bloqueado: true,
+  bloqueado: false,
   itensComFoto: true,        // painel admin: visão "Itens" com foto, nome e quantidade pedida
-  ocultarSeCadastrada: true, // joiner cadastrada: sem os campos de claim, nome, e-mail e @
+  ocultarSeCadastrada: false,
+  dadosTravados: true,       // joiner cadastrada: dados do cadastro travados, com o botão "Editar" (igual ao DICON)
   cabecalho: true,           // barra ANTICEG no topo
   aoVivo: true,              // abas Pedido · Ao vivo · Histórico (@ sempre como @***)
   resumoPedido: true,        // lista os itens marcados embaixo, para conferência

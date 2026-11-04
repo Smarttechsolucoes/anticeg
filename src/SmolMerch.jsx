@@ -153,6 +153,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
+  // cfg.dadosTravados: quem está logada vê os dados do cadastro travados, com o botão "Editar" (vale só para este pedido), como no DICON
+  const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
+  const [editando,    setEditando]    = useState(false);
   // limites de estoque por opção (maxTotal): quanto já foi pedido por todo mundo, atualizado a cada 15s
   const [vendidos,    setVendidos]    = useState({});
   const temLimite = produtos.some(p => p.opcoes.some(o => o.maxTotal != null));
@@ -260,6 +263,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 
   const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "10px 14px", color: "var(--offwhite)", fontFamily: mono, fontSize: 13, outline: "none", boxSizing: "border-box" };
   const labelStyle = { fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.4)", textTransform: "uppercase", marginBottom: 6, display: "block" };
+  // campo travado fica mais apagado e sem cursor de digitação; sem nome ou e-mail (cadastro incompleto) os campos ficam livres
+  const campo = trava => trava ? { ...inputStyle, background: "rgba(245,240,232,.03)", color: "rgba(245,240,232,.7)", cursor: "default" } : inputStyle;
+  const travado = !!cfg.dadosTravados && logado && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
   const agora = pagamento !== "depois";
 
@@ -359,23 +365,36 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               </div>
             ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
+              {cfg.dadosTravados && logado && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", lineHeight: 1.5 }}>
+                    {travado ? "Dados do seu cadastro. Algo errado? Toque em Editar (vale só para este pedido)." : "Editando os dados deste pedido."}
+                  </div>
+                  {(travado || editando) && (
+                    <button type="button" onClick={() => setEditando(e => !e)}
+                      style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: editando ? "var(--laranja)" : "rgba(245,240,232,.75)", fontFamily: mono, fontSize: 10, cursor: "pointer" }}>
+                      {editando ? "Travar" : "✎ Editar"}
+                    </button>
+                  )}
+                </div>
+              )}
               {claim && (
                 <div>
                   <label style={labelStyle}>Nome de claim <span style={{ color: "rgba(245,240,232,.25)", fontWeight: 400 }}>· como está na planilha</span></label>
-                  <input style={inputStyle} value={claim} onChange={e => setClaim(e.target.value)} placeholder="Seu claim" />
+                  <input style={campo(travado)} readOnly={travado} value={claim} onChange={e => setClaim(e.target.value)} placeholder="Seu claim" />
                 </div>
               )}
               <div>
                 <label style={labelStyle}>Nome do site <span style={{ color: "rgba(245,240,232,.25)", fontWeight: 400 }}>· como você quer aparecer aqui</span></label>
-                <input style={inputStyle} value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required />
+                <input style={campo(travado)} readOnly={travado} value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required />
               </div>
               <div>
                 <label style={labelStyle}>E-mail</label>
-                <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
+                <input style={campo(travado)} readOnly={travado} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
               </div>
               <div>
                 <label style={labelStyle}>@ Rede Social</label>
-                <input style={inputStyle} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
+                <input style={campo(travado && !!social.trim())} readOnly={travado && !!social.trim()} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
               </div>
             </div>
             )}
