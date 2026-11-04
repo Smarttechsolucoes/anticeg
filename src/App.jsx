@@ -26458,7 +26458,7 @@ function PrevendaTab({ user }) {
       url: "/dicon-origin",
       img: DICON_GRUPOS[0].completaMiniatura,
       tags: ["Envio somente em 2027", "Pagamento a definir"],
-      info: `R$ 200,00 por revista · ${DICON_OPCOES.length} capas · PIX ou cartão · pague agora ou depois`,
+      info: `${DICON_CFG.valorADefinir ? "Valor a definir" : "R$ 200,00 por revista"} · ${DICON_OPCOES.length} capas · PIX ou cartão · pague agora ou depois`,
     },
     {
       key: "smolmerch",
