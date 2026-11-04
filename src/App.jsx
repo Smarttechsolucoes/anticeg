@@ -1417,7 +1417,6 @@ function GastoMensal({ cog }) {
   const [demandas, setDemandas] = useState(null);
   const [mes, setMes] = useState(() => { const d = new Date(); return { a: d.getFullYear(), m: d.getMonth() }; });
   const [grupo, setGrupo] = useState("Stray Kids");
-  const [aberto, setAberto] = useState(true);
   const [hoje] = useState(() => new Date());
 
   useEffect(() => {
@@ -1460,11 +1459,7 @@ function GastoMensal({ cog }) {
 
   return (
     <div style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(183,156,255,.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 18 }}>
-      <div onClick={() => setAberto(a => !a)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-        <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.5)", textTransform: "uppercase" }}>Meu mês · quanto eu gastei</div>
-        <span style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.4)" }}>{aberto ? "−" : "+"}</span>
-      </div>
-      {aberto && (demandas === null ? (
+      {(demandas === null ? (
         <div style={{ fontFamily: mono, fontSize: 11, opacity: .4, padding: "14px 0" }}>carregando...</div>
       ) : (
         <>
@@ -1628,6 +1623,7 @@ function CegTab({ user, itens }) {
     { id: "todas", label: `Todas (${todasCegs.length})` },
     ...(!guest ? [{ id: "minhas", label: `Minhas (${minhasAtivas.length})` }] : []),
     { id: "finalizadas", label: `Finalizadas (${finalizadas.length})` },
+    ...(!guest ? [{ id: "gasto", label: "Quanto eu gastei" }] : []),
   ];
 
   if (detalhe) return <CegDetailView ceg={detalhe} onVoltar={() => { window.history.pushState(null, "", "/cegs"); setDetalhe(null); }} guest={guest} user={user} />;
@@ -1657,9 +1653,9 @@ function CegTab({ user, itens }) {
         ))}
       </div>
 
-      {!guest && meuCog && <GastoMensal cog={meuCog} />}
+      {filtro === "gasto" && !guest && meuCog && <GastoMensal cog={meuCog} />}
 
-      {allItens === null ? (
+      {filtro === "gasto" ? null : allItens === null ? (
         <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>carregando...</div>
       ) : cegs.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>
