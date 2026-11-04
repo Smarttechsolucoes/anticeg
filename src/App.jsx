@@ -26476,8 +26476,8 @@ function PrevendaTab({ user }) {
       subtitulo: "THE ORIGIN · Stray Kids · BTS · CORTIS · G-DRAGON",
       url: "/dicon-origin",
       img: DICON_GRUPOS[0].completaMiniatura,
-      tags: ["Envio somente em 2027", "Pagamento a definir"],
-      info: `${DICON_CFG.valorADefinir ? "Valor a definir" : "R$ 200,00 por revista"} · ${DICON_OPCOES.length} capas · PIX ou cartão · pague agora ou depois`,
+      tags: ["Envio somente em 2027", "Pedidos até 10/11"],
+      info: `${DICON_CFG.valorADefinir ? "Valor a definir" : `R$ ${DICON_CFG.prazos[0].preco} à vista ou R$ ${DICON_CFG.prazos[1].preco} em 2x`} · ${DICON_OPCOES.length} capas · POB · PIX ou cartão · pague agora ou depois`,
     },
     {
       key: "smolmerch",
