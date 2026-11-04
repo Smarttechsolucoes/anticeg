@@ -4037,6 +4037,16 @@ ${p.comprovante_url ? (() => {
             .filter(d => d.status === "em_analise")
             .flatMap(d => (d.itens || []).map(it => it.id))
         );
+        // em análise é POR CAMPO: quem enviou só o item não enviou o frete (o card inteiro não pode parecer pago)
+        const emAnaliseCampos = new Map();
+        meusPagamentos.filter(d => d.status === "em_analise").forEach(d => (d.itens || []).forEach(it => {
+          if (it.id == null) return;
+          const c = emAnaliseCampos.get(it.id) || {};
+          if (Number(it.valor_item  || 0) > 0) c.item  = true;
+          if (Number(it.frete_inter || 0) > 0) c.frete = true;
+          if (Number(it.taxa_rf     || 0) > 0) c.rf    = true;
+          emAnaliseCampos.set(it.id, c);
+        }));
         const itensSel = itensPendentes.filter(i => pagSelecionados.has(i.id));
         const multaItem = i => {
           if (emAnaliseIds.has(i.id)) return 0;
@@ -4219,11 +4229,13 @@ ${p.comprovante_url ? (() => {
 
 
         if (pagSubTab === "pendentes") {
-          const grandTotal = itensPendentes.reduce((a, i) =>
-            a + (!i.pago_item  ? Number(i.valor_item ||0) : 0)
-              + (!i.pago_frete ? Number(i.frete_inter||0) : 0)
-              + (!i.pago_rf    ? Number(i.taxa_rf    ||0) : 0)
-              + multaItem(i), 0);
+          const grandTotal = itensPendentes.reduce((a, i) => {
+            const an = emAnaliseCampos.get(i.id) || {};
+            return a + (!i.pago_item  && !an.item  ? Number(i.valor_item ||0) : 0)
+                     + (!i.pago_frete && !an.frete ? Number(i.frete_inter||0) : 0)
+                     + (!i.pago_rf    && !an.rf    ? Number(i.taxa_rf    ||0) : 0)
+                     + multaItem(i);
+          }, 0);
           const grandMulta = itensPendentes.reduce((a, i) => a + multaItem(i), 0);
           const tabBar = (
             <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
@@ -4258,12 +4270,20 @@ ${p.comprovante_url ? (() => {
                 <>
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12 }}>
                     {itensPendentes.map(item => {
-                      const isAn = emAnaliseIds.has(item.id);
+                      const an = emAnaliseCampos.get(item.id) || {};
                       const valItem  = !item.pago_item  ? Number(item.valor_item ||0) : 0;
                       const valFrete = !item.pago_frete ? Number(item.frete_inter||0) : 0;
                       const valRf    = !item.pago_rf    ? Number(item.taxa_rf    ||0) : 0;
                       const multa    = multaItem(item);
+                      const aPagar   = (an.item ? 0 : valItem) + (an.frete ? 0 : valFrete) + (an.rf ? 0 : valRf) + multa;   // o que ainda falta pagar
+                      const temAn    = (an.item && valItem > 0) || (an.frete && valFrete > 0) || (an.rf && valRf > 0);
+                      const isAn     = temAn && aPagar <= 0;                                                                  // tudo já foi enviado
                       const itemTotal = valItem + valFrete + valRf + multa;
+                      const chipAn = (v, enviado, rotulo) => v > 0 && (
+                        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background: enviado ? "rgba(201,168,240,.08)" : "rgba(255,159,64,.1)", border:`1px solid ${enviado ? "rgba(201,168,240,.3)" : "rgba(255,159,64,.35)"}`, borderRadius:4, padding:"2px 8px", color: enviado ? "#C9A8F0" : "#FF9F40", fontWeight: enviado ? 400 : 700 }}>
+                          {rotulo} R${v.toFixed(2).replace(".",",")} · {enviado ? "em análise" : "falta pagar"}
+                        </span>
+                      );
                       const proxVenc = [
                         !item.pago_item  && item.venc_item  ? item.venc_item  : null,
                         !item.pago_frete && item.venc_frete ? item.venc_frete : null,
@@ -4278,14 +4298,17 @@ ${p.comprovante_url ? (() => {
                               <div style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", marginTop:2 }}>{item.ceg}</div>
                             </div>
                             <div style={{ textAlign:"right", flexShrink:0 }}>
-                              <div style={{ fontSize:13, fontWeight:900, color: isAn ? "#C9A8F0" : "#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R${itemTotal.toFixed(2).replace(".",",")}</div>
+                              <div style={{ fontSize:13, fontWeight:900, color: isAn ? "#C9A8F0" : "#F5F0E8", fontFamily:"'DM Mono',monospace" }}>R${(temAn ? aPagar : itemTotal).toFixed(2).replace(".",",")}</div>
                               {isAn && <div style={{ fontSize:8, color:"#C9A8F0", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginTop:1 }}>em análise</div>}
+                              {temAn && !isAn && <div style={{ fontSize:8, color:"#FF9F40", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginTop:1 }}>ainda falta pagar</div>}
                             </div>
                           </div>
                           <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                            {temAn ? <>{chipAn(valItem, !!an.item, "item")}{chipAn(valFrete, !!an.frete, "frete")}{chipAn(valRf, !!an.rf, "RF")}</> : <>
                             {valItem  > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>item R${valItem.toFixed(2).replace(".",",")}</span>}
                             {valFrete > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>frete R${valFrete.toFixed(2).replace(".",",")}</span>}
                             {valRf    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.1)", borderRadius:4, padding:"2px 8px", color:"rgba(245,240,232,.5)" }}>RF R${valRf.toFixed(2).replace(".",",")}</span>}
+                            </>}
                             {multa    > 0 && <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(255,107,107,.1)", border:"1px solid rgba(255,107,107,.3)", borderRadius:4, padding:"2px 8px", color:"#ff6b6b", fontWeight:700 }}>⚠ multa R${multa.toFixed(2).replace(".",",")}</span>}
                             {proxVenc && (() => {
                               if (dpv < 0)   return null;
@@ -4535,6 +4558,21 @@ ${p.comprovante_url ? (() => {
               <span style={{ fontSize:11, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", textTransform:"uppercase" }}>Total selecionado</span>
               <span style={{ fontSize:18, fontWeight:900, color: temItens ? "#F5F0E8" : "rgba(245,240,232,.2)", fontFamily:"'DM Mono',monospace" }}>R$ {total.toFixed(2).replace(".",",")}</span>
             </div>
+            {(() => {
+              // item marcado, mas com frete / RF desmarcado (e ainda não enviado): avisa ANTES de mandar, para ninguém pagar só o item sem querer
+              const ficou = [];
+              itensSel.forEach(i => {
+                const f = pagSelecionados.get(i.id) || {}, an = emAnaliseCampos.get(i.id) || {};
+                [["item", "Item", !i.pago_item, Number(i.valor_item||0)], ["frete", "Frete", !i.pago_frete, Number(i.frete_inter||0)], ["rf", "RF", !i.pago_rf, Number(i.taxa_rf||0)]]
+                  .forEach(([k, rot, pend, v]) => { if (pend && v > 0 && !f[k] && !an[k]) ficou.push(`${rot} R$${v.toFixed(2).replace(".",",")} de ${i.nome_do_item}`); });
+              });
+              if (ficou.length === 0) return null;
+              return (
+                <div style={{ background:"rgba(255,159,64,.08)", border:"1px solid rgba(255,159,64,.35)", borderRadius:8, padding:"10px 14px", margin:"-6px 0 16px", fontSize:11, fontFamily:"'DM Mono',monospace", color:"#FF9F40", lineHeight:1.6 }}>
+                  <strong>⚠ Atenção:</strong> este envio NÃO inclui {ficou.join("; ")}. Isso continua em aberto. Para pagar tudo junto, marque também essa parte acima.
+                </div>
+              );
+            })()}
             {/* Reembolso */}
             {totalReembolso > 0 && (
               <div style={{ background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.2)", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
