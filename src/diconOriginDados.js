@@ -43,7 +43,7 @@ export const DICON_CFG = {
   deadline: new Date("2026-11-10T23:59:59-03:00"), pedidosAte: "10/11/2026", pagarAte: null,
   preco: DICON_PRECO,
   // true = "em breve": a página mostra as capas, mas não aceita pedido. Trocar para false quando abrir.
-  bloqueado: true,
+  bloqueado: false,
   // link do grupo de atualizações; se for null o botão não aparece
   grupoWhatsapp: "https://chat.whatsapp.com/E0KKDrRGuUAI7oofzMtPgs",
   // true = o valor ainda não foi definido: a página mostra "A DEFINIR" no lugar de R$ e não calcula total.
