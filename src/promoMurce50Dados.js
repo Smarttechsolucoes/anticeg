@@ -15,7 +15,7 @@ export const PROMO_MURCE_50_PRODUTOS = [
   {
     id: "photocard-set", nome: "PHOTOCARD ZIP UP HOODIE", foto: "PHOTOCARD SET.png",
     avisos: ["Precisa sair OT8: o set só sai se os 8 membros forem fechados."],
-    opcoes: opcoes("photocard-set", MEMBROS, 20).map(o => ({ ...o, maxTotal: 11 })),   // estoque: 11 de cada membro (já contando o que foi pedido)
+    opcoes: opcoes("photocard-set", MEMBROS, 13).map(o => ({ ...o, maxTotal: 11 })),   // estoque: 11 de cada membro (já contando o que foi pedido)
   },
   {
     id: "zip-hoodie-do-it", nome: "ZIP UP HOODIE — DO IT POP-UP", foto: "HOODIE DO IT.png",
