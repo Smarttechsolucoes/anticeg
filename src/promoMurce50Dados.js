@@ -61,6 +61,7 @@ export const PROMO_MURCE_50_CFG = {
   bloqueado: false,
   itensComFoto: true,        // painel admin: visão "Itens" com foto, nome e quantidade pedida
   ocultarSeCadastrada: false,
+  historicoSoMeu: true,      // Histórico = só os pedidos da própria joiner; Ao vivo = todos, com a posição dela na fila
   dadosTravados: true,       // joiner cadastrada: dados do cadastro travados, com o botão "Editar" (igual ao DICON)
   cabecalho: true,           // barra ANTICEG no topo
   aoVivo: true,              // abas Pedido · Ao vivo · Histórico (@ sempre como @***)
