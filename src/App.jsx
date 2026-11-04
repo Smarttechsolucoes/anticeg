@@ -1415,7 +1415,7 @@ function CegSlugPage({ slug, user }) {
 const grupoDaCeg = ceg => CEG_GRUPO[ceg] || (/stray|skz/i.test(ceg || "") ? "Stray Kids" : "Outros");
 function GastoMensal({ cog }) {
   const [demandas, setDemandas] = useState(null);
-  const [mes, setMes] = useState(() => { const d = new Date(); return { a: d.getFullYear(), m: d.getMonth() }; });
+  const [mes, setMes] = useState(null);   // null = todos os meses; senão { a: ano, m: mês 0-11 }
   const [grupo, setGrupo] = useState("Stray Kids");
   const [hoje] = useState(() => new Date());
 
@@ -1427,10 +1427,10 @@ function GastoMensal({ cog }) {
     return () => { vivo = false; };
   }, [cog]);
 
-  const brl = v => "R$" + Number(v || 0).toFixed(2).replace(".", ",");
-  const doMes = (demandas || []).filter(d => { const t = new Date(d.created_at); return t.getFullYear() === mes.a && t.getMonth() === mes.m; });
+  const brl = v => "R$" + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const doMes = (demandas || []).filter(d => { if (!mes) return true; const t = new Date(d.created_at); return t.getFullYear() === mes.a && t.getMonth() === mes.m; });
   const grupos = ["Todos", ...new Set((demandas || []).flatMap(d => (d.itens || []).map(i => grupoDaCeg(i.ceg))).concat("Stray Kids"))];
-  const soma = { item: 0, frete: 0, rf: 0, multa: 0 }, porCeg = {};
+  const soma = { item: 0, frete: 0, rf: 0, multa: 0 }, porCeg = {}, porMes = {};
   let reembolso = 0, emAnalise = 0;
   doMes.forEach(d => {
     let somaDemanda = 0, somaGrupo = 0;
@@ -1443,6 +1443,9 @@ function GastoMensal({ cog }) {
       Object.keys(soma).forEach(k => { soma[k] += v[k]; });
       const c = porCeg[i.ceg || "—"] || (porCeg[i.ceg || "—"] = { item: 0, frete: 0, rf: 0, multa: 0 });
       Object.keys(c).forEach(k => { c[k] += v[k]; });
+      const dt = new Date(d.created_at), chave = dt.getFullYear() * 100 + dt.getMonth();
+      const pm = porMes[chave] || (porMes[chave] = { a: dt.getFullYear(), m: dt.getMonth(), item: 0, frete: 0, rf: 0, multa: 0 });
+      Object.keys(v).forEach(k => { pm[k] += v[k]; });
       if (d.status === "em_analise") emAnalise += t;
     });
     // o reembolso (cashback) usado no envio é dividido entre os itens do comprovante, proporcional ao que cabe a este grupo
@@ -1450,9 +1453,11 @@ function GastoMensal({ cog }) {
   });
   const total = soma.item + soma.frete + soma.rf + soma.multa;
   const liquido = Math.max(0, total - reembolso);
-  const nomeMes = new Date(mes.a, mes.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  const ehAtual = mes.a === hoje.getFullYear() && mes.m === hoje.getMonth();
-  const mover = delta => setMes(({ a, m }) => { const d = new Date(a, m + delta, 1); return { a: d.getFullYear(), m: d.getMonth() }; });
+  const nomeDe = (a, m) => { const n = new Date(a, m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); return n.charAt(0).toUpperCase() + n.slice(1); };
+  const nomeMes = mes ? nomeDe(mes.a, mes.m) : "todos os meses";
+  const ehAtual = !mes || (mes.a === hoje.getFullYear() && mes.m === hoje.getMonth());
+  // saindo de "todos os meses", a seta ‹ vai para o mês passado (a atual já está logo abaixo na lista)
+  const mover = delta => setMes(prev => { const b = prev || { a: hoje.getFullYear(), m: hoje.getMonth() }; const d = new Date(b.a, b.m + delta, 1); return { a: d.getFullYear(), m: d.getMonth() }; });
   const mono = "'DM Mono',monospace";
   const btn = { background: "transparent", border: "1px solid rgba(245,240,232,.2)", color: "rgba(245,240,232,.7)", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontFamily: mono };
   const linhas = [["item", "item", soma.item], ["frete", "frete", soma.frete], ["rf", "taxa RF", soma.rf]];
@@ -1463,9 +1468,10 @@ function GastoMensal({ cog }) {
         <div style={{ fontFamily: mono, fontSize: 11, opacity: .4, padding: "14px 0" }}>carregando...</div>
       ) : (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0", flexWrap: "wrap" }}>
+            <button onClick={() => setMes(null)} style={{ background: !mes ? "var(--laranja)" : "transparent", color: !mes ? "#111" : "rgba(245,240,232,.6)", border: `1px solid ${!mes ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius: 6, padding: "5px 12px", fontSize: 11, fontFamily: mono, fontWeight: 600, cursor: "pointer" }}>Todos os meses</button>
             <button onClick={() => mover(-1)} style={btn} aria-label="mês anterior">‹</button>
-            <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, minWidth: 130, textAlign: "center" }}>{nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}</div>
+            <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, minWidth: 130, textAlign: "center", opacity: mes ? 1 : .35 }}>{mes ? nomeDe(mes.a, mes.m) : "escolher mês"}</div>
             <button onClick={() => mover(1)} disabled={ehAtual} style={{ ...btn, opacity: ehAtual ? .3 : 1, cursor: ehAtual ? "default" : "pointer" }} aria-label="próximo mês">›</button>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
@@ -1474,7 +1480,7 @@ function GastoMensal({ cog }) {
             ))}
           </div>
           {total <= 0 ? (
-            <div style={{ fontFamily: mono, fontSize: 11, opacity: .45, padding: "6px 0" }}>Nenhum pagamento de {grupo === "Todos" ? "nenhum grupo" : grupo} enviado em {nomeMes}.</div>
+            <div style={{ fontFamily: mono, fontSize: 11, opacity: .45, padding: "6px 0" }}>Nenhum pagamento de {grupo === "Todos" ? "nenhum grupo" : grupo} enviado {mes ? `em ${nomeMes}` : "ainda"}.</div>
           ) : (
             <>
               <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 34, color: "var(--laranja)", lineHeight: 1 }}>{brl(total)}</div>
@@ -1502,6 +1508,20 @@ function GastoMensal({ cog }) {
                   </div>
                 )}
               </div>
+              {!mes && Object.keys(porMes).length > 0 && (
+                <div style={{ marginTop: 14, borderTop: "1px solid rgba(245,240,232,.08)", paddingTop: 10 }}>
+                  <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.35)", textTransform: "uppercase", marginBottom: 6 }}>Por mês · toque para abrir</div>
+                  {Object.entries(porMes).sort((a, b) => Number(b[0]) - Number(a[0])).map(([k, c]) => (
+                    <div key={k} onClick={() => setMes({ a: c.a, m: c.m })} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9, cursor: "pointer" }}>
+                      <span style={{ color: "rgba(245,240,232,.75)" }}>{nomeDe(c.a, c.m)}</span>
+                      <span style={{ color: "rgba(245,240,232,.45)", textAlign: "right" }}>
+                        {c.item > 0 && `item ${brl(c.item)}`}{c.frete > 0 && ` · frete ${brl(c.frete)}`}{c.rf > 0 && ` · RF ${brl(c.rf)}`}{c.multa > 0 && ` · multa ${brl(c.multa)}`}
+                        <strong style={{ color: "var(--offwhite)", marginLeft: 8 }}>{brl(c.item + c.frete + c.rf + c.multa)}</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {Object.keys(porCeg).length > 0 && (
                 <div style={{ marginTop: 14, borderTop: "1px solid rgba(245,240,232,.08)", paddingTop: 10 }}>
                   <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.35)", textTransform: "uppercase", marginBottom: 6 }}>Por CEG</div>
@@ -1517,7 +1537,7 @@ function GastoMensal({ cog }) {
                 </div>
               )}
               <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.28)", marginTop: 12, lineHeight: 1.6 }}>
-                Conta o que você enviou de comprovante no mês (pago + em análise). Comprovante recusado não entra.
+                Conta o que você enviou de comprovante no período (pago + em análise). Comprovante recusado não entra.
               </div>
             </>
           )}
