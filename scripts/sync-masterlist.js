@@ -138,7 +138,7 @@ async function main() {
   // O DONO da linha da planilha é calculado como no laço abaixo (@ → joiner cadastrada; senão o próprio @/e-mail): um id NUNCA muda de dono por causa de um código.
   const cogDe = r => cogDaLinha({ twitter: col(r, colMap, '@'), email: col(r, colMap, 'EMAIL') }, idxJoiners);
   const casamento = casarPorIdLinha(
-    rows.map(r => ({ idLinha: col(r, colMap, 'ID').trim(), ceg: col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), cog: cogDe(r) })),
+    rows.map(r => ({ idLinha: col(r, colMap, 'ID').trim(), ceg: col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), item: col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim(), cog: cogDe(r) })),
     Object.values(existingMap).flat()
   );
   // as linhas já reivindicadas saem do casamento por chave/ordem (e, por consequência, nunca entram na exclusão)

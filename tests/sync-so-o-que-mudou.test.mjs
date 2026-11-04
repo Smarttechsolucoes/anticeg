@@ -26,14 +26,16 @@ const linha = (id, idLinha, nome, item, valor) => ({ id, ceg: "CEG A", cog: nome
   pago_item: false, pago_frete: false, pago_rf: false, venc_item: null, venc_frete: null, venc_rf: null, status: "Comprado" });
 // no modo "ausente" o banco tem uma linha (id 9) que não está na planilha
 const noBanco = modo === "leitura_vazia" ? [] : [linha(1, "A-1", "ANA", "ITEM 1", 10), linha(2, "A-2", "CLO", "ITEM 2", 15), ...(modo === "ausente" ? [linha(9, "Z-9", "BIA", "SUMIU", 5)] : [])];
+// no modo "moveu_ceg" a linha 1 está no banco com outro CEG (a planilha a moveu para "CEG A"): deve continuar a MESMA linha
+if (modo === "moveu_ceg") noBanco[0].ceg = "CEG ANTIGO";
 class Q { constructor(t){this.t=t;this.op="select";}
   select(c,o){ if(o&&o.head)this.head=true; return this; } order(){return this;} range(a){this.pagina=a;return this;} eq(c,v){this.alvo=v;return this;} in(){return this;} limit(){return this;}
-  update(){this.op="update";return this;} insert(){this.op="insert";return this;} upsert(){this.op="upsert";return this;}
+  update(p){this.op="update";this.payload=p;return this;} insert(){this.op="insert";return this;} upsert(){this.op="upsert";return this;}
   then(ok,no){ return Promise.resolve(this.resolver()).then(ok,no); }
   resolver(){
     if(this.t==="joiners"&&this.op==="select")return{data:[]};
     if(this.t==="masterlist"&&this.op==="select"){ if(this.head)return{count: modo==="leitura_vazia"?7630:noBanco.length}; if(this.pagina>0)return{data:[]}; return{data:noBanco}; }
-    if(this.t==="masterlist"&&this.op==="update"){ console.log("[fake] update id="+this.alvo); return{error:null}; }
+    if(this.t==="masterlist"&&this.op==="update"){ console.log("[fake] update id="+this.alvo+" ceg="+(this.payload&&this.payload.ceg)); return{error:null}; }
     if(this.t==="masterlist"&&this.op==="insert"){ console.log("[fake] insert"); return{error:null}; }
     if(this.t==="joiners"&&this.op==="upsert")return{error:null};
     return{data:[]};
@@ -80,6 +82,14 @@ test("linhas do banco que não estão na planilha são LISTADAS no log (id, cód
   assert.match(r.saida, /Candidatas à remoção \(id \| código \| CEG \| item \| status \| pago item\/frete\/rf\):/);
   assert.match(r.saida, /9 \| Z-9 \| CEG A \| SUMIU \| Comprado \| n\/n\/n/);
   assert.doesNotMatch(r.saida, /bia/i, "o dono (cog/nome) da linha não aparece na lista");
+});
+
+test("CEG movido na planilha: a linha do banco é ATUALIZADA (CEG novo, mesmo id), não duplicada nem deixada para trás", () => {
+  const r = rodar("moveu_ceg");
+  assert.equal(r.codigo, 0, r.saida);
+  assert.match(r.saida, /\[fake\] update id=1 ceg=CEG A/, "a linha 1 recebe o CEG novo");
+  assert.equal((r.saida.match(/\[fake\] insert/g) || []).length, 1, "só a linha 3 (de fato nova) é inserida; a linha 1 não vira linha nova");
+  assert.doesNotMatch(r.saida, /ausentes da planilha/, "a linha velha não fica para trás como candidata à remoção");
 });
 
 test("leitura vazia do banco (contagem diz 7630, páginas vazias) ABORTA sem gravar nada", () => {
