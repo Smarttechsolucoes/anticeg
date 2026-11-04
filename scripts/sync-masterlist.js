@@ -420,7 +420,13 @@ ${toDelete.length} registro(s) ausentes da planilha (de ${totalExistentes} no ba
   if (errPrune) { console.error('Exclusão protegida indisponível — NADA foi apagado:', errPrune.message); return; }
   if (rel.abortado) {
     console.error(`Exclusão ABORTADA pela proteção (${rel.motivo}) — nada foi apagado.`, JSON.stringify(rel));
-    process.exitCode = 3;   // o job fica vermelho para alguém olhar; as demais atualizações já foram feitas
+    if (rel.motivo === 'limite_excedido') {
+      // Há mais linhas ausentes da planilha do que o limite por execução (25). Nada foi apagado e todo o resto do sync já foi feito: isto é um AVISO (o job fica verde),
+      // não uma falha. A lista "Candidatas à remoção" acima mostra quais são, para revisão manual.
+      console.log(`::warning title=Sync: ${toDelete.length} linha(s) ausentes da planilha::Exclusão protegida não apagou nada (limite_excedido). Veja a lista "Candidatas à remoção" neste log.`);
+      return;
+    }
+    process.exitCode = 3;   // qualquer outro motivo (ex.: planilha parcial) continua vermelho para alguém olhar; as demais atualizações já foram feitas
     return;
   }
   console.log(`✓ Removidos: ${rel.apagadas} · preservados por proteção: ${rel.protegidas} ${JSON.stringify(rel.por_motivo)}`);

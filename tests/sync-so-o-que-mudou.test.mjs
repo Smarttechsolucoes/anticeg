@@ -25,7 +25,7 @@ const modo = process.env.MODO_TESTE;
 const linha = (id, idLinha, nome, item, valor) => ({ id, ceg: "CEG A", cog: nome.toLowerCase(), nome, nome_do_item: item, id_linha: idLinha, valor_item: valor, frete_inter: 0, taxa_rf: 0, info_adicionais: null,
   pago_item: false, pago_frete: false, pago_rf: false, venc_item: null, venc_frete: null, venc_rf: null, status: "Comprado" });
 // no modo "ausente" o banco tem uma linha (id 9) que não está na planilha
-const noBanco = modo === "leitura_vazia" ? [] : [linha(1, "A-1", "ANA", "ITEM 1", 10), linha(2, "A-2", "CLO", "ITEM 2", 15), ...(modo === "ausente" ? [linha(9, "Z-9", "BIA", "SUMIU", 5)] : [])];
+const noBanco = modo === "leitura_vazia" ? [] : [linha(1, "A-1", "ANA", "ITEM 1", 10), linha(2, "A-2", "CLO", "ITEM 2", 15), ...(["ausente", "limite", "outro_aborto"].includes(modo) ? [linha(9, "Z-9", "BIA", "SUMIU", 5)] : [])];
 // no modo "moveu_ceg" a linha 1 está no banco com outro CEG (a planilha a moveu para "CEG A"): deve continuar a MESMA linha
 if (modo === "moveu_ceg") noBanco[0].ceg = "CEG ANTIGO";
 class Q { constructor(t){this.t=t;this.op="select";}
@@ -40,7 +40,8 @@ class Q { constructor(t){this.t=t;this.op="select";}
     if(this.t==="joiners"&&this.op==="upsert")return{error:null};
     return{data:[]};
   } }
-export function createClient(){ return { from:t=>new Q(t), rpc:async()=>({data:{apagadas:0,protegidas:0,por_motivo:{}},error:null}) }; }
+const respostaPrune = modo === "limite" ? { abortado: true, motivo: "limite_excedido", apagadas: 0 } : modo === "outro_aborto" ? { abortado: true, motivo: "planilha_parcial", apagadas: 0 } : { apagadas: 0, protegidas: 0, por_motivo: {} };
+export function createClient(){ return { from:t=>new Q(t), rpc:async()=>({data:respostaPrune,error:null}) }; }
 ` });
   fs.writeFileSync(path.join(d, "preload.mjs"), `
 const csv = ["", "", "NUM,ID,ABA / CEG,NOME,@,NOME DO ITEM,PREÇO ITEM,ITEM",
@@ -90,6 +91,22 @@ test("CEG movido na planilha: a linha do banco é ATUALIZADA (CEG novo, mesmo id
   assert.match(r.saida, /\[fake\] update id=1 ceg=CEG A/, "a linha 1 recebe o CEG novo");
   assert.equal((r.saida.match(/\[fake\] insert/g) || []).length, 1, "só a linha 3 (de fato nova) é inserida; a linha 1 não vira linha nova");
   assert.doesNotMatch(r.saida, /ausentes da planilha/, "a linha velha não fica para trás como candidata à remoção");
+});
+
+test("exclusão protegida abortada por LIMITE EXCEDIDO: o sync termina verde (código 0) com aviso e a lista das candidatas", () => {
+  const r = rodar("limite");
+  assert.equal(r.codigo, 0, r.saida);
+  assert.match(r.saida, /::warning title=Sync: 1 linha\(s\) ausentes da planilha::/);
+  assert.match(r.saida, /Candidatas à remoção/);
+  assert.match(r.saida, /9 \| Z-9 \| CEG A \| SUMIU/);
+  assert.doesNotMatch(r.saida, /\[fake\] delete/, "nada é apagado");
+});
+
+test("exclusão protegida abortada por OUTRO motivo (ex.: planilha parcial) continua vermelha (código 3)", () => {
+  const r = rodar("outro_aborto");
+  assert.equal(r.codigo, 3, r.saida);
+  assert.match(r.saida, /Exclusão ABORTADA pela proteção \(planilha_parcial\)/);
+  assert.doesNotMatch(r.saida, /::warning/);
 });
 
 test("leitura vazia do banco (contagem diz 7630, páginas vazias) ABORTA sem gravar nada", () => {
