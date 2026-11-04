@@ -28,6 +28,19 @@ function Capa({ m, onAmpliar }) {
   );
 }
 
+// linhas da tela "meu pedido completo"
+function ResumoTitulo({ children }) {
+  return <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "rgba(245,240,232,.4)", textTransform: "uppercase", margin: "18px 0 6px", paddingTop: 12, borderTop: "1px solid rgba(245,240,232,.1)" }}>{children}</div>;
+}
+function ResumoLinha({ k, v }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "3px 0", fontSize: 12 }}>
+      <span style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.45)", flexShrink: 0 }}>{k}</span>
+      <span style={{ textAlign: "right", wordBreak: "break-word" }}>{v}</span>
+    </div>
+  );
+}
+
 // ── Formulário público ───────────────────────────────────────────────────────
 export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const encerrado = !!cfg.deadline && new Date() > cfg.deadline;
@@ -47,6 +60,9 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const [aba,         setAba]         = useState(DICON_GRUPOS[0].id);   // grupo mostrado
   const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
   const [editando,    setEditando]    = useState(false);
+  const [prazo,       setPrazo]       = useState(cfg.prazos[0].id);   // opção de prazo/valor
+  const [loja,        setLoja]        = useState("");                 // loja do POB
+  const [revisando,   setRevisando]   = useState(false);              // tela "ver meu pedido completo"
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -63,15 +79,33 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const grupo = DICON_GRUPOS.find(g => g.id === aba) || DICON_GRUPOS[0];
   const escolhidos = DICON_OPCOES.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
-  const total = escolhidos.reduce((a, o) => a + qtds[o.id] * o.preco, 0);
+  const prazoSel = cfg.prazos.find(p => p.id === prazo) || cfg.prazos[0];
+  const lojaSel = cfg.lojas.find(l => l.id === loja) || null;
+  const total = qtdTotal * prazoSel.preco;
+  const parcelas = prazoSel.parcelas.map(p => ({ ate: p.ate, valor: p.valor * qtdTotal }));
   const ajustar = (id, delta) => setQtds(q => ({ ...q, [id]: Math.min(20, Math.max(0, (q[id] || 0) + delta)) }));
   const ampliar = img => { setLightboxFalhou(false); setLightbox(img); };
 
-  async function handleSubmit(e) {
+  function validar() {
+    if (!qtdTotal || !nome.trim() || !email.trim()) return "Preencha nome, e-mail e escolha ao menos 1 capa.";
+    if (!lojaSel) return "Escolha a loja do POB.";
+    if (pagamento === "pix" && !comprovante) return "Anexe o comprovante do PIX.";
+    return "";
+  }
+
+  // o botão do formulário não envia: abre "ver meu pedido completo" para a pessoa conferir tudo antes
+  function handleSubmit(e) {
     e.preventDefault();
     if (cfg.bloqueado) return;
-    if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 capa."); return; }
-    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
+    const msg = validar();
+    if (msg) { setErro(msg); return; }
+    setErro(""); setRevisando(true);
+  }
+
+  async function enviar() {
+    if (cfg.bloqueado || status === "enviando") return;
+    const msg = validar();
+    if (msg) { setRevisando(false); setErro(msg); return; }
     setStatus("enviando"); setErro("");
 
     // o id é gerado aqui (não precisa ler o pedido de volta do banco) e também dá nome ao comprovante
@@ -88,13 +122,15 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
     const { error } = await criarPedidoLoja(cfg.tabela, {
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
-      itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: o.preco, qtd: qtds[o.id] })),
+      // prazo e loja do POB vão dentro de cada item (a tabela não precisa de colunas novas); preco = valor de cada revista no prazo escolhido
+      itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: prazoSel.preco, qtd: qtds[o.id], prazo: prazoSel.titulo, loja: lojaSel.nome })),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
     });
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
+    setRevisando(false);
 
     if (pagamento === "cartao") window.open("https://linknabio.gg/anticeg-comu", "_blank");
     setStatus("sucesso");
@@ -111,6 +147,64 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--offwhite)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 16px 80px" }}>
+      {revisando && status !== "sucesso" && (
+        <div role="dialog" aria-modal="true" aria-label="Meu pedido completo" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", zIndex: 998, overflowY: "auto", display: "flex", justifyContent: "center", padding: "24px 14px 40px" }}>
+          <div style={{ width: "100%", maxWidth: 520, height: "fit-content", background: "#0d0d0d", border: "1px solid rgba(245,240,232,.15)", borderRadius: 14, padding: "20px 18px" }}>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "3px", color: "var(--laranja)", marginBottom: 6 }}>CONFIRA ANTES DE ENVIAR</div>
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Meu pedido completo</div>
+
+            <ResumoTitulo>Seus dados</ResumoTitulo>
+            {claim && <ResumoLinha k="Claim" v={claim} />}
+            <ResumoLinha k="Nome" v={nome} />
+            <ResumoLinha k="E-mail" v={email} />
+            <ResumoLinha k="@ Rede social" v={social.trim() || "—"} />
+
+            <ResumoTitulo>Capas ({qtdTotal})</ResumoTitulo>
+            {escolhidos.map(o => (
+              <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+                <img src={o.foto} alt="" style={{ width: 36, height: 54, objectFit: "cover", borderRadius: 4, background: "rgba(245,240,232,.06)", flexShrink: 0 }} onError={e => { e.target.style.visibility = "hidden"; }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.45)" }}>{o.produto}</div>
+                </div>
+                <div style={{ fontFamily: mono, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>
+                  {qtds[o.id]} × {fmtReais(prazoSel.preco)}
+                  <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)" }}>{fmtReais(qtds[o.id] * prazoSel.preco)}</div>
+                </div>
+              </div>
+            ))}
+
+            <ResumoTitulo>Prazo</ResumoTitulo>
+            <ResumoLinha k="Opção" v={`${prazoSel.titulo} — ${fmtReais(prazoSel.preco)} por revista`} />
+            {parcelas.map((p, i) => <ResumoLinha key={i} k={parcelas.length > 1 ? `Parcela ${i + 1}` : "Pagamento"} v={`${fmtReais(p.valor)} até ${p.ate}`} />)}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 8, fontFamily: mono, fontWeight: 700, color: "var(--laranja)" }}>
+              <span style={{ fontSize: 12 }}>TOTAL ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})</span>
+              <span style={{ fontSize: 16 }}>{fmtReais(total)}</span>
+            </div>
+
+            <ResumoTitulo>Loja do POB</ResumoTitulo>
+            <ResumoLinha k="Loja" v={lojaSel.nome} />
+
+            <ResumoTitulo>Pagamento</ResumoTitulo>
+            <ResumoLinha k="Forma" v={pagamento === "pix" ? "Pagar agora · PIX" : pagamento === "cartao" ? "Pagar agora · Cartão" : "Pagar depois"} />
+            {agora && <ResumoLinha k="Valor agora" v={fmtReais(parcelas[0].valor)} />}
+            {pagamento === "pix" && <ResumoLinha k="Comprovante" v={comprovante ? comprovante.name : "—"} />}
+
+            <div style={{ ...caixa, marginTop: 16 }}>Ao confirmar, o pedido <strong style={{ color: "var(--offwhite)" }}>não poderá ser cancelado</strong>. Se algo estiver errado, volte e corrija.</div>
+            {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginTop: 12 }}>{erro}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button type="button" disabled={status === "enviando"} onClick={() => setRevisando(false)}
+                style={{ flex: 1, padding: "13px 0", borderRadius: 10, border: "1px solid rgba(245,240,232,.25)", background: "transparent", color: "var(--offwhite)", fontFamily: mono, fontSize: 12, cursor: "pointer" }}>
+                ← VOLTAR E EDITAR
+              </button>
+              <button type="button" disabled={status === "enviando"} onClick={enviar}
+                style={{ flex: 1.4, padding: "13px 0", borderRadius: 10, border: "none", background: "var(--laranja)", color: "#fff", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "1px", cursor: status === "enviando" ? "wait" : "pointer" }}>
+                {status === "enviando" ? "ENVIANDO..." : "CONFIRMAR E ENVIAR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, cursor: "zoom-out" }}>
           {lightboxFalhou
@@ -203,7 +297,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             </div>
 
             <div style={{ marginBottom: 28 }}>
-              <div style={labelStyle}>Escolha as capas{cfg.valorADefinir ? "" : ` — ${fmtReais(cfg.preco)} cada`}</div>
+              <div style={labelStyle}>Escolha as capas{cfg.valorADefinir ? "" : ` — ${cfg.prazos.map(p => `${fmtReais(p.preco)} ${p.titulo.toLowerCase()}`).join(" ou ")}`}</div>
               {/* abas dos grupos: a quantidade escolhida em cada um aparece na aba, mesmo com outra aberta */}
               <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
                 {DICON_GRUPOS.map(g => {
@@ -241,7 +335,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                         <Capa m={m} onAmpliar={ampliar} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
-                          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{cfg.valorADefinir ? "valor a definir" : fmtReais(m.preco)}</div>
+                          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{cfg.valorADefinir ? "valor a definir" : `${fmtReais(prazoSel.preco)} · ${prazoSel.titulo.toLowerCase()}`}</div>
                         </div>
                         <Qty valor={q} onMenos={() => ajustar(m.id, -1)} onMais={() => ajustar(m.id, 1)} />
                       </div>
@@ -254,6 +348,45 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                   Total: {fmtReais(total)} ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})
                 </div>
               )}
+            </div>
+
+            <div style={{ marginBottom: 28 }}>
+              <div style={labelStyle}>Prazo</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {cfg.prazos.map(p => {
+                  const ativo = p.id === prazoSel.id;
+                  return (
+                    <button key={p.id} type="button" aria-pressed={ativo} onClick={() => setPrazo(p.id)}
+                      style={{ textAlign: "left", padding: "12px 14px", borderRadius: 10, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativo ? "rgba(255,92,26,.12)" : "transparent", color: "var(--offwhite)", fontFamily: mono, cursor: "pointer" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: ativo ? "var(--laranja)" : "var(--offwhite)" }}>{p.titulo}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtReais(p.preco)}<span style={{ fontSize: 10, fontWeight: 400, color: "rgba(245,240,232,.5)" }}> /revista</span></span>
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.6 }}>
+                        {p.parcelas.map((x, i) => <div key={i}>{fmtReais(x.valor)} até {x.ate}</div>)}
+                      </div>
+                      {qtdTotal > 0 && <div style={{ marginTop: 6, fontSize: 11, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>Seu pedido ({qtdTotal}): {fmtReais(qtdTotal * p.preco)}</div>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 28 }}>
+              <div style={labelStyle}>Loja do POB</div>
+              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a sua loja:</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {cfg.lojas.map(l => {
+                  const ativo = l.id === loja;
+                  return (
+                    <button key={l.id} type="button" aria-pressed={ativo} onClick={() => setLoja(l.id)}
+                      style={{ flex: 1, padding: "12px 4px", borderRadius: 8, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativo ? "rgba(255,92,26,.12)" : "transparent", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 11, fontWeight: ativo ? 700 : 400, cursor: "pointer" }}>
+                      {l.nome}
+                    </button>
+                  );
+                })}
+              </div>
+              {lojaSel?.pob && <div style={{ ...caixa, marginTop: 10 }}>{lojaSel.pob}</div>}
             </div>
 
             <div style={{ marginBottom: 24 }}>
@@ -269,9 +402,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
               {!agora && (
                 <div style={caixa}>
-                  Seu pedido será registrado sem pagamento agora. {cfg.pagarAte
-                    ? <>O prazo para pagar é <strong style={{ color: "var(--offwhite)" }}>{cfg.pagarAte}</strong> — após isso o pedido será cancelado automaticamente.</>
-                    : "O prazo de pagamento será informado em breve."}
+                  Seu pedido será registrado sem pagamento agora. Prazo: {parcelas.map((p, i) => <span key={i}>{i > 0 && " + "}<strong style={{ color: "var(--offwhite)" }}>{fmtReais(p.valor)} até {p.ate}</strong></span>)}.
                 </div>
               )}
 
@@ -285,6 +416,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                       </button>
                     ))}
                   </div>
+                  {qtdTotal > 0 && <div style={{ ...caixa, marginBottom: 12 }}>Valor a pagar agora: <strong style={{ color: "var(--offwhite)" }}>{fmtReais(parcelas[0].valor)}</strong>{parcelas.length > 1 && <> (1ª parcela; a próxima, {fmtReais(parcelas[1].valor)}, vence em {parcelas[1].ate})</>}</div>}
                   {pagamento === "pix" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                       <div style={{ ...caixa, padding: "14px 16px" }}>
@@ -313,7 +445,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}</div>}
             <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado}
               style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado ? "pointer" : "not-allowed", letterSpacing: "1px" }}>
-              {cfg.bloqueado ? "EM BREVE" : status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
+              {cfg.bloqueado ? "EM BREVE" : status === "enviando" ? "ENVIANDO..." : "VER MEU PEDIDO COMPLETO →"}
             </button>
           </form>
         )}
