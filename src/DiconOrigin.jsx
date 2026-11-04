@@ -216,13 +216,19 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
               </div>
 
               <div style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px" }}>
+                <div style={{ padding: "12px 14px" }}>
                   <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: ".5px" }}>{grupo.nome}</div>
-                  <button type="button" onClick={() => ampliar({ src: grupo.completa, legenda: `${grupo.nome} — visualização completa` })}
-                    style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "rgba(245,240,232,.75)", fontFamily: mono, fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Ver completo
-                  </button>
                 </div>
+                {/* prévia do que vem incluso: o topo da imagem completa, com "Ver mais" para abrir inteira */}
+                <button type="button" aria-label={`Ver mais: ${grupo.nome} — o que vem incluso`} onClick={() => ampliar({ src: grupo.completa, legenda: `${grupo.nome} — visualização completa` })}
+                  style={{ position: "relative", display: "block", width: "100%", height: 240, padding: 0, border: "none", borderTop: "1px solid rgba(245,240,232,.06)", background: "rgba(245,240,232,.05)", cursor: "zoom-in", overflow: "hidden" }}>
+                  <img key={grupo.id} src={grupo.completaMiniatura} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+                    onError={e => { e.target.style.display = "none"; }} />
+                  <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "40px 12px 12px", background: "linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,0))", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.75)", textAlign: "left" }}>O QUE VEM INCLUSO</span>
+                    <span style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, color: "#fff", background: "var(--laranja)", borderRadius: 20, padding: "6px 14px", whiteSpace: "nowrap" }}>Ver mais +</span>
+                  </div>
+                </button>
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   {grupo.membros.map(m => {
                     const q = qtds[m.id] || 0;
