@@ -407,6 +407,15 @@ async function main() {
 ✓ Nenhum registro candidato à remoção`); return; }
   console.log(`
 ${toDelete.length} registro(s) ausentes da planilha (de ${totalExistentes} no banco): enviando para a exclusão protegida...`);
+  // Lista as candidatas (só id, código, CEG, item, status e pago; sem dono nem e-mail) para quem for revisar à mão por que não estão na planilha.
+  const LISTA_MAX = 300;
+  const itensPorId = new Map(Object.values(existingMap).flat().map(x => [x.id, x]));
+  console.log('Candidatas à remoção (id | código | CEG | item | status | pago item/frete/rf):');
+  toDelete.slice(0, LISTA_MAX).forEach(id => {
+    const x = itensPorId.get(id) || {};
+    console.log(`  ${id} | ${x.id_linha || '-'} | ${x.ceg} | ${x.nome_do_item} | ${x.status} | ${x.pago_item ? 'S' : 'n'}/${x.pago_frete ? 'S' : 'n'}/${x.pago_rf ? 'S' : 'n'}`);
+  });
+  if (toDelete.length > LISTA_MAX) console.log(`  ... e mais ${toDelete.length - LISTA_MAX}`);
   const { data: rel, error: errPrune } = await supabase.rpc('prune_masterlist', { p_ids: toDelete, p_linhas_planilha: rows.length, p_limite: 25 });
   if (errPrune) { console.error('Exclusão protegida indisponível — NADA foi apagado:', errPrune.message); return; }
   if (rel.abortado) {
