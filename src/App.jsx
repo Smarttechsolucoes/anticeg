@@ -1410,6 +1410,128 @@ function CegSlugPage({ slug, user }) {
   return <CegDetailView ceg={cegNome} onVoltar={voltar} guest={!user || user.guest} user={user} />;
 }
 
+// ── Meu mês (aba RESUMO CEGs): quanto a joiner logada pagou no mês, por grupo, separado em item / frete / taxa RF / multa ──
+// Fonte: os comprovantes enviados (pagamento_demandas), que têm data. Conta "pago" e "em análise"; recusados ficam de fora.
+const grupoDaCeg = ceg => CEG_GRUPO[ceg] || (/stray|skz/i.test(ceg || "") ? "Stray Kids" : "Outros");
+function GastoMensal({ cog }) {
+  const [demandas, setDemandas] = useState(null);
+  const [mes, setMes] = useState(() => { const d = new Date(); return { a: d.getFullYear(), m: d.getMonth() }; });
+  const [grupo, setGrupo] = useState("Stray Kids");
+  const [aberto, setAberto] = useState(true);
+  const [hoje] = useState(() => new Date());
+
+  useEffect(() => {
+    if (!cog) return;
+    let vivo = true;
+    supabase.from("pagamento_demandas").select("id, created_at, status, itens, cashback_aplicado").eq("joiner_cog", cog).neq("status", "rejeitado")
+      .then(({ data }) => { if (vivo) setDemandas(data || []); });
+    return () => { vivo = false; };
+  }, [cog]);
+
+  const brl = v => "R$" + Number(v || 0).toFixed(2).replace(".", ",");
+  const doMes = (demandas || []).filter(d => { const t = new Date(d.created_at); return t.getFullYear() === mes.a && t.getMonth() === mes.m; });
+  const grupos = ["Todos", ...new Set((demandas || []).flatMap(d => (d.itens || []).map(i => grupoDaCeg(i.ceg))).concat("Stray Kids"))];
+  const soma = { item: 0, frete: 0, rf: 0, multa: 0 }, porCeg = {};
+  let reembolso = 0, emAnalise = 0;
+  doMes.forEach(d => {
+    let somaDemanda = 0, somaGrupo = 0;
+    (d.itens || []).forEach(i => {
+      const v = { item: Number(i.valor_item || 0), frete: Number(i.frete_inter || 0), rf: Number(i.taxa_rf || 0), multa: Number(i.multa || 0) };
+      const t = v.item + v.frete + v.rf + v.multa;
+      somaDemanda += t;
+      if (grupo !== "Todos" && grupoDaCeg(i.ceg) !== grupo) return;
+      somaGrupo += t;
+      Object.keys(soma).forEach(k => { soma[k] += v[k]; });
+      const c = porCeg[i.ceg || "—"] || (porCeg[i.ceg || "—"] = { item: 0, frete: 0, rf: 0, multa: 0 });
+      Object.keys(c).forEach(k => { c[k] += v[k]; });
+      if (d.status === "em_analise") emAnalise += t;
+    });
+    // o reembolso (cashback) usado no envio é dividido entre os itens do comprovante, proporcional ao que cabe a este grupo
+    if (Number(d.cashback_aplicado) > 0 && somaDemanda > 0) reembolso += Number(d.cashback_aplicado) * (somaGrupo / somaDemanda);
+  });
+  const total = soma.item + soma.frete + soma.rf + soma.multa;
+  const liquido = Math.max(0, total - reembolso);
+  const nomeMes = new Date(mes.a, mes.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const ehAtual = mes.a === hoje.getFullYear() && mes.m === hoje.getMonth();
+  const mover = delta => setMes(({ a, m }) => { const d = new Date(a, m + delta, 1); return { a: d.getFullYear(), m: d.getMonth() }; });
+  const mono = "'DM Mono',monospace";
+  const btn = { background: "transparent", border: "1px solid rgba(245,240,232,.2)", color: "rgba(245,240,232,.7)", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontFamily: mono };
+  const linhas = [["item", "item", soma.item], ["frete", "frete", soma.frete], ["rf", "taxa RF", soma.rf]];
+
+  return (
+    <div style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(183,156,255,.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 18 }}>
+      <div onClick={() => setAberto(a => !a)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+        <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.5)", textTransform: "uppercase" }}>Meu mês · quanto eu gastei</div>
+        <span style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.4)" }}>{aberto ? "−" : "+"}</span>
+      </div>
+      {aberto && (demandas === null ? (
+        <div style={{ fontFamily: mono, fontSize: 11, opacity: .4, padding: "14px 0" }}>carregando...</div>
+      ) : (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0" }}>
+            <button onClick={() => mover(-1)} style={btn} aria-label="mês anterior">‹</button>
+            <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 700, minWidth: 130, textAlign: "center" }}>{nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}</div>
+            <button onClick={() => mover(1)} disabled={ehAtual} style={{ ...btn, opacity: ehAtual ? .3 : 1, cursor: ehAtual ? "default" : "pointer" }} aria-label="próximo mês">›</button>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+            {grupos.map(g => (
+              <button key={g} onClick={() => setGrupo(g)} style={{ background: grupo === g ? "var(--laranja)" : "transparent", color: grupo === g ? "#111" : "rgba(245,240,232,.6)", border: `1px solid ${grupo === g ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, borderRadius: 6, padding: "4px 10px", fontSize: 11, fontFamily: mono, fontWeight: 600, cursor: "pointer" }}>{g}</button>
+            ))}
+          </div>
+          {total <= 0 ? (
+            <div style={{ fontFamily: mono, fontSize: 11, opacity: .45, padding: "6px 0" }}>Nenhum pagamento de {grupo === "Todos" ? "nenhum grupo" : grupo} enviado em {nomeMes}.</div>
+          ) : (
+            <>
+              <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 34, color: "var(--laranja)", lineHeight: 1 }}>{brl(total)}</div>
+              <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", margin: "4px 0 12px" }}>
+                {grupo === "Todos" ? "todos os grupos" : grupo} · {nomeMes}
+                {emAnalise > 0 && <> · <span style={{ color: "#C9A8F0" }}>{brl(emAnalise)} ainda em análise</span></>}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {linhas.map(([k, rot, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 12 }}>
+                    <span style={{ color: "rgba(245,240,232,.6)" }}>{brl(v)} <span style={{ color: "rgba(245,240,232,.4)" }}>em {rot}</span></span>
+                    <span style={{ color: "rgba(245,240,232,.35)" }}>{total > 0 ? Math.round(v / total * 100) : 0}%</span>
+                  </div>
+                ))}
+                {soma.multa > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 12 }}>
+                    <span style={{ color: "#ff6b6b" }}>{brl(soma.multa)} <span style={{ opacity: .7 }}>em multa</span></span>
+                    <span style={{ color: "rgba(245,240,232,.35)" }}>{Math.round(soma.multa / total * 100)}%</span>
+                  </div>
+                )}
+                {reembolso > 0.005 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 12, borderTop: "1px solid rgba(245,240,232,.08)", paddingTop: 6, marginTop: 2 }}>
+                    <span style={{ color: "#BAFF39" }}>− {brl(reembolso)} <span style={{ opacity: .7 }}>de reembolso usado</span></span>
+                    <span style={{ color: "rgba(245,240,232,.7)", fontWeight: 700 }}>{brl(liquido)} pagos</span>
+                  </div>
+                )}
+              </div>
+              {Object.keys(porCeg).length > 0 && (
+                <div style={{ marginTop: 14, borderTop: "1px solid rgba(245,240,232,.08)", paddingTop: 10 }}>
+                  <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.35)", textTransform: "uppercase", marginBottom: 6 }}>Por CEG</div>
+                  {Object.entries(porCeg).sort((a, b) => (b[1].item + b[1].frete + b[1].rf + b[1].multa) - (a[1].item + a[1].frete + a[1].rf + a[1].multa)).map(([ceg, c]) => (
+                    <div key={ceg} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9 }}>
+                      <span style={{ color: "rgba(245,240,232,.75)" }}>{ceg}</span>
+                      <span style={{ color: "rgba(245,240,232,.45)", textAlign: "right" }}>
+                        {c.item > 0 && `item ${brl(c.item)}`}{c.frete > 0 && ` · frete ${brl(c.frete)}`}{c.rf > 0 && ` · RF ${brl(c.rf)}`}{c.multa > 0 && ` · multa ${brl(c.multa)}`}
+                        <strong style={{ color: "var(--offwhite)", marginLeft: 8 }}>{brl(c.item + c.frete + c.rf + c.multa)}</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.28)", marginTop: 12, lineHeight: 1.6 }}>
+                Conta o que você enviou de comprovante no mês (pago + em análise). Comprovante recusado não entra.
+              </div>
+            </>
+          )}
+        </>
+      ))}
+    </div>
+  );
+}
+
 function CegTab({ user, itens }) {
   const [allItens, setAllItens] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
@@ -1534,6 +1656,8 @@ function CegTab({ user, itens }) {
           </button>
         ))}
       </div>
+
+      {!guest && meuCog && <GastoMensal cog={meuCog} />}
 
       {allItens === null ? (
         <div style={{ padding: 40, textAlign: "center", color: "rgba(245,240,232,.3)", fontSize: "var(--fs-xs)" }}>carregando...</div>
