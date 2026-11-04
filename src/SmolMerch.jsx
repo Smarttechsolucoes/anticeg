@@ -112,16 +112,20 @@ function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
   const publicos = abre && Date.now() < abre ? [] : pedidos;
   const horaDe = p => hora(abre && new Date(p.created_at).getTime() < abre ? cfg.abreEm : p.created_at);
   const validos = publicos.filter(p => p.status !== "cancelado");
+  // posição na fila = ordem de chegada entre os pedidos não cancelados (1 = o primeiro a pedir)
+  const ordem = [...validos].sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || String(a.id).localeCompare(String(b.id)));
+  const posDe = Object.fromEntries(ordem.map((p, i) => [p.id, i + 1]));
+  const soMeu = !!cfg.historicoSoMeu;   // histórico só com os pedidos da própria joiner; o "ao vivo" mostra todos, com a posição dela
 
   // mesmo cartão nas duas abas: o @ é "@***" (a consulta nem traz o nome, e-mail ou @), menos nos pedidos da própria joiner
-  const cartoes = lista => (
+  const cartoes = (lista, comPosicao = false) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {lista.map(p => {
         const meu = meusIds[p.id];
         return (
         <div key={p.id} style={{ background: meu ? "rgba(255,92,26,.06)" : "rgba(245,240,232,.03)", border: `1px solid ${meu ? "rgba(255,92,26,.35)" : "rgba(245,240,232,.08)"}`, borderRadius: 12, padding: "12px 14px", opacity: p.status === "cancelado" ? .6 : 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11, marginBottom: 6 }}>
-            <span style={{ fontWeight: 700 }}>{meu ? <>{meu} <span style={{ fontSize: 9, fontWeight: 400, color: "var(--laranja)", border: "1px solid rgba(255,92,26,.45)", borderRadius: 10, padding: "1px 7px", marginLeft: 4 }}>seu pedido</span></> : "@***"}</span>
+            <span style={{ fontWeight: 700 }}>{meu ? <>{meu} <span style={{ fontSize: 9, fontWeight: 400, color: "var(--laranja)", border: "1px solid rgba(255,92,26,.45)", borderRadius: 10, padding: "1px 7px", marginLeft: 4 }}>seu pedido{comPosicao && posDe[p.id] ? ` · posição #${posDe[p.id]} de ${ordem.length}` : ""}</span></> : "@***"}</span>
             <span style={{ color: "rgba(245,240,232,.4)" }}>{horaDe(p)}</span>
           </div>
           {(p.itens || []).map((i, k) => (
@@ -145,7 +149,17 @@ function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
           <span><span style={{ color: "#4ade80" }}>●</span> AO VIVO · atualiza a cada 15s</span>
           <span>{validos.length} pedido{validos.length !== 1 ? "s" : ""} · {validos.reduce((a, p) => a + (Number(p.qtd_total) || 0), 0)} un</span>
         </div>
-        {validos.length ? cartoes(validos) : vazio}
+        {soMeu && meuSocial && (() => {
+          const minhas = ordem.map((p, i) => ({ id: p.id, pos: i + 1 })).filter(x => meusIds[x.id]);
+          return (
+            <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.25)", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontFamily: mono, fontSize: 11, lineHeight: 1.7, color: "rgba(245,240,232,.8)" }}>
+              {minhas.length
+                ? <>☆ {minhas.length === 1 ? "Seu pedido está na" : "Seus pedidos estão nas"} <strong>posição {minhas.map(x => "#" + x.pos).join(", ")}</strong> de {ordem.length} (ordem de chegada, sem contar cancelados).</>
+                : <>☆ Você ainda não tem pedido na fila.</>}
+            </div>
+          );
+        })()}
+        {validos.length ? cartoes(validos, soMeu) : vazio}
         {atualizado && <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.25)", textAlign: "center", marginTop: 14 }}>atualizado às {atualizado.toLocaleTimeString("pt-BR")}</div>}
       </div>
     );
@@ -156,8 +170,23 @@ function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
       <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontFamily: mono, fontSize: 11, lineHeight: 1.7, color: "rgba(245,240,232,.75)" }}>
         ☆ Seu item estará disponível para o pagamento <strong>somente após a confirmação da seller</strong>.
       </div>
-      <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {publicos.length} pedido{publicos.length !== 1 ? "s" : ""}</div>
-      {publicos.length ? cartoes(publicos) : vazio}
+      {soMeu ? (() => {
+        // só os pedidos da própria joiner (achados pelo @ dela), cancelados inclusive, para ela conferir o que pediu
+        const meus = publicos.filter(p => meusIds[p.id]);
+        return (
+          <>
+            <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>MEUS PEDIDOS · {meus.length} pedido{meus.length !== 1 ? "s" : ""}</div>
+            {!meuSocial
+              ? <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Entre na sua conta para ver os seus pedidos.</div>
+              : meus.length ? cartoes(meus) : <div style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,240,232,.35)", textAlign: "center", padding: "30px 0" }}>Você ainda não fez nenhum pedido.</div>}
+          </>
+        );
+      })() : (
+        <>
+          <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", marginBottom: 14 }}>HISTÓRICO · {publicos.length} pedido{publicos.length !== 1 ? "s" : ""}</div>
+          {publicos.length ? cartoes(publicos) : vazio}
+        </>
+      )}
     </div>
   );
 }
