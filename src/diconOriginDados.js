@@ -43,11 +43,12 @@ export const DICON_CFG = {
   avisos: [
     [
       "Cada revista: **A DEFINIR**.",
-      "Prazo de pagamento: **A DEFINIR**.",
+      "Prazo de **PEDIDO**: **10 de novembro**.",
+      "Prazo de pagamento: **duas opções disponíveis**.",
     ],
     [
       "A DICON é uma revista pesada, com mais de **1,5 kg**; por isso, o **frete será alto**.",
-      "O envio **INTERNACIONAL** será apenas em **2027**. A data será **definida pela GOM dentro do grupo da CEG**.",
+      "O envio **INTERNACIONAL** será apenas em **FEVEREIRO de 2027**, a depender do envio original.",
       "Você pode **pagar agora** (PIX ou cartão) ou **pagar depois**.",
       "Ao fechar o pedido, ele **não poderá ser cancelado**.",
     ],
