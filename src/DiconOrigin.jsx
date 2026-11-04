@@ -44,6 +44,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);   // { src, legenda }
   const [lightboxFalhou, setLightboxFalhou] = useState(false);
+  const [aba,         setAba]         = useState(DICON_GRUPOS[0].id);   // grupo mostrado
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -57,6 +58,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- só no primeiro carregamento
   }, []);
 
+  const grupo = DICON_GRUPOS.find(g => g.id === aba) || DICON_GRUPOS[0];
   const escolhidos = DICON_OPCOES.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
   const total = escolhidos.reduce((a, o) => a + qtds[o.id] * o.preco, 0);
@@ -179,33 +181,44 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha as capas — {fmtReais(cfg.preco)} cada</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {DICON_GRUPOS.map(g => (
-                  <div key={g.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px" }}>
-                      <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: ".5px" }}>{g.nome}</div>
-                      <button type="button" onClick={() => ampliar({ src: g.completa, legenda: `${g.nome} — visualização completa` })}
-                        style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "rgba(245,240,232,.75)", fontFamily: mono, fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
-                        Ver completo
-                      </button>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      {g.membros.map(m => {
-                        const q = qtds[m.id] || 0;
-                        return (
-                          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)", background: q > 0 ? "rgba(255,92,26,.06)" : "transparent", transition: "background .15s" }}>
-                            <Capa m={m} onAmpliar={ampliar} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
-                              <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(m.preco)}</div>
-                            </div>
-                            <Qty valor={q} onMenos={() => ajustar(m.id, -1)} onMais={() => ajustar(m.id, 1)} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              {/* abas dos grupos: a quantidade escolhida em cada um aparece na aba, mesmo com outra aberta */}
+              <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
+                {DICON_GRUPOS.map(g => {
+                  const ativa = g.id === grupo.id;
+                  const qGrupo = g.membros.reduce((a, m) => a + (qtds[m.id] || 0), 0);
+                  return (
+                    <button key={g.id} type="button" role="tab" aria-selected={ativa} onClick={() => setAba(g.id)}
+                      style={{ flex: "1 0 auto", padding: "10px 12px", borderRadius: 8, border: `1px solid ${ativa ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativa ? "rgba(255,92,26,.12)" : "transparent", color: ativa ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 11, fontWeight: ativa ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      {g.nome}
+                      {qGrupo > 0 && <span style={{ fontSize: 9, background: "var(--laranja)", color: "#fff", borderRadius: 10, padding: "1px 6px", fontWeight: 700 }}>{qGrupo}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px" }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: ".5px" }}>{grupo.nome}</div>
+                  <button type="button" onClick={() => ampliar({ src: grupo.completa, legenda: `${grupo.nome} — visualização completa` })}
+                    style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "rgba(245,240,232,.75)", fontFamily: mono, fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    Ver completo
+                  </button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {grupo.membros.map(m => {
+                    const q = qtds[m.id] || 0;
+                    return (
+                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)", background: q > 0 ? "rgba(255,92,26,.06)" : "transparent", transition: "background .15s" }}>
+                        <Capa m={m} onAmpliar={ampliar} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                          <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(m.preco)}</div>
+                        </div>
+                        <Qty valor={q} onMenos={() => ajustar(m.id, -1)} onMais={() => ajustar(m.id, 1)} />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               {total > 0 && (
                 <div style={{ marginTop: 14, fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)", textAlign: "right" }}>
