@@ -45,6 +45,8 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const [lightbox,    setLightbox]    = useState(null);   // { src, legenda }
   const [lightboxFalhou, setLightboxFalhou] = useState(false);
   const [aba,         setAba]         = useState(DICON_GRUPOS[0].id);   // grupo mostrado
+  const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
+  const [editando,    setEditando]    = useState(false);
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
   useEffect(() => {
@@ -100,6 +102,10 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
   const inputStyle = { width: "100%", background: "rgba(245,240,232,.06)", border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, padding: "10px 14px", color: "var(--offwhite)", fontFamily: mono, fontSize: 13, outline: "none", boxSizing: "border-box" };
   const labelStyle = { fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.4)", textTransform: "uppercase", marginBottom: 6, display: "block" };
+  // campo do cadastro: travado fica mais apagado e sem cursor de digitação
+  const campo = trava => trava ? { ...inputStyle, background: "rgba(245,240,232,.03)", color: "rgba(245,240,232,.7)", cursor: "default" } : inputStyle;
+  // quem está logada tem os dados vindos do cadastro travados; sem nome ou e-mail (cadastro incompleto) os campos ficam livres
+  const travado = logado && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
   const agora = pagamento !== "depois";
 
@@ -159,23 +165,36 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
+              {logado && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", lineHeight: 1.5 }}>
+                    {travado ? "Dados do seu cadastro. Algo errado? Toque em Editar (vale só para este pedido)." : "Editando os dados deste pedido."}
+                  </div>
+                  {(travado || editando) && (
+                    <button type="button" onClick={() => setEditando(e => !e)}
+                      style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: editando ? "var(--laranja)" : "rgba(245,240,232,.75)", fontFamily: mono, fontSize: 10, cursor: "pointer" }}>
+                      {editando ? "Travar" : "✎ Editar"}
+                    </button>
+                  )}
+                </div>
+              )}
               {claim && (
                 <div>
                   <label style={labelStyle}>Nome de claim <span style={{ color: "rgba(245,240,232,.25)", fontWeight: 400 }}>· como está na planilha</span></label>
-                  <input style={inputStyle} value={claim} onChange={e => setClaim(e.target.value)} placeholder="Seu claim" />
+                  <input style={campo(travado)} readOnly={travado} value={claim} onChange={e => setClaim(e.target.value)} placeholder="Seu claim" />
                 </div>
               )}
               <div>
                 <label style={labelStyle}>Nome do site <span style={{ color: "rgba(245,240,232,.25)", fontWeight: 400 }}>· como você quer aparecer aqui</span></label>
-                <input style={inputStyle} value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required />
+                <input style={campo(travado)} readOnly={travado} value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" required />
               </div>
               <div>
                 <label style={labelStyle}>E-mail</label>
-                <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
+                <input style={campo(travado)} readOnly={travado} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
               </div>
               <div>
                 <label style={labelStyle}>@ Rede Social</label>
-                <input style={inputStyle} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
+                <input style={campo(travado && !!social.trim())} readOnly={travado && !!social.trim()} value={social} onChange={e => setSocial(e.target.value)} placeholder="@seu_usuario" />
               </div>
             </div>
 
