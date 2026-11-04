@@ -640,7 +640,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
                 <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)" }}>{p.email}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}>
                   {(p.itens || []).map((i, k) => (
-                    <span key={k} style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.6)" }}>{i.qtd}x {i.produto} — {i.opcao}</span>
+                    <span key={k} style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.6)" }}>{i.qtd}x {i.produto} — {i.opcao}{i.loja ? ` · POB ${i.loja}` : ""}{i.prazo ? ` · ${i.prazo}` : ""}</span>
                   ))}
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, color: "var(--laranja)", marginTop: 4 }}>

@@ -61,7 +61,8 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
   const [editando,    setEditando]    = useState(false);
   const [prazo,       setPrazo]       = useState(cfg.prazos[0].id);   // opção de prazo/valor
-  const [loja,        setLoja]        = useState("");                 // loja do POB
+  const [lojaUn,      setLojaUn]      = useState({});                 // loja do POB de cada unidade: { "<idCapa>#<n>": idLoja }
+  const [pobVer,      setPobVer]      = useState("");                 // loja cujo POB está aberto para ver
   const [revisando,   setRevisando]   = useState(false);              // tela "ver meu pedido completo"
 
   // se a pessoa está logada, preenche nome, e-mail e @ a partir do cadastro
@@ -80,15 +81,24 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const escolhidos = DICON_OPCOES.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
   const prazoSel = cfg.prazos.find(p => p.id === prazo) || cfg.prazos[0];
-  const lojaSel = cfg.lojas.find(l => l.id === loja) || null;
+  const lojaDe = id => cfg.lojas.find(l => l.id === id) || null;
+  // uma linha por unidade pedida: a loja do POB é escolhida por capa (e por unidade, se pedir mais de uma da mesma)
+  const unidades = escolhidos.flatMap(o => Array.from({ length: qtds[o.id] }, (_, n) => ({ chave: `${o.id}#${n}`, o, n })));
+  const semLoja = unidades.filter(u => !lojaDe(lojaUn[u.chave]));
+  // itens do pedido: capa + loja juntas, com a quantidade de cada combinação
+  const itensPedido = escolhidos.flatMap(o => cfg.lojas
+    .map(l => ({ o, loja: l, qtd: unidades.filter(u => u.o.id === o.id && lojaUn[u.chave] === l.id).length }))
+    .filter(x => x.qtd > 0));
   const total = qtdTotal * prazoSel.preco;
   const parcelas = prazoSel.parcelas.map(p => ({ ate: p.ate, valor: p.valor * qtdTotal }));
   const ajustar = (id, delta) => setQtds(q => ({ ...q, [id]: Math.min(20, Math.max(0, (q[id] || 0) + delta)) }));
   const ampliar = img => { setLightboxFalhou(false); setLightbox(img); };
+  const escolherLoja = (chave, id) => setLojaUn(m => ({ ...m, [chave]: id }));
+  const todasNaLoja = id => setLojaUn(m => ({ ...m, ...Object.fromEntries(unidades.map(u => [u.chave, id])) }));
 
   function validar() {
     if (!qtdTotal || !nome.trim() || !email.trim()) return "Preencha nome, e-mail e escolha ao menos 1 capa.";
-    if (!lojaSel) return "Escolha a loja do POB.";
+    if (semLoja.length) return semLoja.length === 1 ? "Escolha a loja do POB da capa que falta." : `Escolha a loja do POB de cada capa (faltam ${semLoja.length}).`;
     if (pagamento === "pix" && !comprovante) return "Anexe o comprovante do PIX.";
     return "";
   }
@@ -123,7 +133,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
     const { error } = await criarPedidoLoja(cfg.tabela, {
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       // prazo e loja do POB vão dentro de cada item (a tabela não precisa de colunas novas); preco = valor de cada revista no prazo escolhido
-      itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: prazoSel.preco, qtd: qtds[o.id], prazo: prazoSel.titulo, loja: lojaSel.nome })),
+      itens: itensPedido.map(({ o, loja, qtd }) => ({ id: o.id, produto: o.produto, opcao: o.label, preco: prazoSel.preco, qtd, prazo: prazoSel.titulo, loja: loja.nome })),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
@@ -144,6 +154,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const travado = logado && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
   const agora = pagamento !== "depois";
+  const pill = ativo => ({ padding: "6px 9px", borderRadius: 6, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.18)"}`, background: ativo ? "rgba(255,92,26,.14)" : "transparent", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 10, fontWeight: ativo ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap" });
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--offwhite)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 16px 80px" }}>
@@ -160,16 +171,16 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             <ResumoLinha k="@ Rede social" v={social.trim() || "—"} />
 
             <ResumoTitulo>Capas ({qtdTotal})</ResumoTitulo>
-            {escolhidos.map(o => (
-              <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+            {itensPedido.map(({ o, loja: l, qtd }) => (
+              <div key={`${o.id}-${l.id}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
                 <img src={o.foto} alt="" style={{ width: 36, height: 54, objectFit: "cover", borderRadius: 4, background: "rgba(245,240,232,.06)", flexShrink: 0 }} onError={e => { e.target.style.visibility = "hidden"; }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
-                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.45)" }}>{o.produto}</div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.45)" }}>{o.produto} · <strong style={{ color: "var(--laranja)", fontWeight: 700 }}>POB {l.nome}</strong></div>
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>
-                  {qtds[o.id]} × {fmtReais(prazoSel.preco)}
-                  <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)" }}>{fmtReais(qtds[o.id] * prazoSel.preco)}</div>
+                  {qtd} × {fmtReais(prazoSel.preco)}
+                  <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)" }}>{fmtReais(qtd * prazoSel.preco)}</div>
                 </div>
               </div>
             ))}
@@ -181,9 +192,6 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
               <span style={{ fontSize: 12 }}>TOTAL ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})</span>
               <span style={{ fontSize: 16 }}>{fmtReais(total)}</span>
             </div>
-
-            <ResumoTitulo>Loja do POB</ResumoTitulo>
-            <ResumoLinha k="Loja" v={lojaSel.nome} />
 
             <ResumoTitulo>Pagamento</ResumoTitulo>
             <ResumoLinha k="Forma" v={pagamento === "pix" ? "Pagar agora · PIX" : pagamento === "cartao" ? "Pagar agora · Cartão" : "Pagar depois"} />
@@ -374,32 +382,49 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Loja do POB</div>
-              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a sua loja:</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                {cfg.lojas.map(l => {
-                  const ativo = l.id === loja;
-                  return (
-                    <button key={l.id} type="button" aria-pressed={ativo} onClick={() => setLoja(l.id)}
-                      style={{ flex: 1, padding: "12px 4px", borderRadius: 8, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativo ? "rgba(255,92,26,.12)" : "transparent", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 11, fontWeight: ativo ? 700 : 400, cursor: "pointer" }}>
-                      {l.nome}
-                    </button>
-                  );
-                })}
-              </div>
-              {lojaSel ? (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.45)", marginBottom: 8 }}>POB {lojaSel.nome.toUpperCase()} · TOQUE PARA AMPLIAR</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a loja de <strong style={{ color: "var(--offwhite)" }}>cada capa</strong>: pode ser uma de cada loja ou todas da mesma.</div>
+              {unidades.length === 0 ? (
+                <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>Escolha as capas acima para definir a loja de cada uma.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {unidades.length > 1 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.5)" }}>
+                      <span>Todas na mesma loja:</span>
+                      {cfg.lojas.map(l => <button key={l.id} type="button" onClick={() => todasNaLoja(l.id)} style={pill(false)}>{l.nome}</button>)}
+                    </div>
+                  )}
+                  {unidades.map(u => (
+                    <div key={u.chave} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 10px", borderRadius: 10, border: `1px solid ${lojaDe(lojaUn[u.chave]) ? "rgba(245,240,232,.12)" : "rgba(255,92,26,.4)"}` }}>
+                      <img src={u.o.foto} alt="" style={{ width: 32, height: 48, objectFit: "cover", borderRadius: 4, background: "rgba(245,240,232,.06)", flexShrink: 0 }} onError={e => { e.target.style.visibility = "hidden"; }} />
+                      <div style={{ flex: "1 1 90px", minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>{u.o.label}{qtds[u.o.id] > 1 ? ` (${u.n + 1}/${qtds[u.o.id]})` : ""}</div>
+                        <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.4)" }}>{u.o.produto}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {cfg.lojas.map(l => <button key={l.id} type="button" aria-pressed={lojaUn[u.chave] === l.id} onClick={() => escolherLoja(u.chave, l.id)} style={pill(lojaUn[u.chave] === l.id)}>{l.nome}</button>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.45)", marginBottom: 8 }}>VER O POB DE CADA LOJA</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {cfg.lojas.map(l => <button key={l.id} type="button" aria-pressed={pobVer === l.id} onClick={() => setPobVer(v => v === l.id ? "" : l.id)} style={pill(pobVer === l.id)}>{l.nome}</button>)}
+                </div>
+                {lojaDe(pobVer) && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginTop: 10 }}>
                     {DICON_GRUPOS.map(g => (
-                      <button key={g.id} type="button" aria-label={`POB ${lojaSel.nome} — ${g.nome}`} onClick={() => ampliar({ src: g.pobs[lojaSel.id].grande, legenda: `POB ${lojaSel.nome} — ${g.nome}` })}
+                      <button key={g.id} type="button" aria-label={`POB ${lojaDe(pobVer).nome} — ${g.nome}`} onClick={() => ampliar({ src: g.pobs[pobVer].grande, legenda: `POB ${lojaDe(pobVer).nome} — ${g.nome}` })}
                         style={{ padding: 0, border: "1px solid rgba(245,240,232,.12)", borderRadius: 8, background: "rgba(245,240,232,.05)", overflow: "hidden", cursor: "zoom-in", textAlign: "left" }}>
-                        <img src={g.pobs[lojaSel.id].miniatura} alt="" loading="lazy" style={{ display: "block", width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }} onError={e => { e.target.style.visibility = "hidden"; }} />
+                        <img src={g.pobs[pobVer].miniatura} alt="" loading="lazy" style={{ display: "block", width: "100%", aspectRatio: "1 / 1", objectFit: "cover" }} onError={e => { e.target.style.visibility = "hidden"; }} />
                         <div style={{ padding: "6px 8px", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.7)" }}>{g.nome}</div>
                       </button>
                     ))}
                   </div>
-                </div>
-              ) : <div style={{ marginTop: 8, fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>Toque numa loja para ver o POB de cada grupo.</div>}
+                )}
+              </div>
             </div>
 
             <div style={{ marginBottom: 24 }}>
