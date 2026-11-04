@@ -391,10 +391,23 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                       <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.6 }}>
                         {p.parcelas.map((x, i) => <div key={i}>{fmtReais(x.valor)} até {x.ate}</div>)}
                       </div>
-                      {qtdTotal > 0 && <div style={{ marginTop: 6, fontSize: 11, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>Seu pedido ({qtdTotal}): {fmtReais(totalPara(p))}</div>}
+                      {qtdTotal > 0 && (qtdTotal - nSemPob) > 0 && <div style={{ marginTop: 6, fontSize: 11, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>{nSemPob > 0 ? "Capas com POB" : "Seu pedido"} ({qtdTotal - nSemPob}): {fmtReais((qtdTotal - nSemPob) * p.preco)}</div>}
                     </button>
                   );
                 })}
+                {semPobCfg && (
+                  <div style={{ padding: "12px 14px", borderRadius: 10, border: `1px ${nSemPob > 0 ? "solid" : "dashed"} ${nSemPob > 0 ? "var(--laranja)" : "rgba(245,240,232,.25)"}`, background: nSemPob > 0 ? "rgba(255,92,26,.12)" : "transparent", color: "var(--offwhite)", fontFamily: mono }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: nSemPob > 0 ? "var(--laranja)" : "var(--offwhite)" }}>{semPobCfg.nome}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtReais(semPobCfg.preco)}<span style={{ fontSize: 10, fontWeight: 400, color: "rgba(245,240,232,.5)" }}> /revista</span></span>
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.6 }}>
+                      <div>{fmtReais(semPobCfg.preco)} até {semPobCfg.ate} (sempre à vista)</div>
+                      <div>Escolha "{semPobCfg.nome}" na capa, em "Loja do POB".</div>
+                    </div>
+                    {nSemPob > 0 && <div style={{ marginTop: 6, fontSize: 11, color: "var(--laranja)" }}>Capas {semPobCfg.nome} ({nSemPob}): {fmtReais(nSemPob * semPobCfg.preco)}</div>}
+                  </div>
+                )}
               </div>
             </div>
 
