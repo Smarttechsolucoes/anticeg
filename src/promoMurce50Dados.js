@@ -34,7 +34,7 @@ export const PROMO_MURCE_50_PRODUTOS = [
   { id: "sleep-mask", nome: "SLEEP MASK", foto: "SLEEP MASK.png", opcoes: opcoes("sleep-mask", ["Leebit", "Dwaekki", "Jiniret", "Han Quokka", "BbokAri", "FoxI.Ny"], 45) },
   { id: "plush-bagpack", nome: "PLUSH BAGPACK", foto: "plush bagpack.png", opcoes: opcoes("plush-bagpack", ["Wolf Chan", "Leebit", "Han Quokka", "FoxI.Ny"], 115) },
   { id: "reversible-face-pouch", nome: "REVERSIBLE FACE POUCH", foto: "REVERSIBLE face pouch.png", opcoes: opcoes("reversible-face-pouch", ["Leebit", "Dwaekki", "Jiniret", "BbokAri", "PuppyM", "FoxI.Ny"], 60) },
-  // CONFIRMAR: na foto só 4 chaveiros estão sem SOLD e os plushes brancos são parecidos
+  // Confirmado pela organização (04/11): 4 opções (na foto só 4 chaveiros estão sem SOLD)
   { id: "silver-keyring", nome: "SILVER KEYRING", foto: "SILVER KEYRING.png", opcoes: opcoes("silver-keyring", ["Dwaekki", "Han Quokka", "PuppyM", "FoxI.Ny"], 37) },
   { id: "skzoo-name-tag", nome: "SKZOO NAME TAG", foto: "skzoo name tag.png", opcoes: opcoes("skzoo-name-tag", ["Dwaekki", "Jiniret", "Han Quokka", "BbokAri", "PuppyM", "FoxI.Ny"], 60) },
   { id: "box-tape", nome: "BOX TAPE — STAY IN OUR LITTLE HOUSE", foto: "BOX TAPE.png", opcoes: opcoes("box-tape", ["Amarelo", "Rosa"], 10) },
@@ -56,7 +56,8 @@ export const PROMO_MURCE_50_FAIXA = { min: Math.min(...PRECOS_PM), max: Math.max
 export const PROMO_MURCE_50_CFG = {
   tabela: "pedidos_promo_murce_50", pasta: "promo-murce-50", produto: "PROMO-MURCE-50",
   titulo: "PROMO-MURCE-50", sub: "",
-  deadline: null, pedidosAte: null, pagarAte: null,
+  // o formulário fecha em 05/11/2026 às 12h (Brasília)
+  deadline: new Date("2026-11-05T12:00:00-03:00"), pedidosAte: "05/11 às 12h", pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando abrir.
   bloqueado: true,
@@ -69,6 +70,13 @@ export const PROMO_MURCE_50_CFG = {
   pagamentoAgora: false,     // só "pagar depois"
   // **texto** = negrito
   avisos: [
-    "Prazo de pagamento: **imediato após a confirmação da seller**.",
+    "Prazo **imediato** após a confirmação da seller.",
+    "Envio demorado, apenas em **Fevereiro de 2027** (com sorte).",
+    "O formulário fecha no dia **05 de novembro às 12h**.",
+    "O estoque é **LIMITADO** e não foi informada a quantidade de cada item: o risco de sold-out é grande.",
+    "Os itens saem da **Indonésia** para o Brasil.",
+    "Haverá **frete internacional** e **taxa da Receita Federal**.",
+    "**Não haverá possibilidade de cancelar a claim.** Se estiver em dúvida, não marque.",
+    "CEG: https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   ],
 };
