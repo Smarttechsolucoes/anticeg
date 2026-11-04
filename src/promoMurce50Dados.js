@@ -25,7 +25,7 @@ export const PROMO_MURCE_50_PRODUTOS = [
   },
   { id: "acrylic-carabiner", nome: "ACRYLIC CARABINER", foto: "ACRYLIC CARABINER.png",
     opcoes: [...opcoes("acrylic-carabiner-circle", SKZOO, 15).map(o => ({ ...o, label: `Circle — ${o.label}` })), ...opcoes("acrylic-carabiner-heart", SKZOO, 15).map(o => ({ ...o, label: `Heart — ${o.label}` }))] },
-  { id: "collect-plush-case", nome: "COLLECT PLUSH CASE", foto: "COLLECT PLUSH CASE.png", avisos: ["Somente a case (sem o plush).", "Sem o PHOTOCARD."], opcoes: opcoes("collect-plush-case", SKZOO, 37) },
+  { id: "collect-plush-case", nome: "COLLECT PLUSH CASE", foto: "COLLECT PLUSH CASE.png", avisos: ["Sem o PHOTOCARD."], opcoes: opcoes("collect-plush-case", SKZOO, 37) },
   { id: "skzoo-magnetic-holder", nome: "SKZOO MAGNETIC HOLDER", foto: "SKZOO MAGNETIC HOLDER.png", opcoes: opcoes("skzoo-magnetic-holder", SKZOO, 37) },
   { id: "skzoo-hippers", nome: "SKZOO HIPPERS — DO IT POP-UP", foto: "skzoo hippers do it pop-up.png", avisos: ["Sem o PHOTOCARD."], opcoes: opcoes("skzoo-hippers", SKZOO, 22) },
   { id: "mini-block-keyring", nome: "MINI BLOCK KEYRING", foto: "mini block keyring.png", opcoes: opcoes("mini-block-keyring", MEMBROS, 22) },
