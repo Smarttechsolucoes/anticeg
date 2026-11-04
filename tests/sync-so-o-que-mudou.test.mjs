@@ -24,7 +24,8 @@ const modo = process.env.MODO_TESTE;
 // linha 1 igual à planilha; linha 2 com valor diferente (15 no banco, 20 na planilha); a linha 3 da planilha não existe no banco
 const linha = (id, idLinha, nome, item, valor) => ({ id, ceg: "CEG A", cog: nome.toLowerCase(), nome, nome_do_item: item, id_linha: idLinha, valor_item: valor, frete_inter: 0, taxa_rf: 0, info_adicionais: null,
   pago_item: false, pago_frete: false, pago_rf: false, venc_item: null, venc_frete: null, venc_rf: null, status: "Comprado" });
-const noBanco = modo === "leitura_vazia" ? [] : [linha(1, "A-1", "ANA", "ITEM 1", 10), linha(2, "A-2", "CLO", "ITEM 2", 15)];
+// no modo "ausente" o banco tem uma linha (id 9) que não está na planilha
+const noBanco = modo === "leitura_vazia" ? [] : [linha(1, "A-1", "ANA", "ITEM 1", 10), linha(2, "A-2", "CLO", "ITEM 2", 15), ...(modo === "ausente" ? [linha(9, "Z-9", "BIA", "SUMIU", 5)] : [])];
 class Q { constructor(t){this.t=t;this.op="select";}
   select(c,o){ if(o&&o.head)this.head=true; return this; } order(){return this;} range(a){this.pagina=a;return this;} eq(c,v){this.alvo=v;return this;} in(){return this;} limit(){return this;}
   update(){this.op="update";return this;} insert(){this.op="insert";return this;} upsert(){this.op="upsert";return this;}
@@ -70,6 +71,15 @@ test("SYNC_ATUALIZAR_TUDO=1 volta ao comportamento antigo: atualiza todas as lin
   assert.equal(r.codigo, 0, r.saida);
   assert.equal((r.saida.match(/\[fake\] update/g) || []).length, 2, r.saida);
   assert.match(r.saida, /Sem mudança \(nenhum UPDATE enviado\): 0/);
+});
+
+test("linhas do banco que não estão na planilha são LISTADAS no log (id, código, CEG, item), sem dono nem e-mail", () => {
+  const r = rodar("ausente");
+  assert.equal(r.codigo, 0, r.saida);
+  assert.match(r.saida, /1 registro\(s\) ausentes da planilha/);
+  assert.match(r.saida, /Candidatas à remoção \(id \| código \| CEG \| item \| status \| pago item\/frete\/rf\):/);
+  assert.match(r.saida, /9 \| Z-9 \| CEG A \| SUMIU \| Comprado \| n\/n\/n/);
+  assert.doesNotMatch(r.saida, /bia/i, "o dono (cog/nome) da linha não aparece na lista");
 });
 
 test("leitura vazia do banco (contagem diz 7630, páginas vazias) ABORTA sem gravar nada", () => {
