@@ -1419,37 +1419,61 @@ function GastoMensal({ cog }) {
   const [grupo, setGrupo] = useState("Stray Kids");
   const [hoje] = useState(() => new Date());
 
+  const [itensML, setItensML] = useState(null);   // itens da joiner na masterlist (a base real: valores e o que já está pago)
   useEffect(() => {
     if (!cog) return;
     let vivo = true;
-    supabase.from("pagamento_demandas").select("id, created_at, status, itens, cashback_aplicado").eq("joiner_cog", cog).neq("status", "rejeitado")
-      .then(({ data }) => { if (vivo) setDemandas(data || []); });
+    (async () => {
+      let ml = [], from = 0;
+      while (from < 10000) {
+        const { data } = await supabase.from("masterlist")
+          .select("id, ceg, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
+          .eq("cog", cog).order("id", { ascending: true }).range(from, from + 999);
+        if (!data || data.length === 0) break;
+        ml = ml.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      const { data: dem } = await supabase.from("pagamento_demandas").select("id, created_at, status, itens, cashback_aplicado").eq("joiner_cog", cog).neq("status", "rejeitado");
+      if (vivo) { setItensML(ml); setDemandas(dem || []); }
+    })();
     return () => { vivo = false; };
   }, [cog]);
 
   const brl = v => "R$" + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const doMes = (demandas || []).filter(d => { if (!mes) return true; const t = new Date(d.created_at); return t.getFullYear() === mes.a && t.getMonth() === mes.m; });
-  const grupos = ["Todos", ...new Set((demandas || []).flatMap(d => (d.itens || []).map(i => grupoDaCeg(i.ceg))).concat("Stray Kids"))];
+  const grupos = ["Todos", ...new Set((itensML || []).map(i => grupoDaCeg(i.ceg)).concat("Stray Kids"))];
   const soma = { item: 0, frete: 0, rf: 0, multa: 0 }, porCeg = {}, porMes = {};
   let reembolso = 0, emAnalise = 0;
-  doMes.forEach(d => {
+  // "mês" de cada parte paga = a data de vencimento dela na planilha (a base não guarda a data do pagamento); sem data cai em "Sem data"
+  const mesDe = iso => /^\d{4}-\d{2}/.test(iso || "") ? { a: Number(iso.slice(0, 4)), m: Number(iso.slice(5, 7)) - 1 } : null;
+  const noMes = mm => !mes || (!!mm && mm.a === mes.a && mm.m === mes.m);
+  const lanca = (ceg, tipo, v, mm) => {
+    if (!(v > 0) || (grupo !== "Todos" && grupoDaCeg(ceg) !== grupo) || !noMes(mm)) return;
+    soma[tipo] += v;
+    const c = porCeg[ceg || "—"] || (porCeg[ceg || "—"] = { item: 0, frete: 0, rf: 0, multa: 0 });
+    c[tipo] += v;
+    const chave = mm ? mm.a * 100 + mm.m : 0;
+    const pm = porMes[chave] || (porMes[chave] = { a: mm ? mm.a : null, m: mm ? mm.m : null, item: 0, frete: 0, rf: 0, multa: 0 });
+    pm[tipo] += v;
+  };
+  (itensML || []).forEach(i => {
+    [["item", i.valor_item, i.pago_item, i.venc_item], ["frete", i.frete_inter, i.pago_frete, i.venc_frete], ["rf", i.taxa_rf, i.pago_rf, i.venc_rf]].forEach(([tipo, val, pago, venc]) => {
+      if (!isPendente(pago) && pago !== "N/A") lanca(i.ceg, tipo, Number(val || 0), mesDe(venc));
+    });
+  });
+  // dos comprovantes: a multa (não está na planilha), o reembolso usado e o que foi enviado e ainda está em análise
+  (demandas || []).forEach(d => {
+    const dt = new Date(d.created_at), mm = { a: dt.getFullYear(), m: dt.getMonth() };
     let somaDemanda = 0, somaGrupo = 0;
     (d.itens || []).forEach(i => {
-      const v = { item: Number(i.valor_item || 0), frete: Number(i.frete_inter || 0), rf: Number(i.taxa_rf || 0), multa: Number(i.multa || 0) };
-      const t = v.item + v.frete + v.rf + v.multa;
+      const t = Number(i.valor_item || 0) + Number(i.frete_inter || 0) + Number(i.taxa_rf || 0) + Number(i.multa || 0);
       somaDemanda += t;
       if (grupo !== "Todos" && grupoDaCeg(i.ceg) !== grupo) return;
       somaGrupo += t;
-      Object.keys(soma).forEach(k => { soma[k] += v[k]; });
-      const c = porCeg[i.ceg || "—"] || (porCeg[i.ceg || "—"] = { item: 0, frete: 0, rf: 0, multa: 0 });
-      Object.keys(c).forEach(k => { c[k] += v[k]; });
-      const dt = new Date(d.created_at), chave = dt.getFullYear() * 100 + dt.getMonth();
-      const pm = porMes[chave] || (porMes[chave] = { a: dt.getFullYear(), m: dt.getMonth(), item: 0, frete: 0, rf: 0, multa: 0 });
-      Object.keys(v).forEach(k => { pm[k] += v[k]; });
-      if (d.status === "em_analise") emAnalise += t;
+      lanca(i.ceg, "multa", Number(i.multa || 0), mm);
+      if (d.status === "em_analise" && noMes(mm)) emAnalise += t;
     });
-    // o reembolso (cashback) usado no envio é dividido entre os itens do comprovante, proporcional ao que cabe a este grupo
-    if (Number(d.cashback_aplicado) > 0 && somaDemanda > 0) reembolso += Number(d.cashback_aplicado) * (somaGrupo / somaDemanda);
+    if (noMes(mm) && Number(d.cashback_aplicado) > 0 && somaDemanda > 0) reembolso += Number(d.cashback_aplicado) * (somaGrupo / somaDemanda);
   });
   const total = soma.item + soma.frete + soma.rf + soma.multa;
   const liquido = Math.max(0, total - reembolso);
@@ -1464,7 +1488,7 @@ function GastoMensal({ cog }) {
 
   return (
     <div style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(183,156,255,.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 18 }}>
-      {(demandas === null ? (
+      {(demandas === null || itensML === null ? (
         <div style={{ fontFamily: mono, fontSize: 11, opacity: .4, padding: "14px 0" }}>carregando...</div>
       ) : (
         <>
@@ -1486,7 +1510,7 @@ function GastoMensal({ cog }) {
               <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 34, color: "var(--laranja)", lineHeight: 1 }}>{brl(total)}</div>
               <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)", margin: "4px 0 12px" }}>
                 {grupo === "Todos" ? "todos os grupos" : grupo} · {nomeMes}
-                {emAnalise > 0 && <> · <span style={{ color: "#C9A8F0" }}>{brl(emAnalise)} ainda em análise</span></>}
+                {emAnalise > 0 && <> · <span style={{ color: "#C9A8F0" }}>+ {brl(emAnalise)} enviados, em análise (fora do total)</span></>}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {linhas.map(([k, rot, v]) => (
@@ -1512,8 +1536,8 @@ function GastoMensal({ cog }) {
                 <div style={{ marginTop: 14, borderTop: "1px solid rgba(245,240,232,.08)", paddingTop: 10 }}>
                   <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.35)", textTransform: "uppercase", marginBottom: 6 }}>Por mês · toque para abrir</div>
                   {Object.entries(porMes).sort((a, b) => Number(b[0]) - Number(a[0])).map(([k, c]) => (
-                    <div key={k} onClick={() => setMes({ a: c.a, m: c.m })} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9, cursor: "pointer" }}>
-                      <span style={{ color: "rgba(245,240,232,.75)" }}>{nomeDe(c.a, c.m)}</span>
+                    <div key={k} onClick={() => c.a != null && setMes({ a: c.a, m: c.m })} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, lineHeight: 1.9, cursor: c.a != null ? "pointer" : "default" }}>
+                      <span style={{ color: "rgba(245,240,232,.75)" }}>{c.a != null ? nomeDe(c.a, c.m) : "Sem data na planilha"}</span>
                       <span style={{ color: "rgba(245,240,232,.45)", textAlign: "right" }}>
                         {c.item > 0 && `item ${brl(c.item)}`}{c.frete > 0 && ` · frete ${brl(c.frete)}`}{c.rf > 0 && ` · RF ${brl(c.rf)}`}{c.multa > 0 && ` · multa ${brl(c.multa)}`}
                         <strong style={{ color: "var(--offwhite)", marginLeft: 8 }}>{brl(c.item + c.frete + c.rf + c.multa)}</strong>
@@ -1537,7 +1561,7 @@ function GastoMensal({ cog }) {
                 </div>
               )}
               <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.28)", marginTop: 12, lineHeight: 1.6 }}>
-                Conta o que você enviou de comprovante no período (pago + em análise). Comprovante recusado não entra.
+                Conta o que está marcado como PAGO nos seus itens (item, frete e taxa RF), no mês do vencimento de cada parte. A multa vem dos seus comprovantes. Valores em análise não entram no total.
               </div>
             </>
           )}
