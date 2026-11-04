@@ -61,7 +61,7 @@ async function contarPedidos(cfg) {
   const { data, error } = await q.limit(1000);
   if (error || !data) return null;
   const soma = {};
-  data.forEach(p => (p.itens || []).forEach(i => { soma[i.id] = (soma[i.id] || 0) + (Number(i.qtd) || 0); }));
+  data.forEach(p => (p.itens || []).forEach(i => { soma[i.id] = (soma[i.id] || 0) + Math.max(0, (Number(i.qtd) || 0) - (Number(i.prereserva) || 0)); }));
   return soma;
 }
 
@@ -125,7 +125,7 @@ function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
             <span style={{ color: "rgba(245,240,232,.4)" }}>{horaDe(p)}</span>
           </div>
           {(p.itens || []).map((i, k) => (
-            <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}</div>
+            <div key={k} style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.8, color: "rgba(245,240,232,.65)" }}>☆ {i.qtd}× {i.produto} — {i.opcao}{Number(i.prereserva) > 0 && <span style={{ color: "#FF9F40" }}> ({i.prereserva} pré-reserva)</span>}</div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10, marginTop: 6 }}>
             <span style={{ color: p.status === "confirmado" ? "#4ade80" : p.status === "cancelado" ? "#ff6b6b" : "rgba(245,240,232,.4)" }}>{p.status === "confirmado" ? "confirmado" : p.status === "cancelado" ? "cancelado" : "aguardando confirmação"}</span>
@@ -196,6 +196,8 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     return () => { vivo = false; clearInterval(t); };
   }, [temLimite, cfg]);
   const restam = (o, v = vendidos) => o.maxTotal == null ? Infinity : Math.max(0, o.maxTotal - (v[o.id] || 0));
+  // opção com prereserva:true: acabou o estoque (maxTotal), mas ainda dá para pedir; o que passar do que resta fica em PRÉ-RESERVA
+  const preDe = (o, q, v = vendidos) => o.prereserva && o.maxTotal != null ? Math.max(0, q - restam(o, v)) : 0;
   // cfg.abreEm: o formulário só aceita pedidos a partir dessa hora; até lá o botão mostra a contagem regressiva
   const [relogio,     setRelogio]     = useState(() => Date.now());
   useEffect(() => {
@@ -225,12 +227,15 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const todasOpcoes = produtos.flatMap(p => p.opcoes.map(o => ({ ...o, produto: p.nome })));
   const escolhidos = todasOpcoes.filter(o => (qtds[o.id] || 0) > 0);
   const qtdTotal = escolhidos.reduce((a, o) => a + qtds[o.id], 0);
-  const total = escolhidos.reduce((a, o) => a + qtds[o.id] * o.preco, 0);
+  const qtdPre = escolhidos.reduce((a, o) => a + preDe(o, qtds[o.id]), 0);                       // unidades em pré-reserva
+  const total = escolhidos.reduce((a, o) => a + (qtds[o.id] - preDe(o, qtds[o.id])) * o.preco, 0);   // só o garantido (pré-reserva não se paga agora)
+  const totalPre = escolhidos.reduce((a, o) => a + preDe(o, qtds[o.id]) * o.preco, 0);
+  const soPre = qtdTotal > 0 && qtdTotal === qtdPre;                                                  // pedido só com pré-reserva: nada a pagar agora
   // regras por produto (opcionais): maxPorOpcao = limite por opção; todasOuNenhuma = as opções só saem juntas (ex.: set de 3 membros)
   const ajustar = (id, delta) => setQtds(q => {
     const p = produtos.find(pr => pr.opcoes.some(o => o.id === id));
     const op = p?.opcoes.find(o => o.id === id);
-    const novo = Math.min(p?.maxPorOpcao || 20, restam(op || {}), Math.max(0, (q[id] || 0) + delta));
+    const novo = Math.min(p?.maxPorOpcao || 20, op?.prereserva ? Infinity : restam(op || {}), Math.max(0, (q[id] || 0) + delta));
     const prox = p?.todasOuNenhuma ? { ...q, ...Object.fromEntries(p.opcoes.map(o => [o.id, novo])) } : { ...q, [id]: novo };
     // exigeTodos (na opção): só sai junto com todas as outras do produto e em no máximo a menor quantidade delas (ex.: Hyunjin só fechando o set OT8)
     const dep = p?.opcoes.filter(o => o.exigeTodos) || [];
@@ -248,7 +253,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     e.preventDefault();
     if (cfg.bloqueado || aindaNaoAbriu) return;
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 item."); return; }
-    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
+    if (pagamento === "pix" && !comprovante && !soPre) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
 
     // alguém pode ter pedido o último enquanto esta pessoa preenchia: confere o limite de novo antes de gravar
@@ -256,7 +261,10 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
       const v = await contarPedidos(cfg);
       if (v) {
         setVendidos(v);
-        const estourou = escolhidos.find(o => qtds[o.id] > restam(o, v));
+        // acabou o estoque enquanto a pessoa preenchia: o valor a pagar mudou, então ela precisa revisar antes de enviar
+        const mudou = escolhidos.find(o => preDe(o, qtds[o.id], v) !== preDe(o, qtds[o.id]));
+        if (mudou) { setStatus("idle"); setErro(`${mudou.produto} — ${mudou.label}: o estoque mudou e parte do pedido virou pré-reserva. Confira o total e envie de novo.`); return; }
+        const estourou = escolhidos.find(o => !o.prereserva && qtds[o.id] > restam(o, v));
         if (estourou) {
           const r = restam(estourou, v);
           setStatus("idle");
@@ -280,15 +288,15 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 
     const { error } = await supabase.from(cfg.tabela).insert([{
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
-      itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: o.preco, qtd: qtds[o.id] })),
+      itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: o.preco, qtd: qtds[o.id], ...(preDe(o, qtds[o.id]) > 0 ? { prereserva: preDe(o, qtds[o.id]) } : {}) })),
       qtd_total: qtdTotal, valor_total: total,
-      forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
-      status: pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
+      forma_pagamento: soPre ? "depois" : pagamento, comprovante_url: comprovanteUrl,
+      status: soPre || pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
     }]);
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
 
-    if (pagamento === "cartao") window.open("https://linknabio.gg/anticeg-comu", "_blank");
+    if (pagamento === "cartao" && !soPre) window.open("https://linknabio.gg/anticeg-comu", "_blank");
     setStatus("sucesso");
   }
 
@@ -445,10 +453,11 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
                               <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(o.preco)}</div>
-                              {o.maxTotal != null && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: resta === 0 ? "#ff6b6b" : "rgba(245,240,232,.45)" }}>{resta === 0 ? "ESGOTADO" : `restam ${resta} de ${o.maxTotal}`}</div>}
+                              {o.maxTotal != null && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: resta === 0 ? (o.prereserva ? "#FF9F40" : "#ff6b6b") : "rgba(245,240,232,.45)" }}>{resta === 0 ? (o.prereserva ? "ESTOQUE ESGOTADO · PRÉ-RESERVA" : "ESGOTADO") : `restam ${resta} de ${o.maxTotal}`}</div>}
+                              {preDe(o, q) > 0 && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: "#FF9F40" }}>{preDe(o, q)} un em pré-reserva: só vale se sobrar estoque, não é cobrada agora</div>}
                               {o.exigeTodos && <div style={{ fontFamily: mono, fontSize: 10, color: "var(--laranja)", marginTop: 3 }}>{o.exigeTodosTexto || "só sai fechando o set completo"}</div>}
                             </div>
-                            <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} maisDesligado={q >= resta} />
+                            <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} maisDesligado={!o.prereserva && q >= resta} />
                           </div>
                         );
                       })}
@@ -467,27 +476,34 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{p.nome}</div>
                         {linhas.map(o => (
                           <div key={o.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: mono, fontSize: 11, lineHeight: 1.8, color: "rgba(245,240,232,.7)" }}>
-                            <span>☆ {o.label}{qtds[o.id] > 1 ? ` × ${qtds[o.id]}` : ""}</span>
-                            <span style={{ color: "rgba(245,240,232,.5)", whiteSpace: "nowrap" }}>{o.preco == null ? "—" : fmtReais(qtds[o.id] * o.preco)}</span>
+                            <span>☆ {o.label}{qtds[o.id] > 1 ? ` × ${qtds[o.id]}` : ""}{preDe(o, qtds[o.id]) > 0 && <span style={{ color: "#FF9F40" }}> ({preDe(o, qtds[o.id])} pré-reserva)</span>}</span>
+                            <span style={{ color: "rgba(245,240,232,.5)", whiteSpace: "nowrap" }}>{o.preco == null ? "—" : fmtReais((qtds[o.id] - preDe(o, qtds[o.id])) * o.preco)}</span>
                           </div>
                         ))}
                       </div>
                     );
                   })}
                   <div style={{ borderTop: "1px solid rgba(245,240,232,.1)", paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)" }}>
-                    <span>Total · {qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""}</span>
+                    <span>Total a pagar · {qtdTotal - qtdPre} unidade{qtdTotal - qtdPre !== 1 ? "s" : ""}</span>
                     <span>{fmtReais(total)}</span>
                   </div>
+                  {qtdPre > 0 && <div style={{ marginTop: 6, fontFamily: mono, fontSize: 10, color: "#FF9F40", lineHeight: 1.6 }}>+ {qtdPre} unidade{qtdPre !== 1 ? "s" : ""} em PRÉ-RESERVA ({fmtReais(totalPre)}): não cobrada agora. Se sobrar estoque, a organização entra em contato.</div>}
                 </div>
               )}
               {!cfg.resumoPedido && total > 0 && (
                 <div style={{ marginTop: 14, fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--laranja)", textAlign: "right" }}>
-                  Total: {fmtReais(total)} ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})
+                  Total: {fmtReais(total)} ({qtdTotal - qtdPre} unidade{qtdTotal - qtdPre !== 1 ? "s" : ""})
                 </div>
               )}
+              {!cfg.resumoPedido && qtdPre > 0 && <div style={{ marginTop: 6, fontFamily: mono, fontSize: 10, color: "#FF9F40", textAlign: "right" }}>+ {qtdPre} em pré-reserva ({fmtReais(totalPre)}), não cobrada agora</div>}
             </div>
 
-            {cfg.pagamentoAgora === false ? null : (
+            {soPre && (
+              <div style={{ ...caixa, marginBottom: 24, borderColor: "rgba(255,159,64,.4)", color: "#FF9F40" }}>
+                Seu pedido tem só itens em PRÉ-RESERVA: <strong>nada para pagar agora</strong>. Se sobrar estoque, a organização entra em contato para confirmar.
+              </div>
+            )}
+            {soPre || cfg.pagamentoAgora === false ? null : (
             <div style={{ marginBottom: 24 }}>
               <div style={labelStyle}>Pagamento</div>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
@@ -592,6 +608,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
       if (!porId.has(i.id)) porId.set(i.id, { id: i.id, produto: i.produto || "(item antigo)", label: i.opcao || i.id, preco: i.preco, pedido: 0, confirmado: 0 });
       const r = porId.get(i.id);
       r.pedido += Number(i.qtd) || 0;
+      r.pre = (r.pre || 0) + (Number(i.prereserva) || 0);
       if (p.status === "confirmado") r.confirmado += Number(i.qtd) || 0;
     });
   });
@@ -650,7 +667,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
                 </div>
                 {g.linhas.map(r => (
                   <div key={r.id} style={{ fontFamily: mono, fontSize: 11, lineHeight: 1.6, color: "rgba(245,240,232,.7)" }}>
-                    {r.label} <strong style={{ color: "var(--offwhite)" }}>· {r.pedido}×</strong>
+                    {r.label} <strong style={{ color: "var(--offwhite)" }}>· {r.pedido}×</strong>{r.pre > 0 && <span style={{ color: "#FF9F40" }}> ({r.pre} pré-reserva)</span>}
                   </div>
                 ))}
               </div>
@@ -665,7 +682,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
           {resumo.map(r => (
             <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: mono, fontSize: 11, padding: "3px 0", color: "rgba(245,240,232,.7)" }}>
               <span>{r.produto} — {r.label}</span>
-              <span style={{ color: "var(--offwhite)", fontWeight: 700 }}>{r.pedido} · {r.confirmado}</span>
+              <span style={{ color: "var(--offwhite)", fontWeight: 700 }}>{r.pedido} · {r.confirmado}{r.pre > 0 ? ` · ${r.pre} pré` : ""}</span>
             </div>
           ))}
         </div>
@@ -690,7 +707,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
                 <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)" }}>{p.email}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}>
                   {(p.itens || []).map((i, k) => (
-                    <span key={k} style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.6)" }}>{i.qtd}x {i.produto} — {i.opcao}{i.loja ? ` · ${/^sem/i.test(i.loja) ? "" : "POB "}${i.loja}` : ""}{i.prazo ? ` · ${i.prazo}` : ""}</span>
+                    <span key={k} style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.6)" }}>{i.qtd}x {i.produto} — {i.opcao}{Number(i.prereserva) > 0 ? ` · PRÉ-RESERVA ×${i.prereserva}` : ""}{i.loja ? ` · ${/^sem/i.test(i.loja) ? "" : "POB "}${i.loja}` : ""}{i.prazo ? ` · ${i.prazo}` : ""}</span>
                   ))}
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, color: "var(--laranja)", marginTop: 4 }}>
