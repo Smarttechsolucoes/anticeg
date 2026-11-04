@@ -51,20 +51,24 @@ export const DICON_CFG = {
   // opções de prazo do checkout. preco = valor de CADA revista nessa opção; parcelas = quanto (por revista) e até quando.
   prazos: [
     { id: "avista",    titulo: "À vista",         preco: 210, parcelas: [{ valor: 210, ate: "13/11" }] },
-    { id: "parcelado", titulo: "Parcelado em 2x", preco: 300, parcelas: [{ valor: 150, ate: "10/11" }, { valor: 150, ate: "10/12" }] },
+    { id: "parcelado", titulo: "Parcelado em 2x", preco: 300, parcelas: [{ valor: 150, ate: "13/11" }, { valor: 150, ate: "10/12" }] },
   ],
   // todas as revistas acompanham POB; a pessoa escolhe em qual loja (as imagens do POB de cada grupo estão em DICON_GRUPOS[].pobs)
   lojas: [
     { id: "weverse",   nome: "WeVerse" },
     { id: "kakaotalk", nome: "KakaoTalk" },
     { id: "diconmall", nome: "DiconMall" },
+    // sem POB: valor fixo por revista, sempre à vista e até a data indicada (qualquer que seja o prazo escolhido)
+    { id: "sempob", nome: "SEM POB", semPob: true, preco: 190, ate: "13/11" },
   ],
   // dois blocos de avisos; **texto** = negrito
   avisos: [
     [
-      "Cada revista: **R$210** (pagamento até **13/11**) ou **R$300** em 2x de **R$150** (**10/11** e **10/12**).",
+      "Cada revista: **R$210** (pagamento até **13/11**) ou **R$300** em 2x de **R$150** (**13/11** e **10/12**).",
+      "Opção **SEM POB**: **R$190** (pagamento até **13/11**).",
       "Prazo de **PEDIDO**: **10 de novembro**.",
-      "Todas as revistas acompanham **POB**.",
+      "Todas as revistas acompanham **POB** (escolha a loja), a não ser que você escolha **SEM POB**.",
+      "O **POB é aleatório** e **não é respectivo ao membro da capa**.",
     ],
     [
       "A DICON é uma revista pesada, com mais de **1,5 kg**; por isso, o **frete será alto**.",
@@ -78,5 +82,5 @@ export const DICON_CFG = {
 // itens do pedido para a exportação "Pedidos dos joiners": uma linha por unidade
 export function diconLinhas(p) {
   // prazo e loja do POB vão dentro de cada item (pedidos antigos não têm: aí ficam de fora do texto)
-  return (p.itens || []).flatMap(i => Array.from({ length: Math.max(0, Number(i.qtd) || 0) }, () => ({ item: `DICON × D'FESTA THE ORIGIN — ${i.produto} · ${i.opcao}${i.prazo ? ` · ${i.prazo}` : ""}${i.loja ? ` · POB ${i.loja}` : ""}`, preco: i.preco })));
+  return (p.itens || []).flatMap(i => Array.from({ length: Math.max(0, Number(i.qtd) || 0) }, () => ({ item: `DICON × D'FESTA THE ORIGIN — ${i.produto} · ${i.opcao}${i.prazo ? ` · ${i.prazo}` : ""}${i.loja ? ` · ${/^sem/i.test(i.loja) ? "" : "POB "}${i.loja}` : ""}`, preco: i.preco })));
 }

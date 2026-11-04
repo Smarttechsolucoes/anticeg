@@ -89,8 +89,24 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
   const itensPedido = escolhidos.flatMap(o => cfg.lojas
     .map(l => ({ o, loja: l, qtd: unidades.filter(u => u.o.id === o.id && lojaUn[u.chave] === l.id).length }))
     .filter(x => x.qtd > 0));
-  const total = qtdTotal * prazoSel.preco;
-  const parcelas = prazoSel.parcelas.map(p => ({ ate: p.ate, valor: p.valor * qtdTotal }));
+  const rotulo = l => l.semPob ? l.nome : `POB ${l.nome}`;
+  // SEM POB tem valor e prazo próprios (à vista), qualquer que seja o prazo escolhido
+  const semPobCfg = cfg.lojas.find(l => l.semPob) || null;
+  const ehSemPob = chave => !!lojaDe(lojaUn[chave])?.semPob;
+  const precoDe = lojaId => lojaDe(lojaId)?.semPob ? lojaDe(lojaId).preco : prazoSel.preco;
+  const totalPara = pz => unidades.reduce((a, u) => a + (ehSemPob(u.chave) ? semPobCfg.preco : pz.preco), 0);
+  const nSemPob = unidades.filter(u => ehSemPob(u.chave)).length;
+  const total = totalPara(prazoSel);
+  const dataOrdem = d => { const [dd, mm] = d.split("/"); return Number(mm) * 100 + Number(dd); };
+  // quanto pagar em cada data: as capas com POB seguem o prazo escolhido; as SEM POB entram à vista na data delas
+  function calcParcelas() {
+    if (!qtdTotal) return prazoSel.parcelas.map(x => ({ ate: x.ate, valor: x.valor }));   // sem capas: valores por revista
+    const porData = {};
+    prazoSel.parcelas.forEach(x => { porData[x.ate] = (porData[x.ate] || 0) + x.valor * (qtdTotal - nSemPob); });
+    if (nSemPob && semPobCfg) porData[semPobCfg.ate] = (porData[semPobCfg.ate] || 0) + semPobCfg.preco * nSemPob;
+    return Object.entries(porData).filter(([, v]) => v > 0).map(([ate, valor]) => ({ ate, valor })).sort((a, b) => dataOrdem(a.ate) - dataOrdem(b.ate));
+  }
+  const parcelas = calcParcelas();
   const ajustar = (id, delta) => setQtds(q => ({ ...q, [id]: Math.min(20, Math.max(0, (q[id] || 0) + delta)) }));
   const ampliar = img => { setLightboxFalhou(false); setLightbox(img); };
   const escolherLoja = (chave, id) => setLojaUn(m => ({ ...m, [chave]: id }));
@@ -133,7 +149,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
     const { error } = await criarPedidoLoja(cfg.tabela, {
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       // prazo e loja do POB vão dentro de cada item (a tabela não precisa de colunas novas); preco = valor de cada revista no prazo escolhido
-      itens: itensPedido.map(({ o, loja, qtd }) => ({ id: o.id, produto: o.produto, opcao: o.label, preco: prazoSel.preco, qtd, prazo: prazoSel.titulo, loja: loja.nome })),
+      itens: itensPedido.map(({ o, loja, qtd }) => ({ id: o.id, produto: o.produto, opcao: o.label, preco: precoDe(loja.id), qtd, prazo: loja.semPob ? "À vista" : prazoSel.titulo, loja: loja.nome })),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
@@ -176,17 +192,18 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                 <img src={o.foto} alt="" style={{ width: 36, height: 54, objectFit: "cover", borderRadius: 4, background: "rgba(245,240,232,.06)", flexShrink: 0 }} onError={e => { e.target.style.visibility = "hidden"; }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
-                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.45)" }}>{o.produto} · <strong style={{ color: "var(--laranja)", fontWeight: 700 }}>POB {l.nome}</strong></div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.45)" }}>{o.produto} · <strong style={{ color: "var(--laranja)", fontWeight: 700 }}>{rotulo(l)}</strong></div>
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>
-                  {qtd} × {fmtReais(prazoSel.preco)}
-                  <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)" }}>{fmtReais(qtd * prazoSel.preco)}</div>
+                  {qtd} × {fmtReais(precoDe(l.id))}
+                  <div style={{ fontSize: 11, color: "rgba(245,240,232,.5)" }}>{fmtReais(qtd * precoDe(l.id))}</div>
                 </div>
               </div>
             ))}
 
             <ResumoTitulo>Prazo</ResumoTitulo>
-            <ResumoLinha k="Opção" v={`${prazoSel.titulo} — ${fmtReais(prazoSel.preco)} por revista`} />
+            {nSemPob < qtdTotal && <ResumoLinha k="Opção" v={`${prazoSel.titulo} — ${fmtReais(prazoSel.preco)} por revista`} />}
+            {nSemPob > 0 && <ResumoLinha k="SEM POB" v={`${nSemPob} × ${fmtReais(semPobCfg.preco)} (à vista, até ${semPobCfg.ate})`} />}
             {parcelas.map((p, i) => <ResumoLinha key={i} k={parcelas.length > 1 ? `Parcela ${i + 1}` : "Pagamento"} v={`${fmtReais(p.valor)} até ${p.ate}`} />)}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 8, fontFamily: mono, fontWeight: 700, color: "var(--laranja)" }}>
               <span style={{ fontSize: 12 }}>TOTAL ({qtdTotal} unidade{qtdTotal !== 1 ? "s" : ""})</span>
@@ -198,7 +215,8 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             {agora && <ResumoLinha k="Valor agora" v={fmtReais(parcelas[0].valor)} />}
             {pagamento === "pix" && <ResumoLinha k="Comprovante" v={comprovante ? comprovante.name : "—"} />}
 
-            <div style={{ ...caixa, marginTop: 16 }}>Ao confirmar, o pedido <strong style={{ color: "var(--offwhite)" }}>não poderá ser cancelado</strong>. Se algo estiver errado, volte e corrija.</div>
+            {nSemPob < qtdTotal && <div style={{ ...caixa, marginTop: 16 }}>O <strong style={{ color: "var(--offwhite)" }}>POB é aleatório</strong> e não é respectivo ao membro da capa.</div>}
+            <div style={{ ...caixa, marginTop: 12 }}>Ao confirmar, o pedido <strong style={{ color: "var(--offwhite)" }}>não poderá ser cancelado</strong>. Se algo estiver errado, volte e corrija.</div>
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginTop: 12 }}>{erro}</div>}
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button type="button" disabled={status === "enviando"} onClick={() => setRevisando(false)}
@@ -305,7 +323,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
             </div>
 
             <div style={{ marginBottom: 28 }}>
-              <div style={labelStyle}>Escolha as capas{cfg.valorADefinir ? "" : ` — ${cfg.prazos.map(p => `${fmtReais(p.preco)} ${p.titulo.toLowerCase()}`).join(" ou ")}`}</div>
+              <div style={labelStyle}>Escolha as capas{cfg.valorADefinir ? "" : ` — ${[...cfg.prazos.map(p => `${fmtReais(p.preco)} ${p.titulo.toLowerCase()}`), ...(semPobCfg ? [`${fmtReais(semPobCfg.preco)} sem POB`] : [])].join(" ou ")}`}</div>
               {/* abas dos grupos: a quantidade escolhida em cada um aparece na aba, mesmo com outra aberta */}
               <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
                 {DICON_GRUPOS.map(g => {
@@ -373,7 +391,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                       <div style={{ marginTop: 6, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.6 }}>
                         {p.parcelas.map((x, i) => <div key={i}>{fmtReais(x.valor)} até {x.ate}</div>)}
                       </div>
-                      {qtdTotal > 0 && <div style={{ marginTop: 6, fontSize: 11, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>Seu pedido ({qtdTotal}): {fmtReais(qtdTotal * p.preco)}</div>}
+                      {qtdTotal > 0 && <div style={{ marginTop: 6, fontSize: 11, color: ativo ? "var(--laranja)" : "rgba(245,240,232,.45)" }}>Seu pedido ({qtdTotal}): {fmtReais(totalPara(p))}</div>}
                     </button>
                   );
                 })}
@@ -382,7 +400,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Loja do POB</div>
-              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a loja de <strong style={{ color: "var(--offwhite)" }}>cada capa</strong>: pode ser uma de cada loja ou todas da mesma.</div>
+              <div style={{ ...caixa, marginBottom: 10 }}>Todas as revistas acompanham <strong style={{ color: "var(--offwhite)" }}>POB</strong>. Escolha a loja de <strong style={{ color: "var(--offwhite)" }}>cada capa</strong>: pode ser uma de cada loja ou todas da mesma. O <strong style={{ color: "var(--offwhite)" }}>POB é aleatório</strong> e não é respectivo ao membro da capa.{semPobCfg && <> Se preferir, escolha <strong style={{ color: "var(--offwhite)" }}>SEM POB</strong> ({fmtReais(semPobCfg.preco)}, pagamento até {semPobCfg.ate}).</>}</div>
               {unidades.length === 0 ? (
                 <div style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.4)" }}>Escolha as capas acima para definir a loja de cada uma.</div>
               ) : (
@@ -400,7 +418,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{u.o.label}{qtds[u.o.id] > 1 ? ` (${u.n + 1}/${qtds[u.o.id]})` : ""}</div>
                         <div style={{ fontFamily: mono, fontSize: 9, color: "rgba(245,240,232,.4)" }}>{u.o.produto}</div>
                       </div>
-                      <div style={{ display: "flex", gap: 4 }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {cfg.lojas.map(l => <button key={l.id} type="button" aria-pressed={lojaUn[u.chave] === l.id} onClick={() => escolherLoja(u.chave, l.id)} style={pill(lojaUn[u.chave] === l.id)}>{l.nome}</button>)}
                       </div>
                     </div>
@@ -411,7 +429,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
               <div style={{ marginTop: 16 }}>
                 <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", color: "rgba(245,240,232,.45)", marginBottom: 8 }}>VER O POB DE CADA LOJA</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {cfg.lojas.map(l => <button key={l.id} type="button" aria-pressed={pobVer === l.id} onClick={() => setPobVer(v => v === l.id ? "" : l.id)} style={pill(pobVer === l.id)}>{l.nome}</button>)}
+                  {cfg.lojas.filter(l => !l.semPob).map(l => <button key={l.id} type="button" aria-pressed={pobVer === l.id} onClick={() => setPobVer(v => v === l.id ? "" : l.id)} style={pill(pobVer === l.id)}>{l.nome}</button>)}
                 </div>
                 {lojaDe(pobVer) && (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginTop: 10 }}>
