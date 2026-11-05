@@ -24837,6 +24837,7 @@ function RunItVol2Tab({ user }) {
     { id:"STRAP HOLDER",       preco:"R$95" },
   ];
   const CHARS = ["BBOKARI","DWAEKKI","FOXINY","JINIRET","LEEBIT","PUPPYM","QUOKKA","WOLFCHAN"];
+  const FECHADO = true; // formulário encerrado: loja só para consulta (fotos e preços), sem seleção nem envio
 
   const [qtdMap, setQtdMap] = useState({});
   const [enviando, setEnviando] = useState(false);
@@ -24867,7 +24868,7 @@ function RunItVol2Tab({ user }) {
   }
 
   async function enviar() {
-    if (itensSelecionados.length === 0 || enviando) return;
+    if (FECHADO || itensSelecionados.length === 0 || enviando) return;
     setEnviando(true); setErro(null); setEnviado(null);
     const obsItens = itensSelecionados.map(([k,q]) => q > 1 ? `${k} (x${q})` : k).join(", ");
     const { error } = await supabase.from("formulario_pedidos").insert([{
@@ -24912,7 +24913,9 @@ function RunItVol2Tab({ user }) {
           <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.45)", marginTop:4, marginBottom:12 }}>Pré-venda</div>
           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
             {[
-              { label:"FORMS 3/NOV",     bg:"rgba(201,168,240,.1)",  color:"var(--lilas)",           border:"rgba(201,168,240,.3)" },
+              FECHADO
+                ? { label:"ENCERRADO", bg:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"rgba(255,107,107,.3)" }
+                : { label:"FORMS 3/NOV", bg:"rgba(201,168,240,.1)", color:"var(--lilas)", border:"rgba(201,168,240,.3)" },
               { label:"PAGAMENTO 6/NOV", bg:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.45)",  border:"rgba(245,240,232,.12)" },
             ].map(t => (
               <span key={t.label} style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:t.bg, color:t.color, border:`1px solid ${t.border}`, letterSpacing:"1px" }}>{t.label}</span>
@@ -24962,6 +24965,15 @@ function RunItVol2Tab({ user }) {
 
         {/* Aba Loja */}
         {abaRIV2 === "forms" && <>
+          {FECHADO && (
+            <div style={{ marginBottom:20, background:"rgba(255,107,107,.08)", border:"1px solid rgba(255,107,107,.35)", borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+              <span style={{ fontSize:18 }}>🔒</span>
+              <div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, letterSpacing:1, color:"#ff6b6b" }}>FORMULÁRIO ENCERRADO</div>
+                <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)", marginTop:2 }}>Não estamos mais aceitando pedidos. Você ainda pode ver as fotos e os preços, e acompanhar seus pedidos na aba Histórico.</div>
+              </div>
+            </div>
+          )}
           {/* Informações */}
           <div style={{ marginBottom:24, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
             <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>INFORMAÇÕES</div>
@@ -24970,7 +24982,7 @@ function RunItVol2Tab({ user }) {
                 》Sempre esteja ciente das regras da comunidade, caso não lembre:{" "}
                 <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
               </div>
-              {["Forms aberto: 3 de Novembro","Pagamento: 6 de Novembro","Envios previsto para Fevereiro de 2027, podendo variar de acordo com a logística de importação"].map((r, i) => (
+              {[FECHADO ? "Forms encerrado" : "Forms aberto: 3 de Novembro","Pagamento: 6 de Novembro","Envios previsto para Fevereiro de 2027, podendo variar de acordo com a logística de importação"].map((r, i) => (
                 <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
                   <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
                 </div>
@@ -25001,7 +25013,7 @@ function RunItVol2Tab({ user }) {
                         </div>
                         <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:4 }}>
                           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.1 }}>{char}</div>
-                          {!sel ? (
+                          {FECHADO ? null : !sel ? (
                             <button onClick={() => setQtd(key, 1)}
                               style={{ marginTop:4, border:"1px solid rgba(201,168,240,.35)", borderRadius:6, padding:"7px 0", background:"transparent", color:"rgba(201,168,240,.8)", fontFamily:mono, fontSize:9, fontWeight:700, letterSpacing:"0.5px", cursor:"pointer", transition:"all .15s" }}>
                               SELECIONAR
@@ -25023,7 +25035,7 @@ function RunItVol2Tab({ user }) {
           })}
 
           {/* Checkout */}
-          {itensSelecionados.length > 0 && (
+          {!FECHADO && itensSelecionados.length > 0 && (
             <div style={{ marginBottom:20, background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:14, padding:"16px 18px" }}>
               <div style={{ fontFamily:mono, fontSize:9, color:"rgba(201,168,240,.6)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:12 }}>Resumo do pedido</div>
               {itensSelecionados.map(([key, qtd]) => (
@@ -25039,7 +25051,7 @@ function RunItVol2Tab({ user }) {
           )}
 
           {/* Dados */}
-          {itensSelecionados.length > 0 && user && (
+          {!FECHADO && itensSelecionados.length > 0 && user && (
             <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>
               <span style={{ color:"rgba(245,240,232,.2)", fontSize:9, letterSpacing:"1px" }}>SEUS DADOS · </span>
               @{user.cog} · {user.nome || "—"} · {user.email || "—"}
@@ -25055,10 +25067,12 @@ function RunItVol2Tab({ user }) {
             </div>
           )}
 
-          <button onClick={enviar} disabled={itensSelecionados.length===0 || enviando}
-            style={{ width:"100%", background:itensSelecionados.length>0?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:itensSelecionados.length>0?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:itensSelecionados.length>0?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
-            {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
-          </button>
+          {!FECHADO && (
+            <button onClick={enviar} disabled={itensSelecionados.length===0 || enviando}
+              style={{ width:"100%", background:itensSelecionados.length>0?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:itensSelecionados.length>0?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:itensSelecionados.length>0?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
+              {enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
+            </button>
+          )}
         </>}
 
         {/* Zoom */}
@@ -25315,7 +25329,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" , aberto:agora <= POPCORN_SLEEVE_DEADLINE },
     { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SINGBA_DEADLINE },
     { id:"wave-maker-admin", label:"WAVE MAKER",          icon:"🌊", count:waveMakerCount,  tipo:"forms",    cor:"var(--lilas)",  aberto:!WM_CFG.fechado },
-    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" , aberto:true },
+    { id:"run-it-admin",     label:"RUN IT VOL 2",        icon:"◈", count:runItCount,       tipo:"forms",    cor:"var(--lilas)",         evento:"RUN IT VOL 2" , aberto:false },
     { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",  aberto:!PT_CFG.fechado },
     { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",  aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
     { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
@@ -26805,7 +26819,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "run-it-vol-2",
-      ativo: true,
+      ativo: false,
       fechado: false,
       cor: "lilas",
       titulo: "RUN IT VOL 2",
@@ -26813,7 +26827,7 @@ function PrevendaTab({ user }) {
       url: null,
       tab: "run-it-vol-2",
       img: null,
-      tags: ["Forms 3/Nov", "Pagamento 6/Nov"],
+      tags: ["Pedidos encerrados", "Pagamento 6/Nov"],
       info: "Button Badge Pouch · Key Cover · Reversible Pouch · Sticker · Strap Holder · 8 personagens",
     },
     {
