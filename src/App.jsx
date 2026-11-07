@@ -8979,15 +8979,15 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     supabase.from("pre_cadastros").select("*").or(`status.eq.pendente,and(status.eq.aprovado,created_at.gte.${seteDiasAtras})`).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setPreCadastros(data); });
-    supabase.from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
+    clienteAdmin().from("envio_solicitacoes").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setEnvioSolic(data); });
     supabase.from("joiner_updates").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setJoinerUpdates(data); });
-    supabase.from("pagamento_demandas").select("*").order("created_at", { ascending: false })
+    clienteAdmin().from("pagamento_demandas").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setPagDemandas(data); });
-    supabase.from("repassos").select("*").order("created_at", { ascending: false })
+    clienteAdmin().from("repassos").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setAdminRepassos(data || []); });
-    supabase.from("mercari_pedidos").select("*").order("created_at", { ascending: false })
+    clienteAdmin().from("mercari_pedidos").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMercariPedidos(data); });
     supabase.from("pedidos_revista").select("id", { count: "exact", head: true }).eq("status", "aguardando")
       .then(({ count }) => { if (count) setRevistaCount(count); });

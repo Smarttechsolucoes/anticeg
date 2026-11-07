@@ -15,3 +15,8 @@ test("saldo de cashback e bloqueio de joiner são gravados só com o cliente da 
   for (const m of app.matchAll(/\bsupabase\s*\.from\((["'])joiners\1\)\s*\.update\(\s*\{([^}]*)\}/g)) if (/saldo_cashback|bloqueado/.test(m[2])) ruins.push(`linha ${ln(m.index)}`);
   assert.deepEqual(ruins, [], "estas gravações precisam de clienteAdmin(): " + ruins.join(", "));
 });
+test("depois da Q6c o cliente anônimo não lê com select(\"*\") as tabelas cujo endereço de comprovante é escondido (o painel usa clienteAdmin())", () => {
+  const ruins = [];
+  for (const m of app.matchAll(/\bsupabase\s*\.from\((["'])(pagamento_demandas|mercari_pedidos|envio_solicitacoes|repassos)\1\)\s*\.select\(\s*(["'])\*\3/g)) ruins.push(`${m[2]} (linha ${ln(m.index)})`);
+  assert.deepEqual(ruins, [], "use clienteAdmin() ou COLS_*: " + ruins.join(", "));
+});
