@@ -763,7 +763,7 @@ let pedidosCache = null;
 async function carregarPedidos() {
   if(!joiner) return;
   pedidosCache = null;
-  const url = `${SUPA}/rest/v1/mercari_pedidos?joiner_cog=eq.${encodeURIComponent(joiner.cog)}&order=created_at.desc&select=*`;
+  const url = `${SUPA}/rest/v1/mercari_pedidos?joiner_cog=eq.${encodeURIComponent(joiner.cog)}&order=created_at.desc&select=id,joiner_cog,joiner_nome,itens,valor_jpy_total,valor_brl_total,taxa_cambio,status,created_at,metodo_pagamento,id_transacao,tem_comprovante`;
   try {
     const data = await (await fetch(url,{headers:{apikey:KEY,Authorization:`Bearer ${KEY}`}})).json();
     pedidosCache = Array.isArray(data) ? data : [];

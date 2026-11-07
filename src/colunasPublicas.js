@@ -1,0 +1,7 @@
+// Colunas que o VISITANTE pode ler nas tabelas cujo endereço de comprovante o banco esconde (supabase/seguranca/Q6c): sem `comprovante_url`, com `tem_comprovante`.
+// Nestes pontos NÃO use select("*"): ler a linha inteira exige permissão em todas as colunas e falharia para o visitante. O painel da administradora (conta logada) continua lendo tudo.
+// Mantidas em sincronia com o banco pelo teste tests/colunas-publicas.test.mjs.
+export const COLS_PAGAMENTO = "id, joiner_cog, itens, valor_total, obs, status, created_at, cashback_aplicado, motivo_rejeicao, analisado_por, analisado_em, tem_comprovante";
+export const COLS_MERCARI = "id, joiner_cog, joiner_nome, itens, valor_jpy_total, valor_brl_total, taxa_cambio, status, created_at, metodo_pagamento, id_transacao, tem_comprovante";
+export const COLS_ENVIO = "id, created_at, joiner_cog, joiner_nome, joiner_handle, destinatario, cpf, cep, endereco, numero, complemento, bairro, cidade, estado, itens, metodo, seguro, valor_seguro, status, cotacao_valor, cotacao_prazo, cotacao_obs, cotacao_at, cotacao_frete, cotacao_forma, cotacao_seguro, cotacao_embalagem, cotacao_opcoes, modalidade_escolhida, rastreio_codigo, rastreio_link, grupo_envio_codigo, storage_selecionados, tem_comprovante";
+export const COLS_REPASSOS = "id, created_at, joiner_cog, joiner_nome, joiner_twitter, item_id, ceg, nome_do_item, item_status, novo_dono_cog, novo_dono_nome, novo_dono_twitter, item_quitado, custos_pagos, valor_pendente_descricao, valor_acordado, obs, status, tem_comprovante";

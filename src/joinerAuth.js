@@ -3,13 +3,14 @@
 // Usa o cliente PRINCIPAL do site: é ele que carrega a sessão da joiner para as consultas ao banco (RLS, etapa J4).
 // A decisão de quem é dono de um COG NÃO é do navegador: o servidor (ativar_minha_conta) confere o e-mail confirmado com o cadastro.
 import supabase from "./supabase.js";
+import { criaPorFuncao, criarPedidoComoInsert } from "./pedidosFechados.js";
 
 // Desligado por padrão: com false o site se comporta exatamente como hoje (sem pop-up, sem bloqueio, sessões antigas valem).
 // Para o lançamento: defina VITE_JOINERS_AUTH=true no ambiente do build (Vercel) — só depois da autorização.
 export const JOINERS_AUTH_ATIVO = import.meta.env.VITE_JOINERS_AUTH === "true";
 
 // Áreas que exigem conta ativada e senha. O resto (CEGs, calendário, regras...) continua público.
-export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13", "mercari"];
+export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "odd-fresh-popup", "suiatsu", "promo-13", "mercari"];
 
 export const SENHA_MIN = 8;
 
@@ -106,18 +107,21 @@ export function criarJoinerAuth(client = supabase) {
   async function entrarComEmail({ cog, email, senha }) {
     const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase();
     if (!emailValido(e) || !senha) return { erro: "Informe o e-mail e a senha." };
-    const { error } = await client.auth.signInWithPassword({ email: e, password: senha });
-    if (error) return { erro: mensagem(error, "entrar") };
+    const { data, error } = await client.functions.invoke("login-joiner", { body: { email: e, senha } });   // o servidor limita as tentativas por e-mail e só aceita conta ativada
+    if (error || !data?.access_token || !data?.refresh_token) return { erro: mensagem(error, "entrar") };
+    const { error: es } = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    if (es) return { erro: mensagem(es, "entrar") };
     const est = await estado(c);
     if (est.estado !== "ativa") { await client.auth.signOut({ scope: "local" }); return { erro: "Esta conta não corresponde a este @." }; }
     return { ok: true, cog: est.cog };
   }
 
   // 4) esqueci minha senha: a resposta é sempre a mesma, com ou sem conta
-  async function recuperar({ cog }) {
-    const c = normalizarCog(cog);
-    if (!c) return { erro: "Informe o seu @." };
-    const { error } = await client.functions.invoke("recuperar-senha-joiner", { body: { cog: c } });
+  async function recuperar({ cog, email }) {
+    const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase();
+    if (e && !emailValido(e)) return { erro: "Confira o e-mail digitado." };
+    if (!e && !c) return { erro: "Informe o e-mail ou o @." };
+    const { error } = await client.functions.invoke("recuperar-senha-joiner", { body: e ? { email: e } : { cog: c } });
     if (error && (error.status === 429 || error.context?.status === 429)) return { erro: mensagem(error, "recuperar") };
     return { ok: true };
   }
@@ -178,12 +182,8 @@ export async function joinersOnline(minutos = 10, client = supabase) {
   const { data } = await client.rpc("joiners_online", { p_minutos: minutos });
   return data || [];
 }
-// Gasta cashback. Ligada a flag, o servidor debita só do saldo da própria conta; desligada, o comportamento antigo (grava o novo saldo).
-export async function debitarCashback(cog, valor, novoSaldo, client = supabase) {
-  if (!JOINERS_AUTH_ATIVO) { await client.from("joiners").update({ saldo_cashback: novoSaldo }).eq("cog", cog); return novoSaldo; }
-  const { data } = await client.rpc("debitar_cashback", { p_valor: valor });
-  return typeof data === "number" || typeof data === "string" ? Number(data) : novoSaldo;
-}
+// Cashback: NÃO existe mais chamada de débito no navegador. O desconto é feito pelo banco no mesmo ato que registra o pagamento (gatilho q6_debito_cashback, supabase/seguranca/Q6a):
+// atômico, uma vez por pagamento, recusa saldo insuficiente. Com o login, só a dona da conta registra pagamento em nome dela (RLS).
 // Aparelho de push: ligada a flag, o servidor associa o aparelho à conta que está logada.
 export async function gravarAssinaturaPush(cog, sub, client = supabase) {
   if (!JOINERS_AUTH_ATIVO) {
@@ -233,6 +233,7 @@ export async function claimsVendidos(client = supabase) {
 // pedido_loja_criar() (o servidor valida a loja, descarta campos que o cliente não escolhe e recusa pedido já 'confirmado'), que devolve só o número do pedido.
 export async function criarPedidoLoja(tabela, dados, { retornar = false } = {}, client = supabase) {
   if (!JOINERS_AUTH_ATIVO) {
+    if (criaPorFuncao(tabela)) return criarPedidoComoInsert(tabela, dados, client);   // Q4/Q5: tabela fechada ao visitante; o servidor valida e devolve só o número
     const q = client.from(tabela).insert([dados]);
     return retornar ? q.select().single() : q;
   }

@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import supabase, { SUPABASE_URL } from "./supabase.js";
+import { chamarPlanilha, mensagemPlanilha, esperadosConfirmacao } from "./planilhaApi.js";
 import HistoricoForms from "./HistoricoForms.jsx";
 import "./App.css";
 import LandingPage from "./LandingPage";
@@ -8,12 +9,18 @@ import { DiconOriginFormPage } from "./DiconOrigin.jsx";
 import { DICON_GRUPOS, DICON_OPCOES, DICON_CFG, diconLinhas } from "./diconOriginDados.js";
 import { PROMO_MURCE_50_PRODUTOS, PROMO_MURCE_50_CFG, PROMO_MURCE_50_FAIXA, fotoPm } from "./promoMurce50Dados.js";
 import { AdminAuthGate } from "./AdminAuth.jsx";
+import AdminContas from "./AdminContas.jsx";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin, buscarNomeAdmin } from "./adminAuth.js";
-import { cancelarNaPlanilha, mensagemCancelar } from "./planilhaCancelar.js";
+import { meusPedidosFechados } from "./pedidosFechados.js";
+import { COLS_PAGAMENTO, COLS_MERCARI, COLS_ENVIO, COLS_REPASSOS } from "./colunasPublicas.js";
+import { CASHBACK_LIBERADO } from "./cashbackLiberado.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
 import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
 import { lerPlanilha } from "./csvSimples.js";
 import { diasAtraso, multaPorDia, multaAtraso, multaDoItem, isentoMulta, diasParaVencer } from "./multa.js";
+import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
+import { enviarComprovante as enviarArquivoSeguro, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
+import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -79,12 +86,7 @@ async function registrarPush(joinerCog) {
       applicationServerKey: VAPID_PUBLIC_KEY,
     });
     const subJson = sub.toJSON();
-    await supabase.from("push_subscriptions").upsert({
-      joiner_cog: joinerCog,
-      endpoint: subJson.endpoint,
-      p256dh: subJson.keys.p256dh,
-      auth: subJson.keys.auth,
-    }, { onConflict: "endpoint" });
+    await gravarAssinaturaPush(joinerCog, subJson);
   } catch (e) { console.error("[push] registrarPush erro:", e); }
 }
 
@@ -102,7 +104,7 @@ async function enviarComprovante(path, arquivo) {
   let ultimo = null;
   for (let tentativa = 0; tentativa < 3; tentativa++) {
     if (tentativa > 0) await new Promise(r => setTimeout(r, 1500 * tentativa));
-    const { error } = await supabase.storage.from("comprovantes").upload(path, corpo, { upsert: false, contentType: corpo.type });
+    const { error } = await enviarArquivoSeguro("comprovantes", path, corpo, { upsert: false, contentType: corpo.type });
     if (!error) return { error: null };
     // a tentativa anterior chegou ao servidor e só a resposta se perdeu
     if (tentativa > 0 && /already exists|duplicate/i.test(error.message || "")) return { error: null };
@@ -130,13 +132,13 @@ async function inserirPush(rows) {
 
 async function enviarPushJoiner(joinerCog, title, body, url) {
   if (!_pushGlobalAtivo) return;
-  const { data: subs } = await supabase
+  const { data: subs } = await clienteAdmin()
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
     .eq("joiner_cog", joinerCog);
   if (!subs?.length) return;
   await Promise.allSettled(subs.map(s =>
-    supabase.functions.invoke("send-push", {
+    clienteAdmin().functions.invoke("push-evento", {
       body: {
         subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         title, body, url,
@@ -145,18 +147,15 @@ async function enviarPushJoiner(joinerCog, title, body, url) {
   ));
 }
 
-async function sendEmailJoiner(toEmail, toNome, assunto, corpo) {
-  if (!toEmail) throw new Error("sem_email");
-  const { error } = await supabase.functions.invoke("send-email", {
-    body: { to_email: toEmail, to_name: toNome || "joiner", assunto, corpo },
-  });
+// E-mail de notificação: o site só informa o TIPO do evento e o id do registro. Destinatário, assunto e conteúdo são decididos pelo servidor.
+// Eventos que a administradora aciona usam a sessão de administradora ({ admin: true }); o aviso de comprovante recebido pode ser acionado pela própria joiner.
+async function notificarEmail(evento, dados, { admin = false } = {}) {
+  const cliente = admin ? clienteAdmin() : supabase;
+  const { error } = await cliente.functions.invoke("email-evento", { body: { evento, ...dados } });
   if (error) {
-    let detail = error.message ?? String(error);
-    try {
-      const ctx = await error.context?.json();
-      if (ctx?.error) detail = ctx.error;
-    } catch {}
-    throw new Error(detail);
+    let detalhe = error.message ?? String(error);
+    try { const ctx = await error.context?.json(); if (ctx?.error) detalhe = ctx.error; } catch { /* resposta sem corpo */ }
+    throw new Error(detalhe);
   }
 }
 
@@ -255,7 +254,7 @@ function buildEmailConfirmacaoPagamento(toNome, recibo) {
         <span style="font-size:10px;font-family:'Courier New',monospace;padding:3px 10px;border-radius:4px;border:1px solid rgba(201,168,240,0.35);color:#C9A8F0;text-transform:uppercase;letter-spacing:.5px">◉ Em análise</span>
       </div>
     </div>
-    ${recibo.comprovante_url ? `
+    ${recibo.comprovante_url && !JOINERS_AUTH_ATIVO ? `
     <div style="margin-bottom:20px">
       <div style="font-size:10px;color:rgba(245,240,232,0.35);font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Comprovante enviado</div>
       <img src="${recibo.comprovante_url}" alt="comprovante" style="max-width:100%;border-radius:6px;border:1px solid rgba(245,240,232,0.1);display:block;margin-bottom:8px" />
@@ -334,7 +333,8 @@ const OWNER_EMAILS = ["nandag_medeiros@hotmail.com"];
 const OWNER_COGS   = ["nandaverseo_c", "ADMMODE"];
 const STAFF_EMAILS = ["nathallynayane1234@gmail.com"];
 const STAFF_COGS   = ["nathy_mrnd", "lyrichangbin"];
-const SESSION_VERSION = "5"; // 5: todas as joiners saem (manutenção 03/11: itens duplicados); admin também precisa entrar de novo
+// Hoje: "5" (todas as joiners saíram na manutenção de 03/11). Com o novo acesso ligado (VITE_JOINERS_AUTH) a versão sobe para "6" e as sessões antigas (só @) deixam de valer; as de administradoras são preservadas.
+const SESSION_VERSION = JOINERS_AUTH_ATIVO ? "6" : "5";
 // Cogs de demonstração: mapeiam para o cog real cujos dados serão exibidos
 const DEMO_COG_MAP = { "ADMMODE": "nandaverseo_c" };
 function dataCog(cog) { return DEMO_COG_MAP[cog] || cog; }
@@ -721,9 +721,7 @@ function CegModal({ ceg, onClose }) {
   const [itens, setItens] = useState(null);
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).then(({ data }) => {
-      setItens(data || []);
-    });
+    itensDoCeg(ceg, { semDisponivel: false }).then(setItens);
   }, [ceg]);
 
   const byJoiner = itens
@@ -987,8 +985,7 @@ function CegDetailView({ ceg, onVoltar, guest, user }) {
   }
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).not("nome", "ilike", "disponivel")
-      .then(({ data }) => setItens(data || []));
+    itensDoCeg(ceg).then(setItens);
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setFotos(data || []));
     supabase.from("ceg_config").select("whatsapp_link").eq("ceg", ceg).single()
@@ -1576,12 +1573,23 @@ function CegTab({ user, itens }) {
   const [detalhe, setDetalhe] = useState(null);
   const [filtro, setFiltro] = useState(!user || user.guest ? "todas" : "minhas");
   const [cegCapas, setCegCapas] = useState({});
+  const [resumoCegs, setResumoCegs] = useState(null);   // só no novo login: números dos CEGs vindos do servidor
 
   const guest = !user || user.guest;
   const meuCog = dataCog(user?.cog);
 
   useEffect(() => {
     async function fetchItens() {
+      if (JOINERS_AUTH_ATIVO) {
+        // números da comunidade por função segura + só as linhas da própria joiner da masterlist (protegida por linha)
+        const [resumo, { data: meus }] = await Promise.all([
+          resumoDosCegs(),
+          meuCog && !user?.acesso_simples ? supabase.from("masterlist").select("ceg, cog, status").or("nome.neq.Disponivel,nome.is.null") : Promise.resolve({ data: [] }),
+        ]);
+        setResumoCegs(resumo);
+        setAllItens(meus || []);
+        return;
+      }
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
@@ -1622,7 +1630,13 @@ function CegTab({ user, itens }) {
 
   const { todasCegs, minhasCegs, meuStatusPorCeg } = useMemo(() => {
     const cegMap = {};
-    (allItens || []).forEach(item => {
+    if (JOINERS_AUTH_ATIVO) {
+      const meusCegs = new Set((allItens || []).filter(i => i.cog === meuCog).map(i => i.ceg || "—"));
+      (resumoCegs || []).forEach(r => {
+        const ceg = r.ceg || "—";
+        cegMap[ceg] = { itens: Number(r.itens) || 0, joiners: { size: Number(r.joiners) || 0, has: () => meusCegs.has(ceg) }, statusCount: r.status_counts || {} };
+      });
+    } else (allItens || []).forEach(item => {
       const ceg = item.ceg || "—";
       if (!cegMap[ceg]) cegMap[ceg] = { itens: 0, joiners: new Set(), statusCount: {} };
       cegMap[ceg].itens++;
@@ -1642,7 +1656,7 @@ function CegTab({ user, itens }) {
       });
     }
     return { todasCegs: todas.filter(([ceg]) => !CEGS_OCULTAS.includes(ceg)), minhasCegs: minhas, meuStatusPorCeg: statusPorCeg };
-  }, [allItens, meuCog]);
+  }, [allItens, meuCog, resumoCegs]);
 
   const finalizadas = useMemo(() => meuCog
     ? minhasCegs.filter(([ceg]) => {
@@ -1819,11 +1833,11 @@ function ReportModal({ user, item, onClose, onReported, replyTo = null }) {
     setLoading(false);
     if (error) { alert("Erro ao enviar: " + error.message); return; }
     if (erros.recebido && item.id_linha) {
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ acao: "recebido", token: "anticeg-pag-2026", id_linha: item.id_linha }),
-      }).catch(() => {});
+      // a resposta da planilha NÃO é mais ignorada: se recusar (ex.: código repetido) ou falhar, a pessoa é avisada
+      chamarPlanilha("recebido", { id_linha: item.id_linha, ceg: item.ceg, nome_do_item: item.nome_do_item }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "joiner" });
+        if (msg) { console.error("planilha (recebido):", res); alert("Seu relato foi enviado.\n\n" + msg); }
+      });
     }
     onReported?.(replyTo ? { ...replyTo, ...campos } : item.id);
     setSent(true);
@@ -3732,6 +3746,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   const [pagStatus,       setPagStatus]       = useState("idle"); // idle | enviando | enviado
   const [pagErro,         setPagErro]         = useState("");
   const [pagEmailMsg,     setPagEmailMsg]     = useState(null); // null | {ok,txt}
+  const [pagPlanilhaMsg,   setPagPlanilhaMsg]   = useState(null); // null | texto: a planilha não confirmou tudo
   const [meusPagamentos,  setMeusPagamentos]  = useState([]);
   const [showReportPicker, setShowReportPicker] = useState(false);
   const [reportItem,       setReportItem]       = useState(null);
@@ -3809,17 +3824,17 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
         { data: cashbackData },
         { data: antivBadgesData },
       ] = await Promise.all([
-        supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("envio_solicitacoes").select(COLS_ENVIO).eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("reports").select("id, item_id, erro_repassado, item_nome, ceg, status, created_at, erro_item, erro_valor, erro_frete, erro_taxa, erro_pagamento, erro_recebido, erro_outro, motivo_item, correcao_valor, correcao_frete, correcao_taxa, pag_data, pag_valor, pag_metodo, observacao, resposta, respondido_por, respondido_em").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("feedbacks").select("id, tipo, message, resposta, resposta_joiner, resposta_joiner_at, created_at").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist")
           .select("id, ceg, nome_do_item, id_linha, valor_item, frete_inter, taxa_rf, pago_item, pago_frete, pago_rf, venc_item, venc_frete, venc_rf")
           .eq("cog", dataCog(user.cog))
           .or("valor_item.gt.0,frete_inter.gt.0,taxa_rf.gt.0"),
-        supabase.from("pagamento_demandas").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("pagamento_demandas").select(COLS_PAGAMENTO).eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("masterlist").select("id, ceg, nome_do_item, status, pago_item, pago_frete, pago_rf, valor_item, frete_inter, taxa_rf")
           .eq("cog", dataCog(user.cog)).order("ceg").order("nome_do_item"),
-        supabase.from("repassos").select("*").eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
+        supabase.from("repassos").select(COLS_REPASSOS).eq("joiner_cog", dataCog(user.cog)).order("created_at", { ascending: false }),
         supabase.from("multas_pagas").select("id", { count: "exact", head: true }).eq("joiner_cog", dataCog(user.cog)).gte("created_at", BADGE_MULTAS_DESDE),
         supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single(),
         supabase.from("antiv_badges").select("badge_slug").eq("joiner_cog", dataCog(user.cog)),
@@ -3872,8 +3887,8 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   // aba Recrutador: quem esta pessoa já indicou
   useEffect(() => {
     if (perfilSubTab !== "recrutador" || !user.cog || user.guest) return;
-    supabase.from("joiners").select("cog, nome, nome_site").eq("recrutador", user.cog)
-      .then(({ data }) => { if (data) { setMeusRecrutados(data); setRecrutadosCount(data.length); } });
+    buscarMeusRecrutados(user.cog)
+      .then(data => { if (data) { setMeusRecrutados(data); setRecrutadosCount(data.length); } });
   }, [perfilSubTab, user.cog]);
 
   useEffect(() => {
@@ -3882,10 +3897,11 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     const email = user.email || "";
     const cog   = dataCog(user.cog);
     Promise.all([
-      email ? supabase.from("pedidos_revista").select("id,created_at,qtd_total,valor_total,status").eq("email", email).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
-      email ? supabase.from("pedidos_popup").select("id,created_at,week,itens,status").eq("email", email).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
+      // login ligado: o banco entrega só o que é DESTA conta (RLS); desligado, as tabelas fechadas ao visitante (Q5b) respondem por função do servidor
+      email ? (JOINERS_AUTH_ATIVO ? supabase.from("pedidos_revista").select("id,created_at,qtd_total,valor_total,status").eq("email", email).order("created_at",{ascending:false}) : meusPedidosFechados("pedidos_revista", { email }).then(data => ({ data }), () => ({ data: [] }))) : Promise.resolve({data:[]}),
+      email ? (JOINERS_AUTH_ATIVO ? supabase.from("pedidos_popup").select("id,created_at,week,itens,status").eq("email", email).order("created_at",{ascending:false}) : meusPedidosFechados("pedidos_popup", { email }).then(data => ({ data }), () => ({ data: [] }))) : Promise.resolve({data:[]}),
       cog   ? supabase.from("mercari_pedidos").select("id,created_at,valor_jpy_total,valor_brl_total,itens,status").eq("joiner_cog", cog).order("created_at",{ascending:false}).limit(20) : Promise.resolve({data:[]}),
-      cog   ? supabase.from("pedidos_skzoo_rio").select("id,created_at,itens,envio,pagamento,total_reais,status").eq("cog", cog).order("created_at",{ascending:false}) : Promise.resolve({data:[]}),
+      cog   ? (JOINERS_AUTH_ATIVO ? supabase.from("pedidos_skzoo_rio").select("id,created_at,itens,envio,pagamento,total_reais,status").eq("cog", cog).order("created_at",{ascending:false}) : meusPedidosFechados("pedidos_skzoo_rio", { cog }).then(data => ({ data }), () => ({ data: [] }))) : Promise.resolve({data:[]}),
       cog   ? supabase.from("claims").select("id,ceg,nome_do_item,valor,status,vencimento,created_at").eq("joiner_cog", cog).order("created_at",{ascending:false}).limit(30) : Promise.resolve({data:[]}),
     ]).then(([rev, pop, mer, skzoo, cls]) => {
       setMeusFormularios({ revista: rev.data||[], popup: pop.data||[], mercari: mer.data||[], skzoo: skzoo.data||[], claims: cls.data||[] });
@@ -4035,6 +4051,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   return (
     <div className="admin-wrap">
       <h2 className="admin-title" style={{ marginBottom:4 }}>Meu Perfil</h2>
+      {JOINERS_AUTH_ATIVO && <TrocarSenhaJoiner user={user} />}
       <div className="admin-greeting" style={{ marginBottom:20 }}>
         <span className="admin-greeting-prompt">// </span>
         <span className="admin-greeting-msg">{user.nome_site || user.nome || user.cog}</span>
@@ -4065,7 +4082,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
 
       {/* ── PAGAMENTOS ── */}
       {perfilSubTab === "pagamentos" && (() => {
-        function exportarComprovante(p) {
+        async function exportarComprovante(p) {
           const itensHTML = p.itens.map(it => {
             const itTotal = Number(it.valor_item||0)+Number(it.frete_inter||0)+Number(it.taxa_rf||0)+Number(it.multa||0);
             const partes = [
@@ -4118,7 +4135,7 @@ ${p.comprovante_url ? (() => {
 <script>window.onload=()=>window.print();</script>
 </body></html>`;
           const w = window.open("","_blank");
-          w.document.write(html);
+          w.document.write(await resolverComprovantesNoHtml(html));
           w.document.close();
         }
         if (pagSubTab === "historico") return (
@@ -4182,9 +4199,11 @@ ${p.comprovante_url ? (() => {
                 {/* Rodapé */}
                 <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.05)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    {p.comprovante_url && (
-                      <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver anexo</a>
-                    )}
+                    {p.comprovante_url ? (
+                      <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver anexo</a>
+                    ) : p.tem_comprovante ? (
+                      <span style={{ fontSize:9, color:"rgba(245,240,232,.45)", fontFamily:"'DM Mono',monospace" }}>✓ anexo enviado</span>
+                    ) : null}
                     <button onClick={() => exportarComprovante(p)} style={{ fontSize:9, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:4, padding:"3px 10px", cursor:"pointer" }}>
                       ↓ exportar
                     </button>
@@ -4233,7 +4252,7 @@ ${p.comprovante_url ? (() => {
           return v < 0 ? a + Math.abs(v) : a;
         }, 0);
         const totalReembolso = saldoCashback + cashbackMasterlist;
-        const cashbackVal  = totalReembolso > 0 ? Math.min(Math.max(0, parseFloat(pagCashback || "0") || 0), totalReembolso, total) : 0;
+        const cashbackVal  = CASHBACK_LIBERADO && totalReembolso > 0 ? Math.min(Math.max(0, parseFloat(pagCashback || "0") || 0), totalReembolso, total) : 0;
         const totalLiquido = Math.max(0, total - cashbackVal);
         const temItens = itensSel.length > 0 || (pagOutros && pagOutrosNome.trim() && outrosValTotal > 0);
 
@@ -4270,17 +4289,20 @@ ${p.comprovante_url ? (() => {
             cashback_aplicado: cashbackVal || null,
             comprovante_url:   comprovanteUrl,
             obs:               obsFinal,
-          }]).select().single();
+          }]).select(COLS_PAGAMENTO).single();
           if (error || !nova) { setPagStatus("idle"); setPagErro(error?.message || "Erro ao salvar demanda."); return; }
-          // Atualiza planilha automaticamente
-          fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-            method: "POST", redirect: "follow",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify({ acao: "confirmar", token: "anticeg-pag-2026", itens: itensPayload.filter(i => i.id_linha) }),
-          }).catch(() => {});
+          nova.comprovante_url = comprovanteUrl || null;   // o servidor não devolve o endereço do arquivo ao visitante; ele fica só na memória desta sessão (para o recibo)
+          // Atualiza planilha automaticamente e INFORMA se não deu certo (recusa, atualização parcial, falha de rede ou de sincronização)
+          setPagPlanilhaMsg(null);
+          const itensNaPlanilha = itensPayload.filter(i => i.id_linha);
+          const itensSemCodigo = itensPayload.filter(i => i.id && !i.id_linha);
+          (itensNaPlanilha.length ? chamarPlanilha("confirmar", { itens: itensNaPlanilha }, { esperados: esperadosConfirmacao(itensNaPlanilha) }) : Promise.resolve(null)).then(res => {
+            const msg = mensagemPlanilha(res, { perfil: "joiner", itensSemId: itensSemCodigo });
+            if (msg) { console.error("planilha (confirmar):", res); setPagPlanilhaMsg(msg); }
+          });
           try {
-            const corpoEmail = buildEmailConfirmacaoPagamento(user.nome_site || user.nome || user.cog, nova);
-            await sendEmailJoiner(user.email, user.nome_site || user.nome || user.cog, "✓ Comprovante recebido — ANTICEG", corpoEmail);
+            if (!user.email) throw new Error("sem_email");
+            await notificarEmail("comprovante_recebido", { demanda_id: nova.id });
             setPagEmailMsg({ ok: true, txt: `📧 Confirmação enviada para ${user.email}` });
           } catch (emailErr) {
             const motivo = emailErr.message === "sem_email"
@@ -4289,11 +4311,10 @@ ${p.comprovante_url ? (() => {
             console.error("email confirmacao pagamento", emailErr);
             setPagEmailMsg({ ok: false, txt: motivo });
           }
-          if (cashbackVal > 0 && saldoCashback > 0) {
-            const fromDB = Math.min(cashbackVal, saldoCashback);
-            const novoSaldo = Math.max(0, saldoCashback - fromDB);
-            await supabase.from("joiners").update({ saldo_cashback: novoSaldo }).eq("cog", user.cog);
-            setSaldoCashback(novoSaldo);
+          if (cashbackVal > 0) {
+            // o desconto JÁ foi feito pelo banco, no mesmo ato que registrou o pagamento (gatilho q6_debito_cashback): o navegador não grava mais saldo; só relê o saldo verdadeiro
+            const { data: sj } = await supabase.from("joiners").select("saldo_cashback").eq("cog", user.cog).single();
+            setSaldoCashback(Number(sj?.saldo_cashback || 0));
           }
           setMeusPagamentos(prev => [nova, ...prev]);
           setPagRecibo(nova);
@@ -4360,7 +4381,7 @@ ${p.comprovante_url ? (() => {
               {pagRecibo.comprovante_url && (
                 <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(245,240,232,.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textTransform:"uppercase", letterSpacing:".8px" }}>Comprovante anexado</span>
-                  <a href={pagRecibo.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver arquivo</a>
+                  <a href={pagRecibo.comprovante_url} onClick={e => abrirComprovante(e, pagRecibo.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#64B5F6", fontFamily:"'DM Mono',monospace", textDecoration:"none" }}>↗ ver arquivo</a>
                 </div>
               )}
             </div>
@@ -4368,6 +4389,11 @@ ${p.comprovante_url ? (() => {
             <div style={{ fontSize:11, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", textAlign:"center", lineHeight:1.8, marginBottom:10 }}>
               Assim que o pagamento for confirmado,<br />o status atualiza automaticamente.
             </div>
+            {pagPlanilhaMsg && (
+              <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", textAlign:"left", whiteSpace:"pre-line", marginBottom:16, letterSpacing:".03em", color:"rgba(255,184,0,.9)", padding:"8px 14px", background:"rgba(255,184,0,.07)", borderRadius:6, border:"1px solid rgba(255,184,0,.25)" }}>
+                {"⚠ Seu comprovante foi recebido, mas a marcação automática na planilha não foi concluída.\n\n" + pagPlanilhaMsg}
+              </div>
+            )}
             {pagEmailMsg && (
               <div style={{ fontSize:10, fontFamily:"'DM Mono',monospace", textAlign:"center", marginBottom:16, letterSpacing:".03em", color: pagEmailMsg.ok ? "rgba(186,255,57,.7)" : "rgba(255,92,26,.8)", padding:"8px 14px", background: pagEmailMsg.ok ? "rgba(186,255,57,.06)" : "rgba(255,92,26,.06)", borderRadius:6, border:`1px solid ${pagEmailMsg.ok ? "rgba(186,255,57,.15)" : "rgba(255,92,26,.15)"}` }}>
                 {pagEmailMsg.txt}
@@ -4375,7 +4401,7 @@ ${p.comprovante_url ? (() => {
             )}
 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Map()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); }}
+              <button onClick={() => { setPagStatus("idle"); setPagRecibo(null); setPagSelecionados(new Map()); setPagComprovante(null); setPagObs(""); setPagCashback(""); setPagSubTab("enviar"); setPagEmailMsg(null); setPagPlanilhaMsg(null); }}
                 style={{ width:"100%", padding:"13px 0", background:"var(--laranja)", color:"#000", border:"none", borderRadius:8, fontSize:13, fontWeight:900, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".5px" }}>
                 + Enviar novo comprovante
               </button>
@@ -4744,11 +4770,12 @@ ${p.comprovante_url ? (() => {
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                   <span style={{ fontSize:15, fontWeight:900, color:"#BAFF39", fontFamily:"'DM Mono',monospace", marginRight:"auto" }}>R$ {totalReembolso.toFixed(2).replace(".",",")}</span>
                   <span style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace" }}>Aplicar:</span>
-                  <input type="number" inputMode="decimal" min={0} max={Math.min(totalReembolso, total)} value={pagCashback}
+                  {!CASHBACK_LIBERADO && <div style={{ flexBasis:"100%", fontSize:10, color:"rgba(255,159,64,.9)", fontFamily:"'DM Mono',monospace", lineHeight:1.5 }}>⚠ O uso do saldo está temporariamente indisponível, por segurança, até o novo login estar ativo. Seu saldo está guardado e não foi alterado.</div>}
+                  <input type="number" inputMode="decimal" min={0} max={Math.min(totalReembolso, total)} value={pagCashback} disabled={!CASHBACK_LIBERADO}
                     onChange={e => setPagCashback(e.target.value)}
                     placeholder="0.00"
                     style={{ width:80, background:"rgba(0,0,0,.4)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, padding:"6px 10px", color:"#BAFF39", fontSize:12, fontFamily:"'DM Mono',monospace", outline:"none", textAlign:"right" }} />
-                  <button onClick={() => setPagCashback(String(Math.min(totalReembolso, total).toFixed(2)))}
+                  <button disabled={!CASHBACK_LIBERADO} onClick={() => setPagCashback(String(Math.min(totalReembolso, total).toFixed(2)))}
                     style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.2)", color:"#BAFF39", borderRadius:5, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>
                     Usar tudo
                   </button>
@@ -4971,8 +4998,9 @@ ${p.comprovante_url ? (() => {
           } else {
             rows = itensSelecionados.map(i => ({ ...base, item_id: i.id, ceg: i.ceg, nome_do_item: i.nome_do_item, item_status: i.status }));
           }
-          const { data: novas, error } = await supabase.from("repassos").insert(rows).select();
+          const { data: novasBanco, error } = await supabase.from("repassos").insert(rows).select(COLS_REPASSOS);
           if (error) { setRepasseStatus("idle"); setRepasseErro(`Erro ao enviar: ${error.message}`); return; }
+          const novas = (novasBanco || []).map(r => ({ ...r, comprovacao_url: publicUrl }));   // o servidor não devolve o endereço do arquivo ao visitante; fica só na memória desta sessão (para o recibo)
           const listaItens = isOutros ? repasseOutrosNome.trim() : itensSelecionados.map(i => `"${i.nome_do_item}"`).join(", ");
           await inserirPush([{
             message: `${joinerNome} quer te repassar ${itensSelecionados.length > 1 ? "os itens" : "o item"} ${listaItens}. Aguarde confirmação da admin!`,
@@ -5093,7 +5121,7 @@ ${p.comprovante_url ? (() => {
 
             {repasseSubTab === "historico" && (() => {
 
-              function exportarComprovanteRepasse(r) {
+              async function exportarComprovanteRepasse(r) {
                 const protocolo = `#${String(r.id).slice(-6).toUpperCase()}`;
                 const dataFmt   = new Date(r.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
                 const custosMap = { item:"Item", frete:"Frete", rf:"Taxa RF" };
@@ -5136,7 +5164,7 @@ ${compHTML}
 <script>window.onload=()=>window.print();</script>
 </body></html>`;
                 const w = window.open("","_blank");
-                w.document.write(html);
+                w.document.write(await resolverComprovantesNoHtml(html));
                 w.document.close();
               }
 
@@ -5300,7 +5328,7 @@ ${compHTML}
                     <div>
                       <input value={repasseNovoDonoSearch} onChange={e => {
                           setRepasseNovoDonoSearch(e.target.value);
-                          if (!repasseJoiners) supabase.from("joiners").select("cog,nome,twitter").order("nome").then(({ data }) => setRepasseJoiners(data || []));
+                          if (!repasseJoiners) listarJoinersPublicos().then(data => setRepasseJoiners(data || []));
                         }}
                         placeholder="Buscar joiner por nome ou @..."
                         style={inputSt} />
@@ -6473,6 +6501,7 @@ function CalendarTab({ user, itens, calEventos, setCalEventos }) {
 
   useEffect(() => {
     (async () => {
+      if (JOINERS_AUTH_ATIVO) { setAllItens(await vencimentosDosCegs()); return; }   // datas por CEG, sem dono nem valor
       let all = [], from = 0;
       while (true) {
         const { data } = await supabase.from("masterlist")
@@ -7572,7 +7601,7 @@ function AdminCardDemanda({ d, joinersData, rejeitarId, setRejeitarId, rejeitarM
       )}
       {(d.comprovante_url || d.obs) && (
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", margin:"12px 0" }}>
-          {d.comprovante_url && <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
+          {d.comprovante_url && <a href={d.comprovante_url} onClick={e => abrirComprovante(e, d.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>↓ ver comprovante</a>}
           {d.obs && <span style={{ fontSize:10, fontFamily:"'DM Mono',monospace", color:"rgba(245,240,232,.35)", fontStyle:"italic" }}>"{d.obs}"</span>}
         </div>
       )}
@@ -7631,11 +7660,12 @@ async function executarAprovacaoRepasse(r, { notificar = true } = {}) {
     // Busca id_linha para atualizar planilha
     const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", r.item_id).single();
     if (mlItem?.id_linha) {
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ acao: "repassar", token: "anticeg-pag-2026", id_linha: mlItem.id_linha, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }),
-      }).catch(() => {});
+      chamarPlanilha("repassar", { id_linha: mlItem.id_linha, ceg: r.ceg, nome_do_item: r.nome_do_item, novo_nome: r.novo_dono_nome, novo_twitter: r.novo_dono_twitter || r.novo_dono_cog }, { admin: true }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Repasse" });
+        if (msg) { console.error("planilha (repassar):", res); alert(`Repasse aprovado no site, mas a planilha precisa de atenção:\n\n${msg}\n\nAtualize o novo dono na planilha à mão; sem isso a próxima sincronização pode devolver o item ao dono anterior.`); }
+      });
+    } else {
+      alert(`Repasse aprovado no site. "${r.nome_do_item}" não tem código (ID), então a planilha não pôde ser atualizada automaticamente. Se este item existe na planilha, atualize o novo dono lá à mão; sem isso a próxima sincronização pode devolver o item ao dono anterior.`);
     }
   }
   if (notificar) {
@@ -7812,7 +7842,7 @@ function AdminRepasseCard({ r, onAprovar, onRecusar, onReabrir }) {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginTop:4 }}>
         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
           {r.comprovacao_url && (
-            <a href={r.comprovacao_url} target="_blank" rel="noopener noreferrer"
+            <a href={r.comprovacao_url} onClick={e => abrirComprovante(e, r.comprovacao_url)} target="_blank" rel="noopener noreferrer"
               style={{ fontSize:9, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:4, padding:"3px 8px", color:"#64B5F6", textDecoration:"none" }}>
               ↗ ver comprovação
             </a>
@@ -9130,12 +9160,12 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     setPmSending(true);
     setPmStatus(null);
     try {
-      let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth, joiner_cog");
+      let query = clienteAdmin().from("push_subscriptions").select("endpoint, p256dh, auth, joiner_cog");
       if (pmDest === "especifico") query = query.eq("joiner_cog", pmJoinerSel.cog);
       const { data: subs } = await query;
       if (!subs?.length) { setPmStatus({ ok: false, txt: "Nenhum dispositivo inscrito." }); setPmSending(false); return; }
       const results = await Promise.allSettled(subs.map(async s => {
-        const { error } = await supabase.functions.invoke("send-push", {
+        const { error } = await clienteAdmin().functions.invoke("push-evento", {
           body: { subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, title: pmTitulo.trim() || "ANTICEG", body: pmCorpo.trim(), url: "/" },
         });
         if (error) throw Object.assign(new Error(error.message || JSON.stringify(error)), { joiner_cog: s.joiner_cog });
@@ -9193,12 +9223,16 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
     }]);
     const joinerInfo = (joinersData || []).find(j => j.cog === rep.joiner_cog);
     if (joinerInfo?.email) {
-      sendEmailJoiner(
-        joinerInfo.email,
-        joinerInfo.nome || rep.joiner_cog,
-        "Seu report foi resolvido ✓",
-        buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>${adminNome ? ` por <strong style="color:#F5F0E8">${adminNome}</strong>` : ""}:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
-      );
+      if (JOINERS_AUTH_ATIVO) {
+        notificarEmail("report_resolvido", { report_id: rep.id }, { admin: true }).catch(err => console.error("e-mail do report", err.message));
+      } else {
+        sendEmailJoiner(
+          joinerInfo.email,
+          joinerInfo.nome || rep.joiner_cog,
+          "Seu report foi resolvido ✓",
+          buildEmailHTML(joinerInfo.nome || rep.joiner_cog, `<tr><td style="background:#111111;padding:20px 40px 24px"><p style="margin:0 0 14px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Seu report sobre o item abaixo foi marcado como <strong style="color:#BAFF39">resolvido</strong>${adminNome ? ` por <strong style="color:#F5F0E8">${adminNome}</strong>` : ""}:</p><div style="background:#0D0D0D;border-radius:6px;padding:14px 16px;border-left:3px solid #BAFF39"><div style="font-size:13px;font-weight:700;color:#F5F0E8">${rep.item_nome}</div></div></td></tr>`)
+        );
+      }
     }
     setReports(r => r.map(x => x.id === rep.id ? { ...x, status: "resolvido", resposta: resposta || null, ...quem } : x));
     setReportRespostas(prev => { const n = { ...prev }; delete n[rep.id]; return n; });
@@ -9356,6 +9390,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   {owner && nav("agenda",  "Agenda",  "▣", 0)}
                   {temAcesso("galeria") && nav("galeria", "Galeria", "◈", 0)}
                   {owner && !isDemo && nav("staff",   "Staff",   "◌", 0)}
+                  {owner && !isDemo && JOINERS_AUTH_ATIVO && nav("contas",  "Contas",  "⚿", 0)}
                 </div>
               )}
             </nav>
@@ -9885,14 +9920,16 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                   enviarPushJoiner(d.joiner_cog, "✕ Comprovante recusado", msg, "/");
                   const joiner = (joinersData || []).find(j => j.cog === d.joiner_cog);
                   if (joiner?.email) {
-                    const corpo = buildEmailRejeicaoPagamento(joiner.nome || joiner.cog, d, motivo.trim());
-                    sendEmailJoiner(joiner.email, joiner.nome || joiner.cog, "✕ Comprovante recusado — ANTICEG", corpo);
+                    notificarEmail("comprovante_recusado", { demanda_id: id }, { admin: true }).catch(err => console.error("e-mail de recusa", err.message));
                   }
                   // Reverte planilha para FALSE
                   const itensComId = (d.itens || []).filter(i => i.id_linha);
-                  if (itensComId.length > 0) {
-                    // sem bloquear a tela: lê a resposta e AVISA se a planilha pode ter ficado marcada (o sync de 9h/21h a devolveria ao site)
-                    cancelarNaPlanilha(itensComId).then(rc => { const aviso = mensagemCancelar(rc, itensComId); if (aviso) alert(aviso); });
+                  const itensSemCodigo = (d.itens || []).filter(i => i.id && !i.id_linha);
+                  if (itensComId.length > 0 || itensSemCodigo.length > 0) {
+                    (itensComId.length > 0 ? chamarPlanilha("cancelar", { itens: itensComId }, { esperados: esperadosConfirmacao(itensComId), admin: true }) : Promise.resolve(null)).then(res => {
+                      const msg = mensagemPlanilha(res, { perfil: "admin", itensSemId: itensSemCodigo, contexto: "Reversão do pagamento" });
+                      if (msg) { console.error("planilha (cancelar):", res); alert(`Comprovante recusado no site, mas desmarcar o pagamento na planilha precisa de atenção:\n\n${msg}\n\nConfira estes itens na planilha: eles podem continuar marcados como pagos.`); }
+                    });
                   }
                 }
                 setPagDemandas(prev => prev.map(x => x.id === id ? { ...x, status:"rejeitado", motivo_rejeicao: motivo.trim() || null, analisado_por: adminNome, analisado_em: adminNome ? new Date().toISOString() : null } : x));
@@ -10109,6 +10146,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         </div>
       )}
 
+      {adminMainTab === "contas" && owner && JOINERS_AUTH_ATIVO && <AdminContas />}
       {adminMainTab === "mercari" && (
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
@@ -11935,7 +11973,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 {s.comprovante_url && (
                   <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"9px 14px", marginBottom:12 }}>
                     <span style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>📎 Comprovante enviado</span>
-                    <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
+                    <a href={s.comprovante_url} onClick={e => abrirComprovante(e, s.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#BAFF39", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver comprovante →</a>
                   </div>
                 )}
 
@@ -12337,7 +12375,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
               {/* Comprovante + obs */}
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom: (isPend || !isPend) ? 10 : 0 }}>
                 {d.comprovante_url && (
-                  <a href={d.comprovante_url} target="_blank" rel="noopener noreferrer"
+                  <a href={d.comprovante_url} onClick={e => abrirComprovante(e, d.comprovante_url)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize:10, fontFamily:"'DM Mono',monospace", background:"rgba(100,181,246,.08)", border:"1px solid rgba(100,181,246,.2)", borderRadius:5, padding:"4px 10px", color:"#64B5F6", textDecoration:"none" }}>
                     ↓ ver comprovante
                   </a>
@@ -12981,7 +13019,7 @@ const fmtReais = n => "R$" + Number(n).toFixed(2).replace(".", ",");
 async function carregarEstoqueWM(cfg) {
   const [{ data: rows, error: e1 }, { data: pedidos, error: e2 }] = await Promise.all([
     supabase.from(cfg.tabelaEstoque).select("item_id, estoque, contar_desde"),
-    supabase.from("formulario_pedidos").select("modalidade, observacoes, status, created_at").eq("evento", cfg.evento),
+    supabase.from(TABELA_FORMULARIO_PUBLICA).select("modalidade, observacoes, status, created_at").eq("evento", cfg.evento),
   ]);
   if (e1 || e2 || !rows) return null;
   const mapa = {};
@@ -13097,7 +13135,7 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       status: "pendente",
     }]).select("id");
     if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
-    const { count } = await supabase.from("formulario_pedidos")
+    const { count } = await supabase.from(TABELA_FORMULARIO_PUBLICA)
       .select("id", { count: "exact", head: true })
       .eq("evento", cfg.evento)
       .eq("status", "pendente");
@@ -13581,7 +13619,9 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   );
 }
 
-function MercariTab() {
+function MercariTab({ user = null }) {
+  // com o novo login a joiner é a conta que está logada (sem digitar @ ou e-mail, que não identifica ninguém)
+  const contaLogada = JOINERS_AUTH_ATIVO && !!user?.cog && !user.acesso_simples;
 
   const WA   = WHATSAPP_NUM;
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
@@ -13617,6 +13657,13 @@ function MercariTab() {
   const fileRef = useRef(null);
 
   useEffect(() => { jRef.current = joiner; }, [joiner]);
+  useEffect(() => {
+    if (!contaLogada) return;
+    const j = { cog: user.cog, nome: user.nome || user.nome_site || user.cog };
+    setJoiner(j); jRef.current = j;
+    setIdSt('found'); setIdMsg(`✦ ${j.nome} · @${j.cog}`);
+    loadPedidos(j);
+  }, [contaLogada, user?.cog]);
   useEffect(() => { fxRef.current = fxVal; }, [fxVal]);
 
   const calcBRL = (jpy) => { const s=jpy+100,f=Math.round(s*.08),c=s+f,p=Math.round(c*.08); return (c+p)*fxVal; };
@@ -13675,7 +13722,7 @@ function MercariTab() {
     const jj=j||jRef.current; if(!jj) return;
     setPedLoad(true);
     try {
-      const {data}=await supabase.from('mercari_pedidos').select('*').eq('joiner_cog',jj.cog).order('created_at',{ascending:false});
+      const {data}=await supabase.from('mercari_pedidos').select(COLS_MERCARI).eq('joiner_cog',jj.cog).order('created_at',{ascending:false});
       setPedidos(Array.isArray(data)?data:[]);
     } catch { setPedidos([]); }
     setPedLoad(false);
@@ -13699,7 +13746,7 @@ function MercariTab() {
       try{
         const ext=fileComp.name.split('.').pop()||'jpg';
         const path=`${jRef.current.cog}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('mercari-comprovantes').upload(path, fileComp, { contentType: fileComp.type || 'application/octet-stream', upsert: false });
+        const { error: upErr } = await enviarArquivoSeguro("mercari-comprovantes", path, fileComp, { contentType: fileComp.type || 'application/octet-stream', upsert: false });
         if (!upErr) { const { data: pub } = supabase.storage.from('mercari-comprovantes').getPublicUrl(path); comp = pub.publicUrl; compOk = true; }
       }catch{ compOk=false; }
       if(!compOk){ setFormErr('Não foi possível enviar o comprovante. Tente novamente ou use "Não consigo anexar o comprovante".'); setSending(false); return; }
@@ -13880,6 +13927,9 @@ function MercariTab() {
             </div>
 
             <div className="mc-sec">Identificação</div>
+            {contaLogada ? (
+              <div className="mc-id-info">{idMsg}</div>
+            ) : (<>
             <div className="mc-id-field">
               <input
                 className={`mc-id-input${idSt==='found'?' found':idSt==='notfound'?' notfound':''}`}
@@ -13890,6 +13940,7 @@ function MercariTab() {
               <span className="mc-id-status">{idSt==='loading'?'⁳':idSt==='found'?'✓':''}</span>
             </div>
             <div className={`mc-id-info${idSt==='notfound'?' err':''}`}>{idMsg}</div>
+            </>)}
 
             <div style={{height:22}}/>
 
@@ -14107,7 +14158,7 @@ function AdminMercari({ pedidos = [], onUpdate }) {
                   </span>
                 )}
                 {p.comprovante_url && (
-                  <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer"
+                  <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize:10, color:"#4ecb71", fontFamily:"'DM Mono',monospace", fontWeight:700, textDecoration:"none", background:"rgba(78,203,113,.1)", border:"1px solid rgba(78,203,113,.25)", borderRadius:4, padding:"2px 8px" }}>
                     📎 comprovante
                   </a>
@@ -14184,11 +14235,11 @@ function AdminCadastros({ confirmacoes, onUpdate, preCadastros = [], onUpdatePre
     }
     await supabase.from("pre_cadastros").update({ status: "aprovado" }).eq("id", p.id);
     // Adiciona joiner na planilha (Dados + MASTERLIST)
-    fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "novo_joiner", token: "anticeg-pag-2026", nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }),
-    }).catch(() => {});
+    chamarPlanilha("novo_joiner", { nome: p.nome, twitter: "@" + p.cog, email: p.email || "" }, { admin: true }).then(res => {
+      const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Cadastro na planilha" });
+      if (msg) { console.error("planilha (novo_joiner):", res); alert(`Cadastro aprovado no site, mas a planilha precisa de atenção:\n\n${msg}`); }
+      else if (res?.bruto?.codigo_gerado === false) alert(`Cadastro adicionado à planilha, mas a linha de ${p.nome} ficou SEM código (NUM/ID). Confira a MASTERLIST.`);
+    });
     onUpdatePre(prev => prev.filter(x => x.id !== p.id));
     setAprovando(null);
   }
@@ -14628,8 +14679,6 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
                 })()}
                 {(() => {
                   const joinerInfo = (joiners || []).find(jn => jn.cog === j.cog);
-                  const itemRowsInd = j.itens.map(it => `<tr><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#F5F0E8">${it.nome_do_item}${it.ceg ? `<div style="font-size:10px;color:rgba(245,240,232,0.3);margin-top:2px">${it.ceg}</div>` : ""}</td><td style="padding:11px 0;border-bottom:1px solid #1e1e1e;text-align:right;white-space:nowrap;font-size:12px;color:#FF5C1A">R$&nbsp;${fmtBRL(it.pend)}</td></tr>`).join("");
-                  const corpo = joinerInfo?.email ? buildEmailHTML(j.nome, `<tr><td style="background:#111111;padding:20px 40px 8px"><p style="margin:0 0 18px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.6">Constam em seu portal os seguintes itens com pagamento em aberto:</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1e1e1e">${itemRowsInd}<tr><td colspan="2" style="padding:16px 0 8px;text-align:right"><div style="font-size:10px;color:rgba(245,240,232,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Total em aberto</div><div style="font-size:26px;font-weight:900;color:#BAFF39">R$&nbsp;${fmtBRL(total + totalMulta)}</div>${totalMulta > 0 ? `<div style="font-size:10px;color:rgba(255,92,26,0.7);margin-top:4px">R$&nbsp;${fmtBRL(total)} item + R$&nbsp;${fmtBRL(totalMulta)} multa</div>` : ""}</td></tr></table></td></tr>`) : null;
                   return (
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
                       <button onClick={e => { e.stopPropagation(); if (window.confirm(`Marcar TODOS os pagamentos pendentes de ${j.nome || j.cog} como pagos?`)) marcarTudoPago(j.cog, j.itens); }} disabled={PAGAMENTOS_SUSPENSO} title={PAGAMENTOS_SUSPENSO ? PAGAMENTOS_MANUAL_SUSPENSO_MSG : undefined} style={{ opacity: PAGAMENTOS_SUSPENSO ? .35 : 1,
@@ -14639,7 +14688,7 @@ function AdminPagamentos({ data, joiners, subtab, onUpdate }) {
                       }}>✓ Marcar tudo pago</button>
                       {joinerInfo?.email && (
                         <>
-                          <button onClick={e => { e.stopPropagation(); sendEmailJoiner(joinerInfo.email, j.nome, "Lembrete de pagamento pendente", corpo); }} style={{
+                          <button onClick={e => { e.stopPropagation(); notificarEmail("lembrete_pagamento", { joiner_cog: j.cog }, { admin: true }).then(() => alert("Lembrete enviado.")).catch(err => alert("Lembrete não enviado: " + err.message)); }} style={{
                             background:"none", border:"1px solid rgba(245,240,232,.12)",
                             color:"rgba(245,240,232,.62)", borderRadius:6, padding:"5px 12px",
                             fontSize:10, fontFamily:"'DM Mono',monospace", cursor:"pointer", letterSpacing:".05em"
@@ -14742,17 +14791,17 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
     enviarPushJoiner(claim.joiner_cog, `✓ Claim aprovado — ${claim.ceg}`, `${claim.nome_do_item} foi confirmado e adicionado à sua lista!`, "/disponiveis");
     const { data: mlItem } = await supabase.from("masterlist").select("id_linha").eq("id", claim.masterlist_id).maybeSingle();
     if (mlItem?.id_linha) {
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          acao: "aprovar_disponivel", token: "anticeg-pag-2026",
-          id_linha: mlItem.id_linha,
-          novo_nome: claim.joiner_nome,
-          novo_twitter: "@" + claim.joiner_cog,
-          vencimento: claim.vencimento || "",
-        }),
-      }).catch(() => {});
+      chamarPlanilha("aprovar_disponivel", {
+        id_linha: mlItem.id_linha, ceg: claim.ceg, nome_do_item: claim.nome_do_item,
+        novo_nome: claim.joiner_nome,
+        novo_twitter: "@" + claim.joiner_cog,
+        vencimento: claim.vencimento || "",
+      }, { admin: true }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "admin", contexto: "Claim" });
+        if (msg) { console.error("planilha (aprovar_disponivel):", res); alert(`Claim aprovado no site, mas a planilha precisa de atenção:\n\n${msg}\n\nAtualize o dono na planilha à mão; sem isso a próxima sincronização pode desfazer a aprovação.`); }
+      });
+    } else {
+      alert(`Claim aprovado no site. "${claim.nome_do_item}" não tem código (ID), então a planilha não pôde ser atualizada automaticamente. Se este item existe na planilha, atualize o dono lá à mão; sem isso a próxima sincronização pode desfazer a aprovação.`);
     }
     updateClaims(prev => prev.filter(c => c.id !== claim.id));
     setItens(prev => prev.filter(i => i.id !== claim.masterlist_id));
@@ -15129,7 +15178,7 @@ function ClaimAoVivo() {
   async function fetchDados() {
     const { data: itens } = await supabase.from("masterlist").select("id, nome_do_item, na_loja").eq("ceg","CLAIM").order("nome_do_item");
     const { data: fd } = await supabase.from("item_fotos").select("nome_do_item, foto_url").eq("ceg","CLAIM").eq("ordem",-1);
-    const { data: cd } = await supabase.from("claims").select("masterlist_id, joiner_nome, status, created_at").eq("ceg","CLAIM").neq("status","rejeitado");
+    const cd = await quadroDeClaims();
     const mapaFotos = {};
     (fd||[]).forEach(f => { mapaFotos[f.nome_do_item] = f.foto_url; });
     setDados(itens || []);
@@ -15265,6 +15314,14 @@ function ClaimGuestPage({ onLogin }) {
     setLoading(true); setErro("");
     const isEmail = val.indexOf("@") > 0;
     let joiner = null;
+    if (JOINERS_AUTH_ATIVO) {
+      if (isEmail) { setErro("Digite o seu @. O e-mail é usado só para ativar a conta."); setLoading(false); return; }
+      joiner = await buscarAcessoSimples(val);
+      if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
+      onLogin(joiner, []);
+      setLoading(false);
+      return;
+    }
     if (isEmail) {
       const { data } = await supabase.from("joiners").select("*").eq("email", val.toLowerCase()).limit(10);
       joiner = escolherJoiner(data, val);
@@ -15495,6 +15552,8 @@ async function buscarPaginado(montar) {
   }
   return todas;
 }
+// quadro dos sets: com o login novo a leitura é pela visão (sem nome real); hoje, pela tabela
+const TABELA_RESERVAS = JOINERS_AUTH_ATIVO ? "claim_reservas_quadro" : "claim_reservas";
 
 function ClaimHistorico() {
   const mono = "'DM Mono',monospace";
@@ -15517,7 +15576,7 @@ function ClaimHistorico() {
       setSets(setsMap);
       const setIds = (setsData || []).map(s => s.id);
       if (!setIds.length) return;
-      const resData = await buscarPaginado(() => supabase.from("claim_reservas")
+      const resData = await buscarPaginado(() => supabase.from(TABELA_RESERVAS)
         .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       const resMap = {};
       (resData || []).forEach(r => { if (!resMap[r.set_id]) resMap[r.set_id] = []; resMap[r.set_id].push(r); });
@@ -15623,11 +15682,11 @@ function ClaimScoreboard() {
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const resData = await buscarPaginado(() => supabase.from("claim_reservas").select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
+      const resData = await buscarPaginado(() => supabase.from(TABELA_RESERVAS).select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       (resData || []).forEach(r => { if (!newRes[r.set_id]) newRes[r.set_id] = []; newRes[r.set_id].push(r); });
     }
     setReservas(newRes);
-    const sbData = await buscarPaginado(() => supabase.from("claim_reservas").select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at").order("id"));
+    const sbData = await buscarPaginado(() => supabase.from(TABELA_RESERVAS).select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado").order("created_at").order("id"));
     const sbMap = {};
     (sbData || []).forEach(r => { if (!sbMap[r.evento_id]) sbMap[r.evento_id] = []; sbMap[r.evento_id].push(r); });
     setStandby(sbMap);
@@ -15792,7 +15851,7 @@ function ClaimPublicoPage({ user }) {
     const setIds = (setsData || []).map(s => s.id);
     const newRes = {};
     if (setIds.length) {
-      const resData = await buscarPaginado(() => supabase.from("claim_reservas")
+      const resData = await buscarPaginado(() => supabase.from(TABELA_RESERVAS)
         .select("*").in("set_id", setIds).neq("status","cancelado").order("created_at").order("id"));
       (resData || []).forEach(r => {
         if (!newRes[r.set_id]) newRes[r.set_id] = [];
@@ -15800,7 +15859,7 @@ function ClaimPublicoPage({ user }) {
       });
     }
     setReservas(newRes);
-    const { data: sbData } = await supabase.from("claim_reservas")
+    const { data: sbData } = await supabase.from(TABELA_RESERVAS)
       .select("*").in("evento_id", evIds).is("set_id", null).neq("status","cancelado")
       .order("created_at");
     const sbMap = {};
@@ -15812,42 +15871,56 @@ function ClaimPublicoPage({ user }) {
 
     if (!fazAutoAbrir) return;
 
-    // Auto-abrir set se todos fecharam e ainda tem standby
-    let abriuAlgum = false;
-    for (const ev of evData) {
-      if (ev.status !== "ativo") continue;
-      if (new Date() < new Date(ev.abertura)) continue;
-      if (ev.sem_novos_sets) continue; // admin parou a abertura de novos sets
-
-      const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
-      if (evSets.length >= 10) continue; // limite máximo de sets
-      if (evSets.some(s => s.status === "aberto")) continue;
-
-      const sbEvento = (sbData || []).filter(r => r.evento_id === ev.id);
-      if (!sbEvento.length) continue;
-
-      // Re-verifica no banco para evitar race condition entre clientes
-      const { data: aindaAberto } = await supabase.from("claim_sets")
-        .select("id").eq("evento_id", ev.id).eq("status","aberto").limit(1);
-      if (aindaAberto?.length) continue;
-
-      const prox = evSets.length ? Math.max(...evSets.map(s => s.numero)) + 1 : 1;
-      const { data: novoSet } = await supabase.from("claim_sets")
-        .insert([{ evento_id: ev.id, numero: prox, status: "aberto" }]).select().single();
-      if (!novoSet) continue;
-
-      abriuAlgum = true;
-      const membrosPromovidos = new Set();
-      for (const r of sbEvento) {
-        if (membrosPromovidos.has(r.membro)) continue;
-        if (!membrosDe(ev).includes(r.membro)) continue;
-        await supabase.from("claim_reservas")
-          .update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
-        membrosPromovidos.add(r.membro);
+    if (JOINERS_AUTH_ATIVO) {
+      // O servidor fecha sets completos e abre o próximo set quando há standby (claim_organizar); aqui só pedimos que ele confira.
+      let mudou = false;
+      for (const ev of evData) {
+        if (new Date() < new Date(ev.abertura) || ev.sem_novos_sets) continue;
+        const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
+        if (evSets.some(s => s.status === "aberto")) continue;
+        if (!(sbData || []).some(r => r.evento_id === ev.id)) continue;
+        const { data: org } = await supabase.rpc("claim_organizar", { p_evento: ev.id });
+        if (org?.ok && org.sets_abertos > 0) mudou = true;
       }
-    }
+      if (mudou) await fetchTudo(false);
+    } else {
+      // Auto-abrir set se todos fecharam e ainda tem standby
+      let abriuAlgum = false;
+      for (const ev of evData) {
+        if (ev.status !== "ativo") continue;
+        if (new Date() < new Date(ev.abertura)) continue;
+        if (ev.sem_novos_sets) continue; // admin parou a abertura de novos sets
 
-    if (abriuAlgum) await fetchTudo(false);
+        const evSets = (setsData || []).filter(s => s.evento_id === ev.id && s.status !== "cancelado");
+        if (evSets.length >= 10) continue; // limite máximo de sets
+        if (evSets.some(s => s.status === "aberto")) continue;
+
+        const sbEvento = (sbData || []).filter(r => r.evento_id === ev.id);
+        if (!sbEvento.length) continue;
+
+        // Re-verifica no banco para evitar race condition entre clientes
+        const { data: aindaAberto } = await supabase.from("claim_sets")
+          .select("id").eq("evento_id", ev.id).eq("status","aberto").limit(1);
+        if (aindaAberto?.length) continue;
+
+        const prox = evSets.length ? Math.max(...evSets.map(s => s.numero)) + 1 : 1;
+        const { data: novoSet } = await supabase.from("claim_sets")
+          .insert([{ evento_id: ev.id, numero: prox, status: "aberto" }]).select().single();
+        if (!novoSet) continue;
+
+        abriuAlgum = true;
+        const membrosPromovidos = new Set();
+        for (const r of sbEvento) {
+          if (membrosPromovidos.has(r.membro)) continue;
+          if (!membrosDe(ev).includes(r.membro)) continue;
+          await supabase.from("claim_reservas")
+            .update({ set_id: novoSet.id, status: "pendente" }).eq("id", r.id);
+          membrosPromovidos.add(r.membro);
+        }
+      }
+
+      if (abriuAlgum) await fetchTudo(false);
+    }
   }
 
   useEffect(() => {
@@ -15866,6 +15939,65 @@ function ClaimPublicoPage({ user }) {
     setClaimErro(null);
   }
 
+  // As regras do claim (conta ativada, bloqueio, vaga livre, standby, limite por joiner, OT8 e fechamento de set) rodam no servidor: claim_enviar / claim_organizar.
+  const MOTIVOS_CLAIM = {
+    sem_conta: "Ative a sua conta para fazer claim.",
+    bloqueada: "Sua conta está bloqueada por pagamentos em atraso.",
+    evento_fechado: "Este evento não está aberto para claims agora.",
+    pedido_vazio: "Escolha ao menos um membro.",
+    pedido_invalido: "Escolha ao menos um membro.",
+    sem_novos_sets: "Não abriremos mais sets neste evento — o OT8 exclusivo não está disponível. Escolha membros dos sets que ainda estão abertos.",
+    ja_tem_claims: "Você já tem membros claimados. Cancele antes de fazer OT8.",
+    sem_vaga: "Não há mais vagas: os sets em aberto já foram preenchidos e não abriremos novos sets neste evento.",
+    ja_tem: "Você já fez claim desses membros.",
+  };
+
+  async function enviarClaims(eventoId, qtdOverride) {
+    try {
+      await enviarClaimsInterno(eventoId, qtdOverride);
+    } catch (e) {
+      console.error("enviarClaims", e);
+      setClaimErro("Não foi possível enviar agora. Verifique sua conexão e tente novamente." + (e?.code ? " (cód. " + e.code + ")" : ""));
+      fetchTudo(false).catch(() => {});
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function enviarClaimsInterno(eventoId, qtdOverride) {
+    if (!JOINERS_AUTH_ATIVO) return enviarClaimsInternoLegado(eventoId, qtdOverride);
+    if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
+    const ev = (eventos || []).find(e => e.id === eventoId);
+    if (!ev) return;
+    const qtds = qtdOverride || quantidades[eventoId] || {};
+    const pedidos = Object.fromEntries(Object.entries(qtds).filter(([, q]) => q > 0));
+    if (!Object.keys(pedidos).length) return;
+    setEnviando(true); setClaimErro(null);
+    const { data, error } = await supabase.rpc("claim_enviar", { p_evento: eventoId, p_pedidos: pedidos });
+    if (error || !data) throw error || new Error("sem resposta do servidor");
+    if (!data.ok) {
+      if (data.motivo === "bloqueada") setIsBloqueada(true);
+      setClaimErro(MOTIVOS_CLAIM[data.motivo] || "Não foi possível registrar seu claim.");
+      setEnviando(false); fetchTudo(false); return;
+    }
+    setQuantidades(prev => ({ ...prev, [eventoId]: {} }));
+    if (data.ot8) {
+      setClaimOk("Claim OT8 enviado! Você tem um set exclusivo ✓");
+    } else {
+      const nomesSb = [...new Set(data.standby || [])];
+      const nomesFalha = [...new Set(data.falhas || [])];
+      const todosStandby = nomesSb.length > 0 && nomesSb.length === data.gravados;
+      setClaimOk(
+        nomesFalha.length ? "Claim enviado, exceto: " + nomesFalha.join(", ") + " (já estão na sua lista)."
+        : nomesSb.length ? "Claim enviado! " + nomesSb.join(", ") + " já tinha(m) sido pego(s) e você entrou no standby automático."
+        : todosStandby ? "Você está no standby! Será notificada se uma vaga abrir." : "Claim enviado com sucesso!");
+    }
+    setTimeout(() => setClaimOk(null), data.ot8 ? 5000 : 4000);
+    setEnviando(false);
+    fetchTudo();
+  }
+
+  // ── caminho de HOJE (login novo desligado): as regras rodam no navegador. Sai quando o lançamento estiver concluído. ──
   async function verificarFechamento(eventoId, setId) {
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
@@ -15931,19 +16063,7 @@ function ClaimPublicoPage({ user }) {
     return { sets: setsData || [], reservas: resMap, standby: sbData || [] };
   }
 
-  async function enviarClaims(eventoId, qtdOverride) {
-    try {
-      await enviarClaimsInterno(eventoId, qtdOverride);
-    } catch (e) {
-      console.error("enviarClaims", e);
-      setClaimErro("Não foi possível enviar agora. Verifique sua conexão e tente novamente." + (e?.code ? " (cód. " + e.code + ")" : ""));
-      fetchTudo(false).catch(() => {});
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  async function enviarClaimsInterno(eventoId, qtdOverride) {
+  async function enviarClaimsInternoLegado(eventoId, qtdOverride) {
     if (isBloqueada) { setClaimErro("Sua conta está bloqueada por pagamentos em atraso."); return; }
     const ev = (eventos || []).find(e => e.id === eventoId);
     if (!ev) return;
@@ -16644,7 +16764,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
     setRepasses(pub || []);
     const cogsAtivos = [...new Set((pub || []).map(r => r.joiner_cog).filter(Boolean))];
     if (cogsAtivos.length) {
-      const { data: js } = await supabase.from("joiners").select("cog, foto_perfil").in("cog", cogsAtivos);
+      const js = await fotosDeJoiners(cogsAtivos);
       const mapa = {};
       (js || []).forEach(j => { mapa[(j.cog || "").toLowerCase()] = j.foto_perfil; });
       setPerfis(mapa);
@@ -16722,8 +16842,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
     setTransferindo(null);
     setBuscaJoiner(""); setJoinerSelecionado(null);
     if (joiners.length === 0) {
-      const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
-      setJoiners(data || []);
+      setJoiners(await listarJoinersPublicos());
     }
   }
 
@@ -16738,8 +16857,7 @@ function LojinhaRepasses({ user, handle = null, onHandle = null }) {
     setTransferindo({ repasseId: repasse.id, masterlistId: repasse.masterlist_id, repasse });
     setBuscaJoiner(""); setJoinerSelecionado(null);
     if (joiners.length === 0) {
-      const { data } = await supabase.from("joiners").select("cog, nome, twitter").order("nome");
-      setJoiners(data || []);
+      setJoiners(await listarJoinersPublicos());
     }
   }
 
@@ -17410,9 +17528,7 @@ function DisponiveisTab({ user }) {
     supabase.from("claims").select("id, ceg, nome_do_item, valor, status, vencimento, created_at")
       .eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => setMeusClaims(data || []));
-    supabase.from("claims").select("id, ceg, nome_do_item, valor, created_at")
-      .eq("status", "aprovado").order("created_at", { ascending: false })
-      .then(({ data }) => setVendidos(data || []));
+    claimsVendidos().then(data => setVendidos(data || []));
   }
 
   useEffect(() => { carregarItens(); }, [user.cog]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -17984,17 +18100,15 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
         email_novo:   emailNovo,
       }]);
       // Atualiza planilha automaticamente
-      fetch("https://script.google.com/macros/s/AKfycbyqioOQMPByiLOI0TgAUBkqVLI5U1U8kwGJAV4MO-fVBp4OmXyBxUk9BtUraoEHAVZReA/exec", {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          acao: "atualizar_joiner", token: "anticeg-pag-2026",
-          twitter_antigo: user.twitter || "",
-          twitter_novo: twitterNovo || "",
-          email_novo: emailNovo || "",
-          nome_novo: nome.trim(),
-        }),
-      }).catch(() => {});
+      chamarPlanilha("atualizar_joiner", {
+        twitter_antigo: user.twitter || "",
+        twitter_novo: twitterNovo || "",
+        email_novo: emailNovo || "",
+        nome_novo: nome.trim(),
+      }).then(res => {
+        const msg = mensagemPlanilha(res, { perfil: "joiner" });
+        if (msg) { console.error("planilha (atualizar_joiner):", res); alert("Seus dados foram atualizados no site.\n\n" + msg); }
+      });
     }
     const updated = { ...user, nome: nome.trim(), whatsapp: whatsapp.trim() || null, twitter: twitterNovo, email: emailNovo, confirmado: true };
     localStorage.setItem("anticeg_user_v2", JSON.stringify(updated));
@@ -18051,8 +18165,7 @@ function CegPage({ ceg, isOwner = false, logoUrl = null }) {
   const [viewMode,   setViewMode]   = useState("tabela");
 
   useEffect(() => {
-    supabase.from("masterlist").select("*").eq("ceg", ceg).not("nome", "ilike", "disponivel")
-      .then(({ data }) => setItens(data || []));
+    itensDoCeg(ceg).then(setItens);
     supabase.from("item_fotos").select("*").eq("ceg", ceg).order("ordem").order("id")
       .then(({ data }) => setCategorias(data || []));
   }, [ceg]);
@@ -20152,8 +20265,8 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
     const codigo = grupoInput.trim().toUpperCase();
     if (!codigo) return;
     setGrupoLoading(true); setGrupoErr("");
-    const { data, error } = await supabase.from("grupos_envio").select("*").eq("codigo", codigo).single();
-    if (error || !data) {
+    const data = await consultarGrupoEnvio(codigo);
+    if (!data) {
       setGrupoErr("Código não encontrado. Confira com a host do grupo.");
       setGrupoLoading(false); return;
     }
@@ -20182,7 +20295,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
   }
 
   useEffect(() => {
-    supabase.from("envio_solicitacoes").select("*").eq("joiner_cog", user.cog).order("created_at", { ascending: false })
+    supabase.from("envio_solicitacoes").select(COLS_ENVIO).eq("joiner_cog", user.cog).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setMeuEnvios(data); });
   }, [user.cog]);
 
@@ -20395,6 +20508,15 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
           }
 
           async function solicitarEnvio() {
+            if (!JOINERS_AUTH_ATIVO) return solicitarEnvioLegado();
+            setEnvioSolicitando(true);
+            // o servidor escolhe a rodada e a posição (e fecha a rodada na 7ª pessoa), sob trava: envio_entrar_round
+            const { data, error } = await supabase.rpc("envio_entrar_round", { p_itens: itensManual.trim() || null });
+            setEnvioRequest(!error && data?.ok ? data.request : null);
+            setEnvioSolicitando(false);
+          }
+
+          async function solicitarEnvioLegado() {
             setEnvioSolicitando(true);
             const { data: openRounds } = await supabase.from("envio_rounds")
               .select("id, numero").eq("status", "aberto").order("created_at", { ascending: true }).limit(1);
@@ -21184,10 +21306,10 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
                                           </div>
                                         </div>
                                         {/* Upload comprovante */}
-                                        {s.comprovante_url ? (
+                                        {(s.comprovante_url || s.tem_comprovante) ? (
                                           <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, background:"rgba(186,255,57,.05)", border:"1px solid rgba(186,255,57,.18)", borderRadius:7, padding:"10px 12px" }}>
                                             <span style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace" }}>✓ Comprovante enviado</span>
-                                            <a href={s.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver →</a>
+                                            {s.comprovante_url && <a href={s.comprovante_url} onClick={e => abrirComprovante(e, s.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"rgba(245,240,232,.4)", fontFamily:"'DM Mono',monospace", textDecoration:"underline" }}>ver →</a>}
                                           </div>
                                         ) : (() => {
                                           const cf = comprovFiles[s.id];
@@ -21212,7 +21334,7 @@ function EnvioTab({ user, proximoEnvio = "", envioAberturaInicio = "", envioAber
                                                     setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: true } }));
                                                     const ext = cf.file.name.split(".").pop();
                                                     const path = `envio/${s.id}/comprovante_${Date.now()}.${ext}`;
-                                                    const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, cf.file, { upsert: false });
+                                                    const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, cf.file, { upsert: false });
                                                     if (upErr) { alert("Erro no upload: " + upErr.message); setComprovFiles(prev => ({ ...prev, [s.id]: { ...cf, uploading: false } })); return; }
                                                     const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
                                                     await supabase.from("envio_solicitacoes").update({ comprovante_url: publicUrl }).eq("id", s.id);
@@ -21685,7 +21807,7 @@ function PopupSkzooEaawPage() {
       const qtd = qtds[`${item.n}:_`] || 0;
       return qtd > 0 ? [{ n: item.n, nome: item.nome, qtd }] : [];
     });
-    const { data, error } = await supabase.from("pedidos_skzoo_rio").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_skzoo_rio", {
       cog: cog.trim().replace(/^@/, ""),
       nome: nomeJoiner.trim(),
       itens: itensPedido,
@@ -21693,7 +21815,7 @@ function PopupSkzooEaawPage() {
       pagamento: "imediato",
       total_reais: totalReais,
       status: "pendente",
-    }]).select().single();
+    }, { retornar: true });
     setEnviando(false);
     if (!error && data) { setPedidoId(data.id); setEtapa("sucesso"); }
   }
@@ -22157,10 +22279,10 @@ function PopupThisAndThatPage() {
     if (tem2 && agora > POPUP_WEEKS[1].deadline) { setErro("Week 02 já encerrada."); setStatus("idle"); return; }
     const semanas = [tem1?"01":null,tem2?"02":null].filter(Boolean).join(",");
     const itens   = [...buildItemsFromQtds(qtds1,"01"), ...buildItemsFromQtds(qtds2,"02")];
-    const { data, error } = await supabase.from("pedidos_popup").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_popup", {
       claim:claim.trim()||null, nome:nome.trim(), email:email.trim(),
       social:social.trim()||null, week:semanas, itens, status:"pendente",
-    }]).select().single();
+    }, { retornar: true });
     if (error) { setStatus("idle"); setErro("Erro: "+(error.message||JSON.stringify(error))); return; }
     setPedidoId(data.id); setStep("sucesso");
   }
@@ -22714,20 +22836,20 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
     }
 
     const statusPedido = pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao_whatsapp";
-    const { data, error } = await supabase.from(cfg.tabela).insert([{
+    const { data, error } = await criarPedidoLoja(cfg.tabela, {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       capa_a: qtds.a, capa_b: qtds.b, capa_c: qtds.c,
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: statusPedido,
-    }]).select().single();
+    }, { retornar: true });
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
@@ -22961,7 +23083,7 @@ function AdminWMag({ onCountChange, cfg = WMAG_HJ_CFG }) {
                   {p.qtd_total} un · R${Number(p.valor_total).toFixed(2).replace(".",",")}
                 </div>
                 {p.comprovante_url && (
-                  <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>ver comprovante ↗</a>
+                  <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.7)", marginTop:2 }}>ver comprovante ↗</a>
                 )}
               </div>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
@@ -22981,9 +23103,11 @@ function AdminWMag({ onCountChange, cfg = WMAG_HJ_CFG }) {
   );
 }
 
-function ComprovanteThumb({ url }) {
+function ComprovanteThumb({ url: urlOriginal }) {
+  const url = useUrlComprovante(urlOriginal);
   const [aberto, setAberto] = useState(false);
   const mono = "'DM Mono',monospace";
+  if (!url) return null;
   return (
     <div style={{ marginTop:6 }}>
       <img
@@ -25555,7 +25679,7 @@ function LightstickForm({ onVoltar }) {
         const slug = contato.replace(/[^a-z0-9]/gi, '_');
         const ext = comprovante.name.split('.').pop() || 'jpg';
         const path = `lightstick/${slug}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, {
           contentType: comprovante.type || 'application/octet-stream', upsert: false,
         });
         if (!upErr) {
@@ -25564,10 +25688,10 @@ function LightstickForm({ onVoltar }) {
         }
       } catch { /* salva mesmo sem comprovante */ }
     }
-    const { error } = await supabase.from('pedidos_lightstick').insert([{
+    const { error } = await criarPedidoLoja('pedidos_lightstick', {
       nome, contato, joiner_cog: j?.cog || null,
       metodo_pagamento: metodo, comprovante_url: comprovanteUrl, status: 'aguardando',
-    }]);
+    });
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
   };
@@ -25790,7 +25914,7 @@ function PopcornSleeveForm({ onVoltar }) {
         const slug = contato.replace(/[^a-z0-9]/gi, '_');
         const ext = comprovante.name.split('.').pop() || 'jpg';
         const path = `popcorn-sleeve/${slug}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, {
           contentType: comprovante.type || 'application/octet-stream', upsert: false,
         });
         if (upErr) throw upErr;
@@ -25800,11 +25924,11 @@ function PopcornSleeveForm({ onVoltar }) {
         setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
       }
     }
-    const { error } = await supabase.from('pedidos_popcorn_sleeve').insert([{
+    const { error } = await criarPedidoLoja('pedidos_popcorn_sleeve', {
       nome, contato, joiner_cog: j?.cog || null,
       comprovante_url: comprovanteUrl, status: 'aguardando',
       metodo_pagamento: metodo, quantidade, valor_total: valorTotal,
-    }]);
+    });
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
   };
@@ -26039,7 +26163,7 @@ function AdminPopcornSleeve({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
                     <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 1}x sleeve</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "cartao" ? "💳 Cartão" : "⚡ PIX"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 </div>
@@ -26166,7 +26290,7 @@ function SingbaForm({ onVoltar }) {
         const slug = contato.replace(/[^a-z0-9]/gi, '_');
         const ext = comprovante.name.split('.').pop() || 'jpg';
         const path = `singba/${slug}_${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('comprovantes').upload(path, comprovante, {
+        const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, {
           contentType: comprovante.type || 'application/octet-stream', upsert: false,
         });
         if (upErr) throw upErr;
@@ -26176,11 +26300,11 @@ function SingbaForm({ onVoltar }) {
         setErr('Erro ao enviar o comprovante. Tente novamente.'); setSending(false); return;
       }
     }
-    const { error } = await supabase.from('pedidos_singba').insert([{
+    const { error } = await criarPedidoLoja('pedidos_singba', {
       nome, contato, joiner_cog: j?.cog || null,
       comprovante_url: comprovanteUrl, status: 'aguardando',
       metodo_pagamento: metodo, itens, quantidade, valor_total: valorTotal,
-    }]);
+    });
     if (error) { setErr('Erro ao registrar pedido. Tente novamente.'); setSending(false); return; }
     setDone(true); setSending(false);
   };
@@ -26470,7 +26594,7 @@ function AdminSingba({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>{fmtBRL(valorPedido(p))}</span>
                     <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>{p.quantidade || 0} pacotes</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "cartao" ? "💳 Cartão" : "⚡ PIX"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 </div>
@@ -27059,7 +27183,7 @@ function AdminRevista({ onCountChange }) {
                     <span style={{ fontFamily:mono, fontSize:11 }}>{p.qtd_total}x unidade{p.qtd_total>1?"s":""}</span>
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R${Number(p.valor_total||0).toFixed(2).replace(".",",")}</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.forma_pagamento === "pix" ? "PIX" : "Cartão"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                   </div>
                 </div>
                 {/* Lado direito — status + ações */}
@@ -27203,7 +27327,7 @@ function AdminLightstick({ onCountChange }) {
                   <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4, flexWrap:"wrap" }}>
                     <span style={{ fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--laranja)" }}>R$ 450,00</span>
                     <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>{p.metodo_pagamento === "pix" ? "⚡ PIX" : "💳 Cartão"}</span>
-                    {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
+                    {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily:mono, fontSize:10, color:"var(--laranja)" }}>ver comprovante</a>}
                     <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)" }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 </div>
@@ -27309,7 +27433,7 @@ function RevistaBazaarInPage({ onVoltar }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `bazaar-in/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
@@ -27321,14 +27445,14 @@ function RevistaBazaarInPage({ onVoltar }) {
       ...Object.fromEntries(BAZAAR_IN_TODOS.map(p => [p.id, m.qtds[p.id]||0])),
       valor: BAZAAR_IN_TODOS.reduce((s, p) => s + p.preco*(m.qtds[p.id]||0), 0),
     })) : null;
-    const { data, error } = await supabase.from("pedidos_bazaar_in").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_bazaar_in", {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       capa_a: qtds.capaA, capa_b: qtds.capaB, capa_c: qtds.capaC,
       caixa_f: qtds.caixaF, caixa_g: qtds.caixaG,
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: statusPedido, membros_grupo: membrosPayload,
-    }]).select().single();
+    }, { retornar: true });
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
@@ -27602,18 +27726,18 @@ function RevistaFormPage() {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `revista/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
     }
 
-    const { data, error } = await supabase.from("pedidos_revista").insert([{
+    const { data, error } = await criarPedidoLoja("pedidos_revista", {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       versao_regular: qtd, versao_guys: 0, qtd_total: qtd,
       valor_total: total, forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: pagamento === "pix" ? "aguardando" : "cartao_whatsapp",
-    }]).select().single();
+    }, { retornar: true });
 
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(data.id);
@@ -27767,10 +27891,20 @@ function RevistaFormPage() {
 }
 
 export default function App() {
+  return (
+    <>
+      <AppPrincipal />
+      {JOINERS_AUTH_ATIVO && <RecuperacaoSenhaGate />}
+    </>
+  );
+}
+
+function AppPrincipal() {
   const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
     try {
       if (localStorage.getItem("anticeg_session_v") !== SESSION_VERSION) {
+        try { const antigo = JSON.parse(localStorage.getItem("anticeg_user_v2")); if (antigo && isAdminUser(antigo)) { localStorage.setItem("anticeg_session_v", SESSION_VERSION); return antigo; } } catch { /* sessão ilegível: segue o fluxo normal */ }
         localStorage.removeItem("anticeg_user_v2");
         localStorage.removeItem("anticeg_session_at_v2");
         localStorage.setItem("anticeg_session_v", SESSION_VERSION);
@@ -27880,7 +28014,7 @@ export default function App() {
       .then(({ data }) => { if (data) setCalEventos(data); });
     // Atualiza dados do joiner em cache (foto, nome, etc.)
     const cached = (() => { try { return JSON.parse(localStorage.getItem("anticeg_user_v2")); } catch { return null; } })();
-    if (cached?.cog && !cached?.guest) {
+    if (cached?.cog && !cached?.guest && !JOINERS_AUTH_ATIVO) {
       supabase.from("joiners").select("*").eq("cog", cached.cog).single()
         .then(({ data }) => {
           if (data) {
@@ -27945,13 +28079,11 @@ export default function App() {
   }
 
   async function fetchOnlineUsers() {
-    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data } = await supabase.from("joiners").select("cog, nome, foto_perfil").gte("last_seen", since);
-    setOnlineUsers(data || []);
+    setOnlineUsers(await joinersOnline(10));
   }
 
   useEffect(() => {
-    if (user && !user.guest && !user.pre_cadastro) {
+    if (user && !user.guest && !user.pre_cadastro && !(JOINERS_AUTH_ATIVO && user.acesso_simples)) {
       updateLastSeen(user);
       fetchOnlineUsers();
       const iv = setInterval(() => { updateLastSeen(user); fetchOnlineUsers(); }, 5 * 60 * 1000);
@@ -27988,13 +28120,24 @@ export default function App() {
 
   // Avisos: ao restaurar sessão, a cada 2 min e ao voltar para a aba
   useEffect(() => {
-    if (!user || user.guest || user.pre_cadastro) return;
+    if (!user || user.guest || user.pre_cadastro || (JOINERS_AUTH_ATIVO && user.acesso_simples)) return;
     carregarAvisos(user);
     const iv = setInterval(() => carregarAvisos(user), 2 * 60 * 1000);
     const onVis = () => { if (document.visibilityState === "visible") carregarAvisos(user); };
     document.addEventListener("visibilitychange", onVis);
     return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
-  }, [user?.cog]);
+  }, [user?.cog, user?.acesso_simples]);
+
+  // Login completo (conta ativada + senha): troca a identidade mínima do acesso simples pelos dados da PRÓPRIA joiner, lidos com a conta
+  async function carregarPrivadosDaConta() {
+    if (!JOINERS_AUTH_ATIVO) return;
+    const r = await carregarDadosPrivados();
+    if (!r) return;
+    const completo = { ...r.joiner, acesso_simples: false };
+    localStorage.setItem("anticeg_user_v2", JSON.stringify(completo));
+    setUser(completo);
+    setItens(r.itens);
+  }
 
   async function handleLogin(u, itensData) {
     localStorage.setItem("anticeg_user_v2", JSON.stringify(u));
@@ -28017,11 +28160,12 @@ export default function App() {
       if (isMobile && !isStandalone && !localStorage.getItem("anticeg_a2hs_asked")) {
         setTimeout(() => setShowA2HS(true), 2000);
       }
-      carregarAvisos(u);
+      if (!(JOINERS_AUTH_ATIVO && u.acesso_simples)) carregarAvisos(u);
     }
   }
 
   function handleLogout() {
+    if (JOINERS_AUTH_ATIVO) supabase.auth.signOut({ scope: "local" }).catch(() => {});
     localStorage.removeItem("anticeg_user_v2");
     setUser(null);
     setItens([]);
@@ -28031,6 +28175,7 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (JOINERS_AUTH_ATIVO && user && (user.acesso_simples || user.guest)) return;   // só com @ (ou visitante): nenhum dado de itens é buscado; a conta completa busca depois do login
     if (user && user.cog) {
       supabase.from("masterlist").select("*").eq("cog", user.cog).then(({ data }) => {
         setItens(data || []);
@@ -28044,7 +28189,7 @@ export default function App() {
 
   // ── detecta badges novos ao abrir o site (qualquer aba, não só Meu Perfil) ──
   useEffect(() => {
-    if (!user || user.guest || !user.cog) return;
+    if (!user || user.guest || !user.cog || (JOINERS_AUTH_ATIVO && user.acesso_simples)) return;
     let cancelled = false;
     (async () => {
       const [
@@ -28079,7 +28224,7 @@ export default function App() {
       }
     })();
     return () => { cancelled = true; };
-  }, [user?.cog, user?.guest]);
+  }, [user?.cog, user?.guest, user?.acesso_simples]);
 
   function handleVerCegs() {
     setUser({ guest: true });
@@ -28092,7 +28237,7 @@ export default function App() {
   if (window.location.pathname === "/tabela-stray-kids") return <TabelaStrayKids />;
   if (window.location.pathname === "/this-and-that") return <ThisAndThatGallery />;
 
-  if (!user && parseUrlParts().tab === "mercari") {
+  if (!user && !JOINERS_AUTH_ATIVO && parseUrlParts().tab === "mercari") {
     return (
       <div style={{ background:"#131310", minHeight:"100vh" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", background:"#0D0D0D", borderBottom:"1px solid #2a2a26" }}>
@@ -28103,22 +28248,22 @@ export default function App() {
       </div>
     );
   }
-  if (window.location.pathname === "/revista") return <RevistaFormPage />;
-  if (window.location.pathname === "/prevenda/bazaar") return <RevistaBazaarInPage onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/prevenda/popup-skzoo") return <PopupSkzooEaawPage />;
-  if (window.location.pathname === "/prevenda/lightstick") return <LightstickForm onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/prevenda/singba") return <SingbaForm onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/prevenda/popcorn-sleeve") return <PopcornSleeveForm onVoltar={() => window.location.href = "/"} />;
-  if (window.location.pathname === "/wmag-hyunjin") return <WMagFormPage />;
-  if (window.location.pathname === "/wmag-leeknow") return <WMagFormPage cfg={WMAG_LK_CFG} />;
-  if (window.location.pathname === "/dazed-seungmin") return <WMagFormPage cfg={DAZED_SM_CFG} />;
-  if (window.location.pathname === "/esquire-hyunjin") return <WMagFormPage cfg={ESQUIRE_HJ_CFG} />;
-  if (window.location.pathname === "/dazed-han") return <WMagFormPage cfg={DAZED_HAN_CFG} />;
-  if (window.location.pathname === "/smolmerch") return <SmolMerchFormPage pixKey={PIX_KEY} />;
-  if (window.location.pathname === "/dicon-origin") return <DiconOriginFormPage pixKey={PIX_KEY} />;
-  if (window.location.pathname === "/promo-murce-50") return <SmolMerchFormPage pixKey={PIX_KEY} cfg={PROMO_MURCE_50_CFG} produtos={PROMO_MURCE_50_PRODUTOS} fotoDe={fotoPm} />;
-  if (window.location.pathname === "/murce-itens" && !user) return <SmolMerchFormPage pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS_ABERTOS} fotoDe={fotoPc} />;
-  if (window.location.pathname === "/popup-this-that") return <PopupThisAndThatPage />;
+  if (window.location.pathname === "/revista") return <ExigeContaAtiva><RevistaFormPage /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/bazaar") return <ExigeContaAtiva><RevistaBazaarInPage onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/popup-skzoo") return <ExigeContaAtiva><PopupSkzooEaawPage /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/lightstick") return <ExigeContaAtiva><LightstickForm onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/singba") return <ExigeContaAtiva><SingbaForm onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/prevenda/popcorn-sleeve") return <ExigeContaAtiva><PopcornSleeveForm onVoltar={() => window.location.href = "/"} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/wmag-hyunjin") return <ExigeContaAtiva><WMagFormPage /></ExigeContaAtiva>;
+  if (window.location.pathname === "/wmag-leeknow") return <ExigeContaAtiva><WMagFormPage cfg={WMAG_LK_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/dazed-seungmin") return <ExigeContaAtiva><WMagFormPage cfg={DAZED_SM_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/esquire-hyunjin") return <ExigeContaAtiva><WMagFormPage cfg={ESQUIRE_HJ_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/dazed-han") return <ExigeContaAtiva><WMagFormPage cfg={DAZED_HAN_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/smolmerch") return <ExigeContaAtiva><SmolMerchFormPage pixKey={PIX_KEY} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/dicon-origin") return <ExigeContaAtiva><DiconOriginFormPage pixKey={PIX_KEY} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/promo-murce-50") return <ExigeContaAtiva><SmolMerchFormPage pixKey={PIX_KEY} cfg={PROMO_MURCE_50_CFG} produtos={PROMO_MURCE_50_PRODUTOS} fotoDe={fotoPm} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/murce-itens" && !user) return <ExigeContaAtiva><SmolMerchFormPage pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS_ABERTOS} fotoDe={fotoPc} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/popup-this-that") return <ExigeContaAtiva><PopupThisAndThatPage /></ExigeContaAtiva>;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
   if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
   if (page === "landing" || !user) {
@@ -28130,6 +28275,8 @@ export default function App() {
 
 
   const isAdmin = isAdminUser(user);
+  // Áreas privadas: com o novo acesso ligado, só abrem com conta ativada e senha (administradoras seguem pelo próprio login)
+  const prot = (slug, el) => (JOINERS_AUTH_ATIVO && AREAS_PROTEGIDAS.includes(slug) && !isAdmin ? <AreaProtegida user={user} area={slug} onLogin={() => setPage("landing")} onCompleto={carregarPrivadosDaConta}>{el}</AreaProtegida> : el);
 
   return (
     <div>
@@ -28425,7 +28572,7 @@ export default function App() {
       })()}
       {formInterno ? (
         <SmolMerchFormPage interno pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS_ABERTOS} fotoDe={fotoPc} />
-      ) : window.location.pathname === "/claim" ? (
+      ) : window.location.pathname === "/claim" ? prot("claims", (
         <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
@@ -28457,27 +28604,29 @@ export default function App() {
           {claimPageTab === "historico" && <ClaimHistorico />}
           {claimPageTab === "teste" && <ClaimAreaTeste />}
         </div>
-      ) : (
+      )) : (
         <>
-          {tab === "masterlist" && <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />}
+          {tab === "masterlist" && prot("masterlist", <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />)}
           {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
           {tab === "calendario" && <CalendarTab user={user} itens={itens} calEventos={calEventos} setCalEventos={setCalEventos} />}
-          {!user.guest && !user.pre_cadastro && tab === "perfil" && <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />}
-          {!user.guest && !user.pre_cadastro && tab === "envio" && <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />}
-          {!user.guest && !user.pre_cadastro && tab === "disponiveis" && <DisponiveisTab user={user} />}
-          {tab === "prevenda" && <PrevendaTab user={user} />}
-          {tab === "wave-maker" && <WaveMakerTab user={user} />}
-          {tab === "run-it-vol-2" && <RunItVol2Tab user={user} />}
-          {tab === "paper-tales" && <WaveMakerTab user={user} cfg={PT_CFG} />}
-          {tab === "odd-fresh" && <WaveMakerTab user={user} cfg={ODD_CFG} />}
-          {tab === "promo-13" && <WaveMakerTab user={user} cfg={PROMO13_CFG} />}
-          {tab === "odd-fresh-popup" && <WaveMakerTab user={user} cfg={ODD_POPUP_CFG} />}
-          {tab === "suiatsu" && <WaveMakerTab user={user} cfg={SUIATSU_CFG} />}
-          {tab === "mercari" && <MercariTab />}
+          {!user.guest && !user.pre_cadastro && tab === "perfil" && prot("perfil", <PerfilTab user={user} onUpdate={setUser} owner={isOwner(user)} openPagamentosSignal={openPagamentosSignal} initialSubTab={initPerfilSubTab} onSubTabChange={handlePerfilSubTab} />)}
+          {!user.guest && !user.pre_cadastro && tab === "envio" && prot("envio", <EnvioTab user={user} itens={itens} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} />)}
+          {!user.guest && !user.pre_cadastro && tab === "disponiveis" && prot("disponiveis", <DisponiveisTab user={user} />)}
+          {tab === "prevenda" && prot("prevenda", <PrevendaTab user={user} />)}
+          {tab === "wave-maker" && prot("wave-maker", <WaveMakerTab user={user} />)}
+          {tab === "run-it-vol-2" && prot("run-it-vol-2", <RunItVol2Tab user={user} />)}
+          {tab === "paper-tales" && prot("paper-tales", <WaveMakerTab user={user} cfg={PT_CFG} />)}
+          {tab === "odd-fresh" && prot("odd-fresh", <WaveMakerTab user={user} cfg={ODD_CFG} />)}
+          {tab === "odd-fresh-popup" && prot("odd-fresh-popup", <WaveMakerTab user={user} cfg={ODD_POPUP_CFG} />)}
+          {tab === "suiatsu" && prot("suiatsu", <WaveMakerTab user={user} cfg={SUIATSU_CFG} />)}
+          {tab === "promo-13" && prot("promo-13", <WaveMakerTab user={user} cfg={PROMO13_CFG} />)}
+          {tab === "mercari" && prot("mercari", <MercariTab user={user} />)}
           {tab === "regras" && <RegrasTab />}
           {tab === "admin" && isAdminUser(user) && <AdminAuthGate><AdminTab owner={isOwner(user)} userCog={user?.cog || ""} resetSignal={adminReset} calEventos={calEventos} setCalEventos={setCalEventos} initialSubTab={initAdminSubTab} onSubTabChange={handleAdminSubTab} /></AdminAuthGate>}
         </>
       )}
+
+      {JOINERS_AUTH_ATIVO && !user.guest && !user.pre_cadastro && !isAdmin && <JoinerAtivacaoGate user={user} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
 

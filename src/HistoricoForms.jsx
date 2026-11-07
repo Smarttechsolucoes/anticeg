@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
+import { tabelaFechada, meusPedidosFechados } from "./pedidosFechados.js";
 import { FORMS_PREVENDA, identidade, filtroDoDono, normalizarPedido } from "./historicoPreVenda.js";
+import { JOINERS_AUTH_ATIVO } from "./joinerAuth.js";
 
 const mono = "'DM Mono',monospace";
 const reais = n => "R$" + Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,7 +27,13 @@ export default function HistoricoForms({ user }) {
       const buscas = FORMS_PREVENDA.map(async f => {
         const ou = filtroDoDono(f, ident);
         if (!ou) return [];
-        const { data, error } = await supabase.from(f.tabela).select("*").or(ou).order("created_at", { ascending: false });
+        // login ligado + loja que identifica por e-mail/@: o banco entrega só o que é DESTA conta (inclui pedidos vinculados pela administradora)
+        if (!JOINERS_AUTH_ATIVO && tabelaFechada(f.tabela)) {   // login desligado: tabelas fechadas ao visitante (Q4b/Q5b) devolvem o histórico por função do servidor (sem nome, e-mail nem endereço do comprovante)
+          return (await meusPedidosFechados(f.tabela, { email: ident.email, arroba: ident.arroba, cog: ident.cog })).map(p => normalizarPedido(f, p));
+        }
+        const { data, error } = (JOINERS_AUTH_ATIVO && f.dono.includes("email"))
+          ? await supabase.rpc("meus_pedidos", { p_tabela: f.tabela })
+          : await supabase.from(f.tabela).select("*").or(ou).order("created_at", { ascending: false });
         if (error) throw error;
         return (data || []).map(p => normalizarPedido(f, p));
       });
