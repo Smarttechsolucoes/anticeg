@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
 import { criarPedidoLoja } from "./joinerAuth.js";
+import { enviarComprovante as enviarArquivoSeguro } from "./comprovantes.js";
 import { DICON_GRUPOS, DICON_OPCOES, DICON_CFG, fmtReais } from "./diconOriginDados.js";
 
 const mono = "'DM Mono',monospace";
@@ -145,7 +146,7 @@ export function DiconOriginFormPage({ pixKey, cfg = DICON_CFG }) {
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;

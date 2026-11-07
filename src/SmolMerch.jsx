@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
+import { enviarComprovante as enviarArquivoSeguro, abrirComprovante } from "./comprovantes.js";
+import { criarPedidoLoja, JOINERS_AUTH_ATIVO } from "./joinerAuth.js";
+import { tabelaQ4, tabelaPublica, meusIdsFechados } from "./pedidosFechados.js";
 import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } from "./smolmerchDados.js";
 
 const mono = "'DM Mono',monospace";
@@ -56,7 +59,7 @@ function CabProduto({ p, fotoDe, grande, onZoom }) {
 // Ficam de fora os cancelados e os pedidos anteriores a cfg.contarDesde (ou, sem ele, a cfg.abreEm). null = não consegui ler (o formulário não trava).
 async function contarPedidos(cfg) {
   const desde = cfg.contarDesde || cfg.abreEm;
-  let q = supabase.from(cfg.tabela).select("itens").neq("status", "cancelado");
+  let q = supabase.from(tabelaPublica(cfg.tabela)).select("itens").neq("status", "cancelado");
   if (desde) q = q.gte("created_at", desde.toISOString());
   const { data, error } = await q.limit(1000);
   if (error || !data) return null;
@@ -87,7 +90,12 @@ function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
     const bruto = (meuSocial || "").trim(), sem = bruto.replace(/^@/, "");
     if (!sem) { setMeusIds({}); return; }
     let vivo = true;
-    const buscar = () => supabase.from(cfg.tabela).select("id, social").in("social", [...new Set([bruto, sem, "@" + sem])]).limit(200)
+    // login ligado: o banco entrega só os pedidos DESTA conta (meus_pedidos); desligado, nas tabelas fechadas ao visitante (Q4b) a função do servidor diz quais pedidos são desse @
+    const buscar = () => (JOINERS_AUTH_ATIVO && tabelaQ4(cfg.tabela)
+      ? supabase.rpc("meus_pedidos", { p_tabela: cfg.tabela }).then(({ data }) => ({ data: (data || []).map(r => ({ id: r.id, social: r.social })) }))
+      : tabelaQ4(cfg.tabela)
+      ? meusIdsFechados(cfg.tabela, sem).then(data => ({ data }))
+      : supabase.from(cfg.tabela).select("id, social").in("social", [...new Set([bruto, sem, "@" + sem])]).limit(200))
       .then(({ data }) => { if (vivo && data) setMeusIds(Object.fromEntries(data.map(r => [r.id, r.social]))); });
     buscar();
     const t = setInterval(buscar, 15000);
@@ -96,7 +104,7 @@ function PainelPublico({ aba, cfg, produtos, meuSocial = "" }) {
 
   useEffect(() => {
     let vivo = true;
-    const buscar = () => supabase.from(cfg.tabela).select("id, itens, qtd_total, valor_total, status, created_at")
+    const buscar = () => supabase.from(tabelaPublica(cfg.tabela)).select("id, itens, qtd_total, valor_total, status, created_at")
       .order("created_at", { ascending: false }).limit(500)
       .then(({ data }) => { if (vivo && data) { setPedidos(data); setAtualizado(new Date()); } });
     buscar();
@@ -309,19 +317,19 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     if (pagamento === "pix" && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("comprovantes").upload(path, comprovante, { upsert: false });
+      const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
       if (upErr) { setStatus("idle"); setErro("Erro ao enviar comprovante: " + upErr.message); return; }
       const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
       comprovanteUrl = publicUrl;
     }
 
-    const { error } = await supabase.from(cfg.tabela).insert([{
+    const { error } = await criarPedidoLoja(cfg.tabela, {
       id, nome: nome.trim(), email: email.trim(), social: social.trim() || null,
       itens: escolhidos.map(o => ({ id: o.id, produto: o.produto, opcao: o.label, preco: o.preco, qtd: qtds[o.id], ...(preDe(o, qtds[o.id]) > 0 ? { prereserva: preDe(o, qtds[o.id]) } : {}) })),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: soPre ? "depois" : pagamento, comprovante_url: comprovanteUrl,
       status: soPre || pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao",
-    }]);
+    });
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
 
@@ -742,7 +750,7 @@ export function AdminSmolMerch({ onCountChange, cfg = SMOLMERCH_CFG, produtos = 
                 <div style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, color: "var(--laranja)", marginTop: 4 }}>
                   {p.qtd_total} un · {fmtReais(p.valor_total)}
                 </div>
-                {p.comprovante_url && <a href={p.comprovante_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: mono, fontSize: 10, color: "rgba(255,92,26,.7)", marginTop: 2 }}>ver comprovante ↗</a>}
+                {p.comprovante_url && <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ fontFamily: mono, fontSize: 10, color: "rgba(255,92,26,.7)", marginTop: 2 }}>ver comprovante ↗</a>}
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
                 <span style={{ fontFamily: mono, fontSize: 10, color: cor(p.status) }}>{rotulo(p.status)}</span>
