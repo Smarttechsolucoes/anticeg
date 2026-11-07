@@ -7976,7 +7976,7 @@ function RastreiosTab() {
 
   async function excluirRastreio(id) {
     if (!window.confirm("Excluir este rastreio?")) return;
-    await supabase.from("rastreios").delete().eq("id", id);
+    await clienteAdmin().from("rastreios").delete().eq("id", id);
     setExpanded(null); setAdding(false); setEditId(null);
     await loadRastreios();
   }
@@ -8265,12 +8265,12 @@ function ControleEstoqueTab() {
 
   async function apagarItem(id) {
     if (!window.confirm("Apagar este material?")) return;
-    await supabase.from("estoque_itens").delete().eq("id", id);
+    await clienteAdmin().from("estoque_itens").delete().eq("id", id);
     setSel(null); await loadData();
   }
 
   async function apagarCompra(id) {
-    await supabase.from("estoque_compras").delete().eq("id", id);
+    await clienteAdmin().from("estoque_compras").delete().eq("id", id);
     await loadData();
   }
 
@@ -10038,7 +10038,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
               async function salvarCashback(cog) {
                 const novoVal = Math.max(0, parseFloat(String(cashbackEdit.val).replace(",",".")) || 0);
                 setCashbackSaving(true);
-                await supabase.from("joiners").update({ saldo_cashback: novoVal }).eq("cog", cog);
+                await clienteAdmin().from("joiners").update({ saldo_cashback: novoVal }).eq("cog", cog);
                 setCashbackList(prev => {
                   const atualizado = prev.map(j => j.cog === cog ? { ...j, saldo_cashback: novoVal } : j);
                   return novoVal === 0 ? atualizado.filter(j => j.cog !== cog) : atualizado;
@@ -10825,7 +10825,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                         });
                         const deletados = [];
                         for (const id of toDelete) {
-                          const { error } = await supabase.from("joiner_storage").delete().eq("id", id);
+                          const { error } = await clienteAdmin().from("joiner_storage").delete().eq("id", id);
                           if (!error) deletados.push(id);
                         }
                         if (deletados.length < toDelete.length) alert(`${toDelete.length - deletados.length} item(s) não puderam ser removidos.`);
@@ -10850,7 +10850,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                           <div style={{ position:"absolute", top:4, left:4, background:"rgba(0,0,0,.75)", borderRadius:4, padding:"2px 6px", fontSize:7, fontFamily:mono, color:"rgba(245,240,232,.7)" }}>@{item.joiner_cog}</div>
                           <button onClick={async e => {
                             e.stopPropagation();
-                            const { error } = await supabase.from("joiner_storage").delete().eq("id", item.id);
+                            const { error } = await clienteAdmin().from("joiner_storage").delete().eq("id", item.id);
                             if (error) { alert("Erro ao apagar foto."); return; }
                             setGaleriaFotos(prev => prev.filter(f => f.id !== item.id));
                           }} style={{ position:"absolute", top:4, right:4, width:18, height:18, borderRadius:"50%", background:"rgba(0,0,0,.75)", border:"none", color:"rgba(245,240,232,.7)", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 }}>✕</button>
@@ -11353,7 +11353,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
                 <span style={{ fontSize:9, color:tipoColor, border:`1px solid ${tipoColor}44`, borderRadius:4, padding:"2px 7px", fontFamily:"'DM Mono',monospace", textTransform:"uppercase" }}>{ev.tipo}</span>
                 <span style={{ flex:1, fontSize:12, color:"var(--offwhite)", fontFamily:"'DM Mono',monospace" }}>{ev.titulo}</span>
                 <button onClick={async () => {
-                  await supabase.from("cal_eventos").delete().eq("id", ev.id);
+                  await clienteAdmin().from("cal_eventos").delete().eq("id", ev.id);
                   setCalEventos(prev => prev.filter(x => x.id !== ev.id));
                 }} style={{ background:"none", border:"none", color:"rgba(245,240,232,.25)", cursor:"pointer", fontSize:14, padding:"2px 6px", borderRadius:4 }}>✕</button>
               </div>
@@ -12617,7 +12617,7 @@ function WhatsappCegsBlock() {
       const { error } = await supabase.from("ceg_config").upsert({ ceg, whatsapp_link: link }, { onConflict: "ceg" });
       if (error) { alert("Erro: " + error.message); setSaving(prev => ({ ...prev, [ceg]: false })); return; }
     } else {
-      const { error } = await supabase.from("ceg_config").delete().eq("ceg", ceg);
+      const { error } = await clienteAdmin().from("ceg_config").delete().eq("ceg", ceg);
       if (error) { alert("Erro: " + error.message); setSaving(prev => ({ ...prev, [ceg]: false })); return; }
     }
     setConfigs(prev => ({ ...prev, [ceg]: link }));
@@ -12687,7 +12687,7 @@ function AdminLinks() {
   }
 
   async function handleDelete(id) {
-    await supabase.from("links_uteis").delete().eq("id", id);
+    await clienteAdmin().from("links_uteis").delete().eq("id", id);
     setLinks(prev => prev.filter(l => l.id !== id));
   }
 
@@ -14885,7 +14885,7 @@ function AdminDisponivel({ data, claimsInit, onClaimsChange, onRefresh }) {
         {item.ceg !== "CLAIM" && (
           <button onClick={async () => {
             if (!window.confirm(`Apagar "${item.nome_do_item}" da masterlist? Isso não pode ser desfeito.`)) return;
-            const { error } = await supabase.from("masterlist").delete().eq("id", item.id);
+            const { error } = await clienteAdmin().from("masterlist").delete().eq("id", item.id);
             if (error) { alert("Erro: " + error.message); return; }
             setItens(prev => prev.filter(i => i.id !== item.id));
           }} style={{
@@ -18004,7 +18004,7 @@ function AdminBlocklist({ data, joiners, onUpdate }) {
   });
 
   async function toggleBloqueado(cog, atual) {
-    await supabase.from("joiners").update({ bloqueado: !atual }).eq("cog", cog);
+    await clienteAdmin().from("joiners").update({ bloqueado: !atual }).eq("cog", cog);
     onUpdate(prev => prev.map(j => j.cog === cog ? { ...j, bloqueado: !atual } : j));
   }
 
