@@ -59,7 +59,7 @@ async function nova(porta, cen) {
 const ir = async (page, porta, caminho, hash = "") => { await page.goto(`http://localhost:${porta}${caminho}${hash}`, { waitUntil: "networkidle" }); await page.waitForTimeout(900); };
 const corpo = page => page.locator("body").innerText();
 const prompt = page => page.getByTestId("area-protegida");
-const entrar = async (page, senha, email) => { if (email !== undefined) await page.getByLabel("E-mail da conta").fill(email); await entrarSo(page, senha); };
+const entrar = async (page, senha, email) => { if (email !== undefined) await page.getByLabel("Seu @ ou e-mail").fill(email); await entrarSo(page, senha); };
 const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact: true }).fill(senha); await page.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(900); };
 
 // ── 1) recurso DESLIGADO (5199): nada muda ────────────────────────────────────────────────────
@@ -75,8 +75,8 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
   const T = await nova(5197, { senhaCerta: "senha-boa-123" }); const { page, reg, erros } = T;
   await ir(page, 5197, "/masterlist");
   ok(await prompt(page).count() === 1, "a MASTERLIST pede e-mail e senha");
-  ok(await page.getByLabel("E-mail da conta").count() === 1 && await page.getByLabel("Seu @").count() === 0, "o padrão é e-mail + senha (o campo do @ só aparece na alternativa)");
-  ok((await page.getByLabel("E-mail da conta").inputValue()) === "" && !(await prompt(page).innerText()).includes("registrado@exemplo.com"), "o pedido nunca mostra nem preenche o e-mail do cadastro");
+  ok(await page.getByLabel("Seu @ ou e-mail").count() === 1 && await page.getByRole("button", { name: /Entrar com (@|e-mail)/ }).count() === 0, "um campo único “Seu @ ou e-mail”, sem alternar por link");
+  ok((await page.getByLabel("Seu @ ou e-mail").inputValue()) === "@ana" && !(await prompt(page).innerText()).includes("registrado@exemplo.com"), "o campo já vem com o @ digitado na entrada e nunca mostra nem preenche o e-mail do cadastro");
   for (const caminho of ["/perfil", "/envio", "/disponiveis", "/prevenda", "/wave-maker", "/claim"]) { await ir(page, 5197, caminho); ok(await prompt(page).count() === 1, `${caminho} pede senha (inclui o ENVIO)`); }
   for (const caminho of ["/cegs", "/calendario", "/regras"]) { await ir(page, 5197, caminho); ok(await prompt(page).count() === 0, `áreas públicas continuam abertas sem senha: ${caminho}`); }
 
@@ -100,16 +100,15 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
 { // e-mail inválido ou vazio nem chega ao servidor
   const T = await nova(5197, { senhaCerta: "senha-boa-123" }); const { page, reg } = T;
   await ir(page, 5197, "/masterlist");
-  await entrar(page, "senha-boa-123", "isso-nao-e-email");
-  ok((await corpo(page)).includes("Informe o e-mail e a senha.") && reg.login.length === 0 && await prompt(page).count() === 1, "e-mail inválido: recusado no navegador, sem chamar o servidor");
+  await entrar(page, "senha-boa-123", "isso@nao-e-email");
+  ok((await corpo(page)).includes("Confira o e-mail digitado") && reg.login.length === 0 && await prompt(page).count() === 1, "e-mail inválido (com @ mas sem cara de e-mail): recusado no navegador, sem chamar o servidor");
   await T.browser.close();
 }
 { // @ + senha como alternativa
   const T = await nova(5197, { senhaCerta: "senha-boa-123" }); const { page, reg } = T;
   await ir(page, 5197, "/masterlist");
-  await page.getByRole("button", { name: "Entrar com @ e senha" }).click();
-  ok((await page.getByLabel("Seu @").inputValue()) === "@ana", "alternativa: mostra o @ da pessoa (somente leitura)");
-  await entrarSo(page, "senha-boa-123");
+  ok((await page.getByLabel("Seu @ ou e-mail").inputValue()) === "@ana", "o mesmo campo já traz o @ da pessoa");
+  await entrar(page, "senha-boa-123", "@Ana");
   ok(await prompt(page).count() === 0 && reg.login.length === 1 && Object.keys(reg.login[0]).sort().join() === "cog,senha" && reg.login[0].cog === "ana", "@ + senha certa: abre a área, enviando só {cog, senha}");
   await T.browser.close();
 }
@@ -124,14 +123,14 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
   const T = await nova(5197, {}); const { page, reg } = T;
   await ir(page, 5197, "/masterlist");
   await page.getByRole("button", { name: "Esqueci minha senha" }).click();
-  await page.getByLabel("E-mail da conta").fill(" Ana@Exemplo.com ");
+  await page.getByLabel("Seu @ ou e-mail").fill(" Ana@Exemplo.com ");
   await page.getByRole("button", { name: "Enviar link de redefinição" }).click(); await page.waitForTimeout(600);
   ok(reg.recuperar.length === 1 && Object.keys(reg.recuperar[0]).join() === "email" && reg.recuperar[0].email === "ana@exemplo.com", "recuperação por e-mail: o navegador envia só o e-mail digitado");
   ok((await prompt(page).innerText()).includes("Se existir uma conta ativada") && !(await prompt(page).innerText()).includes("registrado@exemplo.com"), "recuperação: resposta neutra, sem mostrar e-mail do cadastro");
-  await page.getByLabel("E-mail da conta").fill("");
+  await page.getByLabel("Seu @ ou e-mail").fill("@ana");
   await page.getByRole("button", { name: "Enviar link de redefinição" }).click(); await page.waitForTimeout(600);
-  ok(reg.recuperar.length === 2 && Object.keys(reg.recuperar[1]).join() === "cog" && reg.recuperar[1].cog === "ana", "recuperação sem e-mail digitado: usa o @");
-  await page.getByLabel("E-mail da conta").fill("nao-e-email");
+  ok(reg.recuperar.length === 2 && Object.keys(reg.recuperar[1]).join() === "cog" && reg.recuperar[1].cog === "ana", "recuperação digitando o @: envia só o @");
+  await page.getByLabel("Seu @ ou e-mail").fill("nao@e-email");
   await page.getByRole("button", { name: "Enviar link de redefinição" }).click(); await page.waitForTimeout(400);
   ok(reg.recuperar.length === 2 && (await prompt(page).innerText()).includes("Confira o e-mail digitado"), "recuperação com e-mail inválido: recusada no navegador");
   await page.getByRole("button", { name: "Voltar" }).click();
@@ -196,7 +195,7 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
   await modal.getByRole("button", { name: "Primeiro acesso? Ative sua conta" }).click(); await page.waitForTimeout(300);
   ok((await modal.innerText()).includes("Enviar código de confirmação"), "do login dentro do pop-up dá para voltar à ativação");
   await page.getByTestId("ativacao-ja-tenho-conta").click(); await page.waitForTimeout(300);
-  await modal.getByLabel("E-mail da conta").fill("ana@exemplo.com");
+  await modal.getByLabel("Seu @ ou e-mail").fill("ana@exemplo.com");
   await modal.getByLabel("Senha", { exact: true }).fill("errada"); await modal.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(700);
   ok(await modal.count() === 1 && reg.login.length === 1 && (await modal.innerText()).includes("incorretos"), "senha errada: o pop-up continua aberto com o erro, sem entrar");
   await modal.getByLabel("Senha", { exact: true }).fill("senha-boa-123"); await modal.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(900); await page.waitForTimeout(600);
@@ -210,13 +209,26 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
   for (const [nome, cen, esperado] of casos) {
     const T = await nova(5197, cen); const { page } = T;
     await ir(page, 5197, "/masterlist");
-    await page.getByLabel("E-mail da conta").fill("ana@exemplo.com"); await page.getByLabel("Senha", { exact: true }).fill("errada");
+    await page.getByLabel("Seu @ ou e-mail").fill("ana@exemplo.com"); await page.getByLabel("Senha", { exact: true }).fill("errada");
     await page.getByRole("button", { name: "Entrar", exact: true }).click(); await page.waitForTimeout(900);
     const texto = await prompt(page).innerText();
     ok(texto.includes(esperado) && (esperado.startsWith("@") ? !texto.includes("Não foi possível conectar") : !texto.includes("incorretos")), `login (${nome}): mensagem “${esperado}”`);
     ok(!/existe|cadastrad|não encontrad|inexistente/i.test(texto.replace(/Primeiro acesso[^\n]*/g, "").replace(/Esqueci[^\n]*/g, "")), `login (${nome}): a mensagem não revela se a conta existe`);
     await T.browser.close();
   }
+}
+
+{ // campo único “Seu @ ou e-mail”: o @ pode ser digitado com ou sem “@” (o caso real: o @ digitado no campo que antes era só de e-mail)
+  for (const digitado of ["ana", "@ana", " @Ana "]) {
+    const T = await nova(5197, { senhaCerta: "senha-boa-123" }); const { page, reg } = T;
+    await ir(page, 5197, "/masterlist"); await entrar(page, "senha-boa-123", digitado);
+    ok(await prompt(page).count() === 0 && reg.login.length === 1 && Object.keys(reg.login[0]).sort().join() === "cog,senha" && reg.login[0].cog === "ana", `@ digitado como “${digitado.trim()}”: entra por @ + senha (envia só {cog, senha})`);
+    await T.browser.close();
+  }
+  const T = await nova(5197, { senhaCerta: "senha-boa-123" }); const { page, reg } = T;
+  await ir(page, 5197, "/masterlist"); await entrar(page, "senha-boa-123", "   ");
+  ok((await corpo(page)).includes("Informe o seu @ ou e-mail e a senha") && reg.login.length === 0, "campo vazio: pede o @ ou e-mail, sem chamar o servidor");
+  await T.browser.close();
 }
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");

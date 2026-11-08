@@ -17,7 +17,7 @@ const Dica = ({ children }) => <div style={{ fontSize: 13, fontFamily: sans, col
 // com o teclado aberto no celular, traz o campo focado para o meio da área visível
 const rolarAoFocar = ev => { const el = ev.target; setTimeout(() => { try { el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch { /* sem suporte */ } }, 250); };
 
-export default function CompletarPerfil({ api, perfil, onConcluido, sobreposto = false }) {
+export default function CompletarPerfil({ api, perfil, onConcluido, onSair = null, sobreposto = false }) {   // onSair: X/Voltar leva às áreas públicas SEM concluir o perfil (os dados continuam bloqueados)
   const nomeAtual = String(perfil?.nome_site || "");
   const [nome, setNome] = useState(nomeAtual);          // já vem preenchido com o nome que consta no cadastro, quando existe; a pessoa só confere
   const [erro, setErro] = useState("");
@@ -65,8 +65,14 @@ export default function CompletarPerfil({ api, perfil, onConcluido, sobreposto =
 
   return (
     <div style={fundo}>
-      <form data-testid="completar-perfil" onSubmit={concluir} style={{ background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "26px 22px", width: "min(460px, 100%)", margin: "auto", color: C.texto, display: "grid", gap: 16, boxSizing: "border-box" }}>
-        <div role="heading" aria-level={2} style={{ margin: 0, fontFamily: mono, fontSize: 18, fontWeight: 700, color: C.destaque, lineHeight: 1.3, letterSpacing: 0 }}>Confira seus dados</div>
+      <form data-testid="completar-perfil" onSubmit={concluir} style={{ position: "relative", background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "26px 22px", width: "min(460px, 100%)", margin: "auto", color: C.texto, display: "grid", gap: 16, boxSizing: "border-box" }}>
+        {onSair && (
+          <button type="button" data-testid="fechar-acesso" aria-label="Fechar e voltar às áreas públicas" title="Fechar e voltar às áreas públicas" onClick={onSair}
+            style={{ position: "absolute", top: 6, right: 6, width: 44, height: 44, display: "grid", placeItems: "center", background: "none", border: "none", color: C.mudo, cursor: "pointer", padding: 0, zIndex: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19" /><line x1="19" y1="5" x2="5" y2="19" /></svg>
+          </button>
+        )}
+        <div role="heading" aria-level={2} style={{ margin: 0, paddingRight: 40, fontFamily: mono, fontSize: 18, fontWeight: 700, color: C.destaque, lineHeight: 1.3, letterSpacing: 0 }}>Confira seus dados</div>
         <p style={{ margin: 0, fontSize: 14, fontFamily: sans, color: C.mudo, lineHeight: 1.6 }}>Sua conta foi ativada. Falta só conferir como você aparece no site. Seus pedidos, pagamentos, itens e envios continuam ligados ao seu cadastro.</p>
 
         <div>
@@ -105,6 +111,7 @@ export default function CompletarPerfil({ api, perfil, onConcluido, sobreposto =
         {aviso.texto && <Msg id={aviso.id} cor={aviso.cor}>{aviso.texto}</Msg>}
         {erro && <Msg id="perfil-erro" cor={C.erro}>{erro}</Msg>}
         <button type="submit" data-testid="perfil-concluir" style={botao} disabled={ocupado}>{ocupado ? "Salvando…" : "Concluir e entrar"}</button>
+        {onSair && <button type="button" data-testid="perfil-voltar-publicas" style={link} onClick={onSair}>Voltar às áreas públicas</button>}
       </form>
     </div>
   );

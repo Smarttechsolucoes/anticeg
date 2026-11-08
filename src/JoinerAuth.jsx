@@ -15,8 +15,9 @@ const botaoSec = { ...botao, background: "transparent", color: C.texto, border: 
 const acaoSec = { background: "none", border: "none", color: C.mudo, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer", fontFamily: sans, fontSize: 14, padding: "10px 6px", minHeight: 40 };
 // fundo escuro rolável (o cartão fica no topo quando é maior que a tela, por exemplo com o teclado aberto no celular)
 const sobreposicao = { position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", display: "flex", zIndex: 10000, padding: "max(16px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px))", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", boxSizing: "border-box" };
-const cartao = { background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "24px 22px", width: "min(440px, 100%)", margin: "auto", color: C.texto, display: "grid", gap: 14, boxSizing: "border-box" };
+const cartao = { position: "relative", background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "24px 22px", width: "min(440px, 100%)", margin: "auto", color: C.texto, display: "grid", gap: 14, boxSizing: "border-box" };
 const DISPENSA = "anticeg_ativacao_dispensada";
+const DISPENSA_PERFIL = "anticeg_perfil_dispensado";   // X/Voltar na tela "Confira seus dados": vale só nesta aba, e o aviso "Concluir meus dados" a reabre
 const EVENTO_CONTA = "anticeg:conta-atualizada";
 const ROTAS_PUBLICAS = ["/cegs", "/calendario", "/regras"];
 // avisa as telas que o estado da conta mudou (ativou ou concluiu o perfil): cada uma relê o servidor, sem recarregar a página
@@ -25,7 +26,16 @@ const avisarContaAtualizada = () => { try { window.dispatchEvent(new Event(EVENT
 const rolarAoFocar = ev => { const el = ev.target; setTimeout(() => { try { el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch { /* sem suporte */ } }, 250); };
 
 function Titulo({ children, cor = C.destaque }) {
-  return <div role="heading" aria-level={2} style={{ margin: 0, fontFamily: mono, fontSize: 17, fontWeight: 700, color: cor, lineHeight: 1.3, letterSpacing: 0 }}>{children}</div>;
+  return <div role="heading" aria-level={2} style={{ margin: 0, fontFamily: mono, fontSize: 17, fontWeight: 700, color: cor, lineHeight: 1.3, letterSpacing: 0, paddingRight: 40 }}>{children}</div>;
+}
+// X no canto do cartão das telas de acesso: leva às áreas públicas. Não libera dado protegido nem conclui nada (a sessão e o perfil ficam como estão).
+function BotaoFechar({ onClick, rotulo = "Fechar e voltar às áreas públicas" }) {
+  return (
+    <button type="button" data-testid="fechar-acesso" aria-label={rotulo} title={rotulo} onClick={onClick}
+      style={{ position: "absolute", top: 6, right: 6, width: 44, height: 44, display: "grid", placeItems: "center", background: "none", border: "none", color: C.mudo, cursor: "pointer", padding: 0, zIndex: 1 }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19" /><line x1="19" y1="5" x2="5" y2="19" /></svg>
+    </button>
+  );
 }
 function Texto({ children, pequeno, ...resto }) {
   return <p style={{ margin: 0, fontFamily: sans, fontSize: pequeno ? 13 : 14, lineHeight: 1.55, color: C.mudo }} {...resto}>{children}</p>;
@@ -137,6 +147,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
   return (
     <div data-testid="ativacao-modal" role="dialog" aria-modal="true" aria-label="Ative sua conta" style={sobreposicao}>
       <div style={cartao}>
+        {fase !== "finalizando" && <BotaoFechar onClick={voltarAreasPublicas} />}
         {fase === "dados" && (
           <form onSubmit={enviarCodigo} noValidate style={{ display: "grid", gap: 14 }}>
             <Titulo>Ative sua conta</Titulo>
@@ -220,7 +231,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
         )}
         {fase === "entrar" && (
           // o login existente, dentro do pop-up: ao entrar, a sessão muda e o aviso (conferir) fecha sozinho ou abre "Confira seus dados"
-          <PromptSenha embutido user={{ cog }} api={api} onSemConta={() => { setErro(""); setFase("dados"); }} />
+          <PromptSenha embutido user={{ cog }} api={api} onSemConta={() => { setErro(""); setFase("dados"); }} onEntrou={aoAtivar ? c => aoAtivar(c) : undefined} />
         )}
         {fase === "regularizar" && (
           <div style={{ display: "grid", gap: 14 }}>
@@ -242,6 +253,7 @@ export function JoinerAtivacaoGate({ user }) {
   const [aberto, setAberto] = useState(false);
   const [dispensado, setDispensado] = useState(() => { try { return sessionStorage.getItem(DISPENSA) === "1"; } catch { return false; } });
   const [liberada, setLiberada] = useState(user?.ativacao_liberada !== false);
+  const [perfilDispensado, setPerfilDispensado] = useState(() => { try { return sessionStorage.getItem(DISPENSA_PERFIL) === "1"; } catch { return false; } });   // X/Voltar na tela do perfil: leva às áreas públicas sem concluir nada (volta pelo aviso "Concluir meus dados")
   const [perfilPendente, setPerfilPendente] = useState(null);     // J6: conta ativada, perfil ainda não concluído => tela obrigatória
 
   useEffect(() => {
@@ -263,6 +275,13 @@ export function JoinerAtivacaoGate({ user }) {
     return () => { vivo = false; sub?.subscription?.unsubscribe(); window.removeEventListener(EVENTO_CONTA, conferir); };
   }, [api, user?.cog]);
 
+  // "Concluir meus dados" (aviso de perfil pendente) reabre a tela do perfil
+  useEffect(() => {
+    const reabrir = () => { try { sessionStorage.removeItem(DISPENSA_PERFIL); } catch { /* sem armazenamento */ } setPerfilDispensado(false); };
+    window.addEventListener("anticeg:abrir-perfil", reabrir);
+    return () => window.removeEventListener("anticeg:abrir-perfil", reabrir);
+  }, []);
+
   // "Primeiro acesso? Ative sua conta" na tela de senha reabre este pop-up
   useEffect(() => {
     const abrir = () => { try { sessionStorage.removeItem(DISPENSA); } catch { /* sem armazenamento */ } setDispensado(false); setAberto(true); };
@@ -270,7 +289,7 @@ export function JoinerAtivacaoGate({ user }) {
     return () => window.removeEventListener("anticeg:abrir-ativacao", abrir);
   }, []);
 
-  if (perfilPendente) return <CompletarPerfil sobreposto api={api} perfil={perfilPendente} onConcluido={() => { setPerfilPendente(null); avisarContaAtualizada(); }} />;   // avisa as áreas protegidas: abrem na hora, sem recarregar
+  if (perfilPendente && !perfilDispensado) return <CompletarPerfil sobreposto api={api} perfil={perfilPendente} onConcluido={() => { setPerfilPendente(null); avisarContaAtualizada(); }} onSair={() => { try { sessionStorage.setItem(DISPENSA_PERFIL, "1"); } catch { /* sem armazenamento */ } setPerfilDispensado(true); const p = typeof window !== "undefined" ? window.location.pathname : "/"; if (!ROTAS_PUBLICAS.some(r => p === r || p.startsWith(r + "/"))) window.location.assign("/cegs"); }} />;   // avisa as áreas protegidas: abrem na hora, sem recarregar
   if (!aberto || dispensado) return null;
   return <JoinerAtivacaoModal user={user} api={api} liberada={liberada} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;
 }
@@ -299,28 +318,41 @@ function useNivelAcesso(user) {
   return { api, nivel, perfil, recarregar: () => api.estado(user?.cog).then(r => { setPerfil(r.perfil || null); setNivel(r.estado === "ativa" ? "completo" : r.estado === "perfil_pendente" ? "perfil_pendente" : "simples"); }) };
 }
 
-function PromptSenha({ user, api, onSemConta, embutido = false }) {   // embutido: dentro do pop-up de ativação (sem moldura própria)
-  const [modo, setModo] = useState("email");        // email (padrão) | arroba | recuperar
+// Campo único "Seu @ ou e-mail": o que tem cara de e-mail entra por e-mail + senha; o resto é tratado como @. Sem alternar por link.
+const identificar = v => { const t = String(v || "").trim(); if (!t) return null; if (emailValido(t)) return { email: t.toLowerCase() }; if (t.indexOf("@") > 0) return { invalido: true }; const c = normalizarCog(t); return c ? { cog: c } : null; };   // "x@y" sem cara de e-mail não vira @
+
+function PromptSenha({ user, api, onSemConta, onEntrou, embutido = false }) {   // embutido: dentro do pop-up de ativação (sem moldura própria); onEntrou(cog): quem hospeda recebe o @ da conta ao entrar
+  const [modo, setModo] = useState("entrar");        // entrar | recuperar
+  const cog = normalizarCog(user?.cog);
+  const [ident, setIdent] = useState(cog ? "@" + cog : "");
   const [senha, setSenha] = useState("");
-  const [email, setEmail] = useState("");
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [ocupado, setOcupado] = useState(false);
-  const cog = normalizarCog(user?.cog);
 
   async function entrar(e) {
-    e.preventDefault(); setErro(""); setInfo(""); setOcupado(true);
-    const r = modo === "email" ? await api.entrarComEmail({ cog, email, senha }) : await api.entrar({ cog, senha });
+    e.preventDefault(); setErro(""); setInfo("");
+    const id = identificar(ident);
+    if (id?.invalido) { setErro("Confira o e-mail digitado."); return; }
+    if (!id || !senha) { setErro("Informe o seu @ ou e-mail e a senha."); return; }
+    setOcupado(true);
+    const r = id.email ? await api.entrarComEmail({ cog, email: id.email, senha }) : await api.entrar({ cog: id.cog, senha });
     setOcupado(false);
     if (r.erro) { setErro(r.erro); return; }
     setSenha("");      // a área aparece sozinha: o nível de acesso é recalculado pela mudança de sessão
+    onEntrou?.(r.cog);
   }
   async function recuperar(e) {
-    e.preventDefault(); setErro(""); setInfo(""); setOcupado(true);
-    const r = await api.recuperar({ cog, email });
+    e.preventDefault(); setErro(""); setInfo("");
+    const id = identificar(ident);
+    if (id?.invalido) { setErro("Confira o e-mail digitado."); return; }
+    if (!id) { setErro("Informe o seu @ ou e-mail."); return; }
+    setOcupado(true);
+    const r = await api.recuperar(id.email ? { email: id.email } : { cog: id.cog });
     setOcupado(false);
     if (r.erro) setErro(r.erro); else setInfo("Se existir uma conta ativada para esse e-mail ou @, enviamos um link para o e-mail verificado. Confira também o spam.");
   }
+  const campoIdent = <Rotulo>Seu @ ou e-mail<input style={campo} type="text" value={ident} onChange={ev => setIdent(ev.target.value)} onFocus={rolarAoFocar} aria-label="Seu @ ou e-mail" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" placeholder="@seuusuario ou seuemail@exemplo.com" /></Rotulo>;
 
   return (
     <div data-testid={embutido ? "login-no-popup" : "area-protegida"} style={embutido ? undefined : { maxWidth: 460, margin: "32px auto", padding: "0 16px", boxSizing: "border-box" }}>
@@ -329,9 +361,7 @@ function PromptSenha({ user, api, onSemConta, embutido = false }) {   // embutid
         <Texto>Estas informações são pessoais e só abrem com a sua senha. As áreas públicas continuam abertas.</Texto>
         {modo !== "recuperar" ? (
           <form onSubmit={entrar} noValidate style={{ display: "grid", gap: 14 }}>
-            {modo === "arroba"
-              ? <Rotulo>Seu @<input style={{ ...campo, opacity: 0.8 }} value={"@" + cog} readOnly aria-label="Seu @" /></Rotulo>
-              : <Rotulo>E-mail da conta<input style={campo} type="email" value={email} onChange={ev => setEmail(ev.target.value)} aria-label="E-mail da conta" autoComplete="username" placeholder="seuemail@exemplo.com" /></Rotulo>}
+            {campoIdent}
             <div style={{ display: "grid", gap: 2 }}>
               <Rotulo>Senha<CampoSenha style={campo} value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Senha" autoComplete="current-password" /></Rotulo>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -341,20 +371,20 @@ function PromptSenha({ user, api, onSemConta, embutido = false }) {   // embutid
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Entrando…" : "Entrar"}</button>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
-              <button type="button" style={acaoSec} onClick={() => { setErro(""); setModo(modo === "arroba" ? "email" : "arroba"); }}>{modo === "arroba" ? "Entrar com e-mail e senha" : "Entrar com @ e senha"}</button>
               <button type="button" style={acaoSec} onClick={onSemConta}>Primeiro acesso? Ative sua conta</button>
+              {!embutido && <button type="button" style={acaoSec} data-testid="login-voltar-publicas" onClick={() => window.location.assign("/cegs")}>Voltar às áreas públicas</button>}
             </div>
           </form>
         ) : (
           <form onSubmit={recuperar} noValidate style={{ display: "grid", gap: 14 }}>
-            <Texto>Vamos enviar um link para redefinir a senha no e-mail verificado da sua conta. Digite o e-mail da conta; se deixar em branco, usamos o do <b style={{ color: C.texto }}>@{cog}</b>.</Texto>
-            <Rotulo>E-mail da conta<input style={campo} type="email" value={email} onChange={ev => setEmail(ev.target.value)} aria-label="E-mail da conta" autoComplete="username" placeholder="seuemail@exemplo.com" /></Rotulo>
+            <Texto>Vamos enviar um link para redefinir a senha no e-mail verificado da sua conta. Digite o seu @ ou o e-mail da conta.</Texto>
+            {campoIdent}
             <Texto pequeno>Não tem mais acesso a esse e-mail? Fale com a administração: confirmamos que é você e atualizamos o e-mail do seu cadastro, sem perder pedidos nem histórico.</Texto>
             <Aviso texto={erro} />
             {info && <div role="status" style={{ color: C.ok, fontSize: 14, fontFamily: sans, lineHeight: 1.45 }}>{info}</div>}
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar link de redefinição"}</button>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
-              <button type="button" style={acaoSec} onClick={() => { setErro(""); setInfo(""); setModo("arroba"); }}>Voltar</button>
+              <button type="button" style={acaoSec} onClick={() => { setErro(""); setInfo(""); setModo("entrar"); }}>Voltar</button>
               <button type="button" style={acaoSec} onClick={onSemConta}>Primeiro acesso? Ative sua conta</button>
             </div>
           </form>
@@ -370,7 +400,13 @@ export function AreaProtegida({ user, area, children, onLogin, onCompleto }) {  
   useEffect(() => { if (nivel === "completo" && user?.acesso_simples && onCompleto) onCompleto(); }, [nivel]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { sessionStorage.setItem("anticeg_destino", window.location.pathname + window.location.search); } catch { /* sem armazenamento */ } }, [area]);
   if (nivel === "completo") return children;
-  if (nivel === "perfil_pendente") return <div data-testid="area-perfil-pendente" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12 }}>Conclua os seus dados na tela que abriu para continuar.</div>;
+  if (nivel === "perfil_pendente") return (
+    <div data-testid="area-perfil-pendente" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12, display: "grid", gap: 12, justifyItems: "center" }}>
+      <div>Conclua os seus dados para continuar.</div>
+      <button type="button" style={{ ...botao, width: "auto", padding: "11px 20px" }} onClick={() => { try { window.dispatchEvent(new Event("anticeg:abrir-perfil")); } catch { /* sem window */ } }}>Concluir meus dados</button>
+      <button type="button" style={acaoSec} onClick={() => window.location.assign("/cegs")}>Voltar às áreas públicas</button>
+    </div>
+  );
   if (nivel === "carregando") return <div data-testid="area-verificando" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12 }}>Verificando acesso…</div>;
   if (!user || user.guest || !user.cog) {
     return (
