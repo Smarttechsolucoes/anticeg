@@ -144,6 +144,15 @@ export default function AdminContas() {
   // pedidos sem dona agrupados por e-mail
   const grupos = Object.values(orfaos.reduce((m, o) => { const k = (o.email || "(sem e-mail)").toLowerCase(); (m[k] ||= { email: o.email || "", chave: k, itens: [] }).itens.push(o); return m; }, {}));
 
+  // "pediu ajuda" = tem pedido aberto de ajuda ou de ativação sem vínculo (a pessoa tentou ativar e foi barrada). O restante nunca pediu nada.
+  const comAjuda = aConfirmar.filter(v => v.pedido_de_ajuda), semAjuda = aConfirmar.filter(v => !v.pedido_de_ajuda);
+  const linhaVinculo = v => (
+          <div key={v.joiner_id} style={{ borderTop: `1px solid ${C.borda}`, marginTop: 8, paddingTop: 8, fontSize: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ flex: 1, minWidth: 220 }}>#{v.joiner_id} · @{v.cog} · {v.nome_site || "—"} · e-mail @{v.dominio || "?"}{v.tem_conta ? " · já tem conta" : ""}{v.itens ? ` · ${v.itens} pedido(s)` : ""}{v.pedido_de_ajuda ? <> · <b style={{ color: C.destaque }}>pediu ajuda</b></> : null}{motivos[v.joiner_id] ? <span data-testid="vinculo-motivo" style={{ display: "block", color: C.mudo, fontSize: 11, marginTop: 2 }}>motivo: {rotuloMotivo(motivos[v.joiner_id])}</span> : null}</span>
+            <button style={botao(C.ok)} onClick={() => confirmarVinculo(v)}>Confirmar vínculo</button>
+          </div>
+  );
+
   return (
     <div style={{ color: C.texto, fontFamily: mono, maxWidth: 980 }}>
       <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, letterSpacing: 2, marginBottom: 4 }}>CONTAS DAS JOINERS</div>
@@ -169,12 +178,10 @@ export default function AdminContas() {
         <div style={rot}>Vínculos aguardando confirmação ({aConfirmar.length}{aConfirmar.length >= 300 ? "+" : ""})</div>
         <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>A ativação é AUTOMÁTICA: a pessoa recebe o código sozinha quando o e-mail do cadastro é válido e só dela, o @ não se repete, o e-mail e o @ de hoje são os mesmos da fotografia confiável do cadastro e NÃO há histórico de pedido de troca de e-mail/@ (ou quando você já confirmou o vínculo). Os cadastros desta lista NÃO passaram nessa regra e não recebem código sozinhos; o motivo aparece em cada linha: histórico de pedido de troca (o e-mail/@ de hoje são os mesmos da fotografia: o que existe é um registro antigo de pedido de troca, e não uma mudança depois dela), e-mail compartilhado, e-mail ausente ou inválido, @ repetido, ou e-mail/@ diferentes da fotografia. Para eles, confirme por um canal conhecido (WhatsApp, @). Quem pediu ajuda aparece primeiro. Procedimento: (1) a pessoa fala com você pelo próprio @ ou por um contato já conhecido; (2) ela diz QUAL e-mail usa na Anti CEG; (3) clique em Confirmar vínculo e DIGITE o e-mail completo que ela informou — o sistema confere com o cadastro sem mostrá-lo; (4) se não conferir, nada é confirmado: use "Trocar e-mail" mais abaixo. Conhecer o @ não prova que o e-mail é dela.</div>
         {!aConfirmar.length && <div style={{ color: C.mudo, fontSize: 12, marginTop: 8 }}>Nenhum cadastro aguardando.</div>}
-        {aConfirmar.map(v => (
-          <div key={v.joiner_id} style={{ borderTop: `1px solid ${C.borda}`, marginTop: 8, paddingTop: 8, fontSize: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ flex: 1, minWidth: 220 }}>#{v.joiner_id} · @{v.cog} · {v.nome_site || "—"} · e-mail @{v.dominio || "?"}{v.tem_conta ? " · já tem conta" : ""}{v.itens ? ` · ${v.itens} pedido(s)` : ""}{v.pedido_de_ajuda ? <> · <b style={{ color: C.destaque }}>pediu ajuda</b></> : null}{motivos[v.joiner_id] ? <span data-testid="vinculo-motivo" style={{ display: "block", color: C.mudo, fontSize: 11, marginTop: 2 }}>motivo: {rotuloMotivo(motivos[v.joiner_id])}</span> : null}</span>
-            <button style={botao(C.ok)} onClick={() => confirmarVinculo(v)}>Confirmar vínculo</button>
-          </div>
-        ))}
+        {comAjuda.length > 0 && <div data-testid="vinculos-com-ajuda" style={{ ...rot, marginTop: 14, color: C.destaque }}>Pediram ajuda ou tentaram ativar ({comAjuda.length})</div>}
+        {comAjuda.map(linhaVinculo)}
+        {semAjuda.length > 0 && <div data-testid="vinculos-sem-ajuda" style={{ ...rot, marginTop: 18 }}>Ainda não pediram nada ({semAjuda.length})</div>}
+        {semAjuda.map(linhaVinculo)}
       </div>
 
       <div style={caixa} data-testid="admin-fila-planilha">
