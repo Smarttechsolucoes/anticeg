@@ -18,7 +18,7 @@ import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDad
 import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
 import { lerPlanilha } from "./csvSimples.js";
 import { diasAtraso, diasCobradosMulta, multaPorDia, multaAtraso, multaDoItem, isentoMulta, diasParaVencer } from "./multa.js";
-import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
+import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner, AtivacaoPorEmail } from "./JoinerAuth.jsx";
 import { enviarComprovante as enviarArquivoSeguro, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
 import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
@@ -15308,6 +15308,7 @@ function ClaimGuestPage({ onLogin }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [ativarEmail, setAtivarEmail] = useState(null);      // e-mail digitado: abre a ativação começando por ele
 
   async function entrar() {
     const val = input.trim();
@@ -15316,7 +15317,7 @@ function ClaimGuestPage({ onLogin }) {
     const isEmail = val.indexOf("@") > 0;
     let joiner = null;
     if (JOINERS_AUTH_ATIVO) {
-      if (isEmail) { setErro("Digite o seu @. O e-mail é usado só para ativar a conta."); setLoading(false); return; }
+      if (isEmail) { setAtivarEmail(val.toLowerCase()); setLoading(false); return; }   // e-mail: abre a ativação começando por ele (nada é consultado antes)
       joiner = await buscarAcessoSimples(val);
       if (!joiner) { setErro("Acesso não encontrado. Solicite pelo WhatsApp."); setLoading(false); return; }
       onLogin(joiner, []);
@@ -15340,6 +15341,10 @@ function ClaimGuestPage({ onLogin }) {
 
   return (
     <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)", fontFamily:mono }}>
+      {ativarEmail !== null && (
+        <AtivacaoPorEmail emailInicial={ativarEmail} onFechar={() => setAtivarEmail(null)}
+          aoAtivar={async cogAtivado => { const j = cogAtivado ? await buscarAcessoSimples(cogAtivado).catch(() => null) : null; setAtivarEmail(null); if (j) onLogin(j, []); }} />
+      )}
       <div style={{ maxWidth:480, margin:"0 auto", padding:"48px 20px 80px", display:"flex", flexDirection:"column", gap:24 }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:28, marginBottom:8 }}>◈</div>

@@ -81,13 +81,12 @@ export function criarJoinerAuth(client = supabase) {
   // 1) envia o código para o e-mail digitado. A resposta é sempre a mesma: não revela se o @ ou o e-mail existem.
   async function pedirCodigo({ cog, email }) {
     const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase();
-    if (!c) return { erro: "Informe o seu @." };
-    if (!emailValido(e)) return { erro: "Digite um e-mail válido." };
+    if (!emailValido(e)) return { erro: "Digite um e-mail válido." };      // o @ é opcional: quem não lembra começa pelo e-mail cadastrado
     // se houver sessão de outra pessoa neste aparelho, encerra antes (só local)
     const { data: s } = await client.auth.getSession();
     if (s?.session) await client.auth.signOut({ scope: "local" });
     // o SERVIDOR decide se envia (só para o e-mail do cadastro, só para quem já foi liberada, com limites) e a resposta é sempre a mesma
-    const { error } = await client.functions.invoke("pedir-codigo-joiner", { body: { cog: c, email: e } });
+    const { error } = await client.functions.invoke("pedir-codigo-joiner", { body: c ? { cog: c, email: e } : { email: e } });
     if (error) return { erro: mensagem(error, "envio") };
     return { ok: true };
   }
@@ -111,9 +110,17 @@ export function criarJoinerAuth(client = supabase) {
     if (ev) return { erro: mensagem(ev, "codigo") };
     const { error: es } = await client.auth.updateUser({ password: senha });
     if (es) return { erro: mensagem(es, "senha"), senhaPendente: true };
-    const { data, error: er } = await client.rpc("ativar_minha_conta", { p_cog: c });
+    // sem @ digitado (começou pelo e-mail): o servidor diz qual é o @ DESTA conta, só porque o e-mail acabou de ser provado pelo código; quem decide o vínculo continua sendo ativar_minha_conta
+    let cogDaConta = c;
+    if (!cogDaConta) {
+      const { data: d0, error: e0 } = await client.rpc("cog_para_ativar");
+      if (e0) return { erro: "Seu e-mail foi confirmado, mas não conseguimos concluir agora. Tente de novo em instantes." };
+      cogDaConta = normalizarCog(d0);
+      if (!cogDaConta) return { resultado: "pendente" };      // e-mail dividido entre cadastros ou sem cadastro único: a administração confere
+    }
+    const { data, error: er } = await client.rpc("ativar_minha_conta", { p_cog: cogDaConta });
     if (er) return { erro: "Seu e-mail foi confirmado, mas não conseguimos concluir agora. Tente de novo em instantes." };
-    return { resultado: data && data.status === "ok" ? "ok" : data && data.status === "aguardando_liberacao" ? "aguardando" : "pendente" };
+    return { resultado: data && data.status === "ok" ? "ok" : data && data.status === "aguardando_liberacao" ? "aguardando" : "pendente", cog: cogDaConta };
   }
 
   // 3) login com @ + senha: o servidor resolve o @ para o e-mail verificado (sem devolvê-lo) e devolve só os tokens da sessão

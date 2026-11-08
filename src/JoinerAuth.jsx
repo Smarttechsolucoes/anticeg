@@ -37,10 +37,30 @@ function Rotulo({ children }) {
   return <label style={{ display: "grid", gap: 6, fontSize: 13, color: C.mudo, fontFamily: sans }}>{children}</label>;
 }
 
-function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_liberada !== false }) {
+// Campo de senha com o "olhinho": alterna mostrar/ocultar SEM enviar o formulário (botão type=button), sem perder o que foi digitado nem o foco/teclado (o mesmo <input> só troca o type).
+function CampoSenha({ style, ...resto }) {
+  const [ver, setVer] = useState(false);
+  const rotulo = ver ? "Ocultar senha" : "Mostrar senha";
+  return (
+    <span style={{ position: "relative", display: "block" }}>
+      <input {...resto} style={{ ...style, paddingRight: 52, width: "100%", boxSizing: "border-box" }} type={ver ? "text" : "password"} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+      <button type="button" data-testid="olhinho-senha" aria-label={rotulo} aria-pressed={ver} title={rotulo}
+        onMouseDown={ev => ev.preventDefault()} onClick={() => setVer(v => !v)}
+        style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, display: "grid", placeItems: "center", background: "none", border: "none", color: C.mudo, cursor: "pointer", padding: 0 }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {ver
+            ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
+            : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
+        </svg>
+      </button>
+    </span>
+  );
+}
+
+function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_liberada !== false, emailInicial = "", aoAtivar = null }) {   // aoAtivar: quem abriu o pop-up SEM @ (começou pelo e-mail) recebe o @ da conta ao ativar
   const [fase, setFase] = useState(liberada ? "dados" : "aguardando");           // dados | codigo | pendente | ajuda | ajuda_enviada | aguardando (ativação ainda não liberada para o grupo dela) | regularizar
   const [cog, setCog] = useState(normalizarCog(user?.cog));
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(String(emailInicial || ""));
   const [senha, setSenha] = useState("");
   const [repetir, setRepetir] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -68,7 +88,6 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
   async function enviarCodigo(e) {
     if (e) e.preventDefault();
     setErro("");
-    if (!normalizarCog(cog)) { setErro("Confirme o seu @."); return; }
     if (!emailValido(email)) { setErro("Digite um e-mail válido."); return; }
     const msgSenha = validarSenha(senha, repetir, { cog, email });
     if (msgSenha) { setErro(msgSenha); return; }
@@ -92,7 +111,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     setOcupado(false);
     if (r.erro) { setErro(r.erro); return; }
     // conta ativada: segue direto para a confirmação do perfil (as telas releem o estado da conta); a pessoa NÃO precisa entrar de novo
-    if (r.resultado === "ok") { setFase("finalizando"); avisarContaAtualizada(); return; }
+    if (r.resultado === "ok") { if (aoAtivar) { aoAtivar(r.cog); return; } setFase("finalizando"); avisarContaAtualizada(); return; }
     setFase(r.resultado === "aguardando" ? "aguardando" : "pendente");
   }
   function pedirAjuda(deFase) { setErro(""); setFaseAnterior(deFase); setFase("ajuda"); }
@@ -122,10 +141,10 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
           <form onSubmit={enviarCodigo} noValidate style={{ display: "grid", gap: 14 }}>
             <Titulo>Ative sua conta</Titulo>
             <Texto data-testid="ativacao-intro">Crie sua senha para acessar seus pedidos e pagamentos. Seu histórico continua no mesmo cadastro.</Texto>
-            <Rotulo>Seu @ cadastrado<input style={campo} value={cog} onChange={ev => setCog(ev.target.value)} onFocus={rolarAoFocar} aria-label="Seu @ cadastrado" autoComplete="username" /></Rotulo>
+            <Rotulo>Seu @ cadastrado (se não lembrar, pode deixar em branco)<input style={campo} value={cog} onChange={ev => setCog(ev.target.value)} onFocus={rolarAoFocar} aria-label="Seu @ cadastrado" autoComplete="username" /></Rotulo>
             <Rotulo>E-mail do seu cadastro<input style={campo} type="email" value={email} onChange={ev => setEmail(ev.target.value)} onFocus={rolarAoFocar} aria-label="E-mail do cadastro" autoComplete="email" placeholder="seuemail@exemplo.com" /></Rotulo>
-            <Rotulo>Crie uma senha (mínimo {SENHA_MIN} caracteres)<input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} onFocus={rolarAoFocar} aria-label="Crie sua senha" autoComplete="new-password" /></Rotulo>
-            <Rotulo>Repita a senha<input style={campo} type="password" value={repetir} onChange={ev => setRepetir(ev.target.value)} onFocus={rolarAoFocar} aria-label="Repita a senha" autoComplete="new-password" /></Rotulo>
+            <Rotulo>Crie uma senha (mínimo {SENHA_MIN} caracteres)<CampoSenha style={campo} value={senha} onChange={ev => setSenha(ev.target.value)} onFocus={rolarAoFocar} aria-label="Crie sua senha" autoComplete="new-password" /></Rotulo>
+            <Rotulo>Repita a senha<CampoSenha style={campo} value={repetir} onChange={ev => setRepetir(ev.target.value)} onFocus={rolarAoFocar} aria-label="Repita a senha" autoComplete="new-password" /></Rotulo>
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar código de confirmação"}</button>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
@@ -256,6 +275,13 @@ export function JoinerAtivacaoGate({ user }) {
   return <JoinerAtivacaoModal user={user} api={api} liberada={liberada} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;
 }
 
+// Ativação que começa SÓ pelo e-mail cadastrado (quem ainda não criou senha e não lembra o @). Não consulta nada antes: o servidor decide e a resposta é sempre a mesma.
+// Ao ativar, entrega o @ da conta (quem chamou entra como "acesso simples" por ele e o perfil obrigatório assume).
+export function AtivacaoPorEmail({ emailInicial = "", aoAtivar, onFechar }) {
+  const [api] = useState(() => criarJoinerAuth());
+  return <JoinerAtivacaoModal user={{ cog: "" }} api={api} liberada emailInicial={emailInicial} aoAtivar={aoAtivar} onFechar={onFechar} />;
+}
+
 // ── nível de acesso: simples (só @) ou completo (@ + senha, conta ativada) ───────────────────────
 function useNivelAcesso(user) {
   const [api] = useState(() => criarJoinerAuth());
@@ -307,7 +333,7 @@ function PromptSenha({ user, api, onSemConta, embutido = false }) {   // embutid
               ? <Rotulo>Seu @<input style={{ ...campo, opacity: 0.8 }} value={"@" + cog} readOnly aria-label="Seu @" /></Rotulo>
               : <Rotulo>E-mail da conta<input style={campo} type="email" value={email} onChange={ev => setEmail(ev.target.value)} aria-label="E-mail da conta" autoComplete="username" placeholder="seuemail@exemplo.com" /></Rotulo>}
             <div style={{ display: "grid", gap: 2 }}>
-              <Rotulo>Senha<input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Senha" autoComplete="current-password" /></Rotulo>
+              <Rotulo>Senha<CampoSenha style={campo} value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Senha" autoComplete="current-password" /></Rotulo>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button type="button" style={{ ...acaoSec, color: C.destaque, padding: "8px 2px" }} onClick={() => { setErro(""); setInfo(""); setModo("recuperar"); }}>Esqueci minha senha</button>
               </div>
@@ -396,8 +422,8 @@ export function RecuperacaoSenhaGate() {
         {!feito ? (
           <form onSubmit={salvar} noValidate style={{ display: "grid", gap: 14 }}>
             <Titulo>Defina a sua nova senha</Titulo>
-            <Rotulo>Nova senha (mínimo {SENHA_MIN} caracteres)<input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Nova senha" autoComplete="new-password" /></Rotulo>
-            <Rotulo>Repita a nova senha<input style={campo} type="password" value={repetir} onChange={ev => setRepetir(ev.target.value)} aria-label="Repita a nova senha" autoComplete="new-password" /></Rotulo>
+            <Rotulo>Nova senha (mínimo {SENHA_MIN} caracteres)<CampoSenha style={campo} value={senha} onChange={ev => setSenha(ev.target.value)} aria-label="Nova senha" autoComplete="new-password" /></Rotulo>
+            <Rotulo>Repita a nova senha<CampoSenha style={campo} value={repetir} onChange={ev => setRepetir(ev.target.value)} aria-label="Repita a nova senha" autoComplete="new-password" /></Rotulo>
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Salvando…" : "Salvar nova senha"}</button>
           </form>
@@ -439,8 +465,8 @@ export function TrocarSenhaJoiner({ user }) {
       </div>
       {aberto && (
         <form onSubmit={salvar} noValidate style={{ display: "grid", gap: 8 }}>
-          <input style={campo} type="password" value={senha} onChange={ev => setSenha(ev.target.value)} placeholder={`nova senha (mínimo ${SENHA_MIN} caracteres)`} aria-label="Nova senha" autoComplete="new-password" />
-          <input style={campo} type="password" value={repetir} onChange={ev => setRepetir(ev.target.value)} placeholder="repita a nova senha" aria-label="Repita a nova senha" autoComplete="new-password" />
+          <CampoSenha style={campo} value={senha} onChange={ev => setSenha(ev.target.value)} placeholder={`nova senha (mínimo ${SENHA_MIN} caracteres)`} aria-label="Nova senha" autoComplete="new-password" />
+          <CampoSenha style={campo} value={repetir} onChange={ev => setRepetir(ev.target.value)} placeholder="repita a nova senha" aria-label="Repita a nova senha" autoComplete="new-password" />
           <Aviso texto={erro} />
           {feito && <div role="status" style={{ color: C.ok, fontSize: 12, fontFamily: mono }}>Senha alterada.</div>}
           <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Salvando…" : "Salvar nova senha"}</button>
