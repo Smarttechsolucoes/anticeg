@@ -28293,8 +28293,9 @@ function AppPrincipal() {
 
 
   const isAdmin = isAdminUser(user);
-  // Áreas privadas: com o novo acesso ligado, só abrem com conta ativada e senha (administradoras seguem pelo próprio login)
-  const prot = (slug, el) => (JOINERS_AUTH_ATIVO && AREAS_PROTEGIDAS.includes(slug) && !isAdmin ? <AreaProtegida user={user} area={slug} onLogin={() => setPage("landing")} onCompleto={carregarPrivadosDaConta}>{el}</AreaProtegida> : el);
+  const isDemoUser = !!DEMO_COG_MAP[user?.cog];
+  // Áreas privadas: com o novo acesso ligado, só abrem com conta ativada e senha. Vale também para as administradoras (digitar o @ não basta; o painel de administração tem a própria senha); só o modo demonstração fica de fora
+  const prot = (slug, el) => (JOINERS_AUTH_ATIVO && AREAS_PROTEGIDAS.includes(slug) && !isDemoUser ? <AreaProtegida user={user} area={slug} onLogin={() => setPage("landing")} onCompleto={carregarPrivadosDaConta}>{el}</AreaProtegida> : el);
 
   return (
     <div>
@@ -28644,7 +28645,7 @@ function AppPrincipal() {
         </>
       )}
 
-      {JOINERS_AUTH_ATIVO && !user.guest && !user.pre_cadastro && !isAdmin && <JoinerAtivacaoGate user={user} />}
+      {JOINERS_AUTH_ATIVO && !user.guest && !user.pre_cadastro && !isDemoUser && <JoinerAtivacaoGate user={user} />}
 
       <BottomNav tab={tab} setTab={changeTab} isGuest={user.guest || user.pre_cadastro} isAdmin={isAdmin} />
 

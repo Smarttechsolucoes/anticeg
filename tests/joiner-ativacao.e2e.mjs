@@ -214,10 +214,10 @@ const preencher = async (page, { email = "ana@exemplo.com", senha = "senha-boa-1
   ok(await modal(page).count() === 1, "sessão ligada a OUTRO @: o pop-up aparece (não herda a conta de outra pessoa)");
   await T.browser.close();
 }
-{ // administradora: nunca vê o pop-up
+{ // administradora que digitou só o @: vê o mesmo pop-up das demais (com X)
   const T = await nova(5197, { usuario: OWNER, versao: "6" }); const { page } = T;
   await abrir(page, 5197);
-  ok(await modal(page).count() === 0, "administradora: o pop-up NÃO aparece");
+  ok(await modal(page).count() === 1 && await modal(page).getByTestId("fechar-acesso").count() === 1, "administradora que digitou só o @: o pop-up aparece como para as demais e tem X");
   await T.browser.close();
 }
 { // invalidar sessões antigas: joiner sai, administradora fica
