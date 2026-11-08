@@ -19,12 +19,30 @@ export function diasAtraso(vencimento, agora = new Date()) {
   return diff > 0 ? diff : 0;
 }
 
+// PAUSA DO ACRÉSCIMO DIÁRIO NA MIGRAÇÃO PARA O ACESSO COM SENHA (decisão de 08/11/2026): de 14/11 a 20/11/2026, INCLUSIVE, no horário de Brasília, o dia NÃO soma multa; a cobrança diária volta em 21/11.
+// Só o acréscimo é pausado: as multas acumuladas até 13/11 continuam, os dias pausados nunca são cobrados depois (a conta é "dias de atraso menos dias pausados", sempre) e vencimentos, pagamentos e valores dos itens não mudam.
+// `diasAtraso` continua sendo o atraso REAL (decide "atrasado" ou "no prazo"); quem calcula VALOR de multa usa `diasCobradosMulta`.
+export const MULTA_PAUSA = { de: "2026-11-14", ate: "2026-11-20" };
+
+// quantos dos dias de atraso (datas d com vencimento < d <= hoje) caem dentro da pausa
+export function diasPausados(vencimento, agora = new Date()) {
+  if (!vencimento) return 0;
+  const inicio = Math.max(emDias(vencimento) + 1, emDias(MULTA_PAUSA.de));
+  const fim = Math.min(emDias(hojeBR(agora)), emDias(MULTA_PAUSA.ate));
+  return fim >= inicio ? Math.round(fim - inicio + 1) : 0;
+}
+
+// dias que realmente geram multa
+export function diasCobradosMulta(vencimento, agora = new Date()) {
+  return Math.max(0, diasAtraso(vencimento, agora) - diasPausados(vencimento, agora));
+}
+
 export function multaPorDia(vencimento) {
   return vencimento && String(vencimento).slice(0, 10) >= MULTA_NOVA_DESDE ? 3 : 1;
 }
 
 export function multaAtraso(vencimento, agora = new Date()) {
-  return diasAtraso(vencimento, agora) * multaPorDia(vencimento);
+  return diasCobradosMulta(vencimento, agora) * multaPorDia(vencimento);
 }
 
 // multa do item de um joiner (0 para os isentos); `item` é a linha da masterlist (precisa do cog)

@@ -17,7 +17,7 @@ import { CASHBACK_LIBERADO } from "./cashbackLiberado.js";
 import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDados.js";
 import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
 import { lerPlanilha } from "./csvSimples.js";
-import { diasAtraso, multaPorDia, multaAtraso, multaDoItem, isentoMulta, diasParaVencer } from "./multa.js";
+import { diasAtraso, diasCobradosMulta, multaPorDia, multaAtraso, multaDoItem, isentoMulta, diasParaVencer } from "./multa.js";
 import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner } from "./JoinerAuth.jsx";
 import { enviarComprovante as enviarArquivoSeguro, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
 import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
@@ -659,7 +659,8 @@ function ValCell({ val, status, vencimento, emAnalise, confirmado, cog }) {
   if (!Number(val)) return <span className="zero-val">—</span>;
   const pendente = isPendente(status) && !confirmado;
   const dias = pendente && !emAnalise ? diasAtraso(vencimento) : 0;
-  const multa = isentoMulta(cog) ? 0 : dias * multaPorDia(vencimento);
+  const diasMulta = pendente && !emAnalise ? diasCobradosMulta(vencimento) : 0;   // sem os dias pausados da migração (14–20/11/2026)
+  const multa = isentoMulta(cog) ? 0 : diasMulta * multaPorDia(vencimento);
   const numStyle = emAnalise && pendente
     ? { color: "#A78BFA", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700 }
     : undefined;
@@ -679,9 +680,9 @@ function ValCell({ val, status, vencimento, emAnalise, confirmado, cog }) {
         if (dpv <= 14)  return <span style={{ fontSize: 9, color: "rgba(240,192,64,.85)", fontFamily: "'DM Mono',monospace", letterSpacing: ".03em", whiteSpace: "nowrap" }}>em {dpv}d · {fmtVenc(vencimento)}</span>;
         return <span style={{ fontSize: 9, color: "rgba(240,192,64,.55)", fontFamily: "'DM Mono',monospace", letterSpacing: ".03em", whiteSpace: "nowrap" }}>venc {fmtVenc(vencimento)}</span>;
       })()}
-      {dias > 0 && multa > 0 && (
+      {diasMulta > 0 && multa > 0 && (
         <span style={{ fontSize: 9, fontWeight: 700, color: "#ff6b6b", background: "rgba(255,107,107,.12)", border: "1px solid rgba(255,107,107,.3)", borderRadius: 4, padding: "1px 5px", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
-          ⚠ multa R${fmtBRL(multa)} ({dias}d)
+          ⚠ multa R${fmtBRL(multa)} ({diasMulta}d)
         </span>
       )}
     </div>
@@ -2685,7 +2686,7 @@ function MasterlistTab({ user, itens, onLogin, pushAtivos = [], pendingReportIds
           const mItem  = vItem  > 0 ? multaDoItem(i, i.venc_item)  : 0;
           const mFrete = vFrete > 0 ? multaDoItem(i, i.venc_frete) : 0;
           const mRf    = vRf    > 0 ? multaDoItem(i, i.venc_rf)    : 0;
-          const diasMax = Math.max(mItem > 0 ? diasAtraso(i.venc_item) : 0, mFrete > 0 ? diasAtraso(i.venc_frete) : 0, mRf > 0 ? diasAtraso(i.venc_rf) : 0);
+          const diasMax = Math.max(vItem > 0 && !isentoMulta(i.cog) ? diasAtraso(i.venc_item) : 0, vFrete > 0 && !isentoMulta(i.cog) ? diasAtraso(i.venc_frete) : 0, vRf > 0 && !isentoMulta(i.cog) ? diasAtraso(i.venc_rf) : 0);   // atraso REAL (a multa pode estar pausada)
           const total  = vItem + vFrete + vRf + mItem + mFrete + mRf;
           return total > 0 ? { i, vItem, vFrete, vRf, mItem, mFrete, mRf, diasMax, total } : null;
         }).filter(Boolean);
