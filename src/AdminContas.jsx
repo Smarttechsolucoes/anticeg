@@ -39,6 +39,22 @@ function BuscaJoiner({ cliente, rotulo, onEscolher }) {
   );
 }
 
+// Motivo (vindo de admin_vinculos_motivos, J9) por que o cadastro NÃO é liberado automaticamente. "historico_troca_email" NÃO significa mudança depois da fotografia:
+// o e-mail/@ de hoje podem ser os mesmos da fotografia; o que existe é um registro antigo de pedido de troca (posterior_a_fotografia diz se algum registro é mais novo que ela).
+function rotuloMotivo(m) {
+  if (!m) return "";
+  const dia = d => { const x = String(d || "").slice(0, 10).split("-"); return x.length === 3 ? `${x[2]}/${x[1]}/${x[0]}` : ""; };
+  switch (m.codigo) {
+    case "historico_troca_email": return `histórico de pedido de troca de e-mail/@${m.ultimo_registro ? ` (último registro em ${dia(m.ultimo_registro)})` : ""} · ${m.posterior_a_fotografia ? "há registro DEPOIS da fotografia" : "nada mudou depois da fotografia"}`;
+    case "historico_so_arroba": return "histórico de troca SÓ de @ (pela regra aprovada isso NÃO deveria bloquear a ativação automática: avise o desenvolvedor)";
+    case "diverge_fotografia": return "e-mail/@ DIFERENTES da fotografia (mudaram depois dela)";
+    case "sem_email_valido": return "e-mail ausente ou inválido";
+    case "email_compartilhado": return "e-mail compartilhado com outro cadastro";
+    case "arroba_repetido": return "@ repetido (só muda maiúscula)";
+    default: return "outro motivo (confira o cadastro)";
+  }
+}
+
 export default function AdminContas() {
   const [cliente] = useState(() => clienteAdmin());
   const [pendentes, setPendentes] = useState([]);
@@ -47,6 +63,7 @@ export default function AdminContas() {
   const [solicitacoes, setSolicitacoes] = useState([]);   // J6: pedidos de perfil (@, e-mail, ativação sem vínculo confiável)
   const [fila, setFila] = useState([]);                      // J6: fila de saída para a planilha
   const [aConfirmar, setAConfirmar] = useState([]);           // J6: cadastros cujo vínculo (e-mail/@) ainda não foi confirmado por evidência independente
+  const [motivos, setMotivos] = useState({});                  // J9: motivo por joiner_id (vazio se a função ainda não existe: a lista continua igual, só sem o motivo)
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState({ tipo: "", texto: "" });
   const [abertoTroca, setAbertoTroca] = useState(null);       // joiner_id com o formulário de troca de e-mail aberto
@@ -57,15 +74,17 @@ export default function AdminContas() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const [a, b, c, d, e, f] = await Promise.all([
+    const [a, b, c, d, e, f, g] = await Promise.all([
       cliente.rpc("admin_vinculos_pendentes"),
       cliente.rpc("admin_joiners_problemas", { p_limite: 500 }),
       cliente.rpc("admin_pedidos_orfaos", { p_limite: 1000 }),
       cliente.rpc("admin_perfil_solicitacoes"),
       cliente.rpc("admin_perfil_sync_pendentes"),
       cliente.rpc("admin_vinculos_a_confirmar", { p_limite: 300 }),
+      cliente.rpc("admin_vinculos_motivos", { p_limite: 700 }),
     ]);
     setPendentes(a.data || []); setProblemas(b.data || []); setOrfaos(c.data || []); setSolicitacoes(d.data || []); setFila(e.data || []); setAConfirmar(f.data || []);
+    setMotivos(Object.fromEntries((g.error ? [] : (g.data || [])).map(x => [x.joiner_id, x])));      // g só existe depois do J9: a ausência não é falha
     const falha = a.error || b.error || c.error;   // d/e/f só existem depois do J6: a ausência não é falha
     if (falha) setAviso({ tipo: "erro", texto: "Não foi possível carregar tudo: " + falha.message });
     setCarregando(false);
@@ -148,11 +167,11 @@ export default function AdminContas() {
 
       <div style={caixa} data-testid="admin-vinculos-confirmar">
         <div style={rot}>Vínculos aguardando confirmação ({aConfirmar.length}{aConfirmar.length >= 300 ? "+" : ""})</div>
-        <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>A ativação é AUTOMÁTICA: a pessoa recebe o código sozinha quando o e-mail do cadastro é válido e só dela, o @ não se repete e nem o e-mail nem o @ foram alterados depois da fotografia confiável do cadastro (ou quando você já confirmou o vínculo). Os cadastros desta lista NÃO passaram nessa regra e não recebem código sozinhos: e-mail ausente, inválido ou compartilhado, @ repetido, ou e-mail/@ alterado depois da fotografia. Para eles, confirme por um canal conhecido (WhatsApp, @). Quem pediu ajuda aparece primeiro. Procedimento: (1) a pessoa fala com você pelo próprio @ ou por um contato já conhecido; (2) ela diz QUAL e-mail usa na Anti CEG; (3) clique em Confirmar vínculo e DIGITE o e-mail completo que ela informou — o sistema confere com o cadastro sem mostrá-lo; (4) se não conferir, nada é confirmado: use "Trocar e-mail" mais abaixo. Conhecer o @ não prova que o e-mail é dela.</div>
+        <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>A ativação é AUTOMÁTICA: a pessoa recebe o código sozinha quando o e-mail do cadastro é válido e só dela, o @ não se repete, o e-mail e o @ de hoje são os mesmos da fotografia confiável do cadastro e NÃO há histórico de pedido de troca de e-mail/@ (ou quando você já confirmou o vínculo). Os cadastros desta lista NÃO passaram nessa regra e não recebem código sozinhos; o motivo aparece em cada linha: histórico de pedido de troca (o e-mail/@ de hoje são os mesmos da fotografia: o que existe é um registro antigo de pedido de troca, e não uma mudança depois dela), e-mail compartilhado, e-mail ausente ou inválido, @ repetido, ou e-mail/@ diferentes da fotografia. Para eles, confirme por um canal conhecido (WhatsApp, @). Quem pediu ajuda aparece primeiro. Procedimento: (1) a pessoa fala com você pelo próprio @ ou por um contato já conhecido; (2) ela diz QUAL e-mail usa na Anti CEG; (3) clique em Confirmar vínculo e DIGITE o e-mail completo que ela informou — o sistema confere com o cadastro sem mostrá-lo; (4) se não conferir, nada é confirmado: use "Trocar e-mail" mais abaixo. Conhecer o @ não prova que o e-mail é dela.</div>
         {!aConfirmar.length && <div style={{ color: C.mudo, fontSize: 12, marginTop: 8 }}>Nenhum cadastro aguardando.</div>}
         {aConfirmar.map(v => (
           <div key={v.joiner_id} style={{ borderTop: `1px solid ${C.borda}`, marginTop: 8, paddingTop: 8, fontSize: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ flex: 1, minWidth: 220 }}>#{v.joiner_id} · @{v.cog} · {v.nome_site || "—"} · e-mail @{v.dominio || "?"}{v.tem_conta ? " · já tem conta" : ""}{v.itens ? ` · ${v.itens} pedido(s)` : ""}{v.pedido_de_ajuda ? <> · <b style={{ color: C.destaque }}>pediu ajuda</b></> : null}</span>
+            <span style={{ flex: 1, minWidth: 220 }}>#{v.joiner_id} · @{v.cog} · {v.nome_site || "—"} · e-mail @{v.dominio || "?"}{v.tem_conta ? " · já tem conta" : ""}{v.itens ? ` · ${v.itens} pedido(s)` : ""}{v.pedido_de_ajuda ? <> · <b style={{ color: C.destaque }}>pediu ajuda</b></> : null}{motivos[v.joiner_id] ? <span data-testid="vinculo-motivo" style={{ display: "block", color: C.mudo, fontSize: 11, marginTop: 2 }}>motivo: {rotuloMotivo(motivos[v.joiner_id])}</span> : null}</span>
             <button style={botao(C.ok)} onClick={() => confirmarVinculo(v)}>Confirmar vínculo</button>
           </div>
         ))}
