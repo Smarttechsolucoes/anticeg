@@ -140,7 +140,7 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
 }
 { // administradora e conta já ativada
   const T = await nova(5197, { usuario: OWNER }); await ir(T.page, 5197, "/masterlist");
-  ok(await prompt(T.page).count() === 0, "administradora: nenhuma área é bloqueada");
+  ok(await prompt(T.page).count() === 1, "administradora que digitou só o @: a área pede a senha como as demais (digitar o @ não abre dado nem a tela)");
   await T.browser.close();
   const U = await nova(5197, { comSessao: true, cogDaConta: "ana" }); await ir(U.page, 5197, "/masterlist");
   ok(await prompt(U.page).count() === 0, "conta já ativada e logada: a área abre direto");
