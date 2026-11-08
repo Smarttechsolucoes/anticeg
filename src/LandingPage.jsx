@@ -3,6 +3,7 @@ import "./LandingPage.css";
 import supabase from "./supabase.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
 import { JOINERS_AUTH_ATIVO, buscarAcessoSimples, solicitarCadastro } from "./joinerAuth.js";
+import { AtivacaoPorEmail } from "./JoinerAuth.jsx";
 import { chamarPlanilha, mensagemPlanilha } from "./planilhaApi.js";
 import bonequinha from "./assets/bonequinha.png";
 import foxinyBronze from "./assets/badges/foxiny_bronze.jpg.png";
@@ -28,6 +29,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pendingJoiner, setPendingJoiner] = useState(null);
+  const [ativarEmail, setAtivarEmail] = useState(null);      // e-mail digitado na entrada: abre a ativação começando pelo e-mail (sem consultar nada antes)
   const [senha, setSenha] = useState("");
 
   // primeiro acesso unificado (encontrar conta existente OU cadastrar)
@@ -134,7 +136,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       return;
     }
 
-    if (JOINERS_AUTH_ATIVO && isEmail(input)) { setError("Digite o seu @. O e-mail é usado só para ativar a conta."); setLoading(false); return; }
+    if (JOINERS_AUTH_ATIVO && isEmail(input)) { setAtivarEmail(input.toLowerCase()); setLoading(false); return; }
 
     try {
       const joiner = await buscarJoiner(input);
@@ -485,6 +487,10 @@ export default function LandingPage({ onLogin, onVerCegs }) {
 
   return (
     <div className="lp">
+      {ativarEmail !== null && (
+        <AtivacaoPorEmail emailInicial={ativarEmail} onFechar={() => setAtivarEmail(null)}
+          aoAtivar={async cogAtivado => { const j = cogAtivado ? await buscarAcessoSimples(cogAtivado).catch(() => null) : null; setAtivarEmail(null); if (j) await entrarCom(j); }} />
+      )}
       <div className="lp-cursor" ref={cursorRef} />
       <div className="lp-cursor-ring" ref={ringRef} />
 
