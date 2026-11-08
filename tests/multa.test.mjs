@@ -64,74 +64,73 @@ test("joiner isento (ifelixcollector) nunca tem multa", async () => {
   assert.equal(multaDoItem({ cog: "outra" }, "2026-10-15", agora), 14 * 3);
 });
 
-// ═════════ PAUSA DO ACRÉSCIMO DIÁRIO NA MIGRAÇÃO (14/11 a 20/11/2026, inclusive, horário de Brasília; a cobrança volta em 21/11) ═════════
+// ═════════ PAUSA DO ACRÉSCIMO DIÁRIO NA MIGRAÇÃO (08/11 a 14/11/2026, inclusive, horário de Brasília; a cobrança volta em 15/11) ═════════
 import { diasCobradosMulta, diasPausados, MULTA_PAUSA, multaDoItem } from "../src/multa.js";
 const BRT = (dia, hhmm = "12:00") => new Date(`${dia}T${hhmm}:00-03:00`);
 
-test("pausa: constantes da decisão (14/11 a 20/11/2026)", () => {
-  assert.deepEqual(MULTA_PAUSA, { de: "2026-11-14", ate: "2026-11-20" });
+test("pausa: constantes da decisão (08/11 a 14/11/2026)", () => {
+  assert.deepEqual(MULTA_PAUSA, { de: "2026-11-08", ate: "2026-11-14" });
 });
 
-test("pausa: o dia 13/11 ainda conta; 14/11 00:00 em Brasília já não soma (fronteira de horário de Brasília, não UTC)", () => {
-  assert.equal(multaAtraso("2026-11-12", em("2026-11-14T02:59:59Z")), 3);      // 13/11 23:59:59 em Brasília: 1 dia de atraso (13/11)
-  assert.equal(multaAtraso("2026-11-12", em("2026-11-14T03:00:00Z")), 3);      // 14/11 00:00 em Brasília: o dia 14/11 não soma
-  assert.equal(multaAtraso("2026-11-13", em("2026-11-14T03:00:00Z")), 0);      // venceu em 13/11: o 1º dia de atraso seria 14/11, pausado
+test("pausa: o dia 07/11 ainda conta; 08/11 00:00 em Brasília já não soma (fronteira em Brasília, não em UTC)", () => {
+  assert.equal(multaAtraso("2026-11-06", em("2026-11-08T02:59:59Z")), 3);      // 07/11 23:59:59 em Brasília: 1 dia de atraso (07/11)
+  assert.equal(multaAtraso("2026-11-06", em("2026-11-08T03:00:00Z")), 3);      // 08/11 00:00 em Brasília: o dia 08/11 não soma
+  assert.equal(multaAtraso("2026-11-07", em("2026-11-08T03:00:00Z")), 0);      // venceu em 07/11: o 1º dia de atraso seria 08/11, pausado
 });
 
-test("pausa: multas acumuladas antes de 14/11 são PRESERVADAS e ficam congeladas até 20/11", () => {
-  const venc = "2026-11-10";                                                    // 11, 12 e 13/11 contam: 3 dias × R$3
-  assert.equal(multaAtraso(venc, BRT("2026-11-13", "23:59")), 9);
-  for (const dia of ["2026-11-14", "2026-11-15", "2026-11-17", "2026-11-19", "2026-11-20"]) assert.equal(multaAtraso(venc, BRT(dia)), 9, `congelada em ${dia}`);
-  assert.equal(multaAtraso(venc, BRT("2026-11-20", "23:59")), 9);
+test("pausa: multas acumuladas antes de 08/11 são PRESERVADAS e ficam congeladas até 14/11", () => {
+  const venc = "2026-11-04";                                                    // 05, 06 e 07/11 contam: 3 dias × R$3
+  assert.equal(multaAtraso(venc, BRT("2026-11-07", "23:59")), 9);
+  for (const dia of ["2026-11-08", "2026-11-09", "2026-11-11", "2026-11-13", "2026-11-14"]) assert.equal(multaAtraso(venc, BRT(dia)), 9, `congelada em ${dia}`);
+  assert.equal(multaAtraso(venc, BRT("2026-11-14", "23:59")), 9);
 });
 
-test("pausa: a cobrança diária volta em 21/11 (00:00 de Brasília) e o 1º dia cobrado é o próprio 21/11", () => {
-  assert.equal(multaAtraso("2026-11-10", em("2026-11-21T02:59:59Z")), 9);      // 20/11 23:59:59 em Brasília
-  assert.equal(multaAtraso("2026-11-10", em("2026-11-21T03:00:00Z")), 12);     // 21/11 00:00: +1 dia
-  assert.equal(multaAtraso("2026-11-10", BRT("2026-11-22")), 15);
-  assert.equal(multaAtraso("2026-11-13", BRT("2026-11-21")), 3);               // venceu 13/11: só o 21/11 conta
-  assert.equal(multaAtraso("2026-11-20", BRT("2026-11-21")), 3);               // venceu 20/11: atraso começa em 21/11
+test("pausa: a cobrança diária volta em 15/11 (00:00 de Brasília) e o 1º dia cobrado é o próprio 15/11", () => {
+  assert.equal(multaAtraso("2026-11-04", em("2026-11-15T02:59:59Z")), 9);      // 14/11 23:59:59 em Brasília
+  assert.equal(multaAtraso("2026-11-04", em("2026-11-15T03:00:00Z")), 12);     // 15/11 00:00: +1 dia
+  assert.equal(multaAtraso("2026-11-04", BRT("2026-11-16")), 15);
+  assert.equal(multaAtraso("2026-11-07", BRT("2026-11-15")), 3);               // venceu 07/11: só o 15/11 conta
+  assert.equal(multaAtraso("2026-11-14", BRT("2026-11-15")), 3);               // venceu 14/11: atraso começa em 15/11
 });
 
-test("pausa: vencimento DENTRO da pausa (ex.: 17/11) só começa a gerar multa em 21/11", () => {
-  assert.equal(multaAtraso("2026-11-17", BRT("2026-11-20")), 0);
-  assert.equal(multaAtraso("2026-11-17", BRT("2026-11-21")), 3);
-  assert.equal(multaAtraso("2026-11-17", BRT("2026-11-23")), 9);
+test("pausa: vencimento DENTRO da pausa (ex.: 11/11) só começa a gerar multa em 15/11", () => {
+  assert.equal(multaAtraso("2026-11-11", BRT("2026-11-14")), 0);
+  assert.equal(multaAtraso("2026-11-11", BRT("2026-11-15")), 3);
+  assert.equal(multaAtraso("2026-11-11", BRT("2026-11-17")), 9);
 });
 
 test("pausa: os dias dispensados NUNCA são cobrados depois (retroativo)", () => {
-  // vencido em 10/11; em 30/11 os dias cobrados são 11, 12, 13/11 (3) + 21..30/11 (10) = 13
-  assert.equal(diasCobradosMulta("2026-11-10", BRT("2026-11-30")), 13);
-  assert.equal(multaAtraso("2026-11-10", BRT("2026-11-30")), 39);
-  assert.equal(diasPausados("2026-11-10", BRT("2026-11-30")), 7);
-  // e em dezembro continua sem os 7 dias
-  assert.equal(diasAtraso("2026-11-10", BRT("2026-12-10")) - diasCobradosMulta("2026-11-10", BRT("2026-12-10")), 7);
+  // vencido em 04/11; em 30/11 os dias cobrados são 05, 06 e 07/11 (3) + 15..30/11 (16) = 19
+  assert.equal(diasCobradosMulta("2026-11-04", BRT("2026-11-30")), 19);
+  assert.equal(multaAtraso("2026-11-04", BRT("2026-11-30")), 57);
+  assert.equal(diasPausados("2026-11-04", BRT("2026-11-30")), 7);
+  assert.equal(diasAtraso("2026-11-04", BRT("2026-12-10")) - diasCobradosMulta("2026-11-04", BRT("2026-12-10")), 7);
 });
 
 test("pausa: o atraso REAL (diasAtraso), diasParaVencer e a taxa por dia NÃO mudam", () => {
-  assert.equal(diasAtraso("2026-11-10", BRT("2026-11-17")), 7);               // continua "atrasado há 7 dias" (status)
-  assert.equal(diasAtraso("2026-11-13", BRT("2026-11-14")), 1);               // continua atrasado, só sem acréscimo
-  assert.equal(diasParaVencer("2026-11-17", BRT("2026-11-15")), 2);
-  assert.equal(diasParaVencer("2026-11-10", BRT("2026-11-15")), -5);
-  assert.equal(multaPorDia("2026-11-10"), 3);
+  assert.equal(diasAtraso("2026-11-04", BRT("2026-11-11")), 7);               // continua "atrasado há 7 dias" (status)
+  assert.equal(diasAtraso("2026-11-07", BRT("2026-11-08")), 1);               // continua atrasado, só sem acréscimo
+  assert.equal(diasParaVencer("2026-11-11", BRT("2026-11-09")), 2);
+  assert.equal(diasParaVencer("2026-11-04", BRT("2026-11-09")), -5);
+  assert.equal(multaPorDia("2026-11-04"), 3);
   assert.equal(multaPorDia("2026-09-30"), 1);
 });
 
 test("pausa: prazos antigos (R$1/dia) também ficam congelados e voltam a R$1/dia", () => {
-  const venc = "2026-09-28";                                                   // 46 dias de atraso até 13/11
-  assert.equal(multaAtraso(venc, BRT("2026-11-13", "23:59")), 46);
-  assert.equal(multaAtraso(venc, BRT("2026-11-20", "23:59")), 46);
-  assert.equal(multaAtraso(venc, BRT("2026-11-21")), 47);
+  const venc = "2026-09-28";                                                   // 29/09 a 07/11 = 40 dias
+  assert.equal(multaAtraso(venc, BRT("2026-11-07", "23:59")), 40);
+  assert.equal(multaAtraso(venc, BRT("2026-11-14", "23:59")), 40);
+  assert.equal(multaAtraso(venc, BRT("2026-11-15")), 41);
 });
 
 test("pausa: vencimento DEPOIS da pausa não é afetado", () => {
-  assert.equal(multaAtraso("2026-11-25", BRT("2026-11-28")), 9);
-  assert.equal(diasPausados("2026-11-25", BRT("2026-11-28")), 0);
+  assert.equal(multaAtraso("2026-11-20", BRT("2026-11-23")), 9);
+  assert.equal(diasPausados("2026-11-20", BRT("2026-11-23")), 0);
 });
 
 test("pausa: isento continua isento e item sem vencimento continua sem multa", () => {
-  assert.equal(multaDoItem({ cog: "ifelixcollector" }, "2026-11-10", BRT("2026-11-30")), 0);
-  assert.equal(multaDoItem({ cog: "outra" }, "2026-11-10", BRT("2026-11-30")), 39);
+  assert.equal(multaDoItem({ cog: "ifelixcollector" }, "2026-11-04", BRT("2026-11-30")), 0);
+  assert.equal(multaDoItem({ cog: "outra" }, "2026-11-04", BRT("2026-11-30")), 57);
   assert.equal(multaAtraso(null, BRT("2026-11-30")), 0);
   assert.equal(diasCobradosMulta(undefined, BRT("2026-11-30")), 0);
 });
@@ -143,7 +142,7 @@ test("pausa: varredura dia a dia (vencimentos de 01/10 a 10/12) — nunca diminu
     const venc = dia("2026-10-01", v);
     let anterior = null;
     for (let t = 0; t <= 80; t++) {
-      const hoje = dia("2026-10-15", t), agora = BRT(hoje);
+      const hoje = dia("2026-10-25", t), agora = BRT(hoje);
       const cob = diasCobradosMulta(venc, agora), real = diasAtraso(venc, agora), paus = diasPausados(venc, agora);
       assert.equal(cob, real - paus, `${venc} em ${hoje}`);
       assert.ok(paus >= 0 && paus <= 7, `pausados ${venc} em ${hoje}`);
