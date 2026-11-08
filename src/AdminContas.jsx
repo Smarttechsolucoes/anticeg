@@ -39,13 +39,14 @@ function BuscaJoiner({ cliente, rotulo, onEscolher }) {
   );
 }
 
-// Motivo (vindo de admin_vinculos_motivos, J9) por que o cadastro NÃO é liberado automaticamente. "historico_alteracao" NÃO significa mudança depois da fotografia:
+// Motivo (vindo de admin_vinculos_motivos, J9) por que o cadastro NÃO é liberado automaticamente. "historico_troca_email" NÃO significa mudança depois da fotografia:
 // o e-mail/@ de hoje podem ser os mesmos da fotografia; o que existe é um registro antigo de pedido de troca (posterior_a_fotografia diz se algum registro é mais novo que ela).
 function rotuloMotivo(m) {
   if (!m) return "";
   const dia = d => { const x = String(d || "").slice(0, 10).split("-"); return x.length === 3 ? `${x[2]}/${x[1]}/${x[0]}` : ""; };
   switch (m.codigo) {
-    case "historico_alteracao": return `histórico de pedido de troca de e-mail/@${m.ultimo_registro ? ` (último registro em ${dia(m.ultimo_registro)})` : ""} · ${m.posterior_a_fotografia ? "há registro DEPOIS da fotografia" : "nada mudou depois da fotografia"}`;
+    case "historico_troca_email": return `histórico de pedido de troca de e-mail/@${m.ultimo_registro ? ` (último registro em ${dia(m.ultimo_registro)})` : ""} · ${m.posterior_a_fotografia ? "há registro DEPOIS da fotografia" : "nada mudou depois da fotografia"}`;
+    case "historico_so_arroba": return "histórico de troca SÓ de @ (pela regra aprovada isso NÃO deveria bloquear a ativação automática: avise o desenvolvedor)";
     case "diverge_fotografia": return "e-mail/@ DIFERENTES da fotografia (mudaram depois dela)";
     case "sem_email_valido": return "e-mail ausente ou inválido";
     case "email_compartilhado": return "e-mail compartilhado com outro cadastro";

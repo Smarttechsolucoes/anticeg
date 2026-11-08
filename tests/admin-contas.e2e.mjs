@@ -31,7 +31,7 @@ async function nova(cen) {
       reg.rpc.push(rpc); const corpo = JSON.parse(req.postData() || "{}");
       if (rpc === "is_admin") return json(200, true);
       if (rpc === "admin_vinculos_a_confirmar") return json(200, est.aConfirmar);
-      if (rpc === "admin_vinculos_motivos") return cen.semMotivos ? json(404, { code: "PGRST202", message: "Could not find the function public.admin_vinculos_motivos" }) : json(200, [{ joiner_id: 7, codigo: "historico_alteracao", ultimo_registro: "2026-11-07", posterior_a_fotografia: false }, { joiner_id: 8, codigo: "email_compartilhado", ultimo_registro: null, posterior_a_fotografia: false }]);
+      if (rpc === "admin_vinculos_motivos") return cen.semMotivos ? json(404, { code: "PGRST202", message: "Could not find the function public.admin_vinculos_motivos" }) : json(200, [{ joiner_id: 7, codigo: "historico_troca_email", ultimo_registro: "2026-11-07", posterior_a_fotografia: false }, { joiner_id: 8, codigo: cen.soArroba ? "historico_so_arroba" : "email_compartilhado", ultimo_registro: null, posterior_a_fotografia: false }]);
       if (rpc === "admin_perfil_solicitacoes") return json(200, est.solic);
       if (rpc === "admin_confirmar_vinculo") {
         reg.confirmar.push(corpo);
@@ -133,6 +133,13 @@ const abrirContas = async page => {
   ok(motivos[0].includes("histórico de pedido de troca de e-mail/@") && motivos[0].includes("07/11/2026") && motivos[0].includes("nada mudou depois da fotografia"), "histórico de troca: mostra a data do último registro e que NADA mudou depois da fotografia");
   ok(motivos[1].includes("e-mail compartilhado com outro cadastro"), "e-mail compartilhado: motivo próprio");
   ok(((await caixa.innerText()).match(/[\w.+-]+@[\w.-]+\.\w+/g) || []).length === 0, "os motivos não mostram e-mail");
+  ok(erros.length === 0, "nenhum erro de JavaScript"); await T.browser.close();
+}
+{ // regra aprovada: mudança SÓ de @ não bloqueia — se aparecer um caso assim, o painel diz isso com todas as letras (hoje são 0 casos)
+  const T = await nova({ soArroba: true }); const { page, erros } = T;
+  await abrirContas(page);
+  const motivos = await page.getByTestId("admin-vinculos-confirmar").getByTestId("vinculo-motivo").allInnerTexts();
+  ok(motivos[0].includes("histórico de pedido de troca de e-mail/@") && motivos[1].includes("histórico de troca SÓ de @") && motivos[1].includes("NÃO deveria bloquear"), "troca só de @ é distinguida da troca de e-mail e sinalizada como contrária à regra aprovada");
   ok(erros.length === 0, "nenhum erro de JavaScript"); await T.browser.close();
 }
 { // antes do J9 (função ainda não existe): a lista continua igual, sem motivo e sem erro na tela
