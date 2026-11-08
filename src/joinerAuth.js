@@ -35,6 +35,14 @@ export function validarSenha(senha, repetir, { cog = "", email = "" } = {}) {
   return "";
 }
 
+// Falha de rede/serviço (sem resposta do servidor, relay fora do ar, erro 5xx): não é senha errada.
+function falhaDeConexao(err, status, txt) {
+  const nome = String((err && err.name) || "");
+  if (/FunctionsFetchError|FunctionsRelayError|AuthRetryableFetchError|AuthUnknownError/.test(nome)) return true;
+  if (typeof status === "number" && (status === 0 || status >= 500)) return true;
+  return /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(txt);
+}
+
 function mensagem(err, contexto) {
   const txt = String((err && (err.message || err.code)) || "");
   const status = err && (err.status || err.context?.status);
@@ -46,7 +54,7 @@ function mensagem(err, contexto) {
     if (/reauth/i.test(txt)) return "Por segurança, entre de novo e tente outra vez.";
     return "Não foi possível salvar a senha. Tente de novo.";
   }
-  if (contexto === "entrar") return "@ ou senha incorretos.";
+  if (contexto === "entrar") return falhaDeConexao(err, status, txt) ? "Não foi possível conectar agora. Verifique a internet e tente de novo em alguns minutos." : "@ ou senha incorretos.";   // credencial inválida e falha de conexão têm mensagens diferentes (nenhuma revela se a conta existe)
   if (contexto === "recuperar") return "Não foi possível enviar agora. Tente de novo em alguns minutos.";
   return "Não foi possível enviar o código agora. Tente de novo em alguns minutos.";
 }

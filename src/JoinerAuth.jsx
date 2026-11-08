@@ -129,6 +129,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar código de confirmação"}</button>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
+              <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("entrar"); }} data-testid="ativacao-ja-tenho-conta">Já tenho conta? Entrar</button>
               <button type="button" style={acaoSec} onClick={voltarAreasPublicas} data-testid="ativacao-voltar-publicas">Voltar às áreas públicas</button>
               <button type="button" style={acaoSec} onClick={() => pedirAjuda("dados")} data-testid="ativacao-pedir-ajuda">Meu e-mail não está no cadastro ou não lembro qual é</button>
             </div>
@@ -197,6 +198,10 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             <Texto>Estamos liberando a criação de senha aos poucos, em grupos. Quando chegar a sua vez você será avisada pela administração. Enquanto isso você continua navegando só com o @ (calendário, regras e CEGs). Seus pedidos, claims e histórico continuam guardados no seu @ e nada se perde.</Texto>
             <button style={botao} onClick={continuarLimitado}>Entendi, continuar só com o @</button>
           </div>
+        )}
+        {fase === "entrar" && (
+          // o login existente, dentro do pop-up: ao entrar, a sessão muda e o aviso (conferir) fecha sozinho ou abre "Confira seus dados"
+          <PromptSenha embutido user={{ cog }} api={api} onSemConta={() => { setErro(""); setFase("dados"); }} />
         )}
         {fase === "regularizar" && (
           <div style={{ display: "grid", gap: 14 }}>
@@ -268,7 +273,7 @@ function useNivelAcesso(user) {
   return { api, nivel, perfil, recarregar: () => api.estado(user?.cog).then(r => { setPerfil(r.perfil || null); setNivel(r.estado === "ativa" ? "completo" : r.estado === "perfil_pendente" ? "perfil_pendente" : "simples"); }) };
 }
 
-function PromptSenha({ user, api, onSemConta }) {
+function PromptSenha({ user, api, onSemConta, embutido = false }) {   // embutido: dentro do pop-up de ativação (sem moldura própria)
   const [modo, setModo] = useState("email");        // email (padrão) | arroba | recuperar
   const [senha, setSenha] = useState("");
   const [email, setEmail] = useState("");
@@ -292,8 +297,8 @@ function PromptSenha({ user, api, onSemConta }) {
   }
 
   return (
-    <div data-testid="area-protegida" style={{ maxWidth: 460, margin: "32px auto", padding: "0 16px", boxSizing: "border-box" }}>
-      <div style={{ ...cartao, width: "100%", margin: 0, padding: "24px 22px" }}>
+    <div data-testid={embutido ? "login-no-popup" : "area-protegida"} style={embutido ? undefined : { maxWidth: 460, margin: "32px auto", padding: "0 16px", boxSizing: "border-box" }}>
+      <div style={embutido ? undefined : { ...cartao, width: "100%", margin: 0, padding: "24px 22px" }}>
         <Titulo>Entre na sua conta</Titulo>
         <Texto>Estas informações são pessoais e só abrem com a sua senha. As áreas públicas continuam abertas.</Texto>
         {modo !== "recuperar" ? (
