@@ -97,5 +97,36 @@ const caminho = page => page.evaluate(() => window.location.pathname);
   await T.browser.close();
 }
 
+{ // orientação “Já criou sua senha?”: igual para TODOS, sem consultar nada, com atalhos para entrar e para recuperar
+  const TEXTO = "Já criou sua senha? Entre na sua conta. Se não lembrar, toque em “Esqueci minha senha”.";
+  const textos = [];
+  for (const [rotulo, entradaEmail, entradaCog] of [["@ de quem tem cadastro", "ana@exemplo.com", "ana"], ["@/e-mail que não existem", "ninguem@exemplo.com", "naoexiste-zz"]]) {
+    const T = await nova(); const { page, reg } = T; await ir(page, "/cegs");
+    await page.evaluate(() => window.dispatchEvent(new Event("anticeg:abrir-ativacao"))); await page.waitForTimeout(500);
+    const modal = page.getByTestId("ativacao-modal");
+    const rpcAntes = reg.rpc.length;
+    const o1 = modal.getByTestId("orientacao-ja-criou-senha");
+    ok(await o1.count() === 1, `${rotulo}: a orientação aparece na tela dos dados`);
+    textos.push((await o1.innerText()).replace(/\s+/g, " ").trim());
+    ok(textos.at(-1) === TEXTO, `${rotulo}: o texto é exatamente “${TEXTO}”`);
+    await modal.getByLabel("Seu @ cadastrado").fill(entradaCog); await modal.getByLabel("E-mail do cadastro").fill(entradaEmail); await modal.getByLabel("Crie sua senha").fill("senha-boa-123"); await modal.getByLabel("Repita a senha").fill("senha-boa-123");
+    await modal.getByRole("button", { name: "Enviar código de confirmação" }).click(); await page.waitForTimeout(700);
+    const o2 = modal.getByTestId("orientacao-ja-criou-senha");
+    ok(await o2.count() === 1 && (await o2.innerText()).replace(/\s+/g, " ").trim() === TEXTO, `${rotulo}: a mesma orientação aparece na tela do código`);
+    ok(reg.rpc.length === rpcAntes && reg.privadas.length === 0, `${rotulo}: a orientação não consultou nada (nenhuma chamada ao banco entre abrir a tela e chegar ao código)`);
+    await T.browser.close();
+  }
+  ok(textos[0] === textos[1], "o texto da orientação é IDÊNTICO para quem tem e para quem não tem cadastro");
+  const T = await nova(); const { page } = T; await ir(page, "/cegs");
+  await page.evaluate(() => window.dispatchEvent(new Event("anticeg:abrir-ativacao"))); await page.waitForTimeout(500);
+  const modal = page.getByTestId("ativacao-modal");
+  await modal.getByTestId("orientacao-entrar").click(); await page.waitForTimeout(400);
+  ok(await modal.getByTestId("login-no-popup").count() === 1 && (await modal.innerText()).includes("Entre na sua conta") && await modal.getByLabel("Seu @ ou e-mail").count() === 1, "“Entre na sua conta” abre o login (campo único)");
+  await modal.getByRole("button", { name: "Primeiro acesso? Ative sua conta" }).click(); await page.waitForTimeout(300);
+  await modal.getByTestId("orientacao-esqueci").click(); await page.waitForTimeout(400);
+  ok(await modal.getByRole("button", { name: "Enviar link de redefinição" }).count() === 1, "“Esqueci minha senha” abre direto a recuperação de senha");
+  ok(T.erros.length === 0, "sem erro de script"); await T.browser.close();
+}
+
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);

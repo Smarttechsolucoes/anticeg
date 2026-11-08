@@ -67,6 +67,18 @@ function CampoSenha({ style, ...resto }) {
   );
 }
 
+// Orientação FIXA, igual para todos (não consulta nada nem confirma se o @ ou o e-mail têm conta): quem já criou a senha entra; quem não lembra recupera.
+function OrientacaoSenha({ aoEntrar, aoRecuperar }) {
+  return (
+    <Texto pequeno data-testid="orientacao-ja-criou-senha">
+      Já criou sua senha?{" "}
+      <button type="button" data-testid="orientacao-entrar" style={{ ...acaoSec, display: "inline", padding: 0, minHeight: 0, fontSize: "inherit" }} onClick={aoEntrar}>Entre na sua conta</button>.
+      {" "}Se não lembrar, toque em{" "}
+      <button type="button" data-testid="orientacao-esqueci" style={{ ...acaoSec, display: "inline", padding: 0, minHeight: 0, fontSize: "inherit" }} onClick={aoRecuperar}>“Esqueci minha senha”</button>.
+    </Texto>
+  );
+}
+
 function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_liberada !== false, emailInicial = "", aoAtivar = null }) {   // aoAtivar: quem abriu o pop-up SEM @ (começou pelo e-mail) recebe o @ da conta ao ativar
   const [fase, setFase] = useState(liberada ? "dados" : "aguardando");           // dados | codigo | pendente | ajuda | ajuda_enviada | aguardando (ativação ainda não liberada para o grupo dela) | regularizar
   const [cog, setCog] = useState(normalizarCog(user?.cog));
@@ -81,6 +93,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
   const [contatoAjuda, setContatoAjuda] = useState("");
   const [textoAjuda, setTextoAjuda] = useState("");
   const [faseAnterior, setFaseAnterior] = useState("dados");
+  const [modoEntrar, setModoEntrar] = useState("entrar");     // entrar | recuperar: como o login embutido abre quando vem da orientação
   const [lento, setLento] = useState(false);
 
   // depois de ativar, este pop-up só sai quando a confirmação do perfil assume a tela (a página de trás nunca aparece); se demorar, oferece continuar
@@ -158,6 +171,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             <Rotulo>Repita a senha<CampoSenha style={campo} value={repetir} onChange={ev => setRepetir(ev.target.value)} onFocus={rolarAoFocar} aria-label="Repita a senha" autoComplete="new-password" /></Rotulo>
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar código de confirmação"}</button>
+            <OrientacaoSenha aoEntrar={() => { setErro(""); setModoEntrar("entrar"); setFase("entrar"); }} aoRecuperar={() => { setErro(""); setModoEntrar("recuperar"); setFase("entrar"); }} />
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
               <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("entrar"); }} data-testid="ativacao-ja-tenho-conta">Já tenho conta? Entrar</button>
               <button type="button" style={acaoSec} onClick={voltarAreasPublicas} data-testid="ativacao-voltar-publicas">Voltar às áreas públicas</button>
@@ -175,6 +189,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             {reenviado && <div data-testid="ativacao-reenviado" role="status" style={{ fontSize: 14, fontFamily: sans, color: C.ok, lineHeight: 1.45 }}>Pedimos outro código. Se os dados corresponderem a um cadastro liberado para ativação, ele chega nesse e-mail.</div>}
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Conferindo…" : "Confirmar código"}</button>
             <Texto pequeno data-testid="ativacao-aviso-spam">Confira também Spam ou Lixo Eletrônico. Se pedir outro código, use o mais recente.</Texto>
+            <OrientacaoSenha aoEntrar={() => { setErro(""); setModoEntrar("entrar"); setFase("entrar"); }} aoRecuperar={() => { setErro(""); setModoEntrar("recuperar"); setFase("entrar"); }} />
             <div style={{ display: "grid", gap: 2, justifyItems: "center" }}>
               <Texto pequeno data-testid="ativacao-dica-ajuda">Não recebeu o código? Toque em “Preciso de ajuda”.</Texto>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
@@ -231,7 +246,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
         )}
         {fase === "entrar" && (
           // o login existente, dentro do pop-up: ao entrar, a sessão muda e o aviso (conferir) fecha sozinho ou abre "Confira seus dados"
-          <PromptSenha embutido user={{ cog }} api={api} onSemConta={() => { setErro(""); setFase("dados"); }} onEntrou={aoAtivar ? c => aoAtivar(c) : undefined} />
+          <PromptSenha embutido modoInicial={modoEntrar} user={{ cog }} api={api} onSemConta={() => { setErro(""); setFase("dados"); }} onEntrou={aoAtivar ? c => aoAtivar(c) : undefined} />
         )}
         {fase === "regularizar" && (
           <div style={{ display: "grid", gap: 14 }}>
@@ -321,8 +336,8 @@ function useNivelAcesso(user) {
 // Campo único "Seu @ ou e-mail": o que tem cara de e-mail entra por e-mail + senha; o resto é tratado como @. Sem alternar por link.
 const identificar = v => { const t = String(v || "").trim(); if (!t) return null; if (emailValido(t)) return { email: t.toLowerCase() }; if (t.indexOf("@") > 0) return { invalido: true }; const c = normalizarCog(t); return c ? { cog: c } : null; };   // "x@y" sem cara de e-mail não vira @
 
-function PromptSenha({ user, api, onSemConta, onEntrou, embutido = false }) {   // embutido: dentro do pop-up de ativação (sem moldura própria); onEntrou(cog): quem hospeda recebe o @ da conta ao entrar
-  const [modo, setModo] = useState("entrar");        // entrar | recuperar
+function PromptSenha({ user, api, onSemConta, onEntrou, modoInicial = "entrar", embutido = false }) {   // embutido: dentro do pop-up de ativação (sem moldura própria); onEntrou(cog): quem hospeda recebe o @ da conta ao entrar
+  const [modo, setModo] = useState(modoInicial);        // entrar | recuperar
   const cog = normalizarCog(user?.cog);
   const [ident, setIdent] = useState(cog ? "@" + cog : "");
   const [senha, setSenha] = useState("");
