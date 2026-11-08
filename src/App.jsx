@@ -28145,6 +28145,18 @@ function AppPrincipal() {
     setItens(r.itens);
   }
 
+  // Administradora que também é joiner: a administradora não passa pelo portão das áreas protegidas (é ele quem carrega os dados das demais joiners), então, com a conta
+  // ligada ao cadastro dela, carrega aqui os PRÓPRIOS itens (meus_dados + masterlist do próprio cog). Sem conta ligada ou com o perfil pendente, meus_dados não devolve nada e nada muda.
+  useEffect(() => {
+    if (!JOINERS_AUTH_ATIVO || !user || user.guest || user.pre_cadastro || !user.acesso_simples || !isAdminUser(user)) return undefined;
+    let vivo = true;
+    const tentar = () => { if (vivo) carregarPrivadosDaConta(); };
+    tentar();
+    const { data: sub } = supabase.auth.onAuthStateChange(() => { setTimeout(tentar, 0); });
+    window.addEventListener("anticeg:conta-atualizada", tentar);
+    return () => { vivo = false; sub?.subscription?.unsubscribe(); window.removeEventListener("anticeg:conta-atualizada", tentar); };
+  }, [user?.cog, user?.acesso_simples]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleLogin(u, itensData) {
     localStorage.setItem("anticeg_user_v2", JSON.stringify(u));
     localStorage.setItem("anticeg_session_at_v2", String(Date.now()));
