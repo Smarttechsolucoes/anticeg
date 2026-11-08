@@ -135,6 +135,18 @@ const abrirContas = async page => {
   ok(((await caixa.innerText()).match(/[\w.+-]+@[\w.-]+\.\w+/g) || []).length === 0, "os motivos não mostram e-mail");
   ok(erros.length === 0, "nenhum erro de JavaScript"); await T.browser.close();
 }
+{ // lista separada: quem pediu ajuda / tentou ativar x quem ainda não pediu nada
+  const T = await nova({ notas: ["bia@exemplo.com", "confirmei por whatsapp em 18/11 (mensagem do @ bia)"] }); const { page, erros } = T;
+  await abrirContas(page);
+  const caixa = page.getByTestId("admin-vinculos-confirmar"); const t0 = (await caixa.innerText()).toLowerCase();   // os títulos aparecem em maiúsculas (CSS)
+  const iA = t0.indexOf("pediram ajuda ou tentaram ativar (1)"), iBia = t0.indexOf("@bia"), iB = t0.indexOf("ainda não pediram nada (1)"), iCaio = t0.indexOf("@caio");
+  ok(iA > -1 && iBia > iA && iB > iBia && iCaio > iB, "a lista tem dois blocos em ordem: “Pediram ajuda ou tentaram ativar” (@bia) e depois “Ainda não pediram nada” (@caio)");
+  ok(t0.includes("(2)") && await caixa.getByRole("button", { name: "Confirmar vínculo" }).count() === 2, "o total continua (2) e as duas linhas mantêm o botão Confirmar vínculo");
+  await caixa.getByRole("button", { name: "Confirmar vínculo" }).first().click(); await page.waitForTimeout(800);
+  const t1 = (await caixa.innerText()).toLowerCase();
+  ok(!t1.includes("pediram ajuda ou tentaram ativar") && t1.includes("ainda não pediram nada (1)") && t1.includes("@caio") && t1.includes("(1)"), "depois de confirmar a primeira, o bloco de quem pediu ajuda some e o outro continua");
+  ok(erros.length === 0, "nenhum erro de JavaScript"); await T.browser.close();
+}
 { // regra aprovada: mudança SÓ de @ não bloqueia — se aparecer um caso assim, o painel diz isso com todas as letras (hoje são 0 casos)
   const T = await nova({ soArroba: true }); const { page, erros } = T;
   await abrirContas(page);
