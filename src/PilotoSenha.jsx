@@ -57,8 +57,8 @@ export default function PilotoSenha() {
       await new Promise(r => setTimeout(r, 150));
       const e = await api.estado();
       if (!vivo) return;
-      setFase(fase0 => fase0 === "nova-senha" ? fase0 : e.estado === "ativa" ? "ativa" : "inicio");
-      if (e.estado === "ativa") setCogAtivo(e.cog);
+      setFase(fase0 => fase0 === "nova-senha" ? fase0 : (e.estado === "ativa" || e.estado === "perfil_pendente") ? "ativa" : "inicio");
+      if (e.estado === "ativa" || e.estado === "perfil_pendente") setCogAtivo(e.cog);
     })();
     return () => { vivo = false; data?.subscription?.unsubscribe(); };
   }, [api]);
@@ -89,7 +89,7 @@ export default function PilotoSenha() {
     }
     const est = await api.estado(cog);
     setOcupado(false); limpar();
-    if (est.estado === "ativa") { setCogAtivo(est.cog); setFase("ativa"); info("Conta ativada. Agora teste: sair e entrar de novo com @ e senha.", "ok"); }
+    if (est.estado === "ativa" || est.estado === "perfil_pendente") { setCogAtivo(est.cog); setFase("ativa"); info("Conta ativada. Agora teste: sair e entrar de novo com @ e senha.", "ok"); }
     else { await api.sair(); setFase("inicio"); info("Não foi possível confirmar a conta. Avise a administração."); }
   }
 

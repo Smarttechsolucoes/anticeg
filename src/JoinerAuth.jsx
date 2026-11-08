@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { JOINERS_AUTH_ATIVO, criarJoinerAuth, buscarAcessoSimples, emailValido, mascararEmail, normalizarCog, validarSenha, SENHA_MIN } from "./joinerAuth.js";
 import supabase from "./supabase.js";
+import CompletarPerfil from "./CompletarPerfil.jsx";
 
 const C = { bg: "#17141f", borda: "rgba(245,240,232,0.14)", texto: "#F5F0E8", mudo: "rgba(245,240,232,0.62)", destaque: "#BAFF39", erro: "#FF8A80", ok: "#7CE08A" };
 const mono = "'DM Mono',monospace";
@@ -26,6 +27,10 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [espera, setEspera] = useState(0);
+  const [reenviado, setReenviado] = useState(false);
+  const [contatoAjuda, setContatoAjuda] = useState("");
+  const [textoAjuda, setTextoAjuda] = useState("");
+  const [faseAnterior, setFaseAnterior] = useState("dados");
 
   useEffect(() => {
     if (espera <= 0) return undefined;
@@ -44,14 +49,14 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     const r = await api.pedirCodigo({ cog, email });
     setOcupado(false);
     if (r.erro) { setErro(r.erro); return; }
-    setCodigo(""); setEspera(60); setFase("codigo");
+    setCodigo(""); setEspera(60); setReenviado(false); setFase("codigo");
   }
   async function reenviar() {
     if (espera > 0 || ocupado) return;
     setErro(""); setOcupado(true);
     const r = await api.pedirCodigo({ cog, email });
     setOcupado(false);
-    if (r.erro) setErro(r.erro); else setEspera(60);
+    if (r.erro) setErro(r.erro); else { setEspera(60); setReenviado(true); }
   }
   async function confirmarCodigo(e) {
     e.preventDefault();
@@ -60,6 +65,15 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     setOcupado(false);
     if (r.erro) { setErro(r.erro); return; }
     setFase(r.resultado === "ok" ? "ok" : r.resultado === "aguardando" ? "aguardando" : "pendente");
+  }
+  function pedirAjuda(deFase) { setErro(""); setFaseAnterior(deFase); setFase("ajuda"); }
+  async function enviarAjuda(e) {
+    e.preventDefault();
+    setErro(""); setOcupado(true);
+    const r = await api.pedirAjuda({ cog, contato: contatoAjuda, texto: textoAjuda });
+    setOcupado(false);
+    if (r.erro) { setErro(r.erro); return; }
+    setFase("ajuda_enviada");
   }
   function continuarLimitado() {
     try { sessionStorage.setItem(DISPENSA, "1"); } catch { /* sem armazenamento: o aviso volta no próximo acesso */ }
@@ -81,18 +95,23 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar código de confirmação"}</button>
             <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={continuarLimitado}>Agora não: continuar só com o @</button>
-            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => { setErro(""); setFase("regularizar"); }}>Meu e-mail não está no cadastro ou não lembro qual é</button>
+            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => pedirAjuda("dados")} data-testid="ativacao-pedir-ajuda">Meu e-mail não está no cadastro ou não lembro qual é</button>
           </form>
         )}
         {fase === "codigo" && (
           <form onSubmit={confirmarCodigo} style={{ display: "grid", gap: 10 }}>
             <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>Confirme o seu e-mail</div>
-            <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Se os dados estiverem corretos, enviamos um código para <b style={{ color: C.texto }}>{mascararEmail(email)}</b>. Digite-o abaixo. Confira também a caixa de spam.</div>
+            <div data-testid="ativacao-texto-codigo" style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Se os dados informados corresponderem a um cadastro liberado para ativação, você receberá um código no e-mail. Confira também Spam e Lixo Eletrônico. Se não receber, use “Preciso de ajuda” para verificarmos seu acesso. <span style={{ display: "block", marginTop: 6 }}>E-mail informado: <b style={{ color: C.texto }}>{mascararEmail(email)}</b></span></div>
+            <div data-testid="ativacao-aviso-spam" role="note" style={{ fontSize: 12, lineHeight: 1.5, color: C.texto, border: `1px solid ${C.destaque}`, borderRadius: 8, padding: "10px 12px", background: "rgba(186,255,57,.07)" }}>
+              <b style={{ color: C.destaque }}>Não encontrou o e-mail?</b> Olhe o <b>Lixo Eletrônico / Spam</b> (principalmente no Outlook e no Hotmail) e marque <b>Não é spam</b>. Se pedir outro código, use sempre o <b>mais recente</b>. Se não receber em alguns minutos, use <i>Reenviar código</i> ou <i>Preciso de ajuda</i> logo abaixo.
+            </div>
+            {reenviado && <div data-testid="ativacao-reenviado" role="status" style={{ fontSize: 12, color: C.ok }}>Pedimos outro código. Se os dados corresponderem a um cadastro liberado para ativação, ele chega ao e-mail. Confira também o Lixo Eletrônico / Spam e use sempre o mais recente.</div>}
             <input style={{ ...campo, letterSpacing: 4, textAlign: "center", fontSize: 18 }} inputMode="numeric" autoComplete="one-time-code" maxLength={10} placeholder="000000" value={codigo} onChange={ev => setCodigo(ev.target.value)} aria-label="Código de confirmação" />
             <Aviso texto={erro} />
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Conferindo…" : "Confirmar e ativar minha conta"}</button>
             <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={reenviar} disabled={espera > 0 || ocupado}>{espera > 0 ? `Reenviar código em ${espera}s` : "Reenviar código"}</button>
             <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => { setErro(""); setFase("dados"); }}>Voltar e corrigir os dados</button>
+            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => pedirAjuda("codigo")} data-testid="ativacao-nao-recebi">Preciso de ajuda</button>
           </form>
         )}
         {fase === "ok" && (
@@ -106,6 +125,26 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
           <div style={{ display: "grid", gap: 12 }}>
             <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>Falta só uma conferência</div>
             <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Seu e-mail foi confirmado, mas não conseguimos ligar a conta ao seu cadastro automaticamente (por exemplo, o e-mail cadastrado é outro ou o cadastro está incompleto). <b style={{ color: C.texto }}>Nada se perdeu</b>: seu @, pedidos e histórico continuam guardados. Fale com a administração para regularizar. Enquanto isso você pode continuar navegando no modo limitado, sem acesso às informações privadas.</div>
+            <button style={botao} onClick={() => pedirAjuda("pendente")}>Pedir ajuda à administração</button>
+            <button style={botaoSec} onClick={continuarLimitado}>Continuar no modo limitado</button>
+          </div>
+        )}
+        {fase === "ajuda" && (
+          <form onSubmit={enviarAjuda} data-testid="ativacao-ajuda" style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.destaque }}>Pedir ajuda à administração</div>
+            <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>Não precisa criar outro cadastro: seus pedidos, claims e histórico ficam guardados no seu @. Conte o que aconteceu (não chegou o código, o e-mail do cadastro é outro...) e deixe um contato; a administração confirma que é você por um canal conhecido e responde.</div>
+            <Rotulo>Seu @<input style={campo} value={cog} onChange={ev => setCog(ev.target.value)} aria-label="Seu @ para a ajuda" autoComplete="username" /></Rotulo>
+            <Rotulo>Contato para resposta (WhatsApp, e-mail ou outro @)<input style={campo} value={contatoAjuda} onChange={ev => setContatoAjuda(ev.target.value)} aria-label="Contato para resposta" maxLength={120} /></Rotulo>
+            <Rotulo>O que aconteceu? (opcional)<textarea style={{ ...campo, minHeight: 70, resize: "vertical" }} value={textoAjuda} onChange={ev => setTextoAjuda(ev.target.value)} aria-label="O que aconteceu" maxLength={500} /></Rotulo>
+            <Aviso texto={erro} />
+            <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar pedido de ajuda"}</button>
+            <button type="button" style={{ ...botaoSec, fontSize: 11 }} onClick={() => { setErro(""); setFase(faseAnterior === "codigo" ? "codigo" : "dados"); }}>Voltar</button>
+          </form>
+        )}
+        {fase === "ajuda_enviada" && (
+          <div data-testid="ativacao-ajuda-enviada" style={{ display: "grid", gap: 12 }}>
+            <div style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: C.ok }}>✓ Pedido enviado</div>
+            <div style={{ fontSize: 12, color: C.mudo, lineHeight: 1.5 }}>A administração recebeu o seu pedido e responde pelo contato que você informou. Seus pedidos e histórico continuam guardados no seu @. Enquanto isso você pode continuar no modo limitado.</div>
             <button style={botao} onClick={continuarLimitado}>Continuar no modo limitado</button>
           </div>
         )}
@@ -136,19 +175,24 @@ export function JoinerAtivacaoGate({ user }) {
   const [aberto, setAberto] = useState(false);
   const [dispensado, setDispensado] = useState(() => { try { return sessionStorage.getItem(DISPENSA) === "1"; } catch { return false; } });
   const [liberada, setLiberada] = useState(user?.ativacao_liberada !== false);
+  const [perfilPendente, setPerfilPendente] = useState(null);     // J6: conta ativada, perfil ainda não concluído => tela obrigatória
 
   useEffect(() => {
     let vivo = true;
     if (!user?.cog) return undefined;
-    api.estado(user.cog).then(async r => {
+    const conferir = () => api.estado(user.cog).then(async r => {
       if (!vivo) return;
+      if (r.estado === "perfil_pendente") { setAberto(false); setPerfilPendente(r.perfil || {}); return; }
+      setPerfilPendente(null);
       if (r.estado === "ativa") { setAberto(false); return; }
       // a liberação pode ter mudado desde que o @ foi digitado: confere no servidor (só o @, sem dado pessoal)
       const acesso = await buscarAcessoSimples(user.cog).catch(() => null);
       const lib = acesso ? acesso.ativacao_liberada !== false : user?.ativacao_liberada !== false;
       if (vivo) { setLiberada(lib); setAberto(lib); }      // quem ainda não foi liberada não recebe o pop-up sozinho
     }).catch(() => { if (vivo) setAberto(true); });
-    return () => { vivo = false; };
+    conferir();
+    const { data: sub } = supabase.auth.onAuthStateChange(() => { setTimeout(conferir, 0); });
+    return () => { vivo = false; sub?.subscription?.unsubscribe(); };
   }, [api, user?.cog]);
 
   // "Primeiro acesso? Ative sua conta" na tela de senha reabre este pop-up
@@ -158,6 +202,7 @@ export function JoinerAtivacaoGate({ user }) {
     return () => window.removeEventListener("anticeg:abrir-ativacao", abrir);
   }, []);
 
+  if (perfilPendente) return <CompletarPerfil sobreposto api={api} perfil={perfilPendente} onConcluido={() => setPerfilPendente(null)} />;
   if (!aberto || dispensado) return null;
   return <JoinerAtivacaoModal user={user} api={api} liberada={liberada} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;
 }
@@ -166,14 +211,15 @@ export function JoinerAtivacaoGate({ user }) {
 function useNivelAcesso(user) {
   const [api] = useState(() => criarJoinerAuth());
   const [nivel, setNivel] = useState("carregando");
+  const [perfil, setPerfil] = useState(null);
   useEffect(() => {
     let vivo = true;
-    const atualizar = () => api.estado(user?.cog).then(r => { if (vivo) setNivel(r.estado === "ativa" ? "completo" : "simples"); }).catch(() => { if (vivo) setNivel("simples"); });
+    const atualizar = () => api.estado(user?.cog).then(r => { if (vivo) { setPerfil(r.perfil || null); setNivel(r.estado === "ativa" ? "completo" : r.estado === "perfil_pendente" ? "perfil_pendente" : "simples"); } }).catch(() => { if (vivo) setNivel("simples"); });
     atualizar();
     const { data } = supabase.auth.onAuthStateChange(() => { setTimeout(atualizar, 0); });
     return () => { vivo = false; data?.subscription?.unsubscribe(); };
   }, [api, user?.cog]);
-  return { api, nivel };
+  return { api, nivel, perfil, recarregar: () => api.estado(user?.cog).then(r => { setPerfil(r.perfil || null); setNivel(r.estado === "ativa" ? "completo" : r.estado === "perfil_pendente" ? "perfil_pendente" : "simples"); }) };
 }
 
 function PromptSenha({ user, api, onSemConta }) {
@@ -240,6 +286,7 @@ export function AreaProtegida({ user, area, children, onLogin, onCompleto }) {  
   useEffect(() => { if (nivel === "completo" && user?.acesso_simples && onCompleto) onCompleto(); }, [nivel]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { sessionStorage.setItem("anticeg_destino", window.location.pathname + window.location.search); } catch { /* sem armazenamento */ } }, [area]);
   if (nivel === "completo") return children;
+  if (nivel === "perfil_pendente") return <div data-testid="area-perfil-pendente" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12 }}>Conclua os seus dados na tela que abriu para continuar.</div>;
   if (nivel === "carregando") return <div data-testid="area-verificando" style={{ padding: 32, textAlign: "center", color: C.mudo, fontFamily: mono, fontSize: 12 }}>Verificando acesso…</div>;
   if (!user || user.guest || !user.cog) {
     return (
@@ -351,15 +398,17 @@ export function TrocarSenhaJoiner({ user }) {
 export function ExigeContaAtiva({ children }) {
   const [api] = useState(() => criarJoinerAuth());
   const [estado, setEstado] = useState(JOINERS_AUTH_ATIVO ? "carregando" : "ativa");
+  const [perfil, setPerfil] = useState(null);
   useEffect(() => {
     if (!JOINERS_AUTH_ATIVO) return undefined;
     let vivo = true;
-    const atualizar = () => api.estado().then(r => { if (vivo) setEstado(r.estado === "ativa" ? "ativa" : "bloqueada"); }).catch(() => { if (vivo) setEstado("bloqueada"); });
+    const atualizar = () => api.estado().then(r => { if (vivo) { setPerfil(r.perfil || null); setEstado(r.estado === "ativa" ? "ativa" : r.estado === "perfil_pendente" ? "perfil_pendente" : "bloqueada"); } }).catch(() => { if (vivo) setEstado("bloqueada"); });
     atualizar();
     const { data } = supabase.auth.onAuthStateChange(() => { setTimeout(atualizar, 0); });
     return () => { vivo = false; data?.subscription?.unsubscribe(); };
   }, [api]);
   if (estado === "ativa") return children;
+  if (estado === "perfil_pendente") return <CompletarPerfil api={api} perfil={perfil || {}} onConcluido={() => api.estado().then(r => { setPerfil(r.perfil || null); setEstado(r.estado === "ativa" ? "ativa" : r.estado === "perfil_pendente" ? "perfil_pendente" : "bloqueada"); })} />;
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg, #131310)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div data-testid="exige-conta" style={{ background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "26px 22px", width: "min(420px, 100%)", color: C.texto, display: "grid", gap: 12, textAlign: "center" }}>

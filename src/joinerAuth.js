@@ -56,6 +56,14 @@ export function criarJoinerAuth(client = supabase) {
   async function estado(cogAtual) {
     const { data: s } = await client.auth.getSession();
     if (!s?.session) return { estado: "simples" };
+    // J6: o estado da conta diz se o perfil já foi concluído (sem isso o servidor não libera dado nenhum). Antes do J6 a função não existe: segue o caminho anterior.
+    const { data: ec, error: ee } = await client.rpc("meu_estado_conta");
+    if (!ee && ec && typeof ec === "object" && typeof ec.vinculada === "boolean") {
+      if (!ec.vinculada) return { estado: "sem_vinculo" };
+      if (cogAtual && normalizarCog(ec.cog) !== normalizarCog(cogAtual)) return { estado: "sem_vinculo" };
+      return ec.concluido ? { estado: "ativa", cog: ec.cog } : { estado: "perfil_pendente", cog: ec.cog, perfil: ec };
+    }
+    if (ee && !/PGRST202|42883|could not find|does not exist/i.test(String(ee.code || "") + " " + String(ee.message || ""))) return { estado: "erro" };
     const { data: cog, error } = await client.rpc("meu_cog");
     if (error) return { estado: "erro" };
     if (cog && (!cogAtual || normalizarCog(cog) === normalizarCog(cogAtual))) return { estado: "ativa", cog };
@@ -72,6 +80,16 @@ export function criarJoinerAuth(client = supabase) {
     if (s?.session) await client.auth.signOut({ scope: "local" });
     // o SERVIDOR decide se envia (só para o e-mail do cadastro, só para quem já foi liberada, com limites) e a resposta é sempre a mesma
     const { error } = await client.functions.invoke("pedir-codigo-joiner", { body: { cog: c, email: e } });
+    if (error) return { erro: mensagem(error, "envio") };
+    return { ok: true };
+  }
+
+  // Pedido de ajuda de quem não consegue ativar (não recebeu o código, e-mail errado, vínculo ainda não confirmado). A resposta é sempre a mesma; a administração atende pelo painel.
+  async function pedirAjuda({ cog, contato, texto }) {
+    const c = normalizarCog(cog), ct = String(contato || "").trim();
+    if (!c) return { erro: "Informe o seu @." };
+    if (ct.length < 5) return { erro: "Informe um contato para a gente te responder (WhatsApp, e-mail ou outro @)." };
+    const { error } = await client.functions.invoke("pedir-ajuda-ativacao", { body: { cog: c, contato: ct.slice(0, 120), mensagem: String(texto || "").trim().slice(0, 500) } });
     if (error) return { erro: mensagem(error, "envio") };
     return { ok: true };
   }
@@ -99,8 +117,8 @@ export function criarJoinerAuth(client = supabase) {
     const { error: es } = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
     if (es) return { erro: mensagem(es, "entrar") };
     const e = await estado(c);
-    if (e.estado !== "ativa") { await client.auth.signOut({ scope: "local" }); return { erro: "@ ou senha incorretos." }; }
-    return { ok: true, cog: e.cog };
+    if (e.estado !== "ativa" && e.estado !== "perfil_pendente") { await client.auth.signOut({ scope: "local" }); return { erro: "@ ou senha incorretos." }; }
+    return { ok: true, cog: e.cog, perfilPendente: e.estado === "perfil_pendente" };
   }
 
   // 3b) alternativa: e-mail + senha (a conta precisa ser a do @ que está nesta tela)
@@ -112,8 +130,8 @@ export function criarJoinerAuth(client = supabase) {
     const { error: es } = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
     if (es) return { erro: mensagem(es, "entrar") };
     const est = await estado(c);
-    if (est.estado !== "ativa") { await client.auth.signOut({ scope: "local" }); return { erro: "Esta conta não corresponde a este @." }; }
-    return { ok: true, cog: est.cog };
+    if (est.estado !== "ativa" && est.estado !== "perfil_pendente") { await client.auth.signOut({ scope: "local" }); return { erro: "Esta conta não corresponde a este @." }; }
+    return { ok: true, cog: est.cog, perfilPendente: est.estado === "perfil_pendente" };
   }
 
   // 4) esqueci minha senha: a resposta é sempre a mesma, com ou sem conta
@@ -137,7 +155,31 @@ export function criarJoinerAuth(client = supabase) {
 
   async function sair() { await client.auth.signOut({ scope: "local" }); }
 
-  return { estado, pedirCodigo, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair };
+  // 6) conclusão obrigatória do perfil (J6): nome para claim; o @ não é aceito aqui
+  async function concluirPerfil(nomeSite) {
+    const nome = String(nomeSite || "").trim();
+    if (nome.length < 2 || nome.length > 60 || /[<>]/.test(nome) || [...nome].some(ch => ch.charCodeAt(0) < 32)) return { erro: "Use de 2 a 60 caracteres, sem < > nem caracteres de controle." };
+    const { data, error } = await client.rpc("completar_meu_perfil", { p_nome_site: nome });
+    if (error) return { erro: /nome inv/i.test(String(error.message)) ? "Nome inválido. Use de 2 a 60 caracteres, sem < >." : "Não foi possível salvar agora. Tente de novo em instantes." };
+    return { ok: true, perfil: data };
+  }
+  // 7) pedido à administração (correção de @ ou de e-mail que não dá para fazer sozinha)
+  async function solicitarCorrecao({ tipo, valor, mensagem }) {
+    const t = ["arroba", "email", "outro"].includes(tipo) ? tipo : "outro";
+    const { error } = await client.rpc("solicitar_correcao_perfil", { p_tipo: t, p_valor: String(valor || "").trim(), p_mensagem: String(mensagem || "").trim() });
+    if (error) return { erro: /abertos/i.test(String(error.message)) ? "Você já tem pedidos abertos. Aguarde a administração." : "Não foi possível enviar o pedido agora. Tente de novo em instantes." };
+    return { ok: true };
+  }
+  // 8) troca de e-mail VERIFICADA: o Auth envia o link ao endereço NOVO; o cadastro só muda quando ele for confirmado (e se não for de outro cadastro)
+  async function trocarEmail(novo) {
+    const e = String(novo || "").trim().toLowerCase();
+    if (!emailValido(e)) return { erro: "Digite um e-mail válido." };
+    const { error } = await client.auth.updateUser({ email: e }, { emailRedirectTo: (typeof window !== "undefined" ? window.location.origin : "") + "/" });
+    if (error) return { erro: /already|registered|exists|outro cadastro/i.test(String(error.message)) ? "Este e-mail não pode ser usado aqui. Peça a troca à administração." : mensagem(error, "enviar") };
+    return { ok: true };
+  }
+
+  return { estado, pedirCodigo, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
 }
 
 // Acesso simples (só @): o servidor devolve apenas a identidade mínima (cog, nome do site, foto) e se a conta está ativada.
