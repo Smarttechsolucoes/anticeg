@@ -63,6 +63,16 @@ const privadas = reg => reg.urls.filter(x => /rest\/v1\/(claims|claim_reservas|c
 { // 1) SEM login e SEM cadastro: só o @
   const T = await nova(); const { page, reg, erros } = T; await ir(page);
   ok(await page.getByTestId("claim-arroba-form").count() === 1 && await semPopup(page), "visitante sem @ no aparelho: pede só o @ (nenhum pop-up de senha, ativação ou perfil)");
+  const menu = await page.locator(".tabs-bar").innerText().catch(() => "");
+  ok(/Masterlist/.test(menu) && /CEGs/.test(menu) && /Calendário/.test(menu) && /Pré-vendas/.test(menu) && /Claims/.test(menu) && /Regras/.test(menu), "MENU DA COMUNIDADE visível para quem não tem cadastro: " + menu.replace(/\s+/g, " "));
+  ok(!/Meu Perfil|Envio Nacional|Itens da COMU|Admin/.test(menu), "o menu do visitante não mostra as áreas pessoais nem o admin");
+  ok(await page.locator(".bottom-nav").getByRole("button", { name: /Claims/ }).isVisible() && await page.getByTestId("claim-arroba-form").isVisible(), "o campo de deixar o @ está DENTRO da área de claims (aba CLAIM), com o menu de baixo (celular) visível");
+  ok(/LEIA ANTES DE FAZER CLAIM/i.test(await corpo(page)), "as regras da claim continuam visíveis acima do campo do @");
+  await page.getByRole("button", { name: "AO VIVO ●" }).click(); await page.waitForTimeout(500);
+  const tAoVivo = await corpo(page);
+  ok(/EVENTO DE TESTE/.test(tAoVivo) && await page.getByTestId("claim-aviso-privado").count() === 0 && privadas(reg).length === 0, "AO VIVO aparece para quem não tem cadastro (quadro público, sem consultar tabela privada)");
+  ok(!/@ana|@maria|@Ana/.test(tAoVivo), "o ao vivo público não mostra o @ nem o nome de ninguém");
+  await page.getByRole("button", { name: "CLAIM", exact: true }).click(); await page.waitForTimeout(300);
   await page.getByLabel("Seu @").fill("@x y"); await page.getByRole("button", { name: /Continuar/ }).click(); await page.waitForTimeout(200);
   ok(/Digite o seu @/.test(await corpo(page)), "@ com espaço é recusado no navegador");
   await page.getByLabel("Seu @").fill("@NovaPessoa"); await page.getByRole("button", { name: /Continuar/ }).click(); await page.waitForTimeout(1200);
@@ -77,8 +87,15 @@ const privadas = reg => reg.urls.filter(x => /rest\/v1\/(claims|claim_reservas|c
   await page.getByRole("button", { name: "HISTÓRICO" }).click(); await page.waitForTimeout(300);
   ok(await page.getByTestId("claim-aviso-privado").count() === 1 && /só aparece quando você entra com a sua senha/.test(await corpo(page)), "histórico (dado privado) continua exigindo senha: só um aviso");
   await page.getByRole("button", { name: "AO VIVO ●" }).click(); await page.waitForTimeout(300);
-  ok(await page.getByTestId("claim-aviso-privado").count() === 1 && privadas(reg).length === 0, "o quadro ao vivo também: aviso, sem consultar nada");
+  ok(await page.getByTestId("claim-aviso-privado").count() === 0 && /EVENTO DE TESTE/.test(await corpo(page)) && privadas(reg).length === 0, "o quadro ao vivo abre para o visitante (sem @ de ninguém e sem consultar tabela privada)");
   ok(erros.length === 0, "nenhum erro de JavaScript" + (erros.length ? ": " + erros[0] : "")); await T.browser.close();
+}
+{ // 1a) o visitante navega pelo menu: público abre, área privada pede entrada, sem erro
+  const T = await nova(); const { page, erros } = T; await ir(page);
+  await page.locator(".bottom-nav").getByRole("button", { name: /Lista/ }).click(); await page.waitForTimeout(700);
+  ok(await page.getByTestId("area-protegida").count() === 1 && /Área protegida/.test(await corpo(page)), "visitante que toca em Lista (área privada) vê o pedido de entrada, não os dados");
+  await page.locator(".bottom-nav").getByRole("button", { name: /CEGs/ }).click(); await page.waitForTimeout(700);
+  ok(await page.getByTestId("area-protegida").count() === 0 && erros.length === 0, "CEGs (área pública) abre para o visitante, sem erro" + (erros.length ? ": " + erros[0] : "")); await T.browser.close();
 }
 { // 1b) o @ fica guardado neste aparelho e pode ser trocado
   const T = await nova(); const { page } = T; await ir(page);
