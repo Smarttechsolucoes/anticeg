@@ -67,6 +67,7 @@ export default function AdminContas() {
   const [aConfirmar, setAConfirmar] = useState([]);           // J6: cadastros cujo vínculo (e-mail/@) ainda não foi confirmado por evidência independente
   const [trocas, setTrocas] = useState([]);                   // J13: pedidos de troca de e-mail com o e-mail novo já verificado, aguardando a identidade (vazio se a função ainda não existe)
   const [comprovacoes, setComprovacoes] = useState([]);           // J14: pedidos de comprovação do cadastro (idem)
+  const [extras, setExtras] = useState({});                    // dados lidos dos cadastros de quem tem pedido mas não está na lista de vínculos (nome, provedor do e-mail, se já tem conta)
   const [motivos, setMotivos] = useState({});                  // J9: motivo por joiner_id (vazio se a função ainda não existe: a lista continua igual, só sem o motivo)
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState({ tipo: "", texto: "" });
@@ -92,6 +93,18 @@ export default function AdminContas() {
     setPendentes(a.data || []); setProblemas(b.data || []); setOrfaos(c.data || []); setSolicitacoes(d.data || []); setFila(e.data || []); setAConfirmar(f.data || []);
     setMotivos(Object.fromEntries((g.error ? [] : (g.data || [])).map(x => [x.joiner_id, x])));      // g só existe depois do J9: a ausência não é falha
     setTrocas(h.error ? [] : (h.data || [])); setComprovacoes(i.error ? [] : (i.data || []));      // h/i só existem depois do J13/J14: a ausência não é falha
+    // quem tem pedido/solicitação mas NÃO está na lista de vínculos (por exemplo, quem já ativou): lê o cadastro e as contas para não mostrar zero no lugar do que não se sabe
+    try {
+      const naLista = new Set((f.data || []).map(v => v.joiner_id));
+      const ids = [...new Set([...(d.data || []).filter(x => x.status === "aberta" && x.joiner_id != null).map(x => x.joiner_id), ...(h.error ? [] : h.data || []).map(x => x.joiner_id), ...(i.error ? [] : i.data || []).map(x => x.joiner_id)])].filter(id => !naLista.has(id));
+      const mapa = {};
+      if (ids.length) {
+        const [jr, cr] = await Promise.all([cliente.from("joiners").select("id,nome_site,email").in("id", ids), cliente.from("contas_joiner").select("joiner_id").in("joiner_id", ids)]);
+        const comConta = new Set((cr.error ? [] : cr.data || []).map(r => r.joiner_id));
+        if (!jr.error) for (const r of jr.data || []) { const em = String(r.email || ""); mapa[r.id] = { nome: r.nome_site || "", dominio: em.includes("@") ? em.split("@")[1] : "", tem_conta: cr.error ? null : comConta.has(r.id) }; }
+      }
+      setExtras(mapa);
+    } catch { setExtras({}); }
     const falha = a.error || b.error || c.error;   // d/e/f só existem depois do J6: a ausência não é falha
     if (falha) setAviso({ tipo: "erro", texto: "Não foi possível carregar tudo: " + falha.message });
     setCarregando(false);
@@ -148,7 +161,7 @@ export default function AdminContas() {
     setEnviando(false);
     if (error) falhou("Não foi possível chamar o envio agora."); else { ok(`Envio feito: ${data?.enviados ?? 0} enviado(s), ${data?.falharam ?? 0} com falha.`); carregar(); }
   }
-  const filaPessoas = useMemo(() => montarFila({ trocas, comprovacoes, solicitacoes, aConfirmar, motivos, incluirTodos: true }), [trocas, comprovacoes, solicitacoes, aConfirmar, motivos]);
+  const filaPessoas = useMemo(() => montarFila({ trocas, comprovacoes, solicitacoes, aConfirmar, motivos, incluirTodos: true, extras }), [trocas, comprovacoes, solicitacoes, aConfirmar, motivos, extras]);
   // pedidos sem dona agrupados por e-mail
   const grupos = Object.values(orfaos.reduce((m, o) => { const k = (o.email || "(sem e-mail)").toLowerCase(); (m[k] ||= { email: o.email || "", chave: k, itens: [] }).itens.push(o); return m; }, {}));
 

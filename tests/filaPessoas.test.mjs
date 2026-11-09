@@ -85,3 +85,23 @@ test("dias de espera: contados desde o pedido mais antigo; sem pedido = null", (
   const [r] = montarFila({ trocas: [troca({ criado_em: "2026-11-12T11:00:00Z" })] });
   assert.equal(diasDeEspera(r, agora), 0);
 });
+
+test("quem não está na lista de vínculos: o que não se sabe fica desconhecido (nunca zero nem 'sem e-mail'); extras preenchem o que foi lido do cadastro", () => {
+  const [sem] = montarFila({ solicitacoes: [sol({ joiner_id: 20, cog: "x" })] });
+  assert.equal(sem.itens, null); assert.equal(sem.dominio, null); assert.equal(sem.tem_conta, null); assert.equal(sem.motivoChave, "outro");
+  const [com] = montarFila({ solicitacoes: [sol({ joiner_id: 20, cog: "x" })], extras: { 20: { nome: "Estilo", dominio: "gmail.com", tem_conta: false } } });
+  assert.equal(com.nome, "Estilo"); assert.equal(com.dominio, "gmail.com"); assert.equal(com.itens, null);
+  const [semEmail] = montarFila({ solicitacoes: [sol({ joiner_id: 20, cog: "x" })], extras: { 20: { nome: "", dominio: "", tem_conta: false } } });
+  assert.equal(semEmail.motivoChave, "sem_email", "e-mail realmente ausente (lido do cadastro) vira 'sem e-mail'");
+});
+
+test("quem já tem conta: situação 'conta', vai para o fim, motivo 'já ativou', e o texto diz que basta fechar o pedido", () => {
+  const f = montarFila({ solicitacoes: [sol({ joiner_id: 21, cog: "contaativa" }), sol({ id: 42, joiner_id: 22, cog: "outra" })], extras: { 21: { nome: "S", dominio: "gmail.com", tem_conta: true }, 22: { nome: "O", dominio: "gmail.com", tem_conta: false } } });
+  assert.deepEqual(f.map(p => [p.joiner_id, p.situacao, p.motivoChave]), [[22, "ajuda", "outro"], [21, "conta", "ativou"]]);
+  const conta = f[1];
+  assert.match(acaoNecessaria(conta), /Nada a decidir/); assert.match(oQueConferir(conta).join(" "), /JÁ TEM CONTA/);
+  const [vinculoComConta] = montarFila({ aConfirmar: [vinc({ joiner_id: 23, tem_conta: true })], incluirTodos: true });
+  assert.equal(vinculoComConta.situacao, "conta");
+  const [prova] = montarFila({ trocas: [troca({ joiner_id: 24 })], extras: { 24: { tem_conta: true } } });
+  assert.equal(prova.situacao, "prova", "com pedido de troca/comprovação a situação continua sendo 'prova'");
+});

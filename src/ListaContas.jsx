@@ -9,6 +9,7 @@ const C = { fundo: "rgba(245,240,232,.04)", borda: "rgba(245,240,232,.12)", mudo
 const campo = { background: "rgba(245,240,232,.06)", border: `1px solid ${C.borda}`, borderRadius: 8, padding: "9px 12px", color: C.texto, fontFamily: "var(--sans, system-ui, sans-serif)", fontSize: 14, minWidth: 0, minHeight: 40, boxSizing: "border-box" };
 const botao = (cor = C.destaque) => ({ background: "transparent", border: `1px solid ${cor}`, color: cor, borderRadius: 8, padding: "9px 14px", fontFamily: "var(--sans, system-ui, sans-serif)", fontSize: 13, fontWeight: 500, cursor: "pointer", minHeight: 40 });
 const POR_PAGINA = 15;
+const ROTULO_TAG = { prova: "Com prova", ajuda: "Pediu ajuda", nada: "Sem pedido", conta: "Já tem conta" };
 
 // estilos com @media (o painel usa estilos em linha; aqui precisamos de colunas que viram cartões no celular)
 const CSS = `
@@ -21,7 +22,7 @@ const CSS = `
 .lc-arroba{font-weight:700;font-size:15px}.lc-nome{display:block;color:${C.mudo};font-size:13px}
 .lc-m{color:${C.mudo};font-size:13px}.lc-num{font-family:${mono};font-size:12px;color:${C.mudo};text-align:right;font-variant-numeric:tabular-nums}
 .lc-tag{font-family:${mono};font-size:11px;padding:3px 8px;border-radius:5px;display:inline-block;white-space:nowrap}
-.lc-prova{background:rgba(186,255,57,.14);color:${C.ok}}.lc-ajuda{background:rgba(255,92,26,.16);color:#ff8a57}.lc-nada{background:rgba(245,240,232,.08);color:${C.mudo}}
+.lc-conta{background:rgba(100,181,246,.16);color:#64B5F6}.lc-prova{background:rgba(186,255,57,.14);color:${C.ok}}.lc-ajuda{background:rgba(255,92,26,.16);color:#ff8a57}.lc-nada{background:rgba(245,240,232,.08);color:${C.mudo}}
 .lc-seta{color:${C.mudo};transition:transform .15s}.lc-linha.aberta .lc-seta{transform:rotate(90deg)}
 .lc-det{border-top:1px solid ${C.borda};padding:16px;display:grid;grid-template-columns:1.15fr 1fr;gap:22px;font-family:var(--sans,system-ui,sans-serif)}
 .lc-det h4{margin:0 0 8px;font:500 10px ${mono};letter-spacing:.1em;text-transform:uppercase;color:${C.mudo}}
@@ -151,7 +152,7 @@ function AcaoVinculo({ p, cliente, onFeito, onErro, recarregar }) {
 
 function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarregar, resolverSolicitacao }) {
   const conferir = oQueConferir(p);
-  const acaoVinculo = p.vinculo && !p.troca && !p.comprovacao;
+  const acaoVinculo = p.vinculo && !p.troca && !p.comprovacao && !p.tem_conta;
   return (
     <div className="lc-det">
       <div>
@@ -171,8 +172,8 @@ function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarrega
           <ul className="lc-fatos"><Facto marca="–">{p.vinculo && p.vinculo.pedido_de_ajuda ? "Pediu ajuda para ativar e espera resposta." : "Ainda não pediu nada. Quando usar uma das telas novas, o pedido aparece aqui com a prova."}</Facto></ul>
         )}
         <ul className="lc-fatos" style={{ marginTop: 10, color: C.mudo }}>
-          {motivos[p.joiner_id] && <Facto marca="–">Por que não ativa sozinha: {rotuloMotivo(motivos[p.joiner_id])}</Facto>}
-          <Facto marca="–">{p.itens ? `${p.itens} item(ns) no cadastro` : "nenhum item no cadastro"}{p.dominio ? ` · e-mail do cadastro @${p.dominio}` : " · sem e-mail válido"}{p.tem_conta ? " · já tem conta" : ""}</Facto>
+          {motivos[p.joiner_id] && !p.tem_conta && <Facto marca="–">Por que não ativa sozinha: {rotuloMotivo(motivos[p.joiner_id])}</Facto>}
+          <Facto marca="–">{[p.itens == null ? "" : p.itens ? `${p.itens} item(ns) no cadastro` : "nenhum item no cadastro", p.dominio ? `e-mail do cadastro @${p.dominio}` : p.dominio === "" ? "sem e-mail válido" : "", p.tem_conta ? "já tem conta" : ""].filter(Boolean).join(" · ") || "cadastro sem mais informações aqui"}</Facto>
         </ul>
       </div>
       <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
@@ -234,8 +235,8 @@ export default function ListaContas({ cliente, fila, motivos, rotuloMotivo, onFe
               <button type="button" className="lc-topo" aria-expanded={aberto} onClick={() => setAberta(aberto ? null : p.joiner_id)}>
                 <span><span className="lc-arroba">@{p.cog || "?"}</span><span className="lc-nome">{p.nome || "sem nome no site"}</span></span>
                 <span className="lc-m">{MOTIVOS_LISTA[p.motivoChave]}</span>
-                <span><span className={`lc-tag lc-${p.situacao}`}>{p.situacao === "prova" ? "Com prova" : p.situacao === "ajuda" ? "Pediu ajuda" : "Sem pedido"}</span></span>
-                <span className="lc-num">{p.itens} itens</span>
+                <span><span className={`lc-tag lc-${p.situacao}`}>{ROTULO_TAG[p.situacao]}</span></span>
+                <span className="lc-num">{p.itens == null ? "—" : `${p.itens} itens`}</span>
                 <span className="lc-num">{dias == null ? "—" : dias === 0 ? "hoje" : `${dias} d`}</span>
                 <span className="lc-seta" aria-hidden="true">›</span>
               </button>

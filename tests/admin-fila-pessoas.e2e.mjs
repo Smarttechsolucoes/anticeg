@@ -24,7 +24,9 @@ async function nova(cen = {}) {
     aConfirmar: [V(7, "bia", "Bia", "exemplo.com", 3, true), V(8, "caio", null, "outro.com", 0, false), V(10, "eva", null, "exemplo.com", 1, true), V(11, "fabi", "Fabi Souza", "exemplo.com", 2, false), V(12, "gabi", null, null, 0, false)],
     trocas: [{ id: 5, joiner_id: 7, cog: "bia", via: "sem_acesso", desfecho: "sem_acesso", novo_dominio: "gmail.com", novo_verificado_em: "2026-11-09T15:00:00Z", criado_em: "2026-11-09T14:50:00Z" }],
     comps: [{ id: 6, joiner_id: 8, cog: "caio", via: "sem_perfil", desafio_validado: false, detalhe: HTML_PERIGOSO, itens: 4, criado_em: "2026-11-09T10:00:00Z", expira_em: "2026-11-16T10:00:00Z" }],
-    solic: [{ id: 41, joiner_id: 9, cog: "duda", tipo: "ativacao_ajuda", valor_pedido: "whatsapp 11 90000-0000", mensagem: "não recebi o código", status: "aberta", criado_em: "2026-11-08T12:00:00Z" }],
+    solic: [{ id: 41, joiner_id: 9, cog: "duda", tipo: "ativacao_ajuda", valor_pedido: "whatsapp 11 90000-0000", mensagem: "não recebi o código", status: "aberta", criado_em: "2026-11-08T12:00:00Z" },
+      { id: 42, joiner_id: 13, cog: "contaativa", tipo: "ativacao_ajuda", valor_pedido: "outro.endereco@gmail.com", mensagem: "O código não chegou, tentei várias vezes", status: "aberta", criado_em: "2026-11-08T17:35:00Z" },
+      { id: 43, joiner_id: 13, cog: "contaativa", tipo: "ativacao_sem_vinculo", valor_pedido: null, mensagem: "e-mail/@ do cadastro alterado depois da fotografia confiável", status: "aberta", criado_em: "2026-11-08T15:49:00Z" }],
   };
   const MOT = [{ joiner_id: 7, codigo: "sem_email_valido" }, { joiner_id: 8, codigo: "historico_troca_email", ultimo_registro: "2026-10-01", posterior_a_fotografia: false }, { joiner_id: 10, codigo: "email_compartilhado" }, { joiner_id: 11, codigo: "diverge_fotografia" }, { joiner_id: 12, codigo: "sem_email_valido" }];
   const reg = { aplicar: [], cancelar: [], aprovar: [], recusar: [], resolver: [], confirmar: [], rpc: [] };
@@ -58,6 +60,8 @@ async function nova(cen = {}) {
       }
       return json(200, []);
     }
+    if (u.includes("/rest/v1/contas_joiner")) return json(200, [{ joiner_id: 13 }]);   // só a pessoa 13 já tem conta
+    if (u.includes("/rest/v1/joiners") && u.includes("id=in.")) return json(200, [{ id: 9, nome_site: "Duda", email: "duda@exemplo.com" }, { id: 13, nome_site: "Conta Ativa", email: "conta.ativa@gmail.com" }]);
     if (u.includes("supabase.co/rest/v1/")) {
       const objeto = (req.headers()["accept"] || "").includes("pgrst.object");
       if (u.includes("/rest/v1/joiners") && objeto) return json(200, OWNER);
@@ -85,13 +89,13 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   const T = await nova(); const { page, erros } = T; await abrirContas(page);
   const raiz = page.getByTestId("admin-fila-pessoas");
   ok(await raiz.count() === 1, "a lista de pendências aparece em Admin → Contas");
-  ok(JSON.stringify(await ids(page)) === JSON.stringify(["8", "7", "9", "10", "11", "12"]), "ordem: com prova (a mais antiga primeiro), depois pediram ajuda, depois sem pedido: " + (await ids(page)).join(","));
+  ok(JSON.stringify(await ids(page)) === JSON.stringify(["8", "7", "9", "10", "11", "12", "13"]), "ordem: com prova (a mais antiga primeiro), depois pediram ajuda, depois sem pedido: " + (await ids(page)).join(","));
   ok(await raiz.locator("button.lc-topo[aria-expanded='true']").count() === 0, "as linhas começam FECHADAS (uma linha por pessoa, sem o cartão inteiro aberto)");
   const t0 = await linha(page, 8).innerText();
   ok(t0.includes("@caio") && /Histórico de troca/.test(t0) && /Com prova/.test(t0) && /4 itens/.test(t0) && /hoje|\d+ d/.test(t0), "cada linha mostra @, motivo, situação, itens e espera");
   ok(/Sem e-mail válido/.test(await linha(page, 12).innerText()) && /Sem pedido/.test(await linha(page, 12).innerText()) && /—/.test(await linha(page, 12).innerText()), "quem não pediu nada aparece como 'Sem pedido', sem data de espera");
   const chips = await raiz.locator(".lc-chip").allInnerTexts();
-  ok(chips.join("|").replace(/\s+/g, " ") === "Todos 6|Com prova 2|Pediram ajuda 2|Sem pedido 2", "contagens por situação: " + chips.join("|").replace(/\s+/g, " "));
+  ok(chips.join("|").replace(/\s+/g, " ") === "Todos 7|Com prova 2|Pediram ajuda 2|Sem pedido 2|Já têm conta 1", "contagens por situação: " + chips.join("|").replace(/\s+/g, " "));
   await abrir(page, 8); await abrir(page, 7);
   ok(await raiz.locator("button.lc-topo[aria-expanded='true']").count() === 1 && await linha(page, 8).locator("button.lc-topo").getAttribute("aria-expanded") === "false", "só uma linha fica aberta por vez");
   ok(erros.length === 0, "nenhum erro de JavaScript" + (erros.length ? ": " + erros[0] : "")); await T.browser.close();
@@ -104,7 +108,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   await raiz.getByLabel("Motivo do bloqueio").selectOption("sem_email"); await page.waitForTimeout(200);
   ok(JSON.stringify(await ids(page)) === JSON.stringify(["7", "12"]), "filtro por motivo 'Sem e-mail válido': " + (await ids(page)).join(","));
   const chips = (await raiz.locator(".lc-chip").allInnerTexts()).join("|").replace(/\s+/g, " ");
-  ok(chips === "Todos 2|Com prova 1|Pediram ajuda 0|Sem pedido 1", "as contagens das situações acompanham o filtro de motivo: " + chips);
+  ok(chips === "Todos 2|Com prova 1|Pediram ajuda 0|Sem pedido 1|Já têm conta 0", "as contagens das situações acompanham o filtro de motivo: " + chips);
   await raiz.getByLabel("Motivo do bloqueio").selectOption(""); await raiz.getByLabel("Buscar por @ ou nome").fill("fabi souza"); await page.waitForTimeout(200);
   ok(JSON.stringify(await ids(page)) === JSON.stringify(["11"]), "a busca acha por nome (sem diferenciar maiúsculas)");
   await raiz.getByLabel("Buscar por @ ou nome").fill("CAIO"); await page.waitForTimeout(200);
@@ -126,8 +130,23 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok(((await page.getByTestId("admin-fila-pessoas").innerText()).match(EMAIL) || []).length === 0, "nenhum e-mail completo aparece na lista (só o provedor)");
   const duda = await abrir(page, 9), t9 = await duda.innerText();
   ok(t9.includes("whatsapp 11 90000-0000") && t9.includes("não recebi o código") && t9.includes("Resolvido"), "solicitação aberta: contato, mensagem e ação no detalhe");
-  ok(/Sem motivo registrado/.test(await duda.innerText()), "sem motivo de bloqueio registrado: a linha diz isso");
+  ok(/Sem motivo registrado/.test(await duda.innerText()) && /Duda/.test(await duda.innerText()), "sem motivo de bloqueio registrado: a linha diz isso; o nome vem do cadastro");
   await T.browser.close();
+}
+{ // quem já tem conta (pessoa que já ativou a conta): a tela não inventa zero, mostra que ela já ativou e o que fazer
+  const T = await nova(); const { page, reg } = T; await abrirContas(page);
+  const topo = await linha(page, 13).innerText();
+  ok(/Já tem conta/.test(topo) && /Já ativou a conta/.test(topo) && /Conta Ativa/.test(topo), "a linha mostra 'Já tem conta', o motivo 'Já ativou a conta' e o nome vindo do cadastro");
+  ok(!/0 itens/.test(topo) && /—/.test(topo), "itens desconhecidos aparecem como '—', nunca como '0 itens'");
+  const sty = await abrir(page, 13), td = await sty.innerText();
+  ok(!/sem e-mail válido/i.test(td) && /@gmail\.com/.test(td) && /já tem conta/.test(td), "o detalhe não diz 'sem e-mail válido' e mostra o provedor real");
+  ok(/JÁ TEM CONTA/.test(td) && /Nada a decidir/.test(td) && /Resolvido/.test(td), "o que conferir explica que ela já tem conta e que basta fechar os pedidos");
+  ok(await sty.getByRole("button", { name: "Confirmar vínculo" }).count() === 0, "quem já tem conta NÃO mostra 'Confirmar vínculo'");
+  ok((await sty.getByTestId("fila-solicitacao").count()) === 2, "as duas solicitações aparecem, cada uma com seus botões");
+  const raiz = page.getByTestId("admin-fila-pessoas");
+  await raiz.locator(".lc-chip", { hasText: "Já têm conta" }).click(); await page.waitForTimeout(200);
+  ok(JSON.stringify(await ids(page)) === JSON.stringify(["13"]), "o filtro 'Já têm conta' mostra só quem já ativou (para fechar os pedidos de uma vez)");
+  await T.browser.close(); void reg;
 }
 { // aplicar a troca: e-mail errado é recusado, certo aplica SEM confirmar o vínculo
   const T = await nova(); const { page, reg, dialogos } = T; await abrirContas(page);
@@ -195,7 +214,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok((await sol.innerText()).includes("não recebi o código") && (await vinc.innerText()).includes("@bia") && (await vinc.innerText()).includes("@fabi"), "abrindo 'Listas por tipo', as solicitações e os vínculos a confirmar continuam lá");
   await T.browser.close();
   const S = await nova({ semFuncoes: true }); await abrirContas(S.page);
-  ok(!(await S.page.locator("body").innerText()).includes("Não foi possível carregar tudo") && await linha(S.page, 7).count() === 1 && /Pendências por pessoa \(6/i.test(await S.page.getByTestId("admin-fila-pessoas").innerText()), "sem as funções J13/J14 o painel carrega normalmente (a ausência não é falha)");
+  ok(!(await S.page.locator("body").innerText()).includes("Não foi possível carregar tudo") && await linha(S.page, 7).count() === 1 && /Pendências por pessoa \(7/i.test(await S.page.getByTestId("admin-fila-pessoas").innerText()), "sem as funções J13/J14 o painel carrega normalmente (a ausência não é falha)");
   await S.browser.close();
 }
 { // celular: sem rolagem lateral e a linha continua legível
