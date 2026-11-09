@@ -27,7 +27,7 @@ const TEXTO_SEM_CODIGO = {
 const DISPENSA = "anticeg_ativacao_dispensada";
 const DISPENSA_PERFIL = "anticeg_perfil_dispensado";   // X/Voltar na tela "Confira seus dados": vale só nesta aba, e o aviso "Concluir meus dados" a reabre
 const EVENTO_CONTA = "anticeg:conta-atualizada";
-const ROTAS_PUBLICAS = ["/cegs", "/calendario", "/regras"];
+const ROTAS_PUBLICAS = ["/cegs", "/calendario", "/regras", "/claim"];
 // avisa as telas que o estado da conta mudou (ativou ou concluiu o perfil): cada uma relê o servidor, sem recarregar a página
 const avisarContaAtualizada = () => { try { window.dispatchEvent(new Event(EVENTO_CONTA)); } catch { /* sem window */ } };
 // com o teclado aberto no celular, traz o campo focado para o meio da área visível
@@ -387,6 +387,8 @@ export function JoinerAtivacaoGate({ user }) {
     return () => window.removeEventListener("anticeg:abrir-ativacao", abrir);
   }, []);
 
+  // a página de claims NÃO exige senha, ativação nem perfil concluído (J20): nenhum pop-up da conta aparece nela
+  if (typeof window !== "undefined" && window.location.pathname === "/claim") return null;
   if (perfilPendente && !perfilDispensado) return <CompletarPerfil sobreposto api={api} perfil={perfilPendente} onConcluido={() => { setPerfilPendente(null); avisarContaAtualizada(); }} onSair={() => { try { sessionStorage.setItem(DISPENSA_PERFIL, "1"); } catch { /* sem armazenamento */ } setPerfilDispensado(true); const p = typeof window !== "undefined" ? window.location.pathname : "/"; if (!ROTAS_PUBLICAS.some(r => p === r || p.startsWith(r + "/"))) window.location.assign("/cegs"); }} />;   // avisa as áreas protegidas: abrem na hora, sem recarregar
   if (!aberto || dispensado) return null;
   return <JoinerAtivacaoModal user={user} api={api} liberada={liberada} onFechar={concluida => { setAberto(false); if (!concluida) setDispensado(true); }} />;

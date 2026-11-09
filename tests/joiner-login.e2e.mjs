@@ -79,8 +79,8 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
   ok(await prompt(page).count() === 1, "a MASTERLIST pede e-mail e senha");
   ok(await page.getByLabel("Seu @ ou e-mail").count() === 1 && await page.getByRole("button", { name: /Entrar com (@|e-mail)/ }).count() === 0, "um campo único “Seu @ ou e-mail”, sem alternar por link");
   ok((await page.getByLabel("Seu @ ou e-mail").inputValue()) === "@ana" && !(await prompt(page).innerText()).includes("registrado@exemplo.com"), "o campo já vem com o @ digitado na entrada e nunca mostra nem preenche o e-mail do cadastro");
-  for (const caminho of ["/perfil", "/envio", "/disponiveis", "/prevenda", "/wave-maker", "/claim"]) { await ir(page, 5197, caminho); ok(await prompt(page).count() === 1, `${caminho} pede senha (inclui o ENVIO)`); }
-  for (const caminho of ["/cegs", "/calendario", "/regras"]) { await ir(page, 5197, caminho); ok(await prompt(page).count() === 0, `áreas públicas continuam abertas sem senha: ${caminho}`); }
+  for (const caminho of ["/perfil", "/envio", "/disponiveis", "/prevenda", "/wave-maker"]) { await ir(page, 5197, caminho); ok(await prompt(page).count() === 1, `${caminho} pede senha (inclui o ENVIO)`); }
+  for (const caminho of ["/cegs", "/calendario", "/regras", "/claim"]) { await ir(page, 5197, caminho); ok(await prompt(page).count() === 0, `áreas públicas continuam abertas sem senha: ${caminho}` + (caminho === "/claim" ? " (a claim só pede o @, J20)" : "")); }
 
   await ir(page, 5197, "/masterlist");
   await entrar(page, "errada", " Ana@Exemplo.com ");
