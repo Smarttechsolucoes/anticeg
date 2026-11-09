@@ -20,6 +20,8 @@ export function normalizarCog(valor) {
 export function emailValido(valor) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(valor || "").trim());
 }
+// formato ÚNICO aceito para a dica do servidor: 1ª letra do usuário + ••• + @ + 1ª letra do provedor + ••• + final (.com, .com.br). Nada além disso é exibido.
+export const DICA_VALIDA = /^[^\s@•<>"'&]•••@[^\s@•<>"'&]•••\.[a-z]+(\.[a-z]+)?$/u;   // a 1ª letra do usuário pode ser número, "_", "." etc.
 export function mascararEmail(valor) {
   const [u = "", d = ""] = String(valor || "").trim().toLowerCase().split("@");
   return u ? `${u[0]}${"•".repeat(Math.max(2, Math.min(6, u.length - 1)))}@${d}` : "";
@@ -56,6 +58,7 @@ function mensagem(err, contexto) {
   }
   if (contexto === "entrar") return falhaDeConexao(err, status, txt) ? "Não foi possível conectar agora. Verifique a internet e tente de novo em alguns minutos." : "@ ou senha incorretos.";   // credencial inválida e falha de conexão têm mensagens diferentes (nenhuma revela se a conta existe)
   if (contexto === "recuperar") return "Não foi possível enviar agora. Tente de novo em alguns minutos.";
+  if (contexto === "dica") return "Não foi possível mostrar a dica agora. Tente de novo em alguns minutos.";
   return "Não foi possível enviar o código agora. Tente de novo em alguns minutos.";
 }
 
@@ -89,6 +92,18 @@ export function criarJoinerAuth(client = supabase) {
     const { error } = await client.functions.invoke("pedir-codigo-joiner", { body: c ? { cog: c, email: e } : { email: e } });
     if (error) return { erro: mensagem(error, "envio") };
     return { ok: true };
+  }
+
+  // Dica MASCARADA do e-mail cadastrado para um @ (ex.: "m•••@g•••.com"). Só ajuda a lembrar qual e-mail digitar: não envia nada, não confirma que o @ existe
+  // (um @ sem dica real recebe uma dica falsa do servidor) e não altera cadastro. O formato é conferido aqui: qualquer outra coisa que chegue NÃO é exibida.
+  async function dicaEmail({ cog }) {
+    const c = normalizarCog(cog);
+    if (!c || c.length > 64 || /[\s@]/.test(c)) return { erro: "Informe o seu @ para ver a dica." };
+    const { data, error } = await client.functions.invoke("ativacao-dica", { body: { cog: c } });
+    if (error) return { erro: mensagem(error, "dica") };
+    const dica = data && typeof data.dica === "string" ? data.dica : "";
+    if (!DICA_VALIDA.test(dica)) return { erro: "Não foi possível mostrar a dica agora. Tente de novo em alguns minutos." };
+    return { dica };
   }
 
   // Pedido de ajuda de quem não consegue ativar (não recebeu o código, e-mail errado, vínculo ainda não confirmado). A resposta é sempre a mesma; a administração atende pelo painel.
@@ -194,7 +209,7 @@ export function criarJoinerAuth(client = supabase) {
     return { ok: true };
   }
 
-  return { estado, pedirCodigo, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
+  return { estado, pedirCodigo, dicaEmail, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
 }
 
 // Acesso simples (só @): o servidor devolve apenas a identidade mínima (cog, nome do site, foto) e se a conta está ativada.

@@ -95,6 +95,9 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
   const [faseAnterior, setFaseAnterior] = useState("dados");
   const [modoEntrar, setModoEntrar] = useState("entrar");     // entrar | recuperar: como o login embutido abre quando vem da orientação
   const [lento, setLento] = useState(false);
+  const [dica, setDica] = useState("");                  // dica mascarada do e-mail cadastrado (nunca o endereço completo)
+  const [dicaOcupada, setDicaOcupada] = useState(false);
+  const [dicaErro, setDicaErro] = useState("");
 
   // depois de ativar, este pop-up só sai quando a confirmação do perfil assume a tela (a página de trás nunca aparece); se demorar, oferece continuar
   useEffect(() => {
@@ -138,6 +141,17 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     setFase(r.resultado === "aguardando" ? "aguardando" : "pendente");
   }
   function pedirAjuda(deFase) { setErro(""); setFaseAnterior(deFase); setFase("ajuda"); }
+  // a dica só ajuda a lembrar; sob demanda (uma consulta por clique, com limite no servidor) e sem afirmar que algum código foi enviado
+  async function mostrarDica() {
+    setDicaErro(""); setDica("");
+    if (!normalizarCog(cog)) { setDicaErro("Informe o seu @ para ver a dica."); return; }
+    setDicaOcupada(true);
+    const r = await api.dicaEmail({ cog });
+    setDicaOcupada(false);
+    if (r.erro) setDicaErro(r.erro); else setDica(r.dica);
+  }
+  // "Não reconheço esse e-mail / preciso corrigir" usa o pedido de ajuda que já existe (a administração confirma por um canal conhecido; nada é alterado aqui)
+  function pedirAjudaPorDica() { setTextoAjuda(t => t || "Não reconheço o e-mail do cadastro ou preciso corrigi-lo."); pedirAjuda("dados"); }
   async function enviarAjuda(e) {
     e.preventDefault();
     setErro(""); setOcupado(true);
@@ -165,7 +179,20 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
           <form onSubmit={enviarCodigo} noValidate style={{ display: "grid", gap: 14 }}>
             <Titulo>Ative sua conta</Titulo>
             <Texto data-testid="ativacao-intro">Crie sua senha para acessar seus pedidos e pagamentos. Seu histórico continua no mesmo cadastro.</Texto>
-            <Rotulo>Seu @ cadastrado (se não lembrar, pode deixar em branco)<input style={campo} value={cog} onChange={ev => setCog(ev.target.value)} onFocus={rolarAoFocar} aria-label="Seu @ cadastrado" autoComplete="username" /></Rotulo>
+            <Rotulo>Seu @ cadastrado (se não lembrar, pode deixar em branco)<input style={campo} value={cog} onChange={ev => { setCog(ev.target.value); setDica(""); setDicaErro(""); }} onFocus={rolarAoFocar} aria-label="Seu @ cadastrado" autoComplete="username" /></Rotulo>
+            {normalizarCog(cog) && (
+              <div style={{ display: "grid", gap: 8 }}>
+                <button type="button" style={acaoSec} data-testid="ativacao-ver-dica" onClick={mostrarDica} disabled={dicaOcupada}>{dicaOcupada ? "Buscando a dica…" : "Não lembro o e-mail: ver uma dica"}</button>
+                {dicaErro && <Aviso texto={dicaErro} />}
+                {dica && (
+                  <div data-testid="ativacao-dica" role="status" style={{ display: "grid", gap: 8, padding: "10px 12px", border: `1px solid ${C.borda}`, borderRadius: 8 }}>
+                    <Texto>Dica do e-mail cadastrado para este @: <b data-testid="ativacao-dica-valor" style={{ color: C.texto, fontFamily: mono }}>{dica}</b></Texto>
+                    <Texto pequeno data-testid="ativacao-dica-aviso">A dica só ajuda a lembrar qual e-mail digitar. Ela não garante que um código será enviado: se o e-mail estiver errado, ausente, repetido em outro cadastro, ou se já houve troca de e-mail neste cadastro, só a administração consegue corrigir.</Texto>
+                    <button type="button" style={acaoSec} data-testid="ativacao-nao-reconheco" onClick={pedirAjudaPorDica}>Não reconheço esse e-mail / preciso corrigir</button>
+                  </div>
+                )}
+              </div>
+            )}
             <Rotulo>E-mail do seu cadastro<input style={campo} type="email" value={email} onChange={ev => setEmail(ev.target.value)} onFocus={rolarAoFocar} aria-label="E-mail do cadastro" autoComplete="email" placeholder="seuemail@exemplo.com" /></Rotulo>
             <Rotulo>Crie uma senha (mínimo {SENHA_MIN} caracteres)<CampoSenha style={campo} value={senha} onChange={ev => setSenha(ev.target.value)} onFocus={rolarAoFocar} aria-label="Crie sua senha" autoComplete="new-password" /></Rotulo>
             <Rotulo>Repita a senha<CampoSenha style={campo} value={repetir} onChange={ev => setRepetir(ev.target.value)} onFocus={rolarAoFocar} aria-label="Repita a senha" autoComplete="new-password" /></Rotulo>
