@@ -167,3 +167,13 @@ test("MODO SECO: valida tudo, não chama o provedor, não exige chave e devolve 
   assert.equal((await tratarEmail(post({ evento: "comprovante_recebido", demanda_id: 101 }), real.deps)).status, 200);
   assert.equal(real.chamadasProvedor.length, 1);
 });
+
+// Depois do lançamento: SEM login e COM login são casos DIFERENTES e não podem ser confundidos num teste de sondagem.
+test("depois do lançamento: comprovante com id INVÁLIDO — sem login recebe 401 (barrado ANTES de validar); logada recebe 400 (validação); nada é enviado", async () => {
+  const m = montarEmail({ env: { PERMITIR_COMPROVANTE_ANONIMO: "false" } });
+  for (const id of [-1, 0, 1.5, "abc", null]) {
+    assert.equal((await tratarEmail(post({ evento: "comprovante_recebido", demanda_id: id }, { authorization: "Bearer chave-anonima-publica" }), m.deps)).status, 401, "sem login, id " + JSON.stringify(id));
+    assert.equal((await tratarEmail(post({ evento: "comprovante_recebido", demanda_id: id }, { authorization: "Bearer jwt-ana" }), m.deps)).status, 400, "logada, id " + JSON.stringify(id));
+  }
+  assert.equal(m.chamadasProvedor.length, 0, "nenhum e-mail foi enviado");
+});
