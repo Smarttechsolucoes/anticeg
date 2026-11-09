@@ -26,7 +26,7 @@ async function nova(porta, cen) {
     if (destino) sessionStorage.setItem("anticeg_destino", destino);
     if (sess) localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify(sess));
   }, [cen.usuario === undefined ? ANA : cen.usuario, cen.versao || (porta === 5197 ? "6" : "5"), cen.comSessao ? sessao() : null, REF, cen.destino || null]);
-  const reg = { login: [], recuperar: [], put: [], emailLogin: [], rpc: [], restAuth: [] };
+  const reg = { login: [], recuperar: [], put: [], emailLogin: [], rpc: [], restAuth: [], correcao: [] };
   await ctx.route("**/*", route => {
     const req = route.request(), u = req.url(), m = req.method();
     if (u.startsWith(`http://localhost:${porta}`)) return route.continue();
@@ -43,6 +43,8 @@ async function nova(porta, cen) {
       if (p === "/logout") return route.fulfill({ status: 204, body: "" });
       return json(200, {});
     }
+    // pedido de correção/ajuda de quem já tem conta (usado pelo aviso do perfil); cen.correcaoErro simula "pedidos abertos"
+    if (u.includes("/rest/v1/rpc/solicitar_correcao_perfil")) { reg.correcao.push(JSON.parse(req.postData() || "{}")); return cen.correcaoErro ? json(400, { message: "Você já tem pedidos abertos" }) : json(200, null); }
     if (u.includes("/rest/v1/rpc/is_admin")) return json(200, !!cen.ehAdmin && tokenDaJoiner(req.headers()["authorization"] || ""));
     if (u.includes("/rest/v1/rpc/meu_cog")) { const logada = tokenDaJoiner(req.headers()["authorization"] || ""); reg.rpc.push(logada); return json(200, logada ? (cen.cogDaConta ?? "ana") : null); }
     if (u.includes("supabase.co/rest/v1/")) {
@@ -231,5 +233,32 @@ const entrarSo = async (page, senha) => { await page.getByLabel("Senha", { exact
   await T.browser.close();
 }
 
+{ // aviso de ajuda no perfil (itens/pagamentos que não aparecem)
+  const T = await nova(5197, { comSessao: true, cogDaConta: "ana" }); const { page, reg } = T;
+  await ir(page, 5197, "/perfil");
+  const av = page.getByTestId("aviso-ajuda-perfil");
+  ok(await av.count() === 1, "perfil: a conta ativada vê o aviso de ajuda");
+  ok((await page.getByTestId("aviso-ajuda-perfil-texto").innerText()).trim() === "Se algum item ou pagamento não aparecer após a atualização, use “Preciso de ajuda”. Estamos conferindo as informações. Não crie outro cadastro.", "perfil: o texto do aviso é exatamente o combinado");
+  ok(!/troca d[eo] (e-mail|@)|trocar (o )?(e-mail|@)|sum[ie]/i.test(await av.innerText()), "perfil: o aviso não afirma nenhuma causa (nem 'trocar e-mail/@' nem 'sumir')");
+  await av.getByTestId("aviso-ajuda-perfil-abrir").click();
+  await av.getByRole("button", { name: "Enviar pedido de ajuda" }).click(); await page.waitForTimeout(200);
+  ok(reg.correcao.length === 0 && /Conte o que não apareceu/.test(await av.innerText()), "perfil: pedido vazio é recusado sem chamar o servidor");
+  await av.getByLabel("O que não apareceu").fill("Faltou o pagamento do item Photocard X de outubro"); await av.getByRole("button", { name: "Enviar pedido de ajuda" }).click(); await page.waitForTimeout(500);
+  ok(reg.correcao.length === 1 && reg.correcao[0].p_tipo === "outro" && /Photocard X/.test(reg.correcao[0].p_mensagem) && reg.correcao[0].p_valor === "", "perfil: o pedido segue pelo pedido de correção que já existe (tipo 'outro', com a mensagem da pessoa)");
+  ok(await page.getByTestId("aviso-ajuda-perfil-enviado").count() === 1, "perfil: mostra 'Pedido enviado'");
+  await T.browser.close();
+}
+{ // já existe pedido aberto: mensagem clara
+  const T = await nova(5197, { comSessao: true, cogDaConta: "ana", correcaoErro: true }); const { page } = T;
+  await ir(page, 5197, "/perfil"); const av = page.getByTestId("aviso-ajuda-perfil");
+  await av.getByTestId("aviso-ajuda-perfil-abrir").click(); await av.getByLabel("O que não apareceu").fill("Não aparece um item"); await av.getByRole("button", { name: "Enviar pedido de ajuda" }).click(); await page.waitForTimeout(500);
+  ok(/pedidos abertos/.test(await av.innerText()) && await page.getByTestId("aviso-ajuda-perfil-enviado").count() === 0, "perfil: se já há pedido aberto, mostra a mensagem do servidor e não diz 'enviado'");
+  await T.browser.close();
+}
+{ // quem NÃO está com a conta ativada não vê o aviso (só o @, sem sessão)
+  const T = await nova(5197, { usuario: OWNER }); await ir(T.page, 5197, "/perfil");
+  ok(await T.page.getByTestId("aviso-ajuda-perfil").count() === 0, "sem conta ativada/logada: o aviso do perfil não aparece");
+  await T.browser.close();
+}
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);

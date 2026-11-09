@@ -18,7 +18,7 @@ import { smolmerchLinhas, SMOLMERCH_OPCOES, SMOLMERCH_CFG } from "./smolmerchDad
 import { PHOTOCARD_PRODUTOS, PHOTOCARD_PRODUTOS_ABERTOS, PHOTOCARD_CFG, fotoPc } from "./photocardDados.js";
 import { lerPlanilha } from "./csvSimples.js";
 import { diasAtraso, diasCobradosMulta, multaPorDia, multaAtraso, multaDoItem, isentoMulta, diasParaVencer } from "./multa.js";
-import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner, AtivacaoPorEmail } from "./JoinerAuth.jsx";
+import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner, AvisoAjudaPerfil, AtivacaoPorEmail } from "./JoinerAuth.jsx";
 import { enviarComprovante as enviarArquivoSeguro, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
 import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
@@ -4053,6 +4053,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     <div className="admin-wrap">
       <h2 className="admin-title" style={{ marginBottom:4 }}>Meu Perfil</h2>
       {JOINERS_AUTH_ATIVO && <TrocarSenhaJoiner user={user} />}
+      {JOINERS_AUTH_ATIVO && <AvisoAjudaPerfil user={user} />}
       <div className="admin-greeting" style={{ marginBottom:20 }}>
         <span className="admin-greeting-prompt">// </span>
         <span className="admin-greeting-msg">{user.nome_site || user.nome || user.cog}</span>
