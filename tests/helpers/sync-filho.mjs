@@ -20,7 +20,7 @@ await db.exec(`
     venc_item date, venc_frete date, venc_rf date);
   create table public.claims (id bigint generated always as identity primary key, joiner_cog text, masterlist_id bigint, ceg text, status text default 'pendente');
   create table public.multas_pagas (id bigint generated always as identity primary key, joiner_cog text, masterlist_id bigint, campo text);
-  create table public.joiners (id bigint generated always as identity primary key, cog text unique, nome text, email text, twitter text);
+  create table public.joiners (id bigint generated always as identity primary key, cog text unique, nome text, email text, twitter text, confirmado boolean default false);
   create table public.push_subscriptions (id bigint generated always as identity primary key, joiner_cog text, endpoint text, p256dh text, auth text);
   grant all on all tables in schema public to service_role;
 `);
@@ -50,6 +50,7 @@ process.on("beforeExit", async () => {
     claims: await q("select id, masterlist_id, status from public.claims order by id"),
     exclusoes: await q("select exists(select 1 from pg_class where relname = 'masterlist_exclusoes') e").then(async r => r[0].e ? await q("select masterlist_id from public.masterlist_exclusoes order by id") : null),
     joiners: await q("select cog, nome, email from public.joiners order by cog"),
+    joinersTodos: await q("select * from public.joiners order by cog"),
   };
   try { unlinkSync(copia); } catch {}
   process.stdout.write("\n@@RESULTADO@@" + JSON.stringify(saida) + "\n");

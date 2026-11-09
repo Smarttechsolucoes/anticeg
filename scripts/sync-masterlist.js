@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 import ws from 'ws';
-import { montarUpsertJoiner, carregarIdsComConta } from './preservar-email.js';
+import { montarUpsertJoiner, carregarIdsComConta, carregarIdsEmailTrocado, emailPlanilhaDivergeDoTrocado } from './preservar-email.js';
 import { casarPorIdLinha, casarChavesRepetidas } from './casar-itens.js';
 import { indexarJoiners, cogDaLinha, cogDoUpsert, joinerExistente } from './resolver-joiner.js';
 
@@ -80,7 +80,9 @@ async function main() {
   console.log('Colunas:', Object.keys(colMap).join(' | '));
 
   // Carregar joiners para lookup
-  const { data: joiners } = await supabase.from('joiners').select('id, cog, email, twitter, confirmado').order('id', { ascending: true });
+  const { data: joiners, error: erroJoiners } = await supabase.from('joiners').select('id, cog, email, twitter, confirmado').order('id', { ascending: true });
+  // Sem esta leitura o sync não sabe quem já existe nem quem tem conta: continuaria às cegas e poderia trocar o e-mail verificado de uma conta. Melhor parar sem gravar nada.
+  if (erroJoiners || !Array.isArray(joiners)) throw new Error(`Não consegui ler as joiners (${erroJoiners?.message || 'sem dados'}). Nada foi gravado.`);
   // Quem disputa o mesmo @/e-mail (ex.: "Seopookie" e "seopookie"): a regra de desempate é fixa e o upsert nunca cria gêmeo (ver resolver-joiner.js).
   const idxJoiners = indexarJoiners(joiners);
 
@@ -259,7 +261,7 @@ async function main() {
     process.exitCode = 5;
   }
 
-  const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/send-push`;
+  const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/push-evento`;   // send-push (antiga, aberta) foi descontinuada: o push-evento aceita o mesmo corpo e a chave de serviço do sync
   // Interruptor das notificações do sync: DESLIGADO por padrão. Só envia push (mudança de status e item novo) com SYNC_ENVIAR_PUSH=1
   // (no GitHub: Settings > Secrets and variables > Actions > Variables > SYNC_ENVIAR_PUSH = 1).
   const ENVIAR_PUSH = process.env.SYNC_ENVIAR_PUSH === '1';
@@ -370,11 +372,16 @@ async function main() {
   const { idsComConta, contasIndisponiveis } = await carregarIdsComConta(supabase);
   if (contasIndisponiveis) console.error('Aviso: não foi possível consultar contas_joiner — nenhum e-mail será enviado pelo sync nesta rodada (preservação total).');
   let emailsPreservados = 0;
+  // E-mail trocado pela administração/prova verificada: o sync não o desfaz com o valor antigo da planilha (ver preservar-email.js, regras 5 e 6)
+  const { idsEmailTrocado, trocadosIndisponiveis } = await carregarIdsEmailTrocado(supabase);
+  if (trocadosIndisponiveis) console.error('Aviso: não foi possível consultar as trocas de e-mail — nenhum e-mail será enviado pelo sync nesta rodada (preservação total).');
+  const divergentesDoTrocado = [];
 
   for (const j of joinersList) {
     const atual = joinerExistente(j.cog, idxJoiners);
     // Joiner que já existe (mesmo @ com outras maiúsculas) é atualizada pelo COG que ela já tem: o upsert nunca cria um gêmeo.
-    const alvo = montarUpsertJoiner({ ...j, cog: cogDoUpsert(j.cog, idxJoiners) }, atual, { idsComConta, contasIndisponiveis });
+    const alvo = montarUpsertJoiner({ ...j, cog: cogDoUpsert(j.cog, idxJoiners) }, atual, { idsComConta, contasIndisponiveis, idsEmailTrocado, trocadosIndisponiveis });
+    if (emailPlanilhaDivergeDoTrocado(j, atual, idsEmailTrocado)) divergentesDoTrocado.push(atual.cog);
     if (atual?.email && !('email' in alvo)) emailsPreservados++;
     const { error } = await supabase.from('joiners')
       .upsert(alvo, { onConflict: 'cog', ignoreDuplicates: false });
@@ -383,6 +390,7 @@ async function main() {
   }
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
+  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha): ${divergentesDoTrocado.slice(0, 30).join(', ')}`);
 
   // Erros por linha NÃO podem passar por "sync íntegro": o job fica vermelho (código 4) para alguém olhar.
   // Os logs de cada erro acima continuam como estavam, e as demais atualizações já foram feitas (nada é desfeito).
