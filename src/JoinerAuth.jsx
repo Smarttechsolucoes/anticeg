@@ -202,7 +202,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
                 {dica && (
                   <div data-testid="ativacao-dica" role="status" style={{ display: "grid", gap: 8, padding: "10px 12px", border: `1px solid ${C.borda}`, borderRadius: 8 }}>
                     <Texto>Dica do e-mail cadastrado para este @: <b data-testid="ativacao-dica-valor" style={{ color: C.texto, fontFamily: mono }}>{dica}</b></Texto>
-                    <Texto pequeno data-testid="ativacao-dica-aviso">A dica só ajuda a lembrar qual e-mail digitar. Ela não garante que um código será enviado: se o e-mail estiver errado, ausente, repetido em outro cadastro, ou se já houve troca de e-mail neste cadastro, só a administração consegue corrigir.</Texto>
+                    <Texto pequeno data-testid="ativacao-dica-aviso">A dica só ajuda a lembrar qual e-mail digitar. Ela não garante que um código será enviado: se o e-mail estiver errado, ausente, repetido em outro cadastro, só a administração consegue corrigir.</Texto>
                     <button type="button" style={acaoSec} data-testid="ativacao-nao-reconheco" onClick={pedirAjudaPorDica}>Não reconheço esse e-mail / preciso corrigir</button>
                   </div>
                 )}

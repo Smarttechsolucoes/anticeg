@@ -264,7 +264,7 @@ const preencher = async (page, { email = "ana@exemplo.com", senha = "senha-boa-1
   ok(reg.dica.length === 1 && reg.dica[0].cog === "ana" && Object.keys(reg.dica[0]).length === 1, "dica: uma consulta com SÓ o @ normalizado (nenhum e-mail digitado vai junto)");
   ok((await page.getByTestId("ativacao-dica-valor").innerText()) === "r•••@e•••.com", "dica: mostra a dica mascarada devolvida pelo servidor");
   const bloco = await page.getByTestId("ativacao-dica").innerText();
-  ok(/não garante que um código será enviado/.test(bloco) && /errado, ausente, repetido em outro cadastro/.test(bloco) && /troca de e-mail/.test(bloco), "dica: diz claramente que NÃO garante envio e que e-mail errado, ausente, repetido ou com troca passado dependem da administração");
+  ok(/não garante que um código será enviado/.test(bloco) && /errado, ausente, repetido em outro cadastro/.test(bloco), "dica: diz claramente que NÃO garante envio e que e-mail errado, ausente ou repetido dependem da administração (histórico de troca não bloqueia mais)");
   ok(!/foi enviado|enviamos|enviei|enviado para/i.test(bloco), "dica: nenhuma frase afirma que um código foi enviado");
   // (a página de trás pode mostrar o e-mail que já está no navegador da própria pessoa; o que importa é que o POP-UP da dica nunca traga um endereço completo)
   const textoModal = await modal(page).innerText();

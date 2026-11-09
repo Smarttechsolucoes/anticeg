@@ -201,7 +201,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok(V.reg.aprovar.length === 0, "dizer 'Cancelar' na confirmação NÃO aprova"); await V.browser.close();
 }
 { // confirmar vínculo de quem ainda não pediu nada; solicitação resolvida pelo detalhe
-  const T = await nova({ notas: ["respondi por whatsapp"] }); const { page, reg } = T; await abrirContas(page);
+  const T = await nova(); const { page, reg, dialogos } = T; await abrirContas(page);
   const fabi = await abrir(page, 11); const conf = fabi.getByRole("button", { name: "Confirmar vínculo" });
   ok(await conf.isDisabled(), "'Confirmar vínculo' começa desligado (falta o e-mail e a anotação)");
   await fabi.getByLabel(/E-mail completo informado pela pessoa/).fill("errado@exemplo.com"); await fabi.getByLabel(/Como você confirmou/).fill("WhatsApp em 09/11"); await conf.click(); await page.waitForTimeout(700);
@@ -209,7 +209,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   await fabi.getByLabel(/E-mail completo informado pela pessoa/).fill(" Fabi@Exemplo.com "); await conf.click(); await page.waitForTimeout(900);
   ok(reg.confirmar.length === 2 && reg.confirmar[1].p_nota === "WhatsApp em 09/11" && (await page.locator("body").innerText()).includes("Vínculo do @fabi confirmado") && await linha(page, 11).count() === 0, "e-mail certo: vínculo confirmado, mensagem de sucesso e a pessoa sai da lista");
   const duda = await abrir(page, 9); await duda.getByRole("button", { name: "Resolvido", exact: true }).click(); await page.waitForTimeout(700);
-  ok(reg.resolver.length === 1 && reg.resolver[0].p_id === 41 && reg.resolver[0].p_status === "resolvida" && reg.resolver[0].p_nota === "respondi por whatsapp", "resolver a solicitação pelo detalhe usa a mesma função de sempre e registra o que foi feito");
+  ok(reg.resolver.length === 1 && reg.resolver[0].p_id === 41 && reg.resolver[0].p_status === "resolvida" && reg.resolver[0].p_nota === "" && !dialogos.some(d => d.tipo === "prompt"), "Resolvido NÃO pede anotação (nenhum pop-up) e a solicitação pelo detalhe usa a mesma função de sempre e registra o que foi feito");
   await T.browser.close();
 }
 { // listas por tipo e outras ferramentas continuam acessíveis (recolhidas); sem as funções novas o painel carrega

@@ -64,7 +64,7 @@ const abrirContas = async page => {
 };
 
 { // fluxo feliz: lista → confirma com anotação → some da lista; pedido de ajuda resolvido
-  const T = await nova({ notas: [" Bia@Exemplo.com ", "confirmei por whatsapp em 18/11 (mensagem do @ bia)", "respondi por whatsapp"] }); const { page, reg, erros, dialogos } = T;
+  const T = await nova({ notas: [" Bia@Exemplo.com ", "confirmei por whatsapp em 18/11 (mensagem do @ bia)"] }); const { page, reg, erros, dialogos } = T;
   await abrirContas(page);
   const caixa = page.getByTestId("admin-vinculos-confirmar");
   ok(await caixa.count() === 1, "a seção 'Vínculos aguardando confirmação' aparece em Admin → Contas");
@@ -80,7 +80,7 @@ const abrirContas = async page => {
   const sol = page.getByTestId("admin-solicitacoes");
   ok((await sol.innerText()).includes("não recebi o código") && (await sol.innerText()).includes("whatsapp 11 90000-0000"), "o pedido de ajuda aparece com o contato e a mensagem");
   await sol.getByRole("button", { name: "Resolvido" }).click(); await page.waitForTimeout(600);
-  ok(reg.resolver.length === 1 && reg.resolver[0].p_id === 41 && reg.resolver[0].p_status === "resolvida" && reg.resolver[0].p_nota === "respondi por whatsapp", "resolver o pedido de ajuda registra o que foi feito");
+  ok(reg.resolver.length === 1 && reg.resolver[0].p_id === 41 && reg.resolver[0].p_status === "resolvida" && reg.resolver[0].p_nota === "" && !dialogos.slice(2).some(d => d.tipo === "prompt"), "Resolvido NÃO pede anotação e registra o encerramento");
   ok(erros.length === 0, "nenhum erro de JavaScript" + (erros.length ? ": " + erros[0] : ""));
   await T.browser.close();
 }
@@ -128,7 +128,7 @@ const abrirContas = async page => {
   await abrirContas(page);
   const caixa = page.getByTestId("admin-vinculos-confirmar"); const texto = await caixa.innerText();
   ok(!/foram alterados depois da fotografia|alterado depois da fotografia/.test(texto), "o texto geral NÃO afirma mais que e-mail/@ foram alterados depois da fotografia");
-  ok(texto.includes("NÃO há histórico de pedido de troca") && texto.includes("histórico de pedido de troca (o e-mail/@ de hoje são os mesmos da fotografia"), "o texto geral explica: histórico de troca = registro antigo, não mudança depois da fotografia");
+  ok(texto.includes("o e-mail hoje cadastrado é o endereço autorizado") && texto.includes("histórico antigo de troca e divergência da fotografia não bloqueiam mais") && !texto.includes("NÃO há histórico de pedido de troca"), "o texto geral explica a regra nova: e-mail atual autorizado; histórico e fotografia não bloqueiam");
   const motivos = await caixa.getByTestId("vinculo-motivo").allInnerTexts();
   ok(motivos.length === 2, "cada cadastro da lista mostra o seu motivo");
   ok(motivos[0].includes("histórico de pedido de troca de e-mail/@") && motivos[0].includes("07/11/2026") && motivos[0].includes("nada mudou depois da fotografia"), "histórico de troca: mostra a data do último registro e que NADA mudou depois da fotografia");

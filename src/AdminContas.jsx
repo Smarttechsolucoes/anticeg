@@ -147,10 +147,11 @@ export default function AdminContas() {
 
   // notaFixa: usada pelo botão "Orientei" (a nota já vem pronta, sem digitar); sem ela, pergunta como sempre
   async function resolverSolicitacao(sol, status, notaFixa) {
-    const nota = notaFixa != null ? notaFixa : status === "recusada" ? window.prompt("Motivo da recusa (a pessoa não vê; fica no registro):", "") : window.prompt("Anote o que foi feito (ex.: @ corrigido no cadastro e na planilha):", "");
+    // "Resolvido" NÃO pede anotação: o banco registra sozinho quem encerrou e quando (resolvido_por / resolvido_em). A recusa pergunta o motivo, mas ele é opcional.
+    const nota = notaFixa != null ? notaFixa : status === "recusada" ? window.prompt("Motivo da recusa (opcional; a pessoa não vê; fica no registro):", "") : "";
     if (nota === null) return;
     const { error } = await cliente.rpc("admin_resolver_solicitacao", { p_id: sol.id, p_status: status, p_nota: nota });
-    if (error) falhou("Não foi possível registrar: " + error.message); else { ok("Pedido registrado."); carregar(); }
+    if (error) falhou("Não foi possível registrar: " + error.message); else { ok(status === "resolvida" ? "Pedido resolvido. O sistema registrou quem encerrou e quando." : "Pedido recusado. O sistema registrou quem encerrou e quando."); carregar(); }
   }
   async function confirmarVinculo(v) {
     const informado = window.prompt(`Digite o e-mail COMPLETO que a pessoa (@${v.cog}) informou pelo canal conhecido. O sistema compara com o cadastro; o que você digita não é mostrado nem guardado.`, "");
@@ -213,7 +214,7 @@ export default function AdminContas() {
 
       <div style={caixa} data-testid="admin-vinculos-confirmar">
         <div style={rot}>Vínculos aguardando confirmação ({aConfirmar.length}{aConfirmar.length >= 300 ? "+" : ""})</div>
-        <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>A ativação é AUTOMÁTICA: a pessoa recebe o código sozinha quando o e-mail do cadastro é válido e só dela, o @ não se repete, o e-mail e o @ de hoje são os mesmos da fotografia confiável do cadastro e NÃO há histórico de pedido de troca de e-mail/@ (ou quando você já confirmou o vínculo). Os cadastros desta lista NÃO passaram nessa regra e não recebem código sozinhos; o motivo aparece em cada linha: histórico de pedido de troca (o e-mail/@ de hoje são os mesmos da fotografia: o que existe é um registro antigo de pedido de troca, e não uma mudança depois dela), e-mail compartilhado, e-mail ausente ou inválido, @ repetido, ou e-mail/@ diferentes da fotografia. Para eles, confirme por um canal conhecido (WhatsApp, @). Quem pediu ajuda aparece primeiro. Procedimento: (1) a pessoa fala com você pelo próprio @ ou por um contato já conhecido; (2) ela diz QUAL e-mail usa na Anti CEG; (3) clique em Confirmar vínculo e DIGITE o e-mail completo que ela informou — o sistema confere com o cadastro sem mostrá-lo; (4) se não conferir, nada é confirmado: use "Trocar e-mail" mais abaixo. Conhecer o @ não prova que o e-mail é dela.</div>
+        <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>A ativação é AUTOMÁTICA: a pessoa recebe o código sozinha quando o e-mail do cadastro é válido e só dela e o @ não se repete. Desde 09/11 o e-mail hoje cadastrado é o endereço autorizado a receber o código: histórico antigo de troca e divergência da fotografia não bloqueiam mais, e a ativação NÃO é registrada como identidade conferida por você. Os cadastros desta lista NÃO passaram nessa regra e não recebem código sozinhos: e-mail ausente ou inválido, e-mail compartilhado ou @ repetido; o motivo aparece em cada linha. Para eles, confirme por um canal conhecido (WhatsApp, @). Quem pediu ajuda aparece primeiro. Procedimento: (1) a pessoa fala com você pelo próprio @ ou por um contato já conhecido; (2) ela diz QUAL e-mail usa na Anti CEG; (3) clique em Confirmar vínculo e DIGITE o e-mail completo que ela informou — o sistema confere com o cadastro sem mostrá-lo; (4) se não conferir, nada é confirmado: use "Trocar e-mail" mais abaixo. Conhecer o @ não prova que o e-mail é dela.</div>
         {!aConfirmar.length && <div style={{ color: C.mudo, fontSize: 12, marginTop: 8 }}>Nenhum cadastro aguardando.</div>}
         {comAjuda.length > 0 && <div data-testid="vinculos-com-ajuda" style={{ ...rot, marginTop: 14, color: C.destaque }}>Pediram ajuda ou tentaram ativar ({comAjuda.length})</div>}
         {comAjuda.map(linhaVinculo)}
