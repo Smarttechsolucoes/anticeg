@@ -40,12 +40,36 @@ export function acaoNecessaria(p) {
   return "Confirmar o vínculo (ou orientar a pessoa)";
 }
 
+/** Situação da pessoa para a lista: com prova anexada, pediu ajuda, ou ainda sem pedido. */
+export function situacaoDe(p) {
+  if (p.troca || p.comprovacao) return "prova";
+  if (p.solicitacoes.length || (p.vinculo && p.vinculo.pedido_de_ajuda)) return "ajuda";
+  return "nada";
+}
+export const SITUACOES = { todos: "Todos", prova: "Com prova", ajuda: "Pediram ajuda", nada: "Sem pedido" };
+
+/** Motivo do bloqueio da ativação automática, em grupos curtos para filtrar (vem de admin_vinculos_motivos; se a função não existe, "outro"). */
+export const MOTIVOS_LISTA = { historico: "Histórico de troca", sem_email: "Sem e-mail válido", compartilhado: "E-mail compartilhado", diverge: "Diferente da fotografia", arroba: "@ repetido", outro: "Sem motivo registrado" };
+export function motivoChave(p) {
+  const c = p.motivo && p.motivo.codigo;
+  if (c === "historico_troca_email" || c === "historico_so_arroba") return "historico";
+  if (c === "sem_email_valido") return "sem_email";
+  if (c === "email_compartilhado") return "compartilhado";
+  if (c === "diverge_fotografia") return "diverge";
+  if (c === "arroba_repetido") return "arroba";
+  if (!c && p.vinculo && !p.dominio) return "sem_email";
+  return "outro";
+}
+/** Há quantos dias a pessoa espera (null quando não há pedido com data). */
+export function diasDeEspera(p, agora = new Date()) { return p.desde ? Math.max(0, Math.floor((agora - new Date(p.desde)) / 86400000)) : null; }
+
 /**
  * Monta a fila: uma linha por pessoa (joiner_id) que tem algo a decidir.
  * Entra quem tem pedido de troca em análise, pedido de comprovação, solicitação aberta, ou pediu ajuda para ativar (vínculo a confirmar).
+ * incluirTodos: entra também quem está só na lista de vínculos a confirmar e nunca pediu nada (situação "nada").
  * Ordem: primeiro quem usou a autoatendimento (já traz prova), depois solicitações, depois quem só pediu ajuda; dentro de cada grupo, o mais antigo primeiro.
  */
-export function montarFila({ trocas = [], comprovacoes = [], solicitacoes = [], aConfirmar = [], motivos = {} } = {}) {
+export function montarFila({ trocas = [], comprovacoes = [], solicitacoes = [], aConfirmar = [], motivos = {}, incluirTodos = false } = {}) {
   const m = new Map();
   const pessoa = (id, cog) => { if (!m.has(id)) m.set(id, { joiner_id: id, cog: cog || "", nome: "", dominio: "", itens: 0, tem_conta: false, motivo: motivos[id] || null, troca: null, comprovacao: null, solicitacoes: [], vinculo: null, desde: null }); const p = m.get(id); if (!p.cog && cog) p.cog = cog; return p; };
   const antes = (p, d) => { if (d && (!p.desde || new Date(d) < new Date(p.desde))) p.desde = d; };
@@ -53,8 +77,9 @@ export function montarFila({ trocas = [], comprovacoes = [], solicitacoes = [], 
   for (const t of trocas) { const p = pessoa(t.joiner_id, t.cog); p.troca = t; antes(p, t.criado_em); }
   for (const c of comprovacoes) { const p = pessoa(c.joiner_id, c.cog); p.comprovacao = c; p.itens = c.itens ? Number(c.itens) : p.itens; antes(p, c.criado_em); }
   for (const s of solicitacoes) if (s.status === "aberta" && s.joiner_id != null) { const p = pessoa(s.joiner_id, s.cog); p.solicitacoes.push(s); antes(p, s.criado_em); }
-  const lista = [...m.values()].filter(p => p.troca || p.comprovacao || p.solicitacoes.length || (p.vinculo && p.vinculo.pedido_de_ajuda));
-  const rank = p => (p.troca || p.comprovacao ? 0 : p.solicitacoes.length ? 1 : 2);
+  const lista = [...m.values()].filter(p => p.troca || p.comprovacao || p.solicitacoes.length || (p.vinculo && (incluirTodos || p.vinculo.pedido_de_ajuda)));
+  for (const p of lista) { p.situacao = situacaoDe(p); p.motivoChave = motivoChave(p); }
+  const rank = p => (p.troca || p.comprovacao ? 0 : p.solicitacoes.length ? 1 : p.situacao === "ajuda" ? 2 : 3);
   lista.sort((a, b) => rank(a) - rank(b) || (new Date(a.desde || 0) - new Date(b.desde || 0)) || a.joiner_id - b.joiner_id);
   return lista;
 }

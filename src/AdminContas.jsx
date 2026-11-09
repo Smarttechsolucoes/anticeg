@@ -3,7 +3,7 @@
 // Nada aqui apaga pedido, claim, pagamento ou cadastro.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clienteAdmin } from "./adminAuth.js";
-import FilaPorPessoa from "./FilaPorPessoa.jsx";
+import ListaContas from "./ListaContas.jsx";
 import { montarFila } from "./filaPessoas.js";
 
 const mono = "'DM Mono',monospace";
@@ -148,7 +148,7 @@ export default function AdminContas() {
     setEnviando(false);
     if (error) falhou("Não foi possível chamar o envio agora."); else { ok(`Envio feito: ${data?.enviados ?? 0} enviado(s), ${data?.falharam ?? 0} com falha.`); carregar(); }
   }
-  const filaPessoas = useMemo(() => montarFila({ trocas, comprovacoes, solicitacoes, aConfirmar, motivos }), [trocas, comprovacoes, solicitacoes, aConfirmar, motivos]);
+  const filaPessoas = useMemo(() => montarFila({ trocas, comprovacoes, solicitacoes, aConfirmar, motivos, incluirTodos: true }), [trocas, comprovacoes, solicitacoes, aConfirmar, motivos]);
   // pedidos sem dona agrupados por e-mail
   const grupos = Object.values(orfaos.reduce((m, o) => { const k = (o.email || "(sem e-mail)").toLowerCase(); (m[k] ||= { email: o.email || "", chave: k, itens: [] }).itens.push(o); return m; }, {}));
 
@@ -170,8 +170,11 @@ export default function AdminContas() {
       {aviso.texto && <div role="status" style={{ ...caixa, borderColor: aviso.tipo === "erro" ? C.erro : C.ok, color: aviso.tipo === "erro" ? C.erro : C.ok, fontSize: 12 }}>{aviso.texto}</div>}
       {carregando && <div style={{ color: C.mudo, fontSize: 12, marginBottom: 12 }}>Carregando…</div>}
 
-      <FilaPorPessoa estilo={caixa} cliente={cliente} fila={filaPessoas} motivos={motivos} rotuloMotivo={rotuloMotivo} onFeito={ok} onErro={falhou} recarregar={carregar} resolverSolicitacao={resolverSolicitacao} confirmarVinculo={confirmarVinculo} />
+      <ListaContas estilo={caixa} cliente={cliente} fila={filaPessoas} motivos={motivos} rotuloMotivo={rotuloMotivo} onFeito={ok} onErro={falhou} recarregar={carregar} resolverSolicitacao={resolverSolicitacao} />
 
+      <details data-testid="admin-listas-tipo" style={{ ...caixa, padding: 0 }}>
+        <summary style={{ cursor: "pointer", padding: "12px 16px", fontFamily: mono, fontSize: 12, color: C.mudo }}>Listas por tipo ({solicitacoes.filter(x => x.status === "aberta").length} solicitações · {aConfirmar.length} vínculos a confirmar): a mesma informação da lista acima, sem filtros, e as solicitações sem cadastro</summary>
+        <div style={{ padding: "0 16px 4px" }}>
       <div style={caixa} data-testid="admin-solicitacoes">
         <div style={rot}>Pedidos de perfil e ativações sem vínculo confiável ({solicitacoes.filter(x => x.status === "aberta").length} abertos)</div>
         <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>Correção de @ ou de e-mail pedida pela própria pessoa, e quem tentou ativar mas teve o e-mail/@ alterado depois da fotografia confiável. Confirme a identidade por um canal conhecido (WhatsApp, @) antes de corrigir.</div>
@@ -194,6 +197,12 @@ export default function AdminContas() {
         {semAjuda.map(linhaVinculo)}
       </div>
 
+        </div>
+      </details>
+
+      <details data-testid="admin-outras-ferramentas" style={{ ...caixa, padding: 0 }}>
+        <summary style={{ cursor: "pointer", padding: "12px 16px", fontFamily: mono, fontSize: 12, color: C.mudo }}>Outras ferramentas ({fila.filter(x => x.status === "pendente" || x.status === "falhou").length} na fila da planilha · {pendentes.length} ligações de conta · {problemas.length} cadastros que não ativam sozinhos · {orfaos.length} pedidos sem dona)</summary>
+        <div style={{ padding: "0 16px 4px" }}>
       <div style={caixa} data-testid="admin-fila-planilha">
         <div style={rot}>Fila de envio à planilha ({fila.filter(x => x.status === "pendente" || x.status === "falhou").length} pendentes)</div>
         <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>E-mails verificados que ainda precisam ser gravados na aba Dados. Falhas ficam aqui e são tentadas de novo; o envio é seguro para repetir.</div>
@@ -251,6 +260,8 @@ export default function AdminContas() {
           </div>
         ))}
       </div>
+        </div>
+      </details>
     </div>
   );
 }
