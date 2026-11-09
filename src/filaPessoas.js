@@ -18,7 +18,7 @@ export function oQueConferir(p) {
   const itens = [];
   if (p.situacao === "conta") {
     itens.push("Esta pessoa JÁ TEM CONTA: a ativação que ela pediu não é mais necessária.");
-    itens.push("Leia a mensagem só para ver se o pedido tem outro assunto (item ou pagamento que não aparece, por exemplo). Se não tem, marque Resolvido para tirar da lista.");
+    itens.push("Leia a mensagem: se o pedido era só de ativação, marque Resolvido. Se ela relata outro problema ainda pendente (item ou pagamento que não aparece, por exemplo), mantenha o pedido aberto e trate esse problema.");
     return itens;
   }
   if (p.troca) {
@@ -39,7 +39,7 @@ export function oQueConferir(p) {
 
 /** Ação necessária, em poucas palavras, para o topo do cartão. */
 export function acaoNecessaria(p) {
-  if (p.situacao === "conta") return "Nada a decidir: ela já tem conta. Confirme que o pedido não tem outro assunto e feche-o";
+  if (p.situacao === "conta") return "Ela já tem conta: confira se o pedido era só de ativação ou se relata outro problema, e só então feche-o";
   if (p.troca) return "Confirmar a identidade e aplicar (ou cancelar) a troca de e-mail";
   if (p.comprovacao) return "Conferir a prova e aprovar ou recusar";
   if (p.solicitacoes.length) return "Responder o pedido";

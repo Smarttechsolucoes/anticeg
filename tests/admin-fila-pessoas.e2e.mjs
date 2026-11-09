@@ -140,7 +140,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok(!/0 itens/.test(topo) && /—/.test(topo), "itens desconhecidos aparecem como '—', nunca como '0 itens'");
   const sty = await abrir(page, 13), td = await sty.innerText();
   ok(!/sem e-mail válido/i.test(td) && /@gmail\.com/.test(td) && /já tem conta/.test(td), "o detalhe não diz 'sem e-mail válido' e mostra o provedor real");
-  ok(/JÁ TEM CONTA/.test(td) && /Nada a decidir/.test(td) && /Resolvido/.test(td), "o que conferir explica que ela já tem conta e que basta fechar os pedidos");
+  ok(/JÁ TEM CONTA/.test(td) && /só de ativação/.test(td) && /Resolvido/.test(td), "o que conferir explica que ela já tem conta e que basta fechar os pedidos");
   ok(await sty.getByRole("button", { name: "Confirmar vínculo" }).count() === 0, "quem já tem conta NÃO mostra 'Confirmar vínculo'");
   ok((await sty.getByTestId("fila-solicitacao").count()) === 2, "as duas solicitações aparecem, cada uma com seus botões");
   const raiz = page.getByTestId("admin-fila-pessoas");

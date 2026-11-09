@@ -99,7 +99,7 @@ test("quem já tem conta: situação 'conta', vai para o fim, motivo 'já ativou
   const f = montarFila({ solicitacoes: [sol({ joiner_id: 21, cog: "contaativa" }), sol({ id: 42, joiner_id: 22, cog: "outra" })], extras: { 21: { nome: "S", dominio: "gmail.com", tem_conta: true }, 22: { nome: "O", dominio: "gmail.com", tem_conta: false } } });
   assert.deepEqual(f.map(p => [p.joiner_id, p.situacao, p.motivoChave]), [[22, "ajuda", "outro"], [21, "conta", "ativou"]]);
   const conta = f[1];
-  assert.match(acaoNecessaria(conta), /Nada a decidir/); assert.match(oQueConferir(conta).join(" "), /JÁ TEM CONTA/);
+  assert.match(acaoNecessaria(conta), /só então feche-o/); assert.match(oQueConferir(conta).join(" "), /JÁ TEM CONTA/);
   const [vinculoComConta] = montarFila({ aConfirmar: [vinc({ joiner_id: 23, tem_conta: true })], incluirTodos: true });
   assert.equal(vinculoComConta.situacao, "conta");
   const [prova] = montarFila({ trocas: [troca({ joiner_id: 24 })], extras: { 24: { tem_conta: true } } });
