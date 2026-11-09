@@ -293,4 +293,17 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok(!/0 itens/.test(await linha(page, 11).innerText()), "e não inventa '0 itens'");
   await T.browser.close();
 }
+{ // texto automático antigo e falso: o painel não repete "alterado depois da fotografia"; mostra o motivo calculado ou uma frase neutra
+  const T = await nova(); const { page } = T; await abrirContas(page);
+  const sty = await abrir(page, 13), t13 = await sty.innerText();
+  ok(!/alterado depois da fotografia/i.test(t13) && /Tentou ativar e o código não foi liberado/.test(t13), "pedido com o texto antigo: o painel NÃO afirma 'alterado depois da fotografia'");
+  ok(/Hoje o cadastro já tem conta/.test(t13), "e usa o motivo conhecido (aqui, já tem conta)");
+  const fabi = await abrir(page, 7);
+  ok(!/alterado depois da fotografia/i.test(await fabi.innerText()), "nenhuma linha do detalhe repete a frase antiga");
+  await page.getByTestId("admin-listas-tipo").locator("summary").click(); await page.waitForTimeout(250);
+  const sol = await page.getByTestId("admin-solicitacoes").innerText();
+  ok(!/alterado depois da fotografia/i.test(sol) && /Tentou ativar e o código não foi liberado/.test(sol) && !/teve o e-mail\/@ alterado/.test(sol), "a lista por tipo também mostra o texto corrigido (e a explicação da caixa não afirma mudança)");
+  ok(!/alterado depois da fotografia/i.test(await page.getByTestId("admin-vinculos-confirmar").innerText()), "a caixa de vínculos também não afirma mudança depois da fotografia");
+  await T.browser.close();
+}
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

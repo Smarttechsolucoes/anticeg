@@ -104,12 +104,13 @@ test("CORS só para a origem do site; método errado", async () => {
 });
 
 // ─────────────── vínculo confiável (J6) ───────────────
-test("VÍNCULO NÃO CONFIÁVEL: e-mail/@ alterado depois da fotografia => NENHUM código é enviado (resposta neutra) e a administração recebe o registro", async () => {
+test("VÍNCULO NÃO CONFIÁVEL (a regra automática não libera) => NENHUM código é enviado (resposta neutra) e a administração recebe o registro", async () => {
   const m = montar(); const registros: [number, string][] = [];
   m.db.vinculoConfiavel = async id => id !== 2; m.db.registrarSemVinculo = async (id, motivo) => { registros.push([id, motivo]); };
   const ruim = await pedir(m, "bia", "bia@exemplo.com");
   assert.deepEqual(ruim, { status: 200, corpo: { ok: true, proximo: "comprovar" } }, "quem acertou o par ouve que precisa comprovar (nenhum código sai)"); assert.deepEqual(m.enviados, [], "nenhum e-mail foi enviado"); assert.deepEqual(m.criados, [], "nem criou usuário no Auth");
   assert.equal(registros.length, 1); assert.equal(registros[0][0], 2);
+  assert.doesNotMatch(registros[0][1], /depois da fotografia/, "o texto de reserva NÃO afirma que algo mudou depois da fotografia (o motivo real é calculado pelo banco)");
   const boa = await pedir(m, "ana", "ana@exemplo.com"); assert.deepEqual(boa, { status: 200, corpo: { ok: true } }); assert.deepEqual(m.enviados, ["ana@exemplo.com"], "quem tem vínculo confiável recebe o código");
 });
 test("sem vínculo confiável: quem ERROU o par recebe a resposta neutra (não revela o estado de ninguém); quem acertou ouve 'comprovar'; falha ao registrar para a administração não vaza", async () => {

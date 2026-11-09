@@ -2,7 +2,7 @@
 // Rodar: node --test tests/filaPessoas.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { montarFila, oQueConferir, acaoNecessaria, motivoTroca, diasDeEspera, MOTIVOS_LISTA, conferencias, provasDe, citaOutroProblema } from "../src/filaPessoas.js";
+import { montarFila, oQueConferir, acaoNecessaria, motivoTroca, diasDeEspera, MOTIVOS_LISTA, conferencias, provasDe, citaOutroProblema, mensagemSolicitacao } from "../src/filaPessoas.js";
 
 const troca = (o = {}) => ({ id: 1, joiner_id: 7, cog: "bia", via: "sem_acesso", desfecho: "sem_acesso", novo_dominio: "gmail.com", novo_verificado_em: "2026-11-09T15:00:00Z", criado_em: "2026-11-09T14:50:00Z", ...o });
 const comp = (o = {}) => ({ id: 2, joiner_id: 8, cog: "caio", via: "sem_perfil", desafio_validado: false, detalhe: "Paguei em outubro.", itens: 3, criado_em: "2026-11-09T10:00:00Z", expira_em: "2026-11-16T10:00:00Z", ...o });
@@ -181,4 +181,20 @@ test("pedido que cita item ou pagamento NÃO deve ser fechado só porque a pesso
 test("situação 'conta' com fatos: os fatos têm prioridade sobre o que vinha da lista de vínculos", () => {
   const p = montarFila({ aConfirmar: [vinc({ joiner_id: 60, tem_conta: false, itens: 0 })], incluirTodos: true, fatos: { 60: fx({ tem_conta: true, itens: 19 }) } })[0];
   assert.equal(p.tem_conta, true); assert.equal(p.itens, 19); assert.equal(p.situacao, "conta"); assert.equal(p.orientacao.tipo, "conta");
+});
+
+test("texto automático antigo e falso é trocado pelo motivo calculado; texto da pessoa e texto novo ficam como estão", () => {
+  const falso = { tipo: "ativacao_sem_vinculo", mensagem: "e-mail/@ do cadastro alterado depois da fotografia confiável" };
+  const comMotivo = montarFila({ aConfirmar: [vinc({ joiner_id: 70 })], incluirTodos: true, motivos: { 70: { codigo: "historico_troca_email" } } })[0];
+  const t = mensagemSolicitacao(falso, comMotivo);
+  assert.doesNotMatch(t, /depois da fotografia/); assert.match(t, /registro antigo de pedido de troca/);
+  const semMotivo = montarFila({ solicitacoes: [sol({ joiner_id: 71 })] })[0];
+  const n = mensagemSolicitacao(falso, semMotivo); assert.match(n, /motivo exato não pôde ser determinado/); assert.doesNotMatch(n, /depois da fotografia/);
+  assert.match(mensagemSolicitacao(falso, undefined), /não pôde ser determinado/);
+  for (const [cod, re] of [["sem_email_valido", /não tem e-mail válido/], ["email_compartilhado", /compartilhado/], ["diverge_fotografia", /diferente da fotografia confiável \(não foi possível saber quando mudou\)/], ["arroba_repetido", /se repete/]]) {
+    const p = montarFila({ aConfirmar: [vinc({ joiner_id: 72 })], incluirTodos: true, motivos: { 72: { codigo: cod } } })[0];
+    assert.match(mensagemSolicitacao(falso, p), re, cod);
+  }
+  const nova = { tipo: "ativacao_sem_vinculo", mensagem: "O cadastro não tem e-mail válido." }; assert.equal(mensagemSolicitacao(nova, comMotivo), nova.mensagem);
+  const pessoa = { tipo: "ativacao_ajuda", mensagem: "Meu e-mail foi alterado depois da fotografia do cadastro" }; assert.equal(mensagemSolicitacao(pessoa, comMotivo), pessoa.mensagem, "o que a pessoa escreveu nunca é reescrito");
 });

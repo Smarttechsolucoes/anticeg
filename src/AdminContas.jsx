@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clienteAdmin } from "./adminAuth.js";
 import ListaContas from "./ListaContas.jsx";
-import { montarFila } from "./filaPessoas.js";
+import { mensagemSolicitacao, montarFila } from "./filaPessoas.js";
 
 const mono = "'DM Mono',monospace";
 const C = { fundo: "rgba(245,240,232,.04)", borda: "rgba(245,240,232,.12)", mudo: "rgba(245,240,232,.55)", texto: "#F5F0E8", destaque: "#FF5C1A", ok: "#BAFF39", erro: "#ff6b6b" };
@@ -49,7 +49,7 @@ function rotuloMotivo(m) {
   switch (m.codigo) {
     case "historico_troca_email": return `histórico de pedido de troca de e-mail/@${m.ultimo_registro ? ` (último registro em ${dia(m.ultimo_registro)})` : ""} · ${m.posterior_a_fotografia ? "há registro DEPOIS da fotografia" : "nada mudou depois da fotografia"}`;
     case "historico_so_arroba": return "histórico de troca SÓ de @ (pela regra aprovada isso NÃO deveria bloquear a ativação automática: avise o desenvolvedor)";
-    case "diverge_fotografia": return "e-mail/@ DIFERENTES da fotografia (mudaram depois dela)";
+    case "diverge_fotografia": return "e-mail/@ diferentes da fotografia confiável (não dá para saber quando mudaram)";
     case "sem_email_valido": return "e-mail ausente ou inválido";
     case "email_compartilhado": return "e-mail compartilhado com outro cadastro";
     case "arroba_repetido": return "@ repetido (só muda maiúscula)";
@@ -201,11 +201,11 @@ export default function AdminContas() {
         <div style={{ padding: "0 16px 4px" }}>
       <div style={caixa} data-testid="admin-solicitacoes">
         <div style={rot}>Pedidos de perfil e ativações sem vínculo confiável ({solicitacoes.filter(x => x.status === "aberta").length} abertos)</div>
-        <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>Correção de @ ou de e-mail pedida pela própria pessoa, e quem tentou ativar mas teve o e-mail/@ alterado depois da fotografia confiável. Confirme a identidade por um canal conhecido (WhatsApp, @) antes de corrigir.</div>
+        <div style={{ color: C.mudo, fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>Correção de @ ou de e-mail pedida pela própria pessoa, e quem tentou ativar e não teve o código liberado pela regra automática (o motivo aparece em cada pedido). Confirme a identidade por um canal conhecido (WhatsApp, @) antes de corrigir.</div>
         {!solicitacoes.length && <div style={{ color: C.mudo, fontSize: 12, marginTop: 8 }}>Nenhum pedido.</div>}
         {solicitacoes.map(x => (
           <div key={x.id} style={{ borderTop: `1px solid ${C.borda}`, marginTop: 8, paddingTop: 8, fontSize: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ flex: 1, minWidth: 220 }}>#{x.joiner_id ?? "—"} · @{x.cog || "?"} · <b style={{ color: C.destaque }}>{x.tipo === "ativacao_sem_vinculo" ? "ativação sem vínculo confiável" : x.tipo}</b>{x.valor_pedido ? <> · pediu: <b>{x.valor_pedido}</b></> : null}{x.mensagem ? <> · “{x.mensagem}”</> : null} · {x.status} · {new Date(x.criado_em).toLocaleString("pt-BR")}</span>
+            <span style={{ flex: 1, minWidth: 220 }}>#{x.joiner_id ?? "—"} · @{x.cog || "?"} · <b style={{ color: C.destaque }}>{x.tipo === "ativacao_sem_vinculo" ? "ativação sem vínculo confiável" : x.tipo}</b>{x.valor_pedido ? <> · pediu: <b>{x.valor_pedido}</b></> : null}{x.mensagem ? <> · “{mensagemSolicitacao(x, filaPessoas.find(q => q.joiner_id === x.joiner_id))}”</> : null} · {x.status} · {new Date(x.criado_em).toLocaleString("pt-BR")}</span>
             {x.status === "aberta" && <><button style={botao(C.ok)} onClick={() => resolverSolicitacao(x, "resolvida")}>Resolvido</button><button style={botao(C.erro)} onClick={() => resolverSolicitacao(x, "recusada")}>Recusar</button></>}
           </div>
         ))}
