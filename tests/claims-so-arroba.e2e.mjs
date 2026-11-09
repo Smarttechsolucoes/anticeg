@@ -137,9 +137,17 @@ const privadas = reg => reg.urls.filter(x => /rest\/v1\/(claims|claim_reservas|c
   const S = await nova({ usuario: ANA, resposta: { ok: true, ot8: false, gravados: 1, standby: ["Han"], falhas: [], conta: false } }); await ir(S.page); await mais(S.page, "Han").click(); await enviar(S.page).click(); await S.page.waitForTimeout(900);
   ok(/entrou no standby automático/.test(await corpo(S.page)), "standby: a mensagem explica"); await S.browser.close();
 }
-{ // 6) privacidade do quadro: nenhum @ ou nome de outra pessoa na tela do visitante
-  const quadro = { eventos: [EVENTO], sets: [SET], reservas: [{ id: 1, evento_id: 1, set_id: 10, joiner_cog: null, joiner_nome: null, membro: "Han", status: "pendente" }], standby: [] };
-  const T = await nova({ usuario: ANA, quadro }); await ir(T.page); const t = await corpo(T.page);
-  ok(!/@outra|Fulana|joiner_/.test(t), "o quadro público do visitante não traz @ nem nome de outras pessoas"); await T.browser.close();
+{ // 6) quadro público do AO VIVO: mostra o @ de quem deu claim (só o @), nunca o nome nem o resto
+  const SETF = { ...SET, status: "fechado" };
+  const quadro = { eventos: [EVENTO], sets: [SETF], reservas: [{ id: 1, evento_id: 1, set_id: 10, joiner_cog: "outra.pessoa", joiner_nome: null, membro: "Han", status: "pendente" }, { id: 2, evento_id: 1, set_id: 10, joiner_cog: "sem.cadastro", joiner_nome: null, membro: "Felix", status: "pendente" }], standby: [{ id: 3, evento_id: 1, set_id: null, joiner_cog: "na.fila", joiner_nome: null, membro: "Han", status: "pendente" }] };
+  const T = await nova({ quadro }); const { page, reg } = T; await ir(page);
+  await page.getByRole("button", { name: "AO VIVO ●" }).click(); await page.waitForTimeout(700);
+  await page.getByText("VER SETS").first().click().catch(() => {}); await page.waitForTimeout(300);
+  const sb = page.getByText(/STANDBY \(/).first(); if (await sb.count()) { await sb.click(); await page.waitForTimeout(300); }
+  const t = await corpo(page);
+  ok(/@outra\.pessoa/.test(t) && /@sem\.cadastro/.test(t), "AO VIVO do visitante mostra o @ de quem deu claim (com e sem cadastro): " + (t.match(/@[\w.]+/g) || []).join(" "));
+  ok(/@na\.fila/.test(t), "o standby também mostra o @ de quem está na fila");
+  ok(!/reservado/.test(t.replace(/Claim reservado/g, "")) , "nenhuma vaga ocupada fica só como 'reservado' quando o @ é conhecido");
+  ok(!/joiner_|Fulana/.test(t) && privadas(reg).length === 0, "nenhum nome nem tabela privada: o @ vem do quadro público"); await T.browser.close();
 }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
