@@ -15894,6 +15894,101 @@ function ClaimScoreboard() {
   );
 }
 
+// ── Claims SÓ COM @ (J20) ─────────────────────────────────────────────────────────────────────────────────────────
+// Dois caminhos: quem está logada usa a conta atual (a função de borda usa o @ da PRÓPRIA conta); quem não está logada ou ainda não tem cadastro informa o @.
+// Nenhum dos dois exige senha, ativação ou perfil concluído. Histórico, "ao vivo" e dados privados continuam exigindo senha (aparecem só com sessão).
+function useTemSessaoClaim() {
+  const [tem, setTem] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    supabase.auth.getSession().then(({ data }) => { if (vivo) setTem(!!data?.session); }).catch(() => {});
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, sessao) => { if (vivo) setTem(!!sessao); });
+    return () => { vivo = false; sub?.subscription?.unsubscribe(); };
+  }, []);
+  return tem;
+}
+function ClaimAvisoPrivado({ o }) {
+  return (
+    <div data-testid="claim-aviso-privado" style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.1)", borderRadius:10, padding:"18px 16px", fontFamily:"'DM Mono',monospace", fontSize:11, lineHeight:1.7, color:"rgba(245,240,232,.6)" }}>
+      {o} mostra dados privados e só aparece quando você entra com a sua senha. Você pode fazer a sua claim normalmente na aba CLAIM, só com o @.
+    </div>
+  );
+}
+function ClaimPaginaCorpo({ user, logada }) {
+  const [claimPageTab, setClaimPageTab] = useState("claim");
+  return (
+      <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
+        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
+        {/* Abas */}
+        <div style={{ display:"flex", gap:6, marginBottom:24 }}>
+          {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"],["historico","HISTÓRICO"],["teste","ÁREA DE TESTE"]].map(([v,l]) => (
+            <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {claimPageTab === "claim" && <>
+          <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {["Pagamento será liberado quando fechar o set.","Aceito cartão com juros.","Repasse dos itens apenas após pagamento.","Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!"].map((r, i) => (
+                <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
+                  <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom:20, background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.3)", borderRadius:10, padding:"14px 16px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"#ef4444", lineHeight:1.7 }}>
+            <span style={{ fontWeight:700, marginRight:6 }}>⚠</span>Ao marcar sua claim você está ciente da compra do item, erros de marcação não serão aceitos. Caso aconteça, você pode pagar o item e realizar o repasse dentro da comunidade antigom.
+          </div>
+          <ClaimPublicoPage user={user} />
+        </>}
+        {claimPageTab === "ao-vivo" && (logada ? <ClaimScoreboard /> : <ClaimAvisoPrivado o="O quadro ao vivo" />)}
+        {claimPageTab === "historico" && (logada ? <ClaimHistorico /> : <ClaimAvisoPrivado o="O histórico das suas claims" />)}
+        {claimPageTab === "teste" && (logada ? <ClaimAreaTeste /> : <ClaimAvisoPrivado o="A área de teste" />)}
+      </div>
+  );
+}
+// visitante SEM @ no aparelho: pergunta o @ (guardado só neste aparelho) e libera a página de claims; não cria conta nem cadastro
+function ClaimSemUsuario() {
+  const mono = "'DM Mono',monospace";
+  const [cog, setCog] = useState(() => { try { return localStorage.getItem("anticeg_claim_arroba") || ""; } catch { return ""; } });
+  const [texto, setTexto] = useState("");
+  const [erro, setErro] = useState("");
+  const normalizar = v => String(v || "").trim().replace(/^@+/, "");
+  function confirmar(e) {
+    e.preventDefault();
+    const c = normalizar(texto);
+    if (!c || c.length > 64 || /[\s@]/.test(c)) { setErro("Digite o seu @ (sem espaços)."); return; }
+    try { localStorage.setItem("anticeg_claim_arroba", c); } catch { /* sem armazenamento: vale só nesta visita */ }
+    setErro(""); setCog(c);
+  }
+  function trocar() { try { localStorage.removeItem("anticeg_claim_arroba"); } catch { /* sem armazenamento */ } setCog(""); setTexto(""); }
+  if (!cog) return (
+    <div style={{ maxWidth:420, margin:"0 auto", padding:"48px 16px" }}>
+      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:12 }}>CLAIMS</div>
+      <form onSubmit={confirmar} data-testid="claim-arroba-form" style={{ display:"grid", gap:12 }}>
+        <label style={{ display:"grid", gap:6, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>Seu @ (não precisa de senha nem de cadastro)
+          <input value={texto} onChange={e => setTexto(e.target.value)} aria-label="Seu @" autoFocus placeholder="@seuusuario" style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:16 }} />
+        </label>
+        {erro && <div role="alert" style={{ color:"var(--laranja)", fontFamily:mono, fontSize:11 }}>{erro}</div>}
+        <button type="submit" style={{ background:"var(--laranja)", border:"none", borderRadius:8, padding:"12px", color:"#000", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer" }}>Continuar para as claims</button>
+      </form>
+    </div>
+  );
+  return (
+    <div>
+      <div data-testid="claim-arroba-barra" style={{ maxWidth:720, margin:"0 auto", padding:"12px 16px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)", display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+        <span>Claim como <b style={{ color:"var(--offwhite)" }}>@{cog}</b></span>
+        <button type="button" onClick={trocar} style={{ background:"none", border:"none", color:"var(--laranja)", textDecoration:"underline", cursor:"pointer", fontFamily:mono, fontSize:11, padding:0 }}>trocar @</button>
+      </div>
+      <ClaimPaginaCorpo user={{ cog, nome: cog }} logada={false} />
+    </div>
+  );
+}
+
 function ClaimPublicoPage({ user }) {
   const mono = "'DM Mono',monospace";
   const SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
@@ -15914,10 +16009,25 @@ function ClaimPublicoPage({ user }) {
     return () => clearInterval(t);
   }, []);
 
+  // J20: quem não tem sessão de conta (visitante só com @) ou não consegue ler as tabelas (conta sem perfil concluído) lê o QUADRO PÚBLICO: vagas e standby SEM nenhum @ nem nome de ninguém
+  async function carregarQuadroPublico() {
+    const { data, error } = await supabase.rpc("claim_quadro_publico");
+    if (error || !data || !Array.isArray(data.eventos)) return false;
+    setEventos(data.eventos);
+    const setsMap = {}; (data.sets || []).forEach(x => { (setsMap[x.evento_id] ||= []).push(x); }); setSets(setsMap);
+    const resMap = {}; (data.reservas || []).forEach(r => { (resMap[r.set_id] ||= []).push(r); }); setReservas(resMap);
+    const sbMap = {}; (data.standby || []).forEach(r => { (sbMap[r.evento_id] ||= []).push(r); }); setStandby(sbMap);
+    return true;
+  }
+
   async function fetchTudo(fazAutoAbrir = true) {
+    if (JOINERS_AUTH_ATIVO) {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session) { await carregarQuadroPublico(); return; }
+    }
     const { data: evData } = await supabase.from("claim_eventos")
       .select("*").eq("status", "ativo").order("abertura");
-    if (!evData?.length) { setEventos([]); return; }
+    if (!evData?.length) { if (JOINERS_AUTH_ATIVO && await carregarQuadroPublico()) return; setEventos([]); return; }
     setEventos(evData);
     const evIds = evData.map(e => e.id);
     const { data: setsData } = await supabase.from("claim_sets")
@@ -16004,8 +16114,12 @@ function ClaimPublicoPage({ user }) {
   }
 
   useEffect(() => {
-    supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle()
-      .then(({ data }) => { if (data) setIsBloqueada(!!data.bloqueado); });
+    // só consulta o cadastro quando há sessão de conta (visitante só com @ não toca em tabela de cadastro; o servidor confere o bloqueio ao registrar)
+    (async () => {
+      if (JOINERS_AUTH_ATIVO) { const { data: sess } = await supabase.auth.getSession(); if (!sess?.session) return; }
+      const { data } = await supabase.from("joiners").select("bloqueado").eq("cog", user.cog).maybeSingle();
+      if (data) setIsBloqueada(!!data.bloqueado);
+    })();
     fetchTudo();
     const t = setInterval(fetchTudo, 30000);
     return () => clearInterval(t);
@@ -16022,6 +16136,7 @@ function ClaimPublicoPage({ user }) {
   // As regras do claim (conta ativada, bloqueio, vaga livre, standby, limite por joiner, OT8 e fechamento de set) rodam no servidor: claim_enviar / claim_organizar.
   const MOTIVOS_CLAIM = {
     sem_conta: "Ative a sua conta para fazer claim.",
+    cog_invalido: "Informe o seu @ para fazer a claim.",
     bloqueada: "Sua conta está bloqueada por pagamentos em atraso.",
     evento_fechado: "Este evento não está aberto para claims agora.",
     pedido_vazio: "Escolha ao menos um membro.",
@@ -16053,7 +16168,8 @@ function ClaimPublicoPage({ user }) {
     const pedidos = Object.fromEntries(Object.entries(qtds).filter(([, q]) => q > 0));
     if (!Object.keys(pedidos).length) return;
     setEnviando(true); setClaimErro(null);
-    const { data, error } = await supabase.rpc("claim_enviar", { p_evento: eventoId, p_pedidos: pedidos });
+    // J20: a claim vai pela função de borda: quem está logada usa a PRÓPRIA conta; sem login ou sem cadastro vale o @ informado. Nunca é descartada por falta de conta.
+    const { data, error } = await supabase.functions.invoke("claim-enviar", { body: { cog: user.cog, evento: eventoId, pedidos } });
     if (error || !data) throw error || new Error("sem resposta do servidor");
     if (!data.ok) {
       if (data.motivo === "bloqueada") setIsBloqueada(true);
@@ -28033,7 +28149,7 @@ function AppPrincipal() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [showA2HS, setShowA2HS] = useState(false);
-  const [claimPageTab, setClaimPageTab] = useState("claim");
+  const temSessaoClaim = useTemSessaoClaim();
   const [a2hsPrompt, setA2hsPrompt] = useState(null);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [nudgePushPerm, setNudgePushPerm] = useState(() => "Notification" in window ? Notification.permission : "unsupported");
@@ -28364,6 +28480,7 @@ function AppPrincipal() {
   if (window.location.pathname === "/popup-this-that") return <ExigeContaAtiva><PopupThisAndThatPage /></ExigeContaAtiva>;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
   if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
+  if (JOINERS_AUTH_ATIVO && !user && window.location.pathname === "/claim") return <ClaimSemUsuario />;
   if (page === "landing" || !user) {
     if (window.location.pathname === "/claim") {
       return <ClaimGuestPage onLogin={handleLogin} />;
@@ -28671,39 +28788,9 @@ function AppPrincipal() {
       })()}
       {formInterno ? (
         <SmolMerchFormPage interno pixKey={PIX_KEY} cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS_ABERTOS} fotoDe={fotoPc} />
-      ) : window.location.pathname === "/claim" ? prot("claims", (
-        <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:16 }}>CLAIMS</div>
-          {/* Abas */}
-          <div style={{ display:"flex", gap:6, marginBottom:24 }}>
-            {[["claim","CLAIM"],["ao-vivo","AO VIVO ●"],["historico","HISTÓRICO"],["teste","ÁREA DE TESTE"]].map(([v,l]) => (
-              <button key={v} onClick={() => setClaimPageTab(v)} style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:"1px", padding:"6px 16px", borderRadius:20, cursor:"pointer", fontWeight: claimPageTab===v ? 700 : 400, border: claimPageTab===v ? "1px solid var(--laranja)" : "1px solid rgba(245,240,232,.12)", background: claimPageTab===v ? "rgba(255,92,26,.12)" : "transparent", color: claimPageTab===v ? "var(--laranja)" : "rgba(245,240,232,.4)" }}>
-                {l}
-              </button>
-            ))}
-          </div>
-          {claimPageTab === "claim" && <>
-            <div style={{ marginBottom:28, background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
-              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:10 }}>LEIA ANTES DE FAZER CLAIM</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {["Pagamento será liberado quando fechar o set.","Aceito cartão com juros.","Repasse dos itens apenas após pagamento.","Caso você dê claim em mais de 1 item, é possível que um deles (ou mais) já esteja esgotado! Sua claim valerá para os itens disponíveis. NÃO TEM COMO VOLTAR ATRÁS!"].map((r, i) => (
-                  <div key={i} style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6 }}>
-                    <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom:20, background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.3)", borderRadius:10, padding:"14px 16px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"#ef4444", lineHeight:1.7 }}>
-              <span style={{ fontWeight:700, marginRight:6 }}>⚠</span>Ao marcar sua claim você está ciente da compra do item, erros de marcação não serão aceitos. Caso aconteça, você pode pagar o item e realizar o repasse dentro da comunidade antigom.
-            </div>
-            <ClaimPublicoPage user={user} />
-          </>}
-          {claimPageTab === "ao-vivo" && <ClaimScoreboard />}
-          {claimPageTab === "historico" && <ClaimHistorico />}
-          {claimPageTab === "teste" && <ClaimAreaTeste />}
-        </div>
-      )) : (
+      ) : window.location.pathname === "/claim" ? (
+        <ClaimPaginaCorpo user={user} logada={temSessaoClaim} />
+      ) : (
         <>
           {tab === "masterlist" && prot("masterlist", <MasterlistTab user={user} itens={itens} onLogin={() => setPage("landing")} pushAtivos={pushAtivos} pendingReportIds={pendingReportIds} onReported={itemId => setPendingReportIds(prev => new Set([...prev, itemId]))} avisoMasterlist={avisoMasterlist} proximoEnvio={proximoEnvio} envioAberturaInicio={envioAberturaInicio} envioAberturaFim={envioAberturaFim} bannerEnvioVisivel={bannerEnvioVisivel} bannerPagamentosAtivo={bannerPagamentosAtivo} onOpenPagamentos={() => { setTab("perfil"); setOpenPagamentosSignal(s => s + 1); }} onOpenEnvio={() => setTab("envio")} />)}
           {tab === "cegs" && (initCegSlug ? <CegSlugPage slug={initCegSlug} user={user} /> : <CegTab user={user} itens={itens} />)}
