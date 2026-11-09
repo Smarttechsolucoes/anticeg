@@ -554,6 +554,46 @@ export function TrocarSenhaJoiner({ user }) {
   );
 }
 
+// Aviso no perfil de quem já está com a conta ativada: se algo não aparecer depois da atualização, existe um caminho de ajuda (pedido de correção que já existe).
+// O aviso NÃO substitui a correção do vínculo nem a proteção dos dados e NÃO diz por que algo pode faltar: só orienta a pedir ajuda e a não criar outro cadastro.
+export function AvisoAjudaPerfil({ user }) {
+  const { api, nivel } = useNivelAcesso(user);
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [erro, setErro] = useState("");
+  const [feito, setFeito] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  if (nivel !== "completo") return null;
+  async function enviar(e) {
+    e.preventDefault(); setErro(""); setFeito(false);
+    const t = texto.trim();
+    if (t.length < 5) { setErro("Conte o que não apareceu (qual item ou pagamento)."); return; }
+    setOcupado(true);
+    const r = await api.solicitarCorrecao({ tipo: "outro", mensagem: ("[item/pagamento não aparece] " + t).slice(0, 500) });
+    setOcupado(false);
+    if (r.erro) { setErro(r.erro); return; }
+    setFeito(true); setTexto(""); setAberto(false);
+  }
+  return (
+    <div data-testid="aviso-ajuda-perfil" style={{ margin: "0 0 14px", padding: "12px 14px", borderRadius: 10, border: `1px solid ${C.borda}`, background: C.bg, color: C.texto, display: "grid", gap: 10 }}>
+      <Texto data-testid="aviso-ajuda-perfil-texto" style={{ color: C.texto }}>Se algum item ou pagamento não aparecer após a atualização, use “Preciso de ajuda”. Estamos conferindo as informações. Não crie outro cadastro.</Texto>
+      {feito && <div data-testid="aviso-ajuda-perfil-enviado" role="status" style={{ color: C.ok, fontSize: 13, fontFamily: sans }}>Pedido enviado. A administração vai conferir e responder.</div>}
+      {!aberto ? (
+        <div><button type="button" style={{ ...botaoSec, width: "auto", padding: "6px 14px", fontSize: 12 }} data-testid="aviso-ajuda-perfil-abrir" onClick={() => { setAberto(true); setFeito(false); setErro(""); }}>Preciso de ajuda</button></div>
+      ) : (
+        <form onSubmit={enviar} data-testid="aviso-ajuda-perfil-form" style={{ display: "grid", gap: 8 }}>
+          <Rotulo>O que não apareceu?<textarea style={{ ...campo, minHeight: 70, resize: "vertical" }} value={texto} onChange={ev => setTexto(ev.target.value)} aria-label="O que não apareceu" maxLength={400} /></Rotulo>
+          <Aviso texto={erro} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button style={{ ...botao, width: "auto", padding: "8px 16px", fontSize: 13 }} type="submit" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar pedido de ajuda"}</button>
+            <button style={{ ...botaoSec, width: "auto", padding: "8px 16px", fontSize: 13 }} type="button" onClick={() => { setAberto(false); setErro(""); }}>Cancelar</button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 // D2: páginas de pedido (pré-vendas, revista, W Magazine, Smol Merch...) só abrem para conta ATIVADA e vinculada. Com o login novo desligado não muda nada.
 // Enviar comprovante e criar pedido também são recusados pelo servidor sem conta; esta tela só evita o pedido incompleto.
 export function ExigeContaAtiva({ children }) {
