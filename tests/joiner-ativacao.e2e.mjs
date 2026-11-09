@@ -27,7 +27,7 @@ async function nova(porta, cen) {
     if (u.startsWith(`http://localhost:${porta}`)) return route.continue();
     const json = (status, body) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     // o pedido do código vai para a FUNÇÃO do servidor (nunca direto ao Auth): ela decide se envia e responde sempre igual
-    if (u.includes("/functions/v1/pedir-codigo-joiner")) { reg.otp.push(JSON.parse(req.postData() || "{}")); reg.ordem.push("otp"); return cen.otpErro ? json(429, { error: "Muitas tentativas. Espere alguns minutos e tente de novo." }) : json(200, { ok: true }); }
+    if (u.includes("/functions/v1/pedir-codigo-joiner")) { reg.otp.push(JSON.parse(req.postData() || "{}")); reg.ordem.push("otp"); return cen.otpErro ? json(429, { error: "Muitas tentativas. Espere alguns minutos e tente de novo." }) : json(200, cen.proximo ? { ok: true, proximo: cen.proximo } : { ok: true }); }
     // dica MASCARADA do e-mail (cen.dica = o que o servidor devolve; cen.dicaErro = 429)
     if (u.includes("/functions/v1/ativacao-dica")) { reg.dica.push(JSON.parse(req.postData() || "{}")); return cen.dicaErro ? json(429, { error: "Muitas tentativas. Espere alguns minutos e tente de novo." }) : json(200, { ok: true, dica: cen.dica ?? "r•••@e•••.com" }); }
     if (u.includes("/functions/v1/pedir-ajuda-ativacao")) { reg.ajuda.push(JSON.parse(req.postData() || "{}")); return cen.ajudaErro ? json(429, { error: "Muitos pedidos. Espere alguns minutos e tente de novo." }) : json(200, { ok: true }); }
@@ -309,6 +309,44 @@ const preencher = async (page, { email = "ana@exemplo.com", senha = "senha-boa-1
   const T = await nova(5197, { usuario: ANA, versao: "6", codigo: "123456", ativar: "ok", simularEstado: true, dica: "r•••@e•••.com" }); const { page, reg } = T;
   await abrir(page, 5197); await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(300); await preencher(page, { email: "registrado@exemplo.com" });
   ok(reg.otp.length === 1 && reg.otp[0].email === "registrado@exemplo.com" && await page.getByTestId("ativacao-texto-codigo").count() === 1, "dica + fluxo normal: o pedido do código segue como antes, com a frase condicional ('Se os dados informados corresponderem…')");
+  await T.browser.close();
+}
+// ── "proximo": quem acertou o @ + e-mail e NÃO vai receber código é avisado, sem esperar um envio que o sistema não fez ─────────────
+for (const [proximo, esperado] of [["comprovar", /verificação extra/], ["ajuda", /não conseguimos liberar o código automaticamente/i], ["entrar", /Você já tem conta, então não enviamos código de ativação/], ["aguardando", /ainda não foi liberada/]]) {
+  const T = await nova(5197, { usuario: ANA, versao: "6", proximo }); const { page, reg, erros } = T;
+  await abrir(page, 5197); await preencher(page);
+  ok(reg.otp.length === 1, `proximo=${proximo}: o pedido do código foi feito uma vez`);
+  const tela = page.getByTestId("ativacao-sem-codigo");
+  ok(await tela.count() === 1 && await page.getByLabel("Código de confirmação").count() === 0, `proximo=${proximo}: mostra "Nenhum código foi enviado" e NÃO mostra o campo do código (não fica esperando)`);
+  const txt = await tela.innerText();
+  ok(/Nenhum código foi enviado/.test(txt) && esperado.test(txt), `proximo=${proximo}: o texto orienta o que fazer`);
+  ok(!/foi enviado para|enviamos um código para|você receberá um código/i.test(txt.replace(/Nenhum código foi enviado/, "").replace(/aí sim enviamos um código ao e-mail do cadastro/, "")), `proximo=${proximo}: nenhuma frase afirma envio`);
+  if (proximo === "comprovar" || proximo === "ajuda") {
+    await page.getByTestId("ativacao-sem-codigo-ajuda").click(); await page.waitForTimeout(250);
+    ok(await page.getByTestId("ativacao-ajuda").count() === 1 && /nenhum código foi enviado/i.test(await page.getByLabel("O que aconteceu").inputValue()), `proximo=${proximo}: "Preciso de ajuda" abre o pedido de ajuda existente com a mensagem preenchida`);
+  }
+  if (proximo === "entrar") {
+    ok(await page.getByTestId("ativacao-sem-codigo-entrar").count() === 1 && await page.getByTestId("ativacao-sem-codigo-esqueci").count() === 1, "proximo=entrar: oferece 'Entrar com @ e senha' e 'Esqueci minha senha'");
+    await page.getByTestId("ativacao-sem-codigo-esqueci").click(); await page.waitForTimeout(300);
+    ok(/Esqueci|senha/i.test(await modal(page).innerText()) && await page.getByTestId("ativacao-sem-codigo").count() === 0, "proximo=entrar: 'Esqueci minha senha' abre a recuperação existente");
+  }
+  ok(reg.verify.length === 0 && reg.put.length === 0 && erros.length === 0, `proximo=${proximo}: nenhum código confirmado, nenhuma senha gravada, nenhum erro de JavaScript`);
+  await T.browser.close();
+}
+{ // resposta neutra (par errado/inexistente): segue para o campo do código, com o texto condicional e o caminho de ajuda sempre visível
+  const T = await nova(5197, { usuario: ANA, versao: "6", codigo: "123456" }); const { page } = T;
+  await abrir(page, 5197); await preencher(page);
+  ok(await page.getByTestId("ativacao-sem-codigo").count() === 0 && await page.getByLabel("Código de confirmação").count() === 1 && await page.getByTestId("ativacao-texto-codigo").count() === 1, "resposta neutra: a tela segue para o código (nada revela se o par estava certo) com o texto condicional");
+  ok(await page.getByTestId("ativacao-nao-recebi").count() === 1 && await page.getByTestId("ativacao-nao-chegou").count() === 0, "resposta neutra: 'Preciso de ajuda' está visível desde o início; o aviso de demora ainda não");
+  await T.browser.close();
+}
+{ // depois da espera de 60 s sem código, a tela diz que pode não ter sido enviado nada e aponta o caminho (relógio simulado)
+  const T = await nova(5197, { usuario: ANA, versao: "6", codigo: "123456" }); const { page } = T;
+  await page.clock.install(); await abrir(page, 5197); await preencher(page);
+  ok(await page.getByTestId("ativacao-nao-chegou").count() === 0, "demora: logo depois do pedido o aviso de demora não aparece");
+  for (let s = 0; s < 64; s++) { await page.clock.runFor(1000); await page.waitForTimeout(25); } await page.waitForTimeout(200);   // a contagem é uma cadeia de timers de 1 s: avança 1 s por vez
+  const aviso = page.getByTestId("ativacao-nao-chegou");
+  ok(await aviso.count() === 1 && /nenhum código tenha sido enviado/.test(await aviso.innerText()) && /Preciso de ajuda/.test(await aviso.innerText()), "demora: passados 60 s aparece 'Ainda não chegou? Pode ser que nenhum código tenha sido enviado…' com o caminho de ajuda");
   await T.browser.close();
 }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");

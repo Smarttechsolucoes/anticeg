@@ -21,7 +21,9 @@ export function emailValido(valor) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(valor || "").trim());
 }
 // formato ÚNICO aceito para a dica do servidor: 1ª letra do usuário + ••• + @ + 1ª letra do provedor + ••• + final (.com, .com.br). Nada além disso é exibido.
-export const DICA_VALIDA = /^[^\s@•<>"'&]•••@[^\s@•<>"'&]•••\.[a-z]+(\.[a-z]+)?$/u;   // a 1ª letra do usuário pode ser número, "_", "." etc.
+// próximos passos que o servidor pode informar a quem acertou o par (@ + e-mail) e não vai receber código
+export const PROXIMOS = ["ajuda", "entrar", "aguardando", "comprovar"];
+export const DICA_VALIDA =/^[^\s@•<>"'&]•••@[^\s@•<>"'&]•••\.[a-z]+(\.[a-z]+)?$/u;   // a 1ª letra do usuário pode ser número, "_", "." etc.
 export function mascararEmail(valor) {
   const [u = "", d = ""] = String(valor || "").trim().toLowerCase().split("@");
   return u ? `${u[0]}${"•".repeat(Math.max(2, Math.min(6, u.length - 1)))}@${d}` : "";
@@ -89,9 +91,11 @@ export function criarJoinerAuth(client = supabase) {
     const { data: s } = await client.auth.getSession();
     if (s?.session) await client.auth.signOut({ scope: "local" });
     // o SERVIDOR decide se envia (só para o e-mail do cadastro, só para quem já foi liberada, com limites) e a resposta é sempre a mesma
-    const { error } = await client.functions.invoke("pedir-codigo-joiner", { body: c ? { cog: c, email: e } : { email: e } });
+    const { data, error } = await client.functions.invoke("pedir-codigo-joiner", { body: c ? { cog: c, email: e } : { email: e } });
     if (error) return { erro: mensagem(error, "envio") };
-    return { ok: true };
+    // SÓ quem acertou o @ + e-mail do cadastro e NÃO vai receber código ouve o próximo passo (proximo); para os demais a resposta é a neutra de sempre.
+    const proximo = data && typeof data.proximo === "string" && PROXIMOS.includes(data.proximo) ? data.proximo : null;
+    return proximo ? { ok: true, proximo } : { ok: true };
   }
 
   // Dica MASCARADA do e-mail cadastrado para um @ (ex.: "m•••@g•••.com"). Só ajuda a lembrar qual e-mail digitar: não envia nada, não confirma que o @ existe
