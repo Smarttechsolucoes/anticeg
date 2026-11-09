@@ -21,13 +21,15 @@ async function nova(porta, cen) {
     localStorage.setItem("anticeg_tutorial_v1", "1"); localStorage.setItem("anticeg_push_asked", "1"); localStorage.setItem("anticeg_a2hs_asked", "1");
     if (sess) localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify(sess));
   }, [cen.usuario, cen.versao, cen.comSessao ? sessao() : null, REF]);
-  const reg = { otp: [], verify: [], put: [], rpc: [], ordem: [], ajuda: [] };
+  const reg = { otp: [], verify: [], put: [], rpc: [], ordem: [], ajuda: [], dica: [] };
   await ctx.route("**/*", async route => {
     const req = route.request(), u = req.url(), m = req.method();
     if (u.startsWith(`http://localhost:${porta}`)) return route.continue();
     const json = (status, body) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     // o pedido do código vai para a FUNÇÃO do servidor (nunca direto ao Auth): ela decide se envia e responde sempre igual
     if (u.includes("/functions/v1/pedir-codigo-joiner")) { reg.otp.push(JSON.parse(req.postData() || "{}")); reg.ordem.push("otp"); return cen.otpErro ? json(429, { error: "Muitas tentativas. Espere alguns minutos e tente de novo." }) : json(200, { ok: true }); }
+    // dica MASCARADA do e-mail (cen.dica = o que o servidor devolve; cen.dicaErro = 429)
+    if (u.includes("/functions/v1/ativacao-dica")) { reg.dica.push(JSON.parse(req.postData() || "{}")); return cen.dicaErro ? json(429, { error: "Muitas tentativas. Espere alguns minutos e tente de novo." }) : json(200, { ok: true, dica: cen.dica ?? "r•••@e•••.com" }); }
     if (u.includes("/functions/v1/pedir-ajuda-ativacao")) { reg.ajuda.push(JSON.parse(req.postData() || "{}")); return cen.ajudaErro ? json(429, { error: "Muitos pedidos. Espere alguns minutos e tente de novo." }) : json(200, { ok: true }); }
     if (u.includes("/rest/v1/rpc/entrar_com_arroba")) { reg.rpc.push("entrar_com_arroba"); return cen.liberacaoServidor === undefined ? json(200, null) : json(200, { encontrado: true, cog: "ana", nome_site: "Ana", foto_perfil: null, conta_ativa: false, ativacao_liberada: cen.liberacaoServidor }); }
     if (u.includes("supabase.co/auth/v1/")) {
@@ -250,6 +252,63 @@ const preencher = async (page, { email = "ana@exemplo.com", senha = "senha-boa-1
   await abrir(page, 5197); await preencher(page);
   await page.getByLabel("Código de confirmação").fill("123456"); await page.getByRole("button", { name: "Confirmar código" }).click(); await page.waitForTimeout(900);
   ok(await page.getByTestId("ativacao-aguardando").count() === 1, "se o servidor ainda segura a ativação, a tela mostra o aviso de espera (e nenhum acesso é concedido)");
+  await T.browser.close();
+}
+// ── dica MASCARADA do e-mail cadastrado ─────────────────────────────────────────────────────────
+{ // mostra só a dica, sem afirmar envio, com o caminho de ajuda; nada é enviado nem alterado
+  const T = await nova(5197, { usuario: ANA, versao: "6", dica: "r•••@e•••.com" }); const { page, reg, erros } = T;
+  await abrir(page, 5197);
+  ok(await page.getByTestId("ativacao-ver-dica").count() === 1 && await page.getByTestId("ativacao-dica").count() === 0, "dica: com o @ preenchido há o botão de ver a dica, e NADA é consultado antes do clique");
+  ok(reg.dica.length === 0, "dica: nenhuma consulta ao abrir o pop-up (só quando a pessoa pede)");
+  await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(500);
+  ok(reg.dica.length === 1 && reg.dica[0].cog === "ana" && Object.keys(reg.dica[0]).length === 1, "dica: uma consulta com SÓ o @ normalizado (nenhum e-mail digitado vai junto)");
+  ok((await page.getByTestId("ativacao-dica-valor").innerText()) === "r•••@e•••.com", "dica: mostra a dica mascarada devolvida pelo servidor");
+  const bloco = await page.getByTestId("ativacao-dica").innerText();
+  ok(/não garante que um código será enviado/.test(bloco) && /errado, ausente, repetido em outro cadastro/.test(bloco) && /troca de e-mail/.test(bloco), "dica: diz claramente que NÃO garante envio e que e-mail errado, ausente, repetido ou com troca passado dependem da administração");
+  ok(!/foi enviado|enviamos|enviei|enviado para/i.test(bloco), "dica: nenhuma frase afirma que um código foi enviado");
+  // (a página de trás pode mostrar o e-mail que já está no navegador da própria pessoa; o que importa é que o POP-UP da dica nunca traga um endereço completo)
+  const textoModal = await modal(page).innerText();
+  ok(!textoModal.includes("registrado@") && !textoModal.includes("exemplo.com") && !textoModal.includes("ana@"), "dica: o endereço completo NUNCA aparece no pop-up (só a dica mascarada)");
+  ok(reg.otp.length === 0 && !reg.otpDireto && reg.rpc.every(r => !/ativar|troca|update/i.test(r)), "dica: não pede código, não chama o Auth e não altera cadastro");
+  ok(erros.length === 0, "dica: nenhum erro de JavaScript"); await T.browser.close();
+}
+{ // o servidor devolve algo que NÃO é uma dica (ex.: um e-mail completo): a tela NÃO mostra
+  const T = await nova(5197, { usuario: ANA, versao: "6", dica: "registrado@exemplo.com" }); const { page } = T;
+  await abrir(page, 5197); await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(500);
+  ok(await page.getByTestId("ativacao-dica").count() === 0 && !(await modal(page).innerText()).includes("registrado@exemplo.com") && /não foi possível mostrar a dica/i.test(await modal(page).innerText()), "dica: resposta fora do formato mascarado NÃO é exibida no pop-up (mostra erro neutro)");
+  await T.browser.close();
+}
+{ // limite de consultas (429): mensagem clara e nenhuma dica
+  const T = await nova(5197, { usuario: ANA, versao: "6", dicaErro: true }); const { page } = T;
+  await abrir(page, 5197); await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(500);
+  ok(await page.getByTestId("ativacao-dica").count() === 0 && /Muitas tentativas/.test(await corpo(page)), "dica: acima do limite mostra 'Muitas tentativas' e nenhuma dica");
+  await T.browser.close();
+}
+{ // mudar o @ apaga a dica (ela era do outro @); sem @ não há botão
+  const T = await nova(5197, { usuario: ANA, versao: "6", dica: "r•••@e•••.com" }); const { page, reg } = T;
+  await abrir(page, 5197); await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(400);
+  await page.getByLabel("Seu @ cadastrado").fill("outra"); await page.waitForTimeout(200);
+  ok(await page.getByTestId("ativacao-dica").count() === 0, "dica: ao mudar o @ a dica anterior some");
+  await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(400);
+  ok(reg.dica.length === 2 && reg.dica[1].cog === "outra", "dica: nova consulta para o @ novo");
+  await page.getByLabel("Seu @ cadastrado").fill(""); await page.waitForTimeout(200);
+  ok(await page.getByTestId("ativacao-ver-dica").count() === 0, "dica: sem @ preenchido não há botão (quem começa só pelo e-mail segue como antes)");
+  await T.browser.close();
+}
+{ // "Não reconheço esse e-mail / preciso corrigir" usa o pedido de ajuda que já existe
+  const T = await nova(5197, { usuario: ANA, versao: "6", dica: "r•••@e•••.com" }); const { page, reg } = T;
+  await abrir(page, 5197); await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(400);
+  await page.getByTestId("ativacao-nao-reconheco").click(); await page.waitForTimeout(300);
+  ok(await page.getByTestId("ativacao-ajuda").count() === 1 && /Não reconheço o e-mail do cadastro/.test(await page.getByLabel("O que aconteceu").inputValue()), "ajuda: abre o pedido de ajuda existente, com a mensagem já preenchida (a pessoa pode editar)");
+  await page.getByLabel("Contato para resposta").fill("whatsapp 11 99999-9999"); await page.getByRole("button", { name: "Enviar pedido de ajuda" }).click(); await page.waitForTimeout(500);
+  ok(reg.ajuda.length === 1 && reg.ajuda[0].cog === "ana" && /Não reconheço/.test(reg.ajuda[0].mensagem) && reg.ajuda[0].contato.includes("whatsapp"), "ajuda: o pedido segue pela função que já existe (cadastro e contato corretos)");
+  ok(await page.getByTestId("ativacao-ajuda-enviada").count() === 1 && reg.otp.length === 0 && reg.verify.length === 0, "ajuda: mostra 'Pedido enviado' sem pedir nem afirmar nenhum código");
+  await T.browser.close();
+}
+{ // a dica não atrapalha o fluxo normal: depois de ver a dica, a pessoa digita o e-mail completo e o código segue como sempre (texto condicional)
+  const T = await nova(5197, { usuario: ANA, versao: "6", codigo: "123456", ativar: "ok", simularEstado: true, dica: "r•••@e•••.com" }); const { page, reg } = T;
+  await abrir(page, 5197); await page.getByTestId("ativacao-ver-dica").click(); await page.waitForTimeout(300); await preencher(page, { email: "registrado@exemplo.com" });
+  ok(reg.otp.length === 1 && reg.otp[0].email === "registrado@exemplo.com" && await page.getByTestId("ativacao-texto-codigo").count() === 1, "dica + fluxo normal: o pedido do código segue como antes, com a frase condicional ('Se os dados informados corresponderem…')");
   await T.browser.close();
 }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");
