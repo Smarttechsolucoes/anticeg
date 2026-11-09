@@ -16,6 +16,13 @@ const acaoSec = { background: "none", border: "none", color: C.mudo, textDecorat
 // fundo escuro rolável (o cartão fica no topo quando é maior que a tela, por exemplo com o teclado aberto no celular)
 const sobreposicao = { position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", display: "flex", zIndex: 10000, padding: "max(16px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px))", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", boxSizing: "border-box" };
 const cartao = { position: "relative", background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "24px 22px", width: "min(440px, 100%)", margin: "auto", color: C.texto, display: "grid", gap: 14, boxSizing: "border-box" };
+// o que a pessoa lê quando acertou o @ + e-mail e o sistema NÃO vai enviar código (nunca afirma envio)
+const TEXTO_SEM_CODIGO = {
+  comprovar: "Seu cadastro precisa de uma verificação extra antes de liberarmos o código. Toque em “Preciso de ajuda” e conte o que aconteceu: a administração confere e libera.",
+  ajuda: "Não conseguimos liberar o código automaticamente para este cadastro. Toque em “Preciso de ajuda” para a administração resolver.",
+  entrar: "Você já tem conta, então não enviamos código de ativação. Entre com o seu @ e a sua senha. Se não lembrar a senha, use “Esqueci minha senha”: aí sim enviamos um código ao e-mail do cadastro.",
+  aguardando: "A ativação do seu cadastro ainda não foi liberada. Você continua navegando só com o @ e a administração avisa quando chegar a sua vez.",
+};
 const DISPENSA = "anticeg_ativacao_dispensada";
 const DISPENSA_PERFIL = "anticeg_perfil_dispensado";   // X/Voltar na tela "Confira seus dados": vale só nesta aba, e o aviso "Concluir meus dados" a reabre
 const EVENTO_CONTA = "anticeg:conta-atualizada";
@@ -98,6 +105,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
   const [dica, setDica] = useState("");                  // dica mascarada do e-mail cadastrado (nunca o endereço completo)
   const [dicaOcupada, setDicaOcupada] = useState(false);
   const [dicaErro, setDicaErro] = useState("");
+  const [proximo, setProximo] = useState("");              // próximo passo que o servidor informa a quem acertou o par e NÃO vai receber código
 
   // depois de ativar, este pop-up só sai quando a confirmação do perfil assume a tela (a página de trás nunca aparece); se demorar, oferece continuar
   useEffect(() => {
@@ -121,6 +129,8 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     const r = await api.pedirCodigo({ cog, email });
     setOcupado(false);
     if (r.erro) { setErro(r.erro); return; }
+    // quem acertou o @ + e-mail e não vai receber código é avisado AGORA (a tela não fica esperando um envio que o sistema não fez)
+    if (r.proximo) { setProximo(r.proximo); setFase("sem_codigo"); return; }
     setCodigo(""); setEspera(60); setReenviado(false); setFase("codigo");
   }
   async function reenviar() {
@@ -128,7 +138,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     setErro(""); setOcupado(true);
     const r = await api.pedirCodigo({ cog, email });
     setOcupado(false);
-    if (r.erro) setErro(r.erro); else { setEspera(60); setReenviado(true); }
+    if (r.erro) setErro(r.erro); else if (r.proximo) { setProximo(r.proximo); setFase("sem_codigo"); } else { setEspera(60); setReenviado(true); }
   }
   async function confirmarCodigo(e) {
     e.preventDefault();
@@ -216,6 +226,7 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             {reenviado && <div data-testid="ativacao-reenviado" role="status" style={{ fontSize: 14, fontFamily: sans, color: C.ok, lineHeight: 1.45 }}>Pedimos outro código. Se os dados corresponderem a um cadastro liberado para ativação, ele chega nesse e-mail.</div>}
             <button style={botao} type="submit" disabled={ocupado}>{ocupado ? "Conferindo…" : "Confirmar código"}</button>
             <Texto pequeno data-testid="ativacao-aviso-spam">Confira também Spam ou Lixo Eletrônico. Se pedir outro código, use o mais recente.</Texto>
+            {espera === 0 && <Texto pequeno data-testid="ativacao-nao-chegou">Ainda não chegou? Pode ser que nenhum código tenha sido enviado: confira o @ e o e-mail em “Corrigir dados”, veja uma dica do e-mail cadastrado ou toque em “Preciso de ajuda”.</Texto>}
             <OrientacaoSenha aoEntrar={() => { setErro(""); setModoEntrar("entrar"); setFase("entrar"); }} aoRecuperar={() => { setErro(""); setModoEntrar("recuperar"); setFase("entrar"); }} />
             <div style={{ display: "grid", gap: 2, justifyItems: "center" }}>
               <Texto pequeno data-testid="ativacao-dica-ajuda">Não recebeu o código? Toque em “Preciso de ajuda”.</Texto>
@@ -226,6 +237,21 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
               </div>
             </div>
           </form>
+        )}
+        {fase === "sem_codigo" && (
+          <div data-testid="ativacao-sem-codigo" style={{ display: "grid", gap: 14 }}>
+            <Titulo>Nenhum código foi enviado</Titulo>
+            <Texto data-testid="ativacao-sem-codigo-texto">{TEXTO_SEM_CODIGO[proximo] || TEXTO_SEM_CODIGO.ajuda}</Texto>
+            {(proximo === "comprovar" || proximo === "ajuda") && (
+              <button style={botao} data-testid="ativacao-sem-codigo-ajuda" onClick={() => { setTextoAjuda(t => t || (proximo === "comprovar" ? "Meu cadastro pediu uma verificação extra e nenhum código foi enviado." : "Nenhum código foi enviado para o meu cadastro.")); pedirAjuda("dados"); }}>Preciso de ajuda</button>
+            )}
+            {proximo === "entrar" && (<>
+              <button style={botao} data-testid="ativacao-sem-codigo-entrar" onClick={() => { setErro(""); setModoEntrar("entrar"); setFase("entrar"); }}>Entrar com @ e senha</button>
+              <button style={botaoSec} data-testid="ativacao-sem-codigo-esqueci" onClick={() => { setErro(""); setModoEntrar("recuperar"); setFase("entrar"); }}>Esqueci minha senha</button>
+            </>)}
+            {proximo === "aguardando" && <button style={botao} onClick={continuarLimitado}>Entendi, continuar só com o @</button>}
+            <div style={{ display: "flex", justifyContent: "center" }}><button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("dados"); }}>Corrigir dados</button></div>
+          </div>
         )}
         {fase === "finalizando" && (
           <div data-testid="ativacao-finalizando" role="status" style={{ display: "grid", gap: 14 }}>
