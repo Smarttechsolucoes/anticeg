@@ -12826,8 +12826,8 @@ const ODD_POPUP_CFG = {
   capa: "/odd-fresh/capa.jpg",
   capaAltura: 320,
   proporcao: "1/1",
-  tags: ["PEDIDOS ATÉ 05/NOV", "PAGAMENTO 08/NOV"],
-  infos: ["Pedidos aceitos até: 05 de novembro", "Pagamento até: 08 de novembro", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional", "Ganhe POB online a cada R$190 (40,000KRW)"],
+  tags: ["PEDIDOS ABERTOS", "PAGAMENTO IMEDIATO · PIX OU CARTÃO"],
+  infos: ["Pagamento imediato: no envio do pedido você paga por PIX ou cartão e anexa o comprovante", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional", "Ganhe POB online a cada R$190 (40,000KRW)"],
   box: null,
   itens: [
     { id: "HOODIE", foto: ODD_PU + "hoodie.png", preco: 395, nota: "Tamanho único | medidas não estão disponíveis" },
@@ -12855,9 +12855,9 @@ const ODD_POPUP_CFG = {
     { id: "SKZOO SECRET MINI CHARM", foto: ODD_PU + "skzoo-secret-mini-charm.png", preco: 52, nota: "Aleatório: 1 de 8" },
   ],
   kits: [],
-  get fechado() { return new Date() > ODD_POPUP_PRAZO; },
+  pagamentoImediato: true,   // pedido só entra com a forma de pagamento (PIX ou cartão), o valor total e o comprovante
+  fechado: false,            // aberto, sem data para fechar (decisão de 09/11/2026); para encerrar, troque por true
 };
-const ODD_POPUP_PRAZO = new Date("2026-11-05T23:59:59-03:00");
 
 // SUIATSU — Stray Kids JAPAN 4th Mini Album. Lançamento 25/11/2026, envio só em janeiro de 2027.
 const SU = "/suiatsu/";
@@ -13059,6 +13059,9 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   const [tipoModal, setTipoModal] = useState(null);
   const [infoModal, setInfoModal] = useState(null);
   const [compararAberto, setCompararAberto] = useState(false);
+  const [pagamento, setPagamento] = useState("");              // "pix" | "cartao" (só com cfg.pagamentoImediato)
+  const [comprovante, setComprovante] = useState(null);
+  const [pixCopiadoWM, setPixCopiadoWM] = useState(false);
   const [prazoPgto, setPrazoPgto] = useState("");
   const [estoqueMap, setEstoqueMap] = useState(null);
 
@@ -13106,12 +13109,30 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
   const idsSelecionados = itensSel.length > 0 ? itensSel : (modalidade ? [modalidade] : []);
   const qtdMax = idsSelecionados.reduce((m, id) => { const r = restante(id); return r === null ? m : Math.min(m, r); }, Infinity);
   const qtdEf  = Math.min(quantidade, Math.max(1, qtdMax));
+  // valor do pedido (cada item/kit selecionado × quantidade); null enquanto algum preço estiver "a definir"
+  const fmtBRL = n => "R$ " + Number(n).toFixed(2).replace(".", ",");
+  const totalPedido = (() => {
+    if (!idsSelecionados.length) return null;
+    let soma = 0;
+    for (const id of idsSelecionados) {
+      const x = achaItem(id) || [BOX_WM, ...KITS_WM].filter(Boolean).find(k => k.id === id);
+      const v = comDesconto(cfg, x?.preco ?? null);
+      if (v == null) return null;
+      soma += v;
+    }
+    return Math.round(soma * qtdEf * 100) / 100;
+  })();
 
   async function enviar() {
     const modalFinal = itensSel.length > 0 ? "ITENS SOLTOS" : modalidade;
     if (cfg.fechado || !modalFinal || enviando) return;
     if (modalFinal === "ITENS SOLTOS" && itensSel.length === 0) { setErro("Selecione ao menos um item."); return; }
     if (cfg.prazosPagamento && !prazoPgto) { setErro("Escolha a data de pagamento."); return; }
+    if (cfg.pagamentoImediato) {
+      if (totalPedido == null || totalPedido <= 0) { setErro("Não foi possível calcular o valor do pedido."); return; }
+      if (pagamento !== "pix" && pagamento !== "cartao") { setErro("Escolha a forma de pagamento: PIX ou cartão."); return; }
+      if (!comprovante) { setErro("Anexe o comprovante do pagamento."); return; }
+    }
     setEnviando(true); setErro(null); setEnviado(null);
     // confere o estoque de novo na hora de enviar (outra pessoa pode ter pedido antes)
     const mapaAtual = await carregarEstoqueWM(cfg);
@@ -13126,7 +13147,18 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
     const obsBase = modalFinal === "ITENS SOLTOS"
       ? `Itens: ${itensSel.join(", ")} · Qtd: ${qtdEf}`
       : `Qtd: ${qtdEf}`;
-    const obsFinal = cfg.prazosPagamento ? `${obsBase} · Pagamento: ${prazoPgto}` : obsBase;
+    const rotuloForma = pagamento === "pix" ? "PIX" : "Cartão";
+    const obsFinal = cfg.pagamentoImediato ? `${obsBase} · Pagamento: ${rotuloForma} · Total: ${fmtBRL(totalPedido)}` : cfg.prazosPagamento ? `${obsBase} · Pagamento: ${prazoPgto}` : obsBase;
+    // pagamento imediato: o comprovante sobe ANTES de registrar o pedido (sem comprovante, nada é registrado)
+    let comprovanteUrl = null;
+    if (cfg.pagamentoImediato) {
+      const ext = (comprovante.name.split(".").pop() || "").toLowerCase();
+      const path = `${cfg.slug}/${Date.now()}.${ext}`;
+      const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
+      if (upErr) { setErro("Erro ao enviar o comprovante: " + (upErr.message || "tente de novo.")); setEnviando(false); return; }
+      const { data: { publicUrl } } = supabase.storage.from("comprovantes").getPublicUrl(path);
+      comprovanteUrl = publicUrl;
+    }
     const { error } = await supabase.from("formulario_pedidos").insert([{
       evento: cfg.evento,
       joiner_cog: user.cog,
@@ -13135,8 +13167,10 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
       modalidade: modalFinal,
       observacoes: obsFinal,
       status: "pendente",
+      ...(cfg.pagamentoImediato ? { forma_pagamento: pagamento, valor_total: totalPedido, comprovante_url: comprovanteUrl } : {}),
     }]).select("id");
     if (error) { setErro("Erro ao enviar. Tenta de novo!"); setEnviando(false); return; }
+    if (cfg.pagamentoImediato) { setPagamento(""); setComprovante(null); }
     const { count } = await supabase.from(TABELA_FORMULARIO_PUBLICA)
       .select("id", { count: "exact", head: true })
       .eq("evento", cfg.evento)
@@ -13486,6 +13520,45 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
         </div>
       )}
 
+      {/* Pagamento imediato (PIX ou cartão) — só nos formulários com cfg.pagamentoImediato */}
+      {cfg.pagamentoImediato && modalidade && totalPedido != null && (
+        <div data-testid="wm-pagamento" style={{ background:"rgba(201,168,240,.06)", border:"1px solid rgba(201,168,240,.25)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
+          <div style={{ fontSize:9, fontFamily:mono, color:"rgba(245,240,232,.4)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:8 }}>Pagamento imediato</div>
+          <div data-testid="wm-total" style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color:"var(--lilas)", letterSpacing:1 }}>Total: {fmtBRL(totalPedido)}</div>
+          <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.45)", marginTop:2, marginBottom:12 }}>O pedido só é registrado com o comprovante do pagamento anexado.</div>
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            {[["pix","◈ PIX"],["cartao","▣ Cartão"]].map(([k, rotulo]) => (
+              <button key={k} type="button" data-testid={`wm-forma-${k}`} onClick={() => setPagamento(k)} aria-pressed={pagamento === k}
+                style={{ flex:1, padding:"10px", borderRadius:8, cursor:"pointer", fontFamily:mono, fontSize:12, fontWeight:700, border:`1px solid ${pagamento===k?"var(--lilas)":"rgba(245,240,232,.15)"}`, background:pagamento===k?"rgba(201,168,240,.18)":"transparent", color:pagamento===k?"var(--lilas)":"rgba(245,240,232,.6)" }}>{rotulo}</button>
+            ))}
+          </div>
+          {pagamento === "pix" && (
+            <div data-testid="wm-pix" style={{ marginBottom:12 }}>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.6, marginBottom:8 }}>Faça um PIX de <strong style={{ color:"var(--offwhite)" }}>{fmtBRL(totalPedido)}</strong> para a chave abaixo e anexe o comprovante.</div>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                <div style={{ flex:1, minWidth:0, background:"rgba(0,0,0,.35)", border:"1px solid rgba(245,240,232,.12)", borderRadius:6, padding:"9px 11px", fontFamily:mono, fontSize:11, wordBreak:"break-all", color:"var(--offwhite)" }}>{PIX_KEY}</div>
+                <button type="button" onClick={() => { navigator.clipboard.writeText(PIX_KEY); setPixCopiadoWM(true); setTimeout(() => setPixCopiadoWM(false), 2000); }}
+                  style={{ flexShrink:0, padding:"9px 12px", background:"transparent", border:"1px solid rgba(245,240,232,.2)", borderRadius:6, color:"rgba(245,240,232,.7)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>{pixCopiadoWM ? "Copiado ✓" : "Copiar"}</button>
+              </div>
+            </div>
+          )}
+          {pagamento === "cartao" && (
+            <div data-testid="wm-cartao" style={{ marginBottom:12 }}>
+              <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.7, marginBottom:8 }}>Você vai para uma página externa para pagar <strong style={{ color:"var(--offwhite)" }}>{fmtBRL(totalPedido)}</strong> no cartão.<br/><strong style={{ color:"rgba(245,240,232,.85)" }}>Depois de pagar, volte aqui e anexe o comprovante</strong> para enviar o pedido.</div>
+              <a href={cfg.cartaoUrl || "https://linknabio.gg/anticeg-comu"} target="_blank" rel="noopener noreferrer" data-testid="wm-cartao-link"
+                style={{ display:"block", textAlign:"center", padding:"11px", background:"rgba(245,240,232,.08)", color:"#F5F0E8", border:"1px solid rgba(245,240,232,.2)", borderRadius:8, fontFamily:mono, fontSize:11, fontWeight:700, textDecoration:"none", letterSpacing:"1px" }}>Pagar no cartão →</a>
+            </div>
+          )}
+          {pagamento && (
+            <label style={{ display:"block", fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.5)", letterSpacing:"1px", textTransform:"uppercase" }}>
+              Comprovante do pagamento *
+              <input type="file" accept="image/*,application/pdf" data-testid="wm-comprovante" onChange={e => setComprovante(e.target.files?.[0] || null)}
+                style={{ display:"block", marginTop:6, width:"100%", boxSizing:"border-box", fontFamily:mono, fontSize:12, color:"var(--offwhite)" }} />
+            </label>
+          )}
+        </div>
+      )}
+
       {/* Dados */}
       {modalidade && user && (
         <div style={{ background:"rgba(245,240,232,.02)", border:"1px solid rgba(245,240,232,.06)", borderRadius:10, padding:"12px 16px", marginBottom:16, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>
@@ -13498,14 +13571,14 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
 
       {enviado && (
         <div style={{ marginBottom:16, background:"rgba(74,222,128,.08)", border:"1px solid rgba(74,222,128,.25)", borderRadius:12, padding:"14px 18px" }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#4ade80", marginBottom:4 }}>Pedido confirmado!</div>
-          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)" }}>Seu pré-cadastro foi registrado. Acompanhe o status na aba Histórico.</div>
+          <div data-testid="wm-enviado" style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#4ade80", marginBottom:4 }}>{cfg.pagamentoImediato ? "Pedido e comprovante enviados!" : "Pedido confirmado!"}</div>
+          <div style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)" }}>{cfg.pagamentoImediato ? "Recebemos o seu pedido com o comprovante. A equipe confere o pagamento e confirma. Acompanhe o status na aba Histórico." : "Seu pré-cadastro foi registrado. Acompanhe o status na aba Histórico."}</div>
         </div>
       )}
 
-      <button onClick={enviar} disabled={!modalidade || enviando || cfg.fechado}
+      <button onClick={enviar} disabled={!modalidade || enviando || cfg.fechado || (cfg.pagamentoImediato && (!pagamento || !comprovante))}
         style={{ width:"100%", background:modalidade&&!cfg.fechado?"var(--lilas)":"rgba(245,240,232,.06)", border:"none", borderRadius:12, padding:"14px", color:modalidade&&!cfg.fechado?"#000":"rgba(245,240,232,.2)", fontFamily:mono, fontSize:13, fontWeight:700, cursor:modalidade&&!cfg.fechado?"pointer":"default", letterSpacing:"1px", opacity:enviando?.6:1, transition:"all .15s" }}>
-        {cfg.fechado ? "Pedidos encerrados" : enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : "Enviar pedido →"}
+        {cfg.fechado ? "Pedidos encerrados" : enviando ? "Enviando..." : enviado ? "Enviar outro pedido →" : cfg.pagamentoImediato ? "Enviar pedido e comprovante →" : "Enviar pedido →"}
       </button>
       </>}
 
@@ -24933,6 +25006,12 @@ function AdminWaveMaker({ onCountChange, cfg = WM_CFG }) {
                   </div>
                   {itensList.length > 0 && <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{itensList.join(", ")}</div>}
                   {pgtoData && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)" }}>Pagamento: {pgtoData}</div>}
+                  {p.forma_pagamento && (
+                    <div data-testid="admin-pagamento-imediato" style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+                      <span>{p.forma_pagamento === "pix" ? "PIX" : "Cartão"} · {p.valor_total != null ? `R$ ${Number(p.valor_total).toFixed(2).replace(".", ",")}` : "valor não informado"}</span>
+                      {p.comprovante_url ? <a href={p.comprovante_url} onClick={e => abrirComprovante(e, p.comprovante_url)} target="_blank" rel="noopener noreferrer" style={{ color:"#64B5F6" }}>↗ ver comprovante</a> : <span style={{ color:"#ff6b6b" }}>sem comprovante</span>}
+                    </div>
+                  )}
                   <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.2)", marginTop:2 }}>{new Date(p.created_at).toLocaleDateString("pt-BR")} {new Date(p.created_at).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}</div>
                 </div>
               </div>
@@ -25464,7 +25543,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"paper-tales-admin", label:PT_CFG.titulo,        icon:"📜", count:paperTalesCount, tipo:"forms",    cor:"var(--lilas)",  aberto:!PT_CFG.fechado },
     { id:"odd-fresh-admin",   label:ODD_CFG.titulo,       icon:"🍋", count:oddFreshCount,   tipo:"forms",    cor:"var(--lilas)",  aberto:agora <= new Date("2026-10-16T23:59:59-03:00") },
     { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
-    { id:"odd-fresh-popup-admin", label:ODD_POPUP_CFG.titulo, icon:"🍋", count:oddPopupCount, tipo:"forms",    cor:"var(--lilas)",         evento:ODD_POPUP_CFG.evento , aberto:agora <= ODD_POPUP_PRAZO },
+    { id:"odd-fresh-popup-admin", label:ODD_POPUP_CFG.titulo, icon:"🍋", count:oddPopupCount, tipo:"forms",    cor:"var(--lilas)",         evento:ODD_POPUP_CFG.evento , aberto:!ODD_POPUP_CFG.fechado },
     { id:"suiatsu-admin", label:SUIATSU_CFG.titulo, icon:"💿", count:suiatsuCount, tipo:"forms", cor:"var(--lilas)", evento:SUIATSU_CFG.evento , aberto:agora <= SUIATSU_PRAZO },
   ];
   const STATUS_COLS = [
@@ -26766,15 +26845,15 @@ function PrevendaTab({ user }) {
     {
       key: "odd-fresh-popup",
       ativo: true,
-      fechado: now > ODD_POPUP_PRAZO,
+      fechado: ODD_POPUP_CFG.fechado,
       cor: "lilas",
       titulo: "ODD & FRESH POP-UP",
       subtitulo: "Stray Kids Pop-up · itens do pop-up",
       url: null,
       tab: "odd-fresh-popup",
       img: ODD_POPUP_CFG.capa,
-      tags: ["Pedidos até 05/11", "Pagamento até 08/11"],
-      info: "Roupas em tamanho único · escolha o tipo de cada item no formulário",
+      tags: ["Pedidos abertos", "Pagamento imediato"],
+      info: "Pagamento imediato via PIX ou cartão · Roupas em tamanho único · escolha o tipo de cada item no formulário",
     },
     {
       key: "promo-13",
