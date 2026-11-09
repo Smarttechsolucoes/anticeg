@@ -1,8 +1,10 @@
 // Painel da administradora: contas das joiners (vínculos pendentes, cadastros com problema, troca de e-mail, pedidos antigos sem dona).
 // Tudo passa por funções do banco que conferem "é administradora" no servidor (J1 e J4c-0); este arquivo só mostra e chama.
 // Nada aqui apaga pedido, claim, pagamento ou cadastro.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { clienteAdmin } from "./adminAuth.js";
+import FilaPorPessoa from "./FilaPorPessoa.jsx";
+import { montarFila } from "./filaPessoas.js";
 
 const mono = "'DM Mono',monospace";
 const C = { fundo: "rgba(245,240,232,.04)", borda: "rgba(245,240,232,.12)", mudo: "rgba(245,240,232,.55)", texto: "#F5F0E8", destaque: "#FF5C1A", ok: "#BAFF39", erro: "#ff6b6b" };
@@ -63,6 +65,8 @@ export default function AdminContas() {
   const [solicitacoes, setSolicitacoes] = useState([]);   // J6: pedidos de perfil (@, e-mail, ativação sem vínculo confiável)
   const [fila, setFila] = useState([]);                      // J6: fila de saída para a planilha
   const [aConfirmar, setAConfirmar] = useState([]);           // J6: cadastros cujo vínculo (e-mail/@) ainda não foi confirmado por evidência independente
+  const [trocas, setTrocas] = useState([]);                   // J13: pedidos de troca de e-mail com o e-mail novo já verificado, aguardando a identidade (vazio se a função ainda não existe)
+  const [comprovacoes, setComprovacoes] = useState([]);           // J14: pedidos de comprovação do cadastro (idem)
   const [motivos, setMotivos] = useState({});                  // J9: motivo por joiner_id (vazio se a função ainda não existe: a lista continua igual, só sem o motivo)
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState({ tipo: "", texto: "" });
@@ -74,7 +78,7 @@ export default function AdminContas() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const [a, b, c, d, e, f, g] = await Promise.all([
+    const [a, b, c, d, e, f, g, h, i] = await Promise.all([
       cliente.rpc("admin_vinculos_pendentes"),
       cliente.rpc("admin_joiners_problemas", { p_limite: 500 }),
       cliente.rpc("admin_pedidos_orfaos", { p_limite: 1000 }),
@@ -82,9 +86,12 @@ export default function AdminContas() {
       cliente.rpc("admin_perfil_sync_pendentes"),
       cliente.rpc("admin_vinculos_a_confirmar", { p_limite: 300 }),
       cliente.rpc("admin_vinculos_motivos", { p_limite: 700 }),
+      cliente.rpc("admin_trocas_email_pendentes"),
+      cliente.rpc("admin_comprovacoes_pendentes"),
     ]);
     setPendentes(a.data || []); setProblemas(b.data || []); setOrfaos(c.data || []); setSolicitacoes(d.data || []); setFila(e.data || []); setAConfirmar(f.data || []);
     setMotivos(Object.fromEntries((g.error ? [] : (g.data || [])).map(x => [x.joiner_id, x])));      // g só existe depois do J9: a ausência não é falha
+    setTrocas(h.error ? [] : (h.data || [])); setComprovacoes(i.error ? [] : (i.data || []));      // h/i só existem depois do J13/J14: a ausência não é falha
     const falha = a.error || b.error || c.error;   // d/e/f só existem depois do J6: a ausência não é falha
     if (falha) setAviso({ tipo: "erro", texto: "Não foi possível carregar tudo: " + falha.message });
     setCarregando(false);
@@ -141,6 +148,7 @@ export default function AdminContas() {
     setEnviando(false);
     if (error) falhou("Não foi possível chamar o envio agora."); else { ok(`Envio feito: ${data?.enviados ?? 0} enviado(s), ${data?.falharam ?? 0} com falha.`); carregar(); }
   }
+  const filaPessoas = useMemo(() => montarFila({ trocas, comprovacoes, solicitacoes, aConfirmar, motivos }), [trocas, comprovacoes, solicitacoes, aConfirmar, motivos]);
   // pedidos sem dona agrupados por e-mail
   const grupos = Object.values(orfaos.reduce((m, o) => { const k = (o.email || "(sem e-mail)").toLowerCase(); (m[k] ||= { email: o.email || "", chave: k, itens: [] }).itens.push(o); return m; }, {}));
 
@@ -161,6 +169,8 @@ export default function AdminContas() {
       </div>
       {aviso.texto && <div role="status" style={{ ...caixa, borderColor: aviso.tipo === "erro" ? C.erro : C.ok, color: aviso.tipo === "erro" ? C.erro : C.ok, fontSize: 12 }}>{aviso.texto}</div>}
       {carregando && <div style={{ color: C.mudo, fontSize: 12, marginBottom: 12 }}>Carregando…</div>}
+
+      <FilaPorPessoa estilo={caixa} cliente={cliente} fila={filaPessoas} motivos={motivos} rotuloMotivo={rotuloMotivo} onFeito={ok} onErro={falhou} recarregar={carregar} resolverSolicitacao={resolverSolicitacao} confirmarVinculo={confirmarVinculo} />
 
       <div style={caixa} data-testid="admin-solicitacoes">
         <div style={rot}>Pedidos de perfil e ativações sem vínculo confiável ({solicitacoes.filter(x => x.status === "aberta").length} abertos)</div>
