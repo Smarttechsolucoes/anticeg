@@ -2,7 +2,7 @@
 // Reúne, para cada pessoa, o pedido, a prova e a ação necessária, com o que a administradora precisa conferir. Quem anexou prova (troca de e-mail ou comprovação) vem primeiro.
 // Tudo passa por funções do banco que conferem "é administradora" no servidor (J6, J13, J14, J16). O texto escrito pela pessoa é mostrado como TEXTO (nunca HTML) e sempre marcado como "não é prova".
 import { useMemo, useState } from "react";
-import { citaOutroProblema, conferencias, dia, diasDeEspera, hora, motivoTroca, MOTIVOS_LISTA, ORIENTACOES, provasDe, SITUACOES } from "./filaPessoas.js";
+import { citaOutroProblema, conferencias, dia, diasDeEspera, hora, mensagemSolicitacao, motivoTroca, MOTIVOS_LISTA, ORIENTACOES, provasDe, SITUACOES } from "./filaPessoas.js";
 
 const mono = "'DM Mono',monospace";
 const C = { fundo: "rgba(245,240,232,.04)", borda: "rgba(245,240,232,.12)", mudo: "rgba(245,240,232,.62)", texto: "#F5F0E8", destaque: "#FF5C1A", ok: "#BAFF39", erro: "#ff6b6b" };
@@ -210,7 +210,7 @@ function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarrega
         {p.comprovacao && <FatosComprovacao p={p} />}
         {p.solicitacoes.map(x => (
           <ul key={x.id} className="lc-fatos" data-testid="fila-solicitacao" style={{ marginTop: 8 }}>
-            <Facto marca="…" tipo="pend"><b style={{ color: "#ff8a57" }}>{x.tipo === "ativacao_sem_vinculo" ? "ativação sem vínculo confiável" : x.tipo}</b>{x.valor_pedido ? <> · pediu: <b>{x.valor_pedido}</b></> : null}{x.mensagem ? <> · “{x.mensagem}”</> : null} · {hora(x.criado_em)}
+            <Facto marca="…" tipo="pend"><b style={{ color: "#ff8a57" }}>{x.tipo === "ativacao_sem_vinculo" ? "ativação sem vínculo confiável" : x.tipo}</b>{x.valor_pedido ? <> · pediu: <b>{x.valor_pedido}</b></> : null}{x.mensagem ? <> · “{mensagemSolicitacao(x, p)}”</> : null} · {hora(x.criado_em)}
               <span style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                 <button style={botao(C.ok)} onClick={() => resolverSolicitacao(x, "resolvida")}>Resolvido</button><button style={botao(C.erro)} onClick={() => resolverSolicitacao(x, "recusada")}>Recusar</button>
               </span>

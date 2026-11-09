@@ -81,8 +81,9 @@ export async function processarPedidoCodigo(entrada: unknown, ip: string, db: Db
   if ((await db.quantasComEmail(cadastrado)) !== 1) return proximo("ajuda");   // e-mail dividido entre joiners: a administradora resolve
   if (await db.jaVinculada(j.id)) return proximo("entrar");                    // quem já tem conta entra por @ + senha ou recupera a senha
   if (!(await db.liberada(j.id))) return proximo("aguardando");                // a onda dela ainda não foi liberada
-  // E-mail válido e único NÃO prova identidade: se o e-mail/@ do cadastro mudou depois da fotografia confiável (J1d), NENHUM código é enviado; a administração confirma por um canal conhecido.
-  if (db.vinculoConfiavel && !(await db.vinculoConfiavel(j.id))) { try { await db.registrarSemVinculo?.(j.id, "e-mail/@ do cadastro alterado depois da fotografia confiável"); } catch (err) { console.error("pedir-codigo-joiner", err instanceof Error ? err.message : err); } return proximo("comprovar"); }
+  // E-mail válido e único NÃO prova identidade: se a regra automática não libera o vínculo (fotografia diferente, histórico de troca, e-mail ausente ou compartilhado...), NENHUM código é enviado; a administração confirma por um canal conhecido.
+  // O MOTIVO gravado para a administração é calculado pelo BANCO (J18); este texto é só um valor de reserva e NÃO afirma que algo mudou depois da fotografia.
+  if (db.vinculoConfiavel && !(await db.vinculoConfiavel(j.id))) { try { await db.registrarSemVinculo?.(j.id, "a regra automática não liberou o código para este cadastro"); } catch (err) { console.error("pedir-codigo-joiner", err instanceof Error ? err.message : err); } return proximo("comprovar"); }
   try { await rede.garantirUsuario(cadastrado); await rede.enviarCodigo(cadastrado); } catch (err) { console.error("pedir-codigo-joiner", err instanceof Error ? err.message : err); }
   return NEUTRO;
 }

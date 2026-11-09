@@ -135,6 +135,23 @@ export function conferencias(p) {
   return lista;
 }
 
+/** Registros antigos gravaram, para TODO bloqueio, "e-mail/@ do cadastro alterado depois da fotografia confiável", o que pode ser falso. O painel não repete essa afirmação. */
+const TEXTO_ANTIGO_FALSO = /alterado depois da fotografia/i;
+export const FRASE_MOTIVO = {
+  historico: "Há um registro antigo de pedido de troca neste cadastro (o e-mail e o @ de hoje podem ser os mesmos da fotografia).",
+  sem_email: "O cadastro não tem e-mail válido.",
+  compartilhado: "O e-mail do cadastro é compartilhado com outro cadastro.",
+  diverge: "O e-mail ou o @ do cadastro é diferente da fotografia confiável (não foi possível saber quando mudou).",
+  arroba: "O @ do cadastro se repete em outro cadastro (só muda a maiúscula).",
+  ativou: "Hoje o cadastro já tem conta.",
+  outro: "A regra automática não liberou o código; o motivo exato não pôde ser determinado.",
+};
+/** Texto do pedido para mostrar: o que a pessoa escreveu fica como está; o texto automático antigo e falso é trocado pelo motivo calculado (ou por uma frase neutra). */
+export function mensagemSolicitacao(x, p) {
+  if (x && x.tipo === "ativacao_sem_vinculo" && TEXTO_ANTIGO_FALSO.test(String(x.mensagem || ""))) return `Tentou ativar e o código não foi liberado. ${FRASE_MOTIVO[p && p.motivoChave] || FRASE_MOTIVO.outro}`;
+  return x ? x.mensagem : "";
+}
+
 const SITE = "https://anticeg.vercel.app";
 /** Orientação objetiva por pessoa. tipo: conta | ativar | corrigir_email | analise | desconhecido. */
 export function orientar(p) {
