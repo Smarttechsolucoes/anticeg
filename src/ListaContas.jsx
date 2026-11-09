@@ -266,7 +266,7 @@ export default function ListaContas({ cliente, fila, motivos, rotuloMotivo, onFe
           <input type="search" style={{ ...campo, flex: "1 1 220px" }} value={busca} onChange={e => mudar(setBusca)(e.target.value)} placeholder="Buscar por @ ou nome" aria-label="Buscar por @ ou nome" />
           <select style={{ ...campo, flex: "0 1 240px" }} value={motivo} onChange={e => mudar(setMotivo)(e.target.value)} aria-label="Motivo do bloqueio">
             <option value="">Todos os motivos</option>
-            {Object.entries(MOTIVOS_LISTA).map(([k, rotulo]) => <option key={k} value={k}>{rotulo}</option>)}
+            {Object.entries(MOTIVOS_LISTA).filter(([k]) => fila.some(x => x.motivoChave === k)).map(([k, rotulo]) => <option key={k} value={k}>{rotulo}</option>)}
           </select>
           <select style={{ ...campo, flex: "0 1 240px" }} value={orientacao} onChange={e => mudar(setOrientacao)(e.target.value)} aria-label="Orientação">
             {Object.entries(ORIENTACOES).map(([k, rotulo]) => <option key={k} value={k}>{k === "todos" ? "Todas as orientações" : `${rotulo} (${fila.filter(x => x.orientacao.tipo === k).length})`}</option>)}
