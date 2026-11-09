@@ -14,7 +14,7 @@
 const minusculo = v => String(v ?? '').trim().toLowerCase();
 
 /** Índices de busca das joiners; disputa pelo mesmo @/e-mail é decidida de forma determinística (ver regras acima). */
-export function indexarJoiners(joiners) {
+export function indexarJoiners(joiners, arrobasAntigos = []) {
   const lista = [...(joiners || [])].filter(j => j && j.cog);
   const idDe = j => j.id ?? Infinity;
   const melhor = (candidatos, chave) => [...candidatos].sort((a, b) =>
@@ -33,14 +33,49 @@ export function indexarJoiners(joiners) {
     if (!porCog[j.cog]) porCog[j.cog] = j;
   }
   for (const [k, g] of agrupar(j => minusculo(j.cog))) porCogMin[k] = melhor(g, k);
-  return { porTwitter, porEmail, porCog, porCogMin };
+
+  // @ ANTIGOS registrados nas trocas (de/para), por cadastro. Mudanças sucessivas (A→B→C) deixam A e B ligados ao mesmo cadastro.
+  // O @ de HOJE de qualquer cadastro (twitter ou cog) sempre vence: um @ antigo só vale se NINGUÉM o usa hoje (a resolução trata isso).
+  const cogDoCadastro = new Map(lista.map(j => [minusculo(j.cog), j.cog]));
+  const porArrobaAntigo = new Map();            // @ (minúsculo, sem @) -> Set de cogs
+  for (const h of arrobasAntigos || []) {
+    const cog = cogDoCadastro.get(minusculo(h && h.cog));
+    if (!cog) continue;
+    for (const v of [h.de, h.para]) {
+      const k = minusculo(v).replace(/^@/, '');
+      if (!k) continue;
+      if (!porArrobaAntigo.has(k)) porArrobaAntigo.set(k, new Set());
+      porArrobaAntigo.get(k).add(cog);
+    }
+  }
+  return { porTwitter, porEmail, porCog, porCogMin, porArrobaAntigo };
+}
+
+/**
+ * Resolve a linha da planilha. Ordem: @ de hoje → e-mail → @ ANTIGO registrado → o próprio @/e-mail (pessoa nova).
+ * Devolve { cog, via, conflito }: via = 'twitter' | 'email' | 'arroba_antigo' | 'novo' | 'conflito'.
+ * Se mais de um cadastro é possível, via = 'conflito' e cog = null: quem chama NÃO move itens, NÃO cria cadastro e registra o conflito.
+ */
+export function resolverLinha({ twitter, email }, idx) {
+  const tw = minusculo(twitter).replace(/^@/, '');
+  const em = minusculo(email);
+  const conflito = (tipo, chave, candidatos) => ({ cog: null, via: 'conflito', conflito: { tipo, chave, candidatos } });
+  // @ de hoje e e-mail seguem a regra de "dono de hoje" (acima), SEM mudança. Só o @ ANTIGO, que é novo, trata "mais de um cadastro possível" como conflito.
+  if (tw && idx.porTwitter[tw]) return { cog: idx.porTwitter[tw], via: 'twitter', conflito: null };
+  if (em && idx.porEmail[em]) return { cog: idx.porEmail[em], via: 'email', conflito: null };
+  if (tw && idx.porArrobaAntigo && idx.porArrobaAntigo.has(tw)) {
+    const donos = [...idx.porArrobaAntigo.get(tw)];
+    if (donos.length > 1) return conflito('arroba_antigo_em_mais_de_um_cadastro', tw, donos.map(minusculo).sort());
+    const outro = idx.porCogMin[tw];             // alguém tem hoje um cog igual a este @ antigo?
+    if (outro && minusculo(outro.cog) !== minusculo(donos[0])) return conflito('arroba_antigo_e_cog_de_outro_cadastro', tw, [minusculo(donos[0]), minusculo(outro.cog)].sort());
+    return { cog: donos[0], via: 'arroba_antigo', conflito: null };
+  }
+  return { cog: tw || em.split('@')[0] || null, via: 'novo', conflito: null };
 }
 
 /** COG (dono) da linha da planilha: @ → joiner cadastrada; senão o e-mail; senão o próprio @/e-mail em minúsculas. */
 export function cogDaLinha({ twitter, email }, idx) {
-  const tw = minusculo(twitter).replace(/^@/, '');
-  const em = minusculo(email);
-  return idx.porTwitter[tw] || idx.porEmail[em] || tw || em.split('@')[0] || null;
+  return resolverLinha({ twitter, email }, idx).cog;      // conflito => null (quem precisa distinguir usa resolverLinha)
 }
 
 /** Joiner já cadastrada para este @, ignorando maiúsculas (se houver gêmeos, a que a regra 1 escolhe). */

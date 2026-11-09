@@ -3,7 +3,8 @@ import { parse } from 'csv-parse/sync';
 import ws from 'ws';
 import { montarUpsertJoiner, carregarIdsComConta, carregarIdsEmailTrocado, emailPlanilhaDivergeDoTrocado } from './preservar-email.js';
 import { casarPorIdLinha, casarChavesRepetidas } from './casar-itens.js';
-import { indexarJoiners, cogDaLinha, cogDoUpsert, joinerExistente } from './resolver-joiner.js';
+import { indexarJoiners, resolverLinha, cogDoUpsert, joinerExistente } from './resolver-joiner.js';
+import { carregarArrobasAntigos } from './arrobas-antigos.js';
 
 const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
@@ -84,7 +85,13 @@ async function main() {
   // Sem esta leitura o sync não sabe quem já existe nem quem tem conta: continuaria às cegas e poderia trocar o e-mail verificado de uma conta. Melhor parar sem gravar nada.
   if (erroJoiners || !Array.isArray(joiners)) throw new Error(`Não consegui ler as joiners (${erroJoiners?.message || 'sem dados'}). Nada foi gravado.`);
   // Quem disputa o mesmo @/e-mail (ex.: "Seopookie" e "seopookie"): a regra de desempate é fixa e o upsert nunca cria gêmeo (ver resolver-joiner.js).
-  const idxJoiners = indexarJoiners(joiners);
+  // @ ANTIGOS registrados nas trocas: se a planilha ainda mostra o @ de antes, a pessoa continua sendo a MESMA (o cadastro e o cog originais ficam; nada é movido nem criado).
+  // Se mais de um cadastro é possível (@ antigo ligado a dois cadastros, ou igual ao cog/@ de outro), o sync NÃO decide: registra o conflito e deixa tudo como está.
+  const arrobasAntigos = await carregarArrobasAntigos(supabase, joiners);
+  const idxJoiners = indexarJoiners(joiners, arrobasAntigos);
+  const conflitos = [];                                   // { onde, tipo, chave, candidatos, detalhe }
+  const avisosArrobaAntigo = new Set();                   // cogs cuja planilha ainda mostra o @ antigo (a planilha precisa ser corrigida; nada é sobrescrito)
+  const registrarConflito = (onde, resolucao, detalhe) => conflitos.push({ onde, tipo: resolucao.conflito.tipo, chave: resolucao.conflito.chave, candidatos: resolucao.conflito.candidatos, detalhe });
 
   // Carregar masterlist existente paginada (Supabase limita 1000 por query)
   // existingMap: chave → array de itens (suporta duplicatas)
@@ -138,7 +145,7 @@ async function main() {
   // Casa primeiro pelo CÓDIGO da planilha (coluna ID = id_linha): a linha continua a MESMA (mesmo id) mesmo que o nome do item, o nome de exibição ou o dono mudem.
   // Sem isso a regra antiga (ceg|item|nome) insere uma linha nova e apaga a antiga, e as demandas de pagamento ficam apontando para um id que não existe mais.
   // O DONO da linha da planilha é calculado como no laço abaixo (@ → joiner cadastrada; senão o próprio @/e-mail): um id NUNCA muda de dono por causa de um código.
-  const cogDe = r => cogDaLinha({ twitter: col(r, colMap, '@'), email: col(r, colMap, 'EMAIL') }, idxJoiners);
+  const cogDe = r => resolverLinha({ twitter: col(r, colMap, '@'), email: col(r, colMap, 'EMAIL') }, idxJoiners).cog;   // conflito => null (a linha não casa com nada e não é tocada)
   const casamento = casarPorIdLinha(
     rows.map(r => ({ idLinha: col(r, colMap, 'ID').trim(), ceg: col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), item: col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim(), cog: cogDe(r) })),
     Object.values(existingMap).flat()
@@ -176,7 +183,16 @@ async function main() {
       const pagoRf    = col(r, colMap, 'RF').trim().toUpperCase() === 'TRUE';
       const idLinha   = col(r, colMap, 'ID').trim() || null;
 
-      const cog = cogDaLinha({ twitter, email }, idxJoiners);
+      const resol = resolverLinha({ twitter, email }, idxJoiners);
+      if (resol.conflito) {
+        // mais de um cadastro possível: NÃO move item, NÃO cria cadastro, NÃO atualiza a linha. A linha do banco (se existir) é protegida da exclusão (conta como presente na planilha).
+        registrarConflito('masterlist', resol, { ceg, item: nomeItem, id_linha: col(r, colMap, 'ID').trim() || null });
+        const chaveProtegida = `${ceg}|${nomeItem}|${nome}`.toLowerCase();
+        sheetKeyCount[chaveProtegida] = (sheetKeyCount[chaveProtegida] || 0) + 1;
+        continue;
+      }
+      const cog = resol.cog;
+      if (resol.via === 'arroba_antigo') avisosArrobaAntigo.add(cog);
 
       const parseDate = str => {
         if (!str || !str.trim()) return null;
@@ -378,9 +394,15 @@ async function main() {
   const divergentesDoTrocado = [];
 
   for (const j of joinersList) {
-    const atual = joinerExistente(j.cog, idxJoiners);
-    // Joiner que já existe (mesmo @ com outras maiúsculas) é atualizada pelo COG que ela já tem: o upsert nunca cria um gêmeo.
-    const alvo = montarUpsertJoiner({ ...j, cog: cogDoUpsert(j.cog, idxJoiners) }, atual, { idsComConta, contasIndisponiveis, idsEmailTrocado, trocadosIndisponiveis });
+    // A pessoa da linha é resolvida pela MESMA regra dos itens: @ de hoje → e-mail → @ ANTIGO registrado → pessoa nova. Mais de um cadastro possível = conflito (nada é criado nem alterado).
+    const resol = resolverLinha({ twitter: j.twitter, email: j.email }, idxJoiners);
+    if (resol.conflito) { registrarConflito('joiner', resol, { cog_da_planilha: j.cog }); continue; }
+    const nova = resol.via === 'novo';
+    const atual = nova ? joinerExistente(j.cog, idxJoiners) : joinerExistente(resol.cog, idxJoiners);
+    // Joiner que já existe (mesmo @ com outras maiúsculas, ou @ antigo) é atualizada pelo COG que ela já tem: o upsert nunca cria um gêmeo.
+    const alvo = montarUpsertJoiner({ ...j, cog: nova ? cogDoUpsert(j.cog, idxJoiners) : resol.cog }, atual, { idsComConta, contasIndisponiveis, idsEmailTrocado, trocadosIndisponiveis });
+    // planilha com @ antigo (ou @ que só casa pelo e-mail): o @ de hoje do cadastro NÃO é sobrescrito pelo valor atrasado da planilha; o aviso diz qual planilha precisa ser corrigida
+    if (resol.via === 'arroba_antigo' || resol.via === 'email') { delete alvo.twitter; avisosArrobaAntigo.add(resol.cog); }
     if (emailPlanilhaDivergeDoTrocado(j, atual, idsEmailTrocado)) divergentesDoTrocado.push(atual.cog);
     if (atual?.email && !('email' in alvo)) emailsPreservados++;
     const { error } = await supabase.from('joiners')
@@ -390,6 +412,20 @@ async function main() {
   }
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
+  // Conflitos de dono (mais de um cadastro possível) e planilhas com @ antigo: nada foi movido, criado ou sobrescrito por causa deles. Fica registrado no log e no resumo da execução (GitHub) para análise.
+  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s): ${[...avisosArrobaAntigo].slice(0, 40).join(', ')}`);
+  if (conflitos.length > 0) {
+    const unicos = new Map(conflitos.map(c => [`${c.tipo}|${c.chave}|${(c.candidatos || []).join(',')}`, c]));
+    console.log(`⚠ CONFLITOS DE DONO (mais de um cadastro possível): ${conflitos.length} linha(s) em ${unicos.size} caso(s). NADA foi movido, criado ou alterado por causa deles.`);
+    for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: c.chave, candidatos: c.candidatos, onde: c.onde, exemplo: c.detalhe })}`);
+    console.log(`::warning title=Sync: ${unicos.size} conflito(s) de dono::Mais de um cadastro possível para linhas da planilha; nada foi movido nem criado. Veja as linhas CONFLITO_SYNC neste log.`);
+    try {
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        const linhas = ['### Conflitos de dono no sync (nada foi movido, criado ou alterado)', '', '| tipo | chave | cadastros possíveis |', '|---|---|---|', ...[...unicos.values()].map(c => `| ${c.tipo} | ${c.chave} | ${(c.candidatos || []).join(', ')} |`), ''];
+        (await import('node:fs')).appendFileSync(process.env.GITHUB_STEP_SUMMARY, linhas.join('\n'));
+      }
+    } catch { /* o resumo é só um complemento do log */ }
+  }
   if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha): ${divergentesDoTrocado.slice(0, 30).join(', ')}`);
 
   // Erros por linha NÃO podem passar por "sync íntegro": o job fica vermelho (código 4) para alguém olhar.
