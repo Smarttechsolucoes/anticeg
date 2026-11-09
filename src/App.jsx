@@ -26804,7 +26804,7 @@ function PrevendaTab({ user }) {
     },
     {
       key: "promo-murce-50",
-      ativo: true,
+      ativo: now <= PROMO_MURCE_50_CFG.deadline,   // prazo (05/11 às 12h) encerrado: vai para "Encerradas" (cartão "ENCERRADO", sem "Preencher formulário")
       fechado: PROMO_MURCE_50_CFG.bloqueado,
       emBreve: PROMO_MURCE_50_CFG.bloqueado,
       titulo: "PROMO-MURCE-50",
