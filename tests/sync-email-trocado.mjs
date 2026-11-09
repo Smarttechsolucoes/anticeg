@@ -23,6 +23,7 @@ const PLANILHA = [   // a planilha ainda mostra os e-mails ANTIGOS de ana e caio
 const setup = (aud = true, auditoria = "create table public.contas_auditoria (id bigint generated always as identity primary key, joiner_id bigint, acao text not null);") =>
   JOINERS.map(([c, n, e]) => `insert into public.joiners (cog, nome, email, twitter) values (${q(c)}, ${q(n)}, ${q(e)}, ${q("@" + c)});`).join("\n") +
   "\n" + PLANILHA.map((l, i) => `insert into public.masterlist (id, ceg, cog, nome, nome_do_item, id_linha, valor_item, status, pago_item) values (${i + 1}, 'CEG1', ${q(l.arroba.slice(1))}, ${q(l.nome)}, ${q(l.item)}, ${q(l.id)}, 10, null, false);`).join("\n") +
+  "\ninsert into public.claims (joiner_cog, masterlist_id, ceg) values ('ana', 1, 'CEG1'), ('caio', 3, 'CEG1');" +
   (aud ? `\n${auditoria}\ninsert into public.contas_auditoria (joiner_id, acao) values (1, 'trocar_email'), (3, 'troca_email_verificada'), (4, 'trocar_email'), (2, 'outra_acao');` : "");
 
 const dir = mkdtempSync(join(tmpdir(), "sync-eml-")); let n = 0;
@@ -57,6 +58,11 @@ const planCorrigida = PLANILHA.map(l => l.arroba === "@ana" ? { ...l, email: "an
 const r3 = rodar(setup(), planCorrigida);
 ok(!r3.erro && /3 cadastro\(s\); 0 com a planilha/.test(r3.log), "planilha já corrigida: 0 divergências no aviso");
 ok(email(r3, "ana") === "ana.nova@exemplo.com" && email(r3, "caio") === "caio.novo@exemplo.com", "planilha corrigida: e-mails continuam os mesmos");
+// cadastro, cog, itens e claims NÃO mudam com a troca (verificada ou pela administração), em nenhuma das 3 rodadas
+const linhas = (o, cog) => JSON.stringify(o.masterlist.filter(m => m.cog === cog).map(m => [m.nome_do_item, m.id_linha, m.valor_item, m.pago_item, m.pago_frete, m.pago_rf]));
+for (const cog of ["ana", "caio"]) ok(linhas(r1, cog) === linhas(r2, cog) && linhas(r2, cog) === linhas(r3, cog) && linhas(r1, cog) !== "[]", `${cog}: itens (e flags de pagamento) idênticos nas 3 rodadas`);
+for (const r of [r1, r2, r3]) ok(JSON.stringify(r.joinersTodos.map(j => j.cog)) === JSON.stringify(["ana", "bia", "caio", "dani"]), "nenhum cadastro foi criado, movido ou apagado (os @ continuam os mesmos)");
+ok(JSON.stringify(r1.claims) === JSON.stringify(r3.claims) && r3.claims.length === 2, "claims (itens reservados) de ana e caio intactos");
 
 // 4) sem a tabela de auditoria (J4c0 ausente): comportamento de hoje (a planilha atualiza), sem erro
 const r4 = rodar(setup(false));
