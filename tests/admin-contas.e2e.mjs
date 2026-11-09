@@ -60,6 +60,7 @@ const abrirContas = async page => {
   await page.waitForSelector(".admin-sidebar-group", { timeout: 15000 }).catch(() => {});
   const item = page.locator("button.admin-sidebar-item", { hasText: /Contas$/ }).first();
   await item.click({ timeout: 8000 }); await page.waitForTimeout(900);
+  await page.getByTestId("admin-listas-tipo").locator("summary").click().catch(() => {}); await page.waitForTimeout(250);   // as listas por tipo ficam recolhidas na tela nova
 };
 
 { // fluxo feliz: lista → confirma com anotação → some da lista; pedido de ajuda resolvido

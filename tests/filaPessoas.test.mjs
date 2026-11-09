@@ -2,7 +2,7 @@
 // Rodar: node --test tests/filaPessoas.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { montarFila, oQueConferir, acaoNecessaria, motivoTroca } from "../src/filaPessoas.js";
+import { montarFila, oQueConferir, acaoNecessaria, motivoTroca, diasDeEspera, MOTIVOS_LISTA } from "../src/filaPessoas.js";
 
 const troca = (o = {}) => ({ id: 1, joiner_id: 7, cog: "bia", via: "sem_acesso", desfecho: "sem_acesso", novo_dominio: "gmail.com", novo_verificado_em: "2026-11-09T15:00:00Z", criado_em: "2026-11-09T14:50:00Z", ...o });
 const comp = (o = {}) => ({ id: 2, joiner_id: 8, cog: "caio", via: "sem_perfil", desafio_validado: false, detalhe: "Paguei em outubro.", itens: 3, criado_em: "2026-11-09T10:00:00Z", expira_em: "2026-11-16T10:00:00Z", ...o });
@@ -54,3 +54,34 @@ test("pessoa só com pedido de ajuda: orienta a confirmar o vínculo; nenhum tex
 });
 
 test("entradas ausentes não quebram", () => { assert.deepEqual(montarFila(), []); assert.deepEqual(montarFila({ trocas: [], comprovacoes: [], solicitacoes: [], aConfirmar: [], motivos: {} }), []); });
+
+test("incluirTodos traz quem nunca pediu nada; sem ele só entra quem pediu ajuda", () => {
+  const aConfirmar = [vinc({ joiner_id: 1, pedido_de_ajuda: false }), vinc({ joiner_id: 2, pedido_de_ajuda: true })];
+  assert.deepEqual(montarFila({ aConfirmar }).map(p => p.joiner_id), [2]);
+  const todos = montarFila({ aConfirmar, incluirTodos: true });
+  assert.deepEqual(todos.map(p => [p.joiner_id, p.situacao]), [[2, "ajuda"], [1, "nada"]]);
+});
+
+test("situação: prova > ajuda > nada, e a ordem da lista segue essa prioridade", () => {
+  const f = montarFila({ trocas: [troca({ joiner_id: 3 })], solicitacoes: [sol({ joiner_id: 4 })], aConfirmar: [vinc({ joiner_id: 5, pedido_de_ajuda: false })], incluirTodos: true });
+  assert.deepEqual(f.map(p => [p.joiner_id, p.situacao]), [[3, "prova"], [4, "ajuda"], [5, "nada"]]);
+});
+
+test("motivo do bloqueio vira um grupo curto; sem informação e sem domínio é 'sem e-mail'; o resto é 'outro'", () => {
+  const motivos = { 1: { codigo: "historico_troca_email" }, 2: { codigo: "historico_so_arroba" }, 3: { codigo: "email_compartilhado" }, 4: { codigo: "diverge_fotografia" }, 5: { codigo: "sem_email_valido" }, 6: { codigo: "arroba_repetido" } };
+  const aConfirmar = [1, 2, 3, 4, 5, 6, 7, 8].map(id => vinc({ joiner_id: id, cog: "p" + id, dominio: id === 8 ? "" : "exemplo.com" }));
+  const f = montarFila({ aConfirmar, motivos, incluirTodos: true });
+  const m = Object.fromEntries(f.map(p => [p.joiner_id, p.motivoChave]));
+  assert.deepEqual(m, { 1: "historico", 2: "historico", 3: "compartilhado", 4: "diverge", 5: "sem_email", 6: "arroba", 7: "outro", 8: "sem_email" });
+  assert.ok(Object.keys(MOTIVOS_LISTA).includes("outro"));
+});
+
+test("dias de espera: contados desde o pedido mais antigo; sem pedido = null", () => {
+  const agora = new Date("2026-11-12T12:00:00Z");
+  const [p] = montarFila({ trocas: [troca({ criado_em: "2026-11-09T09:00:00Z" })] });
+  assert.equal(diasDeEspera(p, agora), 3);
+  const [q] = montarFila({ aConfirmar: [vinc()], incluirTodos: true });
+  assert.equal(diasDeEspera(q, agora), null);
+  const [r] = montarFila({ trocas: [troca({ criado_em: "2026-11-12T11:00:00Z" })] });
+  assert.equal(diasDeEspera(r, agora), 0);
+});
