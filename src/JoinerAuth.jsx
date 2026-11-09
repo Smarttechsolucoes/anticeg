@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { JOINERS_AUTH_ATIVO, criarJoinerAuth, buscarAcessoSimples, emailValido, mascararEmail, normalizarCog, validarSenha, SENHA_MIN } from "./joinerAuth.js";
 import supabase from "./supabase.js";
 import CompletarPerfil from "./CompletarPerfil.jsx";
+import { FluxoTrocaEmail, FluxoComprovar } from "./TrocaEmailJoiner.jsx";
 
 const C = { bg: "#17141f", borda: "rgba(245,240,232,0.14)", texto: "#F5F0E8", mudo: "rgba(245,240,232,0.72)", destaque: "#BAFF39", erro: "#FF8A80", ok: "#7CE08A" };
 const mono = "'DM Mono',monospace";
@@ -18,7 +19,7 @@ const sobreposicao = { position: "fixed", inset: 0, background: "rgba(0,0,0,.82)
 const cartao = { position: "relative", background: C.bg, border: `1px solid ${C.borda}`, borderRadius: 14, padding: "24px 22px", width: "min(440px, 100%)", margin: "auto", color: C.texto, display: "grid", gap: 14, boxSizing: "border-box" };
 // o que a pessoa lê quando acertou o @ + e-mail e o sistema NÃO vai enviar código (nunca afirma envio)
 const TEXTO_SEM_CODIGO = {
-  comprovar: "Seu cadastro precisa de uma verificação extra antes de liberarmos o código. Toque em “Preciso de ajuda” e conte o que aconteceu: a administração confere e libera.",
+  comprovar: "Seu cadastro precisa de uma verificação extra antes de liberarmos o código. Você pode descrever outra prova de que o cadastro é seu, trocar o e-mail do cadastro ou pedir ajuda: em todos os casos a administração confere antes de liberar.",
   ajuda: "Não conseguimos liberar o código automaticamente para este cadastro. Toque em “Preciso de ajuda” para a administração resolver.",
   entrar: "Você já tem conta, então não enviamos código de ativação. Entre com o seu @ e a sua senha. Se não lembrar a senha, use “Esqueci minha senha”: aí sim enviamos um código ao e-mail do cadastro.",
   aguardando: "A ativação do seu cadastro ainda não foi liberada. Você continua navegando só com o @ e a administração avisa quando chegar a sua vez.",
@@ -54,6 +55,7 @@ function Rotulo({ children }) {
   return <label style={{ display: "grid", gap: 6, fontSize: 13, color: C.mudo, fontFamily: sans }}>{children}</label>;
 }
 
+const legendaEstilo = { fontSize: 13, color: C.mudo, fontFamily: sans, marginBottom: 6, padding: 0 };
 // Campo de senha com o "olhinho": alterna mostrar/ocultar SEM enviar o formulário (botão type=button), sem perder o que foi digitado nem o foco/teclado (o mesmo <input> só troca o type).
 function CampoSenha({ style, ...resto }) {
   const [ver, setVer] = useState(false);
@@ -86,8 +88,11 @@ function OrientacaoSenha({ aoEntrar, aoRecuperar }) {
   );
 }
 
+// estilos e átomos repassados às telas "Quero mudar de e-mail" e "Quero manter meu e-mail e comprovar meu cadastro" (src/TrocaEmailJoiner.jsx)
+const UI = { C, mono, sans, campo, botao, botaoSec, acaoSec, Titulo, Texto, Aviso, Rotulo, rolarAoFocar, legendaEstilo };
+
 function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_liberada !== false, emailInicial = "", aoAtivar = null }) {   // aoAtivar: quem abriu o pop-up SEM @ (começou pelo e-mail) recebe o @ da conta ao ativar
-  const [fase, setFase] = useState(liberada ? "dados" : "aguardando");           // dados | codigo | pendente | ajuda | ajuda_enviada | aguardando (ativação ainda não liberada para o grupo dela) | regularizar
+  const [fase, setFase] = useState(liberada ? "dados" : "aguardando");           // dados | codigo | pendente | ajuda | ajuda_enviada | aguardando (ativação ainda não liberada para o grupo dela) | troca (Quero mudar de e-mail) | comprovar (Quero manter meu e-mail e comprovar) | regularizar
   const [cog, setCog] = useState(normalizarCog(user?.cog));
   const [email, setEmail] = useState(String(emailInicial || ""));
   const [senha, setSenha] = useState("");
@@ -214,6 +219,10 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
               <button type="button" style={acaoSec} onClick={voltarAreasPublicas} data-testid="ativacao-voltar-publicas">Voltar às áreas públicas</button>
               <button type="button" style={acaoSec} onClick={() => pedirAjuda("dados")} data-testid="ativacao-pedir-ajuda">Meu e-mail não está no cadastro ou não lembro qual é</button>
             </div>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
+              <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("troca"); }} data-testid="ativacao-quero-trocar">Quero mudar de e-mail</button>
+              <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("comprovar"); }} data-testid="ativacao-quero-comprovar">Quero manter meu e-mail e comprovar meu cadastro</button>
+            </div>
           </form>
         )}
         {fase === "codigo" && (
@@ -235,6 +244,10 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
                 <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("dados"); }}>Corrigir dados</button>
                 <button type="button" style={acaoSec} onClick={() => pedirAjuda("codigo")} data-testid="ativacao-nao-recebi">Preciso de ajuda</button>
               </div>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
+                <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("troca"); }} data-testid="codigo-quero-trocar">Quero mudar de e-mail</button>
+                <button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("comprovar"); }} data-testid="codigo-quero-comprovar">Quero manter meu e-mail e comprovar meu cadastro</button>
+              </div>
             </div>
           </form>
         )}
@@ -242,8 +255,10 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
           <div data-testid="ativacao-sem-codigo" style={{ display: "grid", gap: 14 }}>
             <Titulo>Nenhum código foi enviado</Titulo>
             <Texto data-testid="ativacao-sem-codigo-texto">{TEXTO_SEM_CODIGO[proximo] || TEXTO_SEM_CODIGO.ajuda}</Texto>
+            {proximo === "comprovar" && <button style={botao} data-testid="ativacao-sem-codigo-comprovar" onClick={() => { setErro(""); setFase("comprovar"); }}>Quero manter meu e-mail e comprovar meu cadastro</button>}
+            {(proximo === "comprovar" || proximo === "ajuda") && <button style={botaoSec} data-testid="ativacao-sem-codigo-trocar" onClick={() => { setErro(""); setFase("troca"); }}>Quero mudar de e-mail</button>}
             {(proximo === "comprovar" || proximo === "ajuda") && (
-              <button style={botao} data-testid="ativacao-sem-codigo-ajuda" onClick={() => { setTextoAjuda(t => t || (proximo === "comprovar" ? "Meu cadastro pediu uma verificação extra e nenhum código foi enviado." : "Nenhum código foi enviado para o meu cadastro.")); pedirAjuda("dados"); }}>Preciso de ajuda</button>
+              <button style={proximo === "comprovar" ? botaoSec : botao} data-testid="ativacao-sem-codigo-ajuda" onClick={() => { setTextoAjuda(t => t || (proximo === "comprovar" ? "Meu cadastro pediu uma verificação extra e nenhum código foi enviado." : "Nenhum código foi enviado para o meu cadastro.")); pedirAjuda("dados"); }}>Preciso de ajuda</button>
             )}
             {proximo === "entrar" && (<>
               <button style={botao} data-testid="ativacao-sem-codigo-entrar" onClick={() => { setErro(""); setModoEntrar("entrar"); setFase("entrar"); }}>Entrar com @ e senha</button>
@@ -252,6 +267,21 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
             {proximo === "aguardando" && <button style={botao} onClick={continuarLimitado}>Entendi, continuar só com o @</button>}
             <div style={{ display: "flex", justifyContent: "center" }}><button type="button" style={acaoSec} onClick={() => { setErro(""); setFase("dados"); }}>Corrigir dados</button></div>
           </div>
+        )}
+        {fase === "troca" && (
+          <FluxoTrocaEmail ui={UI} api={api} cogInicial={cog} emailInicial={email}
+            onVoltar={() => { setErro(""); setFase("dados"); }}
+            onAtivar={novo => { setEmail(novo); setSenha(""); setRepetir(""); setErro(""); setFase("dados"); }}
+            onAjuda={() => { setTextoAjuda(t => t || "Preciso de ajuda para trocar o e-mail do meu cadastro."); pedirAjuda("dados"); }}
+            onContinuarLimitado={continuarLimitado} />
+        )}
+        {fase === "comprovar" && (
+          <FluxoComprovar ui={UI} api={api} cogInicial={cog} emailInicial={email}
+            onVoltar={() => { setErro(""); setFase("dados"); }}
+            onPedirCodigo={e => { setEmail(e); setErro(""); setFase("dados"); }}
+            onEntrar={() => { setErro(""); setModoEntrar("entrar"); setFase("entrar"); }}
+            onAjuda={() => { setTextoAjuda(t => t || "Preciso de ajuda para comprovar o meu cadastro."); pedirAjuda("dados"); }}
+            onContinuarLimitado={continuarLimitado} />
         )}
         {fase === "finalizando" && (
           <div data-testid="ativacao-finalizando" role="status" style={{ display: "grid", gap: 14 }}>

@@ -23,6 +23,11 @@ export function emailValido(valor) {
 // formato ÚNICO aceito para a dica do servidor: 1ª letra do usuário + ••• + @ + 1ª letra do provedor + ••• + final (.com, .com.br). Nada além disso é exibido.
 // próximos passos que o servidor pode informar a quem acertou o par (@ + e-mail) e não vai receber código
 export const PROXIMOS = ["ajuda", "entrar", "aguardando", "comprovar"];
+// "Quero mudar de e-mail" (J13) e "Quero manter meu e-mail e comprovar meu cadastro" (J14): respostas aceitas do servidor (qualquer outra coisa é tratada como falha)
+export const PROXIMOS_TROCA = ["ajuda", "entrar", "limite"];
+export const RESULTADOS_TROCA = ["errado", "bloqueado", "expirado", "antigo_ok", "aplicada", "aguardando_identidade", "falta_antigo", "limite_envio", "falha_envio", "erro"];
+export const ETAPAS_COMPROVAR = ["pedido_recebido", "pedir_codigo", "entrar", "ajuda", "limite_diario"];
+export const DETALHE_MIN = 20, DETALHE_MAX = 500;
 export const DICA_VALIDA =/^[^\s@•<>"'&]•••@[^\s@•<>"'&]•••\.[a-z]+(\.[a-z]+)?$/u;   // a 1ª letra do usuário pode ser número, "_", "." etc.
 export function mascararEmail(valor) {
   const [u = "", d = ""] = String(valor || "").trim().toLowerCase().split("@");
@@ -61,6 +66,8 @@ function mensagem(err, contexto) {
   if (contexto === "entrar") return falhaDeConexao(err, status, txt) ? "Não foi possível conectar agora. Verifique a internet e tente de novo em alguns minutos." : "@ ou senha incorretos.";   // credencial inválida e falha de conexão têm mensagens diferentes (nenhuma revela se a conta existe)
   if (contexto === "recuperar") return "Não foi possível enviar agora. Tente de novo em alguns minutos.";
   if (contexto === "dica") return "Não foi possível mostrar a dica agora. Tente de novo em alguns minutos.";
+  if (contexto === "troca") return "Não foi possível seguir agora. Tente de novo em alguns minutos.";
+  if (contexto === "comprovar") return "Não foi possível enviar o seu pedido agora. Tente de novo em alguns minutos.";
   return "Não foi possível enviar o código agora. Tente de novo em alguns minutos.";
 }
 
@@ -118,6 +125,45 @@ export function criarJoinerAuth(client = supabase) {
     const { error } = await client.functions.invoke("pedir-ajuda-ativacao", { body: { cog: c, contato: ct.slice(0, 120), mensagem: String(texto || "").trim().slice(0, 500) } });
     if (error) return { erro: mensagem(error, "envio") };
     return { ok: true };
+  }
+
+  // "Quero mudar de e-mail": começa o pedido. via "email_antigo" = a pessoa ainda lê o e-mail cadastrado (informa @ + e-mail cadastrado); via "sem_acesso" = só o e-mail novo.
+  // A resposta SEMPRE traz um "token" de aparência igual para quem acertou ou errou os dados (o servidor não revela nada); a tela NUNCA afirma que um código foi enviado.
+  async function iniciarTrocaEmail({ cog, email, novoEmail, via }) {
+    const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase(), n = String(novoEmail || "").trim().toLowerCase();
+    if (!c) return { erro: "Informe o seu @." };
+    if (via !== "email_antigo" && via !== "sem_acesso") return { erro: "Escolha uma das opções." };
+    if (via === "email_antigo" && !emailValido(e)) return { erro: "Digite o e-mail que está no seu cadastro." };
+    if (!emailValido(n)) return { erro: "Digite um e-mail novo válido." };
+    if (via === "email_antigo" && e === n) return { erro: "O e-mail novo precisa ser diferente do e-mail do cadastro." };
+    const { data, error } = await client.functions.invoke("trocar-email-joiner", { body: { acao: "iniciar", cog: c, ...(via === "email_antigo" ? { email: e } : {}), novo_email: n, via } });
+    if (error) return { erro: mensagem(error, "troca") };
+    if (data && typeof data.proximo === "string" && PROXIMOS_TROCA.includes(data.proximo)) return { proximo: data.proximo };
+    if (!data || typeof data.token !== "string" || !/^[A-Za-z0-9_-]{8,600}\.[A-Za-z0-9_-]{8,200}$/.test(data.token)) return { erro: mensagem(null, "troca") };
+    return { token: data.token };
+  }
+  // confere um código ("antigo" ou "novo"). Devolve só um dos resultados conhecidos; nada de e-mail ou código volta do servidor (o e-mail novo vem mascarado).
+  async function confirmarTrocaEmail({ token, lado, codigo }) {
+    const cod = String(codigo || "").replace(/\s+/g, "");
+    if (!/^\d{6}$/.test(cod)) return { erro: "O código tem 6 números." };
+    if (lado !== "antigo" && lado !== "novo") return { erro: "Escolha uma das opções." };
+    const { data, error } = await client.functions.invoke("trocar-email-joiner", { body: { acao: "confirmar", token, lado, codigo: cod } });
+    if (error) return { erro: mensagem(error, "troca") };
+    if (!data || !RESULTADOS_TROCA.includes(data.resultado)) return { erro: mensagem(null, "troca") };
+    const novoMascarado = typeof data.novo_mascarado === "string" && DICA_VALIDA.test(data.novo_mascarado) ? data.novo_mascarado : "";
+    return { resultado: data.resultado, ...(novoMascarado ? { novoMascarado } : {}) };
+  }
+  // "Quero manter meu e-mail e comprovar meu cadastro": a pessoa descreve outra prova. NÃO envia código nem e-mail; só registra o pedido para a administração.
+  async function pedirComprovacao({ cog, email, detalhe }) {
+    const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase(), d = String(detalhe || "").trim();
+    if (!c) return { erro: "Informe o seu @." };
+    if (!emailValido(e)) return { erro: "Digite o e-mail que está no seu cadastro." };
+    if (d.length < DETALHE_MIN) return { erro: `Descreva a prova com pelo menos ${DETALHE_MIN} letras.` };
+    if (d.length > DETALHE_MAX) return { erro: `Use no máximo ${DETALHE_MAX} letras.` };
+    const { data, error } = await client.functions.invoke("comprovar-cadastro", { body: { cog: c, email: e, detalhe: d } });
+    if (error) return { erro: mensagem(error, "comprovar") };
+    if (!data || !ETAPAS_COMPROVAR.includes(data.etapa)) return { erro: mensagem(null, "comprovar") };
+    return { etapa: data.etapa };
   }
 
   // 2) confere o código, grava a senha (só depois de provar que controla o e-mail) e pede ao servidor o vínculo ao cadastro
@@ -213,7 +259,7 @@ export function criarJoinerAuth(client = supabase) {
     return { ok: true };
   }
 
-  return { estado, pedirCodigo, dicaEmail, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
+  return { estado, pedirCodigo, dicaEmail, iniciarTrocaEmail, confirmarTrocaEmail, pedirComprovacao, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
 }
 
 // Acesso simples (só @): o servidor devolve apenas a identidade mínima (cog, nome do site, foto) e se a conta está ativada.
