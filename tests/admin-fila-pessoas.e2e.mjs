@@ -25,7 +25,7 @@ async function nova(cen = {}) {
     trocas: [{ id: 5, joiner_id: 7, cog: "bia", via: "sem_acesso", desfecho: "sem_acesso", novo_dominio: "gmail.com", novo_verificado_em: "2026-11-09T15:00:00Z", criado_em: "2026-11-09T14:50:00Z" }],
     comps: [{ id: 6, joiner_id: 8, cog: "caio", via: "sem_perfil", desafio_validado: false, detalhe: HTML_PERIGOSO, itens: 4, criado_em: "2026-11-09T10:00:00Z", expira_em: "2026-11-16T10:00:00Z" }],
     solic: [{ id: 41, joiner_id: 9, cog: "duda", tipo: "ativacao_ajuda", valor_pedido: "whatsapp 11 90000-0000", mensagem: "não recebi o código", status: "aberta", criado_em: "2026-11-08T12:00:00Z" },
-      { id: 42, joiner_id: 13, cog: "contaativa", tipo: "ativacao_ajuda", valor_pedido: "outro.endereco@gmail.com", mensagem: "O código não chegou, tentei várias vezes", status: "aberta", criado_em: "2026-11-08T17:35:00Z" },
+      { id: 42, joiner_id: 13, cog: "contaativa", tipo: "ativacao_ajuda", valor_pedido: "outro.endereco@gmail.com", mensagem: cen.mensagemPagamento || "O código não chegou, tentei várias vezes", status: "aberta", criado_em: "2026-11-08T17:35:00Z" },
       { id: 43, joiner_id: 13, cog: "contaativa", tipo: "ativacao_sem_vinculo", valor_pedido: null, mensagem: "e-mail/@ do cadastro alterado depois da fotografia confiável", status: "aberta", criado_em: "2026-11-08T15:49:00Z" }],
   };
   const MOT = [{ joiner_id: 7, codigo: "sem_email_valido" }, { joiner_id: 8, codigo: "historico_troca_email", ultimo_registro: "2026-10-01", posterior_a_fotografia: false }, { joiner_id: 10, codigo: "email_compartilhado" }, { joiner_id: 11, codigo: "diverge_fotografia" }, { joiner_id: 12, codigo: "sem_email_valido" }];
@@ -39,6 +39,13 @@ async function nova(cen = {}) {
     if (rpc) {
       reg.rpc.push(rpc); const corpo = JSON.parse(req.postData() || "{}");
       if (rpc === "is_admin") return json(200, true);
+      if (rpc === "admin_conferencias_pessoas") {
+        if (cen.semConferencias) return json(404, { code: "PGRST202", message: "Could not find the function public.admin_conferencias_pessoas" });
+        const F = (id, o) => ({ joiner_id: id, cog: "", tem_conta: false, conta_criada_em: null, ultimo_login: null, bloqueado: false, email_valido: true, email_dominio: "exemplo.com", email_exclusivo: true, liberado: false, identidade_confirmada: false, itens: 0, pagamentos: 0, ...o });
+        const TODOS = [F(7, { email_valido: false, email_dominio: null, email_exclusivo: false, itens: 3 }), F(8, { itens: 4, identidade_confirmada: !!cen.identidade8 }), F(9, { liberado: true, itens: 2, pagamentos: 1 }), F(10, { email_exclusivo: false, itens: 1 }), F(11, { itens: 2 }),
+          F(12, { email_valido: false, email_dominio: null, email_exclusivo: false }), F(13, { tem_conta: true, conta_criada_em: "2026-11-08T22:09:00Z", ultimo_login: "2026-11-09T11:56:00Z", liberado: true, itens: 19, pagamentos: 2, email_dominio: "gmail.com" })];
+        return json(200, TODOS.filter(f => (corpo.p_ids || []).includes(f.joiner_id)));
+      }
       if (rpc === "admin_vinculos_a_confirmar") return json(200, est.aConfirmar);
       if (rpc === "admin_vinculos_motivos") return json(200, MOT);
       if (rpc === "admin_perfil_solicitacoes") return json(200, est.solic);
@@ -121,7 +128,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   const T = await nova(); const { page } = T; await abrirContas(page);
   const bia = await abrir(page, 7), t7 = await bia.innerText();
   ok(/Pedido em/.test(t7) && t7.includes("@gmail.com") && /verificado por código/.test(t7) && /NÃO tem acesso ao e-mail antigo/.test(t7), "troca: mostra o provedor do e-mail novo (verificado), o motivo e que não tem acesso ao antigo");
-  ok(/o que você precisa conferir/i.test(t7) && /só prova que a pessoa lê ESSE endereço, não QUEM ela é/.test(t7) && t7.includes("O que fazer:"), "troca: diz o que fazer e o que conferir");
+  ok(/o que você precisa conferir/i.test(t7) && /o código só provou que ela lê o e-mail novo/.test(t7) && /Falta você conferir/.test(t7), "troca: diz exatamente o que falta conferir (o código só provou que ela lê o e-mail novo)");
   ok(await bia.getByRole("button", { name: "Confirmar vínculo" }).count() === 0, "quem tem pedido de troca NÃO mostra 'Confirmar vínculo'");
   const caio = await abrir(page, 8), t8 = await caio.innerText();
   ok(/NÃO é prova/.test(t8) && t8.includes("4 item(ns) no cadastro") && t8.includes("Aprovar") && t8.includes("Recusar"), "comprovação: texto marcado como NÃO prova, itens e ações no mesmo lugar");
@@ -137,10 +144,10 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   const T = await nova(); const { page, reg } = T; await abrirContas(page);
   const topo = await linha(page, 13).innerText();
   ok(/Já tem conta/.test(topo) && /Já ativou a conta/.test(topo) && /Conta Ativa/.test(topo), "a linha mostra 'Já tem conta', o motivo 'Já ativou a conta' e o nome vindo do cadastro");
-  ok(!/0 itens/.test(topo) && /—/.test(topo), "itens desconhecidos aparecem como '—', nunca como '0 itens'");
+  ok(/19 itens/.test(topo) && !/0 itens/.test(topo.replace("19 itens", "")), "a linha mostra os 19 itens vindos das conferências automáticas");
   const sty = await abrir(page, 13), td = await sty.innerText();
   ok(!/sem e-mail válido/i.test(td) && /@gmail\.com/.test(td) && /já tem conta/.test(td), "o detalhe não diz 'sem e-mail válido' e mostra o provedor real");
-  ok(/JÁ TEM CONTA/.test(td) && /só de ativação/.test(td) && /Resolvido/.test(td), "o que conferir explica que ela já tem conta e que basta fechar os pedidos");
+  ok(/Já tem conta \(criada em 08\/11, entrou em 09\/11\)/.test(td) && /outro problema/.test(td) && /Resolvido/.test(td), "a orientação diz quando ela criou e entrou, e que outro problema mantém o pedido aberto");
   ok(await sty.getByRole("button", { name: "Confirmar vínculo" }).count() === 0, "quem já tem conta NÃO mostra 'Confirmar vínculo'");
   ok((await sty.getByTestId("fila-solicitacao").count()) === 2, "as duas solicitações aparecem, cada uma com seus botões");
   const raiz = page.getByTestId("admin-fila-pessoas");
@@ -201,7 +208,7 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok(reg.confirmar.length === 1 && reg.confirmar[0].p_joiner_id === 11 && /NÃO é o do cadastro/.test(await page.locator("body").innerText()) && await linha(page, 11).count() === 1, "e-mail errado: o servidor recusa, aparece o erro e a pessoa continua na lista");
   await fabi.getByLabel(/E-mail completo informado pela pessoa/).fill(" Fabi@Exemplo.com "); await conf.click(); await page.waitForTimeout(900);
   ok(reg.confirmar.length === 2 && reg.confirmar[1].p_nota === "WhatsApp em 09/11" && (await page.locator("body").innerText()).includes("Vínculo do @fabi confirmado") && await linha(page, 11).count() === 0, "e-mail certo: vínculo confirmado, mensagem de sucesso e a pessoa sai da lista");
-  const duda = await abrir(page, 9); await duda.getByRole("button", { name: "Resolvido" }).click(); await page.waitForTimeout(700);
+  const duda = await abrir(page, 9); await duda.getByRole("button", { name: "Resolvido", exact: true }).click(); await page.waitForTimeout(700);
   ok(reg.resolver.length === 1 && reg.resolver[0].p_id === 41 && reg.resolver[0].p_status === "resolvida" && reg.resolver[0].p_nota === "respondi por whatsapp", "resolver a solicitação pelo detalhe usa a mesma função de sempre e registra o que foi feito");
   await T.browser.close();
 }
@@ -222,6 +229,68 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "no celular não há rolagem lateral");
   await abrir(page, 8);
   ok(await page.evaluate(() => { const d = document.querySelector(".lc-det"); return !!d && d.scrollWidth <= d.clientWidth + 1; }), "no celular o detalhe cabe na largura (colunas empilhadas)");
+  await T.browser.close();
+}
+{ // atendimento orientado: cada pessoa recebe uma orientação objetiva, com as conferências técnicas já feitas
+  const T = await nova(); const { page } = T; await abrirContas(page);
+  const rotulos = {};
+  for (const id of [7, 8, 9, 10, 11, 12, 13]) rotulos[id] = (await page.getByTestId(`fila-pessoa-${id}`).getByTestId("lc-orient").innerText()).replace("→ ", "");
+  ok(JSON.stringify(rotulos) === JSON.stringify({ 7: "Precisa de análise", 8: "Precisa de análise", 9: "Pode ativar", 10: "Precisa corrigir o e-mail", 11: "Precisa de análise", 12: "Precisa corrigir o e-mail", 13: "Já tem conta" }), "a linha mostra a orientação de cada pessoa: " + JSON.stringify(rotulos));
+  const ativar = await abrir(page, 9);
+  ok(/Pode ativar/i.test(await ativar.getByTestId("fila-conferir").innerText()) && /pedir o código de novo/.test(await ativar.getByTestId("orientacao-passos").innerText()), "Pode ativar: orienta a pedir o código de novo");
+  ok(await ativar.getByTestId("conf-liberado").getAttribute("data-estado") === "sim" && await ativar.getByTestId("conf-conta").getAttribute("data-estado") === "nao" && await ativar.getByTestId("conf-bloqueado").getAttribute("data-estado") === "sim", "conferido automaticamente: liberada, sem conta, não bloqueada");
+  ok(await ativar.getByRole("button", { name: "Copiar mensagem para a pessoa" }).count() === 1 && await ativar.getByTestId("orientei").count() === 1, "oferece copiar a mensagem pronta e 'Orientei' (sem digitar nota)");
+  ok(await ativar.getByRole("button", { name: "Confirmar vínculo" }).count() === 0, "quem pode ativar não mostra 'Confirmar vínculo'");
+  const corrigir = await abrir(page, 12);
+  ok(/Precisa corrigir o e-mail/i.test(await corrigir.getByTestId("fila-conferir").innerText()) && /Quero mudar de e-mail/.test(await corrigir.getByTestId("orientacao-passos").innerText()) && await corrigir.getByTestId("conf-email").getAttribute("data-estado") === "nao", "e-mail ausente: encaminha para 'Quero mudar de e-mail'");
+  const compart = await abrir(page, 10);
+  ok(/compartilhado/.test(await compart.getByTestId("conf-email").innerText()), "e-mail compartilhado é identificado na conferência");
+  const analise = await abrir(page, 11), ta = await analise.getByTestId("fila-conferir").innerText();
+  ok(/O que você precisa conferir: Precisa de análise/i.test(ta) && /Falta você conferir/.test(ta) && /Reconhecer a pessoa por um canal já conhecido/.test(ta), "Precisa de análise: diz exatamente o que falta conferir");
+  ok(await analise.getByRole("button", { name: "Confirmar vínculo" }).count() === 1 && await analise.getByTestId("orientei").count() === 0, "análise: a ação é 'Confirmar vínculo' (decisão sua); não há 'Orientei'");
+  await T.browser.close();
+}
+{ // "Com prova": código verificado, descrição enviada e identidade conferida são coisas diferentes
+  const T = await nova(); const { page } = T; await abrirContas(page);
+  const bia = await abrir(page, 7);
+  ok(await bia.getByTestId("prova-codigo").getAttribute("data-estado") === "sim" && await bia.getByTestId("prova-descricao").getAttribute("data-estado") === "nao" && await bia.getByTestId("prova-identidade").getAttribute("data-estado") === "nao", "troca: código verificado = sim; descrição enviada = não; identidade conferida = ainda não");
+  ok(/não quem ela é/.test(await bia.getByTestId("prova-codigo").innerText()), "o código verificado explica que não prova quem é a pessoa");
+  const caio = await abrir(page, 8);
+  ok(await caio.getByTestId("prova-codigo").getAttribute("data-estado") === "nao" && await caio.getByTestId("prova-descricao").getAttribute("data-estado") === "sim" && await caio.getByTestId("prova-identidade").getAttribute("data-estado") === "nao", "comprovação: código verificado = não; descrição enviada = sim; identidade conferida = ainda não");
+  ok(/NÃO está validado/.test(await caio.getByTestId("prova-descricao").innerText()), "a descrição é marcada como NÃO validada");
+  await T.browser.close();
+  const U = await nova({ identidade8: true }); await abrirContas(U.page); const c2 = await abrir(U.page, 8);
+  ok(await c2.getByTestId("prova-identidade").getAttribute("data-estado") === "sim", "identidade conferida só vira 'sim' quando o banco diz que você já a conferiu");
+  await U.browser.close();
+}
+{ // quem já tem conta: orientação de login, nota pronta, e 'Orientei' fecha os pedidos sem digitar
+  const T = await nova(); const { page, reg, dialogos } = T; await abrirContas(page);
+  const sty = await abrir(page, 13);
+  ok(/Entre|entrar/.test(await sty.getByTestId("orientacao-passos").innerText()) && /Esqueci minha senha/.test(await sty.getByTestId("orientacao-passos").innerText()), "já tem conta: orienta login ou recuperação de senha");
+  ok(/criada em 08\/11, entrou em 09\/11/.test(await sty.getByTestId("conf-conta").innerText()) && /NÃO é o e-mail do cadastro/.test(await sty.getByTestId("conf-contato").innerText()), "mostra quando criou e entrou, e que o contato informado não é o e-mail do cadastro");
+  await sty.getByTestId("orientei").click(); await page.waitForTimeout(900);
+  ok(dialogos.some(d => d.tipo === "confirm" && /2 pedido\(s\)/.test(d.msg)) && !dialogos.some(d => d.tipo === "prompt"), "pede UMA confirmação e nenhuma digitação");
+  ok(reg.resolver.length === 2 && reg.resolver.every(r => r.p_status === "resolvida" && r.p_nota === "já tem conta; orientada a entrar ou recuperar a senha") && reg.resolver.map(r => r.p_id).sort().join() === "42,43", "os dois pedidos são resolvidos com a nota pronta (nada é fechado sem o clique)");
+  await T.browser.close();
+  const U = await nova({ mensagemPagamento: "Meu pagamento de outubro não aparece no site" }); await abrirContas(U.page); const s2 = await abrir(U.page, 13);
+  ok(await s2.getByTestId("orientei").count() === 0 && /cita item ou pagamento/.test(await s2.innerText()), "se um pedido cita item ou pagamento, NÃO oferece fechar em bloco e avisa: ter conta não resolve outro problema");
+  ok(await s2.getByRole("button", { name: "Resolvido", exact: true }).count() === 2 && U.reg.resolver.length === 0, "os botões 'Resolvido' individuais continuam; nada foi fechado");
+  await U.browser.close();
+}
+{ // filtro por orientação
+  const T = await nova(); const { page } = T; await abrirContas(page); const raiz = page.getByTestId("admin-fila-pessoas");
+  await raiz.getByLabel("Orientação").selectOption("ativar"); await page.waitForTimeout(200);
+  ok(JSON.stringify(await ids(page)) === JSON.stringify(["9"]), "filtro por orientação 'Pode ativar'");
+  await raiz.getByLabel("Orientação").selectOption("corrigir_email"); await page.waitForTimeout(200);
+  ok(JSON.stringify(await ids(page)) === JSON.stringify(["10", "12"]), "filtro por orientação 'Precisa corrigir o e-mail'");
+  await T.browser.close();
+}
+{ // sem a função das conferências automáticas: nada é inventado
+  const T = await nova({ semConferencias: true }); const { page } = T; await abrirContas(page);
+  ok(/Já tem conta/.test(await page.getByTestId("fila-pessoa-13").innerText()), "sem a função, quem tem conta ainda é identificado pela leitura direta");
+  const x = await abrir(page, 11);
+  ok(/Conferências não consultadas/i.test(await x.getByTestId("fila-conferir").innerText()) && await x.getByTestId("conferencias").count() === 0 && await x.getByTestId("orientei").count() === 0, "sem as conferências: diz que não foram consultadas, não mostra checklist nem 'Orientei'");
+  ok(!/0 itens/.test(await linha(page, 11).innerText()), "e não inventa '0 itens'");
   await T.browser.close();
 }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

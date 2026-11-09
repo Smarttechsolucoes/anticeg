@@ -2,7 +2,7 @@
 // Reúne, para cada pessoa, o pedido, a prova e a ação necessária, com o que a administradora precisa conferir. Quem anexou prova (troca de e-mail ou comprovação) vem primeiro.
 // Tudo passa por funções do banco que conferem "é administradora" no servidor (J6, J13, J14, J16). O texto escrito pela pessoa é mostrado como TEXTO (nunca HTML) e sempre marcado como "não é prova".
 import { useMemo, useState } from "react";
-import { acaoNecessaria, dia, diasDeEspera, hora, motivoTroca, MOTIVOS_LISTA, oQueConferir, SITUACOES } from "./filaPessoas.js";
+import { citaOutroProblema, conferencias, dia, diasDeEspera, hora, motivoTroca, MOTIVOS_LISTA, ORIENTACOES, provasDe, SITUACOES } from "./filaPessoas.js";
 
 const mono = "'DM Mono',monospace";
 const C = { fundo: "rgba(245,240,232,.04)", borda: "rgba(245,240,232,.12)", mudo: "rgba(245,240,232,.62)", texto: "#F5F0E8", destaque: "#FF5C1A", ok: "#BAFF39", erro: "#ff6b6b" };
@@ -22,7 +22,7 @@ const CSS = `
 .lc-arroba{font-weight:700;font-size:15px}.lc-nome{display:block;color:${C.mudo};font-size:13px}
 .lc-m{color:${C.mudo};font-size:13px}.lc-num{font-family:${mono};font-size:12px;color:${C.mudo};text-align:right;font-variant-numeric:tabular-nums}
 .lc-tag{font-family:${mono};font-size:11px;padding:3px 8px;border-radius:5px;display:inline-block;white-space:nowrap}
-.lc-conta{background:rgba(100,181,246,.16);color:#64B5F6}.lc-prova{background:rgba(186,255,57,.14);color:${C.ok}}.lc-ajuda{background:rgba(255,92,26,.16);color:#ff8a57}.lc-nada{background:rgba(245,240,232,.08);color:${C.mudo}}
+.lc-conta{background:rgba(100,181,246,.16);color:#64B5F6}.lc-orient{display:block;font-size:12px;color:${C.mudo};margin-top:3px}.lc-prova{background:rgba(186,255,57,.14);color:${C.ok}}.lc-ajuda{background:rgba(255,92,26,.16);color:#ff8a57}.lc-nada{background:rgba(245,240,232,.08);color:${C.mudo}}
 .lc-seta{color:${C.mudo};transition:transform .15s}.lc-linha.aberta .lc-seta{transform:rotate(90deg)}
 .lc-det{border-top:1px solid ${C.borda};padding:16px;display:grid;grid-template-columns:1.15fr 1fr;gap:22px;font-family:var(--sans,system-ui,sans-serif)}
 .lc-det h4{margin:0 0 8px;font:500 10px ${mono};letter-spacing:.1em;text-transform:uppercase;color:${C.mudo}}
@@ -150,12 +150,61 @@ function AcaoVinculo({ p, cliente, onFeito, onErro, recarregar }) {
   );
 }
 
+const COR_TIPO = { analise: "#ff8a57", ativar: C.ok, conta: "#64B5F6", corrigir_email: "#f0c040", desconhecido: C.mudo };
+
+function Marca({ estado }) {
+  const cor = estado === "sim" ? C.ok : estado === "nao" ? C.mudo : C.mudo;
+  return <span aria-hidden="true" style={{ color: cor }}>{estado === "sim" ? "✓" : estado === "nao" ? "–" : "?"}</span>;
+}
+
+function Orientacao({ p, onFeito, resolverSolicitacao }) {
+  const o = p.orientacao;
+  const [copiado, setCopiado] = useState(false);
+  const citam = p.solicitacoes.filter(citaOutroProblema);
+  const podeFechar = !!o.nota && p.solicitacoes.length > 0 && !citam.length;
+  async function copiar() {
+    try { await navigator.clipboard.writeText(o.mensagem); setCopiado(true); setTimeout(() => setCopiado(false), 2000); onFeito("Mensagem copiada. Cole no canal em que você fala com a pessoa."); }
+    catch { window.prompt("Copie a mensagem abaixo:", o.mensagem); }
+  }
+  async function orientei() {
+    if (!window.confirm(`Marcar ${p.solicitacoes.length} pedido(s) de @${p.cog} como RESOLVIDO(S) com a nota:\n“${o.nota}”?\n\nFaça isso só depois de ter orientado a pessoa.`)) return;
+    for (const x of p.solicitacoes) await resolverSolicitacao(x, "resolvida", o.nota);
+  }
+  return (
+    <div data-testid="fila-conferir" style={{ background: "rgba(255,92,26,.08)", border: `1px solid ${COR_TIPO[o.tipo]}`, borderRadius: 8, padding: "10px 14px" }}>
+      <h4 style={{ color: COR_TIPO[o.tipo], margin: 0 }}>{o.tipo === "analise" ? "O que você precisa conferir" : "Orientação"}: {o.rotulo}</h4>
+      <div data-testid="fila-acao" style={{ fontSize: 14, margin: "6px 0 0" }}>{o.resumo}</div>
+      {o.passos.length > 0 && <ul data-testid="orientacao-passos" style={{ margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.55, fontSize: 13, display: "grid", gap: 4 }}>{o.passos.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+      {o.falta.length > 0 && <div data-testid="orientacao-falta" style={{ marginTop: 8 }}><div style={{ fontSize: 12, color: C.mudo }}>Falta você conferir:</div><ul style={{ margin: "4px 0 0", paddingLeft: 18, lineHeight: 1.55, fontSize: 13, display: "grid", gap: 4 }}>{o.falta.map((t, i) => <li key={i}>{t}</li>)}</ul></div>}
+      {citam.length > 0 && o.nota && <div role="status" style={{ marginTop: 8, fontSize: 13, color: "#f0c040" }}>Um dos pedidos cita item ou pagamento: leia antes de fechar. Ter conta não resolve outro problema pendente.</div>}
+      {(o.mensagem || podeFechar) && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          {o.mensagem && <button type="button" style={botao(C.mudo)} onClick={copiar}>{copiado ? "Copiado ✓" : "Copiar mensagem para a pessoa"}</button>}
+          {podeFechar && <button type="button" data-testid="orientei" style={botao(C.ok)} onClick={orientei}>Orientei: marcar os pedidos como resolvidos</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarregar, resolverSolicitacao }) {
-  const conferir = oQueConferir(p);
-  const acaoVinculo = p.vinculo && !p.troca && !p.comprovacao && !p.tem_conta;
+  const acaoVinculo = p.vinculo && !p.troca && !p.comprovacao && !p.tem_conta && p.orientacao.tipo === "analise";
+  const checks = conferencias(p), prova = (p.troca || p.comprovacao) ? provasDe(p) : null;
   return (
     <div className="lc-det">
       <div>
+        {checks.length > 0 && (
+          <div data-testid="conferencias" style={{ marginBottom: 14 }}>
+            <h4>Conferido automaticamente</h4>
+            <ul className="lc-fatos">{checks.map(c => <li key={c.id} data-testid={`conf-${c.id}`} data-estado={c.estado}><Marca estado={c.estado} /><span>{c.texto}</span></li>)}</ul>
+          </div>
+        )}
+        {prova && (
+          <div data-testid="provas" style={{ marginBottom: 14 }}>
+            <h4>O que “com prova” significa aqui</h4>
+            <ul className="lc-fatos">{["codigo", "descricao", "identidade"].map(k => <li key={k} data-testid={`prova-${k}`} data-estado={prova[k].estado}><Marca estado={prova[k].estado} /><span>{prova[k].texto}</span></li>)}</ul>
+          </div>
+        )}
         <h4>O que aconteceu</h4>
         {p.troca && <FatosTroca t={p.troca} />}
         {p.comprovacao && <FatosComprovacao p={p} />}
@@ -173,15 +222,11 @@ function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarrega
         )}
         <ul className="lc-fatos" style={{ marginTop: 10, color: C.mudo }}>
           {motivos[p.joiner_id] && !p.tem_conta && <Facto marca="–">Por que não ativa sozinha: {rotuloMotivo(motivos[p.joiner_id])}</Facto>}
-          <Facto marca="–">{[p.itens == null ? "" : p.itens ? `${p.itens} item(ns) no cadastro` : "nenhum item no cadastro", p.dominio ? `e-mail do cadastro @${p.dominio}` : p.dominio === "" ? "sem e-mail válido" : "", p.tem_conta ? "já tem conta" : ""].filter(Boolean).join(" · ") || "cadastro sem mais informações aqui"}</Facto>
+          <Facto marca="–">{[p.itens == null ? "" : p.itens ? `${p.itens} item(ns) no cadastro` : "nenhum item no cadastro", p.fatos && p.fatos.pagamentos != null ? `${Number(p.fatos.pagamentos)} pagamento(s)` : "", p.dominio ? `e-mail do cadastro @${p.dominio}` : p.dominio === "" ? "sem e-mail válido" : "", p.tem_conta ? "já tem conta" : ""].filter(Boolean).join(" · ") || "cadastro sem mais informações aqui"}</Facto>
         </ul>
       </div>
       <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
-        <div data-testid="fila-conferir" style={{ background: "rgba(255,92,26,.1)", borderRadius: 8, padding: "10px 14px" }}>
-          <h4 style={{ color: "#ff8a57", margin: 0 }}>O que você precisa conferir</h4>
-          <div data-testid="fila-acao" style={{ fontSize: 13, margin: "6px 0 0", color: "#ff8a57" }}><b>O que fazer:</b> {acaoNecessaria(p)}</div>
-          <ul style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.55, fontSize: 13, display: "grid", gap: 4 }}>{conferir.map((t, i) => <li key={i}>{t}</li>)}</ul>
-        </div>
+        <Orientacao p={p} onFeito={onFeito} resolverSolicitacao={resolverSolicitacao} />
         {p.troca && <AcaoTroca p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />}
         {p.comprovacao && <AcaoComprovacao p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />}
         {acaoVinculo && <AcaoVinculo p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />}
@@ -193,11 +238,12 @@ function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarrega
 export default function ListaContas({ cliente, fila, motivos, rotuloMotivo, onFeito, onErro, recarregar, resolverSolicitacao, estilo }) {
   const [situacao, setSituacao] = useState("todos");
   const [motivo, setMotivo] = useState("");
+  const [orientacao, setOrientacao] = useState("todos");
   const [busca, setBusca] = useState("");
   const [aberta, setAberta] = useState(null);
   const [limite, setLimite] = useState(POR_PAGINA);
   const q = busca.trim().toLowerCase();
-  const base = useMemo(() => fila.filter(p => (!motivo || p.motivoChave === motivo) && (!q || `${p.cog} ${p.nome}`.toLowerCase().includes(q))), [fila, motivo, q]);
+  const base = useMemo(() => fila.filter(p => (!motivo || p.motivoChave === motivo) && (orientacao === "todos" || p.orientacao.tipo === orientacao) && (!q || `${p.cog} ${p.nome}`.toLowerCase().includes(q))), [fila, motivo, orientacao, q]);
   const contar = k => (k === "todos" ? base.length : base.filter(p => p.situacao === k).length);
   const visiveis = base.filter(p => situacao === "todos" || p.situacao === situacao);
   const mostradas = visiveis.slice(0, limite);
@@ -208,7 +254,7 @@ export default function ListaContas({ cliente, fila, motivos, rotuloMotivo, onFe
       <style>{CSS}</style>
       <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1.5px", textTransform: "uppercase", color: C.mudo }}>Pendências por pessoa ({fila.length}{comProva ? ` · ${comProva} com prova anexada` : ""})</div>
       <div style={{ color: C.mudo, fontSize: 13, lineHeight: 1.55, marginTop: 6, fontFamily: "var(--sans, system-ui, sans-serif)" }}>
-        Quem anexou prova aparece primeiro. Abra uma linha para ver o que a pessoa fez, o que conferir e os botões. Nada é aplicado sozinho: a identidade é sempre decisão sua.
+        Quem anexou prova aparece primeiro. As conferências técnicas (conta, e-mail, bloqueio, código) já vêm feitas. Abra uma linha para ver o que a pessoa fez, a orientação e os botões. Nada é aplicado sozinho: reconhecer a pessoa é sempre decisão sua.
       </div>
       <div style={{ display: "grid", gap: 10, margin: "14px 0", position: "sticky", top: 0, zIndex: 3, background: "#0e0e10", padding: "10px 0" }}>
         <div role="group" aria-label="Situação" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -221,6 +267,9 @@ export default function ListaContas({ cliente, fila, motivos, rotuloMotivo, onFe
           <select style={{ ...campo, flex: "0 1 240px" }} value={motivo} onChange={e => mudar(setMotivo)(e.target.value)} aria-label="Motivo do bloqueio">
             <option value="">Todos os motivos</option>
             {Object.entries(MOTIVOS_LISTA).map(([k, rotulo]) => <option key={k} value={k}>{rotulo}</option>)}
+          </select>
+          <select style={{ ...campo, flex: "0 1 240px" }} value={orientacao} onChange={e => mudar(setOrientacao)(e.target.value)} aria-label="Orientação">
+            {Object.entries(ORIENTACOES).map(([k, rotulo]) => <option key={k} value={k}>{k === "todos" ? "Todas as orientações" : `${rotulo} (${fila.filter(x => x.orientacao.tipo === k).length})`}</option>)}
           </select>
           <span data-testid="lc-contagem" aria-live="polite" style={{ color: C.mudo, fontSize: 12, fontFamily: mono }}>{mostradas.length} de {visiveis.length} pessoas</span>
         </div>
@@ -235,7 +284,7 @@ export default function ListaContas({ cliente, fila, motivos, rotuloMotivo, onFe
               <button type="button" className="lc-topo" aria-expanded={aberto} onClick={() => setAberta(aberto ? null : p.joiner_id)}>
                 <span><span className="lc-arroba">@{p.cog || "?"}</span><span className="lc-nome">{p.nome || "sem nome no site"}</span></span>
                 <span className="lc-m">{MOTIVOS_LISTA[p.motivoChave]}</span>
-                <span><span className={`lc-tag lc-${p.situacao}`}>{ROTULO_TAG[p.situacao]}</span></span>
+                <span><span className={`lc-tag lc-${p.situacao}`}>{ROTULO_TAG[p.situacao]}</span><span className="lc-orient" data-testid="lc-orient">→ {p.orientacao.rotulo}</span></span>
                 <span className="lc-num">{p.itens == null ? "—" : `${p.itens} itens`}</span>
                 <span className="lc-num">{dias == null ? "—" : dias === 0 ? "hoje" : `${dias} d`}</span>
                 <span className="lc-seta" aria-hidden="true">›</span>
