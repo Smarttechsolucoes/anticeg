@@ -289,15 +289,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         || (resPlanilha?.bruto?.codigo_gerado === false ? "A linha do joiner foi criada na MASTERLIST, mas ficou SEM código (NUM/ID)." : null);
       if (!aviso) return;
       console.error("planilha (novo_joiner):", resPlanilha);
-      const seguro = String(aviso).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
-      supabase.functions.invoke("send-email", {
-        body: {
-          to_email: "nandadomarketing@gmail.com",
-          to_name: "Nanda",
-          assunto: "⚠ Conferir planilha — novo joiner " + cog,
-          corpo: `<p style="font-family:monospace;font-size:13px;color:#FF5C1A;line-height:1.7">⚠ O joiner <b>${nome}</b> (@${cog}) foi cadastrado no site, mas a planilha precisa de atenção:</p><p style="font-family:monospace;font-size:12px;color:rgba(245,240,232,.8);line-height:1.8">${seguro}</p>`,
-        },
-      }).catch(() => {});
+      // evento do servidor (destinatário e texto fixos; o navegador só informa o @): substitui a função antiga send-email, que aceitava destinatário e conteúdo livres
+      supabase.functions.invoke("email-evento", { body: { evento: "planilha_atencao", joiner_cog: cog } }).catch(() => {});
     });
 
     // loga direto com a conta recém-criada

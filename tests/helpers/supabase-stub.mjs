@@ -6,7 +6,7 @@ const ident = n => { if (!/^[a-z_][a-z0-9_]*$/i.test(n)) throw new Error("identi
 
 class Consulta {
   constructor(tabela) { this.t = ident(tabela); this.op = "select"; this.cols = "*"; this.filtros = []; this.params = []; this.ord = ""; this.lim = ""; this.dados = null; this.conflito = null; }
-  select(c) { if (this.op === "select") this.cols = c; return this; }
+  select(c, opcoes) { if (this.op === "select") { this.cols = c; this.contar = opcoes?.count ? true : false; this.cabeca = opcoes?.head === true; } return this; }
   update(o) { this.op = "update"; this.dados = o; return this; }
   insert(a) { this.op = "insert"; this.dados = a; return this; }
   upsert(o, { onConflict } = {}) { this.op = "upsert"; this.dados = [o]; this.conflito = onConflict; return this; }
@@ -18,6 +18,7 @@ class Consulta {
   async executar() {
     const db = globalThis.__SYNC_DB; const where = this.filtros.length ? " where " + this.filtros.join(" and ") : "";
     try {
+      if (this.op === "select" && this.contar) { const n = Number((await db.query(`select count(*)::int as n from public.${this.t}${where}`, this.params)).rows[0].n); return { data: this.cabeca ? null : (await db.query(`select ${this.cols} from public.${this.t}${where}${this.ord}${this.lim}`, this.params)).rows, count: n, error: null }; }
       if (this.op === "select") return { data: (await db.query(`select ${this.cols} from public.${this.t}${where}${this.ord}${this.lim}`, this.params)).rows, error: null };
       if (this.op === "update") {
         const cs = Object.keys(this.dados); const ps = [...cs.map(c => this.dados[c]), ...this.params];

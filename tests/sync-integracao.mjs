@@ -86,11 +86,12 @@ const mudar = (pl, idl, campos) => pl.map(l => l.id === idl ? { ...l, ...campos 
   const o = rodar({ planilha: pl, aplicarS1: true });
   ok(!o.erro && por(o, 1)?.nome_do_item === "Item A" && existe(o, "Item G") === 1 && ids(o).length === 7 && /2 casados pelo código/.test(o.log), "código repetido na planilha: o código repetido NÃO casa (só ABC-2 e ABC-6 casaram); a linha 1 segue pela chave e a nova entra como NOVA, sem tomar o id da linha 1");
 }
-{ // 7) CEG diferente para o mesmo código: não casa (é outro item); entra como linha nova e a antiga segue a regra antiga/S1
-  const pl = mudar(planilhaBase(), "ABC-1", { ceg: "OUTRO CEG" });
-  const o = rodar({ planilha: pl, aplicarS1: true });
-  ok(!o.erro && o.masterlist.filter(x => x.ceg === "OUTRO CEG").length === 1 && /2 casados pelo código/.test(o.log) && (o.exclusoes || []).some(e => e.masterlist_id === 1), "CEG diferente: NÃO casa pelo código (só 2 casaram); entra como linha nova e a antiga sai pela regra antiga/S1, arquivada");
-  ok(!o.masterlist.some(x => x.id === 1 && x.ceg === "OUTRO CEG"), "CEG diferente: a linha 1 NÃO é reaproveitada para o outro CEG");
+{ // 7) CEG diferente para o mesmo código. Regra do PR #130 (04/11): se o dono e o NOME DO ITEM são os mesmos, a planilha só MOVEU a linha de CEG => continua a mesma linha (id preservado, CEG atualizado). CEG E item diferentes => é outro item.
+  const movida = rodar({ planilha: mudar(planilhaBase(), "ABC-1", { ceg: "OUTRO CEG" }), aplicarS1: true });
+  ok(!movida.erro && JSON.stringify(ids(movida)) === "[1,2,3,4,5,6]" && por(movida, 1)?.ceg === "OUTRO CEG" && /3 casados pelo código/.test(movida.log) && !(movida.exclusoes || []).some(e => e.masterlist_id === 1), "CEG movido (mesmo código, dono e item): a linha 1 CONTINUA a mesma (id preservado, CEG atualizado), sem linha nova e sem exclusão" + (movida.erro ? " | " + movida.erro : ""));
+  const outro = rodar({ planilha: mudar(planilhaBase(), "ABC-1", { ceg: "OUTRO CEG", item: "Item A OUTRO" }), aplicarS1: true });
+  ok(!outro.erro && outro.masterlist.filter(x => x.ceg === "OUTRO CEG").length === 1 && /2 casados pelo código/.test(outro.log) && (outro.exclusoes || []).some(e => e.masterlist_id === 1), "CEG E item diferentes: NÃO casa pelo código (só 2 casaram); entra como linha nova e a antiga sai pela regra antiga/S1, arquivada");
+  ok(!outro.masterlist.some(x => x.id === 1 && x.ceg === "OUTRO CEG"), "CEG e item diferentes: a linha 1 NÃO é reaproveitada para o outro CEG");
 }
 { // 8) linha com claim, com código, renomeada: id preservado, claim intacto
   const o = rodar({ planilha: mudar(planilhaBase(), "ABC-6", { item: "Item F RENOMEADO" }), aplicarS1: true });
