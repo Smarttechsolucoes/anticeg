@@ -15750,9 +15750,24 @@ function ClaimScoreboard() {
     return () => clearInterval(t);
   }, []);
 
+  // sem sessão de conta (visitante só com @) ou sem poder ler as tabelas: lê o QUADRO PÚBLICO (vagas e standby, SEM @ nem nome de ninguém)
+  async function carregarQuadroPublico() {
+    const { data, error } = await supabase.rpc("claim_quadro_publico");
+    if (error || !data || !Array.isArray(data.eventos)) return false;
+    setEventos(data.eventos);
+    const setsMap = {}; (data.sets || []).forEach(x => { (setsMap[x.evento_id] ||= []).push(x); }); setSets(setsMap);
+    const resMap = {}; (data.reservas || []).forEach(r => { (resMap[r.set_id] ||= []).push(r); }); setReservas(resMap);
+    const sbMap = {}; (data.standby || []).forEach(r => { (sbMap[r.evento_id] ||= []).push(r); }); setStandby(sbMap);
+    return true;
+  }
+
   async function fetchTudo() {
+    if (JOINERS_AUTH_ATIVO) {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session) { if (!(await carregarQuadroPublico())) setEventos([]); return; }
+    }
     const { data: evData } = await supabase.from("claim_eventos").select("*").eq("status","ativo").order("abertura");
-    if (!evData?.length) { setEventos([]); return; }
+    if (!evData?.length) { if (JOINERS_AUTH_ATIVO && await carregarQuadroPublico()) return; setEventos([]); return; }
     setEventos(evData);
     const evIds = evData.map(e => e.id);
     const { data: setsData } = await supabase.from("claim_sets").select("*").in("evento_id", evIds).neq("status","cancelado").order("numero");
@@ -15851,7 +15866,7 @@ function ClaimScoreboard() {
                           const res = resSet.find(r => r.membro === m);
                           const livre = !res;
                           const ehAdmin = res?.is_admin;
-                          const nome = res?.joiner_cog ? `@${res.joiner_cog}` : (res?.joiner_nome || "");
+                          const nome = res?.joiner_cog ? `@${res.joiner_cog}` : (res?.joiner_nome || "reservado");
                           return (
                             <div key={m} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid rgba(245,240,232,.03)" }}>
                               <span style={{ fontFamily:mono, fontSize:12, color: livre?"rgba(245,240,232,.4)":ehAdmin?"rgba(255,92,26,.6)":"var(--offwhite)" }}>{m}</span>
@@ -15879,7 +15894,7 @@ function ClaimScoreboard() {
                       return (
                         <div key={m} style={{ display:"flex", gap:8, padding:"3px 0", fontFamily:mono, fontSize:10 }}>
                           <span style={{ color:"rgba(245,240,232,.4)", minWidth:80 }}>{m}</span>
-                          <span style={{ color:"rgba(245,240,232,.6)" }}>{sb.map(r => r.joiner_cog ? `@${r.joiner_cog}` : r.joiner_nome).join(", ")}</span>
+                          <span style={{ color:"rgba(245,240,232,.6)" }}>{sb.map(r => r.joiner_cog ? `@${r.joiner_cog}` : (r.joiner_nome || "na fila")).join(", ")}</span>
                         </div>
                       );
                     })}
@@ -15914,8 +15929,25 @@ function ClaimAvisoPrivado({ o }) {
     </div>
   );
 }
+const CHAVE_ARROBA_CLAIM = "anticeg_claim_arroba";
 function ClaimPaginaCorpo({ user, logada }) {
+  const mono = "'DM Mono',monospace";
   const [claimPageTab, setClaimPageTab] = useState("claim");
+  // visitante (sem login nem cadastro): deixa o @ aqui mesmo, na aba CLAIM, e não perde a claim; o @ fica guardado só neste aparelho
+  const visitante = !!user?.guest;
+  const [arrobaSalvo, setArrobaSalvo] = useState(() => { try { return localStorage.getItem(CHAVE_ARROBA_CLAIM) || ""; } catch { return ""; } });
+  const [textoArroba, setTextoArroba] = useState("");
+  const [erroArroba, setErroArroba] = useState("");
+  const normalizarArroba = v => String(v || "").trim().replace(/^@+/, "");
+  function confirmarArroba(e) {
+    e.preventDefault();
+    const c = normalizarArroba(textoArroba);
+    if (!c || c.length > 64 || /[\s@]/.test(c)) { setErroArroba("Digite o seu @ (sem espaços)."); return; }
+    try { localStorage.setItem(CHAVE_ARROBA_CLAIM, c); } catch { /* sem armazenamento: vale só nesta visita */ }
+    setErroArroba(""); setArrobaSalvo(c);
+  }
+  function trocarArroba() { try { localStorage.removeItem(CHAVE_ARROBA_CLAIM); } catch { /* sem armazenamento */ } setArrobaSalvo(""); setTextoArroba(""); }
+  const usuarioClaim = visitante ? (arrobaSalvo ? { cog: arrobaSalvo, nome: arrobaSalvo } : null) : user;
   return (
       <div style={{ maxWidth:720, margin:"0 auto", padding:"24px 16px 80px" }}>
         <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
@@ -15942,53 +15974,33 @@ function ClaimPaginaCorpo({ user, logada }) {
           <div style={{ marginBottom:20, background:"rgba(239,68,68,.06)", border:"1px solid rgba(239,68,68,.3)", borderRadius:10, padding:"14px 16px", fontFamily:"'DM Mono',monospace", fontSize:11, color:"#ef4444", lineHeight:1.7 }}>
             <span style={{ fontWeight:700, marginRight:6 }}>⚠</span>Ao marcar sua claim você está ciente da compra do item, erros de marcação não serão aceitos. Caso aconteça, você pode pagar o item e realizar o repasse dentro da comunidade antigom.
           </div>
-          <ClaimPublicoPage user={user} />
+          {visitante && !usuarioClaim ? (
+            <form onSubmit={confirmarArroba} data-testid="claim-arroba-form" style={{ display:"grid", gap:12, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.3)", borderRadius:10, padding:"16px" }}>
+              <div style={{ fontFamily:mono, fontSize:12, fontWeight:700, color:"var(--laranja)" }}>Deixe o seu @ para fazer a claim</div>
+              <label style={{ display:"grid", gap:6, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>Seu @ (não precisa de senha nem de cadastro; assim você não perde a sua claim)
+                <input value={textoArroba} onChange={e => setTextoArroba(e.target.value)} aria-label="Seu @" placeholder="@seuusuario" style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:16 }} />
+              </label>
+              {erroArroba && <div role="alert" style={{ color:"var(--laranja)", fontFamily:mono, fontSize:11 }}>{erroArroba}</div>}
+              <button type="submit" style={{ background:"var(--laranja)", border:"none", borderRadius:8, padding:"12px", color:"#000", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer" }}>Continuar para as claims</button>
+            </form>
+          ) : (
+            <>
+              {visitante && (
+                <div data-testid="claim-arroba-barra" style={{ marginBottom:16, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)", display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+                  <span>Claim como <b style={{ color:"var(--offwhite)" }}>@{usuarioClaim.cog}</b></span>
+                  <button type="button" onClick={trocarArroba} style={{ background:"none", border:"none", color:"var(--laranja)", textDecoration:"underline", cursor:"pointer", fontFamily:mono, fontSize:11, padding:0 }}>trocar @</button>
+                </div>
+              )}
+              <ClaimPublicoPage user={usuarioClaim} />
+            </>
+          )}
         </>}
-        {claimPageTab === "ao-vivo" && (logada ? <ClaimScoreboard /> : <ClaimAvisoPrivado o="O quadro ao vivo" />)}
+        {claimPageTab === "ao-vivo" && <ClaimScoreboard />}
         {claimPageTab === "historico" && (logada ? <ClaimHistorico /> : <ClaimAvisoPrivado o="O histórico das suas claims" />)}
         {claimPageTab === "teste" && (logada ? <ClaimAreaTeste /> : <ClaimAvisoPrivado o="A área de teste" />)}
       </div>
   );
 }
-// visitante SEM @ no aparelho: pergunta o @ (guardado só neste aparelho) e libera a página de claims; não cria conta nem cadastro
-function ClaimSemUsuario() {
-  const mono = "'DM Mono',monospace";
-  const [cog, setCog] = useState(() => { try { return localStorage.getItem("anticeg_claim_arroba") || ""; } catch { return ""; } });
-  const [texto, setTexto] = useState("");
-  const [erro, setErro] = useState("");
-  const normalizar = v => String(v || "").trim().replace(/^@+/, "");
-  function confirmar(e) {
-    e.preventDefault();
-    const c = normalizar(texto);
-    if (!c || c.length > 64 || /[\s@]/.test(c)) { setErro("Digite o seu @ (sem espaços)."); return; }
-    try { localStorage.setItem("anticeg_claim_arroba", c); } catch { /* sem armazenamento: vale só nesta visita */ }
-    setErro(""); setCog(c);
-  }
-  function trocar() { try { localStorage.removeItem("anticeg_claim_arroba"); } catch { /* sem armazenamento */ } setCog(""); setTexto(""); }
-  if (!cog) return (
-    <div style={{ maxWidth:420, margin:"0 auto", padding:"48px 16px" }}>
-      <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>ANTICEG · LOJA</div>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, marginBottom:12 }}>CLAIMS</div>
-      <form onSubmit={confirmar} data-testid="claim-arroba-form" style={{ display:"grid", gap:12 }}>
-        <label style={{ display:"grid", gap:6, fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.6)" }}>Seu @ (não precisa de senha nem de cadastro)
-          <input value={texto} onChange={e => setTexto(e.target.value)} aria-label="Seu @" autoFocus placeholder="@seuusuario" style={{ background:"rgba(245,240,232,.06)", border:"1px solid rgba(245,240,232,.15)", borderRadius:8, padding:"12px 14px", color:"var(--offwhite)", fontFamily:mono, fontSize:16 }} />
-        </label>
-        {erro && <div role="alert" style={{ color:"var(--laranja)", fontFamily:mono, fontSize:11 }}>{erro}</div>}
-        <button type="submit" style={{ background:"var(--laranja)", border:"none", borderRadius:8, padding:"12px", color:"#000", fontFamily:mono, fontSize:12, fontWeight:700, cursor:"pointer" }}>Continuar para as claims</button>
-      </form>
-    </div>
-  );
-  return (
-    <div>
-      <div data-testid="claim-arroba-barra" style={{ maxWidth:720, margin:"0 auto", padding:"12px 16px 0", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.55)", display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
-        <span>Claim como <b style={{ color:"var(--offwhite)" }}>@{cog}</b></span>
-        <button type="button" onClick={trocar} style={{ background:"none", border:"none", color:"var(--laranja)", textDecoration:"underline", cursor:"pointer", fontFamily:mono, fontSize:11, padding:0 }}>trocar @</button>
-      </div>
-      <ClaimPaginaCorpo user={{ cog, nome: cog }} logada={false} />
-    </div>
-  );
-}
-
 function ClaimPublicoPage({ user }) {
   const mono = "'DM Mono',monospace";
   const SK8 = ["Bang Chan","Lee Know","Changbin","Hyunjin","Han","Felix","Seungmin","I.N"];
@@ -28101,6 +28113,8 @@ export default function App() {
   );
 }
 
+// quem abre /claim sem login nem cadastro entra como VISITANTE: vê o menu da comunidade e deixa o @ dentro da própria área de claim
+function visitanteDeClaim() { return JOINERS_AUTH_ATIVO && window.location.pathname === "/claim" ? { guest: true } : null; }
 function AppPrincipal() {
   const [page, setPage] = useState("landing");
   const [user, setUser] = useState(() => {
@@ -28110,17 +28124,17 @@ function AppPrincipal() {
         localStorage.removeItem("anticeg_user_v2");
         localStorage.removeItem("anticeg_session_at_v2");
         localStorage.setItem("anticeg_session_v", SESSION_VERSION);
-        return null;
+        return visitanteDeClaim();
       }
       const sessionAt = Number(localStorage.getItem("anticeg_session_at_v2") || 0);
       const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
       if (sessionAt && Date.now() - sessionAt > SEVEN_DAYS) {
         localStorage.removeItem("anticeg_user_v2");
         localStorage.removeItem("anticeg_session_at_v2");
-        return null;
+        return visitanteDeClaim();
       }
-      return JSON.parse(localStorage.getItem("anticeg_user_v2"));
-    } catch { return null; }
+      return JSON.parse(localStorage.getItem("anticeg_user_v2")) || visitanteDeClaim();
+    } catch { return visitanteDeClaim(); }
   });
   const [itens, setItens] = useState([]);
   useEffect(() => { if (PUSH_DESLIGADO) desligarPushNesteAparelho(); }, []);
@@ -28233,11 +28247,13 @@ function AppPrincipal() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  const [, setRotaVersao] = useState(0);   // sair de /claim para a aba que já estava marcada (ex.: Masterlist) não muda nenhum estado: força a tela a ser redesenhada pelo novo endereço
   function changeTab(newTab) {
     setTab(newTab);
     setInitCegSlug(null);
     setFormInterno(false);
     history.pushState(null, "", "/" + newTab);
+    setRotaVersao(v => v + 1);
   }
 
   useEffect(() => {
@@ -28480,7 +28496,6 @@ function AppPrincipal() {
   if (window.location.pathname === "/popup-this-that") return <ExigeContaAtiva><PopupThisAndThatPage /></ExigeContaAtiva>;
   // páginas públicas de cadastro: abrem para qualquer pessoa, mesmo já logada
   if (["/primeiro-acesso", "/recrutador"].includes(window.location.pathname)) return <LandingPage onLogin={handleLogin} onVerCegs={handleVerCegs} />;
-  if (JOINERS_AUTH_ATIVO && !user && window.location.pathname === "/claim") return <ClaimSemUsuario />;
   if (page === "landing" || !user) {
     if (window.location.pathname === "/claim") {
       return <ClaimGuestPage onLogin={handleLogin} />;
