@@ -21957,6 +21957,7 @@ const SKZOO_ONLINE_DEADLINE = new Date("2026-11-14T23:59:59-03:00");
 const SKZOO_ONLINE_PAGAR_ATE = "25/11";
 const SKZOO_ONLINE_ENVIO = "internacional";
 const SKZOO_ONLINE_PAGAMENTO = "ate-25-11";
+const SKZOO_ONLINE_GRUPO = "https://chat.whatsapp.com/LJaRrnSGfufDegEKa8jOqb";   // grupo da CEG no WhatsApp (botão na tela de pedido enviado)
 
 function PopupSkzooEaawPage() {
   const mono = "'DM Mono',monospace";
@@ -22106,8 +22107,6 @@ function PopupSkzooEaawPage() {
               </div>
               {[
                 "A pop-up é INTERNACIONAL, com envio direto, logo, haverá TAXA e FRETE INTERNACIONAL.",
-                "O valor de proxy service está adicionado no valor final.",
-                `O formulário fecha no dia 14/11 e o prazo de pagamento é até ${SKZOO_ONLINE_PAGAR_ATE}.`,
               ].map((r, i) => (
                 <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
                   <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
@@ -22326,6 +22325,11 @@ function PopupSkzooEaawPage() {
             <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", marginBottom:28 }}>
               Formulário aberto até 14/11 · pagamento até {SKZOO_ONLINE_PAGAR_ATE}
             </div>
+            <a href={SKZOO_ONLINE_GRUPO} target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-block", marginBottom:14, padding:"12px 24px", borderRadius:10, background:"rgba(37,211,102,.15)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:mono, fontSize:12, fontWeight:700, textDecoration:"none", letterSpacing:"0.5px" }}>
+              Entrar no grupo da CEG
+            </a>
+            <div />
             <button onClick={() => window.location.href = "/"} style={{ fontFamily:mono, fontSize:11, padding:"11px 28px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.25)", borderRadius:8, color:"var(--verde)", cursor:"pointer" }}>
               voltar ao início
             </button>
