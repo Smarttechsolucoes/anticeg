@@ -21986,15 +21986,8 @@ function PopupSkzooEaawPage() {
     { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$153", tag:"TEMPORARIAMENTE ESGOTADO" },
     { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$173" },
     { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$27"  },
-    { n:"14", nome:"Racing Jacket LATAM Ver.",                  preco:"R$755" },
-    { n:"15", nome:"T-Shirt LATAM Ver.",                        preco:"R$224" },
-    { n:"16", nome:"Baseball Jersey LATAM Ver.",                preco:"R$605" },
+    // itens 14, 15, 16 (Racing Jacket, T-Shirt, Baseball Jersey) e 18 a 22 (Travel Pouch, Mouse Pad, Luggage Strap, Ball Cap, Mini Lightbox) também saíram da versão ONLINE
     { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"18", nome:"SKZOO Travel Pouch",                        preco:"R$92", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"19", nome:"SKZOO Mouse Pad",                           preco:"R$57", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"20", nome:"SKZOO Luggage Strap",                       preco:"R$62"  },
-    { n:"21", nome:"Ball Cap",                                  preco:"R$183", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"22", nome:"SKZOO Mini Lightbox",                       preco:"R$153" },
   ];
 
   const ETAPAS = [
@@ -27083,7 +27076,7 @@ function PrevendaTab({ user }) {
       url: "/prevenda/popup-skzoo",
       img: `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo/capa.png`,
       tags: ["Formulário até 14/11", `Pagamento até ${SKZOO_ONLINE_PAGAR_ATE}`],
-      info: "15 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
+      info: "7 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
     },
     {
       key: "this-that-albuns",
