@@ -8636,6 +8636,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [wmagDzCount,       setWmagDzCount]       = useState(0);
   const [dazedHanCount,     setDazedHanCount]     = useState(0);
   const [bazaarVCount,      setBazaarVCount]      = useState(0);
+  const [skzooOnlineCount,  setSkzooOnlineCount]  = useState(0);
   const [esqHjCount,        setEsqHjCount]        = useState(0);
   const [smolmerchCount,    setSmolmerchCount]    = useState(0);
   const [murceCount,        setMurceCount]        = useState(0);
@@ -9006,6 +9007,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setDazedHanCount(count); });
     supabase.from("pedidos_bazaar_v").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setBazaarVCount(count); });
+    supabase.from("pedidos_skzoo_rio").select("id", { count: "exact", head: true }).eq("envio", SKZOO_ONLINE_ENVIO).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setSkzooOnlineCount(count); });
     supabase.from("pedidos_esquire_hyunjin").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setEsqHjCount(count); });
     supabase.from("pedidos_smolmerch").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
@@ -9370,7 +9373,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + dazedHanCount + bazaarVCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + suiatsuCount + smolmerchCount + murceCount + diconCount + promoMurceCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + dazedHanCount + bazaarVCount + skzooOnlineCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + suiatsuCount + smolmerchCount + murceCount + diconCount + promoMurceCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -10156,12 +10159,12 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","wmag-leeknow","dazed-seungmin","dazed-han","bazaar-v","esquire-hyunjin","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","suiatsu-admin","smolmerch","murce-itens","dicon-origin","promo-murce-50"].includes(adminMainTab) && (
+      {["revista","wmag","wmag-leeknow","dazed-seungmin","dazed-han","bazaar-v","esquire-hyunjin","popup","bazaar-in","skzoo-rio","skzoo-online","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","suiatsu-admin","smolmerch","murce-itens","dicon-origin","promo-murce-50"].includes(adminMainTab) && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
             ← Todos os drops
           </button>
-            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "dazed-han":"Dazed & Confused Han", "bazaar-v":"Bazaar V","esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "suiatsu-admin":SUIATSU_CFG.titulo, "smolmerch":"Smol Merch", "murce-itens":"Murcekaly Itens", "dicon-origin":"DICON x D'FESTA THE ORIGIN", "promo-murce-50":"PROMO-MURCE-50" }[adminMainTab]} />
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "dazed-han":"Dazed & Confused Han", "bazaar-v":"Bazaar V","esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "skzoo-online":"SKZOO EAAW Online","lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "suiatsu-admin":SUIATSU_CFG.titulo, "smolmerch":"Smol Merch", "murce-itens":"Murcekaly Itens", "dicon-origin":"DICON x D'FESTA THE ORIGIN", "promo-murce-50":"PROMO-MURCE-50" }[adminMainTab]} />
         </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
@@ -10173,7 +10176,8 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "esquire-hyunjin" && <AdminWMag cfg={ESQUIRE_HJ_CFG} onCountChange={setEsqHjCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
-      {adminMainTab === "skzoo-rio"   && <AdminSkzooRio />}
+      {adminMainTab === "skzoo-rio"   && <AdminSkzooRio modo="rio" />}
+      {adminMainTab === "skzoo-online" && <AdminSkzooRio modo="online" onCountChange={setSkzooOnlineCount} />}
       {adminMainTab === "lightstick"  && <AdminLightstick onCountChange={setLightstickCount} />}
       {adminMainTab === "popcorn-sleeve" && <AdminPopcornSleeve onCountChange={setPopcornSleeveCount} />}
       {adminMainTab === "singba" && <AdminSingba onCountChange={setSingbaCount} />}
@@ -10188,7 +10192,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "murce-itens"       && <AdminSmolMerch cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} onCountChange={setMurceCount} />}
       {adminMainTab === "dicon-origin"      && <AdminSmolMerch cfg={DICON_CFG} produtos={DICON_GRUPOS} onCountChange={setDiconCount} />}
       {adminMainTab === "promo-murce-50"    && <AdminSmolMerch cfg={PROMO_MURCE_50_CFG} produtos={PROMO_MURCE_50_PRODUTOS} fotoDe={fotoPm} onCountChange={setPromoMurceCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} bazaarVCount={bazaarVCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} smolmerchCount={smolmerchCount} murceCount={murceCount} diconCount={diconCount} promoMurceCount={promoMurceCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} bazaarVCount={bazaarVCount} skzooOnlineCount={skzooOnlineCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} smolmerchCount={smolmerchCount} murceCount={murceCount} diconCount={diconCount} promoMurceCount={promoMurceCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -24660,20 +24664,29 @@ function AdminClaims({ pendentesInit, onPendentesChange }) {
   );
 }
 
-function AdminSkzooRio() {
+// Painel do SKZOO EAAW. A mesma tabela (pedidos_skzoo_rio) guarda os dois formulários; aqui eles aparecem em duas visões:
+//   modo "rio"    = pop-up do Rio (pedidos antigos, com brinde de photocard);
+//   modo "online" = versão ONLINE (pedidos com envio "internacional"), com o quadro de itens para comprar.
+function AdminSkzooRio({ modo = "rio", onCountChange }) {
+  const online = modo === "online";
   const mono = "'DM Mono',monospace";
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pcsAberto, setPcsAberto] = useState(false);
+  const [itensAberto, setItensAberto] = useState(true);
   const corStatus = s => s === "confirmado" ? "#4ade80" : s === "cancelado" ? "#ff6b6b" : "rgba(255,92,26,.8)";
 
   function carregar() {
     setLoading(true);
     supabase.from("pedidos_skzoo_rio").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setPedidos(data); setLoading(false); });
+      .then(({ data }) => { if (data) setPedidos(data.filter(p => (p.envio === SKZOO_ONLINE_ENVIO) === online)); setLoading(false); });
   }
 
   useEffect(() => { carregar(); }, []);
+  // contador de pendentes da aba "Todos os drops" (só a visão ONLINE tem contador)
+  useEffect(() => {
+    if (online && !loading) onCountChange?.(pedidos.filter(p => p.status !== "confirmado" && p.status !== "cancelado").length);
+  }, [pedidos, loading]);
 
   async function atualizar(id, novoStatus) {
     await supabase.from("pedidos_skzoo_rio").update({ status: novoStatus }).eq("id", id);
@@ -24703,6 +24716,23 @@ function AdminSkzooRio() {
   const envioLabel = e => e === "retirada-rio" ? "Retirada · Rio 09/09" : e === "uber-flash" ? "Uber Flash" : e === "envio-nacional" ? "Envio Nacional" : e === SKZOO_ONLINE_ENVIO ? "Envio internacional direto" : e || "—";
   const prazoLabel = n => n === "01" ? "até 13/09" : n === "02" ? "até 05/10" : n === SKZOO_ONLINE_PAGAMENTO ? `até ${SKZOO_ONLINE_PAGAR_ATE}` : "—";
 
+  // Itens para comprar (visão ONLINE): total por item e por opção (SKZOO ou cidade), sem contar cancelados, com a parte já confirmada
+  const resumoItens = (() => {
+    const m = new Map();
+    for (const p of pedidos) {
+      if (p.status === "cancelado") continue;
+      for (const it of (Array.isArray(p.itens) ? p.itens : [])) {
+        const q = Number(it.qtd || 1), chave = `${it.n}|${it.skzoo || ""}`;
+        const a = m.get(chave) || { n: String(it.n), nome: it.nome, opcao: it.skzoo || "", qtd: 0, conf: 0 };
+        a.qtd += q; if (p.status === "confirmado") a.conf += q;
+        m.set(chave, a);
+      }
+    }
+    return [...m.values()].sort((a, b) => a.n.localeCompare(b.n) || a.opcao.localeCompare(b.opcao));
+  })();
+  const totalUnidades = resumoItens.reduce((s, a) => s + a.qtd, 0);
+  const totalConfirmadas = resumoItens.reduce((s, a) => s + a.conf, 0);
+
   const Stat = ({ label, val, color, sub }) => (
     <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", flex:1, minWidth:120 }}>
       <div style={{ fontFamily:mono, fontSize:8, letterSpacing:"1.5px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>{label}</div>
@@ -24715,7 +24745,7 @@ function AdminSkzooRio() {
     <div style={{ padding:"32px 24px", maxWidth:800 }}>
       <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:4 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>SKZOO EAAW · RIO + ONLINE</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>{online ? "SKZOO EAAW · ONLINE" : "SKZOO EAAW · RIO"}</div>
         <button onClick={carregar} disabled={loading} style={{ fontFamily:mono, fontSize:10, padding:"6px 14px", borderRadius:7, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color: loading ? "rgba(245,240,232,.25)" : "rgba(245,240,232,.6)", cursor: loading ? "not-allowed" : "pointer", letterSpacing:"1px" }}>
           {loading ? "..." : "↻ atualizar"}
         </button>
@@ -24727,11 +24757,43 @@ function AdminSkzooRio() {
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:16 }}>
             {Stat({ label: "TOTAL DE PEDIDOS", val: ativos.length, sub: `${pedidos.length} total incl. cancelados` })}
             {Stat({ label: "VALOR TOTAL", val: fmtR(totalValor), color: "var(--laranja)", sub: "apenas confirmados" })}
-            {Stat({ label: "PHOTOCARDS TOTAIS", val: `🃏 ${pcsTotal}`, color: "var(--lilas)", sub: "apenas confirmados" })}
+            {online
+              ? Stat({ label: "PENDENTES", val: ativos.filter(p => p.status !== "confirmado").length, color: "rgba(255,92,26,.9)", sub: "aguardando confirmação" })
+              : Stat({ label: "PHOTOCARDS TOTAIS", val: `🃏 ${pcsTotal}`, color: "var(--lilas)", sub: "apenas confirmados" })}
           </div>
 
+          {/* Itens para comprar (só ONLINE) — colapsível */}
+          {online && (
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, marginBottom:24, overflow:"hidden" }}>
+              <button onClick={() => setItensAberto(v => !v)} style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", background:"none", border:"none", cursor:"pointer" }}>
+                <span style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.55)" }}>ITENS PARA COMPRAR ({totalUnidades} un · {totalConfirmadas} confirmadas · sem cancelados)</span>
+                <span style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", display:"inline-block", transform: itensAberto ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+              </button>
+              {itensAberto && (
+                resumoItens.length === 0
+                  ? <div style={{ padding:"0 16px 14px", fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.3)" }}>Nenhum item pedido ainda.</div>
+                  : (
+                    <div style={{ padding:"0 16px 14px" }}>
+                      <div style={{ display:"flex", gap:8, fontFamily:mono, fontSize:8, letterSpacing:"1px", color:"rgba(245,240,232,.3)", padding:"4px 0" }}>
+                        <span style={{ flex:1 }}>ITEM · OPÇÃO</span><span style={{ width:64, textAlign:"right" }}>PEDIDOS</span><span style={{ width:80, textAlign:"right" }}>CONFIRMADOS</span>
+                      </div>
+                      {resumoItens.map(a => (
+                        <div key={a.n + "|" + a.opcao} style={{ display:"flex", gap:8, alignItems:"baseline", padding:"6px 0", borderTop:"1px solid rgba(245,240,232,.06)", fontFamily:mono, fontSize:11 }}>
+                          <span style={{ flex:1, color:"var(--offwhite)" }}>
+                            <span style={{ color:"rgba(245,240,232,.3)", marginRight:6 }}>#{a.n}</span>{a.nome}{a.opcao && <span style={{ color:"rgba(245,240,232,.45)" }}> · {a.opcao}</span>}
+                          </span>
+                          <span style={{ width:64, textAlign:"right", fontWeight:700, color:"var(--laranja)" }}>{a.qtd}</span>
+                          <span style={{ width:80, textAlign:"right", color: a.conf > 0 ? "#4ade80" : "rgba(245,240,232,.25)" }}>{a.conf}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+              )}
+            </div>
+          )}
+
           {/* Breakdown de photocards por joiner — colapsível */}
-          {pcsTotal > 0 && (
+          {!online && pcsTotal > 0 && (
             <div style={{ background:"rgba(201,168,240,.05)", border:"1px solid rgba(201,168,240,.15)", borderRadius:10, marginBottom:24, overflow:"hidden" }}>
               <button onClick={() => setPcsAberto(v => !v)} style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", background:"none", border:"none", cursor:"pointer" }}>
                 <span style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"var(--lilas)", opacity:.7 }}>PHOTOCARDS POR JOINER ({joinersComPcs.length} joiners · {joinersComPcs.reduce((s,[,v])=>s+v,0)} pcs total)</span>
@@ -25619,7 +25681,7 @@ function AdminRecrutadores() {
 }
 
 // ── Admin Todos os Drops ────────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, dazedHanCount, bazaarVCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, suiatsuCount, smolmerchCount, murceCount, diconCount, promoMurceCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, dazedHanCount, bazaarVCount, skzooOnlineCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, suiatsuCount, smolmerchCount, murceCount, diconCount, promoMurceCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const agora = new Date();
   const DROPS = [
@@ -25636,7 +25698,8 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"murce-itens",     label:"Murcekaly Itens",     icon:"◈", count:murceCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= PHOTOCARD_CFG.deadline },
     { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:POPUP_WEEKS.some(w => agora <= w.deadline) },
     { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= BAZAAR_IN_DEADLINE },
-    { id:"skzoo-rio",        label:"SKZOO EAAW Online",   icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SKZOO_ONLINE_DEADLINE },
+    { id:"skzoo-online",     label:"SKZOO EAAW Online",   icon:"◈", count:skzooOnlineCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SKZOO_ONLINE_DEADLINE },
+    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:false },
     { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-09-08T12:00:00-03:00") },
     { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" , aberto:agora <= POPCORN_SLEEVE_DEADLINE },
     { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SINGBA_DEADLINE },
