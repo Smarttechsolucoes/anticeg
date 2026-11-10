@@ -1,6 +1,11 @@
 -- Pedidos do formulário BAZAAR V (/bazaar-v) — Harper's Bazaar Korea, dezembro/2026, 6 versões (A a F).
--- Rode uma vez no SQL Editor do Supabase ANTES de publicar o formulário.
 -- Pedidos até 13/11, pagamento até 20/11, envio internacional previsto 15/12. R$ 70 por unidade.
+--
+-- ATENÇÃO (corrigido em 10/11/2026): a primeira versão deste arquivo criava regras abertas ao público (select/update/insert para qualquer visitante),
+-- como nos drops antigos. Em produção as tabelas de pedidos são fechadas e o pedido é criado pela função pedido_loja_criar(), que só aceita as
+-- tabelas da lista dela. Por isso o formulário dava "Não foi possível registrar o pedido".
+-- Se a tabela ainda não existe: rode ESTE arquivo e DEPOIS pedidos_bazaar_v_liberar_e_fechar.sql (acrescenta a tabela à lista da função e cria as regras seguras).
+-- Se a tabela já existe com as regras antigas: rode só pedidos_bazaar_v_liberar_e_fechar.sql.
 
 create table if not exists pedidos_bazaar_v (
   id              bigserial primary key,
@@ -21,15 +26,5 @@ create table if not exists pedidos_bazaar_v (
   created_at      timestamptz not null default now()
 );
 
+-- Segurança por linha ligada e SEM regra nenhuma: a tabela nasce fechada. As regras (administradora e a própria pessoa) vêm no outro arquivo.
 alter table pedidos_bazaar_v enable row level security;
-
--- Qualquer pessoa pode inserir (formulário público)
-create policy "insert_publico" on pedidos_bazaar_v
-  for insert with check (true);
-
--- Painel admin lê e atualiza com a chave anon, como nos outros drops
-create policy "select_todos" on pedidos_bazaar_v
-  for select using (true);
-
-create policy "update_todos" on pedidos_bazaar_v
-  for update using (true);
