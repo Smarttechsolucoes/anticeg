@@ -8635,6 +8635,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [wmagLkCount,       setWmagLkCount]       = useState(0);
   const [wmagDzCount,       setWmagDzCount]       = useState(0);
   const [dazedHanCount,     setDazedHanCount]     = useState(0);
+  const [bazaarVCount,      setBazaarVCount]      = useState(0);
   const [esqHjCount,        setEsqHjCount]        = useState(0);
   const [smolmerchCount,    setSmolmerchCount]    = useState(0);
   const [murceCount,        setMurceCount]        = useState(0);
@@ -9003,6 +9004,8 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count != null) setWmagDzCount(count); });
     supabase.from("pedidos_dazed_han").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setDazedHanCount(count); });
+    supabase.from("pedidos_bazaar_v").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
+      .then(({ count }) => { if (count != null) setBazaarVCount(count); });
     supabase.from("pedidos_esquire_hyunjin").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
       .then(({ count }) => { if (count != null) setEsqHjCount(count); });
     supabase.from("pedidos_smolmerch").select("id", { count: "exact", head: true }).neq("status", "confirmado").neq("status", "cancelado")
@@ -9367,7 +9370,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + dazedHanCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + suiatsuCount + smolmerchCount + murceCount + diconCount + promoMurceCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + dazedHanCount + bazaarVCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + suiatsuCount + smolmerchCount + murceCount + diconCount + promoMurceCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -10153,12 +10156,12 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","wmag-leeknow","dazed-seungmin","dazed-han","esquire-hyunjin","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","suiatsu-admin","smolmerch","murce-itens","dicon-origin","promo-murce-50"].includes(adminMainTab) && (
+      {["revista","wmag","wmag-leeknow","dazed-seungmin","dazed-han","bazaar-v","esquire-hyunjin","popup","bazaar-in","skzoo-rio","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","suiatsu-admin","smolmerch","murce-itens","dicon-origin","promo-murce-50"].includes(adminMainTab) && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
             ← Todos os drops
           </button>
-            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "dazed-han":"Dazed & Confused Han", "esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "suiatsu-admin":SUIATSU_CFG.titulo, "smolmerch":"Smol Merch", "murce-itens":"Murcekaly Itens", "dicon-origin":"DICON x D'FESTA THE ORIGIN", "promo-murce-50":"PROMO-MURCE-50" }[adminMainTab]} />
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "dazed-han":"Dazed & Confused Han", "bazaar-v":"Bazaar V","esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "suiatsu-admin":SUIATSU_CFG.titulo, "smolmerch":"Smol Merch", "murce-itens":"Murcekaly Itens", "dicon-origin":"DICON x D'FESTA THE ORIGIN", "promo-murce-50":"PROMO-MURCE-50" }[adminMainTab]} />
         </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
@@ -10166,6 +10169,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "wmag-leeknow" && <AdminWMag  cfg={WMAG_LK_CFG} onCountChange={setWmagLkCount} />}
       {adminMainTab === "dazed-seungmin" && <AdminWMag cfg={DAZED_SM_CFG} onCountChange={setWmagDzCount} />}
       {adminMainTab === "dazed-han" && <AdminWMag cfg={DAZED_HAN_CFG} onCountChange={setDazedHanCount} />}
+      {adminMainTab === "bazaar-v" && <AdminWMag cfg={BAZAAR_V_CFG} onCountChange={setBazaarVCount} />}
       {adminMainTab === "esquire-hyunjin" && <AdminWMag cfg={ESQUIRE_HJ_CFG} onCountChange={setEsqHjCount} />}
       {adminMainTab === "popup"     && <AdminPopup    onCountChange={setPopupCount} />}
       {adminMainTab === "bazaar-in" && <AdminBazaarIn onCountChange={setBazaarInCount} />}
@@ -10184,7 +10188,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "murce-itens"       && <AdminSmolMerch cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} onCountChange={setMurceCount} />}
       {adminMainTab === "dicon-origin"      && <AdminSmolMerch cfg={DICON_CFG} produtos={DICON_GRUPOS} onCountChange={setDiconCount} />}
       {adminMainTab === "promo-murce-50"    && <AdminSmolMerch cfg={PROMO_MURCE_50_CFG} produtos={PROMO_MURCE_50_PRODUTOS} fotoDe={fotoPm} onCountChange={setPromoMurceCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} smolmerchCount={smolmerchCount} murceCount={murceCount} diconCount={diconCount} promoMurceCount={promoMurceCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} bazaarVCount={bazaarVCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} smolmerchCount={smolmerchCount} murceCount={murceCount} diconCount={diconCount} promoMurceCount={promoMurceCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -22968,6 +22972,31 @@ const DAZED_HAN_CFG = {
   dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
 };
 
+// BAZAAR V (Harper's Bazaar Korea, dezembro/2026) — 6 versões; pedidos até 13/11, pagamento até 20/11, envio internacional 15/12
+const BAZAAR_V_CAPAS = [
+  { id:"a", label:"Versão A", img:"https://image.aladin.co.kr/product/40651/26/cover500/k742131143_1.jpg" },
+  { id:"b", label:"Versão B", img:"https://image.aladin.co.kr/product/40651/28/cover500/k102131144_1.jpg" },
+  { id:"c", label:"Versão C", img:"https://image.aladin.co.kr/product/40651/27/cover500/k882131143_1.jpg" },
+  { id:"d", label:"Versão D", img:"https://image.aladin.co.kr/product/40651/27/cover500/k902131144_1.jpg" },
+  { id:"e", label:"Versão E", img:"https://image.aladin.co.kr/product/40651/27/cover500/k922131144_1.jpg" },
+  { id:"f", label:"Versão F", img:"https://image.aladin.co.kr/product/40651/27/cover500/k802131143_1.jpg" },
+];
+const BAZAAR_V_CFG = {
+  tabela: "pedidos_bazaar_v", pasta: "bazaar-v", produto: "BAZAAR V",
+  titulo: "BAZAAR", sub: "V", deadline: new Date("2026-11-13T23:59:59-03:00"), pedidosAte: "13/11/2026",
+  preco: 70, capas: BAZAAR_V_CAPAS, pagarAte: "20/11",
+  avisos: [
+    <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
+    <>Envio internacional previsto para <strong>15 de dezembro</strong>.</>,
+    <>Pagamento até o dia <strong>20 de novembro</strong>.</>,
+    <>Formulário fecha no dia <strong>13 de novembro</strong>.</>,
+    <>O valor do frete internacional será <strong>disponibilizado com prazo para pagamento</strong>.</>,
+    <>Não terá <strong>taxa da Receita Federal</strong> nesse item.</>,
+    <>A revista <strong>pode ser pesada</strong>.</>,
+  ],
+  dica: <>Tenha em mente que a revista pode ser pesada — o frete internacional pode ser alto.</>,
+};
+
 // ESQUIRE HYUNJIN — pedidos até 20/10, pagamento até 25/10
 const ESQUIRE_HJ_CAPAS = [
   { id:"a", label:"Versão A", img:"https://pbs.twimg.com/media/HUqe__XbAAAxuBl?format=jpg&name=large" },
@@ -22995,7 +23024,8 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
   const [nome,       setNome]       = useState("");
   const [email,      setEmail]      = useState("");
   const [social,     setSocial]     = useState("");
-  const [qtds,       setQtds]       = useState({ a:0, b:0, c:0 });
+  // uma quantidade por versão da configuração (3 nas revistas antigas, 6 na Bazaar V)
+  const [qtds,       setQtds]       = useState(() => Object.fromEntries(WMAG_CAPAS.map(c => [c.id, 0])));
   const [pagamento,  setPagamento]  = useState("pix");
   const [comprovante,setComprovante]= useState(null);
   const [pixCopiado, setPixCopiado] = useState(false);
@@ -23018,7 +23048,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     } catch {}
   }, []);
 
-  const qtdTotal = qtds.a + qtds.b + qtds.c;
+  const qtdTotal = WMAG_CAPAS.reduce((s, c) => s + (qtds[c.id] || 0), 0);
   const total    = qtdTotal * WMAG_PRECO;
 
   function Qty({ id }) {
@@ -23053,7 +23083,7 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
     const statusPedido = pagamento === "depois" ? "pendente" : pagamento === "pix" ? "aguardando" : "cartao_whatsapp";
     const { data, error } = await criarPedidoLoja(cfg.tabela, {
       nome: nome.trim(), email: email.trim(), social: social.trim() || null,
-      capa_a: qtds.a, capa_b: qtds.b, capa_c: qtds.c,
+      ...Object.fromEntries(WMAG_CAPAS.map(c => [`capa_${c.id}`, qtds[c.id] || 0])),
       qtd_total: qtdTotal, valor_total: total,
       forma_pagamento: pagamento, comprovante_url: comprovanteUrl,
       status: statusPedido,
@@ -23095,9 +23125,9 @@ function WMagFormPage({ cfg = WMAG_HJ_CFG }) {
         )}
 
         {/* Capas */}
-        <div style={{ display:"flex", gap:8, marginBottom:28, justifyContent:"center" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:8, marginBottom:28 }}>
           {WMAG_CAPAS.map(c => (
-            <div key={c.id} style={{ flex:1, borderRadius:10, overflow:"hidden", cursor:"zoom-in", position:"relative" }} onClick={() => setLightbox(c.img)}>
+            <div key={c.id} style={{ borderRadius:10, overflow:"hidden", cursor:"zoom-in", position:"relative" }} onClick={() => setLightbox(c.img)}>
               <img src={c.img} alt={c.label} style={{ width:"100%", aspectRatio:"2/3", objectFit:"cover", display:"block" }} onError={e => { e.target.style.display="none"; }} />
               <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,.55)", fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.8)", textAlign:"center", padding:"4px 0", letterSpacing:"1px" }}>{c.label}</div>
             </div>
@@ -25498,6 +25528,7 @@ function ExportarPedidosDrop({ dropId, label }) {
     "wmag-leeknow": { tabela:"pedidos_wmag_leeknow", linhas:p => [["Capa A", p.capa_a], ["Capa B", p.capa_b], ["Capa C", p.capa_c]].flatMap(([n, q]) => rep(q, `W Magazine Lee Know — ${n}`, WMAG_LK_CFG.preco)) },
     "dazed-seungmin": { tabela:"pedidos_dazed_seungmin", linhas:p => [["Versão A", p.capa_a], ["Versão B", p.capa_b], ["Versão C", p.capa_c]].flatMap(([n, q]) => rep(q, `Dazed & Confused Seungmin — ${n}`, DAZED_SM_CFG.preco)) },
     "dazed-han": { tabela:"pedidos_dazed_han", linhas:p => [["Versão A", p.capa_a], ["Versão B", p.capa_b], ["Versão C", p.capa_c]].flatMap(([n, q]) => rep(q, `Dazed & Confused Han — ${n}`, DAZED_HAN_CFG.preco)) },
+    "bazaar-v": { tabela:"pedidos_bazaar_v", linhas:p => BAZAAR_V_CAPAS.flatMap(c => rep(p[`capa_${c.id}`], `Bazaar V — ${c.label}`, BAZAAR_V_CFG.preco)) },
     "esquire-hyunjin": { tabela:"pedidos_esquire_hyunjin", linhas:p => [["Versão A", p.capa_a], ["Versão B", p.capa_b], ["Versão C", p.capa_c]].flatMap(([n, q]) => rep(q, `Esquire Hyunjin — ${n}`, ESQUIRE_HJ_CFG.preco)) },
     "smolmerch": { tabela:"pedidos_smolmerch", linhas:smolmerchLinhas },
     "murce-itens": { tabela:"pedidos_murce_itens", linhas:smolmerchLinhas },
@@ -25646,7 +25677,7 @@ function AdminRecrutadores() {
 }
 
 // ── Admin Todos os Drops ────────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, dazedHanCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, suiatsuCount, smolmerchCount, murceCount, diconCount, promoMurceCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, dazedHanCount, bazaarVCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, suiatsuCount, smolmerchCount, murceCount, diconCount, promoMurceCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const agora = new Date();
   const DROPS = [
@@ -25655,6 +25686,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"wmag-leeknow",     label:"W Magazine Lee Know", icon:"◈", count:wmagLkCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= WMAG_LK_CFG.deadline },
     { id:"dazed-seungmin",   label:"Dazed & Confused Seungmin", icon:"◈", count:wmagDzCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= DAZED_SM_CFG.deadline },
     { id:"dazed-han",   label:"Dazed & Confused Han", icon:"◈", count:dazedHanCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= DAZED_HAN_CFG.deadline },
+    { id:"bazaar-v",    label:"Bazaar V", icon:"◈", count:bazaarVCount, tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= BAZAAR_V_CFG.deadline },
     { id:"esquire-hyunjin", label:"Esquire Hyunjin", icon:"◈", count:esqHjCount, tipo:"externo",  cor:"rgba(245,240,232,.7)", aberto:agora <= ESQUIRE_HJ_CFG.deadline },
     { id:"smolmerch",        label:"Smol Merch",          icon:"◈", count:smolmerchCount,   tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SMOLMERCH_CFG.deadline },
     { id:"dicon-origin",     label:"DICON x D'FESTA THE ORIGIN", icon:"◈", count:diconCount, tipo:"externo",  cor:"rgba(245,240,232,.7)", aberto:!DICON_CFG.bloqueado },
@@ -26956,6 +26988,16 @@ function PrevendaTab({ user }) {
       img: DAZED_HAN_CAPAS[0].img,
       tags: ["Pedidos encerrados em 31/10", "Pagamento até 06/11"],
       info: "R$ 86,00 por unidade · PIX ou cartão · envio previsto 10/11",
+    },
+    {
+      key: "bazaar-v",
+      ativo: now <= BAZAAR_V_CFG.deadline,
+      titulo: "BAZAAR",
+      subtitulo: "V — 6 versões",
+      url: "/bazaar-v",
+      img: BAZAAR_V_CAPAS[0].img,
+      tags: ["Pedidos até 13/11", "Pagamento até 20/11"],
+      info: "R$ 70,00 por unidade · PIX ou cartão · envio previsto 15/12",
     },
     {
       key: "suiatsu",
@@ -28489,6 +28531,7 @@ function AppPrincipal() {
   if (window.location.pathname === "/dazed-seungmin") return <ExigeContaAtiva><WMagFormPage cfg={DAZED_SM_CFG} /></ExigeContaAtiva>;
   if (window.location.pathname === "/esquire-hyunjin") return <ExigeContaAtiva><WMagFormPage cfg={ESQUIRE_HJ_CFG} /></ExigeContaAtiva>;
   if (window.location.pathname === "/dazed-han") return <ExigeContaAtiva><WMagFormPage cfg={DAZED_HAN_CFG} /></ExigeContaAtiva>;
+  if (window.location.pathname === "/bazaar-v") return <ExigeContaAtiva><WMagFormPage cfg={BAZAAR_V_CFG} /></ExigeContaAtiva>;
   if (window.location.pathname === "/smolmerch") return <ExigeContaAtiva><SmolMerchFormPage pixKey={PIX_KEY} /></ExigeContaAtiva>;
   if (window.location.pathname === "/dicon-origin") return <ExigeContaAtiva><DiconOriginFormPage pixKey={PIX_KEY} /></ExigeContaAtiva>;
   if (window.location.pathname === "/promo-murce-50") return <ExigeContaAtiva><SmolMerchFormPage pixKey={PIX_KEY} cfg={PROMO_MURCE_50_CFG} produtos={PROMO_MURCE_50_PRODUTOS} fotoDe={fotoPm} /></ExigeContaAtiva>;
