@@ -21985,19 +21985,31 @@ function PopupSkzooEaawPage() {
   }
 
   const itens = [
-    // itens 01 a 07 (Light Stick, bolsa, Evil keyring, Plush Collect Book, Strap Plush, Reel Face Set, Secret Keyring Toy) saíram da versão ONLINE; a numeração
-    // dos demais é mantida porque as fotos no storage são nomeadas pelo número (08.png, 09.png...).
-    // preços da versão ONLINE (10/11/2026). "foto" é opcional: sem ela, a foto vem do storage ({n}.png); a do 13 está em public/skzoo-online/.
-    // sem etiquetas ("Exclusivo Online" e "TEMPORARIAMENTE ESGOTADO" saíram em 10/11/2026); o campo "tag" continua funcionando se algum item precisar de uma de novo
+    // Preços da versão ONLINE (10/11/2026). O item 01 (Official Light Stick Ver.2) continua fora desta versão.
+    // A numeração é fixa porque as fotos no storage são nomeadas pelo número ({n}.png); "foto" é opcional (as do 13 e do 23 ficam em public/skzoo-online/).
+    // Sem etiquetas ("Exclusivo Online" e "TEMPORARIAMENTE ESGOTADO" saíram em 10/11/2026); o campo "tag" continua funcionando se algum item precisar de uma de novo.
+    { n:"02", nome:"SKZOO Face Shoulder Bag",       skzoo:true, preco:"R$308" },
+    { n:"03", nome:"Evil SKZOO Acrylic Keyring",    skzoo:true, preco:"R$50" },
+    { n:"04", nome:"SKZOO Plush Collect Book",      skzoo:true, preco:"R$136" },
+    { n:"05", nome:"SKZOO Strap Plush",             skzoo:true, preco:"R$136" },
+    { n:"06", nome:"SKZOO Reel Face Set",           skzoo:true, preco:"R$124" },
+    { n:"07", nome:"SKZOO Secret Keyring Toy Ver.",             preco:"R$142" },
     { n:"08", nome:"SKZOO Keyring LATAM Ver.",      skzoo:true, preco:"R$105" },
     { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", preco:"R$55" },
     { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$110" },
     { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$90" },
     { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$110" },
     { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$65", foto:"/skzoo-online/13.jpg", opcoes:["México","Rio de Janeiro","Bogotá","Buenos Aires"] },
-    { n:"23", nome:"SKZOO Acrylic Gel Pen",         skzoo:true, preco:"R$30", foto:"/skzoo-online/23.jpg" },
-    // itens 14, 15, 16 (Racing Jacket, T-Shirt, Baseball Jersey) e 18 a 22 (Travel Pouch, Mouse Pad, Luggage Strap, Ball Cap, Mini Lightbox) também saíram da versão ONLINE
+    { n:"14", nome:"Racing Jacket LATAM Ver.",                  preco:"R$647" },
+    { n:"15", nome:"T-Shirt LATAM Ver.",                        preco:"R$234" },
+    { n:"16", nome:"Baseball Jersey LATAM Ver.",                preco:"R$517" },
     { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72" },
+    { n:"18", nome:"SKZOO Travel Pouch",                        preco:"R$80" },
+    { n:"19", nome:"SKZOO Mouse Pad",                           preco:"R$50" },
+    { n:"20", nome:"SKZOO Luggage Strap",                       preco:"R$74" },
+    { n:"21", nome:"Ball Cap",                                  preco:"R$197" },
+    { n:"22", nome:"SKZOO Mini Lightbox",                       preco:"R$105" },
+    { n:"23", nome:"SKZOO Acrylic Gel Pen",         skzoo:true, preco:"R$30", foto:"/skzoo-online/23.jpg" },
   ];
 
   const ETAPAS = [
@@ -27152,7 +27164,7 @@ function PrevendaTab({ user }) {
       url: "/prevenda/popup-skzoo",
       img: `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo/capa.png`,
       tags: ["Formulário até 14/11", `Pagamento até ${SKZOO_ONLINE_PAGAR_ATE}`],
-      info: "8 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
+      info: "22 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
     },
     {
       key: "this-that-albuns",
