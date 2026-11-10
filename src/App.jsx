@@ -5989,12 +5989,12 @@ ${compHTML}
             {/* SKZOO Rio */}
             {skzoo.length > 0 && (
               <div>
-                <SecaoLabel>SKZOO EAAW RIO · PRÉ-VENDA</SecaoLabel>
+                <SecaoLabel>SKZOO EAAW · PRÉ-VENDA</SecaoLabel>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {skzoo.map(p => {
                     const itens = Array.isArray(p.itens) ? p.itens : [];
-                    const envioLabel = p.envio === "retirada-rio" ? "Retirada · Rio 09/09" : p.envio === "uber-flash" ? "Uber Flash" : p.envio === "envio-nacional" ? "Envio Nacional" : p.envio || "—";
-                    const prazoLabel = p.pagamento === "01" ? "até 13/09" : p.pagamento === "02" ? "até 05/10" : null;
+                    const envioLabel = p.envio === "retirada-rio" ? "Retirada · Rio 09/09" : p.envio === "uber-flash" ? "Uber Flash" : p.envio === "envio-nacional" ? "Envio Nacional" : p.envio === SKZOO_ONLINE_ENVIO ? "Envio internacional direto" : p.envio || "—";
+                    const prazoLabel = p.pagamento === "01" ? "até 13/09" : p.pagamento === "02" ? "até 05/10" : p.pagamento === SKZOO_ONLINE_PAGAMENTO ? `até ${SKZOO_ONLINE_PAGAR_ATE}` : null;
                     return (
                       <div key={p.id} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px" }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:6, marginBottom:8 }}>
@@ -21948,13 +21948,19 @@ function buildItemsFromQtds(qtds, week) {
   });
 }
 
+// SKZOO EAAW ONLINE (form reaberto em 10/11/2026): formulário até 14/11, pagamento até 25/11, envio internacional direto
+const SKZOO_ONLINE_DEADLINE = new Date("2026-11-14T23:59:59-03:00");
+const SKZOO_ONLINE_PAGAR_ATE = "25/11";
+const SKZOO_ONLINE_ENVIO = "internacional";
+const SKZOO_ONLINE_PAGAMENTO = "ate-25-11";
+
 function PopupSkzooEaawPage() {
   const mono = "'DM Mono',monospace";
   const BASE = `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo`;
   const [lightbox, setLightbox] = useState(null);
   const [qtds, setQtds] = useState({});
   const [etapa, setEtapa] = useState("loja");
-  const [envio, setEnvio] = useState(null);
+  const encerrado = new Date() > SKZOO_ONLINE_DEADLINE;
   const [cog, setCog] = useState(() => {
     try { const u = JSON.parse(localStorage.getItem("anticeg_user_v2")); return u?.cog || ""; } catch { return ""; }
   });
@@ -21972,13 +21978,8 @@ function PopupSkzooEaawPage() {
   }
 
   const itens = [
-    { n:"01", nome:"Official Light Stick Ver.2",               preco:"R$604" },
-    { n:"02", nome:"SKZOO Face Shoulder Bag",       skzoo:true, preco:"R$585" },
-    { n:"03", nome:"Evil SKZOO Acrylic Keyring",    skzoo:true, preco:"R$113" },
-    { n:"04", nome:"SKZOO Plush Collect Book",      skzoo:true, preco:"R$299" },
-    { n:"05", nome:"SKZOO Strap Plush",             skzoo:true, preco:"R$294" },
-    { n:"06", nome:"SKZOO Reel Face Set",           skzoo:true, preco:"R$294" },
-    { n:"07", nome:"SKZOO Secret Keyring Toy Ver.",             preco:"R$303" },
+    // itens 01 a 07 (Light Stick, bolsa, Evil keyring, Plush Collect Book, Strap Plush, Reel Face Set, Secret Keyring Toy) saíram da versão ONLINE; a numeração
+    // dos demais é mantida porque as fotos no storage são nomeadas pelo número (08.png, 09.png...).
     { n:"08", nome:"SKZOO Keyring LATAM Ver.",      tag:"Exclusivo Online", skzoo:true },
     { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Exclusivo Online" },
     { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$87", tag:"TEMPORARIAMENTE ESGOTADO" },
@@ -21998,7 +21999,6 @@ function PopupSkzooEaawPage() {
 
   const ETAPAS = [
     { id:"loja",     label:"Loja" },
-    { id:"envio",    label:"Envio / Retirada" },
     { id:"confirmar",label:"Confirmar" },
   ];
 
@@ -22008,7 +22008,7 @@ function PopupSkzooEaawPage() {
   });
 
   async function enviarPedido() {
-    if (!cog.trim() || !nomeJoiner.trim()) return;
+    if (encerrado || !cog.trim() || !nomeJoiner.trim() || itensSelecionados.length === 0) return;
     setEnviando(true);
     const itensPedido = itens.flatMap(item => {
       if (item.skzoo) {
@@ -22023,8 +22023,8 @@ function PopupSkzooEaawPage() {
       cog: cog.trim().replace(/^@/, ""),
       nome: nomeJoiner.trim(),
       itens: itensPedido,
-      envio,
-      pagamento: "imediato",
+      envio: SKZOO_ONLINE_ENVIO,
+      pagamento: SKZOO_ONLINE_PAGAMENTO,
       total_reais: totalReais,
       status: "pendente",
     }, { retornar: true });
@@ -22047,7 +22047,6 @@ function PopupSkzooEaawPage() {
       : (qtds[`${item.n}:_`] || 0);
     return acc + preco * qtdTotal;
   }, 0);
-  const pcs = Math.floor(totalReais / 400);
 
   const fmtReais = (v) => `R$${v.toFixed(2).replace(".",",")}`;
 
@@ -22055,7 +22054,7 @@ function PopupSkzooEaawPage() {
     <div style={{ minHeight:"100vh", background:"#0d0d0d", color:"var(--offwhite)" }}>
       {/* Capa */}
       <div style={{ position:"relative", maxHeight:220, overflow:"hidden" }}>
-        <img src={`${BASE}/capa.png`} alt="SKZOO EAAW RIO" style={{ width:"100%", display:"block", objectFit:"cover", objectPosition:"center 20%" }} />
+        <img src={`${BASE}/capa.png`} alt="SKZOO EAAW ONLINE" style={{ width:"100%", display:"block", objectFit:"cover", objectPosition:"center 20%" }} />
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 40%, #0d0d0d)" }} />
       </div>
 
@@ -22066,12 +22065,13 @@ function PopupSkzooEaawPage() {
           <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:6 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1 }}>SKZOO EVERYWHERE</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:2, lineHeight:1, color:"var(--laranja)" }}>ALL AROUND THE WORLD</div>
-          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginTop:6 }}>in Rio de Janeiro · Formulário 03–05/09</div>
+          <div style={{ fontFamily:mono, fontSize:12, color:"rgba(245,240,232,.5)", marginTop:6 }}>ONLINE · Formulário até 14/11</div>
           <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", letterSpacing:"1px" }}>ENCERRADO</span>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>22 ITENS</span>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>PREÇOS CONFIRMADOS</span>
-            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.35)", letterSpacing:"1px" }}>PAGAMENTO IMEDIATO</span>
+            {encerrado
+              ? <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,107,107,.1)", color:"#ff6b6b", border:"1px solid rgba(255,107,107,.3)", letterSpacing:"1px" }}>ENCERRADO</span>
+              : <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(186,255,57,.1)", color:"var(--verde)", border:"1px solid rgba(186,255,57,.3)", letterSpacing:"1px" }}>ABERTO</span>}
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(245,240,232,.05)", color:"rgba(245,240,232,.4)", letterSpacing:"1px" }}>{itens.length} ITENS</span>
+            <span style={{ fontFamily:mono, fontSize:9, padding:"3px 10px", borderRadius:20, background:"rgba(255,92,26,.12)", color:"var(--laranja)", border:"1px solid rgba(255,92,26,.35)", letterSpacing:"1px" }}>PAGAMENTO ATÉ {SKZOO_ONLINE_PAGAR_ATE}</span>
           </div>
         </div>
 
@@ -22099,27 +22099,14 @@ function PopupSkzooEaawPage() {
                 <a href="/regras" style={{ color:"var(--laranja)", textDecoration:"underline" }}>clique aqui</a>.
               </div>
               {[
-                "A pop-up é NACIONAL e não haverá TAXA INTERNACIONAL e nem FRETE INTERNACIONAL.",
+                "A pop-up é INTERNACIONAL, com envio direto, logo, haverá TAXA e FRETE INTERNACIONAL.",
                 "O valor de proxy service está adicionado no valor final.",
-                "O envio nacional poderá ser solicitado a partir da abertura do formulário.",
-                "Os itens só podem ser retirados presencialmente mediante pagamento integral. Local de retirada a combinar.",
+                `O formulário fecha no dia 14/11 e o prazo de pagamento é até ${SKZOO_ONLINE_PAGAR_ATE}.`,
               ].map((r, i) => (
                 <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
                   <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Promo photocard */}
-          <div style={{ marginBottom:20, background:"linear-gradient(135deg, rgba(201,168,240,.08), rgba(255,92,26,.06))", border:"1px solid rgba(201,168,240,.25)", borderRadius:12, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
-            <img src={`${BASE}/pob.png`} alt="POB Photocard" onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} style={{ width:80, height:56, objectFit:"cover", borderRadius:8, flexShrink:0, border:"1px solid rgba(201,168,240,.2)" }} />
-            <div style={{ display:"none", width:80, height:56, borderRadius:8, flexShrink:0, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.15)", alignItems:"center", justifyContent:"center", fontSize:22 }}>🃏</div>
-            <div>
-              <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color:"var(--lilas)", letterSpacing:"0.5px", marginBottom:3 }}>PHOTOCARD ALEATÓRIO DE BRINDE</div>
-              <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.55)", lineHeight:1.5 }}>
-                A cada <span style={{ color:"var(--laranja)", fontWeight:700 }}>R$400</span> em compras, você ganha um photocard aleatório.
-              </div>
             </div>
           </div>
 
@@ -22213,21 +22200,6 @@ function PopupSkzooEaawPage() {
                           </div>
                         )}
                       </div>
-                      {pcs > 0 ? (
-                        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(201,168,240,.08)", border:"1px solid rgba(201,168,240,.2)", borderRadius:8, padding:"6px 12px" }}>
-                            <span style={{ fontSize:14 }}>🃏</span>
-                            <span style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>{pcs} photocard{pcs > 1 ? "s" : ""} de brinde</span>
-                          </div>
-                          <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)" }}>
-                            faltam R${(400 - (totalReais % 400)).toFixed(0)} para +1 photocard
-                          </div>
-                        </div>
-                      ) : totalReais > 0 ? (
-                        <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>
-                          faltam R${(400 - (totalReais % 400)).toFixed(0)} para 1 photocard
-                        </div>
-                      ) : null}
                     </div>
                   </>
                 );
@@ -22236,54 +22208,16 @@ function PopupSkzooEaawPage() {
           )}
 
           <div style={{ marginTop:32 }}>
-            <div style={{ background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"12px 16px", marginBottom:12, fontFamily:mono, fontSize:11, color:"rgba(255,107,107,.8)", textAlign:"center" }}>
-              Formulário encerrado · pedidos não estão mais sendo aceitos
-            </div>
-          </div>
-        </>}
-
-        {/* ── ENVIO / RETIRADA ── */}
-        {etapa === "envio" && <>
-          {/* Mini-resumo herdado */}
-          <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
-            <div>
-              <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.3)", letterSpacing:"1px", marginBottom:3 }}>VALOR A PAGAR</div>
-              <div style={{ fontFamily:mono, fontSize:16, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</div>
-            </div>
-            <span style={{ fontFamily:mono, fontSize:9, color:"rgba(186,255,57,.7)", background:"rgba(186,255,57,.1)", borderRadius:6, padding:"4px 10px", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>PAGAMENTO IMEDIATO</span>
-          </div>
-
-          <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"2px", color:"rgba(245,240,232,.3)", marginBottom:12 }}>ESCOLHA UMA OPÇÃO</div>
-          <div style={{ marginBottom:16, background:"rgba(255,92,26,.06)", border:"1px solid rgba(255,92,26,.2)", borderRadius:8, padding:"10px 14px", fontFamily:mono, fontSize:10, color:"rgba(255,92,26,.85)", lineHeight:1.5 }}>
-            ⚠ O frete de todas as opções é de responsabilidade do joiner.
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-            {[
-              { id:"retirada-rio",   label:"Retirada · Rio de Janeiro",  desc:"Encontrar no Rio no dia 09 de Setembro" },
-              { id:"uber-flash",     label:"Retirada · Uber Flash",       desc:"A combinar dia e horário" },
-              { id:"envio-nacional", label:"Envio Nacional",              desc:"Formulário nacional abre após 15 de Setembro" },
-            ].map(op => {
-              const sel = envio === op.id;
-              return (
-                <div key={op.id} onClick={() => setEnvio(op.id)} style={{
-                  background: sel ? "rgba(255,92,26,.07)" : "rgba(245,240,232,.03)",
-                  border: `1px solid ${sel ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.08)"}`,
-                  borderRadius:10, padding:"14px 16px", cursor:"pointer", transition:"border-color .15s",
-                }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid ${sel ? "var(--laranja)" : "rgba(245,240,232,.2)"}`, background: sel ? "var(--laranja)" : "transparent", flexShrink:0, transition:"all .15s" }} />
-                    <div>
-                      <div style={{ fontFamily:mono, fontSize:11, fontWeight:700, color: sel ? "var(--offwhite)" : "rgba(245,240,232,.55)" }}>{op.label}</div>
-                      <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.35)", marginTop:3 }}>{op.desc}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display:"flex", justifyContent:"space-between" }}>
-            <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
-            <button onClick={() => setEtapa("confirmar")} disabled={!envio} style={{ fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 28px", background: envio ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: envio ? "#fff" : "rgba(245,240,232,.2)", cursor: envio ? "pointer" : "not-allowed" }}>PRÓXIMA ETAPA →</button>
+            {encerrado ? (
+              <div style={{ background:"rgba(255,107,107,.06)", border:"1px solid rgba(255,107,107,.2)", borderRadius:8, padding:"12px 16px", marginBottom:12, fontFamily:mono, fontSize:11, color:"rgba(255,107,107,.8)", textAlign:"center" }}>
+                Formulário encerrado · pedidos não estão mais sendo aceitos
+              </div>
+            ) : (
+              <button onClick={() => setEtapa("confirmar")} disabled={itensSelecionados.length === 0}
+                style={{ width:"100%", fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"14px 0", background: itensSelecionados.length ? "var(--laranja)" : "rgba(245,240,232,.08)", border:"none", borderRadius:8, color: itensSelecionados.length ? "#fff" : "rgba(245,240,232,.2)", cursor: itensSelecionados.length ? "pointer" : "not-allowed" }}>
+                {itensSelecionados.length ? "REVISAR PEDIDO →" : "ESCOLHA PELO MENOS UM ITEM"}
+              </button>
+            )}
           </div>
         </>}
 
@@ -22310,6 +22244,12 @@ function PopupSkzooEaawPage() {
                         <span style={{ color:"var(--laranja)", fontWeight:700 }}>× {qtds[`${item.n}:${sk}`]}</span>
                       </div>
                     ))}
+                    {!item.skzoo && (
+                      <div style={{ display:"flex", justifyContent:"space-between", fontFamily:mono, fontSize:10 }}>
+                        <span style={{ color:"rgba(245,240,232,.55)" }}>quantidade</span>
+                        <span style={{ color:"var(--laranja)", fontWeight:700 }}>× {qtds[`${item.n}:_`]}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -22322,25 +22262,21 @@ function PopupSkzooEaawPage() {
 
           {/* Resumo financeiro */}
           <div style={{ background:"rgba(255,92,26,.05)", border:"1px solid rgba(255,92,26,.18)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: pcs > 0 ? 10 : 0 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.5)" }}>Total a pagar</span>
               <span style={{ fontFamily:mono, fontSize:18, fontWeight:700, color:"var(--laranja)" }}>{fmtReais(totalReais)}</span>
             </div>
-            {pcs > 0 && (
-              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(245,240,232,.06)", paddingTop:10 }}>
-                <span style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.4)" }}>Photocards de brinde</span>
-                <span style={{ display:"flex", alignItems:"center", gap:5, fontFamily:mono, fontSize:10, color:"var(--lilas)", fontWeight:700 }}>🃏 {pcs} pc{pcs > 1 ? "s" : ""}</span>
-              </div>
-            )}
           </div>
 
-          {/* Envio */}
+          {/* Envio e pagamento (fixos nesta versão ONLINE) */}
           <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
-            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
-              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Envio / Retirada</span>
-              <span style={{ fontFamily:mono, fontSize:11, color: envio ? "var(--offwhite)" : "rgba(245,240,232,.25)" }}>
-                {envio === "retirada-rio" ? "Retirada · Rio 09/09" : envio === "uber-flash" ? "Uber Flash" : envio === "envio-nacional" ? "Envio Nacional" : "a confirmar"}
-              </span>
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", gap:12 }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Envio</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", textAlign:"right" }}>Internacional direto · taxa e frete à parte</span>
+            </div>
+            <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", gap:12 }}>
+              <span style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.4)" }}>Pagamento</span>
+              <span style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)" }}>até {SKZOO_ONLINE_PAGAR_ATE}</span>
             </div>
           </div>
 
@@ -22362,11 +22298,13 @@ function PopupSkzooEaawPage() {
           </div>
 
           <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
-            <button onClick={() => setEtapa("envio")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
-            <button onClick={enviarPedido} disabled={enviando || !cog.trim() || !nomeJoiner.trim()}
-              style={{ flex:1, fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 0", background: (!cog.trim() || !nomeJoiner.trim()) ? "rgba(245,240,232,.06)" : "var(--laranja)", border:"none", borderRadius:8, color: (!cog.trim() || !nomeJoiner.trim()) ? "rgba(245,240,232,.2)" : "#111", cursor: (!cog.trim() || !nomeJoiner.trim()) ? "not-allowed" : "pointer" }}>
-              {enviando ? "enviando..." : "ENVIAR PEDIDO →"}
+            <button onClick={() => setEtapa("loja")} style={{ fontFamily:mono, fontSize:11, padding:"12px 20px", background:"none", border:"1px solid rgba(245,240,232,.12)", borderRadius:8, color:"rgba(245,240,232,.4)", cursor:"pointer" }}>← voltar</button>
+            {(() => { const bloqueado = encerrado || enviando || !cog.trim() || !nomeJoiner.trim() || itensSelecionados.length === 0; return (
+            <button onClick={enviarPedido} disabled={bloqueado}
+              style={{ flex:1, fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", padding:"12px 0", background: bloqueado ? "rgba(245,240,232,.06)" : "var(--laranja)", border:"none", borderRadius:8, color: bloqueado ? "rgba(245,240,232,.2)" : "#111", cursor: bloqueado ? "not-allowed" : "pointer" }}>
+              {encerrado ? "FORMULÁRIO ENCERRADO" : enviando ? "enviando..." : "ENVIAR PEDIDO →"}
             </button>
+            ); })()}
           </div>
         </>}
 
@@ -22380,7 +22318,7 @@ function PopupSkzooEaawPage() {
               A GOM entrará em contato para confirmação e pagamento.
             </div>
             <div style={{ fontFamily:mono, fontSize:10, color:"rgba(245,240,232,.3)", marginBottom:28 }}>
-              Formulário aberto até 05/09
+              Formulário aberto até 14/11 · pagamento até {SKZOO_ONLINE_PAGAR_ATE}
             </div>
             <button onClick={() => window.location.href = "/"} style={{ fontFamily:mono, fontSize:11, padding:"11px 28px", background:"rgba(186,255,57,.1)", border:"1px solid rgba(186,255,57,.25)", borderRadius:8, color:"var(--verde)", cursor:"pointer" }}>
               voltar ao início
@@ -24743,10 +24681,12 @@ function AdminSkzooRio() {
   const ativos      = pedidos.filter(p => p.status !== "cancelado");
   const confirmados = pedidos.filter(p => p.status === "confirmado");
   const fmtR = v => `R$${Number(v||0).toFixed(2).replace(".",",")}`;
-  const pcsPedido = p => Math.floor(Number(p.total_reais||0) / 400);
+  // O brinde de photocard (a cada R$400) valeu só para o pop-up do Rio; os pedidos da versão ONLINE (envio "internacional") não entram nessa conta.
+  const temBrinde = p => p.envio !== SKZOO_ONLINE_ENVIO;
+  const pcsPedido = p => temBrinde(p) ? Math.floor(Number(p.total_reais||0) / 400) : 0;
 
   // Agrupa total por joiner (soma apenas confirmados, igual ao valor total)
-  const totalPorJoiner = confirmados.reduce((acc, p) => {
+  const totalPorJoiner = confirmados.filter(temBrinde).reduce((acc, p) => {
     acc[p.cog] = (acc[p.cog] || 0) + Number(p.total_reais || 0);
     return acc;
   }, {});
@@ -24756,10 +24696,10 @@ function AdminSkzooRio() {
   );
   const joinersComPcs = Object.entries(pcsJoinerMap).filter(([, pcs]) => pcs >= 1);
   const totalValor = confirmados.reduce((s,p) => s + Number(p.total_reais||0), 0);
-  const pcsTotal = Math.floor(totalValor / 400);
+  const pcsTotal = Math.floor(confirmados.filter(temBrinde).reduce((s,p) => s + Number(p.total_reais||0), 0) / 400);
 
-  const envioLabel = e => e === "retirada-rio" ? "Retirada · Rio 09/09" : e === "uber-flash" ? "Uber Flash" : e === "envio-nacional" ? "Envio Nacional" : e || "—";
-  const prazoLabel = n => n === "01" ? "até 13/09" : n === "02" ? "até 05/10" : "—";
+  const envioLabel = e => e === "retirada-rio" ? "Retirada · Rio 09/09" : e === "uber-flash" ? "Uber Flash" : e === "envio-nacional" ? "Envio Nacional" : e === SKZOO_ONLINE_ENVIO ? "Envio internacional direto" : e || "—";
+  const prazoLabel = n => n === "01" ? "até 13/09" : n === "02" ? "até 05/10" : n === SKZOO_ONLINE_PAGAMENTO ? `até ${SKZOO_ONLINE_PAGAR_ATE}` : "—";
 
   const Stat = ({ label, val, color, sub }) => (
     <div style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.07)", borderRadius:10, padding:"12px 16px", flex:1, minWidth:120 }}>
@@ -24773,7 +24713,7 @@ function AdminSkzooRio() {
     <div style={{ padding:"32px 24px", maxWidth:800 }}>
       <div style={{ fontFamily:mono, fontSize:9, letterSpacing:"3px", color:"rgba(245,240,232,.3)", marginBottom:4 }}>STRAY KIDS GLOBAL POP-UP STORE</div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>SKZOO EAAW · RIO</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:2, color:"var(--offwhite)", lineHeight:1 }}>SKZOO EAAW · RIO + ONLINE</div>
         <button onClick={carregar} disabled={loading} style={{ fontFamily:mono, fontSize:10, padding:"6px 14px", borderRadius:7, border:"1px solid rgba(245,240,232,.15)", background:"transparent", color: loading ? "rgba(245,240,232,.25)" : "rgba(245,240,232,.6)", cursor: loading ? "not-allowed" : "pointer", letterSpacing:"1px" }}>
           {loading ? "..." : "↻ atualizar"}
         </button>
@@ -24860,7 +24800,7 @@ function AdminSkzooRio() {
                     🃏 {pcs} photocard{pcs > 1 ? "s" : ""}
                   </span>
                 )}
-                {p.total_reais > 0 && pcs === 0 && (
+                {p.total_reais > 0 && pcs === 0 && temBrinde(p) && (
                   <span style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.25)" }}>
                     faltam {fmtR(400 - (Number(p.total_reais) % 400))} p/ 1 pc
                   </span>
@@ -25694,7 +25634,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"murce-itens",     label:"Murcekaly Itens",     icon:"◈", count:murceCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= PHOTOCARD_CFG.deadline },
     { id:"popup",            label:"Pop-up This & That",  icon:"◉", count:popupCount,       tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:POPUP_WEEKS.some(w => agora <= w.deadline) },
     { id:"bazaar-in",        label:"Bazaar IN",           icon:"◈", count:bazaarInCount,    tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= BAZAAR_IN_DEADLINE },
-    { id:"skzoo-rio",        label:"SKZOO Pop-up Rio",    icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:false },
+    { id:"skzoo-rio",        label:"SKZOO EAAW Online",   icon:"◈", count:0,                tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SKZOO_ONLINE_DEADLINE },
     { id:"lightstick",       label:"Lightstick SKZ",      icon:"◈", count:lightstickCount,  tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= new Date("2026-09-08T12:00:00-03:00") },
     { id:"popcorn-sleeve",   label:"Pop-corn Sleeve",     icon:"◈", count:popcornSleeveCount, tipo:"externo", cor:"rgba(245,240,232,.7)" , aberto:agora <= POPCORN_SLEEVE_DEADLINE },
     { id:"singba",           label:"SINGBA",              icon:"◈", count:singbaCount,      tipo:"externo",  cor:"rgba(245,240,232,.7)" , aberto:agora <= SINGBA_DEADLINE },
@@ -27137,13 +27077,13 @@ function PrevendaTab({ user }) {
     },
     {
       key: "popup-skzoo-rio",
-      ativo: false,
-      titulo: "POP-UP SKZOO EAAW",
-      subtitulo: "Rio de Janeiro · Merch Oficial",
+      ativo: now <= SKZOO_ONLINE_DEADLINE,
+      titulo: "SKZOO EAAW ONLINE",
+      subtitulo: "Everywhere All Around the World · Merch Oficial",
       url: "/prevenda/popup-skzoo",
       img: `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo/capa.png`,
-      tags: ["Aberto · Formulário 03–05/09", "Pagamento imediato"],
-      info: "22 itens · LATAM Ver. exclusivos · preços confirmados",
+      tags: ["Formulário até 14/11", `Pagamento até ${SKZOO_ONLINE_PAGAR_ATE}`],
+      info: "15 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
     },
     {
       key: "this-that-albuns",
