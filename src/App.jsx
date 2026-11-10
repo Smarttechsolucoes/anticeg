@@ -21983,15 +21983,16 @@ function PopupSkzooEaawPage() {
     // itens 01 a 07 (Light Stick, bolsa, Evil keyring, Plush Collect Book, Strap Plush, Reel Face Set, Secret Keyring Toy) saíram da versão ONLINE; a numeração
     // dos demais é mantida porque as fotos no storage são nomeadas pelo número (08.png, 09.png...).
     // preços da versão ONLINE (10/11/2026). "foto" é opcional: sem ela, a foto vem do storage ({n}.png); a do 13 está em public/skzoo-online/.
-    { n:"08", nome:"SKZOO Keyring LATAM Ver.",      tag:"Exclusivo Online", skzoo:true, preco:"R$105" },
-    { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Exclusivo Online", preco:"R$55" },
-    { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$110", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$90", tag:"TEMPORARIAMENTE ESGOTADO" },
+    // sem etiquetas ("Exclusivo Online" e "TEMPORARIAMENTE ESGOTADO" saíram em 10/11/2026); o campo "tag" continua funcionando se algum item precisar de uma de novo
+    { n:"08", nome:"SKZOO Keyring LATAM Ver.",      skzoo:true, preco:"R$105" },
+    { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", preco:"R$55" },
+    { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$110" },
+    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$90" },
     { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$110" },
     { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$65", foto:"/skzoo-online/13.jpg", opcoes:["México","Rio de Janeiro","Bogotá","Buenos Aires"] },
     { n:"23", nome:"SKZOO Acrylic Gel Pen",         skzoo:true, preco:"R$30", foto:"/skzoo-online/23.jpg" },
     // itens 14, 15, 16 (Racing Jacket, T-Shirt, Baseball Jersey) e 18 a 22 (Travel Pouch, Mouse Pad, Luggage Strap, Ball Cap, Mini Lightbox) também saíram da versão ONLINE
-    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72" },
   ];
 
   const ETAPAS = [
