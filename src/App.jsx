@@ -21980,12 +21980,13 @@ function PopupSkzooEaawPage() {
   const itens = [
     // itens 01 a 07 (Light Stick, bolsa, Evil keyring, Plush Collect Book, Strap Plush, Reel Face Set, Secret Keyring Toy) saíram da versão ONLINE; a numeração
     // dos demais é mantida porque as fotos no storage são nomeadas pelo número (08.png, 09.png...).
-    { n:"08", nome:"SKZOO Keyring LATAM Ver.",      tag:"Exclusivo Online", skzoo:true },
-    { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Exclusivo Online" },
-    { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$87", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$153", tag:"TEMPORARIAMENTE ESGOTADO" },
-    { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$173" },
-    { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$27"  },
+    // preços da versão ONLINE (10/11/2026). "foto" é opcional: sem ela, a foto vem do storage ({n}.png); a do 13 está em public/skzoo-online/.
+    { n:"08", nome:"SKZOO Keyring LATAM Ver.",      tag:"Exclusivo Online", skzoo:true, preco:"R$105" },
+    { n:"09", nome:"SKZOO Standing Plush Outfit LATAM Ver.", tag:"Exclusivo Online", preco:"R$55" },
+    { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$110", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$90", tag:"TEMPORARIAMENTE ESGOTADO" },
+    { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$110" },
+    { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$65", foto:"/skzoo-online/13.jpg" },
     // itens 14, 15, 16 (Racing Jacket, T-Shirt, Baseball Jersey) e 18 a 22 (Travel Pouch, Mouse Pad, Luggage Strap, Ball Cap, Mini Lightbox) também saíram da versão ONLINE
     { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72", tag:"TEMPORARIAMENTE ESGOTADO" },
   ];
@@ -22110,7 +22111,7 @@ function PopupSkzooEaawPage() {
                 style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, overflow:"hidden", cursor:"zoom-in", transition:"border-color .15s", display:"flex", flexDirection:"column" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor="rgba(255,92,26,.35)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor="rgba(245,240,232,.08)"}>
-                <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
+                <img src={item.foto || `${BASE}/${item.n}.png`} alt={item.nome} style={{ width:"100%", aspectRatio:"1/1", objectFit:"cover", display:"block" }} />
                 <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column" }}>
                   <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)", marginBottom:3 }}>#{item.n}</div>
                   <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 }}>{item.nome}</div>
@@ -22158,7 +22159,7 @@ function PopupSkzooEaawPage() {
                       const qtdSimples = item.skzoo ? 0 : (qtds[`${item.n}:_`] || 0);
                       return (
                         <div key={item.n} style={{ padding:"10px 14px", borderBottom:"1px solid rgba(245,240,232,.04)", display:"flex", gap:10, alignItems:"flex-start" }}>
-                          <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:38, height:38, objectFit:"cover", borderRadius:5, flexShrink:0 }} />
+                          <img src={item.foto || `${BASE}/${item.n}.png`} alt={item.nome} style={{ width:38, height:38, objectFit:"cover", borderRadius:5, flexShrink:0 }} />
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", fontWeight:700, marginBottom:3 }}>{item.nome}</div>
                             {item.skzoo ? (
@@ -22224,7 +22225,7 @@ function PopupSkzooEaawPage() {
               {itensSelecionados.map(item => (
                 <div key={item.n} style={{ background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:10 }}>
-                    <img src={`${BASE}/${item.n}.png`} alt={item.nome} style={{ width:48, height:48, objectFit:"cover", borderRadius:6 }} />
+                    <img src={item.foto || `${BASE}/${item.n}.png`} alt={item.nome} style={{ width:48, height:48, objectFit:"cover", borderRadius:6 }} />
                     <div>
                       <div style={{ fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.3)" }}>#{item.n}</div>
                       <div style={{ fontFamily:mono, fontSize:11, color:"var(--offwhite)", fontWeight:700 }}>{item.nome}</div>
@@ -22324,7 +22325,7 @@ function PopupSkzooEaawPage() {
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.92)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out", padding:24, overflowY:"auto" }}>
           <div onClick={e => e.stopPropagation()} style={{ display:"flex", flexDirection:"column", alignItems:"center", maxWidth:420, width:"100%", cursor:"default" }}>
-            <img src={`${BASE}/${lightbox.n}.png`} alt={lightbox.nome} style={{ maxWidth:"80vw", maxHeight:"45vh", objectFit:"contain", borderRadius:10 }} />
+            <img src={lightbox.foto || `${BASE}/${lightbox.n}.png`} alt={lightbox.nome} style={{ maxWidth:"80vw", maxHeight:"45vh", objectFit:"contain", borderRadius:10 }} />
             <div style={{ marginTop:14, textAlign:"center", width:"100%" }}>
               <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.35)", marginBottom:4 }}>#{lightbox.n}</div>
               <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
