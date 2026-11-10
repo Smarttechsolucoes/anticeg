@@ -22119,6 +22119,12 @@ function PopupSkzooEaawPage() {
               </div>
               {[
                 "A pop-up é INTERNACIONAL, com envio direto, logo, haverá TAXA e FRETE INTERNACIONAL.",
+                "O valor de proxy service está adicionado no valor final.",
+                "Compra será feita dentro do site da kpopmerch!",
+                "Formulário encerra: 14 de novembro",
+                "Pagamento até: 25 de novembro",
+                "As POBs enviadas pela Kpopmerch serão sorteadas entre os participantes dessa CEG específica. Válida apenas para quem NÃO possui POB.",
+                "Ao joiner que já possui POB, seu item é garantido. Valor de 100 dólares para garantir 1.",
               ].map((r, i) => (
                 <div key={i} style={{ fontFamily:mono, fontSize:11, color:"rgba(245,240,232,.65)", lineHeight:1.5 }}>
                   <span style={{ color:"var(--laranja)", marginRight:6 }}>☆</span>{r}
