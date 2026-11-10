@@ -21971,6 +21971,8 @@ function PopupSkzooEaawPage() {
   const [pedidoId, setPedidoId] = useState(null);
 
   const SKZOOS = ["Wolf Chan","Leebit","Dwaekki","Jiniret","Han Quokka","BbokAri","PuppyM","FoxI.Ny"];
+  // Lista de opções escolhíveis de um item: "opcoes" próprias (ex.: as cidades do Metal Badge), os 8 SKZOOS quando o item tem skzoo:true, ou null (item simples).
+  const opcoesDe = item => item.opcoes || (item.skzoo ? SKZOOS : null);
 
   function alterarQtd(itemN, personagem, delta) {
     const key = `${itemN}:${personagem}`;
@@ -21986,7 +21988,8 @@ function PopupSkzooEaawPage() {
     { n:"10", nome:"SKZOO City Mug LATAM Ver.",                 preco:"R$110", tag:"TEMPORARIAMENTE ESGOTADO" },
     { n:"11", nome:"SKZOO Acrylic Stand LATAM Ver.",            preco:"R$90", tag:"TEMPORARIAMENTE ESGOTADO" },
     { n:"12", nome:"SKZOO Index Note LATAM Ver.",               preco:"R$110" },
-    { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$65", foto:"/skzoo-online/13.jpg" },
+    { n:"13", nome:"Metal Badge LATAM Ver.",                    preco:"R$65", foto:"/skzoo-online/13.jpg", opcoes:["México","Rio de Janeiro","Bogotá","Buenos Aires"] },
+    { n:"23", nome:"SKZOO Acrylic Gel Pen",         skzoo:true, preco:"R$30", foto:"/skzoo-online/23.jpg" },
     // itens 14, 15, 16 (Racing Jacket, T-Shirt, Baseball Jersey) e 18 a 22 (Travel Pouch, Mouse Pad, Luggage Strap, Ball Cap, Mini Lightbox) também saíram da versão ONLINE
     { n:"17", nome:"SKZOO Acrylic Magnetic Holder", skzoo:true, preco:"R$72", tag:"TEMPORARIAMENTE ESGOTADO" },
   ];
@@ -21997,7 +22000,8 @@ function PopupSkzooEaawPage() {
   ];
 
   const itensSelecionados = itens.filter(item => {
-    if (item.skzoo) return SKZOOS.some(sk => (qtds[`${item.n}:${sk}`] || 0) > 0);
+    const ops = opcoesDe(item);
+    if (ops) return ops.some(op => (qtds[`${item.n}:${op}`] || 0) > 0);
     return (qtds[`${item.n}:_`] || 0) > 0;
   });
 
@@ -22005,9 +22009,11 @@ function PopupSkzooEaawPage() {
     if (encerrado || !cog.trim() || !nomeJoiner.trim() || itensSelecionados.length === 0) return;
     setEnviando(true);
     const itensPedido = itens.flatMap(item => {
-      if (item.skzoo) {
-        return SKZOOS.filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0).map(sk => ({
-          n: item.n, nome: item.nome, skzoo: sk, qtd: qtds[`${item.n}:${sk}`],
+      const ops = opcoesDe(item);
+      if (ops) {
+        // o campo continua se chamando "skzoo" (é o que o painel e "meus formulários" exibem), mesmo quando a opção é uma cidade
+        return ops.filter(op => (qtds[`${item.n}:${op}`] || 0) > 0).map(op => ({
+          n: item.n, nome: item.nome, skzoo: op, qtd: qtds[`${item.n}:${op}`],
         }));
       }
       const qtd = qtds[`${item.n}:_`] || 0;
@@ -22036,8 +22042,9 @@ function PopupSkzooEaawPage() {
 
   const totalReais = itensSelecionados.reduce((acc, item) => {
     const preco = item.preco ? Number(item.preco.replace("R$","").replace(",",".")) : 0;
-    const qtdTotal = item.skzoo
-      ? SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0)
+    const ops = opcoesDe(item);
+    const qtdTotal = ops
+      ? ops.reduce((s, op) => s + (qtds[`${item.n}:${op}`] || 0), 0)
       : (qtds[`${item.n}:_`] || 0);
     return acc + preco * qtdTotal;
   }, 0);
@@ -22119,11 +22126,11 @@ function PopupSkzooEaawPage() {
                   <div style={{ marginTop:6, fontFamily:mono, fontSize:13, fontWeight:700, color: item.preco ? "var(--verde)" : "rgba(245,240,232,.2)", letterSpacing:"0.5px" }}>{item.preco || "a confirmar"}</div>
                   <div style={{ flex:1 }} />
                   {/* Botão de adicionar */}
-                  {item.skzoo ? (() => {
-                    const total = SKZOOS.reduce((s, sk) => s + (qtds[`${item.n}:${sk}`] || 0), 0);
+                  {opcoesDe(item) ? (() => {
+                    const total = opcoesDe(item).reduce((s, op) => s + (qtds[`${item.n}:${op}`] || 0), 0);
                     return (
                       <button onClick={e => { e.stopPropagation(); setLightbox(item); }} style={{ marginTop:8, width:"100%", padding:"6px 0", background: total > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.05)", border: `1px solid ${total > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)"}`, borderRadius:6, fontFamily:mono, fontSize:9, color: total > 0 ? "var(--laranja)" : "rgba(245,240,232,.4)", cursor:"pointer", letterSpacing:"1px", fontWeight: total > 0 ? 700 : 400 }}>
-                        {total > 0 ? `${total} no carrinho ✓` : "ESCOLHER MEMBRO →"}
+                        {total > 0 ? `${total} no carrinho ✓` : item.opcoes ? "ESCOLHER OPÇÃO →" : "ESCOLHER MEMBRO →"}
                       </button>
                     );
                   })() : (() => {
@@ -22155,14 +22162,14 @@ function PopupSkzooEaawPage() {
                 return (
                   <>
                     {itensSelecionados.map(item => {
-                      const selecionados = item.skzoo ? SKZOOS.filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0) : [];
-                      const qtdSimples = item.skzoo ? 0 : (qtds[`${item.n}:_`] || 0);
+                      const selecionados = opcoesDe(item) ? opcoesDe(item).filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0) : [];
+                      const qtdSimples = opcoesDe(item) ? 0 : (qtds[`${item.n}:_`] || 0);
                       return (
                         <div key={item.n} style={{ padding:"10px 14px", borderBottom:"1px solid rgba(245,240,232,.04)", display:"flex", gap:10, alignItems:"flex-start" }}>
                           <img src={item.foto || `${BASE}/${item.n}.png`} alt={item.nome} style={{ width:38, height:38, objectFit:"cover", borderRadius:5, flexShrink:0 }} />
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontFamily:mono, fontSize:10, color:"var(--offwhite)", fontWeight:700, marginBottom:3 }}>{item.nome}</div>
-                            {item.skzoo ? (
+                            {opcoesDe(item) ? (
                               <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
                                 {selecionados.map(sk => (
                                   <span key={sk} style={{ display:"inline-flex", alignItems:"center", gap:4, fontFamily:mono, fontSize:9, background:"rgba(255,92,26,.08)", border:"1px solid rgba(255,92,26,.2)", borderRadius:5, padding:"2px 7px", color:"var(--laranja)" }}>
@@ -22182,7 +22189,7 @@ function PopupSkzooEaawPage() {
                               </div>
                             )}
                           </div>
-                          <button onClick={() => setQtds(p => { const n = {...p}; if (item.skzoo) selecionados.forEach(sk => delete n[`${item.n}:${sk}`]); else delete n[`${item.n}:_`]; return n; })} style={{ background:"none", border:"none", color:"rgba(245,240,232,.2)", cursor:"pointer", fontSize:13, lineHeight:1, flexShrink:0, padding:"0 2px" }}>✕</button>
+                          <button onClick={() => setQtds(p => { const n = {...p}; if (opcoesDe(item)) selecionados.forEach(sk => delete n[`${item.n}:${sk}`]); else delete n[`${item.n}:_`]; return n; })} style={{ background:"none", border:"none", color:"rgba(245,240,232,.2)", cursor:"pointer", fontSize:13, lineHeight:1, flexShrink:0, padding:"0 2px" }}>✕</button>
                         </div>
                       );
                     })}
@@ -22232,13 +22239,13 @@ function PopupSkzooEaawPage() {
                     </div>
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                    {SKZOOS.filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0).map(sk => (
+                    {(opcoesDe(item) || []).filter(sk => (qtds[`${item.n}:${sk}`] || 0) > 0).map(sk => (
                       <div key={sk} style={{ display:"flex", justifyContent:"space-between", fontFamily:mono, fontSize:10 }}>
                         <span style={{ color:"rgba(245,240,232,.55)" }}>{sk}</span>
                         <span style={{ color:"var(--laranja)", fontWeight:700 }}>× {qtds[`${item.n}:${sk}`]}</span>
                       </div>
                     ))}
-                    {!item.skzoo && (
+                    {!opcoesDe(item) && (
                       <div style={{ display:"flex", justifyContent:"space-between", fontFamily:mono, fontSize:10 }}>
                         <span style={{ color:"rgba(245,240,232,.55)" }}>quantidade</span>
                         <span style={{ color:"var(--laranja)", fontWeight:700 }}>× {qtds[`${item.n}:_`]}</span>
@@ -22331,10 +22338,10 @@ function PopupSkzooEaawPage() {
               <div style={{ fontFamily:mono, fontSize:13, color:"var(--offwhite)", fontWeight:700 }}>{lightbox.nome}</div>
               {lightbox.tag && <div style={{ fontFamily:mono, fontSize:10, color:"var(--lilas)", marginTop:4 }}>{lightbox.tag}</div>}
             </div>
-            {lightbox.skzoo && (
+            {opcoesDe(lightbox) && (
               <div style={{ marginTop:20, width:"100%", background:"rgba(245,240,232,.03)", border:"1px solid rgba(245,240,232,.08)", borderRadius:10, padding:"14px 16px" }}>
-                <div style={{ fontFamily:mono, fontSize:9, color:"var(--laranja)", letterSpacing:"1.5px", marginBottom:12 }}>ESCOLHA SEU SKZOO:</div>
-                {SKZOOS.map(sk => {
+                <div style={{ fontFamily:mono, fontSize:9, color:"var(--laranja)", letterSpacing:"1.5px", marginBottom:12 }}>{lightbox.opcoes ? "ESCOLHA A OPÇÃO:" : "ESCOLHA SEU SKZOO:"}</div>
+                {opcoesDe(lightbox).map(sk => {
                   const key = `${lightbox.n}:${sk}`;
                   const qtd = qtds[key] || 0;
                   return (
@@ -22350,15 +22357,15 @@ function PopupSkzooEaawPage() {
                 })}
               </div>
             )}
-            {lightbox?.skzoo && (() => {
-              const total = SKZOOS.reduce((s, sk) => s + (qtds[`${lightbox.n}:${sk}`] || 0), 0);
+            {lightbox && opcoesDe(lightbox) && (() => {
+              const total = opcoesDe(lightbox).reduce((s, sk) => s + (qtds[`${lightbox.n}:${sk}`] || 0), 0);
               return (
                 <button onClick={() => setLightbox(null)} style={{ marginTop:16, width:"100%", padding:"12px 0", background: total > 0 ? "var(--laranja)" : "rgba(245,240,232,.06)", border:`1px solid ${total > 0 ? "var(--laranja)" : "rgba(245,240,232,.1)"}`, borderRadius:8, fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:"1.5px", color: total > 0 ? "#111" : "rgba(245,240,232,.25)", cursor: total > 0 ? "pointer" : "not-allowed" }}>
-                  {total > 0 ? `✓ ADICIONAR AO CARRINHO (${total})` : "SELECIONE UM PERSONAGEM"}
+                  {total > 0 ? `✓ ADICIONAR AO CARRINHO (${total})` : lightbox.opcoes ? "SELECIONE UMA OPÇÃO" : "SELECIONE UM PERSONAGEM"}
                 </button>
               );
             })()}
-            {!lightbox?.skzoo && (
+            {lightbox && !opcoesDe(lightbox) && (
               <button onClick={() => setLightbox(null)} style={{ marginTop:16, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:mono, fontSize:10, cursor:"pointer" }}>fechar ✕</button>
             )}
           </div>
@@ -27077,7 +27084,7 @@ function PrevendaTab({ user }) {
       url: "/prevenda/popup-skzoo",
       img: `${SUPABASE_URL}/storage/v1/object/public/popup-skzoo/capa.png`,
       tags: ["Formulário até 14/11", `Pagamento até ${SKZOO_ONLINE_PAGAR_ATE}`],
-      info: "7 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
+      info: "8 itens · LATAM Ver. exclusivos · envio internacional direto (taxa e frete internacionais)",
     },
     {
       key: "this-that-albuns",
