@@ -22924,7 +22924,7 @@ const BAZAAR_V_CAPAS = [
 const BAZAAR_V_CFG = {
   tabela: "pedidos_bazaar_v", pasta: "bazaar-v", produto: "BAZAAR V",
   titulo: "BAZAAR", sub: "V", deadline: new Date("2026-11-13T23:59:59-03:00"), pedidosAte: "13/11/2026",
-  preco: 70, capas: BAZAAR_V_CAPAS, pagarAte: "20/11",
+  preco: 70, capas: BAZAAR_V_CAPAS, pagarAte: "20/11", grupoWpp: "https://chat.whatsapp.com/J0Av2iyE3WiFIPXaAbwNDg",
   avisos: [
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
     <>Envio internacional previsto para <strong>15 de dezembro</strong>.</>,
