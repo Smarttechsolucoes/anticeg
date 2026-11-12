@@ -259,7 +259,60 @@ export function criarJoinerAuth(client = supabase) {
     return { ok: true };
   }
 
-  return { estado, pedirCodigo, dicaEmail, iniciarTrocaEmail, confirmarTrocaEmail, pedirComprovacao, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
+
+  // ── ATIVAÇÃO AUTOMÁTICA (J22): o @ leva ao próximo passo; o servidor mostra o e-mail só mascarado, envia o código, confere o código e liga a conta ──
+  // "indisponivel" = a função ainda não existe/ não responde: a tela volta ao formulário antigo (nada quebra antes da publicação).
+  async function chamarAuto(corpo) {
+    const { data, error } = await client.functions.invoke("ativacao-automatica", { body: corpo });
+    if (!error) return { data };
+    const status = error?.context?.status;
+    if (status === 429) return { erro: "Muitas tentativas. Espere alguns minutos e tente de novo." };
+    if (status === 400 || status === 401) { try { const j = await error.context.json(); if (j && typeof j.error === "string") return { erro: j.error }; } catch { /* sem corpo legível */ } return { erro: "Não foi possível seguir. Confira os dados e tente de novo." }; }
+    return { indisponivel: true };
+  }
+  async function autoConsultar({ cog }) {
+    const c = normalizarCog(cog);
+    if (!c) return { erro: "Informe o seu @." };
+    const r = await chamarAuto({ acao: "consultar", cog: c });
+    if (r.erro || r.indisponivel) return r;
+    const p = r.data?.proximo;
+    if (p === "confirmar_email" && typeof r.data.email_mascarado === "string" && DICA_VALIDA.test(r.data.email_mascarado)) return { proximo: p, emailMascarado: r.data.email_mascarado };
+    if (p === "informar_email" || p === "entrar" || p === "ajuda") return { proximo: p };
+    return { indisponivel: true };
+  }
+  // usarCadastrado: o código vai para o e-mail do cadastro (que a pessoa viu mascarado); senão, para o e-mail que ela digitou
+  async function autoEnviar({ cog, email, usarCadastrado }) {
+    const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase();
+    if (!c) return { erro: "Informe o seu @." };
+    if (!usarCadastrado && !emailValido(e)) return { erro: "Digite um e-mail válido." };
+    const { data: s } = await client.auth.getSession();
+    if (s?.session) await client.auth.signOut({ scope: "local" });       // sessão de outra pessoa neste aparelho: encerra (só local)
+    const r = await chamarAuto(usarCadastrado ? { acao: "enviar", cog: c, usar_cadastrado: true } : { acao: "enviar", cog: c, email: e });
+    if (r.erro || r.indisponivel) return r.indisponivel ? { erro: mensagem(null, "envio") } : r;
+    const p = r.data?.proximo;
+    return ["ajuda", "entrar", "aguardando", "informar_email"].includes(p) ? { proximo: p } : { ok: true };
+  }
+  // confere o código NO SERVIDOR (a pessoa não precisa saber o e-mail completo), define a senha e liga a conta. sessaoPronta: o código já foi aceito e só a senha precisa ser tentada de novo.
+  async function autoConfirmar({ cog, email, codigo, senha, sessaoPronta }) {
+    const c = normalizarCog(cog), e = String(email || "").trim().toLowerCase();
+    const limpo = String(codigo || "").replace(/\s+/g, "");
+    if (!sessaoPronta) {
+      if (!/^\d{6,10}$/.test(limpo)) return { erro: "Digite o código numérico que chegou no e-mail." };
+      const v = await chamarAuto(e ? { acao: "verificar", cog: c, email: e, codigo: limpo } : { acao: "verificar", cog: c, codigo: limpo });
+      if (v.indisponivel) return { erro: mensagem(null, "envio") };
+      if (v.erro) return { erro: v.erro };
+      const { error: es } = await client.auth.setSession({ access_token: v.data.access_token, refresh_token: v.data.refresh_token });
+      if (es) return { erro: mensagem(es, "codigo") };
+    }
+    const { error: ep } = await client.auth.updateUser({ password: senha });
+    if (ep) return { erro: mensagem(ep, "senha"), senhaPendente: true };
+    const f = await chamarAuto({ acao: "concluir", cog: c });
+    if (f.indisponivel || f.erro) return { erro: "Seu e-mail foi confirmado, mas não conseguimos concluir agora. Tente de novo em instantes.", senhaPendente: true };
+    const res = f.data?.resultado;
+    return { resultado: res === "ok" ? "ok" : res === "aguardando" ? "aguardando" : "pendente", cog: c };
+  }
+
+  return { estado, autoConsultar, autoEnviar, autoConfirmar, pedirCodigo, dicaEmail, iniciarTrocaEmail, confirmarTrocaEmail, pedirComprovacao, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
 }
 
 // Acesso simples (só @): o servidor devolve apenas a identidade mínima (cog, nome do site, foto) e se a conta está ativada.

@@ -3,6 +3,9 @@ import { JOINERS_AUTH_ATIVO, criarJoinerAuth, buscarAcessoSimples, emailValido, 
 import supabase from "./supabase.js";
 import CompletarPerfil from "./CompletarPerfil.jsx";
 import { FluxoTrocaEmail, FluxoComprovar } from "./TrocaEmailJoiner.jsx";
+import AtivacaoAutomatica from "./AtivacaoAutomatica.jsx";
+// Ativação automática (J22): só liga depois que o SQL J22 e a função "ativacao-automatica" estão em produção (variável VITE_ATIVACAO_AUTO=true na Vercel). Desligada, tudo segue como antes.
+const ATIVACAO_AUTO = import.meta.env.VITE_ATIVACAO_AUTO === "true";
 
 const C = { bg: "#17141f", borda: "rgba(245,240,232,0.14)", texto: "#F5F0E8", mudo: "rgba(245,240,232,0.72)", destaque: "#BAFF39", erro: "#FF8A80", ok: "#7CE08A" };
 const mono = "'DM Mono',monospace";
@@ -89,10 +92,10 @@ function OrientacaoSenha({ aoEntrar, aoRecuperar }) {
 }
 
 // estilos e átomos repassados às telas "Quero mudar de e-mail" e "Quero manter meu e-mail e comprovar meu cadastro" (src/TrocaEmailJoiner.jsx)
-const UI = { C, mono, sans, campo, botao, botaoSec, acaoSec, Titulo, Texto, Aviso, Rotulo, rolarAoFocar, legendaEstilo };
+const UI = { C, mono, sans, campo, botao, botaoSec, acaoSec, Titulo, Texto, Aviso, Rotulo, CampoSenha, rolarAoFocar, legendaEstilo };
 
 function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_liberada !== false, emailInicial = "", aoAtivar = null }) {   // aoAtivar: quem abriu o pop-up SEM @ (começou pelo e-mail) recebe o @ da conta ao ativar
-  const [fase, setFase] = useState(liberada ? "dados" : "aguardando");           // dados | codigo | pendente | ajuda | ajuda_enviada | aguardando (ativação ainda não liberada para o grupo dela) | troca (Quero mudar de e-mail) | comprovar (Quero manter meu e-mail e comprovar) | regularizar
+  const [fase, setFase] = useState(liberada ? (emailInicial || !ATIVACAO_AUTO ? "dados" : "auto") : "aguardando");           // dados | codigo | pendente | ajuda | ajuda_enviada | aguardando (ativação ainda não liberada para o grupo dela) | troca (Quero mudar de e-mail) | comprovar (Quero manter meu e-mail e comprovar) | regularizar
   const [cog, setCog] = useState(normalizarCog(user?.cog));
   const [email, setEmail] = useState(String(emailInicial || ""));
   const [senha, setSenha] = useState("");
@@ -190,6 +193,13 @@ function JoinerAtivacaoModal({ user, api, onFechar, liberada = user?.ativacao_li
     <div data-testid="ativacao-modal" role="dialog" aria-modal="true" aria-label="Ative sua conta" style={sobreposicao}>
       <div style={cartao}>
         {fase !== "finalizando" && <BotaoFechar onClick={voltarAreasPublicas} />}
+        {fase === "auto" && (
+          <AtivacaoAutomatica ui={UI} api={api} cogInicial={cog}
+            onPronto={(res, c) => { if (res === "ok") { if (aoAtivar) { aoAtivar(c); return; } setFase("finalizando"); avisarContaAtualizada(); return; } setFase(res === "aguardando" ? "aguardando" : "pendente"); }}
+            onSemCodigo={(prox, c) => { setCog(c); setProximo(prox); setErro(""); setFase("sem_codigo"); }}
+            onIndisponivel={() => { setErro(""); setFase("dados"); }}
+            onEntrar={() => { setErro(""); setFase("entrar"); }} />
+        )}
         {fase === "dados" && (
           <form onSubmit={enviarCodigo} noValidate style={{ display: "grid", gap: 14 }}>
             <Titulo>Ative sua conta</Titulo>
