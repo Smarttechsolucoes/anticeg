@@ -29,12 +29,21 @@ async function nova(cen = {}) {
       { id: 43, joiner_id: 13, cog: "contaativa", tipo: "ativacao_sem_vinculo", valor_pedido: null, mensagem: "e-mail/@ do cadastro alterado depois da fotografia confiável", status: "aberta", criado_em: "2026-11-08T15:49:00Z" }],
   };
   const MOT = [{ joiner_id: 7, codigo: "sem_email_valido" }, { joiner_id: 8, codigo: "historico_troca_email", ultimo_registro: "2026-10-01", posterior_a_fotografia: false }, { joiner_id: 10, codigo: "email_compartilhado" }, { joiner_id: 11, codigo: "diverge_fotografia" }, { joiner_id: 12, codigo: "sem_email_valido" }];
-  const reg = { aplicar: [], cancelar: [], aprovar: [], recusar: [], resolver: [], confirmar: [], rpc: [] };
+  const reg = { aplicar: [], cancelar: [], aprovar: [], recusar: [], resolver: [], confirmar: [], rpc: [], trocarEmail: [], enviarCodigo: [] };
   await ctx.route("**/*", route => {
     const req = route.request(), u = req.url();
     if (u.startsWith(`http://localhost:${PORTA}`)) return route.continue();
     const json = (status, body) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (u.includes("supabase.co/auth/v1/")) { const p = new URL(u).pathname.replace("/auth/v1", ""); if (p === "/user") return json(200, sessao().user); if (p === "/logout") return route.fulfill({ status: 204, body: "" }); return json(200, sessao()); }
+    if (u.includes("/functions/v1/admin-enviar-codigo")) {
+      const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "POST, OPTIONS" };
+      if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors, body: "" });
+      const corpo = JSON.parse(req.postData() || "{}"); reg.enviarCodigo.push(corpo);
+      const resp = corpo.joiner_id === 10 ? [409, { error: "O e-mail do cadastro é compartilhado com outro cadastro. Decida de quem é antes de enviar (nada foi enviado).", motivo: "email_compartilhado" }]
+        : corpo.joiner_id === 8 ? [200, { ok: true, dominio: "outro.com", avisos: ["O e-mail ou o @ foi alterado depois da fotografia confiável: a ativação fica pendente até você usar Confirmar vínculo."] }]
+        : [200, { ok: true, dominio: "exemplo.com", avisos: [] }];
+      return route.fulfill({ status: resp[0], headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify(resp[1]) });
+    }
     const rpc = (u.match(/\/rest\/v1\/rpc\/([a-z_0-9]+)/) || [])[1];
     if (rpc) {
       reg.rpc.push(rpc); const corpo = JSON.parse(req.postData() || "{}");
@@ -56,6 +65,7 @@ async function nova(cen = {}) {
         if (String(corpo.p_email_informado).trim().toLowerCase() !== "bia.nova@gmail.com") return json(400, { code: "P0001", message: "o e-mail informado NÃO é o do pedido; nada foi alterado. Confira com a pessoa o endereço completo" });
         est.trocas = est.trocas.filter(t => t.id !== corpo.p_id); return json(200, { ok: true, vinculo_confirmado: corpo.p_confirmar_vinculo });
       }
+      if (rpc === "admin_trocar_email_joiner") { reg.trocarEmail.push(corpo); return json(200, { ok: true, conta_desvinculada: false, pedidos_vinculados: 0 }); }
       if (rpc === "admin_cancelar_troca_email") { reg.cancelar.push(corpo); est.trocas = est.trocas.filter(t => t.id !== corpo.p_id); return route.fulfill({ status: 204, body: "" }); }
       if (rpc === "admin_aprovar_comprovacao") { reg.aprovar.push(corpo); est.comps = est.comps.filter(c => c.id !== corpo.p_id); return json(200, { ok: true, liberado: true }); }
       if (rpc === "admin_recusar_comprovacao") { reg.recusar.push(corpo); est.comps = est.comps.filter(c => c.id !== corpo.p_id); return route.fulfill({ status: 204, body: "" }); }
@@ -211,6 +221,32 @@ const ids = page => page.locator("[data-testid^='fila-pessoa-']").evaluateAll(el
   const duda = await abrir(page, 9); await duda.getByRole("button", { name: "Resolvido", exact: true }).click(); await page.waitForTimeout(700);
   ok(reg.resolver.length === 1 && reg.resolver[0].p_id === 41 && reg.resolver[0].p_status === "resolvida" && reg.resolver[0].p_nota === "" && !dialogos.some(d => d.tipo === "prompt"), "Resolvido NÃO pede anotação (nenhum pop-up) e a solicitação pelo detalhe usa a mesma função de sempre e registra o que foi feito");
   await T.browser.close();
+}
+{ // botões da administração: Atualizar dados e Enviar código
+  const T = await nova(); const { page, reg, dialogos } = T; await abrirContas(page);
+  const duda = await abrir(page, 9);
+  ok(await duda.getByTestId("btn-atualizar-dados").count() === 1 && await duda.getByTestId("btn-enviar-codigo").count() === 1, "o detalhe da pessoa tem 'Atualizar dados' e 'Enviar código'");
+  await duda.getByTestId("btn-enviar-codigo").click(); await page.waitForTimeout(800);
+  ok(dialogos.some(d => d.tipo === "confirm" && /SÓ para o e-mail do cadastro/.test(d.msg)) && reg.enviarCodigo.length === 1 && reg.enviarCodigo[0].joiner_id === 9 && Object.keys(reg.enviarCodigo[0]).join() === "joiner_id", "enviar: pede confirmação e manda SÓ o id do cadastro (nunca um e-mail digitado)");
+  ok(/Código pedido para o e-mail @exemplo\.com/.test(await page.locator("body").innerText()), "mostra só o provedor do e-mail e não afirma que chegou");
+  const caio = await abrir(page, 8); await caio.getByTestId("btn-enviar-codigo").click(); await page.waitForTimeout(800);
+  ok(/ativação fica pendente até você usar/.test(await page.locator("body").innerText()), "quando a ativação ainda ficará pendente, o aviso aparece junto");
+  const eva = await abrir(page, 10); await eva.getByTestId("btn-enviar-codigo").click(); await page.waitForTimeout(800);
+  ok(/compartilhado com outro cadastro/.test(await page.locator("body").innerText()), "e-mail compartilhado: o servidor recusa e a mensagem é mostrada");
+  const conta = await abrir(page, 13);
+  ok(await conta.getByTestId("btn-enviar-codigo").isDisabled(), "quem já tem conta: 'Enviar código' fica desligado");
+  await abrir(page, 9); await duda.getByTestId("btn-atualizar-dados").click(); await page.waitForTimeout(250);
+  await duda.getByRole("button", { name: "Salvar e-mail" }).click(); await page.waitForTimeout(300);
+  ok(reg.trocarEmail.length === 0 && /Digite o e-mail completo/.test(await page.locator("body").innerText()), "atualizar sem e-mail: nada é enviado ao servidor");
+  await duda.getByLabel("E-mail correto do cadastro").fill(" Duda.Certa@Gmail.com "); await duda.getByRole("button", { name: "Salvar e-mail" }).click(); await page.waitForTimeout(300);
+  ok(reg.trocarEmail.length === 0 && /Anote por que/.test(await page.locator("body").innerText()), "atualizar sem anotar como confirmou: recusado antes de chamar o servidor");
+  await duda.getByLabel("Como você confirmou").fill("WhatsApp em 12/11"); await duda.getByRole("button", { name: "Salvar e-mail" }).click(); await page.waitForTimeout(800);
+  ok(reg.trocarEmail.length === 1 && reg.trocarEmail[0].p_joiner_id === 9 && reg.trocarEmail[0].p_novo_email === "duda.certa@gmail.com" && reg.trocarEmail[0].p_motivo === "WhatsApp em 12/11", "atualizar: usa a função oficial com o e-mail em minúsculas e o motivo anotado");
+  ok(dialogos.some(d => d.tipo === "confirm" && /Trocar o e-mail do cadastro @duda/.test(d.msg)), "atualizar pede confirmação");
+  await T.browser.close();
+  const R = await nova({ recusarDialogo: true }); await abrirContas(R.page); const d2 = await abrir(R.page, 9);
+  await d2.getByTestId("btn-enviar-codigo").click(); await R.page.waitForTimeout(500);
+  ok(R.reg.enviarCodigo.length === 0, "dizer 'Cancelar' na confirmação NÃO envia código"); await R.browser.close();
 }
 { // listas por tipo e outras ferramentas continuam acessíveis (recolhidas); sem as funções novas o painel carrega
   const T = await nova(); const { page } = T; await abrirContas(page);
