@@ -187,6 +187,56 @@ function Orientacao({ p, onFeito, resolverSolicitacao }) {
   );
 }
 
+// Texto de erro de uma função do servidor (o corpo JSON vem dentro de error.context)
+async function erroDaFuncao(error) {
+  try { const j = await error.context.json(); if (j && j.error) return String(j.error); } catch { /* sem corpo legível */ }
+  return "Não foi possível concluir agora. Nada foi enviado.";
+}
+
+// Botões da administradora: "Atualizar dados" (troca o e-mail do cadastro pela função oficial, que registra quem e quando) e "Enviar código"
+// (força o código de ativação, SÓ para o e-mail que está no cadastro: para outro e-mail, atualize os dados antes).
+function AcoesAdmin({ p, cliente, onFeito, onErro, recarregar }) {
+  const [editando, setEditando] = useState(false), [email, setEmail] = useState(""), [motivo, setMotivo] = useState(""), [ocupado, setOcupado] = useState(false);
+  async function atualizar() {
+    const novo = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(novo)) return onErro("Digite o e-mail completo.");
+    if (motivo.trim().length < 5) return onErro("Anote por que está trocando (canal e data, ex.: WhatsApp em 12/11; mínimo 5 letras). Fica no registro.");
+    if (!window.confirm(`Trocar o e-mail do cadastro @${p.cog} (#${p.joiner_id}) para ${novo}?\n\n${p.tem_conta ? "ATENÇÃO: esta pessoa JÁ TEM CONTA. A conta de login atual será desvinculada (nada é apagado) e ela terá de ativar de novo.\n\n" : ""}Só faça depois de confirmar quem é a pessoa por outro canal.`)) return;
+    setOcupado(true);
+    const { data, error } = await cliente.rpc("admin_trocar_email_joiner", { p_joiner_id: p.joiner_id, p_novo_email: novo, p_motivo: motivo.trim() });
+    setOcupado(false);
+    if (error) return onErro(error.message);
+    onFeito(`E-mail do @${p.cog} atualizado.${data?.conta_desvinculada ? " A conta antiga foi desvinculada." : ""} Agora use “Enviar código”.`);
+    setEditando(false); setEmail(""); setMotivo(""); recarregar();
+  }
+  async function enviar() {
+    if (!window.confirm(`Enviar o código de ativação para o e-mail que está no cadastro de @${p.cog} (#${p.joiner_id})?\n\nO código vai SÓ para o e-mail do cadastro. Cada envio fica registrado.`)) return;
+    setOcupado(true);
+    const { data, error } = await cliente.functions.invoke("admin-enviar-codigo", { body: { joiner_id: p.joiner_id } });
+    setOcupado(false);
+    if (error) return onErro(await erroDaFuncao(error));
+    const avisos = (data?.avisos || []).join(" ");
+    onFeito(`Código pedido para o e-mail @${data?.dominio || "?"} do cadastro de @${p.cog}. A entrega não é garantida: se não chegar, veja o spam e o painel de envios.${avisos ? " ⚠ " + avisos : ""}`);
+  }
+  return (
+    <div data-testid="acoes-admin" style={{ border: `1px solid ${C.borda}`, borderRadius: 8, padding: "10px 14px", display: "grid", gap: 10 }}>
+      <h4 style={{ margin: 0 }}>Ações da administração</h4>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button type="button" data-testid="btn-atualizar-dados" style={botao(C.mudo)} disabled={ocupado} onClick={() => setEditando(v => !v)}>Atualizar dados</button>
+        <button type="button" data-testid="btn-enviar-codigo" style={botao(C.ok)} disabled={ocupado || p.tem_conta} title={p.tem_conta ? "Já tem conta: use recuperar senha" : ""} onClick={enviar}>Enviar código</button>
+      </div>
+      {p.tem_conta && <div style={{ fontSize: 12, color: C.mudo }}>Já tem conta: não há código de ativação. Se ela esqueceu a senha, use “Esqueci minha senha” no site.</div>}
+      {editando && (
+        <div style={{ display: "grid", gap: 8 }}>
+          <input style={campo} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="e-mail correto do cadastro" aria-label="E-mail correto do cadastro" />
+          <input style={campo} value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="como você confirmou (canal e data)" aria-label="Como você confirmou" maxLength={300} />
+          <div><button type="button" style={botao(C.ok)} disabled={ocupado} onClick={atualizar}>Salvar e-mail</button></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarregar, resolverSolicitacao }) {
   const acaoVinculo = p.vinculo && !p.troca && !p.comprovacao && !p.tem_conta && p.orientacao.tipo === "analise";
   const checks = conferencias(p), prova = (p.troca || p.comprovacao) ? provasDe(p) : null;
@@ -227,6 +277,7 @@ function Detalhe({ p, cliente, motivos, rotuloMotivo, onFeito, onErro, recarrega
       </div>
       <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
         <Orientacao p={p} onFeito={onFeito} resolverSolicitacao={resolverSolicitacao} />
+        <AcoesAdmin p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />
         {p.troca && <AcaoTroca p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />}
         {p.comprovacao && <AcaoComprovacao p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />}
         {acaoVinculo && <AcaoVinculo p={p} cliente={cliente} onFeito={onFeito} onErro={onErro} recarregar={recarregar} />}
