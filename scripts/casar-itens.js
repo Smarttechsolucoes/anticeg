@@ -12,6 +12,12 @@
 //     A regra antiga casa essas linhas só pela ORDEM; se a ordem da planilha mudar, os DONOS (@) trocam entre os ids. Aqui cada linha da planilha é ligada à linha do banco que já pertence ao MESMO @.
 //     Só mexe em grupos de chave repetida (na planilha ou no banco); grupos sem ambiguidade seguem exatamente como hoje. O que não achar o mesmo @ cai na regra antiga.
 //
+//  3) adotarCodigoSemChave — ADOÇÃO DO CÓDIGO (13/11/2026). Linha da planilha com um CÓDIGO NOVO (que nenhuma linha do banco tem) cuja chave (ceg|item|nome) não casou com ninguém, porque o NOME de exibição mudou
+//     junto com o código (a coluna NOME da planilha é preenchida depois, por fórmula). Sem esta etapa o sync INSERIA uma linha nova com o código e deixava a antiga SEM código para trás: a cópia
+//     (13/11: 36 cópias em "SKZOO EAAW · ONLINE", 9 em MERCARI). Aqui a linha antiga SEM código, do MESMO CEG, MESMO item e MESMO dono (comparação exata), RECEBE o código: continua a mesma linha (mesmo id).
+//     Só atua nas linhas que, depois da regra da chave, ficariam SEM PAR de qualquer dos lados (compra repetida legítima, com par pela chave, nunca é tocada); o código tem que ser único na planilha e
+//     inexistente no banco; o pareamento é 1 para 1, na ordem. Na dúvida NÃO casa (vale o comportamento antigo).
+//
 // Entradas: linhas da planilha ({ idLinha?, ceg, cog, chave? }) e linhas existentes ({ id, id_linha?, ceg, cog, chave? }). Saídas: { porIndice: Map<indice da linha da planilha, linha existente>, reivindicados: Set<id> }.
 
 const norm = v => String(v ?? '').trim();
@@ -64,6 +70,53 @@ export function casarChavesRepetidas(linhas, existentes) {
       if (!e) continue;
       porIndice.set(l.indice, e);
       reivindicados.add(e.id);
+    }
+  }
+  return { porIndice, reivindicados };
+}
+
+/**
+ * linhas: [{ indice, chave, idLinha, ceg, item, cog }] — só as NÃO casadas pelo código nem pelo desempate, na ordem da planilha (chave já em minúsculas, igual à do sync).
+ * existentes: [{ id, chave, id_linha, ceg, nome_do_item, cog }] — só as NÃO reivindicadas, na ordem de leitura do banco (id crescente).
+ * opcoes.codigosPlanilha: Map código -> quantas vezes aparece na planilha inteira. opcoes.codigosBanco: Set de TODOS os códigos que o banco já tem.
+ */
+export function adotarCodigoSemChave(linhas, existentes, { codigosPlanilha = new Map(), codigosBanco = new Set() } = {}) {
+  const porIndice = new Map();
+  const reivindicados = new Set();
+
+  // 1) emula o pareamento pela chave que o sync faz em seguida (n-ésima ocorrência da chave na planilha <-> n-ésima linha do banco com a mesma chave)
+  const gl = new Map(), ge = new Map();
+  for (const l of linhas) { const k = String(l.chave); if (!gl.has(k)) gl.set(k, []); gl.get(k).push(l); }
+  for (const e of existentes) { const k = String(e.chave); if (!ge.has(k)) ge.set(k, []); ge.get(k).push(e); }
+  const semParLinha = [], semParBanco = [];
+  for (const [k, ls] of gl) { const es = ge.get(k) || []; semParLinha.push(...ls.slice(es.length)); }
+  for (const [k, es] of ge) { const ls = gl.get(k) || []; semParBanco.push(...es.slice(ls.length)); }
+
+  // 2) candidatas: do lado da planilha, código novo e único; do lado do banco, linha SEM código
+  const grupo = (ceg, item, cog) => norm(ceg).toLowerCase() + '|' + norm(item).toLowerCase() + '|' + norm(cog);
+  const candLinhas = new Map(), candBanco = new Map();
+  for (const l of semParLinha) {
+    const c = norm(l.idLinha), dono = norm(l.cog);
+    if (!c || !dono || codigosPlanilha.get(c) !== 1 || codigosBanco.has(c)) continue;
+    const g = grupo(l.ceg, l.item, l.cog);
+    if (!candLinhas.has(g)) candLinhas.set(g, []);
+    candLinhas.get(g).push(l);
+  }
+  for (const e of semParBanco) {
+    if (norm(e.id_linha) || !norm(e.cog)) continue;
+    const g = grupo(e.ceg, e.nome_do_item, e.cog);
+    if (!candBanco.has(g)) candBanco.set(g, []);
+    candBanco.get(g).push(e);
+  }
+
+  // 3) pareia 1 para 1, na ordem (planilha na ordem das linhas; banco por id crescente)
+  for (const [g, ls] of candLinhas) {
+    const es = (candBanco.get(g) || []).slice().sort((a, b) => Number(a.id) - Number(b.id));
+    const n = Math.min(ls.length, es.length);
+    for (let i = 0; i < n; i++) {
+      if (reivindicados.has(es[i].id)) continue;
+      porIndice.set(ls[i].indice, es[i]);
+      reivindicados.add(es[i].id);
     }
   }
   return { porIndice, reivindicados };

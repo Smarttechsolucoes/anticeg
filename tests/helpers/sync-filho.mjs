@@ -46,7 +46,7 @@ process.on("beforeExit", async () => {
   const q = async s => (await db.query(s)).rows;
   const saida = {
     logs, exitCode: process.exitCode ?? 0, push,
-    masterlist: await q("select id, ceg, cog, nome, nome_do_item, id_linha, status, pago_item, pago_frete, pago_rf, valor_item from public.masterlist order by id"),
+    masterlist: await q("select id, ceg, cog, nome, nome_do_item, id_linha, status, pago_item, pago_frete, pago_rf, valor_item, venc_item from public.masterlist order by id"),
     claims: await q("select id, masterlist_id, status from public.claims order by id"),
     exclusoes: await q("select exists(select 1 from pg_class where relname = 'masterlist_exclusoes') e").then(async r => r[0].e ? await q("select masterlist_id from public.masterlist_exclusoes order by id") : null),
     joiners: await q("select cog, nome, email from public.joiners order by cog"),
