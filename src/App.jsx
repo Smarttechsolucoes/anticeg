@@ -12829,6 +12829,7 @@ const ODD_CFG = {
 const ODD_PU = "/odd-fresh-popup/";
 const ODD_TIPOS_8 = ["Wolf Chan", "Leebit", "Dwaekki", "Jiniret", "Han Quokka", "BbokAri", "PuppyM", "FoxI.Ny"];
 const ODD_TIPOS_9 = [...ODD_TIPOS_8, "Tasy"];
+const ODD_POPUP_PRAZO = new Date("2026-11-13T23:59:59-03:00"); // fecha sozinho em 13/11/2026 às 23:59 (Brasília), decisão de 13/11/2026
 const ODD_POPUP_CFG = {
   slug: "odd-fresh-popup",
   evento: "ODD & FRESH POP-UP",
@@ -12839,8 +12840,8 @@ const ODD_POPUP_CFG = {
   capa: "/odd-fresh/capa.jpg",
   capaAltura: 320,
   proporcao: "1/1",
-  tags: ["PEDIDOS ABERTOS", "PAGAMENTO IMEDIATO · PIX OU CARTÃO"],
-  infos: ["Pagamento imediato: no envio do pedido você paga por PIX ou cartão e anexa o comprovante", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional", "Ganhe POB online a cada R$190 (40,000KRW)"],
+  tags: ["PEDIDOS ATÉ 13/NOV", "PAGAMENTO IMEDIATO · PIX OU CARTÃO"],
+  infos: ["Pedidos aceitos até 13 de novembro, às 23h59", "Pagamento imediato: no envio do pedido você paga por PIX ou cartão e anexa o comprovante", "Roupas: tamanho único (as medidas ainda não foram disponibilizadas)", "Ainda sem data de envio internacional", "Ganhe POB online a cada R$190 (40,000KRW)"],
   box: null,
   itens: [
     { id: "HOODIE", foto: ODD_PU + "hoodie.png", preco: 395, nota: "Tamanho único | medidas não estão disponíveis" },
@@ -12869,7 +12870,7 @@ const ODD_POPUP_CFG = {
   ],
   kits: [],
   pagamentoImediato: true,   // pedido só entra com a forma de pagamento (PIX ou cartão), o valor total e o comprovante
-  fechado: false,            // aberto, sem data para fechar (decisão de 09/11/2026); para encerrar, troque por true
+  get fechado() { return new Date() > ODD_POPUP_PRAZO; },
 };
 
 // SUIATSU — Stray Kids JAPAN 4th Mini Album. Lançamento 25/11/2026, envio só em janeiro de 2027.
@@ -27081,8 +27082,8 @@ function PrevendaTab({ user }) {
     },
     {
       key: "suiatsu-popup",
-      ativo: true,
-      fechado: SUIATSU_POPUP_CFG.fechado,
+      ativo: !SUIATSU_POPUP_CFG.fechado,
+      fechado: false,
       cor: "lilas",
       titulo: "POP-UP SUIATSU",
       subtitulo: "Stray Kids Pop-up · itens do pop-up SUIATSU",
@@ -27094,15 +27095,15 @@ function PrevendaTab({ user }) {
     },
     {
       key: "odd-fresh-popup",
-      ativo: true,
-      fechado: ODD_POPUP_CFG.fechado,
+      ativo: !ODD_POPUP_CFG.fechado,
+      fechado: false,
       cor: "lilas",
       titulo: "ODD & FRESH POP-UP",
       subtitulo: "Stray Kids Pop-up · itens do pop-up",
       url: null,
       tab: "odd-fresh-popup",
       img: ODD_POPUP_CFG.capa,
-      tags: ["Pedidos abertos", "Pagamento imediato"],
+      tags: ["Pedidos até 13/11", "Pagamento imediato"],
       info: "Pagamento imediato via PIX ou cartão · Roupas em tamanho único · escolha o tipo de cada item no formulário",
     },
     {
