@@ -10,7 +10,7 @@ import { criaPorFuncao, criarPedidoComoInsert } from "./pedidosFechados.js";
 export const JOINERS_AUTH_ATIVO = import.meta.env.VITE_JOINERS_AUTH === "true";
 
 // Áreas que exigem conta ativada e senha. O resto (CEGs, calendário, regras...) continua público.
-export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "odd-fresh-popup", "suiatsu", "promo-13", "mercari"];
+export const AREAS_PROTEGIDAS = ["masterlist", "perfil", "envio", "disponiveis", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "odd-fresh-popup", "suiatsu", "suiatsu-popup", "promo-13", "mercari"];
 
 export const SENHA_MIN = 8;
 

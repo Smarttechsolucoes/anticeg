@@ -8654,6 +8654,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [promo13Count,     setPromo13Count]     = useState(0);
   const [oddPopupCount,   setOddPopupCount]   = useState(0);
   const [suiatsuCount,    setSuiatsuCount]    = useState(0);
+  const [suiatsuPopupCount, setSuiatsuPopupCount] = useState(0);
   const [dropsStats,       setDropsStats]       = useState({});
   const [claimsPendentes, setClaimsPendentes] = useState([]);
   const [claimsAdminPendentes, setClaimsAdminPendentes] = useState([]);
@@ -9041,8 +9042,10 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
       .then(({ count }) => { if (count) setOddPopupCount(count); });
     supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", SUIATSU_CFG.evento).eq("status", "pendente")
       .then(({ count }) => { if (count) setSuiatsuCount(count); });
+    supabase.from("formulario_pedidos").select("id", { count: "exact", head: true }).eq("evento", SUIATSU_POPUP_CFG.evento).eq("status", "pendente")
+      .then(({ count }) => { if (count) setSuiatsuPopupCount(count); });
     supabase.from("formulario_pedidos").select("evento, status")
-      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2", PT_CFG.evento, ODD_CFG.evento, PROMO13_CFG.evento, ODD_POPUP_CFG.evento, SUIATSU_CFG.evento])
+      .in("evento", ["WAVE MAKER - SG JAPAN 2027", "RUN IT VOL 2", PT_CFG.evento, ODD_CFG.evento, PROMO13_CFG.evento, ODD_POPUP_CFG.evento, SUIATSU_CFG.evento, SUIATSU_POPUP_CFG.evento])
       .then(({ data }) => {
         if (!data) return;
         const stats = {};
@@ -9373,7 +9376,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               </div>
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Drops</div>
-                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + dazedHanCount + bazaarVCount + skzooOnlineCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + suiatsuCount + smolmerchCount + murceCount + diconCount + promoMurceCount)}
+                {nav("todos-drops", "Todos os drops", "◫", revistaCount + wmagCount + wmagLkCount + wmagDzCount + dazedHanCount + bazaarVCount + skzooOnlineCount + esqHjCount + popupCount + bazaarInCount + lightstickCount + popcornSleeveCount + singbaCount + waveMakerCount + runItCount + paperTalesCount + oddFreshCount + promo13Count + oddPopupCount + suiatsuCount + suiatsuPopupCount + smolmerchCount + murceCount + diconCount + promoMurceCount)}
               </div>
               {(temAcesso("envios") || owner) && (
               <div className="admin-sidebar-group">
@@ -9511,6 +9514,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                 { evento:PROMO13_CFG.evento,           label:PROMO13_CFG.titulo, tab:"promo-13-admin", cor:"rgba(201,168,240,.85)", icon:"🏷️" },
                 { evento:ODD_POPUP_CFG.evento,         label:ODD_POPUP_CFG.titulo, tab:"odd-fresh-popup-admin", cor:"rgba(201,168,240,.85)", icon:"🍋" },
                 { evento:SUIATSU_CFG.evento,           label:SUIATSU_CFG.titulo, tab:"suiatsu-admin", cor:"rgba(201,168,240,.85)", icon:"💿" },
+                { evento:SUIATSU_POPUP_CFG.evento,     label:SUIATSU_POPUP_CFG.titulo, tab:"suiatsu-popup-admin", cor:"rgba(201,168,240,.85)", icon:"💿" },
               ];
               const STATUS_COLS = [
                 { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -10159,12 +10163,12 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
         <AdminMercari pedidos={mercariPedidos} onUpdate={setMercariPedidos} />
       )}
 
-      {["revista","wmag","wmag-leeknow","dazed-seungmin","dazed-han","bazaar-v","esquire-hyunjin","popup","bazaar-in","skzoo-rio","skzoo-online","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","suiatsu-admin","smolmerch","murce-itens","dicon-origin","promo-murce-50"].includes(adminMainTab) && (
+      {["revista","wmag","wmag-leeknow","dazed-seungmin","dazed-han","bazaar-v","esquire-hyunjin","popup","bazaar-in","skzoo-rio","skzoo-online","lightstick","popcorn-sleeve","singba","wave-maker-admin","run-it-admin","paper-tales-admin","odd-fresh-admin","promo-13-admin","odd-fresh-popup-admin","suiatsu-admin","suiatsu-popup-admin","smolmerch","murce-itens","dicon-origin","promo-murce-50"].includes(adminMainTab) && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           <button onClick={() => setAdminMainTab("todos-drops")} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", fontSize:10, cursor:"pointer", marginBottom:0, padding:"4px 0", letterSpacing:".04em" }}>
             ← Todos os drops
           </button>
-            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "dazed-han":"Dazed & Confused Han", "bazaar-v":"Bazaar V","esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "skzoo-online":"SKZOO EAAW Online","lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "suiatsu-admin":SUIATSU_CFG.titulo, "smolmerch":"Smol Merch", "murce-itens":"Murcekaly Itens", "dicon-origin":"DICON x D'FESTA THE ORIGIN", "promo-murce-50":"PROMO-MURCE-50" }[adminMainTab]} />
+            <ExportarPedidosDrop dropId={adminMainTab} label={{ "revista":"Revista Nylon", "wmag":"W Magazine Hyunjin", "wmag-leeknow":"W Magazine Lee Know", "dazed-seungmin":"Dazed & Confused Seungmin", "dazed-han":"Dazed & Confused Han", "bazaar-v":"Bazaar V","esquire-hyunjin":"Esquire Hyunjin", "popup":"Pop-up This & That", "bazaar-in":"Bazaar IN", "skzoo-rio":"SKZOO Pop-up Rio", "skzoo-online":"SKZOO EAAW Online","lightstick":"Lightstick SKZ", "popcorn-sleeve":"Pop-corn Sleeve", "singba":"SINGBA", "wave-maker-admin":"WAVE MAKER", "run-it-admin":"RUN IT VOL 2", "paper-tales-admin":PT_CFG.titulo, "odd-fresh-admin":ODD_CFG.titulo, "promo-13-admin":PROMO13_CFG.titulo, "odd-fresh-popup-admin":ODD_POPUP_CFG.titulo, "suiatsu-admin":SUIATSU_CFG.titulo, "suiatsu-popup-admin":SUIATSU_POPUP_CFG.titulo, "smolmerch":"Smol Merch", "murce-itens":"Murcekaly Itens", "dicon-origin":"DICON x D'FESTA THE ORIGIN", "promo-murce-50":"PROMO-MURCE-50" }[adminMainTab]} />
         </div>
       )}
       {adminMainTab === "revista"   && <AdminRevista  onCountChange={setRevistaCount} />}
@@ -10188,11 +10192,12 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {adminMainTab === "promo-13-admin"    && <AdminWaveMaker cfg={PROMO13_CFG} onCountChange={setPromo13Count} />}
       {adminMainTab === "odd-fresh-popup-admin" && <AdminWaveMaker cfg={ODD_POPUP_CFG} onCountChange={setOddPopupCount} />}
       {adminMainTab === "suiatsu-admin" && <AdminWaveMaker cfg={SUIATSU_CFG} onCountChange={setSuiatsuCount} />}
+      {adminMainTab === "suiatsu-popup-admin" && <AdminWaveMaker cfg={SUIATSU_POPUP_CFG} onCountChange={setSuiatsuPopupCount} />}
       {adminMainTab === "smolmerch"         && <AdminSmolMerch onCountChange={setSmolmerchCount} />}
       {adminMainTab === "murce-itens"       && <AdminSmolMerch cfg={PHOTOCARD_CFG} produtos={PHOTOCARD_PRODUTOS} fotoDe={fotoPc} onCountChange={setMurceCount} />}
       {adminMainTab === "dicon-origin"      && <AdminSmolMerch cfg={DICON_CFG} produtos={DICON_GRUPOS} onCountChange={setDiconCount} />}
       {adminMainTab === "promo-murce-50"    && <AdminSmolMerch cfg={PROMO_MURCE_50_CFG} produtos={PROMO_MURCE_50_PRODUTOS} fotoDe={fotoPm} onCountChange={setPromoMurceCount} />}
-      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} bazaarVCount={bazaarVCount} skzooOnlineCount={skzooOnlineCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} smolmerchCount={smolmerchCount} murceCount={murceCount} diconCount={diconCount} promoMurceCount={promoMurceCount} dropsStats={dropsStats} />}
+      {adminMainTab === "todos-drops"      && <AdminTodosDrops onNav={setAdminMainTab} revistaCount={revistaCount} wmagCount={wmagCount} wmagLkCount={wmagLkCount} wmagDzCount={wmagDzCount} dazedHanCount={dazedHanCount} bazaarVCount={bazaarVCount} skzooOnlineCount={skzooOnlineCount} esqHjCount={esqHjCount} popupCount={popupCount} bazaarInCount={bazaarInCount} lightstickCount={lightstickCount} popcornSleeveCount={popcornSleeveCount} singbaCount={singbaCount} waveMakerCount={waveMakerCount} runItCount={runItCount} paperTalesCount={paperTalesCount} oddFreshCount={oddFreshCount} promo13Count={promo13Count} oddPopupCount={oddPopupCount} suiatsuCount={suiatsuCount} suiatsuPopupCount={suiatsuPopupCount} smolmerchCount={smolmerchCount} murceCount={murceCount} diconCount={diconCount} promoMurceCount={promoMurceCount} dropsStats={dropsStats} />}
       {adminMainTab === "claims-admin" && <AdminClaims pendentesInit={claimsAdminPendentes} onPendentesChange={setClaimsAdminPendentes} />}
 
       {adminMainTab === "storage" && owner && (() => {
@@ -12980,6 +12985,39 @@ const SUIATSU_CFG = {
     { id: "EDIÇÃO SOLO FELIX", foto: SU + "felix.jpg", preco: 125, detalhes: SU_INFO_SOLO },
     { id: "EDIÇÃO SOLO SEUNGMIN", foto: SU + "seungmin.jpg", preco: 125, detalhes: SU_INFO_SOLO },
     { id: "EDIÇÃO SOLO I.N", foto: SU + "in.jpg", preco: 125, detalhes: SU_INFO_SOLO },
+  ],
+  kits: [],
+};
+
+// POP-UP SUIATSU — itens do pop-up japonês do Stray Kids (preços em R$ definidos em 13/11/2026).
+// Itens com "tipos" são escolhidos por tipo (membro, personagem, versão ou tamanho).
+const SU_PU = "/suiatsu-popup/";
+const SUIATSU_POPUP_PRAZO = new Date("2026-12-05T23:59:59-03:00");
+const SU_PU_MEMBROS = ["Bang Chan", "Lee Know", "Changbin", "Hyunjin", "Han", "Felix", "Seungmin", "I.N"];
+const SUIATSU_POPUP_CFG = {
+  slug: "suiatsu-popup",
+  get fechado() { return new Date() > SUIATSU_POPUP_PRAZO; },
+  evento: "POP-UP SUIATSU",
+  tabelaEstoque: "suiatsu_popup_estoque",
+  titulo: "POP-UP SUIATSU",
+  grupo: "STRAY KIDS · POP-UP",
+  subtitulo: "Itens do pop-up SUIATSU",
+  capa: null,
+  proporcao: "1/1",
+  tags: ["FORMS ATÉ 5/DEZ", "PAGAMENTO 10/DEZ"],
+  infos: ["Forms aberto até: 5 de dezembro", "Pagamento: 10 de dezembro", "A cada ¥10.000 (ienes) você ganha uma POB exclusiva (não revelada)", "Ainda sem data de envio internacional"],
+  box: null,
+  itens: [
+    { id: "TRADING CARD", foto: SU_PU + "trading-card.png", preco: 25, tipos: ["Aleatório"], nota: "Aleatório: 1 de 50 tipos" },
+    { id: "UCHIWA", foto: SU_PU + "uchiwa.png", preco: 36, tipos: SU_PU_MEMBROS, nota: "Verso igual em todos" },
+    { id: "ACRYLIC STAND COM SLIDER CASE", foto: SU_PU + "acrylic-stand.png", preco: 80, tipos: SU_PU_MEMBROS },
+    { id: "PHOTO BADGE", foto: SU_PU + "photo-badge.png", preco: 28, tipos: SU_PU_MEMBROS },
+    { id: "PHOTO CARD SET", foto: SU_PU + "photocard-set.png", preco: 60, tipos: ["Versão A", "Versão B"], nota: "9 peças por set" },
+    { id: "HOODIE", foto: SU_PU + "hoodie.png", preco: 480, tipos: ["M", "L"] },
+    { id: "BRACELET", foto: SU_PU + "bracelet.png", preco: 110 },
+    { id: "CLEAR POUCH", foto: SU_PU + "clear-pouch.png", preco: 60, tipos: ["Aleatório"], nota: "Aleatório: 1 de 8" },
+    { id: "BLANKET", foto: SU_PU + "blanket.png", preco: 220 },
+    { id: "KEY HOLDER", foto: SU_PU + "key-holder.png", preco: 73, tipos: ODD_TIPOS_8 },
   ],
   kits: [],
 };
@@ -25571,6 +25609,7 @@ function ExportarPedidosDrop({ dropId, label }) {
     "promo-13-admin":    { tabela:"formulario_pedidos", evento:PROMO13_CFG.evento,          linhas:p => linhasForm(PROMO13_CFG, p) },
     "odd-fresh-popup-admin": { tabela:"formulario_pedidos", evento:ODD_POPUP_CFG.evento,       linhas:p => linhasForm(ODD_POPUP_CFG, p) },
     "suiatsu-admin": { tabela:"formulario_pedidos", evento:SUIATSU_CFG.evento,                    linhas:p => linhasForm(SUIATSU_CFG, p) },
+    "suiatsu-popup-admin": { tabela:"formulario_pedidos", evento:SUIATSU_POPUP_CFG.evento,        linhas:p => linhasForm(SUIATSU_POPUP_CFG, p) },
   };
 
   async function exportarPedidosJoiners() {
@@ -25702,7 +25741,7 @@ function AdminRecrutadores() {
 }
 
 // ── Admin Todos os Drops ────────────────────────────────────────
-function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, dazedHanCount, bazaarVCount, skzooOnlineCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, suiatsuCount, smolmerchCount, murceCount, diconCount, promoMurceCount, dropsStats }) {
+function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCount, dazedHanCount, bazaarVCount, skzooOnlineCount, esqHjCount, popupCount, bazaarInCount, lightstickCount, popcornSleeveCount, singbaCount, waveMakerCount, runItCount, paperTalesCount, oddFreshCount, promo13Count, oddPopupCount, suiatsuCount, suiatsuPopupCount, smolmerchCount, murceCount, diconCount, promoMurceCount, dropsStats }) {
   const mono = "'DM Mono',monospace";
   const agora = new Date();
   const DROPS = [
@@ -25731,6 +25770,7 @@ function AdminTodosDrops({ onNav, revistaCount, wmagCount, wmagLkCount, wmagDzCo
     { id:"promo-13-admin",    label:PROMO13_CFG.titulo,   icon:"🏷️", count:promo13Count,    tipo:"forms",    cor:"var(--lilas)",         evento:PROMO13_CFG.evento , aberto:true },
     { id:"odd-fresh-popup-admin", label:ODD_POPUP_CFG.titulo, icon:"🍋", count:oddPopupCount, tipo:"forms",    cor:"var(--lilas)",         evento:ODD_POPUP_CFG.evento , aberto:!ODD_POPUP_CFG.fechado },
     { id:"suiatsu-admin", label:SUIATSU_CFG.titulo, icon:"💿", count:suiatsuCount, tipo:"forms", cor:"var(--lilas)", evento:SUIATSU_CFG.evento , aberto:agora <= SUIATSU_PRAZO },
+    { id:"suiatsu-popup-admin", label:SUIATSU_POPUP_CFG.titulo, icon:"💿", count:suiatsuPopupCount, tipo:"forms", cor:"var(--lilas)", evento:SUIATSU_POPUP_CFG.evento , aberto:!SUIATSU_POPUP_CFG.fechado },
   ];
   const STATUS_COLS = [
     { key:"pendente",   label:"Pendente",   cor:"rgba(201,168,240,.9)" },
@@ -27039,6 +27079,19 @@ function PrevendaTab({ user }) {
       info: "Edições Limitada A e B, Regular, Fã-clube e 8 edições Solo",
     },
     {
+      key: "suiatsu-popup",
+      ativo: true,
+      fechado: SUIATSU_POPUP_CFG.fechado,
+      cor: "lilas",
+      titulo: "POP-UP SUIATSU",
+      subtitulo: "Stray Kids Pop-up · itens do pop-up SUIATSU",
+      url: null,
+      tab: "suiatsu-popup",
+      img: SU_PU + "uchiwa.png",
+      tags: ["Forms até 5/12", "Pagamento 10/12"],
+      info: "Uchiwa, acrylic stand, photo badge, hoodie, key holder e mais · escolha o tipo de cada item no formulário",
+    },
+    {
       key: "odd-fresh-popup",
       ativo: true,
       fechado: ODD_POPUP_CFG.fechado,
@@ -28206,7 +28259,7 @@ function AppPrincipal() {
   });
   const [itens, setItens] = useState([]);
   useEffect(() => { if (PUSH_DESLIGADO) desligarPushNesteAparelho(); }, []);
-  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2","paper-tales","odd-fresh","promo-13","odd-fresh-popup","suiatsu"];
+  const TAB_SLUGS = ["masterlist","cegs","calendario","perfil","regras","envio","admin","mercari","disponiveis","prevenda","wave-maker","run-it-vol-2","paper-tales","odd-fresh","promo-13","odd-fresh-popup","suiatsu","suiatsu-popup"];
   const parseUrlParts = () => {
     const parts = window.location.pathname.replace(/^\//, "").split("/");
     const pathTab = parts[0] || "";
@@ -28889,6 +28942,7 @@ function AppPrincipal() {
           {tab === "odd-fresh" && prot("odd-fresh", <WaveMakerTab user={user} cfg={ODD_CFG} />)}
           {tab === "odd-fresh-popup" && prot("odd-fresh-popup", <WaveMakerTab user={user} cfg={ODD_POPUP_CFG} />)}
           {tab === "suiatsu" && prot("suiatsu", <WaveMakerTab user={user} cfg={SUIATSU_CFG} />)}
+          {tab === "suiatsu-popup" && prot("suiatsu-popup", <WaveMakerTab user={user} cfg={SUIATSU_POPUP_CFG} />)}
           {tab === "promo-13" && prot("promo-13", <WaveMakerTab user={user} cfg={PROMO13_CFG} />)}
           {tab === "mercari" && prot("mercari", <MercariTab user={user} />)}
           {tab === "regras" && <RegrasTab />}
