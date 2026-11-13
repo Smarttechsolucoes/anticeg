@@ -5,6 +5,11 @@ on:
     - cron: '0 12 * * *'  # 9h BRT
     - cron: '0 0 * * *'   # 21h BRT (meia-noite UTC)
   workflow_dispatch:        # permite rodar manualmente também
+    inputs:
+      simulacao:
+        description: 'Só simular: lê a planilha e o banco e mostra o que seria feito, sem gravar nada'
+        type: boolean
+        default: false
 
 concurrency:
   group: sync-masterlist
@@ -30,4 +35,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SYNC_DRY_RUN: ${{ inputs.simulacao && '1' || '' }}  # 1 = simulação (disparo manual com a opção marcada); nunca grava
           SYNC_ENVIAR_PUSH: ${{ vars.SYNC_ENVIAR_PUSH }}  # vazio = sem push; 1 = envia push de status e item novo
