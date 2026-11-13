@@ -12996,6 +12996,7 @@ const SUIATSU_POPUP_PRAZO = new Date("2026-12-05T23:59:59-03:00");
 const SU_PU_MEMBROS = ["Bang Chan", "Lee Know", "Changbin", "Hyunjin", "Han", "Felix", "Seungmin", "I.N"];
 const SUIATSU_POPUP_CFG = {
   slug: "suiatsu-popup",
+  cartaoUniforme: true,
   get fechado() { return new Date() > SUIATSU_POPUP_PRAZO; },
   evento: "POP-UP SUIATSU",
   tabelaEstoque: "suiatsu_popup_estoque",
@@ -13009,7 +13010,7 @@ const SUIATSU_POPUP_CFG = {
   box: null,
   itens: [
     { id: "TRADING CARD", foto: SU_PU + "trading-card.png", preco: 25, tipos: ["Aleatório"], nota: "Aleatório: 1 de 50 tipos" },
-    { id: "UCHIWA", foto: SU_PU + "uchiwa.png", preco: 36, tipos: SU_PU_MEMBROS, nota: "Verso igual em todos" },
+    { id: "PICKET", foto: SU_PU + "uchiwa.png", preco: 36, tipos: SU_PU_MEMBROS, nota: "Verso igual em todos" },
     { id: "ACRYLIC STAND COM SLIDER CASE", foto: SU_PU + "acrylic-stand.png", preco: 80, tipos: SU_PU_MEMBROS },
     { id: "PHOTO BADGE", foto: SU_PU + "photo-badge.png", preco: 28, tipos: SU_PU_MEMBROS },
     { id: "PHOTO CARD SET", foto: SU_PU + "photocard-set.png", preco: 60, tipos: ["Versão A", "Versão B"], nota: "9 peças por set" },
@@ -13402,13 +13403,13 @@ function WaveMakerTab({ user, cfg = WM_CFG }) {
           return (
             <div key={it.id} style={{ border:`1px solid ${sel?"rgba(201,168,240,.5)":"rgba(245,240,232,.08)"}`, borderRadius:14, overflow:"hidden", background:sel?"rgba(201,168,240,.06)":"var(--card-bg)", transition:"all .15s", display:"flex", flexDirection:"column" }}>
               <div style={{ position:"relative", cursor:"zoom-in" }} onClick={() => setFotoZoom(it)}>
-                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:it.proporcao || cfg.proporcao || "2/3", objectFit:"cover", display:"block", opacity: indisp ? .3 : (sel || it.tipos)?1:.75, filter: indisp ? "grayscale(1)" : "none" }} />
+                <img src={it.foto} alt={it.id} style={{ width:"100%", aspectRatio:it.proporcao || cfg.proporcao || "2/3", objectFit:"cover", display:"block", opacity: indisp ? .3 : (sel || it.tipos || cfg.cartaoUniforme)?1:.75, filter: indisp ? "grayscale(1)" : "none" }} />
                 {indisp && <div style={{ position:"absolute", top:"50%", left:0, right:0, transform:"translateY(-50%)", textAlign:"center", background:"rgba(0,0,0,.7)", padding:"6px 0", fontFamily:mono, fontSize:10, fontWeight:700, letterSpacing:"2px", color:"#ff6b6b" }}>INDISPONÍVEL</div>}
                 <div style={{ position:"absolute", bottom:6, right:6, background:"rgba(0,0,0,.55)", borderRadius:5, padding:"2px 6px", fontFamily:mono, fontSize:8, color:"rgba(245,240,232,.55)" }}>🔍</div>
               </div>
               <div style={{ padding:"8px 10px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
-                <div style={it.tipos ? { fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 } : { fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
-                <div style={it.tipos ? { fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--verde)", letterSpacing:"0.5px", marginTop:6 } : { fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(it.preco)}</div>
+                <div style={(it.tipos || cfg.cartaoUniforme) ? { fontFamily:mono, fontSize:10, color:"var(--offwhite)", lineHeight:1.3 } : { fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color: indisp ? "rgba(245,240,232,.35)" : sel?"var(--lilas)":"var(--offwhite)", letterSpacing:.5, lineHeight:1.2 }}>{it.id}</div>
+                <div style={(it.tipos || cfg.cartaoUniforme) ? { fontFamily:mono, fontSize:13, fontWeight:700, color:"var(--verde)", letterSpacing:"0.5px", marginTop:6 } : { fontFamily:mono, fontSize:11, color: indisp ? "rgba(245,240,232,.3)" : "var(--laranja)", fontWeight:700, marginTop:2, textDecoration: indisp ? "line-through" : "none" }}>{fmtPreco(it.preco)}</div>
                 {it.nota && <div style={{ fontFamily:mono, fontSize:9, color:"rgba(245,240,232,.45)", letterSpacing:".3px", marginTop:2 }}>{it.nota}</div>}
                 {!indisp && rest !== null && (
                   <div style={{ fontFamily:mono, fontSize:9, color:"#f0c040", letterSpacing:".5px", marginTop:2 }}>⚠ {rotuloEstoque(rest)}</div>
@@ -27089,7 +27090,7 @@ function PrevendaTab({ user }) {
       tab: "suiatsu-popup",
       img: SU_PU + "uchiwa.png",
       tags: ["Forms até 5/12", "Pagamento 10/12"],
-      info: "Uchiwa, acrylic stand, photo badge, hoodie, key holder e mais · escolha o tipo de cada item no formulário",
+      info: "Picket, acrylic stand, photo badge, hoodie, key holder e mais · escolha o tipo de cada item no formulário",
     },
     {
       key: "odd-fresh-popup",
