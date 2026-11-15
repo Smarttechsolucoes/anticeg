@@ -2,12 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 import ws from 'ws';
 import { montarUpsertJoiner, carregarIdsComConta, carregarIdsEmailTrocado, emailPlanilhaDivergeDoTrocado } from './preservar-email.js';
-import { casarPorIdLinha, casarChavesRepetidas } from './casar-itens.js';
+import { casarPorIdLinha, casarChavesRepetidas, adotarCodigoSemChave } from './casar-itens.js';
 import { indexarJoiners, resolverLinha, cogDoUpsert, joinerExistente } from './resolver-joiner.js';
 import { carregarArrobasAntigos } from './arrobas-antigos.js';
 
 const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
+// SIMULAÇÃO (SYNC_DRY_RUN=1): lê a planilha e o banco, faz TODO o casamento e conta o que seria atualizado/inserido/apagado, mas NÃO grava nada (nem masterlist, nem joiners, nem push, nem a exclusão protegida).
+const SIMULACAO = process.env.SYNC_DRY_RUN === '1';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -44,6 +46,22 @@ function linhaMudou(existente, novo) {
   return false;
 }
 
+// Célula com ERRO DE FÓRMULA da planilha (#N/A, #REF!, #VALUE!...) não é dado: em 13/11/2026 havia 20 e-mails e 5 nomes assim, e o sync gravava "#n/a" como e-mail do cadastro (por cima do e-mail real de quem ainda não tinha conta).
+// E-mail que não parece e-mail também é tratado como CÉLULA VAZIA (o e-mail que já está no banco fica como está).
+const ERRO_FORMULA = /^#(N\/A|REF!?|VALUE!?|NAME\??|DIV\/0!?|NUM!?|NULL!?|ERROR!?)/i;
+const EMAIL_VALIDO = /^[^\s@#]+@[^\s@]+\.[^\s@]+$/;
+const emailLimpo = v => { const e = String(v ?? '').trim().toLowerCase(); return EMAIL_VALIDO.test(e) ? e : ''; };
+const nomeLimpo = v => { const n = String(v ?? '').trim(); return ERRO_FORMULA.test(n) ? '' : n; };
+
+// Data SEM ANO na planilha ("20/12"): o CSV traz só o que a célula mostra, e o sync assumia o ano da execução. Na virada de ano (e a cada nova execução em outro ano) toda data assim seria reescrita com o ano novo
+// (103 linhas em 13/11/2026). Se o banco já tem uma data com o MESMO dia e mês, o ano que está no banco é mantido; só uma data realmente nova usa o ano atual.
+const dataSemAno = s => /^\d{1,2}\/\d{1,2}$/.test(String(s ?? '').trim());
+const dataIso = v => v == null ? null : (v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
+const manterAnoDoBanco = (textoPlanilha, novo, doBanco) => {
+  const atual = dataIso(doBanco);
+  return (novo && atual && dataSemAno(textoPlanilha) && atual.slice(5) === novo.slice(5)) ? atual : novo;
+};
+
 // Normaliza nome de coluna: minúsculo, sem espaços extras, sem BOM
 function norm(str) {
   return str.replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -59,6 +77,7 @@ function col(record, colMap, ...names) {
 }
 
 async function main() {
+  if (SIMULACAO) console.log('=== SIMULAÇÃO (SYNC_DRY_RUN=1): NADA será gravado no banco ===');
   console.log('Buscando planilha...');
   const res = await fetch(CSV_URL);
   if (!res.ok) throw new Error(`Falha ao buscar CSV: ${res.status}`);
@@ -122,6 +141,7 @@ async function main() {
     from += 1000;
   }
   const totalNoBanco = Object.values(existingMap).reduce((a, v) => a + v.length, 0); // ANTES do casamento por código: é a base da trava de planilha parcial
+  const codigosBanco = new Set(Object.values(existingMap).flat().map(x => String(x.id_linha ?? '').trim()).filter(Boolean)); // TODOS os códigos que o banco já tem (para a adoção)
   console.log(`${totalNoBanco} itens existentes no banco`);
   // A leitura tem que bater com a contagem do banco (tolera a diferença de linhas criadas pelo site no meio do caminho).
   if (Math.abs(totalNoBanco - totalEsperado) > Math.max(25, totalEsperado * 0.01)) {
@@ -145,7 +165,7 @@ async function main() {
   // Casa primeiro pelo CÓDIGO da planilha (coluna ID = id_linha): a linha continua a MESMA (mesmo id) mesmo que o nome do item, o nome de exibição ou o dono mudem.
   // Sem isso a regra antiga (ceg|item|nome) insere uma linha nova e apaga a antiga, e as demandas de pagamento ficam apontando para um id que não existe mais.
   // O DONO da linha da planilha é calculado como no laço abaixo (@ → joiner cadastrada; senão o próprio @/e-mail): um id NUNCA muda de dono por causa de um código.
-  const cogDe = r => resolverLinha({ twitter: col(r, colMap, '@'), email: col(r, colMap, 'EMAIL') }, idxJoiners).cog;   // conflito => null (a linha não casa com nada e não é tocada)
+  const cogDe = r => resolverLinha({ twitter: col(r, colMap, '@'), email: emailLimpo(col(r, colMap, 'EMAIL')) }, idxJoiners).cog;   // conflito => null (a linha não casa com nada e não é tocada)
   const casamento = casarPorIdLinha(
     rows.map(r => ({ idLinha: col(r, colMap, 'ID').trim(), ceg: col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), item: col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim(), cog: cogDe(r) })),
     Object.values(existingMap).flat()
@@ -159,13 +179,32 @@ async function main() {
     Object.entries(existingMap).flatMap(([k, arr]) => arr.map(x => ({ id: x.id, chave: k, cog: x.cog, item: x })))
   );
   for (const k of Object.keys(existingMap)) existingMap[k] = existingMap[k].filter(x => !desempate.reivindicados.has(x.id));
-  let desempatadasPeloDono = 0;
+  // ADOÇÃO DO CÓDIGO (casar-itens.js, etapa 3): linha da planilha com código NOVO e sem par pela chave (o NOME de exibição mudou junto com o código) adota a linha ANTIGA sem código do mesmo CEG/item/dono,
+  // em vez de inserir uma cópia. Roda só nas linhas que ficariam sem par; compra repetida com par pela chave nunca é tocada.
+  const codigosPlanilha = new Map();
+  for (const r of rows) { const c = col(r, colMap, 'ID').trim(); if (c) codigosPlanilha.set(c, (codigosPlanilha.get(c) || 0) + 1); }
+  const chaveDe = r => `${col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim()}|${col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim()}|${col(r, colMap, 'NOME').trim()}`.toLowerCase();
+  const adocao = adotarCodigoSemChave(
+    rows.map((r, indice) => ({ indice, r })).filter(x => !casamento.porIndice.has(x.indice) && !desempate.porIndice.has(x.indice))
+        .map(x => ({ indice: x.indice, chave: chaveDe(x.r), idLinha: col(x.r, colMap, 'ID').trim(), ceg: col(x.r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG').trim(), item: col(x.r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim(), cog: cogDe(x.r) })),
+    Object.entries(existingMap).flatMap(([k, arr]) => arr.map(x => ({ id: x.id, chave: k, id_linha: x.id_linha, ceg: x.ceg, nome_do_item: x.nome_do_item, cog: x.cog, item: x }))),
+    { codigosPlanilha, codigosBanco }
+  );
+  for (const k of Object.keys(existingMap)) existingMap[k] = existingMap[k].filter(x => !adocao.reivindicados.has(x.id));
+  const blindadasAmbiguas = new Set(adocao.ambiguos.flatMap(a => a.idsBanco)); // grupo ambíguo: as linhas antigas NÃO são candidatas à exclusão (a ordem não prova qual é qual)
+  if (adocao.ambiguos.length) {
+    console.log(`ADOÇÃO DE CÓDIGO: ${adocao.ambiguos.length} grupo(s) AMBÍGUO(S) deixados sem alteração (mais de uma linha igual — mesmo CEG, item e dono — sem código; a ordem não prova identidade):`);
+    adocao.ambiguos.slice(0, 40).forEach(a => console.log(`  ${a.grupo} | planilha: ${a.linhasPlanilha} · banco: ${a.linhasBanco}`));
+    if (adocao.ambiguos.length > 40) console.log(`  ... e mais ${adocao.ambiguos.length - 40}`);
+  }
+  let desempatadasPeloDono = 0, adotadas = 0;
   let casadosPorCodigo = 0, renomeadosPorCodigo = 0;
 
   let updated = 0, inserted = 0, erros = 0, comData = 0, semMudanca = 0;
   const atualizarTudo = process.env.SYNC_ATUALIZAR_TUDO === '1';
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
+  const planoInsercoes = []; // simulação: linhas que SERIAM inseridas (código | CEG | item; sem dono)
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
 
@@ -175,7 +214,7 @@ async function main() {
       const nome     = col(r, colMap, 'NOME').trim();
       const nomeItem = col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c').trim();
       const twitter  = col(r, colMap, '@').trim().replace(/^@/, '').toLowerCase();
-      const email    = col(r, colMap, 'EMAIL').trim().toLowerCase();
+      const email    = emailLimpo(col(r, colMap, 'EMAIL'));
       const chegou    = col(r, colMap, 'Chegou?', 'CHEGOU?').trim().toUpperCase() === 'TRUE';
       const nacional  = col(r, colMap, 'NACIONAL').trim().toUpperCase() === 'TRUE';
       const pagoItem  = col(r, colMap, 'ITEM').trim().toUpperCase() === 'TRUE';
@@ -234,6 +273,7 @@ async function main() {
       let existingItem = casamento.porIndice.get(idxLinha); // 1º: pelo código da planilha (mesmo id e mesmo dono)
       const doDesempate = !existingItem && desempate.porIndice.has(idxLinha);
       if (doDesempate) { existingItem = desempate.porIndice.get(idxLinha).item; desempatadasPeloDono++; }
+      else if (!existingItem && adocao.porIndice.has(idxLinha)) { existingItem = adocao.porIndice.get(idxLinha).item; adotadas++; }
       else if (existingItem) {
         casadosPorCodigo++;
         if (`${existingItem.ceg}|${existingItem.nome_do_item}|${existingItem.nome}`.toLowerCase() !== key) renomeadosPorCodigo++;
@@ -244,12 +284,17 @@ async function main() {
         existingItem = existingArr[occIdx]; // pega o item correspondente por ordem
       }
 
+      if (existingItem) {
+        baseFields.venc_item  = manterAnoDoBanco(col(r, colMap, 'ITEM DATA'),  baseFields.venc_item,  existingItem.venc_item);
+        baseFields.venc_frete = manterAnoDoBanco(col(r, colMap, 'FRETE DATA'), baseFields.venc_frete, existingItem.venc_frete);
+        baseFields.venc_rf    = manterAnoDoBanco(col(r, colMap, 'RF DATA'),    baseFields.venc_rf,    existingItem.venc_rf);
+      }
       if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
         if (!atualizarTudo && !linhaMudou(existingItem, { ...baseFields, status })) {
           semMudanca++;
         } else {
-          const { error } = await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
+          const { error } = SIMULACAO ? { error: null } : await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
           if (error) throw error;
           if (existingItem.status !== status && cog) {
             mudancasStatus.push({ cog, nomeItem, ceg, statusNovo: status });
@@ -258,7 +303,8 @@ async function main() {
         }
       } else {
         if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }
-        const { error } = await supabase.from('masterlist').insert([{ ...baseFields, status }]);
+        if (SIMULACAO) planoInsercoes.push(`${idLinha || '-'} | ${ceg} | ${nomeItem}`);
+        const { error } = SIMULACAO ? { error: null } : await supabase.from('masterlist').insert([{ ...baseFields, status }]);
         if (error) throw error;
         if (cog && cog.toLowerCase() !== 'disponivel') novosItens.push({ cog, nomeItem, ceg });
         inserted++;
@@ -270,7 +316,12 @@ async function main() {
   }
 
   console.log(`Sem mudança (nenhum UPDATE enviado): ${semMudanca}`);
-  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data · ${casadosPorCodigo} casados pelo código (${renomeadosPorCodigo} com nome/CEG alterado, mantendo o id) · ${desempatadasPeloDono} desempatadas pelo dono`);
+  console.log(`\n✓ Masterlist: ${updated} atualizados · ${inserted} inseridos · ${erros} erros · ${comData} com data · ${casadosPorCodigo} casados pelo código (${renomeadosPorCodigo} com nome/CEG alterado, mantendo o id) · ${desempatadasPeloDono} desempatadas pelo dono · ${adotadas} linha(s) antiga(s) sem código adotada(s) (receberam o código da planilha, sem criar cópia)`);
+
+  if (SIMULACAO) {
+    console.log(`SIMULAÇÃO: ${updated} linha(s) SERIAM atualizadas e ${inserted} SERIAM inseridas (nada foi gravado).`);
+    if (planoInsercoes.length) { console.log('Linhas que seriam INSERIDAS (código | CEG | item):'); planoInsercoes.slice(0, 300).forEach(l => console.log('  ' + l)); if (planoInsercoes.length > 300) console.log(`  ... e mais ${planoInsercoes.length - 300}`); }
+  }
 
   if (bloqueadasPorLimite > 0) {
     console.error(`LIMITE DE INSERÇÕES (${MAX_INSERCOES}) ATINGIDO: ${bloqueadasPorLimite} linha(s) novas NÃO foram inseridas. Confira a planilha e o banco; para liberar de propósito, rode com SYNC_MAX_INSERCOES maior.`);
@@ -280,7 +331,7 @@ async function main() {
   const PUSH_URL = `${process.env.SUPABASE_URL}/functions/v1/push-evento`;   // send-push (antiga, aberta) foi descontinuada: o push-evento aceita o mesmo corpo e a chave de serviço do sync
   // Interruptor das notificações do sync: DESLIGADO por padrão. Só envia push (mudança de status e item novo) com SYNC_ENVIAR_PUSH=1
   // (no GitHub: Settings > Secrets and variables > Actions > Variables > SYNC_ENVIAR_PUSH = 1).
-  const ENVIAR_PUSH = process.env.SYNC_ENVIAR_PUSH === '1';
+  const ENVIAR_PUSH = !SIMULACAO && process.env.SYNC_ENVIAR_PUSH === '1';
   if (!ENVIAR_PUSH) console.log(`Push desligado (SYNC_ENVIAR_PUSH != 1): ${mudancasStatus.length} mudança(s) de status e ${novosItens.length} item(ns) novo(s) NÃO serão notificados.`);
 
   // Enviar push para joiners com mudança de status
@@ -366,8 +417,8 @@ async function main() {
   const joinersMap = {};
   for (const r of rows) {
     const twitter = col(r, colMap, '@').trim();
-    const email   = col(r, colMap, 'EMAIL').trim().toLowerCase();
-    const nome    = col(r, colMap, 'NOME').trim();
+    const email   = emailLimpo(col(r, colMap, 'EMAIL'));
+    const nome    = nomeLimpo(col(r, colMap, 'NOME'));
     const handle  = twitter.replace(/^@/, '').toLowerCase();
     const key     = handle || email;
     if (key && !joinersMap[key]) {
@@ -405,7 +456,7 @@ async function main() {
     if (resol.via === 'arroba_antigo' || resol.via === 'email') { delete alvo.twitter; avisosArrobaAntigo.add(resol.cog); }
     if (emailPlanilhaDivergeDoTrocado(j, atual, idsEmailTrocado)) divergentesDoTrocado.push(atual.cog);
     if (atual?.email && !('email' in alvo)) emailsPreservados++;
-    const { error } = await supabase.from('joiners')
+    const { error } = SIMULACAO ? { error: null } : await supabase.from('joiners')
       .upsert(alvo, { onConflict: 'cog', ignoreDuplicates: false });
     if (error) { console.error('Erro joiner:', error.message); jErros++; }
     else jUpserted++;
@@ -413,20 +464,22 @@ async function main() {
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
   // Conflitos de dono (mais de um cadastro possível) e planilhas com @ antigo: nada foi movido, criado ou sobrescrito por causa deles. Fica registrado no log e no resumo da execução (GitHub) para análise.
-  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s): ${[...avisosArrobaAntigo].slice(0, 40).join(', ')}`);
+  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s)${SIMULACAO ? '' : ': ' + [...avisosArrobaAntigo].slice(0, 40).join(', ')}`);
   if (conflitos.length > 0) {
     const unicos = new Map(conflitos.map(c => [`${c.tipo}|${c.chave}|${(c.candidatos || []).join(',')}`, c]));
     console.log(`⚠ CONFLITOS DE DONO (mais de um cadastro possível): ${conflitos.length} linha(s) em ${unicos.size} caso(s). NADA foi movido, criado ou alterado por causa deles.`);
-    for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: c.chave, candidatos: c.candidatos, onde: c.onde, exemplo: c.detalhe })}`);
+    // Simulação: o log do GitHub é PÚBLICO — nada de @, e-mail ou nome; só o tipo e a contagem.
+    if (SIMULACAO) { const porTipo = {}; for (const c of unicos.values()) porTipo[c.tipo] = (porTipo[c.tipo] || 0) + 1; console.log(`CONFLITO_SYNC (simulação, sem dados pessoais) por tipo: ${JSON.stringify(porTipo)}`); }
+    else for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: c.chave, candidatos: c.candidatos, onde: c.onde, exemplo: c.detalhe })}`);
     console.log(`::warning title=Sync: ${unicos.size} conflito(s) de dono::Mais de um cadastro possível para linhas da planilha; nada foi movido nem criado. Veja as linhas CONFLITO_SYNC neste log.`);
     try {
-      if (process.env.GITHUB_STEP_SUMMARY) {
+      if (process.env.GITHUB_STEP_SUMMARY && !SIMULACAO) {
         const linhas = ['### Conflitos de dono no sync (nada foi movido, criado ou alterado)', '', '| tipo | chave | cadastros possíveis |', '|---|---|---|', ...[...unicos.values()].map(c => `| ${c.tipo} | ${c.chave} | ${(c.candidatos || []).join(', ')} |`), ''];
         (await import('node:fs')).appendFileSync(process.env.GITHUB_STEP_SUMMARY, linhas.join('\n'));
       }
     } catch { /* o resumo é só um complemento do log */ }
   }
-  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha): ${divergentesDoTrocado.slice(0, 30).join(', ')}`);
+  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha)${SIMULACAO ? '' : ': ' + divergentesDoTrocado.slice(0, 30).join(', ')}`);
 
   // Erros por linha NÃO podem passar por "sync íntegro": o job fica vermelho (código 4) para alguém olhar.
   // Os logs de cada erro acima continuam como estavam, e as demais atualizações já foram feitas (nada é desfeito).
@@ -444,8 +497,9 @@ async function main() {
   for (const [key, items] of Object.entries(existingMap)) {
     const countInSheet = sheetKeyCount[key] || 0;
     // Se a planilha tem menos ocorrências que o banco, as extras são CANDIDATAS (a função decide quais podem sair)
-    for (let i = countInSheet; i < items.length; i++) toDelete.push(items[i].id);
+    for (let i = countInSheet; i < items.length; i++) { if (blindadasAmbiguas.has(items[i].id)) continue; toDelete.push(items[i].id); }
   }
+  if (blindadasAmbiguas.size) console.log(`Linhas antigas sem código em grupo AMBÍGUO: ${blindadasAmbiguas.size} preservadas (NÃO entram na exclusão), para análise com evidência.`);
 
   if (toDelete.length === 0) { console.log(`
 ✓ Nenhum registro candidato à remoção`); return; }
@@ -460,6 +514,7 @@ ${toDelete.length} registro(s) ausentes da planilha (de ${totalExistentes} no ba
     console.log(`  ${id} | ${x.id_linha || '-'} | ${x.ceg} | ${x.nome_do_item} | ${x.status} | ${x.pago_item ? 'S' : 'n'}/${x.pago_frete ? 'S' : 'n'}/${x.pago_rf ? 'S' : 'n'}`);
   });
   if (toDelete.length > LISTA_MAX) console.log(`  ... e mais ${toDelete.length - LISTA_MAX}`);
+  if (SIMULACAO) { console.log('SIMULAÇÃO: a exclusão protegida NÃO foi chamada (nada foi apagado).'); return; }
   const { data: rel, error: errPrune } = await supabase.rpc('prune_masterlist', { p_ids: toDelete, p_linhas_planilha: rows.length, p_limite: 25 });
   if (errPrune) { console.error('Exclusão protegida indisponível — NADA foi apagado:', errPrune.message); return; }
   if (rel.abortado) {
