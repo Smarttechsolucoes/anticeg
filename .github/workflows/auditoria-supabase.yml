@@ -1,0 +1,55 @@
+name: Auditoria Supabase (somente leitura)
+
+# SÓ DISPARO MANUAL (sem cron, sem push, sem pull_request). Não grava NADA no banco: faz SELECTs e, se marcado, a SIMULAÇÃO do sync (SYNC_DRY_RUN=1).
+# O log deste repositório é PÚBLICO: os scripts imprimem só contagens, ids de linha, códigos de item e nomes de produto — nunca @, e-mail, nome de pessoa, CPF ou endereço.
+# Usa os segredos que o sync já usa (SUPABASE_URL / SUPABASE_SERVICE_KEY). O valor deles não aparece no log (o GitHub mascara).
+on:
+  workflow_dispatch:
+    inputs:
+      auditoria:
+        description: 'Rodar a auditoria de integridade do banco (somente leitura)'
+        type: boolean
+        default: true
+      simulacao:
+        description: 'Rodar a SIMULAÇÃO do sync contra a planilha atual (somente leitura, não grava)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auditoria-supabase
+  cancel-in-progress: false
+
+jobs:
+  auditoria:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Instalar dependências
+        run: npm install
+        working-directory: scripts
+
+      - name: Auditoria do banco (somente leitura)
+        if: ${{ inputs.auditoria }}
+        run: node auditar-supabase.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Simulação do sync (não grava)
+        if: ${{ inputs.simulacao }}
+        run: node sync-masterlist.js
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SYNC_DRY_RUN: '1'
+          SYNC_ENVIAR_PUSH: ''
