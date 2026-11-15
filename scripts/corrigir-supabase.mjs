@@ -41,7 +41,9 @@ async function corrigirEmail() {
   for (const j of alvo) {
     const fontes = [];
     for (const b of (bkp || []).filter(b => String(b.id) === String(j.id) && igual(b.cog, j.cog) && EMAIL.test(n(b.email)))) fontes.push({ de: 'bkp_unir_joiners', email: n(b.email).toLowerCase() });
-    for (const h of (hist || []).filter(h => String(h.joiner_id) === String(j.id) && /e-?mail/i.test(n(h.campo)) && EMAIL.test(n(h.valor_antigo)))) fontes.push({ de: 'joiner_perfil_historico', email: n(h.valor_antigo).toLowerCase() });
+    // histórico: o que o '#n/a' sobrescreveu foi o e-mail VIGENTE = valor_novo da troca MAIS RECENTE (valor_antigo seria o e-mail anterior a ela, já desatualizado)
+    const hs = (hist || []).filter(h => String(h.joiner_id) === String(j.id) && /e-?mail/i.test(n(h.campo))).sort((a, b) => String(b.em).localeCompare(String(a.em)));
+    if (hs.length && EMAIL.test(n(hs[0].valor_novo))) fontes.push({ de: 'joiner_perfil_historico (valor vigente)', email: n(hs[0].valor_novo).toLowerCase() });
     const distintos = [...new Set(fontes.map(f => f.email))];
     let acao = 'limpar', motivo = 'sem fonte autorizada com e-mail válido', novo = null, de = null;
     if (distintos.length === 1) {
