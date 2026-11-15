@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'node:crypto';
 import { parse } from 'csv-parse/sync';
 import ws from 'ws';
 import { montarUpsertJoiner, carregarIdsComConta, carregarIdsEmailTrocado, emailPlanilhaDivergeDoTrocado } from './preservar-email.js';
@@ -45,6 +46,10 @@ function linhaMudou(existente, novo) {
   }
   return false;
 }
+
+// O log do GitHub deste repositório é PÚBLICO: @, e-mail e nome de pessoa NUNCA vão para o log. Quando for preciso apontar "qual cadastro", usa-se uma marca (hash curto do valor em minúsculas) que permite conferir sem expor a pessoa.
+const anon = v => 'h:' + createHash('sha256').update(String(v ?? '').trim().toLowerCase().replace(/^@/, '')).digest('hex').slice(0, 8);
+const anonDetalhe = d => d && typeof d === 'object' ? Object.fromEntries(Object.entries(d).map(([k, v]) => [k, /cog|arroba|email|twitter/i.test(k) ? anon(v) : v])) : d;
 
 // Célula com ERRO DE FÓRMULA da planilha (#N/A, #REF!, #VALUE!...) não é dado: em 13/11/2026 havia 20 e-mails e 5 nomes assim, e o sync gravava "#n/a" como e-mail do cadastro (por cima do e-mail real de quem ainda não tinha conta).
 // E-mail que não parece e-mail também é tratado como CÉLULA VAZIA (o e-mail que já está no banco fica como está).
@@ -464,22 +469,20 @@ async function main() {
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
   // Conflitos de dono (mais de um cadastro possível) e planilhas com @ antigo: nada foi movido, criado ou sobrescrito por causa deles. Fica registrado no log e no resumo da execução (GitHub) para análise.
-  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s)${SIMULACAO ? '' : ': ' + [...avisosArrobaAntigo].slice(0, 40).join(', ')}`);
+  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s) (marcas, sem @): ${[...avisosArrobaAntigo].slice(0, 40).map(anon).join(', ')}`);
   if (conflitos.length > 0) {
     const unicos = new Map(conflitos.map(c => [`${c.tipo}|${c.chave}|${(c.candidatos || []).join(',')}`, c]));
     console.log(`⚠ CONFLITOS DE DONO (mais de um cadastro possível): ${conflitos.length} linha(s) em ${unicos.size} caso(s). NADA foi movido, criado ou alterado por causa deles.`);
-    // Simulação: o log do GitHub é PÚBLICO — nada de @, e-mail ou nome; só o tipo e a contagem.
-    if (SIMULACAO) { const porTipo = {}; for (const c of unicos.values()) porTipo[c.tipo] = (porTipo[c.tipo] || 0) + 1; console.log(`CONFLITO_SYNC (simulação, sem dados pessoais) por tipo: ${JSON.stringify(porTipo)}`); }
-    else for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: c.chave, candidatos: c.candidatos, onde: c.onde, exemplo: c.detalhe })}`);
+    for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: anon(c.chave), candidatos: (c.candidatos || []).map(anon), onde: c.onde, exemplo: anonDetalhe(c.detalhe) })}`);
     console.log(`::warning title=Sync: ${unicos.size} conflito(s) de dono::Mais de um cadastro possível para linhas da planilha; nada foi movido nem criado. Veja as linhas CONFLITO_SYNC neste log.`);
     try {
-      if (process.env.GITHUB_STEP_SUMMARY && !SIMULACAO) {
-        const linhas = ['### Conflitos de dono no sync (nada foi movido, criado ou alterado)', '', '| tipo | chave | cadastros possíveis |', '|---|---|---|', ...[...unicos.values()].map(c => `| ${c.tipo} | ${c.chave} | ${(c.candidatos || []).join(', ')} |`), ''];
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        const linhas = ['### Conflitos de dono no sync (nada foi movido, criado ou alterado)', '', '| tipo | chave | cadastros possíveis |', '|---|---|---|', ...[...unicos.values()].map(c => `| ${c.tipo} | ${anon(c.chave)} | ${(c.candidatos || []).map(anon).join(', ')} |`), ''];
         (await import('node:fs')).appendFileSync(process.env.GITHUB_STEP_SUMMARY, linhas.join('\n'));
       }
     } catch { /* o resumo é só um complemento do log */ }
   }
-  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha)${SIMULACAO ? '' : ': ' + divergentesDoTrocado.slice(0, 30).join(', ')}`);
+  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha) (marcas, sem @): ${divergentesDoTrocado.slice(0, 30).map(anon).join(', ')}`);
 
   // Erros por linha NÃO podem passar por "sync íntegro": o job fica vermelho (código 4) para alguém olhar.
   // Os logs de cada erro acima continuam como estavam, e as demais atualizações já foram feitas (nada é desfeito).

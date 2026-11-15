@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 // SYNC REAL (scripts/sync-masterlist.js) contra um banco local (PGlite): o e-mail TROCADO pela administração ou por pedido com prova verificada não é desfeito pela rodada seguinte.
 // Uso: node tests/sync-email-trocado.mjs   (sem rede, sem Supabase, dados fictícios)
 import { spawnSync } from "node:child_process";
@@ -11,6 +12,7 @@ const CAB = "ABA / CEG,NOME,@,EMAIL,NOME DO ITEM,ID,PREÇO ITEM,PREÇO FRETE,PRE
 const csv = linhas => [CAB, ...linhas.map(l => [l.ceg, l.nome, l.arroba, l.email ?? "", l.item, l.id, "10", "", "", "", "FALSE", "FALSE", "FALSE", "", "", "", "FALSE", "FALSE"].join(","))].join("\n");
 const q = v => v == null ? "null" : "'" + String(v).replace(/'/g, "''") + "'";
 
+const marca = v => "h:" + createHash("sha256").update(String(v).trim().toLowerCase()).digest("hex").slice(0, 8);   // igual à do sync
 const JOINERS = [   // id 1 = ana (e-mail trocado pela administração), 2 = bia (sem troca), 3 = caio (troca verificada pelo fluxo novo), 4 = dani (e-mail trocado, planilha vazia)
   ["ana", "Ana", "ana.nova@exemplo.com"], ["bia", "Bia", "bia.antiga@exemplo.com"], ["caio", "Caio", "caio.novo@exemplo.com"], ["dani", "Dani", "dani.nova@exemplo.com"],
 ];
@@ -45,7 +47,7 @@ ok(email(r1, "caio") === "caio.novo@exemplo.com", "caio (troca verificada pelo f
 ok(email(r1, "dani") === "dani.nova@exemplo.com", "dani (planilha sem e-mail): continua com o e-mail dela");
 ok(email(r1, "bia") === "bia.corrigida@exemplo.com", "bia (sem troca controlada; a ação 'outra_acao' não conta): a planilha continua atualizando, como hoje");
 ok(nome(r1, "ana") === "Ana Planilha", "os OUTROS campos de ana seguem a planilha como sempre (nada deixou de sincronizar)");
-ok(/protegido do sync\): 3 cadastro\(s\); 2 com a planilha ainda mostrando outro e-mail/.test(r1.log) && /ana, caio|caio, ana/.test(r1.log), "o log avisa quais têm a planilha com outro e-mail (ana e caio), sem sobrescrever nada");
+ok(/protegido do sync\): 3 cadastro\(s\); 2 com a planilha ainda mostrando outro e-mail/.test(r1.log) && ["ana", "caio"].every(c => r1.log.includes(marca(c))) && !/ana.*caio|caio.*ana/.test(r1.log.split(String.fromCharCode(10)).find(l => /protegido do sync/.test(l)) || ""), "o log avisa quais têm a planilha com outro e-mail (ana e caio) por MARCA (hash), sem expor o @ — o log do GitHub é público");
 ok(!/Erro joiner|jErros|✗/.test(r1.log), "sem erro no log");
 
 // 2) segunda rodada a partir do estado final: idempotente
