@@ -14,6 +14,10 @@ on:
         description: 'Rodar a parte 2 (esquema e referências quebradas x arquivo; somente leitura)'
         type: boolean
         default: false
+      investigacao:
+        description: 'Rodar a investigação das pendências ambíguas (pares, demandas, repasses; somente leitura)'
+        type: boolean
+        default: false
       simulacao:
         description: 'Rodar a SIMULAÇÃO do sync contra a planilha atual (somente leitura, não grava)'
         type: boolean
@@ -51,6 +55,14 @@ jobs:
       - name: Referências quebradas e esquema (somente leitura)
         if: ${{ inputs.referencias }}
         run: node auditar-referencias.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Investigação das pendências (somente leitura)
+        if: ${{ inputs.investigacao }}
+        run: node investigar-pendencias.mjs
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

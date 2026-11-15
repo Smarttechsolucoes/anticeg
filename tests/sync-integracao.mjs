@@ -79,7 +79,7 @@ const mudar = (pl, idl, campos) => pl.map(l => l.id === idl ? { ...l, ...campos 
   const pl = planilhaBase().map(l => l.cog === "duda" ? { ...l, item: "Item D RENOMEADO" } : l.cog === "edu" ? { ...l, id: "" } : l);
   const o = rodar({ planilha: pl, aplicarS1: true });
   ok(!o.erro && por(o, 5)?.nome_do_item === "Item E" && por(o, 5)?.cog === "edu", "código repetido no banco: a linha 5 (outra joiner) NÃO é tocada nem confundida com a 4");
-  ok(existe(o, "Item D RENOMEADO") === 1 && !por(o, 4) && (o.exclusoes || []).some(e => e.masterlist_id === 4) && /3 casados pelo código \(0 com nome/.test(o.log), "código repetido no banco: a renomeação da 4 cai na regra antiga (linha nova; a antiga sai arquivada pelo S1); só as 3 linhas de código único foram casadas, sem renomeação");
+  ok(existe(o, "Item D RENOMEADO") === 0 && !!por(o, 4) && !(o.exclusoes || []).some(e => e.masterlist_id === 4) && /INSERÇÕES RETIDAS/.test(o.log) && /3 casados pelo código \(0 com nome/.test(o.log), "código repetido no banco: a renomeação da 4 NÃO insere linha nova nem arquiva a antiga (inserção retida como pendência; antes: linha nova e a antiga arquivada, com troca de id); só as 3 linhas de código único foram casadas");
 }
 { // 6) código repetido NA PLANILHA (duas linhas com ABC-1): o S2 não casa nenhuma; cada uma segue a regra antiga (mesma chave => mesma linha, sem recriar)
   const pl = [...planilhaBase(), { ceg: "CEG1", nome: "Gabi", cog: "gabi", item: "Item G", id: "ABC-1" }];
@@ -90,7 +90,7 @@ const mudar = (pl, idl, campos) => pl.map(l => l.id === idl ? { ...l, ...campos 
   const movida = rodar({ planilha: mudar(planilhaBase(), "ABC-1", { ceg: "OUTRO CEG" }), aplicarS1: true });
   ok(!movida.erro && JSON.stringify(ids(movida)) === "[1,2,3,4,5,6]" && por(movida, 1)?.ceg === "OUTRO CEG" && /3 casados pelo código/.test(movida.log) && !(movida.exclusoes || []).some(e => e.masterlist_id === 1), "CEG movido (mesmo código, dono e item): a linha 1 CONTINUA a mesma (id preservado, CEG atualizado), sem linha nova e sem exclusão" + (movida.erro ? " | " + movida.erro : ""));
   const outro = rodar({ planilha: mudar(planilhaBase(), "ABC-1", { ceg: "OUTRO CEG", item: "Item A OUTRO" }), aplicarS1: true });
-  ok(!outro.erro && outro.masterlist.filter(x => x.ceg === "OUTRO CEG").length === 1 && /2 casados pelo código/.test(outro.log) && (outro.exclusoes || []).some(e => e.masterlist_id === 1), "CEG E item diferentes: NÃO casa pelo código (só 2 casaram); entra como linha nova e a antiga sai pela regra antiga/S1, arquivada");
+  ok(!outro.erro && outro.masterlist.filter(x => x.ceg === "OUTRO CEG").length === 0 && /2 casados pelo código/.test(outro.log) && !(outro.exclusoes || []).some(e => e.masterlist_id === 1) && /INSERÇÕES RETIDAS/.test(outro.log), "CEG E item diferentes: NÃO casa pelo código (só 2 casaram); a linha nova fica RETIDA como pendência e a antiga NÃO é arquivada (antes: linha nova + antiga arquivada)");
   ok(!outro.masterlist.some(x => x.id === 1 && x.ceg === "OUTRO CEG"), "CEG e item diferentes: a linha 1 NÃO é reaproveitada para o outro CEG");
 }
 { // 8) linha com claim, com código, renomeada: id preservado, claim intacto
@@ -150,7 +150,7 @@ const mudar = (pl, idl, campos) => pl.map(l => l.id === idl ? { ...l, ...campos 
   const pl = [{ ceg: "CEG1", nome: "Bia", cog: "bia", item: "Item X", id: "REUSO-1" }];
   const o = rodar({ planilha: pl, aplicarS1: true, setup });
   ok(!o.erro && !o.masterlist.some(x => x.id === 7400 && x.cog === "bia"), "código reaproveitado por OUTRA joiner: o id 7400 NUNCA passa a pertencer à bia" + (o.erro ? " | " + o.erro : ""));
-  ok(o.masterlist.some(x => x.cog === "bia" && x.nome_do_item === "Item X" && x.id !== 7400), "…a bia recebe uma linha NOVA, com id próprio");
+  ok(!o.masterlist.some(x => x.cog === "bia") && /INSERÇÕES RETIDAS/.test(o.log), "…e a linha da bia NÃO é inserida: fica retida como pendência (troca de dono ou código repetido: sem prova)");
   ok(/0 casados pelo código/.test(o.log), "…e o log mostra 0 casados pelo código");
 }
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

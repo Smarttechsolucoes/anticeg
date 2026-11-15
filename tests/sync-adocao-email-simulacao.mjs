@@ -73,7 +73,7 @@ const joiner = (o, cog) => o.joiners.find(j => j.cog === cog);
 { // 3) casos em que NÃO pode adotar (na dúvida, vale o comportamento antigo)
   const donoOutro = comCodigoNovo().map(l => l.cog === "cris" ? { ...l, cog: "dani", nome: "Dani" } : l);
   const a = rodar({ planilha: donoOutro });
-  ok(!a.erro && por(a, 3)?.cog === "cris" && por(a, 3)?.id_linha === null && a.masterlist.some(x => x.cog === "dani" && x.id_linha === "ABC-3"), "dono DIFERENTE: a linha 3 (cris) NÃO é adotada pela dani; a dani recebe a sua linha nova" + (a.erro ? " | " + a.erro : ""));
+  ok(!a.erro && por(a, 3)?.cog === "cris" && por(a, 3)?.id_linha === null && !a.masterlist.some(x => x.cog === "dani") && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 1 linha/.test(a.log), "dono DIFERENTE: a linha 3 (cris) NÃO é adotada pela dani e a linha da dani NÃO é inserida: fica retida como pendência (sem prova de troca de dono ou compra nova)" + (a.erro ? " | " + a.erro : ""));
   const itemOutro = comCodigoNovo().map(l => l.cog === "cris" ? { ...l, item: "Item C OUTRO" } : l);
   const b = rodar({ planilha: itemOutro });
   ok(!b.erro && por(b, 3)?.id_linha === null && por(b, 3)?.nome_do_item === "Item C" && cont(b, "Item C OUTRO") === 1, "item DIFERENTE: a linha 3 NÃO é adotada (entra uma linha nova)" + (b.erro ? " | " + b.erro : ""));
@@ -130,6 +130,8 @@ const joiner = (o, cog) => o.joiners.find(j => j.cog === cog);
   const o = rodar({ planilha: pl, aplicarS1: true, setup });
   ok(!o.erro && /0 linha\(s\) antiga\(s\) sem código adotada\(s\)/.test(o.log) && /1 grupo\(s\) AMBÍGUO\(S\)/.test(o.log) && [3, 31].every(i => por(o, i)?.id_linha === null && por(o, i)?.cog === "cris"),
     "AMBÍGUO: as 2 linhas antigas iguais continuam no banco, SEM código e com o mesmo dono (nenhum código foi atribuído pela ordem; nenhuma foi arquivada)" + (o.erro ? " | " + o.erro : ""));
+  ok(!o.erro && cont(o, "Item C") === 2 && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 2 linha\(s\)/.test(o.log) && /0 inseridos/.test(o.log),
+    "AMBÍGUO: as 2 linhas novas da planilha também NÃO são inseridas (retidas como pendência): o banco não ganha cópias" + (o.erro ? " | " + o.erro : ""));
   ok(!o.erro && /Linhas antigas sem código em grupo AMBÍGUO: 2 preservadas/.test(o.log) && !(o.exclusoes || []).length,
     "AMBÍGUO: o log registra o grupo e as 2 linhas antigas NÃO entram na exclusão protegida" + (o.erro ? " | " + o.erro : ""));
 }
