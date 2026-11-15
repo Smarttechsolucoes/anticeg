@@ -1,0 +1,47 @@
+name: Correções Supabase (ensaio por padrão)
+
+# SÓ DISPARO MANUAL (sem cron/push/pull_request). Por padrão é ENSAIO: lista o que mudaria e NÃO grava. Só grava com "aplicar" marcado.
+# Cada correção reconfere o estado atual antes de gravar e mexe apenas nos casos inequívocos. Nada é apagado.
+# O log deste repositório é PÚBLICO: o script imprime só contagens, ids, códigos de item, CEG e nome de produto — nunca @, e-mail, nome de pessoa, CPF ou endereço.
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: 'Qual correção'
+        type: choice
+        options: [todas, email, demandas]
+        default: todas
+      aplicar:
+        description: 'GRAVAR de verdade (desmarcado = ensaio, não grava)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: correcoes-supabase
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Instalar dependências
+        run: npm install
+        working-directory: scripts
+
+      - name: Correções (ensaio, ou gravação se "aplicar")
+        run: node corrigir-supabase.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ACAO: ${{ inputs.acao }}
+          APLICAR: ${{ inputs.aplicar && '1' || '' }}
