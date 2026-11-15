@@ -99,6 +99,21 @@ async function corrigirDemandas() {
     if (snap) { if (snap.id_linha && n(snap.id_linha) !== cod) return { ok: false, motivo: 'código do snapshot da demanda difere' }; if (snap.ceg && !igual(snap.ceg, t.ceg)) return { ok: false, motivo: 'CEG do snapshot difere' }; if (snap.nome_do_item && !igual(snap.nome_do_item, t.nome_do_item)) return { ok: false, motivo: 'item do snapshot difere' }; }
     return { ok: true, t, a };
   };
+  // REPASSE APROVADO com a cadeia provada pelos dois lados: o vendedor do repasse é o dono da linha ARQUIVADA, o comprador (novo dono) é o dono da linha VIVA de mesmo código, CEG e item,
+  // e há uma única linha arquivada e uma única viva com esse código. O dono da linha na planilha passou do vendedor para o comprador, como o repasse diz.
+  const alvoDeRepasse = r => {
+    const base = alvoDe(String(r.item_id), { ceg: r.ceg, nome_do_item: r.nome_do_item });
+    if (base.ok) return { ...base, via: 'mesmo dono' };
+    if (base.motivo !== 'dono da linha viva é diferente') return base;
+    const a = arqPorId.get(String(r.item_id)), d = a.dados || {}, cod = n(d.id_linha), t = (porCod.get(cod) || [])[0];
+    if (!igual(t.ceg, d.ceg) || !igual(t.nome_do_item, d.nome_do_item)) return { ok: false, motivo: 'CEG/item da linha viva diferente do arquivado' };
+    if (r.ceg && !igual(r.ceg, t.ceg)) return { ok: false, motivo: 'CEG do repasse difere' }; if (r.nome_do_item && !igual(r.nome_do_item, t.nome_do_item)) return { ok: false, motivo: 'item do repasse difere' };
+    if (n(r.status).toLowerCase() !== 'aprovado') return { ok: false, motivo: 'repasse não aprovado' };
+    if (n(r.joiner_cog) !== n(d.cog)) return { ok: false, motivo: 'vendedor do repasse não é o dono arquivado' };
+    if (n(r.novo_dono_cog) !== n(t.cog)) return { ok: false, motivo: 'comprador do repasse não é o dono da linha viva' };
+    if (arq.filter(x => n(x.dados?.id_linha) === cod).length !== 1) return { ok: false, motivo: 'mais de uma linha arquivada com esse código' };
+    return { ok: true, t, a, via: 'cadeia do repasse (vendedor=dono arquivado, comprador=dono vivo)' };
+  };
   const planoD = [], descartes = {};
   for (const d of dem) {
     const itens = Array.isArray(d.itens) ? d.itens : [];
@@ -115,20 +130,20 @@ async function corrigirDemandas() {
   const planoR = [];
   for (const r of rep) {
     const id = String(r.item_id ?? ''); if (!id || vivos.has(id)) continue;
-    const x = alvoDe(id, { ceg: r.ceg, nome_do_item: r.nome_do_item });
+    const x = alvoDeRepasse(r);
     if (!x.ok) { descartes['repasse: ' + x.motivo] = (descartes['repasse: ' + x.motivo] || 0) + 1; continue; }
     if (rep.some(o => o.id !== r.id && String(o.item_id) === String(x.t.id))) { descartes['repasse: a linha viva já tem outro repasse'] = (descartes['repasse: a linha viva já tem outro repasse'] || 0) + 1; continue; }
-    planoR.push({ repasse: r.id, de: id, para: x.t.id, cod: n(x.t.id_linha), ceg: x.t.ceg, item: x.t.nome_do_item, status: r.status, origem: x.a.origem });
+    planoR.push({ repasse: r.id, de: id, para: x.t.id, cod: n(x.t.id_linha), ceg: x.t.ceg, item: x.t.nome_do_item, status: r.status, origem: x.a.origem, via: x.via });
   }
   linha('itens de demanda reapontáveis (inequívocos)', planoD.length); linha('repasses reapontáveis (inequívocos)', planoR.length);
   console.log('  preservados (não inequívocos), por motivo: ' + JSON.stringify(descartes));
   planoD.forEach(p => console.log(`  demanda ${p.demanda} [${p.status}] item#${p.indice}: ${p.de} -> ${p.para} | ${p.cod} | ${p.ceg} | ${p.item} | arquivo=${p.origem}`));
-  planoR.forEach(p => console.log(`  repasse ${p.repasse} [${p.status}]: ${p.de} -> ${p.para} | ${p.cod} | ${p.ceg} | ${p.item} | arquivo=${p.origem}`));
+  planoR.forEach(p => console.log(`  repasse ${p.repasse} [${p.status}]: ${p.de} -> ${p.para} | ${p.cod} | ${p.ceg} | ${p.item} | arquivo=${p.origem} | prova: ${p.via}`));
   if (!APLICAR) return;
   const demandasAfetadas = {}; for (const p of planoD) { const d = dem.find(x => x.id === p.demanda); demandasAfetadas[p.demanda] = { status: d?.status, itens_antes: d?.itens }; }
   try {
     const g = await gravarRegistro(sb, `correcoes/${STAMP}_demandas_plano.json`, { versao: 1, tipo: 'correcao_demandas', run: RUN, quando: new Date().toISOString(),
-      alteracoes: [...planoD.map(p => ({ tipo: 'demanda_item', demanda_id: p.demanda, indice: p.indice, antes_id: p.de, depois_id: p.para, codigo: p.cod, ceg: p.ceg, item: p.item, origem_arquivo: p.origem })), ...planoR.map(p => ({ tipo: 'repasse_item', repasse_id: p.repasse, antes_id: p.de, depois_id: p.para, codigo: p.cod, ceg: p.ceg, item: p.item, origem_arquivo: p.origem }))], demandas: demandasAfetadas });
+      alteracoes: [...planoD.map(p => ({ tipo: 'demanda_item', demanda_id: p.demanda, indice: p.indice, antes_id: p.de, depois_id: p.para, codigo: p.cod, ceg: p.ceg, item: p.item, origem_arquivo: p.origem })), ...planoR.map(p => ({ tipo: 'repasse_item', repasse_id: p.repasse, antes_id: p.de, depois_id: p.para, codigo: p.cod, ceg: p.ceg, item: p.item, origem_arquivo: p.origem, prova: p.via }))], demandas: demandasAfetadas });
     console.log(`  registro privado do plano gravado e conferido: ${g.caminho} (${g.bytes} bytes; bucket ${g.bucket})`);
   } catch (e) { console.log('  ABORTADO: sem o registro privado nada é gravado no banco. ' + e.message); falhas++; return; }
   let okD = 0, okR = 0; const resultadosD = [], resultadosR = [];

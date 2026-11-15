@@ -112,6 +112,14 @@ for (const d of dem) {
   });
 }
 console.log(`  total de itens de demanda nesta situação: ${nItens} · ${JSON.stringify(classes)}`);
+  // referências mortas REDUNDANTES: a própria demanda já cita a linha viva de mesmo código/dono (a morta é só uma entrada antiga duplicada; nada a religar)
+  let redundantes = 0; const statusRed = {};
+  for (const d of dem) idsEm(d.itens).forEach(id => {
+    if (vivos.has(id)) return; const a = arqPorId.get(id); const cod = n(a?.dados?.id_linha); if (!cod) return;
+    const vs = porCod.get(cod) || []; if (vs.length !== 1) return; const t = vs[0];
+    if (n(t.cog) === n(a.dados.cog) && idsEm(d.itens).includes(String(t.id))) { redundantes++; statusRed[d.status] = (statusRed[d.status] || 0) + 1; }
+  });
+  console.log(`  referências mortas REDUNDANTES (a mesma demanda já cita a linha viva de mesmo código e dono): ${redundantes} · por status da demanda ${JSON.stringify(statusRed)}`);
 let nRep = 0;
 for (const r of rep) {
   const id = String(r.item_id ?? ''); if (!id || vivos.has(id)) continue;
@@ -128,12 +136,12 @@ console.log(`  total de repasses nesta situação: ${nRep}`);
 
 // ───────── 4) as 4 inserções suspeitas: as linhas do banco que colidem, com referências
 secao('4) INSERÇÕES SUSPEITAS: linhas do banco que colidem (por código ou por CEG + item)');
-for (const cod of ['ODDF-ITE-7882', 'MURC-MER-8016', 'SKZO-MER-8048']) {
+for (const cod of ['ODDF-ITE-7882', 'MURC-MER-8016', 'SKZO-MER-8048', 'DICO-ITE-7799', 'DICO-ITE-7888', 'DICO-ITE-7889']) {
   const porCodigo = ml.filter(m => n(m.id_linha) === cod);
   console.log(`  código ${cod}: ${porCodigo.length} linha(s) no banco${porCodigo.length ? '' : ' (nenhuma)'}${arqPorCod.has(cod) ? ` · ${arqPorCod.get(cod).length} arquivada(s)` : ''}`);
   porCodigo.forEach(m => console.log(`     ${fmtLinha(m)} | ${refs(m.id)}`));
 }
-for (const [ceg, item] of [['Murcekaly Itens', 'ZIP UP HOODIE — DO IT POP-UP — Zip Up Hoodie'], ['SKZOO EAAW · ONLINE', 'SKZOO Secret Keyring Toy Ver.'], ['ODD & FRESH', 'Changbin ODD&FRESH ONLINE KREAM'], ['THIS & THAT', 'Han STARRIVER FANSIGN R3']]) {
+for (const [ceg, item] of [['Murcekaly Itens', 'ZIP UP HOODIE — DO IT POP-UP — Zip Up Hoodie'], ['SKZOO EAAW · ONLINE', 'SKZOO Secret Keyring Toy Ver.'], ['ODD & FRESH', 'Changbin ODD&FRESH ONLINE KREAM'], ['THIS & THAT', 'Han STARRIVER FANSIGN R3'], ["DICON × D'FESTA", 'Lee Know DICON REVISTA INCOMPLETA'], ["DICON × D'FESTA", 'Lee Know DICON INCLUSÕES']]) {
   const g = ml.filter(m => igual(m.ceg, ceg) && igual(m.nome_do_item, item));
   const rotulos = new Map(); const rot = c => { if (!rotulos.has(n(c))) rotulos.set(n(c), 'D' + (rotulos.size + 1)); return rotulos.get(n(c)); };
   console.log(`  ${ceg} | ${item}: ${g.length} linha(s) no banco`);

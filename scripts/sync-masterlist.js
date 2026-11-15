@@ -336,7 +336,8 @@ async function main() {
     const porItem = sobPorItem.get(`${normTxt(q.ceg)}|${normTxt(q.nomeItem)}`) || [];
     const rel = new Map([...porCod, ...porItem].map(x => [x.id, x]));
     if (rel.size === 0) { inserirAgora.push(q); continue; }
-    insercoesRetidas.push({ q, motivo: porCod.length ? 'o código já existe em linha(s) do banco que a planilha não reconhece (dono diferente ou código repetido)' : 'há linha(s) do banco, sem par na planilha, com o mesmo CEG e item (troca de dono/nome ou compra nova: a ordem não prova qual)', ids: [...rel.keys()].sort((a, c) => a - c) });
+    const mesmoDono = [...rel.values()].some(x => x.cog && q.cog && x.cog === q.cog) ? 'dono IGUAL ao de linha relacionada' : 'dono DIFERENTE das linhas relacionadas';
+    insercoesRetidas.push({ q, mesmoDono, motivo: porCod.length ? 'o código já existe em linha(s) do banco que a planilha não reconhece (dono diferente ou código repetido)' : 'há linha(s) do banco, sem par na planilha, com o mesmo CEG e item (troca de dono/nome ou compra nova: a ordem não prova qual)', ids: [...rel.keys()].sort((a, c) => a - c) });
     rel.forEach((_, id) => blindadasPorRetencao.add(id));
   }
   for (const q of inserirAgora) {
@@ -354,7 +355,7 @@ async function main() {
   }
   if (insercoesRetidas.length) {
     console.log(`INSERÇÕES RETIDAS (PENDÊNCIA): ${insercoesRetidas.length} linha(s) da planilha NÃO foram inseridas e ${blindadasPorRetencao.size} linha(s) do banco NÃO entram na exclusão — sem prova de que é a mesma compra, outra compra ou troca de dono (código | CEG | item | motivo | ids do banco):`);
-    insercoesRetidas.slice(0, 80).forEach(({ q, motivo, ids }) => console.log(`  ${q.idLinha || '-'} | ${q.ceg} | ${q.nomeItem} | ${motivo} | ids ${ids.slice(0, 12).join(', ')}${ids.length > 12 ? ', ...' : ''}`));
+    insercoesRetidas.slice(0, 80).forEach(({ q, motivo, mesmoDono, ids }) => console.log(`  ${q.idLinha || '-'} | ${q.ceg} | ${q.nomeItem} | ${motivo} | ${mesmoDono} | ids ${ids.slice(0, 12).join(', ')}${ids.length > 12 ? ', ...' : ''}`));
     if (insercoesRetidas.length > 80) console.log(`  ... e mais ${insercoesRetidas.length - 80}`);
     console.log(`::warning title=Sync: ${insercoesRetidas.length} inserção(ões) retida(s)::Linha(s) da planilha colidem com linhas do banco sem par (mesmo código ou mesmo CEG+item). Nada foi inserido nem apagado por causa delas; veja "INSERÇÕES RETIDAS" no log.`);
   }
