@@ -124,4 +124,13 @@ const joiner = (o, cog) => o.joiners.find(j => j.cog === cog);
   const nova = rodar({ planilha: pl, setup: setupBase() });
   ok(!nova.erro && String(nova.masterlist.find(x => x.id === 1)?.venc_item).slice(0, 10) === `${ano}-12-20`, "DEPOIS: data realmente NOVA (o banco não tinha) usa o ano atual (" + ano + ")" + (nova.erro ? " | " + nova.erro : ""));
 }
+{ // 8) AMBIGUIDADE: 2 linhas IGUAIS (mesmo CEG, item e dono) sem código no banco; a planilha dá 2 códigos novos e muda o nome => a ordem não prova qual é qual: NADA é adotado e o motivo é registrado
+  const setup = setupBase(sql({ id: 31, ceg: "CEG1", cog: "cris", nome: "Cris", item: "Item C", idl: null }));
+  const pl = [...planilhaBase().map(l => l.cog === "cris" ? { ...l, nome: "Cristina", id: "ABC-3" } : l), { ceg: "CEG1", nome: "Cristina", cog: "cris", item: "Item C", id: "ABC-31" }];
+  const o = rodar({ planilha: pl, aplicarS1: true, setup });
+  ok(!o.erro && /0 linha\(s\) antiga\(s\) sem código adotada\(s\)/.test(o.log) && /1 grupo\(s\) AMBÍGUO\(S\)/.test(o.log) && [3, 31].every(i => por(o, i)?.id_linha === null && por(o, i)?.cog === "cris"),
+    "AMBÍGUO: as 2 linhas antigas iguais continuam no banco, SEM código e com o mesmo dono (nenhum código foi atribuído pela ordem; nenhuma foi arquivada)" + (o.erro ? " | " + o.erro : ""));
+  ok(!o.erro && /Linhas antigas sem código em grupo AMBÍGUO: 2 preservadas/.test(o.log) && !(o.exclusoes || []).length,
+    "AMBÍGUO: o log registra o grupo e as 2 linhas antigas NÃO entram na exclusão protegida" + (o.erro ? " | " + o.erro : ""));
+}
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

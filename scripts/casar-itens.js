@@ -16,7 +16,7 @@
 //     junto com o código (a coluna NOME da planilha é preenchida depois, por fórmula). Sem esta etapa o sync INSERIA uma linha nova com o código e deixava a antiga SEM código para trás: a cópia
 //     (13/11: 36 cópias em "SKZOO EAAW · ONLINE", 9 em MERCARI). Aqui a linha antiga SEM código, do MESMO CEG, MESMO item e MESMO dono (comparação exata), RECEBE o código: continua a mesma linha (mesmo id).
 //     Só atua nas linhas que, depois da regra da chave, ficariam SEM PAR de qualquer dos lados (compra repetida legítima, com par pela chave, nunca é tocada); o código tem que ser único na planilha e
-//     inexistente no banco; o pareamento é 1 para 1, na ordem. Na dúvida NÃO casa (vale o comportamento antigo).
+//     inexistente no banco; só pareia quando o grupo (CEG + item + dono) tem EXATAMENTE 1 candidata na planilha e 1 no banco. Grupo com mais de uma de cada lado é AMBÍGUO: a ordem das linhas não prova identidade, então nada é adotado e o motivo é devolvido em `ambiguos`. Na dúvida NÃO casa (vale o comportamento antigo).
 //
 // Entradas: linhas da planilha ({ idLinha?, ceg, cog, chave? }) e linhas existentes ({ id, id_linha?, ceg, cog, chave? }). Saídas: { porIndice: Map<indice da linha da planilha, linha existente>, reivindicados: Set<id> }.
 
@@ -83,6 +83,7 @@ export function casarChavesRepetidas(linhas, existentes) {
 export function adotarCodigoSemChave(linhas, existentes, { codigosPlanilha = new Map(), codigosBanco = new Set() } = {}) {
   const porIndice = new Map();
   const reivindicados = new Set();
+  const ambiguos = []; // { grupo, linhasPlanilha, linhasBanco, motivo } — grupos que NÃO foram adotados por ambiguidade
 
   // 1) emula o pareamento pela chave que o sync faz em seguida (n-ésima ocorrência da chave na planilha <-> n-ésima linha do banco com a mesma chave)
   const gl = new Map(), ge = new Map();
@@ -109,15 +110,16 @@ export function adotarCodigoSemChave(linhas, existentes, { codigosPlanilha = new
     candBanco.get(g).push(e);
   }
 
-  // 3) pareia 1 para 1, na ordem (planilha na ordem das linhas; banco por id crescente)
+  // 3) só adota quando o grupo é INEQUÍVOCO: 1 candidata na planilha e 1 no banco. A ordem das linhas NÃO é prova de identidade (compras repetidas iguais).
   for (const [g, ls] of candLinhas) {
-    const es = (candBanco.get(g) || []).slice().sort((a, b) => Number(a.id) - Number(b.id));
-    const n = Math.min(ls.length, es.length);
-    for (let i = 0; i < n; i++) {
-      if (reivindicados.has(es[i].id)) continue;
-      porIndice.set(ls[i].indice, es[i]);
-      reivindicados.add(es[i].id);
+    const es = candBanco.get(g) || [];
+    if (!es.length) continue;
+    if (ls.length === 1 && es.length === 1 && !reivindicados.has(es[0].id)) {
+      porIndice.set(ls[0].indice, es[0]);
+      reivindicados.add(es[0].id);
+    } else {
+      ambiguos.push({ grupo: g, linhasPlanilha: ls.length, linhasBanco: es.length, idsBanco: es.map(e => e.id), motivo: 'mais de uma linha igual (mesmo CEG, item e dono) sem código: a ordem não prova qual é qual' });
     }
   }
-  return { porIndice, reivindicados };
+  return { porIndice, reivindicados, ambiguos };
 }

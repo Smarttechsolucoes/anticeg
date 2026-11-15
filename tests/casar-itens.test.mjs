@@ -175,11 +175,24 @@ test("NÃO adota linha do banco que JÁ tem código (ela é de outra linha da pl
   assert.equal(adotarCodigoSemChave(ls, [B(10, "Ana", "Item A", "ana", "CEG1", "OUTRO-9")], OP(ls)).porIndice.size, 0);
 });
 
-test("pareia 1 para 1, na ordem (planilha por índice, banco por id); a sobra do banco fica sem par (continua candidata à exclusão)", () => {
+test("AMBÍGUO: 2 linhas iguais (mesmo CEG, item e dono) na planilha e/ou no banco => NADA é adotado, com o motivo registrado (a ordem não prova identidade)", () => {
   const ls = [P(0, "X-1"), P(1, "X-2")];
-  const { porIndice, reivindicados } = adotarCodigoSemChave(ls, [B(12), B(10), B(11)], OP(ls));
-  assert.equal(porIndice.get(0).id, 10); assert.equal(porIndice.get(1).id, 11);
-  assert.equal(reivindicados.has(12), false);
+  for (const ex of [[B(12), B(10), B(11)], [B(10), B(11)], [B(10)]]) {
+    const r = adotarCodigoSemChave(ls, ex, OP(ls));
+    assert.equal(r.porIndice.size, 0); assert.equal(r.reivindicados.size, 0);
+    assert.equal(r.ambiguos.length, 1); assert.equal(r.ambiguos[0].linhasPlanilha, 2); assert.equal(r.ambiguos[0].linhasBanco, ex.length);
+  }
+  // 1 na planilha e 2 no banco também é ambíguo
+  const um = [P(0, "X-1")];
+  const r2 = adotarCodigoSemChave(um, [B(10), B(11)], OP(um));
+  assert.equal(r2.porIndice.size, 0); assert.equal(r2.ambiguos.length, 1);
+});
+
+test("a ambiguidade de um grupo não impede os outros: grupo inequívoco é adotado, o ambíguo fica intocado", () => {
+  const ls = [P(0, "X-1", "N", "Item A"), P(1, "X-2", "N", "Item A"), P(2, "X-3", "N", "Item B")];
+  const r = adotarCodigoSemChave(ls, [B(10, "Ana", "Item A"), B(11, "Ana", "Item A"), B(20, "Ana", "Item B")], OP(ls));
+  assert.equal(r.porIndice.size, 1); assert.equal(r.porIndice.get(2).id, 20);
+  assert.equal(r.ambiguos.length, 1);
 });
 
 test("sem linhas, sem existentes ou sem opções: devolve vazio e não quebra", () => {

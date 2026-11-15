@@ -191,6 +191,12 @@ async function main() {
     { codigosPlanilha, codigosBanco }
   );
   for (const k of Object.keys(existingMap)) existingMap[k] = existingMap[k].filter(x => !adocao.reivindicados.has(x.id));
+  const blindadasAmbiguas = new Set(adocao.ambiguos.flatMap(a => a.idsBanco)); // grupo ambíguo: as linhas antigas NÃO são candidatas à exclusão (a ordem não prova qual é qual)
+  if (adocao.ambiguos.length) {
+    console.log(`ADOÇÃO DE CÓDIGO: ${adocao.ambiguos.length} grupo(s) AMBÍGUO(S) deixados sem alteração (mais de uma linha igual — mesmo CEG, item e dono — sem código; a ordem não prova identidade):`);
+    adocao.ambiguos.slice(0, 40).forEach(a => console.log(`  ${a.grupo} | planilha: ${a.linhasPlanilha} · banco: ${a.linhasBanco}`));
+    if (adocao.ambiguos.length > 40) console.log(`  ... e mais ${adocao.ambiguos.length - 40}`);
+  }
   let desempatadasPeloDono = 0, adotadas = 0;
   let casadosPorCodigo = 0, renomeadosPorCodigo = 0;
 
@@ -458,20 +464,22 @@ async function main() {
 
   console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
   // Conflitos de dono (mais de um cadastro possível) e planilhas com @ antigo: nada foi movido, criado ou sobrescrito por causa deles. Fica registrado no log e no resumo da execução (GitHub) para análise.
-  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s): ${[...avisosArrobaAntigo].slice(0, 40).join(', ')}`);
+  if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s)${SIMULACAO ? '' : ': ' + [...avisosArrobaAntigo].slice(0, 40).join(', ')}`);
   if (conflitos.length > 0) {
     const unicos = new Map(conflitos.map(c => [`${c.tipo}|${c.chave}|${(c.candidatos || []).join(',')}`, c]));
     console.log(`⚠ CONFLITOS DE DONO (mais de um cadastro possível): ${conflitos.length} linha(s) em ${unicos.size} caso(s). NADA foi movido, criado ou alterado por causa deles.`);
-    for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: c.chave, candidatos: c.candidatos, onde: c.onde, exemplo: c.detalhe })}`);
+    // Simulação: o log do GitHub é PÚBLICO — nada de @, e-mail ou nome; só o tipo e a contagem.
+    if (SIMULACAO) { const porTipo = {}; for (const c of unicos.values()) porTipo[c.tipo] = (porTipo[c.tipo] || 0) + 1; console.log(`CONFLITO_SYNC (simulação, sem dados pessoais) por tipo: ${JSON.stringify(porTipo)}`); }
+    else for (const c of unicos.values()) console.log(`CONFLITO_SYNC ${JSON.stringify({ tipo: c.tipo, chave: c.chave, candidatos: c.candidatos, onde: c.onde, exemplo: c.detalhe })}`);
     console.log(`::warning title=Sync: ${unicos.size} conflito(s) de dono::Mais de um cadastro possível para linhas da planilha; nada foi movido nem criado. Veja as linhas CONFLITO_SYNC neste log.`);
     try {
-      if (process.env.GITHUB_STEP_SUMMARY) {
+      if (process.env.GITHUB_STEP_SUMMARY && !SIMULACAO) {
         const linhas = ['### Conflitos de dono no sync (nada foi movido, criado ou alterado)', '', '| tipo | chave | cadastros possíveis |', '|---|---|---|', ...[...unicos.values()].map(c => `| ${c.tipo} | ${c.chave} | ${(c.candidatos || []).join(', ')} |`), ''];
         (await import('node:fs')).appendFileSync(process.env.GITHUB_STEP_SUMMARY, linhas.join('\n'));
       }
     } catch { /* o resumo é só um complemento do log */ }
   }
-  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha): ${divergentesDoTrocado.slice(0, 30).join(', ')}`);
+  if (idsEmailTrocado.size > 0) console.log(`✓ E-mail trocado por administração/prova verificada (protegido do sync): ${idsEmailTrocado.size} cadastro(s); ${divergentesDoTrocado.length} com a planilha ainda mostrando outro e-mail (nada foi sobrescrito; corrija a planilha)${SIMULACAO ? '' : ': ' + divergentesDoTrocado.slice(0, 30).join(', ')}`);
 
   // Erros por linha NÃO podem passar por "sync íntegro": o job fica vermelho (código 4) para alguém olhar.
   // Os logs de cada erro acima continuam como estavam, e as demais atualizações já foram feitas (nada é desfeito).
@@ -489,8 +497,9 @@ async function main() {
   for (const [key, items] of Object.entries(existingMap)) {
     const countInSheet = sheetKeyCount[key] || 0;
     // Se a planilha tem menos ocorrências que o banco, as extras são CANDIDATAS (a função decide quais podem sair)
-    for (let i = countInSheet; i < items.length; i++) toDelete.push(items[i].id);
+    for (let i = countInSheet; i < items.length; i++) { if (blindadasAmbiguas.has(items[i].id)) continue; toDelete.push(items[i].id); }
   }
+  if (blindadasAmbiguas.size) console.log(`Linhas antigas sem código em grupo AMBÍGUO: ${blindadasAmbiguas.size} preservadas (NÃO entram na exclusão), para análise com evidência.`);
 
   if (toDelete.length === 0) { console.log(`
 ✓ Nenhum registro candidato à remoção`); return; }
