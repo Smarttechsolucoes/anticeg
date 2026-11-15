@@ -111,7 +111,7 @@ async function corrigirDemandas() {
     if (n(r.status).toLowerCase() !== 'aprovado') return { ok: false, motivo: 'repasse não aprovado' };
     if (n(r.joiner_cog) !== n(d.cog)) return { ok: false, motivo: 'vendedor do repasse não é o dono arquivado' };
     if (n(r.novo_dono_cog) !== n(t.cog)) return { ok: false, motivo: 'comprador do repasse não é o dono da linha viva' };
-    if (arq.filter(x => n(x.dados?.id_linha) === cod).length !== 1) return { ok: false, motivo: 'mais de uma linha arquivada com esse código' };
+    if (new Set(arq.filter(x => n(x.dados?.id_linha) === cod && n(x.dados?.cog) === n(d.cog)).map(x => String(x.masterlist_id))).size !== 1) return { ok: false, motivo: 'mais de uma linha arquivada com esse código e esse vendedor' };
     return { ok: true, t, a, via: 'cadeia do repasse (vendedor=dono arquivado, comprador=dono vivo)' };
   };
   const planoD = [], descartes = {};
