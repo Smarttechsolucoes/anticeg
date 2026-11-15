@@ -146,6 +146,7 @@ async function main() {
     from += 1000;
   }
   const totalNoBanco = Object.values(existingMap).reduce((a, v) => a + v.length, 0); // ANTES do casamento por código: é a base da trava de planilha parcial
+  const todosBanco = Object.values(existingMap).flat();   // todas as linhas do banco, antes de qualquer casamento (diagnóstico)
   const codigosBanco = new Set(Object.values(existingMap).flat().map(x => String(x.id_linha ?? '').trim()).filter(Boolean)); // TODOS os códigos que o banco já tem (para a adoção)
   console.log(`${totalNoBanco} itens existentes no banco`);
   // A leitura tem que bater com a contagem do banco (tolera a diferença de linhas criadas pelo site no meio do caminho).
@@ -210,6 +211,7 @@ async function main() {
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   const planoInsercoes = []; // simulação: linhas que SERIAM inseridas (código | CEG | item; sem dono)
+  const insercoesPendentes = []; // linhas da planilha sem par: só são inseridas depois da checagem de suspeita (abaixo)
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
 
@@ -307,17 +309,64 @@ async function main() {
           updated++;
         }
       } else {
-        if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }
-        if (SIMULACAO) planoInsercoes.push(`${idLinha || '-'} | ${ceg} | ${nomeItem}`);
-        const { error } = SIMULACAO ? { error: null } : await supabase.from('masterlist').insert([{ ...baseFields, status }]);
-        if (error) throw error;
-        if (cog && cog.toLowerCase() !== 'disponivel') novosItens.push({ cog, nomeItem, ceg });
-        inserted++;
+        insercoesPendentes.push({ baseFields, status, cog, nomeItem, ceg, idLinha });
       }
     } catch (err) {
       console.error(`Erro:`, err.message);
       erros++;
     }
+  }
+
+  // Linhas do banco que ficaram SEM PAR na planilha (candidatas à exclusão). Calculado ANTES de inserir, para proteger os casos suspeitos.
+  const candidatas = [];
+  for (const [key, items] of Object.entries(existingMap)) {
+    const countInSheet = sheetKeyCount[key] || 0;
+    for (let i = countInSheet; i < items.length; i++) { if (blindadasAmbiguas.has(items[i].id)) continue; candidatas.push(items[i]); }
+  }
+  // INSERÇÃO SUSPEITA: linha da planilha sem par que COLIDE com linha do banco que a planilha não reconhece — (1) o código dela já existe numa dessas linhas (dono diferente: repasse? correção de cadastro? código repetido?) ou
+  // (2) há linha dessas com o mesmo CEG e item (troca de dono/nome ou compra nova: a ordem não prova qual). Sem prova NADA é inserido e NADA dessas linhas é apagado: fica como pendência no log para decisão com evidência.
+  const normTxt = v => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const sob = [...candidatas, ...todosBanco.filter(x => blindadasAmbiguas.has(x.id))];   // sem par na planilha, ou em grupo ambíguo
+  const sobPorCodigo = new Map(), sobPorItem = new Map();
+  const empilha = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+  for (const x of sob) { const c = String(x.id_linha ?? '').trim(); if (c) empilha(sobPorCodigo, c, x); empilha(sobPorItem, `${normTxt(x.ceg)}|${normTxt(x.nome_do_item)}`, x); }
+  const insercoesRetidas = [], blindadasPorRetencao = new Set(), inserirAgora = [];
+  for (const q of insercoesPendentes) {
+    const porCod = q.idLinha ? (sobPorCodigo.get(String(q.idLinha).trim()) || []) : [];
+    const porItem = sobPorItem.get(`${normTxt(q.ceg)}|${normTxt(q.nomeItem)}`) || [];
+    const rel = new Map([...porCod, ...porItem].map(x => [x.id, x]));
+    if (rel.size === 0) { inserirAgora.push(q); continue; }
+    insercoesRetidas.push({ q, motivo: porCod.length ? 'o código já existe em linha(s) do banco que a planilha não reconhece (dono diferente ou código repetido)' : 'há linha(s) do banco, sem par na planilha, com o mesmo CEG e item (troca de dono/nome ou compra nova: a ordem não prova qual)', ids: [...rel.keys()].sort((a, c) => a - c) });
+    rel.forEach((_, id) => blindadasPorRetencao.add(id));
+  }
+  for (const q of inserirAgora) {
+    try {
+      if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }
+      if (SIMULACAO) planoInsercoes.push(`${q.idLinha || '-'} | ${q.ceg} | ${q.nomeItem}`);
+      const { error } = SIMULACAO ? { error: null } : await supabase.from('masterlist').insert([{ ...q.baseFields, status: q.status }]);
+      if (error) throw error;
+      if (q.cog && q.cog.toLowerCase() !== 'disponivel') novosItens.push({ cog: q.cog, nomeItem: q.nomeItem, ceg: q.ceg });
+      inserted++;
+    } catch (err) {
+      console.error(`Erro:`, err.message);
+      erros++;
+    }
+  }
+  if (insercoesRetidas.length) {
+    console.log(`INSERÇÕES RETIDAS (PENDÊNCIA): ${insercoesRetidas.length} linha(s) da planilha NÃO foram inseridas e ${blindadasPorRetencao.size} linha(s) do banco NÃO entram na exclusão — sem prova de que é a mesma compra, outra compra ou troca de dono (código | CEG | item | motivo | ids do banco):`);
+    insercoesRetidas.slice(0, 80).forEach(({ q, motivo, ids }) => console.log(`  ${q.idLinha || '-'} | ${q.ceg} | ${q.nomeItem} | ${motivo} | ids ${ids.slice(0, 12).join(', ')}${ids.length > 12 ? ', ...' : ''}`));
+    if (insercoesRetidas.length > 80) console.log(`  ... e mais ${insercoesRetidas.length - 80}`);
+    console.log(`::warning title=Sync: ${insercoesRetidas.length} inserção(ões) retida(s)::Linha(s) da planilha colidem com linhas do banco sem par (mesmo código ou mesmo CEG+item). Nada foi inserido nem apagado por causa delas; veja "INSERÇÕES RETIDAS" no log.`);
+  }
+  // DIAGNÓSTICO DE GRUPOS: onde o banco tem MAIS linhas que a planilha para o mesmo CEG + item + dono (sem nome de pessoa; só CEG, item, contagens e ids)
+  {
+    const gp = new Map(), gb = new Map(), idsG = new Map();
+    for (const r of rows) { const k = `${normTxt(col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG'))}|${normTxt(col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c'))}|${cogDe(r) ?? ''}`; gp.set(k, (gp.get(k) || 0) + 1); }
+    for (const x of todosBanco) { const k = `${normTxt(x.ceg)}|${normTxt(x.nome_do_item)}|${x.cog ?? ''}`; gb.set(k, (gb.get(k) || 0) + 1); empilha(idsG, k, x); }
+    const gruposExcesso = [...gb.entries()].filter(([k, m]) => m > (gp.get(k) || 0) && sob.some(x => `${normTxt(x.ceg)}|${normTxt(x.nome_do_item)}|${x.cog ?? ''}` === k));
+    console.log(`DIAGNÓSTICO: ${gruposExcesso.length} grupo(s) (CEG + item + dono) em que o banco tem MAIS linhas que a planilha e há linha sem par (grupo | planilha | banco | ids com código/sem:pago):`);
+    gruposExcesso.slice(0, 120).forEach(([k, m]) => { const [c, it] = k.split('|'); console.log(`  ${c} | ${it} | planilha ${gp.get(k) || 0} | banco ${m} | ${idsG.get(k).map(x => `${x.id}(${x.id_linha ? 'cod' : 'sem'}${x.pago_item || x.pago_frete || x.pago_rf ? ':pago' : ''})`).join(' ')}`); });
+    if (gruposExcesso.length > 120) console.log(`  ... e mais ${gruposExcesso.length - 120}`);
   }
 
   console.log(`Sem mudança (nenhum UPDATE enviado): ${semMudanca}`);
@@ -496,12 +545,8 @@ async function main() {
   // Ela mesma recusa planilha parcial, preserva claims/linhas do site/pagas, aplica limite por execução e arquiva o que apagar.
   // Se a função não existir (S1 não aplicado) NÃO apagamos nada: nunca há exclusão direta por este script.
   const totalExistentes = totalNoBanco; // total REAL do banco (as linhas casadas pelo código saíram do existingMap)
-  const toDelete = [];
-  for (const [key, items] of Object.entries(existingMap)) {
-    const countInSheet = sheetKeyCount[key] || 0;
-    // Se a planilha tem menos ocorrências que o banco, as extras são CANDIDATAS (a função decide quais podem sair)
-    for (let i = countInSheet; i < items.length; i++) { if (blindadasAmbiguas.has(items[i].id)) continue; toDelete.push(items[i].id); }
-  }
+  // Se a planilha tem menos ocorrências que o banco, as extras são CANDIDATAS (a função decide quais podem sair). As retidas (inserção suspeita) e as de grupo ambíguo NÃO entram.
+  const toDelete = candidatas.filter(x => !blindadasPorRetencao.has(x.id)).map(x => x.id);
   if (blindadasAmbiguas.size) console.log(`Linhas antigas sem código em grupo AMBÍGUO: ${blindadasAmbiguas.size} preservadas (NÃO entram na exclusão), para análise com evidência.`);
 
   if (toDelete.length === 0) { console.log(`
@@ -517,7 +562,19 @@ ${toDelete.length} registro(s) ausentes da planilha (de ${totalExistentes} no ba
     console.log(`  ${id} | ${x.id_linha || '-'} | ${x.ceg} | ${x.nome_do_item} | ${x.status} | ${x.pago_item ? 'S' : 'n'}/${x.pago_frete ? 'S' : 'n'}/${x.pago_rf ? 'S' : 'n'}`);
   });
   if (toDelete.length > LISTA_MAX) console.log(`  ... e mais ${toDelete.length - LISTA_MAX}`);
-  if (SIMULACAO) { console.log('SIMULAÇÃO: a exclusão protegida NÃO foi chamada (nada foi apagado).'); return; }
+  if (SIMULACAO) {
+    try {
+      const porMotivo = {}; let livres = 0, semLeitura = 0;
+      for (const id of toDelete) {
+        const { data: mot, error: eM } = await supabase.rpc('masterlist_motivos_protecao', { p_id: id });
+        if (eM) { semLeitura++; continue; }
+        if (!mot || mot.length === 0) livres++; else for (const m of mot) porMotivo[m] = (porMotivo[m] || 0) + 1;
+      }
+      const limite = Math.max(1, Math.min(25, 25, Math.max(10, Math.floor(totalExistentes * 0.05))));
+      console.log(`SIMULAÇÃO da exclusão protegida: ${toDelete.length} candidata(s); ${livres} LIVRE(S) (sem pagamento/claim/multa/loja) e as demais protegidas por motivo ${JSON.stringify(porMotivo)}${semLeitura ? ` (${semLeitura} sem leitura)` : ''}. Limite por execução: ${limite} livres. ${livres > limite ? 'RESULTADO: ABORTARIA a exclusão (limite_excedido) e NÃO apagaria nenhuma; atualizações e inserções já teriam sido feitas.' : `RESULTADO: EXECUTARIA e arquivaria/apagaria ${livres} linha(s) livre(s).`}`);
+    } catch (e) { console.log('SIMULAÇÃO da exclusão protegida: sem leitura das proteções (' + e.message + ').'); }
+    console.log('SIMULAÇÃO: a exclusão protegida NÃO foi chamada (nada foi apagado).'); return;
+  }
   const { data: rel, error: errPrune } = await supabase.rpc('prune_masterlist', { p_ids: toDelete, p_linhas_planilha: rows.length, p_limite: 25 });
   if (errPrune) { console.error('Exclusão protegida indisponível — NADA foi apagado:', errPrune.message); return; }
   if (rel.abortado) {

@@ -130,6 +130,8 @@ const joiner = (o, cog) => o.joiners.find(j => j.cog === cog);
   const o = rodar({ planilha: pl, aplicarS1: true, setup });
   ok(!o.erro && /0 linha\(s\) antiga\(s\) sem código adotada\(s\)/.test(o.log) && /1 grupo\(s\) AMBÍGUO\(S\)/.test(o.log) && [3, 31].every(i => por(o, i)?.id_linha === null && por(o, i)?.cog === "cris"),
     "AMBÍGUO: as 2 linhas antigas iguais continuam no banco, SEM código e com o mesmo dono (nenhum código foi atribuído pela ordem; nenhuma foi arquivada)" + (o.erro ? " | " + o.erro : ""));
+  ok(!o.erro && cont(o, "Item C") === 2 && /INSERÇÕES RETIDAS (PENDÊNCIA): 2 linha(s)/.test(o.log) && /0 inseridos/.test(o.log),
+    "AMBÍGUO: as 2 linhas novas da planilha também NÃO são inseridas (retidas como pendência): o banco não ganha cópias" + (o.erro ? " | " + o.erro : ""));
   ok(!o.erro && /Linhas antigas sem código em grupo AMBÍGUO: 2 preservadas/.test(o.log) && !(o.exclusoes || []).length,
     "AMBÍGUO: o log registra o grupo e as 2 linhas antigas NÃO entram na exclusão protegida" + (o.erro ? " | " + o.erro : ""));
 }
