@@ -10,6 +10,10 @@ on:
         description: 'Rodar a auditoria de integridade do banco (somente leitura)'
         type: boolean
         default: true
+      referencias:
+        description: 'Rodar a parte 2 (esquema e referências quebradas x arquivo; somente leitura)'
+        type: boolean
+        default: false
       simulacao:
         description: 'Rodar a SIMULAÇÃO do sync contra a planilha atual (somente leitura, não grava)'
         type: boolean
@@ -39,6 +43,14 @@ jobs:
       - name: Auditoria do banco (somente leitura)
         if: ${{ inputs.auditoria }}
         run: node auditar-supabase.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Referências quebradas e esquema (somente leitura)
+        if: ${{ inputs.referencias }}
+        run: node auditar-referencias.mjs
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
