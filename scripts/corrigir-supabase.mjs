@@ -207,7 +207,8 @@ async function reverter() {
   secao('D) reversão a partir do registro privado');
   if (!REGISTRO) { console.log('  informe REGISTRO=<caminho do arquivo _resultado.json>. Registros existentes:'); (await listarRegistros(sb).catch(e => [e.message])).forEach(x => console.log('   ' + x)); return; }
   const reg = await lerRegistro(sb, REGISTRO);
-  const alvo = (reg.alteracoes || []).filter(a => a.resultado === 'aplicado');
+  // no registro RETROATIVO os e-mails não trazem 'resultado': valem os que foram conferidos contra o estado atual na hora do registro
+  const alvo = (reg.alteracoes || []).filter(a => a.resultado === 'aplicado' || (reg.tipo === 'resultado_retroativo' && a.tipo === 'joiner_email' && a.estado_atual === 'conferido'));
   linha('registro', `${REGISTRO} · alterações aplicadas: ${alvo.length}`);
   let rev = 0, pulados = 0;
   for (const a of alvo) {
