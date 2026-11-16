@@ -27,6 +27,7 @@ await db.exec(`
 await db.exec(cfg.setupSql || "");
 if (cfg.aplicarS1) await db.exec(readFileSync(new URL("supabase/sync/S1_prune_protegido_aplicar.sql", raiz), "utf8"));
 globalThis.__SYNC_DB = db;
+if (cfg.semStorage) globalThis.__SYNC_SEM_STORAGE = true;
 
 const push = [];
 globalThis.fetch = async (url, init) => {
@@ -46,6 +47,7 @@ process.on("beforeExit", async () => {
   const q = async s => (await db.query(s)).rows;
   const saida = {
     logs, exitCode: process.exitCode ?? 0, push,
+    registros: Object.fromEntries([...(globalThis.__SYNC_BUCKET || new Map())]),
     masterlist: await q("select id, ceg, cog, nome, nome_do_item, id_linha, status, pago_item, pago_frete, pago_rf, valor_item, venc_item from public.masterlist order by id"),
     claims: await q("select id, masterlist_id, status from public.claims order by id"),
     exclusoes: await q("select exists(select 1 from pg_class where relname = 'masterlist_exclusoes') e").then(async r => r[0].e ? await q("select masterlist_id from public.masterlist_exclusoes order by id") : null),
