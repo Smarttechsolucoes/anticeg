@@ -1,6 +1,6 @@
 // CORREÇÕES PONTUAIS no Supabase, com ENSAIO por padrão. Só grava com APLICAR=1. Cada ação confere o estado ATUAL imediatamente antes de gravar e só mexe nos casos inequívocos; o resto fica como está, com o motivo.
 // O log do GitHub é PÚBLICO: só contagens, ids de linha/cadastro/demanda, códigos de item, CEG e nomes de produto. Nunca @, e-mail, nome de pessoa, CPF ou endereço.
-// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
+// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido.   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
 // ANTES de gravar qualquer correção, o plano com os valores anteriores vai para um registro PRIVADO e durável (bucket privado do Supabase; ver registro-privado.mjs). Se o registro não puder ser gravado e conferido, NADA é gravado no banco.
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
@@ -249,6 +249,12 @@ async function reverter() {
       if (!APLICAR) { console.log(`  linha ${a.masterlist_id}: seria restaurada a partir da foto do registro`); rev++; continue; }
       const { error } = await sb.from('masterlist').insert([a.antes]);
       if (error) { console.log(`  linha ${a.masterlist_id}: ERRO ${error.message}`); falhas++; } else { rev++; console.log(`  linha ${a.masterlist_id}: restaurada (a foto continua em masterlist_exclusoes)`); }
+    } else if (a.tipo === 'campo_masterlist') {
+      const { data: atual } = await sb.from('masterlist').select(`id, ${a.campo}`).eq('id', a.masterlist_id);
+      if (!atual || atual.length !== 1 || atual[0][a.campo] !== a.depois) { console.log(`  linha ${a.masterlist_id} ${a.campo}: o valor mudou desde a correção — NÃO revertido`); pulados++; continue; }
+      if (!APLICAR) { console.log(`  linha ${a.masterlist_id} ${a.campo}: seria revertido (${a.depois} -> ${a.antes})`); rev++; continue; }
+      const { error } = await sb.from('masterlist').update({ [a.campo]: a.antes }).eq('id', a.masterlist_id).eq(a.campo, a.depois);
+      if (error) { console.log(`  linha ${a.masterlist_id} ${a.campo}: ERRO ${error.message}`); falhas++; } else { rev++; console.log(`  linha ${a.masterlist_id} ${a.campo}: revertido`); }
     } else if (a.tipo === 'repasse_item') {
       const { data: r } = await sb.from('repassos').select('id, item_id').eq('id', a.repasse_id).maybeSingle();
       if (!r || String(r.item_id) !== String(a.depois_id)) { console.log(`  repasse ${a.repasse_id}: a referência mudou desde a correção — NÃO revertido`); pulados++; continue; }
@@ -349,7 +355,83 @@ async function arquivarCopias() {
   catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
 }
 
+// ───────── 7) EFEITOS DO SYNC SEM PROTEÇÕES de 16/11/2026 17:59 UTC: DOCUMENTAR tudo e corrigir SÓ o que o próprio banco prova.
+//   Pagamento: o pago_item volta a TRUE somente se uma demanda com status "pago" cita o item (evidência financeira confirmada). Sem demanda paga, a planilha (fonte oficial) fica valendo e o caso é só documentado.
+//   Status: volta ao valor anterior somente se há solicitação de envio "enviado" citando o item (o item já saiu). Sem isso, a planilha fica valendo.
+//   Dono: NÃO é alterado aqui (a planilha é a fonte oficial dos pedidos); o balanço de linhas por dono na planilha x banco é só documentado.
+// Valores anteriores (pago_item=true e status) vêm do log público da simulação controlada (ids e rótulos, sem dados pessoais). Cada gravação reconfere o estado ATUAL; foto antes/depois no registro privado.
+const SYNC_PAGOS = [5340, 7125, 5436, 18285, 5084, 5085, 18445, 8838, 8839, 8840, 8841, 8842, 8833, 8834, 8835, 8836, 8837];
+const SYNC_STATUS = [{ id: 338, antes: 'Enviado Nacional' }, { id: 369, antes: 'Enviado Nacional' }, { id: 2829, antes: 'Envio Liberado' }];
+const SYNC_DONOS = [{ id: 9222, antes: 'h:d5525f6c' }, { id: 7232, antes: 'h:79651e7e' }];
+async function corrigirSyncIndevido() {
+  secao('G) efeitos do sync sem proteções (16/11 17:59 UTC): documentar e corrigir só o comprovado');
+  const ml = await ler('masterlist', 'id, ceg, cog, nome_do_item, status, id_linha, pago_item, pago_frete, pago_rf');
+  const jo = await ler('joiners', 'id, cog, email, twitter'), dem = await ler('pagamento_demandas', 'id, joiner_cog, itens, status, created_at, valor_total');
+  const env = await ler('envio_solicitacoes', 'id, itens, status'), multas = await ler('multas_pagas', 'id, masterlist_id, campo, valor_multa, joiner_cog'), rep = await ler('repassos', 'id, item_id, status');
+  if (!ml || !jo || !dem || !env || !multas || !rep) { console.log('  leitura incompleta: nada feito'); falhas++; return; }
+  const { createHash } = await import('node:crypto');
+  const marca = v => (v == null || n(v) === '') ? '(sem)' : 'h:' + createHash('sha256').update(n(v).toLowerCase().replace(/^@/, '')).digest('hex').slice(0, 8);
+  const idsEm = itens => (Array.isArray(itens) ? itens : []).map(e => (e && typeof e === 'object') ? String(e.id ?? e.item_id ?? e.masterlist_id ?? '') : String(e ?? '')).filter(Boolean);
+  const por = new Map(ml.map(m => [m.id, m]));
+  const plano = [], documentadas = [];
+
+  console.log('  — 1) PAGAMENTOS (os 17 que a planilha desmarcaria):');
+  for (const id of SYNC_PAGOS) {
+    const m = por.get(id); if (!m) { console.log(`    #${id}: não existe`); continue; }
+    const pagas = dem.filter(d => idsEm(d.itens).includes(String(id)) && n(d.status).toLowerCase() === 'pago');
+    const outras = dem.filter(d => idsEm(d.itens).includes(String(id)) && n(d.status).toLowerCase() !== 'pago').map(d => `${d.id}:${d.status}`);
+    const mesmoPagador = pagas.map(d => n(d.joiner_cog).toLowerCase() === n(m.cog).toLowerCase());
+    if (m.pago_item === true) { console.log(`    #${id} [${n(m.id_linha)}]: já está marcado (nada a fazer)`); continue; }
+    if (pagas.length) {
+      plano.push({ tipo: 'campo_masterlist', masterlist_id: id, campo: 'pago_item', antes: false, depois: true, prova: `demanda(s) paga(s) citando o item: ${pagas.map(d => `${d.id} (${n(d.created_at).slice(0, 10)}, R$ ${Number(d.valor_total).toFixed(2)})`).join(', ')}` });
+      console.log(`    #${id} [${n(m.id_linha)}] ${n(m.ceg)} | ${n(m.nome_do_item)}: RESTAURAR pago_item=true — demanda(s) paga(s) ${pagas.map(d => d.id).join(',')}; pagador = dono: ${mesmoPagador.join('/')}${pagas.length > 1 ? ' · ATENÇÃO: mais de uma demanda paga cita o mesmo item (possível pagamento em duplicidade, só documentado)' : ''}${outras.length ? ' · outras demandas: ' + outras.join(',') : ''}`);
+    } else {
+      documentadas.push({ tipo: 'pagamento_sem_evidencia', masterlist_id: id });
+      console.log(`    #${id} [${n(m.id_linha)}] ${n(m.ceg)} | ${n(m.nome_do_item)}: PRESERVADO sem a marcação — nenhuma demanda paga cita o item; a planilha (oficial) diz não pago${outras.length ? ' · demandas não pagas: ' + outras.join(',') : ''}`);
+    }
+  }
+
+  console.log('  — 2) STATUS que voltou para "Comprado":');
+  for (const s of SYNC_STATUS) {
+    const m = por.get(s.id); if (!m) { console.log(`    #${s.id}: não existe`); continue; }
+    const enviados = env.filter(e => idsEm(e.itens).includes(String(s.id)) && n(e.status).toLowerCase() === 'enviado');
+    if (m.status !== 'Comprado') { console.log(`    #${s.id}: status hoje "${m.status}" (já não é Comprado)`); continue; }
+    if (enviados.length) {
+      plano.push({ tipo: 'campo_masterlist', masterlist_id: s.id, campo: 'status', antes: 'Comprado', depois: s.antes, prova: `solicitação(ões) de envio "enviado" citando o item: ${enviados.map(e => e.id).join(', ')}` });
+      console.log(`    #${s.id} [${n(m.id_linha)}] ${n(m.ceg)} | ${n(m.nome_do_item)}: RESTAURAR status "${s.antes}" — envio(s) "enviado" ${enviados.map(e => e.id).join(',')}`);
+    } else console.log(`    #${s.id} [${n(m.id_linha)}] ${n(m.ceg)} | ${n(m.nome_do_item)}: PRESERVADO "Comprado" — nenhuma solicitação de envio "enviado" cita o item (antes: "${s.antes}"); a planilha (oficial) manda`);
+  }
+
+  console.log('  — 3) DONOS (só documentação; a planilha é a fonte oficial):');
+  for (const d of SYNC_DONOS) {
+    const m = por.get(d.id); if (!m) { console.log(`    #${d.id}: não existe`); continue; }
+    const ref = [...dem.filter(x => idsEm(x.itens).includes(String(d.id))).map(x => `demanda ${x.id}:${x.status} pagadora ${marca(x.joiner_cog)}`), ...rep.filter(x => String(x.item_id) === String(d.id)).map(x => `repasse ${String(x.id).slice(0, 8)}:${x.status}`), ...multas.filter(x => x.masterlist_id === d.id).map(x => `multa ${x.campo} ${Number(x.valor_multa).toFixed(2)} (joiner ${marca(x.joiner_cog)})`)];
+    const mesmaChave = ml.filter(x => n(x.ceg).toLowerCase() === n(m.ceg).toLowerCase() && n(x.nome_do_item).toLowerCase() === n(m.nome_do_item).toLowerCase());
+    const porDono = {}; for (const x of mesmaChave) { const k = marca(x.cog); porDono[k] = (porDono[k] || 0) + 1; }
+    console.log(`    #${d.id} [${n(m.id_linha)}] ${n(m.ceg)} | ${n(m.nome_do_item)}: dono antes ${d.antes} -> hoje ${marca(m.cog)} · pago=${m.pago_item ? 'I' : '-'} · ${ref.length ? ref.join(' · ') : 'sem demandas, repasses nem multas'}`);
+    console.log(`       linhas deste CEG+item no banco por dono (hoje): ${JSON.stringify(porDono)}`);
+    documentadas.push({ tipo: 'dono_segue_planilha', masterlist_id: d.id, antes: d.antes, hoje: marca(m.cog) });
+  }
+  linha('correções comprovadas', plano.length); linha('apenas documentadas', documentadas.length);
+  if (!plano.length) return;
+  if (!APLICAR) { console.log('  ENSAIO: nada foi gravado.'); return; }
+  const alteracoes = plano.map(p => ({ ...p }));
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_sync_indevido_plano.json`, { versao: 1, tipo: 'correcao_sync_indevido', run: RUN, quando: new Date().toISOString(), contexto: 'sync sem proteções de 2026-11-16T17:59Z (run 43924147264)', alteracoes, documentadas }); console.log(`  registro privado do plano gravado e conferido: ${g.caminho} (${g.bytes} bytes; bucket ${g.bucket})`); }
+  catch (e) { console.log('  ERRO: ' + e.message + ' — NADA foi gravado'); falhas++; return; }
+  for (const a of alteracoes) {
+    const { data: atual } = await sb.from('masterlist').select(`id, ${a.campo}`).eq('id', a.masterlist_id);
+    if (!atual || atual.length !== 1 || atual[0][a.campo] !== a.antes) { a.resultado = 'pulado: mudou desde o plano'; console.log(`  #${a.masterlist_id} ${a.campo}: ${a.resultado}`); continue; }
+    const { error } = await sb.from('masterlist').update({ [a.campo]: a.depois }).eq('id', a.masterlist_id).eq(a.campo, a.antes);
+    const { data: depois } = await sb.from('masterlist').select(`id, ${a.campo}`).eq('id', a.masterlist_id);
+    if (error || !depois || depois[0]?.[a.campo] !== a.depois) { a.resultado = 'erro: ' + (error?.message || 'não confirmou'); falhas++; } else a.resultado = 'aplicado';
+    console.log(`  #${a.masterlist_id} ${a.campo}: ${a.resultado}`);
+  }
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_sync_indevido_resultado.json`, { versao: 1, tipo: 'resultado_sync_indevido', run: RUN, plano: `correcoes/${STAMP}_sync_indevido_plano.json`, quando: new Date().toISOString(), alteracoes, documentadas }); console.log(`  registro privado do RESULTADO: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
+if (ACAO === 'sync-indevido') await corrigirSyncIndevido();
 if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();
 if (ACAO === 'verificar-registro') await verificarRegistro();
