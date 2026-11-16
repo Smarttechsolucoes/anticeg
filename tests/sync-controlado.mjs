@@ -105,4 +105,18 @@ const plBase = () => base.map(b => ({ ceg: b.ceg, nome: b.nome, cog: b.cog, item
   const o = rodar({ planilha: pl, banco, env: { SYNC_PROTEGER: "1" } });
   ok(!o.erro && !o.masterlist.some(x => x.id_linha === "P-2") && /INSERÇÕES EXCEDENTES: 1 de 1.*RETIDAS pela proteção/.test(o.log) && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 1 linha/.test(o.log), "SYNC_PROTEGER=1: a P-2 fica retida como pendência" + (o.erro ? " | " + o.erro : ""));
 }
+{ // 11) SYNC_PROTEGER: célula de PREÇO em branco (desconhecido) NÃO apaga o preço conhecido; "R$ 0,00" explícito continua valendo; o resto da atualização segue
+  const banco = [...base.filter(b => b.id !== 11 && b.id !== 12), { id: 11, ceg: "CEG1", cog: "d11", nome: "D11", item: "Item 11", idl: "ABC-11", preco: 90 }, { id: 12, ceg: "CEG1", cog: "d12", nome: "D12", item: "Item 12", idl: "ABC-12", preco: 90 }];
+  const pl = plBase().map(l => l.id === "ABC-11" ? { ...l, preco: "" } : l.id === "ABC-12" ? { ...l, preco: "0" } : l);
+  const sem = rodar({ planilha: pl, banco });
+  ok(!sem.erro && Number(por(sem, 11)?.valor_item) === 0 && Number(por(sem, 12)?.valor_item) === 0, "controle (sem proteção): célula em branco E zero explícito apagam o preço (90 → 0)" + (sem.erro ? " | " + sem.erro : ""));
+  const o = rodar({ planilha: pl, banco, env: { SYNC_PROTEGER: "1" } });
+  ok(!o.erro && Number(por(o, 11)?.valor_item) === 90 && /1 preço\(s\) mantido\(s\) porque a célula está em branco \(id:campo 11:valor_item\)/.test(o.log), "SYNC_PROTEGER=1: a célula em branco da 11 NÃO apaga o preço 90" + (o.erro ? " | " + o.erro : ""));
+  ok(!o.erro && Number(por(o, 12)?.valor_item) === 0, "SYNC_PROTEGER=1: o R$ 0,00 EXPLÍCITO da 12 continua valendo (a planilha decidiu zero)" + (o.erro ? " | " + o.erro : ""));
+}
+{ // 12) inserção com preço em branco: entra com 0 (não cobrado) e o log diz que é preço DESCONHECIDO
+  const pl = [...plBase(), { ceg: "CEG4", nome: "Gabi", cog: "gabi", item: "Item Novo", id: "NOVO-9", preco: "" }];
+  const o = rodar({ planilha: pl, banco: base, env: { SYNC_PROTEGER: "1" } });
+  ok(!o.erro && Number(o.masterlist.find(x => x.id_linha === "NOVO-9")?.valor_item) === 0 && /PREÇO EM BRANCO \(desconhecido, gravado como 0 = NÃO cobrado.*\): 1 de 1 inserção\(ões\) \(NOVO-9\)/.test(o.log), "inserção com preço em branco: entra com 0 e o log marca como DESCONHECIDO (NOVO-9)" + (o.erro ? " | " + o.erro : ""));
+}
 console.log(falhas ?`\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);

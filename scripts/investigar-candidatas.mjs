@@ -90,6 +90,16 @@ for (const x of livres.sort((a, b) => a.id - b.id)) {
   if (refs.length) classe = 'COM REFERÊNCIA (não arquivar)';
   else if (irmas.length) classe = `COPIA_MESMO_CODIGO (irmãs ${irmas.map(y => `#${y.id}${y.pago_item ? '(paga)' : ''}`).join(',')}; planilha tem esse código ${naPlanilhaPorCodigo.length}x${naPlanilhaPorCodigo.some(s => s.dono === c) ? ' do mesmo dono' : ''})`;
   else if (alias && alias.noBanco >= alias.naPlanilha && alias.naPlanilha > 0 && (!cod(x) || mesmaChave.some(y => y.id !== x.id && lc(y.cog) === alias.O && cod(y) === cod(x)))) classe = `COPIA_APELIDO (mesma pessoa de ${anon(alias.O)}: planilha ${alias.naPlanilha} · banco ${alias.noBanco} pareadas)`;
+  else if (c && (() => {
+    // mesma pessoa, mesmo CEG e mesmo produto com PEQUENA diferença de nome (só para diagnóstico; o arquivamento exige o par explícito e a checagem completa)
+    const frouxo = t => lc(t).replace(/[^a-z0-9à-ú ]/g, ' ').replace(/\s+(skz|ver|version)$/, '').replace(/\s+/g, ' ').trim();
+    const gemeas = mesmaChave.filter(y => y.id !== x.id && lc(y.cog) === c && frouxo(y.nome_do_item) === frouxo(x.nome_do_item) && Number(y.valor_item || 0) === Number(x.valor_item || 0) && cod(y) && S.some(s => s.cod === cod(y) && s.dono === c));
+    if (!gemeas.length) return false;
+    const naPlan = S.filter(s => s.item.split('|')[0] === lc(x.ceg) && frouxo(s.item.split('|')[1]) === frouxo(x.nome_do_item) && s.dono === c).length;
+    const noBanco = ml.filter(y => lc(y.ceg) === lc(x.ceg) && lc(y.cog) === c && frouxo(y.nome_do_item) === frouxo(x.nome_do_item)).length;
+    classe = `COPIA_NOME_DIFERENTE (par provável #${gemeas.map(y => y.id).join(',#')}${gemeas.some(y => y.pago_item) ? ' paga' : ''}; planilha ${naPlan} · banco ${noBanco}${noBanco > naPlan ? ' → sobra ' + (noBanco - naPlan) : ' → NÃO sobra'}; código ${cod(x) ? (S.some(s => s.cod === cod(x)) ? 'está na planilha' : 'ausente da planilha') : 'inexistente'})`;
+    return true;
+  })()) { /* classe definida acima */ }
   else if (!c) classe = 'SEM DONO';
   else if (donoNaPlanilha === 0 && naPlanilhaPorCodigo.length === 0) classe = `AUSENTE DA PLANILHA (dono ${cadastro ? 'com' : 'SEM'} cadastro; nenhuma linha dele neste CEG+item; código ${cod(x) ? 'não está na planilha' : 'inexistente'})`;
   else if (naPlanilhaPorCodigo.length && !naPlanilhaPorCodigo.some(s => s.dono === c)) classe = `CODIGO_DE_OUTRO_DONO_NA_PLANILHA (a planilha dá o código a ${naPlanilhaPorCodigo.map(s => anon(s.dono)).join(',')})`;
