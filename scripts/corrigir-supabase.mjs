@@ -109,10 +109,21 @@ async function corrigirDemandas() {
     if (!igual(t.ceg, d.ceg) || !igual(t.nome_do_item, d.nome_do_item)) return { ok: false, motivo: 'CEG/item da linha viva diferente do arquivado' };
     if (r.ceg && !igual(r.ceg, t.ceg)) return { ok: false, motivo: 'CEG do repasse difere' }; if (r.nome_do_item && !igual(r.nome_do_item, t.nome_do_item)) return { ok: false, motivo: 'item do repasse difere' };
     if (n(r.status).toLowerCase() !== 'aprovado') return { ok: false, motivo: 'repasse não aprovado' };
-    if (n(r.joiner_cog) !== n(d.cog)) return { ok: false, motivo: 'vendedor do repasse não é o dono arquivado' };
-    if (n(r.novo_dono_cog) !== n(t.cog)) return { ok: false, motivo: 'comprador do repasse não é o dono da linha viva' };
-    if (new Set(arq.filter(x => n(x.dados?.id_linha) === cod && n(x.dados?.cog) === n(d.cog)).map(x => String(x.masterlist_id))).size !== 1) return { ok: false, motivo: 'mais de uma linha arquivada com esse código e esse vendedor' };
-    return { ok: true, t, a, via: 'cadeia do repasse (vendedor=dono arquivado, comprador=dono vivo)' };
+    // O dono da linha ARQUIVADA tem que ser o vendedor (arquivada antes da venda) ou o comprador (arquivada depois dela): em qualquer caso, alguém do próprio repasse.
+    if (n(d.cog) !== n(r.joiner_cog) && n(d.cog) !== n(r.novo_dono_cog)) return { ok: false, motivo: 'vendedor do repasse não é o dono arquivado' };
+    // CADEIA até o dono da linha viva: o comprador do repasse é o dono vivo, ou há repasses APROVADOS sobre a própria linha viva que levam, elo a elo (vendedor do seguinte = comprador do anterior), até o dono vivo.
+    const cadeia = [n(r.joiner_cog), n(r.novo_dono_cog)], usados = new Set(); let atual = n(r.novo_dono_cog);
+    for (let passo = 0; n(atual) !== n(t.cog); passo++) {
+      const seguintes = rep.filter(o => o.id !== r.id && String(o.item_id) === String(t.id) && n(o.status).toLowerCase() === 'aprovado' && n(o.joiner_cog) === atual && !usados.has(o.id));
+      if (passo >= 5 || seguintes.length !== 1) return { ok: false, motivo: 'comprador do repasse não é o dono da linha viva' };
+      usados.add(seguintes[0].id); atual = n(seguintes[0].novo_dono_cog); cadeia.push(atual);
+    }
+    // Toda linha arquivada com esse código tem que ser do MESMO CEG/item e de alguém da cadeia (cópias do sync e linhas manuais do mesmo vendedor/comprador). Outro dono ou outro item = sem prova.
+    const arqDoCodigo = arq.filter(x => n(x.dados?.id_linha) === cod);
+    if (arqDoCodigo.some(x => !igual(x.dados?.ceg, t.ceg) || !igual(x.dados?.nome_do_item, t.nome_do_item) || !cadeia.includes(n(x.dados?.cog)))) return { ok: false, motivo: 'há linha arquivada com esse código de outro dono ou outro item' };
+    // Outros repasses sobre a linha viva só são aceitos se forem elos DESTA cadeia; qualquer outro é ambíguo.
+    if (rep.some(o => o.id !== r.id && String(o.item_id) === String(t.id) && !usados.has(o.id))) return { ok: false, motivo: 'a linha viva tem outro repasse fora da cadeia' };
+    return { ok: true, t, a, via: cadeia.length > 2 ? `cadeia de ${usados.size + 1} repasses aprovados até o dono vivo` : 'cadeia do repasse (vendedor/comprador = dono arquivado, comprador=dono vivo)', cadeiaOk: true };
   };
   const planoD = [], descartes = {};
   for (const d of dem) {
@@ -132,7 +143,7 @@ async function corrigirDemandas() {
     const id = String(r.item_id ?? ''); if (!id || vivos.has(id)) continue;
     const x = alvoDeRepasse(r);
     if (!x.ok) { descartes['repasse: ' + x.motivo] = (descartes['repasse: ' + x.motivo] || 0) + 1; continue; }
-    if (rep.some(o => o.id !== r.id && String(o.item_id) === String(x.t.id))) { descartes['repasse: a linha viva já tem outro repasse'] = (descartes['repasse: a linha viva já tem outro repasse'] || 0) + 1; continue; }
+    if (!x.cadeiaOk && rep.some(o => o.id !== r.id && String(o.item_id) === String(x.t.id))) { descartes['repasse: a linha viva já tem outro repasse'] = (descartes['repasse: a linha viva já tem outro repasse'] || 0) + 1; continue; }
     planoR.push({ repasse: r.id, de: id, para: x.t.id, cod: n(x.t.id_linha), ceg: x.t.ceg, item: x.t.nome_do_item, status: r.status, origem: x.a.origem, via: x.via });
   }
   linha('itens de demanda reapontáveis (inequívocos)', planoD.length); linha('repasses reapontáveis (inequívocos)', planoR.length);
