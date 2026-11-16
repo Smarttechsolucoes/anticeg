@@ -9,7 +9,7 @@ on:
       acao:
         description: 'Qual correção'
         type: choice
-        options: [todas, email, demandas, registrar-aplicadas, verificar-registro, reverter, arquivar-copias]
+        options: [todas, email, demandas, registrar-aplicadas, verificar-registro, reverter, arquivar-copias, sync-indevido]
         default: todas
       aplicar:
         description: 'GRAVAR de verdade (desmarcado = ensaio, não grava)'
