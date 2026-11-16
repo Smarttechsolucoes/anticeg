@@ -40,8 +40,22 @@ class Consulta {
   then(res, rej) { return this.executar().then(res, rej); }
 }
 
+// Armazenamento em memória (bucket privado): globalThis.__SYNC_BUCKET (Map caminho -> texto). globalThis.__SYNC_SEM_STORAGE = true simula o registro privado INDISPONÍVEL.
+const storageStub = () => ({
+  async getBucket() { if (globalThis.__SYNC_SEM_STORAGE) return { data: null, error: { message: 'storage indisponível (teste)' } }; return { data: { id: 'auditoria-privada', public: false }, error: null }; },
+  async createBucket() { return { error: { message: 'storage indisponível (teste)' } }; },
+  from() {
+    const mapa = (globalThis.__SYNC_BUCKET ||= new Map());
+    return {
+      async upload(caminho, blob) { if (globalThis.__SYNC_SEM_STORAGE) return { error: { message: 'storage indisponível (teste)' } }; if (mapa.has(caminho)) return { error: { message: 'já existe' } }; mapa.set(caminho, await blob.text()); return { error: null }; },
+      async download(caminho) { const t = mapa.get(caminho); return t == null ? { data: null, error: { message: 'não achei' } } : { data: new Blob([t]), error: null }; },
+    };
+  },
+});
+
 export function createClient() {
   return {
+    storage: storageStub(),
     from: t => new Consulta(t),
     async rpc(nome, args = {}) {
       const db = globalThis.__SYNC_DB; const ks = Object.keys(args); const ps = ks.map(k => args[k]);

@@ -1,0 +1,53 @@
+name: Sync controlado (manual, sem exclusões)
+
+# SÓ DISPARO MANUAL (sem cron, sem push, sem pull_request). NÃO é o "Sync Masterlist" diário (que continua desativado): este roda o MESMO script em modo CONTROLADO.
+# Fixo neste arquivo (não são opções): SEM exclusões (prune_masterlist nem é chamada), atualização NUNCA troca o dono nem desmarca pagamento, SEM push/notificações,
+# plano com os valores anteriores gravado no registro PRIVADO antes de qualquer gravação (sem ele nada é gravado) e validação posterior com registro do resultado.
+# Por padrão é SIMULAÇÃO (não grava nada). Só grava com "aplicar" marcado.
+# O log deste repositório é PÚBLICO: o script imprime só contagens, ids, códigos, CEG, nomes de produto, nomes de campo e marcas anônimas — nunca @, e-mail, nome de pessoa, CPF ou endereço.
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: 'GRAVAR de verdade (desmarcado = simulação, não grava nada)'
+        type: boolean
+        default: false
+      joiners:
+        description: 'Cadastros (joiners): nenhum = não mexe; somente-novos = cria o que não existe e NÃO altera nenhum existente; todos = comportamento normal do sync (não recomendado aqui)'
+        type: choice
+        options: [nenhum, somente-novos, todos]
+        default: nenhum
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-masterlist
+  cancel-in-progress: false
+
+jobs:
+  sync-controlado:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Instalar dependências
+        run: npm install
+        working-directory: scripts
+
+      - name: Sync em modo controlado (simulação, ou gravação se "aplicar")
+        run: node sync-masterlist.js
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SYNC_DRY_RUN: ${{ inputs.aplicar && '0' || '1' }}   # '1' = simulação (padrão); '0' só quando "aplicar" está marcado (o script só simula com exatamente '1')
+          SYNC_SEM_EXCLUSAO: '1'
+          SYNC_PROTEGER: '1'
+          SYNC_REGISTRO: '1'
+          SYNC_ENVIAR_PUSH: ''
+          SYNC_JOINERS: ${{ inputs.joiners }}

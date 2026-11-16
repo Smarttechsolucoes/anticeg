@@ -6,11 +6,22 @@ import { montarUpsertJoiner, carregarIdsComConta, carregarIdsEmailTrocado, email
 import { casarPorIdLinha, casarChavesRepetidas, adotarCodigoSemChave } from './casar-itens.js';
 import { indexarJoiners, resolverLinha, cogDoUpsert, joinerExistente } from './resolver-joiner.js';
 import { carregarArrobasAntigos } from './arrobas-antigos.js';
+import { gravarRegistro } from './registro-privado.mjs';
 
 const SHEET_ID = '1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=2116437995`;
 // SIMULAÇÃO (SYNC_DRY_RUN=1): lê a planilha e o banco, faz TODO o casamento e conta o que seria atualizado/inserido/apagado, mas NÃO grava nada (nem masterlist, nem joiners, nem push, nem a exclusão protegida).
 const SIMULACAO = process.env.SYNC_DRY_RUN === '1';
+// EXECUÇÃO CONTROLADA (todos desligados por padrão: o comportamento normal do sync não muda):
+//  SYNC_SEM_EXCLUSAO=1  interruptor PRÓPRIO: nenhuma exclusão (prune_masterlist nem é chamada), independente do limite de 25.
+//  SYNC_PROTEGER=1      atualização NUNCA troca o dono da linha (a linha inteira fica como está) e NUNCA desmarca pagamento (pago_* true continua true).
+//  SYNC_JOINERS=todos|somente-novos|nenhum   somente-novos: cria cadastro que não existe e NÃO altera nenhum cadastro existente; nenhum: não mexe em joiners.
+//  SYNC_REGISTRO=1      grava o PLANO (valores anteriores) e o RESULTADO no registro privado; se o plano não for gravado e conferido, NADA é gravado no banco. Ignorado na simulação.
+const SEM_EXCLUSAO = process.env.SYNC_SEM_EXCLUSAO === '1';
+const PROTEGER = process.env.SYNC_PROTEGER === '1';
+const MODO_JOINERS = ['todos', 'somente-novos', 'nenhum'].includes(process.env.SYNC_JOINERS) ? process.env.SYNC_JOINERS : 'todos';
+const REGISTRO = process.env.SYNC_REGISTRO === '1' && !SIMULACAO;
+const ADIAR_ESCRITA = SIMULACAO || REGISTRO;   // atualizações são planejadas primeiro (registro) e só depois executadas
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -35,6 +46,18 @@ function parseBRL(str) {
 const CAMPOS_COMPARADOS = ['ceg', 'cog', 'nome', 'nome_do_item', 'id_linha', 'valor_item', 'frete_inter', 'taxa_rf', 'info_adicionais',
   'pago_item', 'pago_frete', 'pago_rf', 'venc_item', 'venc_frete', 'venc_rf', 'status'];
 const CAMPOS_NUMERICOS = new Set(['valor_item', 'frete_inter', 'taxa_rf']);
+// Quais campos o UPDATE mudaria (mesma comparação de linhaMudou, campo a campo).
+function camposMudados(existente, novo) {
+  const out = [];
+  for (const c of CAMPOS_COMPARADOS) {
+    const noBanco = existente[c];
+    if (noBanco === undefined) { out.push(c); continue; }
+    const daPlanilha = novo[c] ?? null;
+    if (CAMPOS_NUMERICOS.has(c)) { if (noBanco === null || daPlanilha === null || Math.round(Number(noBanco) * 100) !== Math.round(Number(daPlanilha) * 100)) out.push(c); }
+    else if (noBanco !== daPlanilha) out.push(c);
+  }
+  return out;
+}
 function linhaMudou(existente, novo) {
   for (const c of CAMPOS_COMPARADOS) {
     const noBanco = existente[c];
@@ -211,6 +234,8 @@ async function main() {
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   const planoInsercoes = []; // simulação: linhas que SERIAM inseridas (código | CEG | item; sem dono)
+  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
+  const STAMP = new Date().toISOString().replace(/[:.]/g, '-');
   const insercoesPendentes = []; // linhas da planilha sem par: só são inseridas depois da checagem de suspeita (abaixo)
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
   const sheetKeyCount = {};
@@ -298,11 +323,26 @@ async function main() {
       }
       if (baseFields.venc_item || baseFields.venc_frete || baseFields.venc_rf) comData++;
       if (existingItem) {
-        if (!atualizarTudo && !linhaMudou(existingItem, { ...baseFields, status })) {
+        const novoReg = { ...baseFields, status };
+        let bloqueadoPorDono = false;
+        if (PROTEGER) {
+          // execução controlada: o sync não troca o dono de linha existente nem desmarca pagamento (a planilha pode estar atrasada em relação ao site)
+          if (String(existingItem.cog ?? '') !== String(novoReg.cog ?? '')) bloqueadoPorDono = true;
+          else for (const c of ['pago_item', 'pago_frete', 'pago_rf']) if (existingItem[c] === true && novoReg[c] === false) { novoReg[c] = true; pagamentosMantidos.push(`${existingItem.id}:${c}`); }
+        }
+        if (bloqueadoPorDono) {
+          bloqueadasPorDono.push(existingItem.id); semMudanca++;
+        } else if (!atualizarTudo && !linhaMudou(existingItem, novoReg)) {
           semMudanca++;
         } else {
-          const { error } = SIMULACAO ? { error: null } : await supabase.from('masterlist').update({ ...baseFields, status }).eq('id', existingItem.id);
-          if (error) throw error;
+          const mudados = camposMudados(existingItem, novoReg);
+          if (ADIAR_ESCRITA) {
+            const pegar = (o, cs) => Object.fromEntries(cs.map(c => [c, o[c] ?? null]));
+            planoAtualizacoes.push({ id: existingItem.id, cod: existingItem.id_linha ?? null, campos: mudados, antes: pegar(existingItem, mudados), depois: pegar(novoReg, mudados), payload: novoReg });
+          } else {
+            const { error } = await supabase.from('masterlist').update(novoReg).eq('id', existingItem.id);
+            if (error) throw error;
+          }
           if (existingItem.status !== status && cog) {
             mudancasStatus.push({ cog, nomeItem, ceg, statusNovo: status });
           }
@@ -371,6 +411,54 @@ async function main() {
     rel.forEach((_, id) => blindadasPorRetencao.add(id));
   }
   if (copiasProvadas.size) console.log(`CÓPIAS PROVADAS: ${copiasProvadas.size} linha(s) do banco sem par são cópia de linha pareada e não impedem inserção no mesmo CEG + item (ids ${[...copiasProvadas].slice(0, 30).join(', ')}${copiasProvadas.size > 30 ? ', ...' : ''}); seguem as regras normais de exclusão (só livres, dentro do limite).`);
+  // ───── PLANO DE ATUALIZAÇÕES (só ids, códigos, nomes de campo e transições de pagamento/status; nunca @, e-mail ou nome de pessoa)
+  const chavesPago = ['pago_item', 'pago_frete', 'pago_rf'];
+  if (ADIAR_ESCRITA) {
+    const porCampos = {}, transPago = {}, transStatus = {}; let comDono = 0;
+    for (const u of planoAtualizacoes) {
+      const k = u.campos.join('+'); porCampos[k] = (porCampos[k] || 0) + 1;
+      for (const c of chavesPago) if (u.campos.includes(c)) { const t = `${c}:${u.antes[c]}->${u.depois[c]}`; transPago[t] = (transPago[t] || 0) + 1; }
+      if (u.campos.includes('status')) { const t = `${u.antes.status}->${u.depois.status}`; transStatus[t] = (transStatus[t] || 0) + 1; }
+      if (u.campos.includes('cog')) comDono++;
+    }
+    console.log(`PLANO DE ATUALIZAÇÕES: ${planoAtualizacoes.length} linha(s). Conjuntos de campos que mudam: ${JSON.stringify(porCampos)}`);
+    console.log(`  pagamento: ${JSON.stringify(transPago)} · status: ${JSON.stringify(transStatus)} · linhas em que o DONO mudaria: ${comDono}`);
+    console.log('  atualizações (id | código | campos | pagamento | status):');
+    planoAtualizacoes.slice(0, 400).forEach(u => console.log(`    #${u.id} | ${u.cod || '-'} | ${u.campos.join(',')} | ${chavesPago.filter(c => u.campos.includes(c)).map(c => `${c}:${u.antes[c]}->${u.depois[c]}`).join(' ') || '-'} | ${u.campos.includes('status') ? `${u.antes.status}->${u.depois.status}` : '-'}`));
+    if (planoAtualizacoes.length > 400) console.log(`    ... e mais ${planoAtualizacoes.length - 400}`);
+  }
+  if (PROTEGER) console.log(`PROTEÇÃO ATIVA (SYNC_PROTEGER=1): ${bloqueadasPorDono.length} linha(s) NÃO atualizadas porque o dono mudaria (ids ${bloqueadasPorDono.slice(0, 80).join(', ')}) · ${pagamentosMantidos.length} marcação(ões) de pagamento mantida(s) porque a planilha desmarcaria (id:campo ${pagamentosMantidos.slice(0, 80).join(', ')})`);
+  // ───── REGISTRO PRIVADO DO PLANO (valores anteriores) ANTES de qualquer gravação; sem ele, nada é gravado
+  const resultadoAtualizacoes = [];
+  if (REGISTRO) {
+    try {
+      const g = await gravarRegistro(supabase, `sync/${STAMP}_plano.json`, {
+        versao: 1, tipo: 'sync_plano', run: process.env.GITHUB_RUN_ID || 'local', quando: new Date().toISOString(),
+        modo: { sem_exclusao: SEM_EXCLUSAO, proteger: PROTEGER, joiners: MODO_JOINERS },
+        atualizacoes: planoAtualizacoes.map(({ payload, ...u }) => u),
+        insercoes: inserirAgora.map(q => ({ codigo: q.idLinha, ceg: q.ceg, item: q.nomeItem, cog: q.cog, valores: q.baseFields, status: q.status })),
+        bloqueadas_por_dono: bloqueadasPorDono, pagamentos_mantidos: pagamentosMantidos,
+        insercoes_retidas: insercoesRetidas.map(r => ({ codigo: r.q.idLinha, ceg: r.q.ceg, item: r.q.nomeItem, ids_do_banco: r.ids })),
+      });
+      console.log(`REGISTRO PRIVADO do plano gravado e conferido: ${g.caminho} (${g.bytes} bytes; bucket ${g.bucket}).`);
+    } catch (e) { console.error(`Registro privado indisponível — NADA foi gravado no banco: ${e.message}`); process.exitCode = 6; return; }
+    // executa as atualizações, conferindo o estado ATUAL de cada linha contra o "antes" do plano (se mudou desde o plano, a linha é pulada)
+    const campoData = new Set(['venc_item', 'venc_frete', 'venc_rf']);
+    const igualVal = (c, a, b) => CAMPOS_NUMERICOS.has(c) ? ((a == null || b == null) ? a == b : Math.round(Number(a) * 100) === Math.round(Number(b) * 100))
+      : campoData.has(c) ? dataIso(a) === dataIso(b) : String(a ?? '') === String(b ?? '');
+    for (const u of planoAtualizacoes) {
+      try {
+        const { data: cur, error: eL } = await supabase.from('masterlist').select(['id', ...u.campos].join(', ')).eq('id', u.id);
+        if (eL || !cur || cur.length !== 1) { resultadoAtualizacoes.push({ id: u.id, resultado: 'pulado: não consegui reler' }); continue; }
+        if (u.campos.some(c => !igualVal(c, cur[0][c], u.antes[c]))) { resultadoAtualizacoes.push({ id: u.id, resultado: 'pulado: a linha mudou desde o plano' }); continue; }
+        const { error } = await supabase.from('masterlist').update(u.payload).eq('id', u.id);
+        if (error) throw error;
+        resultadoAtualizacoes.push({ id: u.id, resultado: 'aplicado' });
+      } catch (err) { console.error(`Erro:`, err.message); erros++; resultadoAtualizacoes.push({ id: u.id, resultado: 'erro: ' + err.message }); }
+    }
+    console.log(`Atualizações aplicadas: ${resultadoAtualizacoes.filter(r => r.resultado === 'aplicado').length} de ${planoAtualizacoes.length} (puladas por mudança desde o plano: ${resultadoAtualizacoes.filter(r => r.resultado.startsWith('pulado')).length}).`);
+  }
+  const inseridasOk = [];
   for (const q of inserirAgora) {
     try {
       if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }
@@ -378,7 +466,7 @@ async function main() {
       const { error } = SIMULACAO ? { error: null } : await supabase.from('masterlist').insert([{ ...q.baseFields, status: q.status }]);
       if (error) throw error;
       if (q.cog && q.cog.toLowerCase() !== 'disponivel') novosItens.push({ cog: q.cog, nomeItem: q.nomeItem, ceg: q.ceg });
-      inserted++;
+      inserted++; inseridasOk.push(q);
     } catch (err) {
       console.error(`Erro:`, err.message);
       erros++;
@@ -389,6 +477,30 @@ async function main() {
     insercoesRetidas.slice(0, 80).forEach(({ q, motivo, mesmoDono, ids }) => console.log(`  ${q.idLinha || '-'} | ${q.ceg} | ${q.nomeItem} | ${motivo} | ${mesmoDono} | ids ${ids.slice(0, 12).join(', ')}${ids.length > 12 ? ', ...' : ''}`));
     if (insercoesRetidas.length > 80) console.log(`  ... e mais ${insercoesRetidas.length - 80}`);
     console.log(`::warning title=Sync: ${insercoesRetidas.length} inserção(ões) retida(s)::Linha(s) da planilha colidem com linhas do banco sem par (mesmo código ou mesmo CEG+item). Nada foi inserido nem apagado por causa delas; veja "INSERÇÕES RETIDAS" no log.`);
+  }
+  // ───── VALIDAÇÃO POSTERIOR + REGISTRO PRIVADO DO RESULTADO (execução com SYNC_REGISTRO=1)
+  if (REGISTRO) {
+    const validacao = { atualizacoes_conferidas: 0, atualizacoes_divergentes: [], insercoes: [] };
+    const pegaCampos = async u => (await supabase.from('masterlist').select(['id', ...u.campos].join(', ')).eq('id', u.id)).data;
+    for (const u of planoAtualizacoes) {
+      if (resultadoAtualizacoes.find(r => r.id === u.id)?.resultado !== 'aplicado') continue;
+      const cur = await pegaCampos(u);
+      const ok = cur && cur.length === 1 && u.campos.every(c => CAMPOS_NUMERICOS.has(c) ? Math.round(Number(cur[0][c]) * 100) === Math.round(Number(u.depois[c]) * 100) : String(cur[0][c] ?? '').slice(0, ['venc_item', 'venc_frete', 'venc_rf'].includes(c) ? 10 : 100000) === String(u.depois[c] ?? '').slice(0, ['venc_item', 'venc_frete', 'venc_rf'].includes(c) ? 10 : 100000));
+      if (ok) validacao.atualizacoes_conferidas++; else validacao.atualizacoes_divergentes.push(u.id);
+    }
+    for (const q of inseridasOk) {
+      let query = supabase.from('masterlist').select('id, id_linha').eq('ceg', q.ceg).eq('nome_do_item', q.nomeItem);
+      query = q.idLinha ? query.eq('id_linha', q.idLinha) : query.eq('cog', q.cog);
+      const { data: achadas } = await query;
+      validacao.insercoes.push({ codigo: q.idLinha || null, ceg: q.ceg, item: q.nomeItem, ids: (achadas || []).map(a => a.id), unica: (achadas || []).length === 1 });
+    }
+    const repetidas = validacao.insercoes.filter(i => !i.unica);
+    console.log(`VALIDAÇÃO POSTERIOR: ${validacao.atualizacoes_conferidas} de ${resultadoAtualizacoes.filter(r => r.resultado === 'aplicado').length} atualizações conferidas (divergentes: ${validacao.atualizacoes_divergentes.length}) · ${validacao.insercoes.length - repetidas.length} de ${validacao.insercoes.length} inserções aparecem UMA única vez${repetidas.length ? ` (repetidas ou ausentes: ${repetidas.map(i => i.codigo || i.item).join(', ')})` : ''}.`);
+    if (validacao.atualizacoes_divergentes.length || repetidas.length) erros++;
+    try {
+      const g = await gravarRegistro(supabase, `sync/${STAMP}_resultado.json`, { versao: 1, tipo: 'sync_resultado', plano: `sync/${STAMP}_plano.json`, run: process.env.GITHUB_RUN_ID || 'local', quando: new Date().toISOString(), atualizacoes: resultadoAtualizacoes, validacao });
+      console.log(`REGISTRO PRIVADO do resultado: ${g.caminho}.`);
+    } catch (e) { console.error(`Erro ao gravar o registro do resultado: ${e.message}`); erros++; }
   }
   // DIAGNÓSTICO DE GRUPOS: onde o banco tem MAIS linhas que a planilha para o mesmo CEG + item + dono (sem nome de pessoa; só CEG, item, contagens e ids)
   {
@@ -519,7 +631,7 @@ async function main() {
 
   const joinersList = Object.values(joinersMap);
   console.log(`\nSincronizando ${joinersList.length} joiners únicos...`);
-  let jUpserted = 0, jErros = 0;
+  let jUpserted = 0, jErros = 0, jNovos = 0, jExistentes = 0;
 
   // E-mail: célula vazia da planilha nunca apaga o e-mail do banco, e quem já tem conta ativada (e-mail verificado) não tem o e-mail trocado pelo sync.
   const { idsComConta, contasIndisponiveis } = await carregarIdsComConta(supabase);
@@ -536,6 +648,9 @@ async function main() {
     if (resol.conflito) { registrarConflito('joiner', resol, { cog_da_planilha: j.cog }); continue; }
     const nova = resol.via === 'novo';
     const atual = nova ? joinerExistente(j.cog, idxJoiners) : joinerExistente(resol.cog, idxJoiners);
+    // modo controlado: 'nenhum' não mexe em cadastros; 'somente-novos' cria o cadastro que não existe e NÃO altera nenhum cadastro existente
+    if (nova && !atual) jNovos++; else jExistentes++;
+    if (MODO_JOINERS === 'nenhum' || (MODO_JOINERS === 'somente-novos' && !(nova && !atual))) continue;
     // Joiner que já existe (mesmo @ com outras maiúsculas, ou @ antigo) é atualizada pelo COG que ela já tem: o upsert nunca cria um gêmeo.
     const alvo = montarUpsertJoiner({ ...j, cog: nova ? cogDoUpsert(j.cog, idxJoiners) : resol.cog }, atual, { idsComConta, contasIndisponiveis, idsEmailTrocado, trocadosIndisponiveis });
     // planilha com @ antigo (ou @ que só casa pelo e-mail): o @ de hoje do cadastro NÃO é sobrescrito pelo valor atrasado da planilha; o aviso diz qual planilha precisa ser corrigida
@@ -548,7 +663,7 @@ async function main() {
     else jUpserted++;
   }
 
-  console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s)`);
+  console.log(`✓ Joiners: ${jUpserted} sincronizados · ${jErros} erros · ${emailsPreservados} e-mail(s) existente(s) preservado(s) · modo ${MODO_JOINERS}: ${jNovos} cadastro(s) NOVO(s) e ${jExistentes} já existente(s) entre os resolvidos${MODO_JOINERS !== 'todos' ? ' (os existentes NÃO foram alterados' + (MODO_JOINERS === 'nenhum' ? ' e nenhum cadastro foi criado)' : ')') : ''}`);
   // Conflitos de dono (mais de um cadastro possível) e planilhas com @ antigo: nada foi movido, criado ou sobrescrito por causa deles. Fica registrado no log e no resumo da execução (GitHub) para análise.
   if (avisosArrobaAntigo.size > 0) console.log(`✓ Planilha com @ antigo/diferente do cadastro (o @ do cadastro foi preservado; corrija a planilha): ${avisosArrobaAntigo.size} cadastro(s) (marcas, sem @): ${[...avisosArrobaAntigo].slice(0, 40).map(anon).join(', ')}`);
   if (conflitos.length > 0) {
@@ -581,6 +696,7 @@ async function main() {
   const toDelete = candidatas.filter(x => !blindadasPorRetencao.has(x.id)).map(x => x.id);
   if (blindadasAmbiguas.size) console.log(`Linhas antigas sem código em grupo AMBÍGUO: ${blindadasAmbiguas.size} preservadas (NÃO entram na exclusão), para análise com evidência.`);
 
+  if (SEM_EXCLUSAO) { console.log(`EXCLUSÕES DESLIGADAS (SYNC_SEM_EXCLUSAO=1): ${toDelete.length} linha(s) ausentes da planilha NÃO foram enviadas à exclusão; prune_masterlist NÃO foi chamada (independente do limite).`); return; }
   if (toDelete.length === 0) { console.log(`
 ✓ Nenhum registro candidato à remoção`); return; }
   console.log(`
