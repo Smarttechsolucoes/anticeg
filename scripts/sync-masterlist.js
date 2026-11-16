@@ -234,7 +234,7 @@ async function main() {
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   const planoInsercoes = []; // simulação: linhas que SERIAM inseridas (código | CEG | item; sem dono)
-  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
+  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [], detalheProtecao = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
   const STAMP = new Date().toISOString().replace(/[:.]/g, '-');
   const insercoesPendentes = []; // linhas da planilha sem par: só são inseridas depois da checagem de suspeita (abaixo)
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
@@ -327,8 +327,8 @@ async function main() {
         let bloqueadoPorDono = false;
         if (PROTEGER) {
           // execução controlada: o sync não troca o dono de linha existente nem desmarca pagamento (a planilha pode estar atrasada em relação ao site)
-          if (String(existingItem.cog ?? '') !== String(novoReg.cog ?? '')) bloqueadoPorDono = true;
-          else for (const c of ['pago_item', 'pago_frete', 'pago_rf']) if (existingItem[c] === true && novoReg[c] === false) { novoReg[c] = true; pagamentosMantidos.push(`${existingItem.id}:${c}`); }
+          if (String(existingItem.cog ?? '') !== String(novoReg.cog ?? '')) { bloqueadoPorDono = true; detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | o DONO mudaria: banco ${anon(existingItem.cog)} -> planilha ${anon(novoReg.cog)} (linha NÃO atualizada)`); }
+          else for (const c of ['pago_item', 'pago_frete', 'pago_rf']) if (existingItem[c] === true && novoReg[c] === false) { novoReg[c] = true; pagamentosMantidos.push(`${existingItem.id}:${c}`); detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | ${c} está marcado no banco e a planilha desmarcaria (marcação MANTIDA)`); }
         }
         if (bloqueadoPorDono) {
           bloqueadasPorDono.push(existingItem.id); semMudanca++;
@@ -428,6 +428,7 @@ async function main() {
     if (planoAtualizacoes.length > 400) console.log(`    ... e mais ${planoAtualizacoes.length - 400}`);
   }
   if (PROTEGER) console.log(`PROTEÇÃO ATIVA (SYNC_PROTEGER=1): ${bloqueadasPorDono.length} linha(s) NÃO atualizadas porque o dono mudaria (ids ${bloqueadasPorDono.slice(0, 80).join(', ')}) · ${pagamentosMantidos.length} marcação(ões) de pagamento mantida(s) porque a planilha desmarcaria (id:campo ${pagamentosMantidos.slice(0, 80).join(', ')})`);
+  if (PROTEGER && detalheProtecao.length) { console.log('  linhas protegidas (id | código | CEG | item | motivo):'); detalheProtecao.slice(0, 200).forEach(l => console.log('    ' + l)); }
   // ───── REGISTRO PRIVADO DO PLANO (valores anteriores) ANTES de qualquer gravação; sem ele, nada é gravado
   const resultadoAtualizacoes = [];
   if (REGISTRO) {
