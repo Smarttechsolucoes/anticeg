@@ -79,7 +79,7 @@ for (const x of livres.sort((a, b) => a.id - b.id)) {
   // (β) mesma compra registrada duas vezes: outra linha viva com o MESMO CEG+item+código+dono
   const irmas = cod(x) ? mesmaChave.filter(y => y.id !== x.id && cod(y) === cod(x) && lc(y.cog) === c) : [];
   // (α) o dono desta linha é o @/e-mail DIGITADO numa linha da planilha do mesmo CEG+item que resolve para OUTRO cadastro
-  const rs = S.filter(s => s.item === k && s.dono && s.dono !== c && (s.tw === c || s.em === c));
+  const rs = c ? S.filter(s => s.item === k && s.dono && s.dono !== c && (s.tw === c || s.em === c)) : [];
   const donosAlias = [...new Set(rs.map(s => s.dono))];
   let alias = null;
   if (donosAlias.length === 1) { const O = donosAlias[0]; alias = { O, naPlanilha: S.filter(s => s.item === k && s.dono === O).length, noBanco: mesmaChave.filter(y => y.id !== x.id && lc(y.cog) === O).length }; }
