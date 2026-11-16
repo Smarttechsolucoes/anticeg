@@ -30,6 +30,10 @@ on:
         description: 'Ids das candidatas à exclusão (separados por vírgula) para examinar UMA A UMA (somente leitura). Vazio = não roda'
         type: string
         default: ''
+      controlado:
+        description: 'Na SIMULAÇÃO, usar as mesmas proteções do sync controlado (sem exclusões, dono e pagamento protegidos, cadastros: nenhum). Só afeta o que a simulação mostra; nada é gravado'
+        type: boolean
+        default: false
       simulacao:
         description: 'Rodar a SIMULAÇÃO do sync contra a planilha atual (somente leitura, não grava)'
         type: boolean
@@ -113,4 +117,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SYNC_DRY_RUN: '1'
+          SYNC_SEM_EXCLUSAO: ${{ inputs.controlado && '1' || '' }}
+          SYNC_PROTEGER: ${{ inputs.controlado && '1' || '' }}
+          SYNC_JOINERS: ${{ inputs.controlado && 'nenhum' || 'todos' }}
           SYNC_ENVIAR_PUSH: ''
