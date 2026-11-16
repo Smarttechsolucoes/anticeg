@@ -330,16 +330,47 @@ async function main() {
   const sobPorCodigo = new Map(), sobPorItem = new Map();
   const empilha = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
   for (const x of sob) { const c = String(x.id_linha ?? '').trim(); if (c) empilha(sobPorCodigo, c, x); empilha(sobPorItem, `${normTxt(x.ceg)}|${normTxt(x.nome_do_item)}`, x); }
+  // CÓPIA PROVADA: linha do banco SEM PAR que é, sem dúvida, cópia de uma linha PAREADA (a mesma compra registrada duas vezes) não pode ser a origem de uma troca de dono, então NÃO impede a inserção de outra pessoa no mesmo CEG + item.
+  // Só vale com prova nos dois lados, e nunca para linha sem código do MESMO dono de linha pareada (isso pode ser compra repetida: continua retida):
+  //   (1) mesmo CEG + item + CÓDIGO + dono de uma linha pareada (um código é uma unidade só);
+  //   (2) o dono da linha é um apelido (@ ou e-mail) DIGITADO numa linha da planilha do mesmo CEG + item que resolve para OUTRO cadastro (a mesma pessoa), e esse cadastro já tem, pareadas, linhas para TODAS as suas linhas da planilha
+  //       desse CEG + item; se a linha tem código, é o mesmo código de uma linha pareada desse cadastro.
+  const semParIds = new Set(sob.map(x => x.id));
+  const pareadas = todosBanco.filter(x => !semParIds.has(x.id));
+  const itemKey = (ceg, item) => `${normTxt(ceg)}|${normTxt(item)}`;
+  const linhasPlanilha = rows.map(r => ({ item: itemKey(col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG'), col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c')), dono: normTxt(cogDe(r)), tw: normTxt(col(r, colMap, '@')).replace(/^@/, ''), em: normTxt(emailLimpo(col(r, colMap, 'EMAIL'))) }));
+  const codDe = x => String(x.id_linha ?? '').trim();
+  const copiasProvadas = new Set();
+  const ehCopiaProvada = x => {
+    if (copiasProvadas.has(x.id)) return true;
+    const k = itemKey(x.ceg, x.nome_do_item), c = normTxt(x.cog), cod = codDe(x);
+    if (!c) return false;
+    let prova = false;
+    if (cod && pareadas.some(y => codDe(y) === cod && itemKey(y.ceg, y.nome_do_item) === k && normTxt(y.cog) === c)) prova = true;                                  // (1)
+    else {                                                                                                                                                           // (2)
+      const rs = linhasPlanilha.filter(r => r.item === k && r.dono && r.dono !== c && (r.tw === c || r.em === c));
+      const donos = new Set(rs.map(r => r.dono));
+      if (donos.size === 1) {
+        const O = [...donos][0];
+        const naPlanilha = linhasPlanilha.filter(r => r.item === k && r.dono === O).length;
+        const noBanco = pareadas.filter(y => itemKey(y.ceg, y.nome_do_item) === k && normTxt(y.cog) === O);
+        if (noBanco.length >= naPlanilha && (!cod || noBanco.some(y => codDe(y) === cod))) prova = true;
+      }
+    }
+    if (prova) copiasProvadas.add(x.id);
+    return prova;
+  };
   const insercoesRetidas = [], blindadasPorRetencao = new Set(), inserirAgora = [];
   for (const q of insercoesPendentes) {
     const porCod = q.idLinha ? (sobPorCodigo.get(String(q.idLinha).trim()) || []) : [];
-    const porItem = sobPorItem.get(`${normTxt(q.ceg)}|${normTxt(q.nomeItem)}`) || [];
+    const porItem = (sobPorItem.get(`${normTxt(q.ceg)}|${normTxt(q.nomeItem)}`) || []).filter(x => !ehCopiaProvada(x));   // o código repetido continua retendo sempre
     const rel = new Map([...porCod, ...porItem].map(x => [x.id, x]));
     if (rel.size === 0) { inserirAgora.push(q); continue; }
     const mesmoDono = [...rel.values()].some(x => x.cog && q.cog && x.cog === q.cog) ? 'dono IGUAL ao de linha relacionada' : 'dono DIFERENTE das linhas relacionadas';
     insercoesRetidas.push({ q, mesmoDono, motivo: porCod.length ? 'o código já existe em linha(s) do banco que a planilha não reconhece (dono diferente ou código repetido)' : 'há linha(s) do banco, sem par na planilha, com o mesmo CEG e item (troca de dono/nome ou compra nova: a ordem não prova qual)', ids: [...rel.keys()].sort((a, c) => a - c) });
     rel.forEach((_, id) => blindadasPorRetencao.add(id));
   }
+  if (copiasProvadas.size) console.log(`CÓPIAS PROVADAS: ${copiasProvadas.size} linha(s) do banco sem par são cópia de linha pareada e não impedem inserção no mesmo CEG + item (ids ${[...copiasProvadas].slice(0, 30).join(', ')}${copiasProvadas.size > 30 ? ', ...' : ''}); seguem as regras normais de exclusão (só livres, dentro do limite).`);
   for (const q of inserirAgora) {
     try {
       if (inserted >= MAX_INSERCOES) { bloqueadasPorLimite++; continue; }

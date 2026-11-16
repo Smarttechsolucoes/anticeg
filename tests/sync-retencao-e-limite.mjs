@@ -13,7 +13,7 @@ import { join } from "node:path";
 const RAIZ = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 let falhas = 0; const ok = (c, m) => { console.log((c ? "OK   " : "FALHA ") + m); if (!c) falhas++; };
 const CAB = "ABA / CEG,NOME,@,EMAIL,NOME DO ITEM,ID,PREÇO ITEM,PREÇO FRETE,PREÇO RF,INFORMAÇÕES,ITEM,FRETE,RF,ITEM DATA,FRETE DATA,RF DATA,Chegou?,NACIONAL";
-const csv = linhas => [CAB, ...linhas.map(l => [l.ceg, l.nome, "@" + l.cog, "", l.item, l.id ?? "", l.preco ?? "10", "", "", "", l.pago ? "TRUE" : "FALSE", "FALSE", "FALSE", "", "", "", "FALSE", "FALSE"].join(","))].join("\n");
+const csv = linhas => [CAB, ...linhas.map(l => [l.ceg, l.nome, l.tw ?? ("@" + l.cog), l.email ?? "", l.item, l.id ?? "", l.preco ?? "10", "", "", "", l.pago ? "TRUE" : "FALSE", "FALSE", "FALSE", "", "", "", "FALSE", "FALSE"].join(","))].join("\n");
 const sql = b => `insert into public.masterlist (id, ceg, cog, nome, nome_do_item, id_linha, valor_item, status, pago_item) values (${b.id}, '${b.ceg}', '${b.cog}', '${b.nome}', '${b.item}', ${b.idl ? `'${b.idl}'` : "null"}, ${b.preco ?? 10}, 'Comprado', ${b.pago ? "true" : "false"});`;
 const dir = mkdtempSync(join(tmpdir(), "sync-retencao-"));
 let n = 0;
@@ -77,4 +77,36 @@ const plBase = () => base.map(b => ({ ceg: b.ceg, nome: b.nome, cog: b.cog, item
   const o = rodar({ planilha: plBase(), banco: [...base, ...livres, ...pagas], env: { SYNC_DRY_RUN: "1" } });
   ok(!o.erro && /35 candidata\(s\); 30 LIVRE\(S\)/.test(o.log) && /pagamento_registrado":5/.test(o.log) && /ABORTARIA a exclusão/.test(o.log) && !(o.exclusoes || []).length && ids(o).length === 95, "simulação: 35 candidatas, 30 livres + 5 protegidas, 'ABORTARIA', nada apagado" + (o.erro ? " | " + o.erro : ""));
 }
-console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
+{ // 7) CÓPIA PROVADA (1): duas linhas do banco com o MESMO CEG+item+código+dono (uma compra registrada duas vezes) não são "troca de dono": outra pessoa no mesmo CEG+item É inserida
+  const banco = [...base, { id: 600, ceg: "CEG7", cog: "carla", nome: "Carla", item: "Item K", idl: "K-1" }, { id: 601, ceg: "CEG7", cog: "carla", nome: "Carla", item: "Item K", idl: "K-1" }];
+  const pl = [...plBase(), { ceg: "CEG7", nome: "Carla", cog: "carla", item: "Item K", id: "K-1" }, { ceg: "CEG7", nome: "Dora", cog: "dora", item: "Item K", id: "K-2" }];
+  const o = rodar({ planilha: pl, banco });
+  ok(!o.erro && o.masterlist.some(x => x.cog === "dora" && x.id_linha === "K-2") && !/INSERÇÕES RETIDAS/.test(o.log) && /CÓPIAS PROVADAS: 1 linha/.test(o.log), "cópia provada (mesmo código e dono): a compra da Dora É inserida, sem retenção" + (o.erro ? " | " + o.erro : ""));
+  ok(!o.erro && o.masterlist.some(x => x.cog === "carla" && x.id_linha === "K-1"), "a Carla continua com a linha K-1 (a cópia só sai pela exclusão protegida, que respeita pagamento e limite)");
+}
+{ // 8) CÓPIA PROVADA (2): o dono da linha antiga é o @ DIGITADO na planilha, e o e-mail da linha resolve para OUTRO cadastro (a mesma pessoa, que já tem a linha pareada): a linha com o @ antigo não é troca de dono
+  const banco = [...base, { id: 610, ceg: "CEG8", cog: "ana", nome: "Ana", item: "Item A", idl: "A-1" }, { id: 611, ceg: "CEG8", cog: "ana.antiga", nome: "Ana", item: "Item A" }];
+  const pl = [...plBase(), { ceg: "CEG8", nome: "Ana", cog: "ana", tw: "@ana.antiga", email: "ana@x.com", item: "Item A", id: "A-1" }, { ceg: "CEG8", nome: "Bia", cog: "bia", item: "Item A", id: "A-9" }];
+  const o = rodar({ planilha: pl, banco, setupExtra: "insert into public.joiners (cog, nome, email, twitter) values ('ana','Ana','ana@x.com','ana');" });
+  ok(!o.erro && o.masterlist.some(x => x.cog === "bia" && x.id_linha === "A-9") && !/INSERÇÕES RETIDAS/.test(o.log) && /CÓPIAS PROVADAS: 1 linha/.test(o.log), "apelido (@ antigo) da mesma pessoa: a compra da Bia É inserida" + (o.erro ? " | " + o.erro : ""));
+  ok(!o.erro && !!por(o, 610) && por(o, 610)?.cog === "ana", "a linha pareada da Ana (610) fica intacta");
+}
+{ // 9) REPASSE / TROCA DE DONO sem prova: a Ana tem 2 linhas (T-1 pareada, T-2 sem par) e a planilha dá um item NOVO (T-3) à Bia: pode ser a T-2 trocando de dono => RETIDA
+  const banco = [...base, { id: 630, ceg: "CEG6", cog: "ana", nome: "Ana", item: "Item T", idl: "T-1" }, { id: 631, ceg: "CEG6", cog: "ana", nome: "Ana", item: "Item T", idl: "T-2" }];
+  const pl = [...plBase(), { ceg: "CEG6", nome: "Ana", cog: "ana", item: "Item T", id: "T-1" }, { ceg: "CEG6", nome: "Bia", cog: "bia", item: "Item T", id: "T-3" }];
+  const o = rodar({ planilha: pl, banco });
+  ok(!o.erro && !o.masterlist.some(x => x.id_linha === "T-3") && !!por(o, 631) && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 1 linha/.test(o.log) && !/CÓPIAS PROVADAS/.test(o.log), "troca de dono sem prova (T-2 pode ter passado à Bia): NADA é inserido e a 631 fica" + (o.erro ? " | " + o.erro : ""));
+}
+{ // 10) COMPRA REPETIDA da mesma pessoa + linha de OUTRO dono sem par no mesmo CEG+item: a linha do outro dono não é cópia => RETIDA (a ordem não prova qual é qual)
+  const banco = [...base, { id: 640, ceg: "CEG5", cog: "eva", nome: "Eva", item: "Item P", idl: "P-1" }, { id: 641, ceg: "CEG5", cog: "fabi", nome: "Fabi", item: "Item P", idl: "F-1" }];
+  const pl = [...plBase(), { ceg: "CEG5", nome: "Eva", cog: "eva", item: "Item P", id: "P-1" }, { ceg: "CEG5", nome: "Eva", cog: "eva", item: "Item P", id: "P-2" }];
+  const o = rodar({ planilha: pl, banco });
+  ok(!o.erro && !o.masterlist.some(x => x.id_linha === "P-2") && !!por(o, 641) && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 1 linha/.test(o.log), "compra repetida + linha de outro dono sem par: retida (nada inserido, a 641 fica)" + (o.erro ? " | " + o.erro : ""));
+}
+{ // 11) cópia provada JUNTO com uma linha de outro dono sem par: a segunda continua impedindo a inserção
+  const banco = [...base, { id: 650, ceg: "CEG4X", cog: "carla", nome: "Carla", item: "Item Q", idl: "Q-1" }, { id: 651, ceg: "CEG4X", cog: "carla", nome: "Carla", item: "Item Q", idl: "Q-1" }, { id: 652, ceg: "CEG4X", cog: "gil", nome: "Gil", item: "Item Q", idl: "Q-7" }];
+  const pl = [...plBase(), { ceg: "CEG4X", nome: "Carla", cog: "carla", item: "Item Q", id: "Q-1" }, { ceg: "CEG4X", nome: "Dora", cog: "dora", item: "Item Q", id: "Q-2" }];
+  const o = rodar({ planilha: pl, banco });
+  ok(!o.erro && !o.masterlist.some(x => x.id_linha === "Q-2") && !!por(o, 652) && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 1 linha/.test(o.log), "cópia provada + linha de outro dono sem par: continua retida (a 652 fica)" + (o.erro ? " | " + o.erro : ""));
+}
+console.log(falhas ?`\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
