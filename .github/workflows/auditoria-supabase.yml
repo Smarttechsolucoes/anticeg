@@ -22,6 +22,10 @@ on:
         description: 'Rodar a investigação 2 (compara dono/e-mail/@ da planilha com o banco; somente leitura; log só com marcas e sim/não)'
         type: boolean
         default: false
+      candidatas:
+        description: 'Ids das candidatas à exclusão (separados por vírgula) para examinar UMA A UMA (somente leitura). Vazio = não roda'
+        type: string
+        default: ''
       simulacao:
         description: 'Rodar a SIMULAÇÃO do sync contra a planilha atual (somente leitura, não grava)'
         type: boolean
@@ -79,6 +83,15 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Candidatas à exclusão, uma a uma (somente leitura)
+        if: ${{ inputs.candidatas != '' }}
+        run: node investigar-candidatas.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IDS: ${{ inputs.candidatas }}
 
       - name: Simulação do sync (não grava)
         if: ${{ inputs.simulacao }}
