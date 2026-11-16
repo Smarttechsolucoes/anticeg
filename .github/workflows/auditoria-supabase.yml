@@ -22,6 +22,10 @@ on:
         description: 'Rodar a investigação 2 (compara dono/e-mail/@ da planilha com o banco; somente leitura; log só com marcas e sim/não)'
         type: boolean
         default: false
+      dicon:
+        description: 'Rodar a investigação 4 (DICON: formulário x masterlist x planilha; valores dos repasses e demandas dos casos; somente leitura)'
+        type: boolean
+        default: false
       candidatas:
         description: 'Ids das candidatas à exclusão (separados por vírgula) para examinar UMA A UMA (somente leitura). Vazio = não roda'
         type: string
@@ -79,6 +83,14 @@ jobs:
       - name: Investigação 2 - planilha x banco (somente leitura)
         if: ${{ inputs.investigacao2 }}
         run: node investigar-pendencias-2.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Investigação 4 - DICON e valores (somente leitura)
+        if: ${{ inputs.dicon }}
+        run: node investigar-dicon-e-valores.mjs
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
