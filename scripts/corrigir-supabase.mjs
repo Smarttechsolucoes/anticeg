@@ -1,6 +1,6 @@
 // CORREÇÕES PONTUAIS no Supabase, com ENSAIO por padrão. Só grava com APLICAR=1. Cada ação confere o estado ATUAL imediatamente antes de gravar e só mexe nos casos inequívocos; o resto fica como está, com o motivo.
 // O log do GitHub é PÚBLICO: só contagens, ids de linha/cadastro/demanda, códigos de item, CEG e nomes de produto. Nunca @, e-mail, nome de pessoa, CPF ou endereço.
-// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido.   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
+// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido | arquivar-pares (PARES=dup:preservada,...).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
 // ANTES de gravar qualquer correção, o plano com os valores anteriores vai para um registro PRIVADO e durável (bucket privado do Supabase; ver registro-privado.mjs). Se o registro não puder ser gravado e conferido, NADA é gravado no banco.
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
@@ -430,7 +430,93 @@ async function corrigirSyncIndevido() {
   catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
 }
 
+// ───────── 8) ARQUIVAR PARES EXPLÍCITOS (PARES="duplicada:preservada,..."; máx. 10). NÃO é regra geral: só os pares informados, cada um reprovado na hora. A única tolerância de nome é o sufixo " SKZ" no fim do item,
+// e só vale dentro de um par informado. Reconfere no estado ATUAL, para cada par:
+//   mesmo CEG, mesmo dono, mesmo produto (ignorando só o " SKZ" final), mesmo valor; a duplicada está LIVRE (sem pagamento/claim/multa/loja/demanda/repasse/envio) e o código dela não existe na planilha;
+//   a preservada existe e o código dela está na planilha com o MESMO dono; arquivar não deixa o dono com menos linhas no banco do que linhas na planilha para esse CEG + item.
+// A preservada NUNCA é tocada (inclusive se estiver paga). Foto completa da duplicada e da preservada no registro privado ANTES; usa prune_masterlist com o limite padrão; confere depois (preservada intacta).
+async function arquivarPares() {
+  secao('H) arquivar PARES explícitos (duplicada : preservada), cada um reprovado na hora');
+  const pares = String(process.env.PARES || '').split(/[,\s]+/).filter(Boolean).map(p => p.split(':').map(Number));
+  if (!pares.length || pares.some(p => p.length !== 2 || p.some(x => !Number.isInteger(x)))) { console.log('  informe PARES=duplicada:preservada,duplicada:preservada,...'); falhas++; return; }
+  if (pares.length > 10) { console.log('  mais de 10 pares: recusado'); falhas++; return; }
+  const ml = await ler('masterlist', '*');
+  const jo = await ler('joiners', 'id, cog, email, twitter'), dem = await ler('pagamento_demandas', 'id, itens'), rep = await ler('repassos', 'id, item_id');
+  const env = await ler('envio_solicitacoes', 'id, itens'), loj = await ler('lojinha_repasses', 'id, masterlist_id');
+  if (!ml || !jo || !dem || !rep || !env || !loj) { console.log('  leitura incompleta: nada feito'); falhas++; return; }
+  const lc = v => n(v).toLowerCase().replace(/\s+/g, ' ');
+  const semSkz = t => lc(t).replace(/\s+skz$/, '');
+  const emailLimpo = v => { const e = lc(v); return /^[^\s@#]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : ''; };
+  const norm = t => String(t).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const resp = await fetch('https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995');
+  if (!resp.ok) { console.log('  não consegui ler a planilha'); falhas++; return; }
+  const linhasCsv = (await resp.text()).replace(/^﻿/, '').split('\n'); const hIdx = linhasCsv.findIndex(l => l.includes('ABA'));
+  if (hIdx === -1) { console.log('  cabeçalho da planilha não encontrado'); falhas++; return; }
+  const records = parse(linhasCsv.slice(hIdx).join('\n'), { columns: true, skip_empty_lines: true });
+  const colMap = {}; Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
+  const col = (r, ...nomes) => { for (const nm of nomes) { const k = colMap[norm(nm)]; if (k !== undefined) return r[k] ?? ''; } return ''; };
+  const rows = records.filter(r => n(col(r, 'ABA / CEG', 'CEG')) && n(col(r, 'NOME DO ITEM')));
+  const idx = indexarJoiners(jo, await carregarArrobasAntigos(sb, jo));
+  const S = rows.map(r => { const rs = resolverLinha({ twitter: n(col(r, '@')), email: emailLimpo(col(r, 'EMAIL')) }, idx); return { cod: n(col(r, 'ID')), ceg: lc(col(r, 'ABA / CEG', 'CEG')), item: semSkz(col(r, 'NOME DO ITEM')), dono: lc(rs.cog) }; });
+  const idsEm = itens => (Array.isArray(itens) ? itens : []).map(e => (e && typeof e === 'object') ? String(e.id ?? e.item_id ?? e.masterlist_id ?? '') : String(e ?? '')).filter(Boolean);
+  const refs = id => { const k = String(id); return [dem.some(x => idsEm(x.itens).includes(k)) && 'demanda', rep.some(x => String(x.item_id) === k) && 'repasse', env.some(x => idsEm(x.itens).includes(k)) && 'envio', loj.some(x => String(x.masterlist_id) === k) && 'loja-repasse'].filter(Boolean); };
+  const pago = x => !!(x.pago_item || x.pago_frete || x.pago_rf);
+  const por = new Map(ml.map(m => [m.id, m]));
+  const dupIds = new Set(pares.map(p => p[0]));
+  const plano = [], recusadas = [];
+  for (const [dupId, keepId] of pares) {
+    const d = por.get(dupId), k = por.get(keepId);
+    const recusa = m => { recusadas.push({ duplicada: dupId, preservada: keepId, motivo: m }); };
+    if (!d || !k) { recusa('uma das linhas não existe'); continue; }
+    if (dupIds.has(keepId)) { recusa('a preservada também está na lista de arquivar'); continue; }
+    if (n(d.ceg) !== n(k.ceg) || lc(d.cog) !== lc(k.cog) || !lc(d.cog)) { recusa('CEG ou dono diferente (ou sem dono)'); continue; }
+    if (semSkz(d.nome_do_item) !== semSkz(k.nome_do_item)) { recusa('produto diferente (mesmo ignorando o SKZ final)'); continue; }
+    if (Math.round(Number(d.valor_item || 0) * 100) !== Math.round(Number(k.valor_item || 0) * 100)) { recusa('valor diferente'); continue; }
+    if (pago(d)) { recusa('a duplicada tem pagamento registrado'); continue; }
+    const { data: mot, error: eM } = await sb.rpc('masterlist_motivos_protecao', { p_id: dupId });
+    if (eM || (mot && mot.length)) { recusa('protegida: ' + (eM?.message || mot.join(','))); continue; }
+    const rf = refs(dupId); if (rf.length) { recusa('a duplicada tem referência: ' + rf.join(',')); continue; }
+    const cd = n(d.id_linha), ck = n(k.id_linha);
+    if (!ck || cd === ck) { recusa('a preservada não tem código próprio'); continue; }
+    if (cd && S.some(s => s.cod === cd)) { recusa('o código da duplicada existe na planilha'); continue; }
+    const sk = S.find(s => s.cod === ck); if (!sk || sk.dono !== lc(k.cog)) { recusa('o código da preservada não está na planilha com o mesmo dono'); continue; }
+    const chave = semSkz(k.nome_do_item), naPlanilha = S.filter(s => s.ceg === lc(k.ceg) && s.item === chave && s.dono === lc(k.cog)).length;
+    const noBanco = ml.filter(m => lc(m.ceg) === lc(k.ceg) && semSkz(m.nome_do_item) === chave && lc(m.cog) === lc(k.cog)).length;
+    const arquivandoNoGrupo = pares.filter(([a]) => { const x = por.get(a); return x && lc(x.ceg) === lc(k.ceg) && semSkz(x.nome_do_item) === chave && lc(x.cog) === lc(k.cog); }).length;
+    if (noBanco - arquivandoNoGrupo < naPlanilha) { recusa(`arquivar deixaria o dono com menos linhas (${noBanco - arquivandoNoGrupo}) do que a planilha tem (${naPlanilha})`); continue; }
+    plano.push({ duplicada: dupId, preservada: keepId, codigo_duplicada: cd || null, codigo_preservada: ck, ceg: d.ceg, item: d.nome_do_item, preservada_paga: pago(k), prova: `mesmo CEG, dono, produto (ignorando o " SKZ" final) e valor; duplicada livre e sem referências; planilha tem ${naPlanilha} linha(s) do dono neste item e o banco ficará com ${noBanco - arquivandoNoGrupo}` });
+  }
+  linha('pares informados', pares.length); linha('pares aprovados', plano.length);
+  plano.forEach(p => console.log(`  arquivar #${p.duplicada} [${p.codigo_duplicada || '-'}] | preservar #${p.preservada} [${p.codigo_preservada}]${p.preservada_paga ? ' (PAGA, intocada)' : ''} | ${p.ceg} | ${p.item} | ${p.prova}`));
+  recusadas.forEach(r => console.log(`  RECUSADO #${r.duplicada}:#${r.preservada}: ${r.motivo}`));
+  if (!plano.length) return;
+  if (!APLICAR) { console.log('  ENSAIO: nada foi gravado.'); return; }
+  const idsDup = plano.map(p => p.duplicada), idsKeep = plano.map(p => p.preservada);
+  const { data: fotos, error: eF } = await sb.from('masterlist').select('*').in('id', [...idsDup, ...idsKeep]);
+  if (eF || (fotos || []).length !== idsDup.length + idsKeep.length) { console.log(`  não consegui a foto completa (${eF?.message || 'contagem difere'}): NADA foi feito`); falhas++; return; }
+  const alteracoes = plano.map(p => ({ tipo: 'linha_arquivada', masterlist_id: p.duplicada, codigo: p.codigo_duplicada, prova: p.prova, preservada: p.preservada, antes: fotos.find(f => f.id === p.duplicada) }));
+  const fotosPreservadas = idsKeep.map(id => fotos.find(f => f.id === id));
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_arquivar_pares_plano.json`, { versao: 1, tipo: 'correcao_arquivar_pares', run: RUN, quando: new Date().toISOString(), alteracoes, fotos_das_preservadas: fotosPreservadas, recusadas }); console.log(`  registro privado do plano gravado e conferido: ${g.caminho} (${g.bytes} bytes; bucket ${g.bucket})`); }
+  catch (e) { console.log('  ERRO: ' + e.message + ' — NADA foi apagado'); falhas++; return; }
+  const { data: rel, error: eP } = await sb.rpc('prune_masterlist', { p_ids: idsDup, p_linhas_planilha: rows.length, p_limite: 25 });
+  if (eP || !rel || rel.abortado) { console.log(`  a função recusou: ${eP?.message || JSON.stringify(rel)} — nada foi apagado`); falhas++; return; }
+  console.log(`  prune_masterlist: ${JSON.stringify(rel)}`);
+  const { data: restam } = await sb.from('masterlist').select('*').in('id', [...idsDup, ...idsKeep]);
+  const { data: arqs } = await sb.from('masterlist_exclusoes').select('masterlist_id').in('masterlist_id', idsDup);
+  const vivas = new Map((restam || []).map(r => [r.id, r])); const arquivadas = new Set((arqs || []).map(a => a.masterlist_id));
+  for (const a of alteracoes) {
+    const keep = vivas.get(a.preservada), foto = fotosPreservadas.find(f => f.id === a.preservada);
+    const intacta = !!keep && ['pago_item', 'pago_frete', 'pago_rf', 'cog', 'status', 'id_linha', 'valor_item'].every(c => String(keep[c] ?? '') === String(foto[c] ?? ''));
+    a.resultado = !vivas.has(a.masterlist_id) && arquivadas.has(a.masterlist_id) && intacta ? 'aplicado' : 'nao_confirmado';
+    console.log(`  #${a.masterlist_id}: ${a.resultado} · preservada #${a.preservada}: ${intacta ? 'intacta' : 'ALTERADA OU AUSENTE'}${foto.pago_item ? ' (pago_item continua ' + keep?.pago_item + ')' : ''}`);
+  }
+  if (alteracoes.some(a => a.resultado !== 'aplicado')) falhas++;
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_arquivar_pares_resultado.json`, { versao: 1, tipo: 'resultado_arquivar_pares', run: RUN, plano: `correcoes/${STAMP}_arquivar_pares_plano.json`, quando: new Date().toISOString(), alteracoes }); console.log(`  registro privado do RESULTADO: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
+if (ACAO === 'arquivar-pares') await arquivarPares();
 if (ACAO === 'sync-indevido') await corrigirSyncIndevido();
 if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();
