@@ -1,10 +1,13 @@
 // CORREÇÕES PONTUAIS no Supabase, com ENSAIO por padrão. Só grava com APLICAR=1. Cada ação confere o estado ATUAL imediatamente antes de gravar e só mexe nos casos inequívocos; o resto fica como está, com o motivo.
 // O log do GitHub é PÚBLICO: só contagens, ids de linha/cadastro/demanda, códigos de item, CEG e nomes de produto. Nunca @, e-mail, nome de pessoa, CPF ou endereço.
-// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro.   APLICAR = 1 grava.   (Nada é apagado por este script.)
+// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
 // ANTES de gravar qualquer correção, o plano com os valores anteriores vai para um registro PRIVADO e durável (bucket privado do Supabase; ver registro-privado.mjs). Se o registro não puder ser gravado e conferido, NADA é gravado no banco.
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
 import { readFileSync } from 'node:fs';
+import { parse } from 'csv-parse/sync';
+import { indexarJoiners, resolverLinha } from './resolver-joiner.js';
+import { carregarArrobasAntigos } from './arrobas-antigos.js';
 import { gravarRegistro, lerRegistro, listarRegistros, verificarPrivado } from './registro-privado.mjs';
 
 const ACAO = process.env.ACAO || 'todas', APLICAR = process.env.APLICAR === '1', REGISTRO = (process.env.REGISTRO || '').trim();
@@ -239,6 +242,13 @@ async function reverter() {
       const { error } = await sb.from('pagamento_demandas').update({ itens: novos }).eq('id', a.demanda_id).contains('itens', [{ id: itens[a.indice].id }]);
       const { data: depois } = await sb.from('pagamento_demandas').select('itens').eq('id', a.demanda_id).maybeSingle();
       if (error || String(depois?.itens?.[a.indice]?.id) !== String(a.antes_id)) { console.log(`  demanda ${a.demanda_id} item#${a.indice}: ERRO/não confirmou ${error?.message || ''}`); falhas++; } else { rev++; console.log(`  demanda ${a.demanda_id} item#${a.indice}: revertida (${a.depois_id} -> ${a.antes_id})`); }
+    } else if (a.tipo === 'linha_arquivada') {
+      const { data: viva } = await sb.from('masterlist').select('id').eq('id', a.masterlist_id).maybeSingle();
+      const { data: arq } = await sb.from('masterlist_exclusoes').select('masterlist_id').eq('masterlist_id', a.masterlist_id).limit(1);
+      if (viva || !(arq || []).length) { console.log(`  linha ${a.masterlist_id}: ${viva ? 'já existe de novo na masterlist' : 'não está no arquivo'} — NÃO restaurada`); pulados++; continue; }
+      if (!APLICAR) { console.log(`  linha ${a.masterlist_id}: seria restaurada a partir da foto do registro`); rev++; continue; }
+      const { error } = await sb.from('masterlist').insert([a.antes]);
+      if (error) { console.log(`  linha ${a.masterlist_id}: ERRO ${error.message}`); falhas++; } else { rev++; console.log(`  linha ${a.masterlist_id}: restaurada (a foto continua em masterlist_exclusoes)`); }
     } else if (a.tipo === 'repasse_item') {
       const { data: r } = await sb.from('repassos').select('id, item_id').eq('id', a.repasse_id).maybeSingle();
       if (!r || String(r.item_id) !== String(a.depois_id)) { console.log(`  repasse ${a.repasse_id}: a referência mudou desde a correção — NÃO revertido`); pulados++; continue; }
@@ -261,7 +271,86 @@ async function verificarRegistro() {
   linha('resultado', JSON.stringify(v)); if (!v.privado) { console.log('  ALERTA: o registro NÃO está privado.'); falhas++; }
 }
 
+// ───────── 6) ARQUIVAR CÓPIAS PROVADAS (IDS=id,id,...), uma a uma. Só arquiva linha LIVRE (sem pagamento, claim, multa, loja, demanda, repasse, envio ou loja-repasse) E com prova de que é cópia de outra linha:
+//   (β) mesma compra registrada duas vezes: outra linha viva com o MESMO CEG + item + código + dono, e a planilha tem esse código desse dono; ou
+//   (α) o dono da linha é o @/e-mail DIGITADO numa linha da planilha do mesmo CEG + item que resolve para OUTRO cadastro (a mesma pessoa), e esse cadastro já tem linhas para TODAS as suas linhas da planilha desse CEG + item.
+// Não mexe no limite do prune (usa prune_masterlist com o limite padrão de 25 e no máximo 10 ids por execução). Antes de apagar, a FOTO COMPLETA vai para o registro privado; depois confere que a linha saiu da masterlist e entrou em masterlist_exclusoes.
+async function arquivarCopias() {
+  secao('F) arquivar CÓPIAS PROVADAS, uma a uma (só livres; foto completa no registro privado; limite do prune intacto)');
+  const IDS = [...new Set((process.env.IDS || '').split(/[,\s]+/).filter(Boolean).map(Number))];
+  if (!IDS.length || IDS.some(x => !Number.isInteger(x))) { console.log('  informe IDS=<ids separados por vírgula>'); falhas++; return; }
+  if (IDS.length > 10) { console.log('  mais de 10 ids: recusado (o arquivamento é caso a caso, nunca em lote)'); falhas++; return; }
+  const ml = await ler('masterlist', 'id, ceg, cog, nome, nome_do_item, status, id_linha, pago_item, pago_frete, pago_rf, na_loja');
+  const jo = await ler('joiners', 'id, cog, email, twitter'), dem = await ler('pagamento_demandas', 'id, itens'), rep = await ler('repassos', 'id, item_id');
+  const env = await ler('envio_solicitacoes', 'id, itens'), loj = await ler('lojinha_repasses', 'id, masterlist_id');
+  if (!ml || !jo || !dem || !rep || !env || !loj) { console.log('  leitura incompleta: nada feito'); falhas++; return; }
+  const lc = v => n(v).toLowerCase().replace(/\s+/g, ' ');
+  const emailLimpo = v => { const e = lc(v); return /^[^\s@#]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : ''; };
+  const norm = t => String(t).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const resp = await fetch('https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995');
+  if (!resp.ok) { console.log('  não consegui ler a planilha'); falhas++; return; }
+  const linhasCsv = (await resp.text()).replace(/^﻿/, '').split('\n'); const hIdx = linhasCsv.findIndex(l => l.includes('ABA'));
+  if (hIdx === -1) { console.log('  cabeçalho da planilha não encontrado'); falhas++; return; }
+  const records = parse(linhasCsv.slice(hIdx).join('\n'), { columns: true, skip_empty_lines: true });
+  const colMap = {}; Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
+  const col = (r, ...nomes) => { for (const nm of nomes) { const k = colMap[norm(nm)]; if (k !== undefined) return r[k] ?? ''; } return ''; };
+  const rows = records.filter(r => n(col(r, 'ABA / CEG', 'CEG')) && n(col(r, 'NOME DO ITEM')));
+  const idx = indexarJoiners(jo, await carregarArrobasAntigos(sb, jo));
+  const itemKey = (ceg, item) => `${lc(ceg)}|${lc(item)}`;
+  const S = rows.map(r => { const rs = resolverLinha({ twitter: n(col(r, '@')), email: emailLimpo(col(r, 'EMAIL')) }, idx); return { cod: n(col(r, 'ID')), item: itemKey(col(r, 'ABA / CEG', 'CEG'), col(r, 'NOME DO ITEM')), dono: lc(rs.cog), tw: lc(col(r, '@')).replace(/^@/, ''), em: emailLimpo(col(r, 'EMAIL')) }; });
+  const idsEm = itens => (Array.isArray(itens) ? itens : []).map(e => (e && typeof e === 'object') ? String(e.id ?? e.item_id ?? e.masterlist_id ?? '') : String(e ?? '')).filter(Boolean);
+  const refs = id => { const k = String(id); return [dem.some(x => idsEm(x.itens).includes(k)) && 'demanda', rep.some(x => String(x.item_id) === k) && 'repasse', env.some(x => idsEm(x.itens).includes(k)) && 'envio', loj.some(x => String(x.masterlist_id) === k) && 'loja-repasse'].filter(Boolean); };
+  const pago = x => !!(x.pago_item || x.pago_frete || x.pago_rf);
+  const porItem = new Map(); for (const m of ml) { const k = itemKey(m.ceg, m.nome_do_item); if (!porItem.has(k)) porItem.set(k, []); porItem.get(k).push(m); }
+  const arquivando = new Set(), plano = [], preservadas = [];
+  for (const id of IDS.sort((a, b) => a - b)) {
+    const x = ml.find(m => m.id === id); if (!x) { preservadas.push({ id, motivo: 'a linha não existe mais' }); continue; }
+    const { data: mot, error: eM } = await sb.rpc('masterlist_motivos_protecao', { p_id: id });
+    if (eM) { preservadas.push({ id, motivo: 'sem leitura da proteção' }); continue; }
+    if (mot && mot.length) { preservadas.push({ id, motivo: 'protegida: ' + mot.join(',') }); continue; }
+    const rf = refs(id); if (rf.length) { preservadas.push({ id, motivo: 'tem referência: ' + rf.join(',') }); continue; }
+    const k = itemKey(x.ceg, x.nome_do_item), c = lc(x.cog), cd = n(x.id_linha);
+    if (!c) { preservadas.push({ id, motivo: 'linha sem dono' }); continue; }
+    const outras = (porItem.get(k) || []).filter(y => y.id !== x.id && !arquivando.has(y.id));
+    const irmas = cd ? outras.filter(y => n(y.id_linha) === cd && lc(y.cog) === c) : [];
+    let via = null;
+    if (irmas.length && S.some(s => s.cod === cd && s.dono === c) && irmas.some(y => pago(y) || refs(y.id).length || y.id < x.id)) via = `mesma compra registrada duas vezes (mesmo CEG, item, código e dono; irmã ${irmas.map(y => '#' + y.id).join(',')} permanece)`;
+    else {
+      const rs = S.filter(s => s.item === k && s.dono && s.dono !== c && (s.tw === c || s.em === c)); const donos = [...new Set(rs.map(s => s.dono))];
+      if (donos.length === 1) {
+        const O = donos[0], naPlan = S.filter(s => s.item === k && s.dono === O).length, deO = outras.filter(y => lc(y.cog) === O);
+        if (naPlan > 0 && deO.length >= naPlan && (!cd || deO.some(y => n(y.id_linha) === cd))) via = `@/e-mail antigo da mesma pessoa (o cadastro dono na planilha já tem ${deO.length} linha(s) para ${naPlan} na planilha neste CEG + item)`;
+      }
+    }
+    if (!via) { preservadas.push({ id, motivo: 'sem prova de cópia' }); continue; }
+    arquivando.add(id); plano.push({ id, codigo: cd || null, ceg: x.ceg, item: x.nome_do_item, via });
+  }
+  linha('ids informados', IDS.length); linha('arquivar (cópia provada e livre)', plano.length);
+  plano.forEach(p => console.log(`  #${p.id} | ${p.codigo || '-'} | ${p.ceg} | ${p.item} | prova: ${p.via}`));
+  preservadas.forEach(p => console.log(`  PRESERVADA #${p.id}: ${p.motivo}`));
+  if (!plano.length) return;
+  if (!APLICAR) { console.log('  ENSAIO: nada foi gravado.'); return; }
+  // foto completa das linhas ANTES de apagar, no registro privado (se não gravar e conferir, NADA é apagado)
+  const { data: fotos, error: eF } = await sb.from('masterlist').select('*').in('id', plano.map(p => p.id));
+  if (eF || (fotos || []).length !== plano.length) { console.log(`  não consegui a foto completa das linhas (${eF?.message || 'contagem difere'}): NADA foi feito`); falhas++; return; }
+  const alteracoes = plano.map(p => ({ tipo: 'linha_arquivada', masterlist_id: p.id, codigo: p.codigo, prova: p.via, antes: fotos.find(f => f.id === p.id) }));
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_arquivar_plano.json`, { versao: 1, tipo: 'correcao_arquivar_copias', run: RUN, quando: new Date().toISOString(), alteracoes, preservadas }); console.log(`  registro privado do plano gravado e conferido: ${g.caminho} (${g.bytes} bytes; bucket ${g.bucket})`); }
+  catch (e) { console.log('  ERRO: ' + e.message + ' — NADA foi apagado'); falhas++; return; }
+  const { data: rel, error: eP } = await sb.rpc('prune_masterlist', { p_ids: plano.map(p => p.id), p_linhas_planilha: rows.length, p_limite: 25 });
+  if (eP || !rel || rel.abortado) { console.log(`  a função recusou: ${eP?.message || JSON.stringify(rel)} — nada foi apagado`); falhas++; return; }
+  console.log(`  prune_masterlist: ${JSON.stringify(rel)}`);
+  const { data: restam } = await sb.from('masterlist').select('id').in('id', plano.map(p => p.id));
+  const { data: arqs } = await sb.from('masterlist_exclusoes').select('masterlist_id').in('masterlist_id', plano.map(p => p.id));
+  const sairam = new Set(plano.map(p => p.id)); (restam || []).forEach(r => sairam.delete(r.id)); const arquivadas = new Set((arqs || []).map(a => a.masterlist_id));
+  for (const a of alteracoes) a.resultado = sairam.has(a.masterlist_id) && arquivadas.has(a.masterlist_id) ? 'aplicado' : 'nao_confirmado';
+  alteracoes.forEach(a => console.log(`  #${a.masterlist_id}: ${a.resultado}`));
+  if (alteracoes.some(a => a.resultado !== 'aplicado')) falhas++;
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_arquivar_resultado.json`, { versao: 1, tipo: 'resultado_arquivar_copias', run: RUN, plano: `correcoes/${STAMP}_arquivar_plano.json`, quando: new Date().toISOString(), alteracoes }); console.log(`  registro privado do RESULTADO: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
+if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();
 if (ACAO === 'verificar-registro') await verificarRegistro();
 if (ACAO === 'email' || ACAO === 'todas') await corrigirEmail();
