@@ -235,7 +235,7 @@ async function main() {
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   const planoInsercoes = []; // simulação: linhas que SERIAM inseridas (código | CEG | item; sem dono)
-  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [], detalheProtecao = [], statusMantidos = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
+  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [], detalheProtecao = [], statusMantidos = [], precosMantidos = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
   const STAMP = new Date().toISOString().replace(/[:.]/g, '-');
   const insercoesPendentes = []; // linhas da planilha sem par: só são inseridas depois da checagem de suspeita (abaixo)
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
@@ -278,6 +278,9 @@ async function main() {
         return null;
       };
 
+      // Preço DESCONHECIDO (célula em branco ou erro de fórmula) não é o mesmo que preço ZERO ("R$ 0,00"): o banco guarda 0 nos dois casos (0 = não cobrado), mas o sync protegido nunca apaga um preço já conhecido por causa de uma célula em branco.
+      const emBranco = cel => { const t = String(cel ?? '').trim(); return !t || /^#/.test(t); };
+      const precoBranco = { valor_item: emBranco(col(r, colMap, 'PREÇO ITEM', 'PRECO ITEM')), frete_inter: emBranco(col(r, colMap, 'PREÇO FRETE', 'FRETE INTER', 'PRECO FRETE')), taxa_rf: emBranco(col(r, colMap, 'PREÇO RF', 'PRECO RF')) };
       const baseFields = {
         ceg, cog, nome,
         nome_do_item:    nomeItem,
@@ -333,6 +336,10 @@ async function main() {
             // a planilha atrasada não faz o item andar para trás (ex.: Envio Liberado → Comprado): o status do banco fica; o resto da atualização segue
             detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | o STATUS voltaria de "${existingItem.status}" para "${novoReg.status}" (status MANTIDO)`); statusMantidos.push(existingItem.id); novoReg.status = existingItem.status;
           }
+          if (!bloqueadoPorDono) for (const c of ['valor_item', 'frete_inter', 'taxa_rf']) if (precoBranco[c] && Number(existingItem[c]) > 0 && Number(novoReg[c] || 0) === 0) {
+            novoReg[c] = existingItem[c]; precosMantidos.push(`${existingItem.id}:${c}`);
+            detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | ${c} = ${Number(existingItem[c]).toFixed(2)} no banco e a célula da planilha está EM BRANCO (preço desconhecido, não zero): valor MANTIDO`);
+          }
           if (!bloqueadoPorDono) for (const c of ['pago_item', 'pago_frete', 'pago_rf']) if (existingItem[c] === true && novoReg[c] === false) { novoReg[c] = true; pagamentosMantidos.push(`${existingItem.id}:${c}`); detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | ${c} está marcado no banco e a planilha desmarcaria (marcação MANTIDA)`); }
         }
         if (bloqueadoPorDono) {
@@ -354,7 +361,7 @@ async function main() {
           updated++;
         }
       } else {
-        insercoesPendentes.push({ baseFields, status, cog, nomeItem, ceg, idLinha });
+        insercoesPendentes.push({ baseFields, status, cog, nomeItem, ceg, idLinha, precoBranco: precoBranco.valor_item });
       }
     } catch (err) {
       console.error(`Erro:`, err.message);
@@ -450,7 +457,8 @@ async function main() {
     planoAtualizacoes.slice(0, 400).forEach(u => console.log(`    #${u.id} | ${u.cod || '-'} | ${u.campos.join(',')} | ${chavesPago.filter(c => u.campos.includes(c)).map(c => `${c}:${u.antes[c]}->${u.depois[c]}`).join(' ') || '-'} | ${u.campos.includes('status') ? `${u.antes.status}->${u.depois.status}` : '-'}`));
     if (planoAtualizacoes.length > 400) console.log(`    ... e mais ${planoAtualizacoes.length - 400}`);
   }
-  if (PROTEGER) console.log(`PROTEÇÃO ATIVA (SYNC_PROTEGER=1): ${bloqueadasPorDono.length} linha(s) NÃO atualizadas porque o dono mudaria (ids ${bloqueadasPorDono.slice(0, 80).join(', ')}) · ${pagamentosMantidos.length} marcação(ões) de pagamento mantida(s) porque a planilha desmarcaria (id:campo ${pagamentosMantidos.slice(0, 80).join(', ')}) · ${statusMantidos.length} status mantido(s) porque voltaria para trás (ids ${statusMantidos.slice(0, 80).join(', ')})`);
+  { const semPreco = inserirAgora.filter(q => q.precoBranco); console.log(`PREÇO EM BRANCO (desconhecido, gravado como 0 = NÃO cobrado até a planilha trazer o preço): ${semPreco.length} de ${inserirAgora.length} inserção(ões)${semPreco.length ? ' (' + semPreco.slice(0, 40).map(q => q.idLinha || q.nomeItem).join(', ') + ')' : ''}.`); }
+  if (PROTEGER) console.log(`PROTEÇÃO ATIVA (SYNC_PROTEGER=1): ${bloqueadasPorDono.length} linha(s) NÃO atualizadas porque o dono mudaria (ids ${bloqueadasPorDono.slice(0, 80).join(', ')}) · ${pagamentosMantidos.length} marcação(ões) de pagamento mantida(s) porque a planilha desmarcaria (id:campo ${pagamentosMantidos.slice(0, 80).join(', ')}) · ${statusMantidos.length} status mantido(s) porque voltaria para trás (ids ${statusMantidos.slice(0, 80).join(', ')}) · ${precosMantidos.length} preço(s) mantido(s) porque a célula está em branco (id:campo ${precosMantidos.slice(0, 80).join(', ')})`);
   if (PROTEGER && detalheProtecao.length) { console.log('  linhas protegidas (id | código | CEG | item | motivo):'); detalheProtecao.slice(0, 200).forEach(l => console.log('    ' + l)); }
   // ───── REGISTRO PRIVADO DO PLANO (valores anteriores) ANTES de qualquer gravação; sem ele, nada é gravado
   const resultadoAtualizacoes = [];
