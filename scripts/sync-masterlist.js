@@ -21,6 +21,7 @@ const SEM_EXCLUSAO = process.env.SYNC_SEM_EXCLUSAO === '1';
 const PROTEGER = process.env.SYNC_PROTEGER === '1';
 const MODO_JOINERS = ['todos', 'somente-novos', 'nenhum'].includes(process.env.SYNC_JOINERS) ? process.env.SYNC_JOINERS : 'todos';
 const REGISTRO = process.env.SYNC_REGISTRO === '1' && !SIMULACAO;
+const STATUS_ORDEM = { 'Comprado': 0, 'A Caminho': 1, 'ANTIGOM': 2, 'Envio Liberado': 3, 'Enviado Nacional': 4 };   // só para o SYNC_PROTEGER: status conhecido que voltaria para trás é mantido
 const ADIAR_ESCRITA = SIMULACAO || REGISTRO;   // atualizações são planejadas primeiro (registro) e só depois executadas
 
 const supabase = createClient(
@@ -234,7 +235,7 @@ async function main() {
   const mudancasStatus = []; // { cog, nomeItem, ceg, statusNovo }
   const novosItens = [];     // { cog, nomeItem, ceg }
   const planoInsercoes = []; // simulação: linhas que SERIAM inseridas (código | CEG | item; sem dono)
-  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [], detalheProtecao = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
+  const planoAtualizacoes = [], bloqueadasPorDono = [], pagamentosMantidos = [], detalheProtecao = [], statusMantidos = [];   // execução controlada / simulação: o que mudaria em cada linha (ver ADIAR_ESCRITA)
   const STAMP = new Date().toISOString().replace(/[:.]/g, '-');
   const insercoesPendentes = []; // linhas da planilha sem par: só são inseridas depois da checagem de suspeita (abaixo)
   // Rastreia quantas vezes cada chave apareceu na planilha (para duplicatas)
@@ -328,7 +329,11 @@ async function main() {
         if (PROTEGER) {
           // execução controlada: o sync não troca o dono de linha existente nem desmarca pagamento (a planilha pode estar atrasada em relação ao site)
           if (String(existingItem.cog ?? '') !== String(novoReg.cog ?? '')) { bloqueadoPorDono = true; detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | o DONO mudaria: banco ${anon(existingItem.cog)} -> planilha ${anon(novoReg.cog)} (linha NÃO atualizada)`); }
-          else for (const c of ['pago_item', 'pago_frete', 'pago_rf']) if (existingItem[c] === true && novoReg[c] === false) { novoReg[c] = true; pagamentosMantidos.push(`${existingItem.id}:${c}`); detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | ${c} está marcado no banco e a planilha desmarcaria (marcação MANTIDA)`); }
+          else if (STATUS_ORDEM[existingItem.status] != null && STATUS_ORDEM[novoReg.status] != null && STATUS_ORDEM[novoReg.status] < STATUS_ORDEM[existingItem.status]) {
+            // a planilha atrasada não faz o item andar para trás (ex.: Envio Liberado → Comprado): o status do banco fica; o resto da atualização segue
+            detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | o STATUS voltaria de "${existingItem.status}" para "${novoReg.status}" (status MANTIDO)`); statusMantidos.push(existingItem.id); novoReg.status = existingItem.status;
+          }
+          if (!bloqueadoPorDono) for (const c of ['pago_item', 'pago_frete', 'pago_rf']) if (existingItem[c] === true && novoReg[c] === false) { novoReg[c] = true; pagamentosMantidos.push(`${existingItem.id}:${c}`); detalheProtecao.push(`#${existingItem.id} | ${existingItem.id_linha || '-'} | ${existingItem.ceg} | ${existingItem.nome_do_item} | ${c} está marcado no banco e a planilha desmarcaria (marcação MANTIDA)`); }
         }
         if (bloqueadoPorDono) {
           bloqueadasPorDono.push(existingItem.id); semMudanca++;
@@ -411,6 +416,24 @@ async function main() {
     rel.forEach((_, id) => blindadasPorRetencao.add(id));
   }
   if (copiasProvadas.size) console.log(`CÓPIAS PROVADAS: ${copiasProvadas.size} linha(s) do banco sem par são cópia de linha pareada e não impedem inserção no mesmo CEG + item (ids ${[...copiasProvadas].slice(0, 30).join(', ')}${copiasProvadas.size > 30 ? ', ...' : ''}); seguem as regras normais de exclusão (só livres, dentro do limite).`);
+  // INSERÇÃO EXCEDENTE: inserir deixaria este dono com MAIS linhas no banco do que na planilha neste CEG + item (possível cópia com outro código/nome). Com SYNC_PROTEGER a inserção é retida; sempre aparece no log.
+  {
+    const grupo = (ceg, item, cog) => `${normTxt(ceg)}|${normTxt(item)}|${normTxt(cog)}`;
+    const naPlanilha = new Map(), noBanco = new Map(), jaContados = new Map();
+    for (const r of rows) { const k = grupo(col(r, colMap, 'ABA / CEG', 'CEG', 'ABA/CEG'), col(r, colMap, 'NOME DO ITEM', 'NOME_DO_ITEM', 'c'), cogDe(r) ?? ''); naPlanilha.set(k, (naPlanilha.get(k) || 0) + 1); }
+    for (const x of todosBanco) { const k = grupo(x.ceg, x.nome_do_item, x.cog ?? ''); noBanco.set(k, (noBanco.get(k) || 0) + 1); }
+    const excedentes = [], mantidas = [];
+    for (const q of inserirAgora) {
+      const k = grupo(q.ceg, q.nomeItem, q.cog ?? ''); const depois = (noBanco.get(k) || 0) + (jaContados.get(k) || 0) + 1;
+      if (depois > (naPlanilha.get(k) || 0)) { excedentes.push(q); if (PROTEGER) continue; }
+      jaContados.set(k, (jaContados.get(k) || 0) + 1); mantidas.push(q);
+    }
+    console.log(`INSERÇÕES EXCEDENTES: ${excedentes.length} de ${inserirAgora.length} deixariam o dono com mais linhas no banco do que na planilha neste CEG + item${excedentes.length ? ' (' + excedentes.slice(0, 40).map(q => q.idLinha || q.nomeItem).join(', ') + ')' : ''}${PROTEGER && excedentes.length ? ' — RETIDAS pela proteção' : ''}.`);
+    if (PROTEGER && excedentes.length) {
+      inserirAgora.length = 0; inserirAgora.push(...mantidas);
+      excedentes.forEach(q => insercoesRetidas.push({ q, mesmoDono: 'dono IGUAL ao das linhas do grupo', motivo: 'inserir deixaria este dono com mais linhas no banco do que na planilha neste CEG + item (possível cópia com outro código ou nome)', ids: [] }));
+    }
+  }
   // ───── PLANO DE ATUALIZAÇÕES (só ids, códigos, nomes de campo e transições de pagamento/status; nunca @, e-mail ou nome de pessoa)
   const chavesPago = ['pago_item', 'pago_frete', 'pago_rf'];
   if (ADIAR_ESCRITA) {
@@ -427,7 +450,7 @@ async function main() {
     planoAtualizacoes.slice(0, 400).forEach(u => console.log(`    #${u.id} | ${u.cod || '-'} | ${u.campos.join(',')} | ${chavesPago.filter(c => u.campos.includes(c)).map(c => `${c}:${u.antes[c]}->${u.depois[c]}`).join(' ') || '-'} | ${u.campos.includes('status') ? `${u.antes.status}->${u.depois.status}` : '-'}`));
     if (planoAtualizacoes.length > 400) console.log(`    ... e mais ${planoAtualizacoes.length - 400}`);
   }
-  if (PROTEGER) console.log(`PROTEÇÃO ATIVA (SYNC_PROTEGER=1): ${bloqueadasPorDono.length} linha(s) NÃO atualizadas porque o dono mudaria (ids ${bloqueadasPorDono.slice(0, 80).join(', ')}) · ${pagamentosMantidos.length} marcação(ões) de pagamento mantida(s) porque a planilha desmarcaria (id:campo ${pagamentosMantidos.slice(0, 80).join(', ')})`);
+  if (PROTEGER) console.log(`PROTEÇÃO ATIVA (SYNC_PROTEGER=1): ${bloqueadasPorDono.length} linha(s) NÃO atualizadas porque o dono mudaria (ids ${bloqueadasPorDono.slice(0, 80).join(', ')}) · ${pagamentosMantidos.length} marcação(ões) de pagamento mantida(s) porque a planilha desmarcaria (id:campo ${pagamentosMantidos.slice(0, 80).join(', ')}) · ${statusMantidos.length} status mantido(s) porque voltaria para trás (ids ${statusMantidos.slice(0, 80).join(', ')})`);
   if (PROTEGER && detalheProtecao.length) { console.log('  linhas protegidas (id | código | CEG | item | motivo):'); detalheProtecao.slice(0, 200).forEach(l => console.log('    ' + l)); }
   // ───── REGISTRO PRIVADO DO PLANO (valores anteriores) ANTES de qualquer gravação; sem ele, nada é gravado
   const resultadoAtualizacoes = [];

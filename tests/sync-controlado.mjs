@@ -89,4 +89,20 @@ const plBase = () => base.map(b => ({ ceg: b.ceg, nome: b.nome, cog: b.cog, item
   const ne = rodar({ planilha: pl, banco: base, setupExtra: setup, env: { SYNC_JOINERS: "nenhum" } });
   ok(!ne.erro && nome(ne, "ana") === "Antigo" && nome(ne, "novinha") === undefined, "nenhum: a ana continua 'Antigo' e a novinha NÃO é criada" + (ne.erro ? " | " + ne.erro : ""));
 }
-console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
+{ // 9) SYNC_PROTEGER: o status NÃO volta para trás (Envio Liberado → Comprado por planilha atrasada); o resto da atualização (preço) segue
+  const banco = [...base.filter(b => b.id !== 9), { id: 9, ceg: "CEG1", cog: "d9", nome: "D9", item: "Item 9", idl: "ABC-9", status: "Envio Liberado" }];
+  const pl = plBase().map(l => l.id === "ABC-9" ? { ...l, preco: "44" } : l);
+  const sem = rodar({ planilha: pl, banco });
+  ok(!sem.erro && por(sem, 9)?.status === "Comprado", "controle (sem proteção): o status da 9 volta para Comprado" + (sem.erro ? " | " + sem.erro : ""));
+  const o = rodar({ planilha: pl, banco, env: { SYNC_PROTEGER: "1" } });
+  ok(!o.erro && por(o, 9)?.status === "Envio Liberado" && Number(por(o, 9)?.valor_item) === 44 && /1 status mantido\(s\) porque voltaria para trás \(ids 9\)/.test(o.log), "SYNC_PROTEGER=1: a 9 continua Envio Liberado e o preço é atualizado (44)" + (o.erro ? " | " + o.erro : ""));
+}
+{ // 10) SYNC_PROTEGER: inserção EXCEDENTE (o dono ficaria com mais linhas no banco do que na planilha neste CEG+item) é retida; sem a proteção entraria
+  const banco = [...base, { id: 700, ceg: "CEG5", cog: "eva", nome: "Eva", item: "Item P", idl: "P-1" }, { id: 701, ceg: "CEG5", cog: "eva", nome: "Eva", item: "Item P", idl: "P-1" }];
+  const pl = [...plBase(), { ceg: "CEG5", nome: "Eva", cog: "eva", item: "Item P", id: "P-1" }, { ceg: "CEG5", nome: "Eva Segundo", cog: "eva", item: "Item P", id: "P-2" }];
+  const sem = rodar({ planilha: pl, banco });
+  ok(!sem.erro && sem.masterlist.some(x => x.id_linha === "P-2") && /INSERÇÕES EXCEDENTES: 1 de 1/.test(sem.log), "controle (sem proteção): a P-2 entra e o log avisa que é excedente" + (sem.erro ? " | " + sem.erro : ""));
+  const o = rodar({ planilha: pl, banco, env: { SYNC_PROTEGER: "1" } });
+  ok(!o.erro && !o.masterlist.some(x => x.id_linha === "P-2") && /INSERÇÕES EXCEDENTES: 1 de 1.*RETIDAS pela proteção/.test(o.log) && /INSERÇÕES RETIDAS \(PENDÊNCIA\): 1 linha/.test(o.log), "SYNC_PROTEGER=1: a P-2 fica retida como pendência" + (o.erro ? " | " + o.erro : ""));
+}
+console.log(falhas ?`\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
