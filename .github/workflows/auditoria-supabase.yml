@@ -26,6 +26,10 @@ on:
         description: 'Rodar a investigação 4 (DICON: formulário x masterlist x planilha; valores dos repasses e demandas dos casos; somente leitura)'
         type: boolean
         default: false
+      precos:
+        description: 'Investigar preço em branco x zero (somente leitura)'
+        type: boolean
+        default: false
       pos_sync:
         description: 'Verificar o estado do banco depois de um sync (somente leitura): pagamentos, donos, status, duplicatas, inserções, cadastros e contas'
         type: boolean
@@ -99,6 +103,14 @@ jobs:
       - name: Investigação 4 - DICON e valores (somente leitura)
         if: ${{ inputs.dicon }}
         run: node investigar-dicon-e-valores.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Preço em branco x zero (somente leitura)
+        if: ${{ inputs.precos }}
+        run: node investigar-precos.mjs
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
