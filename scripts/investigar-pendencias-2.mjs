@@ -136,4 +136,20 @@ for (const id of [1552, 1530]) {
   console.log(`  demanda ${d.id} [${d.status}] criada ${dia(d.created_at)} total=${Number(d.valor_total).toFixed(2)} | pagadora ${anon(d.joiner_cog)}`);
   for (const i of idsEm(d.itens)) { const v = vivos.get(i), a = arqPorId.get(i); const dono = v ? v.cog : a?.dados?.cog; console.log(`     item #${i} ${v ? 'VIVO' : a ? `arquivado (${a.origem})` : 'sem registro'}: ${v ? `[${n(v.id_linha)}] ` : a ? `[${n(a.dados?.id_linha)}] ` : ''}dono ${anon(dono)} · dono = pagadora: ${sn(lc(dono) === lc(d.joiner_cog))}`); }
 }
+// ───────── D) quem pagou as demandas ligadas aos casos (pagadora x dono das linhas)
+secao('D) DEMANDAS dos casos: pagadora x dono de cada linha citada');
+for (const id of [2005, 1869, 1870, 1815, 2003, 2042, 2057, 2047]) {
+  const d = dem.find(x => Number(x.id) === id); if (!d) { console.log(`  demanda ${id}: não encontrada`); continue; }
+  const its = idsEm(d.itens);
+  console.log(`  demanda ${d.id} [${d.status}] criada ${dia(d.created_at)} total=${Number(d.valor_total).toFixed(2)} | pagadora ${anon(d.joiner_cog)} | ${its.length} item(ns)`);
+  for (const i of its) { const v = vivos.get(i), a = arqPorId.get(i); const dono = v ? v.cog : a?.dados?.cog; const m = v || a?.dados; console.log(`     item #${i} ${v ? 'VIVO' : a ? `arquivado (${a.origem})` : 'sem registro'}: ${m ? `${n(m.ceg)} | ${n(m.nome_do_item)} | [${n(m.id_linha) || 'sem código'}]` : ''} dono ${anon(dono)} · dono = pagadora: ${sn(lc(dono) === lc(d.joiner_cog))}`); }
+}
+
+// ───────── E) repasses de MERCARI TOKYO DOME e dos SKZOO: vendedor, comprador e dono atual da linha
+secao('E) REPASSES dos MERCARI TOKYO DOME / SKZOO EAAW · ONLINE');
+for (const r of rep.filter(x => (lc(x.ceg) === 'mercari' && /tokyo dome/i.test(n(x.nome_do_item))) || (lc(x.ceg) === lc('SKZOO EAAW · ONLINE')))) {
+  const v = vivos.get(String(r.item_id)), a = arqPorId.get(String(r.item_id)); const dono = v ? v.cog : a?.dados?.cog;
+  console.log(`  repasse ${r.id.slice(0, 8)} [${r.status}] criado ${dia(r.created_at)} | vendedor ${anon(r.joiner_cog)} → comprador ${anon(r.novo_dono_cog)} | ${n(r.nome_do_item)} | item #${r.item_id} ${v ? 'VIVO' : a ? `arquivado (${a.origem})` : 'sem registro'} dono ${anon(dono)} · dono = vendedor: ${sn(lc(dono) === lc(r.joiner_cog))} · dono = comprador: ${sn(lc(dono) === lc(r.novo_dono_cog))}`);
+}
+
 console.log('\nFim (somente leitura).');
