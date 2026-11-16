@@ -18,6 +18,10 @@ on:
         description: 'Rodar a investigação das pendências ambíguas (pares, demandas, repasses; somente leitura)'
         type: boolean
         default: false
+      investigacao2:
+        description: 'Rodar a investigação 2 (compara dono/e-mail/@ da planilha com o banco; somente leitura; log só com marcas e sim/não)'
+        type: boolean
+        default: false
       simulacao:
         description: 'Rodar a SIMULAÇÃO do sync contra a planilha atual (somente leitura, não grava)'
         type: boolean
@@ -63,6 +67,14 @@ jobs:
       - name: Investigação das pendências (somente leitura)
         if: ${{ inputs.investigacao }}
         run: node investigar-pendencias.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Investigação 2 - planilha x banco (somente leitura)
+        if: ${{ inputs.investigacao2 }}
+        run: node investigar-pendencias-2.mjs
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
