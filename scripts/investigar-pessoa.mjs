@@ -56,9 +56,11 @@ const arq = await ler('masterlist_exclusoes', 'masterlist_id, dados, origem, exc
 
 // linhas da planilha resolvidas pelo MESMO método do sync
 const S = rows.map(r => { const twitter = n(col(r, '@')), email = emailLimpo(col(r, 'EMAIL')); const rs = resolverLinha({ twitter, email }, idx); return { cod: n(col(r, 'ID')), ceg: n(col(r, 'ABA / CEG', 'CEG')), item: n(col(r, 'NOME DO ITEM')), status: n(col(r, 'STATUS')), pago: lc(col(r, 'ITEM')) === 'true', preco: brl(col(r, 'PREÇO ITEM')), cog: lc(rs.cog), via: rs.via, conflito: !!rs.conflito, tw: lc(twitter).replace(/^@/, ''), em: email }; });
-const doAlvoPlan = S.filter(s => hh(s.tw) === ALVO || (s.cog && hh(s.cog) === ALVO));
-const jo = joiners.filter(j => hh(j.twitter) === ALVO || hh(j.cog) === ALVO);
-const cogs = new Set([...jo.map(j => lc(j.cog)), ...doAlvoPlan.map(s => s.cog).filter(Boolean)]);
+// segue o CADASTRO, não só o @ digitado: parte do @ (ou cog) informado e inclui o cog a que a planilha o resolve (por e-mail/@ antigo) e todas as linhas que resolvem para esse cog
+const semente = S.filter(s => hh(s.tw) === ALVO || (s.cog && hh(s.cog) === ALVO));
+const cogs = new Set([...joiners.filter(j => hh(j.twitter) === ALVO || hh(j.cog) === ALVO).map(j => lc(j.cog)), ...semente.map(s => s.cog).filter(Boolean)]);
+const doAlvoPlan = S.filter(s => hh(s.tw) === ALVO || (s.cog && cogs.has(s.cog)));
+const jo = joiners.filter(j => cogs.has(lc(j.cog)));
 console.log(`CONSULTA POR PESSOA (somente leitura) — ${new Date().toISOString()} — pessoa h:${ALVO}`);
 
 secao('1) cadastro (joiners) e conta');
@@ -69,10 +71,10 @@ for (const j of jo) {
 }
 const gemeos = joiners.filter(j => cogs.has(lc(j.cog)) && !jo.includes(j));
 console.log(`outros cadastros com o mesmo cog (gêmeos por maiúsculas): ${gemeos.length}`);
-console.log(`e-mails distintos nas linhas da planilha dela: ${new Set(doAlvoPlan.map(s => s.em).filter(Boolean)).size} · @ distintos: ${new Set(doAlvoPlan.map(s => s.tw)).size} · linhas com conflito de resolução: ${doAlvoPlan.filter(s => s.conflito).length}`);
+console.log(`@ do cadastro bate com o @ consultado: ${sn(jo.some(j => hh(j.twitter) === ALVO))} · e-mails distintos nas linhas da planilha dela: ${new Set(doAlvoPlan.map(s => s.em).filter(Boolean)).size} · @ distintos: ${new Set(doAlvoPlan.map(s => s.tw)).size} · linhas com conflito de resolução: ${doAlvoPlan.filter(s => s.conflito).length}`);
 
 secao('2) planilha: linhas dela');
-for (const s of doAlvoPlan) console.log(`  [${s.cod}] ${s.ceg} | ${s.item} | status "${s.status}" | ITEM=${s.pago ? 'TRUE' : 'FALSE'} | preço ${Number.isNaN(s.preco) ? '(vazio)' : s.preco.toFixed(2)} | resolvida via ${s.via}${s.conflito ? ' CONFLITO' : ''} | dono resolvido ${anon(s.cog)}`);
+for (const s of doAlvoPlan) console.log(`  [${s.cod}] ${s.ceg} | ${s.item} | status "${s.status}" | ITEM=${s.pago ? 'TRUE' : 'FALSE'} | preço ${Number.isNaN(s.preco) ? '(vazio)' : s.preco.toFixed(2)} | resolvida via ${s.via}${s.conflito ? ' CONFLITO' : ''} | @ da linha ${anon(s.tw)} | dono resolvido ${anon(s.cog)}`);
 console.log(`total: ${doAlvoPlan.length}`);
 
 secao('3) banco (masterlist): linhas dela');
