@@ -38,6 +38,10 @@ on:
         description: 'Ids das candidatas à exclusão (separados por vírgula) para examinar UMA A UMA (somente leitura). Vazio = não roda'
         type: string
         default: ''
+      pessoa:
+        description: 'Marca da pessoa (8 hex do sha256 do @ em minúsculas, sem @) para consultar o que ela tem na planilha x banco (somente leitura; o log só traz marcas). Vazio = não roda'
+        type: string
+        default: ''
       controlado:
         description: 'Na SIMULAÇÃO, usar as mesmas proteções do sync controlado (sem exclusões, dono e pagamento protegidos, cadastros: nenhum). Só afeta o que a simulação mostra; nada é gravado'
         type: boolean
@@ -123,6 +127,15 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Consulta por pessoa (somente leitura)
+        if: ${{ inputs.pessoa != '' }}
+        run: node investigar-pessoa.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PESSOA: ${{ inputs.pessoa }}
 
       - name: Candidatas à exclusão, uma a uma (somente leitura)
         if: ${{ inputs.candidatas != '' }}
