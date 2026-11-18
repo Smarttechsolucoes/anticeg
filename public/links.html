@@ -1,286 +1,398 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ANTICEG — Links</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANTICEG — Links</title>
+<meta name="description" content="ANTICEG · comunidade antigom · skz & mais">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=UnifrakturMaguntia&family=Rubik+Glitch&family=Permanent+Marker&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --laranja:#ff5c1a;
+    --lilas:#c9a8f0;
+    --offwhite:#f5f0e8;
+    --preto:#0d0d0d;
+    --verde:#baff39;
+    --card-bg:#111;
+    --line:rgba(245,240,232,.1);
+    --line-strong:rgba(245,240,232,.2);
+    --muted:rgba(245,240,232,.5);
+    --dim:rgba(245,240,232,.28);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--preto);color:var(--offwhite)}
+  body{font-family:'DM Mono',monospace;min-height:100vh;display:flex;justify-content:center;padding:26px 18px 0;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{width:100%;max-width:440px;display:flex;flex-direction:column}
+  .or{color:var(--laranja)}
 
-    body {
-      background: #0e0e0e;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-    }
+  /* topo */
+  .meta{display:flex;justify-content:space-between;align-items:center}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.02em}
+  .logo span{color:var(--laranja)}
+  .live{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--verde);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(186,255,57,.55)}70%{box-shadow:0 0 0 7px rgba(186,255,57,0)}100%{box-shadow:0 0 0 0 rgba(186,255,57,0)}}
 
-    .page {
-      width: 100%;
-      max-width: 520px;
-      padding: 2rem 1.25rem 3rem;
-    }
+  /* ====== CAIXINHA DO CD ====== */
+  .stage{margin-top:34px;display:flex;flex-direction:column;align-items:center}
+  .case{
+    position:relative;width:100%;aspect-ratio:1/.9;
+    perspective:1400px;cursor:pointer;outline:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .case:focus-visible{box-shadow:0 0 0 2px var(--lilas);border-radius:6px}
 
-    .header { text-align: center; margin-bottom: 2.5rem; padding-top: 0.5rem; }
-    .logo { font-size: 30px; font-weight: 900; letter-spacing: -1px; color: #fff; margin-bottom: 4px; }
-    .logo span { color: #ff5c00; }
-    .tagline { font-size: 10px; font-weight: 300; letter-spacing: 0.22em; text-transform: uppercase; color: #444; margin-bottom: 10px; }
-    .divider { width: 40px; height: 2px; background: #ff5c00; margin: 10px auto 0; }
+  /* bandeja (o que fica embaixo da capa) */
+  .tray{
+    position:absolute;inset:0;border-radius:6px;
+    background:#151515;
+    border:1px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  .tray::before{ /* pinos da bandeja */
+    content:"";position:absolute;width:22%;aspect-ratio:1;border-radius:50%;
+    background:repeating-conic-gradient(#1f1f1f 0 10deg,#0f0f0f 10deg 20deg);
+  }
+  .tray-text{position:absolute;bottom:8px;right:12px;font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
 
-    .section-label {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #444; margin: 2rem 0 0.75rem;
-    }
-    .section-label span { color: #ff5c00; margin-right: 6px; }
-
-    .link-card {
-      display: flex; align-items: center; gap: 14px;
-      padding: 14px 16px;
-      background: #161616;
-      border: 1px solid #222;
-      border-left: 3px solid #ff5c00;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      cursor: pointer; text-decoration: none;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .link-card:hover { background: #1c1c1c; border-left-color: #c8f000; }
-    .link-card:hover .link-arrow { color: #c8f000; }
-    .link-card.destaque { background: #ff5c00; border-left-color: #ff5c00; border-color: #ff5c00; }
-    .link-card.destaque .link-title { color: #fff; }
-    .link-card.destaque .link-sub { color: rgba(255,255,255,.75); }
-    .link-card.destaque .link-arrow { color: #fff; }
-    .link-card.destaque:hover { background: #e84e00; border-color: #e84e00; border-left-color: #e84e00; }
-
-    .link-icon {
-      width: 36px; height: 36px; border-radius: 4px;
-      background: #1e1e1e; border: 1px solid #2a2a2a;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 16px;
-    }
-    .link-info { flex: 1; }
-    .link-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.3; }
-    .link-sub { font-size: 11px; font-weight: 300; color: #555; margin-top: 2px; }
-    .link-arrow { font-size: 18px; color: #ff5c00; font-weight: 700; }
-
-    .calc-card {
-      background: #161616; border: 1px solid #222;
-      border-top: 3px solid #c8f000; border-radius: 4px; padding: 18px 16px;
-    }
-    .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .calc-field label {
-      display: block; font-size: 10px; font-weight: 700;
-      color: #444; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.12em;
-    }
-    .calc-field input {
-      width: 100%; padding: 9px 12px;
-      border: 1px solid #2a2a2a; border-radius: 3px;
-      font-size: 15px; font-weight: 600; font-family: 'Poppins', sans-serif;
-      color: #fff; background: #111; outline: none; transition: border-color 0.15s;
-    }
-    .calc-field input:focus { border-color: #c8f000; }
-    .calc-field input::placeholder { color: #333; font-weight: 300; }
-
-    .calc-result {
-      background: #111; border: 1px solid #2a2a2a;
-      border-left: 3px solid #c8f000; border-radius: 3px;
-      padding: 14px 16px; margin-top: 4px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .result-label { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.12em; }
-    .result-breakdown { font-size: 11px; font-weight: 300; color: #444; margin-top: 3px; }
-    .result-value { font-size: 26px; font-weight: 900; color: #c8f000; letter-spacing: -1px; }
-
-    .calc-note { font-size: 10px; font-weight: 300; color: #3a3a3a; margin-top: 12px; text-align: center; line-height: 1.7; letter-spacing: 0.03em; }
-    .calc-note strong { color: #ff5c00; font-weight: 600; }
-
-    .ticker { margin-top: 2.5rem; overflow: hidden; white-space: nowrap; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; padding: 8px 0; }
-    .ticker-inner { display: inline-block; animation: ticker 20s linear infinite; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #222; text-transform: uppercase; }
-    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-    .online-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-      text-transform: uppercase; color: #444; margin-top: 10px;
-    }
-    .online-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: #c8f000;
-      box-shadow: 0 0 6px #c8f000;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-    .online-count { color: #c8f000; }
-
-    .footer { text-align: center; margin-top: 1.5rem; font-size: 10px; font-weight: 300; color: #2a2a2a; letter-spacing: 0.18em; text-transform: uppercase; }
-    .footer span { color: #ff5c00; font-weight: 700; }
-
-    /* ── PORTAL CARD ── */
-    .portal-card {
-      position: relative; overflow: hidden;
-      background: #0e0e0e;
-      border: 1px solid rgba(200,240,0,.35);
-      border-radius: 6px;
-      padding: 24px 20px 20px;
-      margin-bottom: 2rem;
-    }
-    .portal-card::before {
-      content: '';
-      position: absolute; top: -60px; right: -60px;
-      width: 180px; height: 180px;
-      background: radial-gradient(circle, rgba(200,240,0,.12) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .portal-card::after {
-      content: '';
-      position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, #ff5c00, #c8f000);
-    }
-    .portal-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: #c8f000; color: #0e0e0e;
-      font-size: 8px; font-weight: 900; letter-spacing: .22em; text-transform: uppercase;
-      padding: 3px 10px; border-radius: 2px; margin-bottom: 14px;
-    }
-    .portal-badge::before { content: '★'; font-size: 9px; }
-    .portal-title {
-      font-size: 28px; font-weight: 900; letter-spacing: -1px; color: #fff;
-      line-height: 1; margin-bottom: 6px;
-    }
-    .portal-title span { color: #c8f000; }
-    .portal-eyebrow {
-      font-size: 9px; font-weight: 700; letter-spacing: .18em;
-      text-transform: uppercase; color: #444; margin-bottom: 10px;
-    }
-    .portal-desc {
-      font-size: 12px; font-weight: 300; color: #666;
-      line-height: 1.75; margin-bottom: 18px;
-    }
-    .portal-chips {
-      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px;
-    }
-    .portal-chip {
-      font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-      color: rgba(200,240,0,.65); background: rgba(200,240,0,.07);
-      border: 1px solid rgba(200,240,0,.2);
-      padding: 4px 10px; border-radius: 2px;
-    }
-    .portal-btn {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      background: #ff5c00; color: #fff; text-decoration: none;
-      font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-      padding: 13px; border-radius: 4px;
-      transition: background .15s, transform .1s;
-    }
-    .portal-btn:hover { background: #e84e00; transform: translateY(-1px); }
-    .portal-btn-arrow { font-size: 16px; }
-  </style>
-</head>
-<body>
-<div class="page">
-
-  <div class="header">
-    <div class="logo">ANTI<span>CEG</span></div>
-    <div class="tagline">comunidade antigom · skz & mais</div>
-    <div class="divider"></div>
-    <div class="online-badge">
-      <span class="online-dot"></span>
-      <span class="online-count" id="onlineCount">—</span>
-      <span>online agora</span>
-    </div>
-  </div>
-
-  <div class="portal-card">
-    <div class="portal-badge">novo</div>
-    <div class="portal-eyebrow">anticeg · portal exclusivo</div>
-    <div class="portal-title">MASTER<span>LIST</span></div>
-    <div class="portal-desc">Acompanhe seus itens, pagamentos e CEGs em tempo real. Seu histórico completo numa só tela — sem precisar abrir planilha.</div>
-    <div class="portal-chips">
-      <span class="portal-chip">☰ Masterlist</span>
-      <span class="portal-chip">◈ CEGs</span>
-      <span class="portal-chip">◫ Calendário</span>
-      <span class="portal-chip">○ Perfil</span>
-      <span class="portal-chip">✉ Notificações</span>
-    </div>
-    <a class="portal-btn" href="https://anticeg.vercel.app/masterlist">
-      Acessar o portal <span class="portal-btn-arrow">→</span>
-    </a>
-  </div>
-
-  <a class="link-card" href="https://x.com/anticegs/status/1962657816096710766" target="_blank">
-    <div class="link-icon">🗣️</div>
-    <div class="link-info">
-      <div class="link-title">Feedbacks</div>
-      <div class="link-sub">Veja o que as joiners estão dizendo</div>
-    </div>
-    <div class="link-arrow">→</div>
-  </a>
-
-  <a class="link-card" href="https://api.whatsapp.com/send/?phone=5524992501917&text&type=phone_number&app_absent=0" target="_blank">
-    <div class="link-icon">💬</div>
-    <div class="link-info">
-      <div class="link-title">WhatsApp — Nanda</div>
-      <div class="link-sub">Dúvidas e contato direto</div>
-    </div>
-    <div class="link-arrow">→</div>
-  </a>
-
-  <div class="ticker">
-    <span class="ticker-inner">OMG, YOU'RE SO ANTI · OMG, YOU'RE SO ANTI · OMG, YOU'RE SO ANTI · OMG, YOU'RE SO ANTI · </span>
-  </div>
-
-  <div class="footer"><span>★</span> ANTICEG · comunidade ANTIGOM <span>★</span></div>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script>
-  // Contador de online via Supabase Presence
-  (function() {
-    // Preview da Vercel não conecta no Supabase de produção (página estática: sem o bloqueio do build)
-    if (location.hostname.endsWith('.vercel.app') && !['anticeg.vercel.app', 'anticeg-smarttechsolucoes-projects.vercel.app'].includes(location.hostname)) return;
-    var { createClient } = window.supabase;
-    var sb = createClient(
-      'https://ghjfsmwwcfpfvrouyrka.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoamZzbXd3Y2ZwZnZyb3V5cmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzMwNDQsImV4cCI6MjA4ODc0OTA0NH0._vfkICuqFw6vhbhIwL_mfDR0QB9p7CXe6Bgac22qZqM'
-    );
-    var uid = Math.random().toString(36).slice(2);
-    var channel = sb.channel('links-online', { config: { presence: { key: uid } } });
-
-    function setCount() {
-      var n = Object.keys(channel.presenceState()).length;
-      document.getElementById('onlineCount').textContent = n;
-    }
-
-    channel
-      .on('presence', { event: 'sync' }, setCount)
-      .on('presence', { event: 'join' }, setCount)
-      .on('presence', { event: 'leave' }, setCount)
-      .subscribe(function(status) {
-        if (status === 'SUBSCRIBED') {
-          channel.track({ uid: uid, t: Date.now() }).then(setCount);
-        }
-      });
-  })();
-
-  function calcMulta() {
-    var qty = parseFloat(document.getElementById('qty').value) || 0;
-    var days = parseFloat(document.getElementById('days').value) || 0;
-    var price = parseFloat(document.getElementById('price').value) || 0;
-    var multa = qty * days;
-    var total = (price * qty) + multa;
-    document.getElementById('total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
-    var bd = document.getElementById('breakdown');
-    if (price > 0) {
-      bd.textContent = 'R$ ' + (price * qty).toFixed(2).replace('.', ',') + ' (itens) + R$ ' + multa.toFixed(2).replace('.', ',') + ' (multa)';
-    } else {
-      bd.textContent = multa > 0 ? 'multa: R$ ' + multa.toFixed(2).replace('.', ',') : '—';
-    }
+  /* o CD */
+  .cd{
+    position:relative;width:84%;aspect-ratio:1;border-radius:50%;
+    --a:0deg;
+    background:
+      radial-gradient(circle,transparent 0 7.5%,rgba(255,255,255,.55) 7.5% 8.2%,transparent 8.2%),
+      conic-gradient(from var(--a),#d9d4cc,#f5f0e8,#c9a8f0,#9fe3ff,#baff39,#ffd36b,#ff9a6b,#d9d4cc,#f5f0e8,#c9a8f0,#9fe3ff,#d9d4cc);
+    box-shadow:0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.25);
+    transition:transform .9s cubic-bezier(.6,.1,.2,1);
+    z-index:1;
+  }
+  .cd-print{ /* parte impressa laranja */
+    position:absolute;inset:6%;border-radius:50%;
+    background:
+      radial-gradient(circle,transparent 0 21%,var(--laranja) 21%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cd-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:13% 0 10%}
+  .cd-bottom{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .cd-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,10vw,46px);line-height:1;color:var(--preto)}
+  .cd-title span{color:var(--offwhite)}
+  .cd-sub{font-size:9px;letter-spacing:.16em;color:var(--preto);text-transform:uppercase;opacity:.75}
+  .cd-hub{ /* anel transparente + furo */
+    position:absolute;inset:0;border-radius:50%;
+    background:
+      radial-gradient(circle,#151515 0 7%,rgba(255,255,255,.18) 7% 7.6%,rgba(255,255,255,.08) 7.6% 15%,rgba(255,255,255,.25) 15% 15.6%,transparent 15.6%);
+    pointer-events:none;
+  }
+  .cd-gloss{
+    position:absolute;inset:0;border-radius:50%;pointer-events:none;
+    background:conic-gradient(from calc(var(--g,40deg)),transparent 0 20deg,rgba(255,255,255,.28) 35deg,transparent 55deg,transparent 200deg,rgba(255,255,255,.18) 215deg,transparent 235deg);
+    mix-blend-mode:screen;
   }
 
+  /* capa (encarte atrás do acrílico) */
+  .cover{
+    position:absolute;inset:0;border-radius:6px;z-index:3;
+    transform-origin:left center;
+    transition:transform 1s cubic-bezier(.6,.1,.2,1),opacity .35s .65s;
+    transform-style:preserve-3d;
+  }
+  .art{
+    position:absolute;inset:0;border-radius:6px;overflow:hidden;
+    background:var(--laranja);color:var(--preto);
+    padding:7% 7% 6% 13%;
+    display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .art-top{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+  .art-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,27vw,124px);line-height:.82}
+  .art-title span{display:block}
+  .art-title .w{color:var(--offwhite)}
+  .art-bottom{display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  .art-bottom b{font-weight:500}
+  .sticker{
+    position:absolute;top:30%;right:7%;width:30%;aspect-ratio:1;border-radius:50%;
+    background:var(--lilas);color:var(--preto);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    transform:rotate(12deg);
+    font-family:'Bebas Neue',sans-serif;font-size:clamp(15px,5vw,22px);line-height:.95;
+    box-shadow:0 3px 0 rgba(0,0,0,.18);
+  }
+  .sticker small{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.12em;margin-top:4px}
+  .hinge{ /* dobradiça do acrílico */
+    position:absolute;left:0;top:0;bottom:0;width:7%;z-index:4;border-radius:6px 0 0 6px;
+    background:
+      repeating-linear-gradient(180deg,rgba(255,255,255,.22) 0 2px,rgba(255,255,255,.05) 2px 6px),
+      rgba(20,20,20,.55);
+    border-right:1px solid rgba(255,255,255,.25);
+  }
+  .plastic{ /* reflexo do acrílico */
+    position:absolute;inset:0;border-radius:6px;z-index:5;pointer-events:none;
+    border:1px solid rgba(255,255,255,.35);
+    background:linear-gradient(115deg,transparent 0 var(--p,30%),rgba(255,255,255,.22) calc(var(--p,30%) + 4%),transparent calc(var(--p,30%) + 14%));
+  }
+
+  /* estado aberto */
+  .case.open .cover{transform:rotateY(-115deg);opacity:0;pointer-events:none}
+  .case.open .plastic{opacity:0;transition:opacity .4s .4s}
+  .hint{margin-top:16px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;transition:opacity .3s}
+  .hint::before{content:"☆";color:var(--laranja)}
+  .case.open + .hint{opacity:.0}
+
+  /* agora tocando */
+  .np{margin-top:6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:16px}
+  .eq{display:flex;gap:2px;align-items:flex-end;height:10px}
+  .eq i{width:2px;background:var(--laranja);animation:eq 1s infinite ease-in-out;height:3px}
+  .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.1s}
+  @keyframes eq{0%,100%{height:3px}50%{height:10px}}
+  .np b{color:var(--offwhite);font-weight:500}
+
+  /* conteúdo revelado ao abrir */
+  .reveal{opacity:0;transform:translateY(14px);transition:opacity .6s,transform .6s;visibility:hidden}
+  body.opened .reveal{opacity:1;transform:none;visibility:visible}
+  body.opened .reveal.d1{transition-delay:.55s}
+  body.opened .reveal.d2{transition-delay:.7s}
+  body.opened .reveal.d3{transition-delay:.85s}
+  body.opened .reveal.d4{transition-delay:1s}
+
+  /* ====== VERSO DO CD — tracklist em tiras de papel ====== */
+  .tl-head{margin-top:36px;display:flex;justify-content:space-between;align-items:baseline}
+  .tl-head h2{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:30px;color:rgba(245,240,232,.4);letter-spacing:.02em}
+  .tl-head .sideA{font-family:'Bebas Neue',sans-serif;font-size:30px}
+  .tl-head .sideA b{color:var(--laranja);font-weight:400}
+  .strips{margin-top:18px;display:flex;flex-direction:column;padding:0 2px}
+  .strip{
+    --bg:#161616;--ink:var(--offwhite);--acc:var(--laranja);
+    position:relative;display:block;color:var(--ink);background:var(--bg);
+    padding:20px 20px 26px 22px;margin-top:-10px;
+    border-radius:18px 8px 8px 18px / 50% 12px 12px 50%;
+    box-shadow:0 12px 20px rgba(0,0,0,.5);
+    transition:transform .3s cubic-bezier(.3,1.4,.5,1),box-shadow .3s;
+    overflow:hidden;outline:none;
+  }
+  .strip:first-child{margin-top:0}
+  .strip::before{ /* sombra de papel enrolado */
+    content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+    background:linear-gradient(180deg,rgba(0,0,0,.38) 0%,rgba(255,255,255,.10) 9%,transparent 26%,transparent 72%,rgba(0,0,0,.22) 90%,rgba(0,0,0,.45) 100%);
+  }
+  .strip::after{ /* textura de papel */
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .strip:nth-child(odd){transform:rotate(-1.2deg)}
+  .strip:nth-child(even){transform:rotate(1deg)}
+  .strip:hover,.strip:focus-visible{transform:rotate(0) translateY(-6px) scale(1.025);box-shadow:0 18px 28px rgba(0,0,0,.6);z-index:5}
+  .s1{--bg:#161616;--ink:var(--offwhite);--acc:var(--laranja);z-index:1}
+  .s2{--bg:var(--offwhite);--ink:#141414;--acc:#c23a0c;z-index:2}
+  .s3{--bg:var(--laranja);--ink:#141414;--acc:#f5f0e8;z-index:3}
+  .s4{--bg:var(--lilas);--ink:#141414;--acc:#7a3fd1;z-index:4}
+  .s-top{position:relative;z-index:1;display:flex;gap:10px;align-items:baseline;font-size:12px;font-weight:500}
+  .s-top .dur{color:var(--acc)}
+  .s-top .ttl{font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;font-weight:400;color:var(--acc)}
+  .s-play{position:absolute;right:18px;top:18px;z-index:1;font-size:10px;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:6px;opacity:.55;transition:opacity .2s,color .2s}
+  .strip:hover .s-play,.strip:focus-visible .s-play{opacity:1;color:var(--acc)}
+  .s-title{position:relative;z-index:1;display:block;margin:8px 0 12px;line-height:.92}
+  .t1{font-family:'UnifrakturMaguntia',serif;font-size:clamp(44px,13vw,58px)}
+  .t2{font-family:'Rubik Glitch',sans-serif;font-size:clamp(32px,9.6vw,42px);letter-spacing:-.01em}
+  .t3{font-family:'Permanent Marker',cursive;font-size:clamp(38px,11vw,48px);transform:rotate(-3deg);transform-origin:left center}
+  .t4{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .t4 i{font-family:'Instrument Serif',serif;font-size:clamp(28px,8vw,36px)}
+  .t4 b{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:clamp(54px,16vw,70px);line-height:.85;letter-spacing:.01em}
+  .s-cred{position:relative;z-index:1;display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:10px;line-height:1.55}
+  .s-cred dt{font-weight:500;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+  .s-cred dd{opacity:.78}
+  .warning{margin-top:22px;text-align:center;font-size:9px;line-height:1.7;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+
+  /* letreiro */
+  .marquee{margin:36px -18px 0;overflow:hidden;white-space:nowrap;padding:12px 0;background:var(--laranja);color:var(--preto)}
+  .marquee .row{display:inline-block;animation:scroll 28s linear infinite;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em}
+  .marquee .row span{margin:0 14px}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+
+  /* contracapa / créditos */
+  .credits{padding:26px 0 34px;font-size:10px;line-height:2;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .credits .cols{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px}
+  .credits b{color:var(--offwhite);font-weight:500}
+  .credits .legal{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .barcode{display:flex;gap:2px;align-items:flex-end;height:26px;flex:0 0 auto}
+  .barcode i{background:var(--offwhite);height:100%;display:block}
+  .replay{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border-radius:999px;cursor:pointer;margin-top:14px}
+  .replay:hover{color:var(--offwhite);border-color:var(--offwhite)}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="meta">
+    <a class="logo" href="https://anticeg.vercel.app/">☆ ANTI<span>GOM</span> ☆</a>
+    <span class="live"><span class="dot"></span>online agora</span>
+  </div>
+
+  <!-- CAIXINHA -->
+  <section class="stage">
+    <div class="case" id="case" role="button" tabindex="0" aria-label="Abrir o CD da ANTICEG" aria-expanded="false">
+      <div class="tray">
+        <div class="cd" id="cd">
+          <div class="cd-print">
+            <div class="cd-label">
+              <span class="cd-sub">vol. 01 · side a</span>
+              <span class="cd-bottom"><span class="cd-title">ANTI<span>CEG</span></span><span class="cd-sub">OMG, YOU'RE SO ANTI</span></span>
+            </div>
+          </div>
+          <div class="cd-hub"></div>
+          <div class="cd-gloss" id="gloss"></div>
+        </div>
+      </div>
+
+      <div class="cover" id="cover">
+        <div class="art">
+          <div class="art-top"><span>vol. 01</span><span>side a</span></div>
+          <div class="art-title"><span>ANTI</span><span class="w">CEG</span></div>
+          <div class="art-bottom">
+            <span>OMG, YOU'RE<br><b>SO ANTI</b></span>
+            <span>☆ skz &amp; mais</span>
+          </div>
+          <div class="sticker">LIMITED<br>EDITION<small>☆ antigom ☆</small></div>
+        </div>
+      </div>
+      <div class="hinge"></div>
+      <div class="plastic" id="plastic"></div>
+    </div>
+    <p class="hint">clique pra abrir o CD</p>
+    <p class="np reveal d1" id="np"><span class="eq"><i></i><i></i><i></i><i></i></span><span>tocando: <b id="npName">ANTICEG vol. 01</b></span></p>
+  </section>
+
+  <!-- VERSO DO CD: TRACKLIST -->
+  <div class="reveal d2">
+    <div class="tl-head"><h2>TRACK LIST</h2><span class="sideA"><b>A</b>-SIDE</span></div>
+
+    <div class="strips">
+      <a class="strip s1" data-name="Masterlist" href="https://anticeg.vercel.app/masterlist">
+        <span class="s-top"><span>(01)</span><span class="dur">03:12</span><span class="ttl">*title</span></span>
+        <span class="s-play">▶ play</span>
+        <span class="s-title t1">Masterlist</span>
+        <dl class="s-cred">
+          <dt>Contains</dt><dd>seus itens, pagamentos e CEGs em tempo real</dd>
+          <dt>Feat.</dt><dd>calendário, perfil, notificações</dd>
+          <dt>Made by</dt><dd>Nanda — sem precisar abrir planilha</dd>
+        </dl>
+      </a>
+
+      <a class="strip s2" data-name="Regras da comu" href="https://anticeg.vercel.app/regras.html">
+        <span class="s-top"><span>(02)</span><span class="dur">02:47</span></span>
+        <span class="s-play">▶ play</span>
+        <span class="s-title t2">REGRAS DA COMU</span>
+        <dl class="s-cred">
+          <dt>Contains</dt><dd>claim, pagamentos &amp; taxas, repasse &amp; atraso</dd>
+          <dt>Feat.</dt><dd>envio nacional, reembolsos</dd>
+          <dt>Note</dt><dd>leia antes de entrar numa CEG ☆</dd>
+        </dl>
+      </a>
+
+      <a class="strip s3" data-name="Feedbacks" href="https://x.com/anticegs/status/1962657816096710766" target="_blank" rel="noopener">
+        <span class="s-top"><span>(03)</span><span class="dur">02:31</span></span>
+        <span class="s-play">▶ play</span>
+        <span class="s-title t3">Feedbacks</span>
+        <dl class="s-cred">
+          <dt>Contains</dt><dd>o que as joiners estão dizendo</dd>
+          <dt>Recorded at</dt><dd>X · @anticegs</dd>
+        </dl>
+      </a>
+
+      <a class="strip s4" data-name="Fale com a Nanda" href="https://api.whatsapp.com/send/?phone=5524992782023&text&type=phone_number&app_absent=0" target="_blank" rel="noopener">
+        <span class="s-top"><span>(04)</span><span class="dur">∞</span></span>
+        <span class="s-play">▶ play</span>
+        <span class="s-title t4"><i>fale com a</i><b>NANDA</b></span>
+        <dl class="s-cred">
+          <dt>Contains</dt><dd>dúvidas e contato direto</dd>
+          <dt>Recorded at</dt><dd>WhatsApp</dd>
+        </dl>
+      </a>
+    </div>
+
+    <p class="warning">℗&amp;© 2026 ANTICEG · comunidade ANTIGOM<br>warning: all rights reserved. ceg furada is prohibited ☆</p>
+  </div>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="row">
+      <span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span><span>OMG YOU'RE SO ANTI</span><span>☆</span>
+    </div>
+  </div>
+
+  <footer class="credits">
+    <div class="cols">
+      <span>produced by <b>Nanda</b></span>
+      <span>featuring <b>as joiners</b></span>
+      <span>recorded in <b>Brasil</b></span>
+      <span>genre <b>skz &amp; mais</b></span>
+    </div>
+    <div class="legal">
+      <span>℗ &amp; © ANTICEG · ☆ comunidade ANTIGOM ☆</span>
+      <span class="barcode" id="barcode" aria-hidden="true"></span>
+    </div>
+    <button class="replay" id="replay" type="button">↺ fechar a caixinha</button>
+  </footer>
+
+</main>
+
+<script>
+  const caseEl = document.getElementById('case');
+  const cd = document.getElementById('cd');
+  const gloss = document.getElementById('gloss');
+  const plastic = document.getElementById('plastic');
+  const npName = document.getElementById('npName');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* abrir / fechar */
+  let opened = false;
+  function setOpen(v){
+    opened = v;
+    caseEl.classList.toggle('open', v);
+    document.body.classList.toggle('opened', v);
+    caseEl.setAttribute('aria-expanded', v);
+    caseEl.setAttribute('aria-label', v ? 'CD da ANTICEG aberto' : 'Abrir o CD da ANTICEG');
+    target = v ? BASE : 0;
+  }
+  caseEl.addEventListener('click', () => { if(!opened) setOpen(true); else boost(); });
+  caseEl.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); if(!opened) setOpen(true); }});
+  document.getElementById('replay').addEventListener('click', () => { setOpen(false); window.scrollTo({top:0,behavior:'smooth'}); });
+  // abre sozinho se a pessoa não clicar, pra ninguém ficar sem os links
+  setTimeout(() => { if(!opened) setOpen(true); }, 3500);
+
+  /* giro do CD — velocidade suave */
+  const BASE = 70, FAST = 420;          // graus por segundo
+  let angle = 0, speed = 0, target = 0, last = performance.now();
+  function frame(t){
+    const dt = Math.min(.05,(t-last)/1000); last = t;
+    speed += (target - speed) * Math.min(1, dt*3);
+    angle = (angle + speed*dt) % 360;
+    cd.style.transform = `rotate(${angle}deg)`;
+    gloss.style.setProperty('--g', (-angle + 40) + 'deg'); // o brilho fica parado enquanto o disco gira
+    requestAnimationFrame(frame);
+  }
+  if(!reduce) requestAnimationFrame(frame);
+  function boost(){ if(!opened) return; target = FAST; clearTimeout(boost.t); boost.t = setTimeout(()=>target=BASE, 900); }
+
+  /* faixas: acelera o disco e mostra o "tocando" */
+  document.querySelectorAll('[data-name]').forEach(el => {
+    const on = () => { npName.textContent = el.dataset.name; if(opened) target = FAST; };
+    const off = () => { npName.textContent = 'ANTICEG vol. 01'; if(opened) target = BASE; };
+    el.addEventListener('mouseenter', on); el.addEventListener('focus', on);
+    el.addEventListener('mouseleave', off); el.addEventListener('blur', off);
+  });
+
+  /* reflexo do acrílico segue o mouse */
+  window.addEventListener('pointermove', e => {
+    const p = (e.clientX / window.innerWidth) * 70 - 5;
+    plastic.style.setProperty('--p', p + '%');
+  });
+
+  const bc = document.getElementById('barcode');
+  [1,2,1,3,1,1,2,1,3,2,1,1,2,3,1,2].forEach(w=>{const i=document.createElement('i');i.style.width=w+'px';bc.appendChild(i)});
 </script>
 </body>
 </html>
