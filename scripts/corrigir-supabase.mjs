@@ -680,11 +680,99 @@ async function enviarCodigo() {
   console.log(`  pedido de envio aceito pelo Auth (HTTP ${r.status}). A chegada na caixa dela NÃO é confirmada por este passo.${avisos.length ? ' Avisos: ' + avisos.join('; ') : ''}`);
 }
 
+// ───────── L) arquivar CÓPIA com pagamento "ESPELHADO" (PARES=copia:original). A cópia veio do sync e herdou as mesmas marcações de pago da original; a PROVA do pagamento (demanda paga) está na original.
+// A função prune_masterlist recusa qualquer linha com pago_* marcado, então aqui o arquivamento é feito no mesmo formato dela (foto em masterlist_exclusoes + remoção), só depois de provar, par a par, que a cópia é idêntica à original e não tem referência nenhuma. A original NUNCA é tocada.
+async function arquivarEspelhadas() {
+  secao('L) arquivar cópias com pagamento espelhado (PARES=copia:original), cada par reprovado na hora');
+  const pares = String(process.env.PARES || '').split(/[,\s]+/).filter(Boolean).map(p => p.split(':').map(Number));
+  if (!pares.length || pares.some(p => p.length !== 2 || p.some(x => !Number.isInteger(x)))) { console.log('  informe PARES=copia:original,copia:original,...'); falhas++; return; }
+  if (pares.length > 10) { console.log('  mais de 10 pares: recusado'); falhas++; return; }
+  const ml = await ler('masterlist', '*');
+  const jo = await ler('joiners', 'id, cog, email, twitter'), dem = await ler('pagamento_demandas', 'id, itens, status'), rep = await ler('repassos', 'id, item_id');
+  const env = await ler('envio_solicitacoes', 'id, itens'), loj = await ler('lojinha_repasses', 'id, masterlist_id');
+  if (!ml || !jo || !dem || !rep || !env || !loj) { console.log('  leitura incompleta: nada feito'); falhas++; return; }
+  const lc = v => n(v).toLowerCase().replace(/\s+/g, ' ');
+  const emailLimpo = v => { const e = lc(v); return /^[^\s@#]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : ''; };
+  const norm = t => String(t).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const resp = await fetch('https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995');
+  if (!resp.ok) { console.log('  não consegui ler a planilha'); falhas++; return; }
+  const linhasCsv = (await resp.text()).replace(/^﻿/, '').split('\n'); const hIdx = linhasCsv.findIndex(l => l.includes('ABA'));
+  if (hIdx === -1) { console.log('  cabeçalho da planilha não encontrado'); falhas++; return; }
+  const records = parse(linhasCsv.slice(hIdx).join('\n'), { columns: true, skip_empty_lines: true });
+  const colMap = {}; Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
+  const col = (r, ...nomes) => { for (const nm of nomes) { const k = colMap[norm(nm)]; if (k !== undefined) return r[k] ?? ''; } return ''; };
+  const rows = records.filter(r => n(col(r, 'ABA / CEG', 'CEG')) && n(col(r, 'NOME DO ITEM')));
+  const idx = indexarJoiners(jo, await carregarArrobasAntigos(sb, jo));
+  const S = rows.map(r => { const rs = resolverLinha({ twitter: n(col(r, '@')), email: emailLimpo(col(r, 'EMAIL')) }, idx); return { cod: n(col(r, 'ID')), dono: lc(rs.cog), pago: lc(col(r, 'ITEM')) === 'true' }; });
+  const idsEm = itens => (Array.isArray(itens) ? itens : []).map(e => (e && typeof e === 'object') ? String(e.id ?? e.item_id ?? e.masterlist_id ?? '') : String(e ?? '')).filter(Boolean);
+  const refs = id => { const k = String(id); return [dem.some(x => idsEm(x.itens).includes(k)) && 'demanda', rep.some(x => String(x.item_id) === k) && 'repasse', env.some(x => idsEm(x.itens).includes(k)) && 'envio', loj.some(x => String(x.masterlist_id) === k) && 'loja-repasse'].filter(Boolean); };
+  const marcas = x => `${x.pago_item ? 1 : 0}${x.pago_frete ? 1 : 0}${x.pago_rf ? 1 : 0}`;
+  const por = new Map(ml.map(m => [m.id, m]));
+  const copias = new Set(pares.map(p => p[0]));
+  const plano = [], recusadas = [];
+  for (const [cId, oId] of pares) {
+    const c = por.get(cId), o = por.get(oId); const recusa = t => recusadas.push({ copia: cId, original: oId, motivo: t });
+    if (!c || !o) { recusa('uma das linhas não existe'); continue; }
+    if (cId === oId || copias.has(oId)) { recusa('a original também está na lista de arquivar'); continue; }
+    const cod = n(o.id_linha); if (!cod || n(c.id_linha) !== cod) { recusa('código diferente ou ausente'); continue; }
+    if (n(c.ceg) !== n(o.ceg) || lc(c.cog) !== lc(o.cog) || !lc(c.cog)) { recusa('CEG ou dono diferente (ou sem dono)'); continue; }
+    if (n(c.nome_do_item) !== n(o.nome_do_item)) { recusa('produto diferente'); continue; }
+    if (Math.round(Number(c.valor_item || 0) * 100) !== Math.round(Number(o.valor_item || 0) * 100)) { recusa('valor diferente'); continue; }
+    if (n(c.status) !== n(o.status)) { recusa('status diferente'); continue; }
+    if (marcas(c) !== marcas(o)) { recusa('as marcações de pagamento da cópia diferem das da original (não é espelho)'); continue; }
+    if (c.na_loja || o.na_loja !== c.na_loja) { recusa('na_loja'); continue; }
+    const { data: mot, error: eM } = await sb.rpc('masterlist_motivos_protecao', { p_id: cId });
+    if (eM || !Array.isArray(mot) || mot.some(m => m !== 'pagamento_registrado')) { recusa('protegida por outro motivo: ' + (eM?.message || (mot || []).join(','))); continue; }
+    const rc = refs(cId); if (rc.length) { recusa('a cópia tem referência: ' + rc.join(',')); continue; }
+    const temPago = marcas(o) !== '000';
+    const demPagas = dem.filter(x => idsEm(x.itens).includes(String(oId)) && lc(x.status) === 'pago').length;
+    if (temPago && !demPagas) { recusa('a original está marcada como paga mas não tem demanda paga como prova'); continue; }
+    const s = S.filter(x => x.cod === cod);
+    if (s.length !== 1 || s[0].dono !== lc(o.cog)) { recusa('a planilha não tem exatamente 1 linha com este código e o mesmo dono'); continue; }
+    if (s[0].pago !== !!o.pago_item) { recusa('o pago da planilha não bate com o da original'); continue; }
+    const noBanco = ml.filter(m => n(m.id_linha) === cod && lc(m.cog) === lc(o.cog)).length, arquivando = pares.filter(([a]) => n(por.get(a)?.id_linha) === cod).length;
+    if (noBanco - arquivando !== 1) { recusa(`arquivar deixaria ${noBanco - arquivando} linha(s) deste código com o dono (a planilha tem 1)`); continue; }
+    plano.push({ copia: cId, original: oId, codigo: cod, ceg: c.ceg, item: c.nome_do_item, valor: Number(c.valor_item || 0), marcas: marcas(c), demandas_pagas_da_original: demPagas, prova: `mesmo código, CEG, dono, produto, valor, status e marcações de pagamento; cópia sem referência nenhuma; original com ${demPagas} demanda(s) paga(s); planilha com 1 linha do dono` });
+  }
+  linha('pares informados', pares.length); linha('pares aprovados', plano.length);
+  plano.forEach(p => console.log(`  arquivar #${p.copia} [${p.codigo}] | manter #${p.original} | ${p.ceg} | ${p.item} | valor ${p.valor.toFixed(2)} | marcas ${p.marcas} | original com ${p.demandas_pagas_da_original} demanda(s) paga(s)`));
+  recusadas.forEach(r => console.log(`  RECUSADO #${r.copia}:#${r.original}: ${r.motivo}`));
+  if (!plano.length) return;
+  if (!APLICAR) { console.log('  ENSAIO: nada foi gravado.'); return; }
+  const idsC = plano.map(p => p.copia), idsO = plano.map(p => p.original);
+  const { data: fotos, error: eF } = await sb.from('masterlist').select('*').in('id', [...idsC, ...idsO]);
+  if (eF || (fotos || []).length !== idsC.length + idsO.length) { console.log(`  não consegui a foto completa (${eF?.message || 'contagem difere'}): NADA foi feito`); falhas++; return; }
+  const alteracoes = plano.map(p => ({ tipo: 'linha_arquivada', masterlist_id: p.copia, codigo: p.codigo, prova: p.prova, preservada: p.original, antes: fotos.find(f => f.id === p.copia) }));
+  const fotosOriginais = idsO.map(id => fotos.find(f => f.id === id));
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_arquivar_espelhadas_plano.json`, { versao: 1, tipo: 'correcao_arquivar_espelhadas', run: RUN, quando: new Date().toISOString(), alteracoes, fotos_das_originais: fotosOriginais, recusadas }); console.log(`  registro privado do plano gravado e conferido: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO: ' + e.message + ' — NADA foi apagado'); falhas++; return; }
+  for (const a of alteracoes) {
+    const { data: ins, error: eI } = await sb.from('masterlist_exclusoes').insert([{ masterlist_id: a.masterlist_id, dados: a.antes, origem: 'copia_espelhada_18_11' }]).select('id');
+    if (eI || !ins?.length) { console.log(`  #${a.masterlist_id}: não consegui gravar a foto em masterlist_exclusoes (${eI?.message || 'sem retorno'}) — a linha NÃO foi removida`); falhas++; a.resultado = 'nao_aplicado'; continue; }
+    const { error: eD } = await sb.from('masterlist').delete().eq('id', a.masterlist_id).eq('id_linha', a.antes.id_linha).eq('cog', a.antes.cog);
+    if (eD) { await sb.from('masterlist_exclusoes').delete().eq('id', ins[0].id); console.log(`  #${a.masterlist_id}: ERRO ao remover (${eD.message}) — foto desfeita, linha mantida`); falhas++; a.resultado = 'nao_aplicado'; }
+  }
+  const { data: restam } = await sb.from('masterlist').select('*').in('id', [...idsC, ...idsO]);
+  const { data: arqs } = await sb.from('masterlist_exclusoes').select('masterlist_id').in('masterlist_id', idsC);
+  const vivas = new Map((restam || []).map(r => [r.id, r])); const arquivadas = new Set((arqs || []).map(r => r.masterlist_id));
+  for (const a of alteracoes) {
+    const orig = vivas.get(a.preservada), foto = fotosOriginais.find(f => f.id === a.preservada);
+    const intacta = !!orig && Object.keys(foto).every(k => JSON.stringify(orig[k] ?? null) === JSON.stringify(foto[k] ?? null));
+    const ok = !vivas.has(a.masterlist_id) && arquivadas.has(a.masterlist_id) && intacta;
+    a.resultado = ok ? 'aplicado' : (a.resultado || 'nao_confirmado');
+    console.log(`  #${a.masterlist_id}: ${ok ? 'aplicado' : 'NÃO CONFIRMADO'} · original #${a.preservada}: ${intacta ? 'intacta (todas as colunas iguais à foto)' : 'ALTERADA OU AUSENTE'}`);
+    if (!ok) falhas++;
+  }
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_arquivar_espelhadas_resultado.json`, { versao: 1, tipo: 'resultado_arquivar_espelhadas', run: RUN, plano: `correcoes/${STAMP}_arquivar_espelhadas_plano.json`, quando: new Date().toISOString(), alteracoes }); console.log(`  registro privado do RESULTADO: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
 if (ACAO === 'arquivar-pares') await arquivarPares();
 if (ACAO === 'liberar-itens') await liberarItens();
 if (ACAO === 'trocar-email') await trocarEmail();
 if (ACAO === 'enviar-codigo') await enviarCodigo();
+if (ACAO === 'arquivar-espelhadas') await arquivarEspelhadas();
 if (ACAO === 'sync-indevido') await corrigirSyncIndevido();
 if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();
