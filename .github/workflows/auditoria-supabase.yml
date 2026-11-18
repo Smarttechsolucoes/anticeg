@@ -128,6 +128,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
+      - name: Linhas "disponível" x banco (somente leitura)
+        if: ${{ inputs.disponiveis }}
+        run: node investigar-disponiveis.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
       - name: Consulta por pessoa (somente leitura)
         if: ${{ inputs.pessoa != '' }}
         run: node investigar-pessoa.mjs
