@@ -647,10 +647,44 @@ async function trocarEmail() {
   catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
 }
 
+// ───────── K) enviar o código de ativação para o e-mail DO CADASTRO (ordem explícita da administração). Mesmas regras e mesmo caminho do botão "Enviar código" do painel (função admin-enviar-codigo), que exige o login de uma administradora; aqui a ordem vem do pedido explícito.
+// Nunca envia para e-mail diferente do cadastro, nem para quem já tem conta, cadastro bloqueado, sem e-mail válido ou com e-mail repartido. Registra em contas_auditoria ANTES de enviar (sem registro, sem envio). Não cria vínculo: a conta só é ligada quando a pessoa digita o código.
+async function enviarCodigo() {
+  secao('K) enviar código de ativação ao e-mail do cadastro (UM id explícito)');
+  const jid = Number(String(process.env.IDS || '').trim());
+  if (!Number.isInteger(jid) || jid <= 0) { console.log('  informe IDS=<id do cadastro>'); falhas++; return; }
+  const lc = v => n(v).toLowerCase();
+  const { data: j, error: eJ } = await sb.from('joiners').select('id, cog, email, bloqueado').eq('id', jid).maybeSingle();
+  if (eJ || !j) { console.log('  cadastro não encontrado'); falhas++; return; }
+  const email = lc(j.email);
+  if (!/^[^\s@#]+@[^\s@]+\.[^\s@]+$/.test(email)) { console.log('  RECUSADO: o cadastro não tem e-mail válido'); falhas++; return; }
+  if (j.bloqueado) { console.log('  RECUSADO: cadastro bloqueado'); falhas++; return; }
+  const { count: qtd } = await sb.from('joiners').select('id', { count: 'exact', head: true }).ilike('email', email.replace(/[\\%_]/g, c => '\\' + c));
+  if (qtd !== 1) { console.log(`  RECUSADO: o e-mail do cadastro está em ${qtd} cadastros (precisa ser 1)`); falhas++; return; }
+  const { count: contas } = await sb.from('contas_joiner').select('user_id', { count: 'exact', head: true }).eq('joiner_id', jid);
+  if (contas) { console.log('  RECUSADO: já tem conta (o caminho é "esqueci minha senha")'); falhas++; return; }
+  const { data: lib } = await sb.rpc('ativacao_liberada', { p_joiner_id: jid });
+  const { data: conf, error: eC } = await sb.rpc('ativacao_vinculo_confiavel', { p_joiner_id: jid });
+  const avisos = []; if (lib !== true) avisos.push('ainda não liberada'); if (!eC && conf !== true) avisos.push('vínculo não confiável (ativação ficará pendente)');
+  linha('cadastro', `#${jid} · e-mail válido, não bloqueado, único, sem conta · liberada: ${lib === true ? 'SIM' : 'não'} · vínculo confiável: ${eC ? 'não consegui consultar' : (conf === true ? 'SIM' : 'não')}`);
+  if (!APLICAR) { console.log('  ENSAIO: nada foi enviado.'); return; }
+  const { error: eA } = await sb.from('contas_auditoria').insert({ acao: 'enviar_codigo_admin', joiner_id: jid, detalhe: { acao: 'enviar_codigo_admin', por: 'ordem_explicita_via_workflow', run: RUN, dominio: email.split('@')[1] || '', avisos: avisos.length } });
+  if (eA) { console.log(`  não consegui registrar a auditoria (${eA.message}): NADA foi enviado`); falhas++; return; }
+  const { error: eU } = await sb.auth.admin.createUser({ email, email_confirm: true });
+  if (eU && !/already|registered|exists/i.test(eU.message)) { console.log('  não foi possível preparar a conta de acesso: nada foi enviado'); falhas++; return; }
+  console.log(`  usuário de acesso: ${eU ? 'já existia' : 'criado (sem vínculo ao cadastro)'}`);
+  const anon = (readFileSync(new URL('../src/supabase.js', import.meta.url), 'utf8').match(/CHAVE_PRODUCAO\s*=\s*"([^"]+)"/) || [])[1];
+  if (!anon) { console.log('  não achei a chave pública do site: nada foi enviado'); falhas++; return; }
+  const r = await fetch(`${process.env.SUPABASE_URL}/auth/v1/otp`, { method: 'POST', headers: { apikey: anon, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, create_user: false }) });
+  if (!r.ok) { console.log(`  O Auth recusou o envio (HTTP ${r.status}). Nada chegou à pessoa.`); falhas++; return; }
+  console.log(`  pedido de envio aceito pelo Auth (HTTP ${r.status}). A chegada na caixa dela NÃO é confirmada por este passo.${avisos.length ? ' Avisos: ' + avisos.join('; ') : ''}`);
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
 if (ACAO === 'arquivar-pares') await arquivarPares();
 if (ACAO === 'liberar-itens') await liberarItens();
 if (ACAO === 'trocar-email') await trocarEmail();
+if (ACAO === 'enviar-codigo') await enviarCodigo();
 if (ACAO === 'sync-indevido') await corrigirSyncIndevido();
 if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();
