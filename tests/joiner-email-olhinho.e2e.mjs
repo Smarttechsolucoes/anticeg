@@ -75,9 +75,9 @@ const entradaInicial = async (page, valor) => { await page.getByPlaceholder("@ d
 }
 { // 3) com @ preenchido o fluxo continua o de sempre (pedido com @ e e-mail)
   const T = await nova(); const { page, reg } = T; await ir(page);
-  await page.goto("http://localhost:5197/primeiro-acesso", { waitUntil: "networkidle" }); await page.waitForTimeout(500); await page.getByPlaceholder("@ da rede social (sem @)").fill("ana"); await page.getByRole("button", { name: /CONTINUAR/ }).click(); await page.waitForTimeout(900);   // o acesso só com @ agora é pelo Primeiro acesso (a tela inicial exige senha)
+  await page.evaluate(() => { localStorage.setItem("anticeg_user_v2", JSON.stringify({ cog: "ana", nome: "Ana", nome_site: "Ana", foto_perfil: null, confirmado: true, acesso_simples: true, conta_ativa: false, ativacao_liberada: true })); localStorage.setItem("anticeg_session_at_v2", String(Date.now())); }); await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);   // quem já está só com o @ (sem conta) vê a ativação com o @ (o Primeiro acesso agora é o cadastro com senha)
   const modal = page.getByTestId("ativacao-modal");
-  ok(await modal.count() === 1 && await modal.getByLabel("Seu @ cadastrado").inputValue() === "ana", "primeiro acesso pelo @ continua abrindo a ativação com o @");
+  ok(await modal.count() === 1 && await modal.getByLabel("Seu @ cadastrado").inputValue() === "ana", "quem está só com o @ continua vendo a ativação com o @");
   await modal.getByLabel("E-mail do cadastro").fill("ana@exemplo.com"); await modal.getByLabel("Crie sua senha").fill("senha-boa-123"); await modal.getByLabel("Repita a senha").fill("senha-boa-123");
   await modal.getByRole("button", { name: "Enviar código de confirmação" }).click(); await page.waitForTimeout(700);
   ok(reg.pedir.length === 1 && JSON.stringify(reg.pedir[0]) === JSON.stringify({ cog: "ana", email: "ana@exemplo.com" }), "com @: o pedido segue com @ e e-mail");

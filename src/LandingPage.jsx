@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
-import { JOINERS_AUTH_ATIVO, buscarAcessoSimples, carregarDadosPrivados, criarJoinerAuth, solicitarCadastro } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, SENHA_MIN, buscarAcessoSimples, carregarDadosPrivados, criarJoinerAuth, emailValido, mascararEmail, solicitarCadastro, validarSenha } from "./joinerAuth.js";
 import { AtivacaoPorEmail } from "./JoinerAuth.jsx";
 import { chamarPlanilha, mensagemPlanilha } from "./planilhaApi.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -19,6 +19,34 @@ const NIVEIS_RECRUTADOR = [
   { id:"prata",  img:foxinyPrata,  cor:"#C0C0C0", titulo:"RECRUTADOR",    regra:"Recrutou de 1 a 5 membros" },
   { id:"ouro",   img:foxinyOuro,   cor:"#D4AF37", titulo:"EMBAIXADOR",    regra:"Recrutou 6 ou mais membros" },
 ];
+
+// Campo de senha do card, com o "olhinho" (mostrar/ocultar sem enviar o formulário e sem perder o foco)
+function CampoSenhaLp({ value, onChange, placeholder, autoComplete, onKeyDown, rotulo }) {
+  const [ver, setVer] = useState(false);
+  const txt = ver ? "Ocultar senha" : "Mostrar senha";
+  return (
+    <div style={{ position:"relative" }}>
+      <input className="lp-card-input" type={ver ? "text" : "password"} placeholder={placeholder} value={value} onChange={onChange} onKeyDown={onKeyDown}
+        autoComplete={autoComplete} autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-label={rotulo} style={{ paddingRight:46 }} />
+      <button type="button" data-testid="olhinho-senha" aria-label={txt} aria-pressed={ver} title={txt}
+        onMouseDown={e => e.preventDefault()} onClick={() => setVer(v => !v)}
+        style={{ position:"absolute", right:2, top:0, bottom:10, width:42, display:"grid", placeItems:"center", background:"none", border:"none", color:"rgba(245,240,232,.55)", padding:0, cursor:"pointer" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {ver
+            ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
+            : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+const TEXTO_SEM_CODIGO_LP = {
+  entrar: "Você já tem conta, então não enviamos código de ativação. Entre pela tela inicial com o seu @ ou e-mail e a sua senha. Se não lembrar a senha, use “Esqueci minha senha”.",
+  aguardando: "A ativação do seu cadastro ainda não foi liberada. Quando chegar a sua vez, a administração avisa.",
+  comprovar: "Seu cadastro precisa de uma verificação extra antes de liberarmos o código. Fale com a administração pelo WhatsApp: confirmamos que é você, sem perder pedidos nem histórico.",
+  ajuda: "Não conseguimos liberar o código automaticamente para este cadastro. Fale com a administração pelo WhatsApp para resolvermos.",
+};
 
 export default function LandingPage({ onLogin, onVerCegs }) {
   const cursorRef = useRef(null);
@@ -49,6 +77,20 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [cadError,       setCadError]          = useState("");
   const [cadLoading,     setCadLoading]        = useState(false);
   const [cadOk,          setCadOk]             = useState(false);
+  // cadastro/ativação COM SENHA (login novo): dados + senha → código no e-mail → conta ativada e entrada
+  const [cadSenha,       setCadSenha]          = useState("");
+  const [cadRepetir,     setCadRepetir]        = useState("");
+  const [cadFase,        setCadFase]           = useState("dados");   // dados | codigo | sem_codigo | pendente | aguardando
+  const [cadCodigo,      setCadCodigo]         = useState("");
+  const [cadEspera,      setCadEspera]         = useState(0);
+  const [cadReenviado,   setCadReenviado]      = useState(false);
+  const [cadProximo,     setCadProximo]        = useState("");
+
+  useEffect(() => {
+    if (cadEspera <= 0) return undefined;
+    const t = setTimeout(() => setCadEspera(v => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cadEspera]);
 
   useEffect(() => { buscarLinkComunidade().then(setLinkComunidade); }, []);
 
@@ -225,6 +267,74 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     onLogin(joiner, itens || []);
   }
 
+  // 1) valida os dados e a senha, registra o pedido de cadastro (só se for cadastro novo: nome + @ + e-mail) e pede o código ao servidor, que decide se envia e responde sempre do mesmo jeito
+  async function enviarCodigoCadastro() {
+    setCadError("");
+    const nome  = cadNome.trim();
+    const cog   = cadCog.trim().replace(/^@+/, "");
+    const eml   = cadEmail.trim().toLowerCase();
+    const whats = cadWhats.trim();
+    if (!emailValido(eml)) { setCadError("Digite um e-mail válido."); return; }
+    if (nome && !cog) { setCadError("Para cadastro novo, preencha nome, @ e e-mail."); return; }
+    const msgSenha = validarSenha(cadSenha, cadRepetir, { cog, email: eml });
+    if (msgSenha) { setCadError(msgSenha); return; }
+    setCadLoading(true);
+    try {
+      if (nome && cog) {
+        const r = await solicitarCadastro({ nome, cog, email: eml, whatsapp: whats, recrutador: cadRecrutador.trim() });
+        if (!r.ok) {
+          setCadError(r.motivo === "recrutador_invalido" ? "Recrutador não encontrado. Confira o @ ou deixe em branco."
+            : r.motivo === "tente_mais_tarde" ? "Muitos pedidos no momento. Tente de novo mais tarde."
+            : "Confira os dados: nome, @ (letras, números, _ ou .) e e-mail válidos.");
+          setCadLoading(false); return;
+        }
+        // aviso à administração (o servidor confere o pedido recente e usa o destinatário configurado; falha não atrapalha)
+        supabase.functions.invoke("email-evento", { body: { evento: "novo_cadastro", joiner_cog: cog } }).catch(() => {});
+      }
+      const r = await api.pedirCodigo({ cog, email: eml });
+      if (r.erro) { setCadError(r.erro); setCadLoading(false); return; }
+      if (r.proximo) { setCadProximo(r.proximo); setCadFase("sem_codigo"); }
+      else { setCadCodigo(""); setCadEspera(60); setCadReenviado(false); setCadFase("codigo"); }
+    } catch {
+      setCadError("Erro de conexão. Tente novamente.");
+    }
+    setCadLoading(false);
+  }
+
+  async function reenviarCodigoCadastro() {
+    if (cadEspera > 0 || cadLoading) return;
+    setCadError(""); setCadLoading(true);
+    try {
+      const r = await api.pedirCodigo({ cog: cadCog.trim().replace(/^@+/, ""), email: cadEmail.trim().toLowerCase() });
+      if (r.erro) setCadError(r.erro);
+      else if (r.proximo) { setCadProximo(r.proximo); setCadFase("sem_codigo"); }
+      else { setCadEspera(60); setCadReenviado(true); }
+    } catch { setCadError("Erro de conexão. Tente novamente."); }
+    setCadLoading(false);
+  }
+
+  // 2) confere o código, grava a senha e liga a conta ao cadastro (api.confirmar); conta ativada = entra já com a conta completa, sem digitar a senha de novo
+  async function confirmarCodigoCadastro() {
+    setCadError("");
+    setCadLoading(true);
+    try {
+      const r = await api.confirmar({ cog: cadCog.trim().replace(/^@+/, ""), email: cadEmail.trim().toLowerCase(), codigo: cadCodigo, senha: cadSenha });
+      if (r.erro) { setCadError(r.erro); setCadLoading(false); return; }
+      if (r.resultado === "aguardando") { setCadFase("aguardando"); setCadLoading(false); return; }
+      if (r.resultado !== "ok") { setCadFase("pendente"); setCadLoading(false); return; }
+      setCadSenha(""); setCadRepetir(""); setCadCodigo("");
+      // perfil ainda por concluir: o servidor não devolve os dados completos; entra com a identidade mínima e o site pede a conclusão do perfil (a sessão já está aberta)
+      const dados = await carregarDadosPrivados();
+      if (dados) { sairDaPaginaPublica(); onLogin({ ...dados.joiner, acesso_simples: false }, dados.itens); setCadLoading(false); return; }
+      const acesso = await buscarAcessoSimples(r.cog);
+      if (acesso) { sairDaPaginaPublica(); onLogin(acesso, []); setCadLoading(false); return; }
+      setCadError("Conta ativada! Não conseguimos abrir seus dados agora: entre pela tela inicial com o seu @ ou e-mail e a senha.");
+    } catch {
+      setCadError("Erro de conexão. Tente novamente.");
+    }
+    setCadLoading(false);
+  }
+
   async function handlePrimeiroAcesso() {
     setCadLoading(true); setCadError("");
     const nome  = cadNome.trim();
@@ -356,12 +466,98 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     setPrimeiroAcesso(false);
     setCadNome(""); setCadCog(""); setCadEmail(""); setCadWhats(""); setCadRecrutador("");
     setCadError(""); setCadOk(false);
+    setCadSenha(""); setCadRepetir(""); setCadCodigo(""); setCadFase("dados"); setCadProximo(""); setCadEspera(0); setCadReenviado(false);
   }
 
   const voltarStyle = {
     background:"none", border:"none", color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace",
     fontSize:11, cursor:"pointer", marginTop:4, textAlign:"center", width:"100%"
   };
+
+  // Primeiro acesso COM SENHA (login novo): dados + senha → código no e-mail → conta ativada e entrada
+  function renderCadastroSenha() {
+    const mono = "'DM Mono',monospace";
+    const txt = { fontSize:11, color:"rgba(245,240,232,.45)", fontFamily:mono, lineHeight:1.6, marginBottom:12 };
+    const emailDigitado = cadEmail.trim().toLowerCase();
+    if (cadFase === "codigo") return (
+      <>
+        <div className="lp-card-label">// confirme o seu e-mail</div>
+        <div style={txt}>E-mail informado: <b data-testid="cad-email-mascarado" style={{ color:"#F5F0E8" }}>{mascararEmail(emailDigitado)}</b></div>
+        <div style={txt} data-testid="cad-texto-codigo">Se os dados informados corresponderem a um cadastro liberado para ativação, você receberá um código nesse e-mail.</div>
+        <input className="lp-card-input" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={10} placeholder="000000" aria-label="Código de confirmação"
+          style={{ letterSpacing:6, textAlign:"center", fontSize:20 }} value={cadCodigo} autoFocus
+          onChange={e => { setCadCodigo(e.target.value); setCadError(""); }}
+          onKeyDown={e => e.key === "Enter" && confirmarCodigoCadastro()} />
+        {cadError && <div className="lp-card-error">{cadError}</div>}
+        {cadReenviado && <div style={{ ...txt, color:"#BAFF39", marginBottom:8 }} data-testid="cad-reenviado">Pedimos outro código. Se os dados corresponderem a um cadastro liberado para ativação, ele chega nesse e-mail.</div>}
+        <button className="lp-card-btn" onClick={confirmarCodigoCadastro} disabled={cadLoading}>{cadLoading ? "..." : "CONFIRMAR CÓDIGO →"}</button>
+        <div style={{ ...txt, marginTop:12, marginBottom:4 }}>Confira também Spam ou Lixo Eletrônico. Se pedir outro código, use o mais recente.</div>
+        <button type="button" onClick={reenviarCodigoCadastro} disabled={cadEspera > 0 || cadLoading} style={{ ...voltarStyle, opacity: cadEspera > 0 || cadLoading ? .5 : 1 }}>
+          {cadEspera > 0 ? `Reenviar código em ${cadEspera}s` : "Reenviar código"}
+        </button>
+        <button type="button" onClick={() => { setCadError(""); setCadFase("dados"); }} style={voltarStyle}>← corrigir dados</button>
+      </>
+    );
+    if (cadFase === "sem_codigo") return (
+      <>
+        <div className="lp-card-label">// nenhum código foi enviado</div>
+        <div style={txt} data-testid="cad-sem-codigo-texto">{TEXTO_SEM_CODIGO_LP[cadProximo] || TEXTO_SEM_CODIGO_LP.ajuda}</div>
+        {cadProximo === "entrar"
+          ? <button className="lp-card-btn" onClick={resetPrimeiroAcesso}>ENTRAR →</button>
+          : <a className="lp-card-btn" style={{ textAlign:"center", textDecoration:"none", boxSizing:"border-box" }} href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer">FALAR COM A ADMIN →</a>}
+        <button type="button" onClick={() => { setCadError(""); setCadFase("dados"); }} style={voltarStyle}>← corrigir dados</button>
+      </>
+    );
+    if (cadFase === "pendente" || cadFase === "aguardando") return (
+      <>
+        <div className="lp-card-label">{cadFase === "aguardando" ? "// ativação em breve" : "// falta só uma conferência"}</div>
+        <div style={txt} data-testid="cad-fase-texto">
+          {cadFase === "aguardando"
+            ? "Estamos liberando a criação de senha aos poucos, em grupos. Quando chegar a sua vez a administração avisa. Seus pedidos e histórico continuam guardados no seu @."
+            : "Seu e-mail foi confirmado, mas não conseguimos ligar a conta ao seu cadastro automaticamente. Nada se perdeu: seu @, pedidos e histórico continuam guardados. Fale com a administração para regularizar."}
+        </div>
+        <a className="lp-card-btn" style={{ textAlign:"center", textDecoration:"none", boxSizing:"border-box" }} href={`https://wa.me/${WA}`} target="_blank" rel="noopener noreferrer">FALAR COM A ADMIN →</a>
+        <button type="button" onClick={resetPrimeiroAcesso} style={voltarStyle}>← voltar</button>
+      </>
+    );
+    return (
+      <>
+        <div className="lp-card-label">// primeiro acesso</div>
+        {modoConvite && <a href={linkComunidade} target="_blank" rel="noopener noreferrer"
+          style={{ display:"block", textAlign:"center", textDecoration:"none", marginBottom:14, padding:"11px 12px", borderRadius:6, background:"rgba(37,211,102,.12)", border:"1px solid rgba(37,211,102,.35)", color:"#25d366", fontFamily:mono, fontSize:11, fontWeight:700, letterSpacing:".5px" }}>
+          1 · Entrar na comunidade (WhatsApp) →
+        </a>}
+        <div style={txt} data-testid="cad-intro">
+          {modoConvite && "2 · "}Crie sua senha para acessar seus pedidos e pagamentos. Seu histórico continua no mesmo cadastro. Cadastro novo? Preencha também o nome. Enviamos um código de confirmação para o seu e-mail.
+        </div>
+        <input className="lp-card-input" type="text" placeholder="nome para a claim (cadastro novo)" aria-label="Nome" value={cadNome} autoComplete="name"
+          onChange={e => { setCadNome(e.target.value); setCadError(""); }} autoFocus />
+        <input className="lp-card-input" type="text" placeholder="@ da rede social (sem @)" aria-label="Seu @" value={cadCog} autoComplete="username" autoCapitalize="none"
+          onChange={e => { setCadCog(e.target.value); setCadError(""); }} />
+        <input className="lp-card-input" type="email" placeholder="e-mail" aria-label="E-mail" value={cadEmail} autoComplete="email"
+          onChange={e => { setCadEmail(e.target.value); setCadError(""); }} />
+        <input className="lp-card-input" type="text" placeholder="whatsapp (pra te localizar nas claims)" aria-label="WhatsApp" value={cadWhats}
+          onChange={e => { setCadWhats(e.target.value); setCadError(""); }} />
+        <input className="lp-card-input" type="text" placeholder={modoConvite ? "@ de quem te indicou" : "@ de quem te indicou (opcional)"} aria-label="Quem te indicou" value={cadRecrutador}
+          onChange={e => { setCadRecrutador(e.target.value); setCadError(""); }} />
+        {recStatus && (
+          <div style={{ fontSize:11, fontFamily:mono, marginTop:-4, marginBottom:10, lineHeight:1.5,
+            color: recStatus === "buscando" ? "rgba(245,240,232,.4)" : recStatus.ok ? "#BAFF39" : "#ff6b6b" }}>
+            {recStatus === "buscando" ? "buscando..."
+              : recStatus.ok ? `✓ Recrutador confirmado: @${recStatus.cog}${recStatus.nome && recStatus.nome !== recStatus.cog ? ` · ${recStatus.nome}` : ""}`
+              : "✕ Recrutador não encontrado. Confira o @."}
+          </div>
+        )}
+        <CampoSenhaLp value={cadSenha} onChange={e => { setCadSenha(e.target.value); setCadError(""); }} placeholder={`crie uma senha (mínimo ${SENHA_MIN} caracteres)`} autoComplete="new-password" rotulo="Crie sua senha" />
+        <CampoSenhaLp value={cadRepetir} onChange={e => { setCadRepetir(e.target.value); setCadError(""); }} placeholder="repita a senha" autoComplete="new-password" rotulo="Repita a senha"
+          onKeyDown={e => e.key === "Enter" && enviarCodigoCadastro()} />
+        {cadError && <div className="lp-card-error">{cadError}</div>}
+        <button className="lp-card-btn" onClick={enviarCodigoCadastro} disabled={cadLoading}>{cadLoading ? "..." : "ENVIAR CÓDIGO DE CONFIRMAÇÃO →"}</button>
+        <button type="button" onClick={resetPrimeiroAcesso} style={voltarStyle} data-testid="cad-ja-tenho-conta">Já tenho conta? Entrar</button>
+        <button type="button" onClick={resetPrimeiroAcesso} style={voltarStyle}>← voltar</button>
+      </>
+    );
+  }
 
   function renderCard() {
     if (pendingJoiner) return (
@@ -384,6 +580,8 @@ export default function LandingPage({ onLogin, onVerCegs }) {
         <button onClick={() => { setPendingJoiner(null); setSenha(""); setError(""); }} style={voltarStyle}>← voltar</button>
       </>
     );
+
+    if (primeiroAcesso && JOINERS_AUTH_ATIVO) return renderCadastroSenha();
 
     if (primeiroAcesso) return (
       <>

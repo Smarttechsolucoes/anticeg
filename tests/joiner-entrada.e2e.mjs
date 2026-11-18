@@ -58,8 +58,9 @@ const tocouPrivada = tabs => tabs.filter(x => PRIVADAS.some(tb => x.split(" ")[1
 const corpo = page => page.locator("body").innerText();
 const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(valor); await page.getByRole("button", { name: /ENTRAR/ }).first().click(); await page.waitForTimeout(1000); };
 
-// acesso só com @ (identidade mínima): pelo "Primeiro acesso", que não pede senha e não carrega nenhum dado privado
-const entrarSimples = async (page, cog) => { await page.goto("http://localhost:5197/primeiro-acesso", { waitUntil: "networkidle" }); await page.waitForTimeout(500); await page.getByPlaceholder("@ da rede social (sem @)").fill(cog); await page.getByRole("button", { name: /CONTINUAR/ }).click(); await page.waitForTimeout(1000); };
+// acesso só com @ (identidade mínima): o "Primeiro acesso" agora é o cadastro COM senha (ver joiner-primeiro-acesso-senha.e2e.mjs); o estado "só com @" continua existindo
+// (identidade já guardada no aparelho, sem conta/senha), e é ele que estes testes exercitam, guardando a identidade mínima que o servidor devolvia (cog, nome do site, foto)
+const entrarSimples = async (page, cog) => { await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.evaluate(c => { localStorage.setItem("anticeg_user_v2", JSON.stringify({ cog: c.replace(/^@+/, "").toLowerCase(), nome: "Ana", nome_site: "Ana", foto_perfil: null, confirmado: true, acesso_simples: true, conta_ativa: true, ativacao_liberada: true })); localStorage.setItem("anticeg_session_at_v2", String(Date.now())); }, cog); await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1000); };
 // acesso rápido da página inicial: @ OU e-mail + senha
 const entrarComSenha = async (page, id, senha) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(id); if (senha !== null) await page.getByPlaceholder("senha", { exact: true }).fill(senha); await page.getByRole("button", { name: /ENTRAR/ }).first().click(); await page.waitForTimeout(1200); };
 
@@ -80,10 +81,10 @@ const entrarComSenha = async (page, id, senha) => { await page.getByPlaceholder(
   await page.getByPlaceholder("@ da rede social ou e-mail").fill("ana@exemplo.com"); await page.getByRole("button", { name: /Primeiro acesso/ }).click(); await page.waitForTimeout(500);
   ok(await page.getByTestId("ativacao-modal").count() === 1 && reg.rpc.length === 0 && tocouPrivada(reg.tabelas).length === 0, "e-mail digitado + 'Primeiro acesso' NÃO vira acesso simples: abre a ativação pelo e-mail e nenhuma tabela privada é consultada");
   await page.getByTestId("fechar-acesso").first().click(); await page.waitForTimeout(500);
-  await entrarSimples(page, "naoexiste");
-  ok((await corpo(page)).includes("Acesso não encontrado"), "@ inexistente: 'Acesso não encontrado' (mesma resposta de sempre)");
+  await page.goto("http://localhost:5197/primeiro-acesso", { waitUntil: "networkidle" }); await page.waitForTimeout(500);
+  ok(await page.getByLabel("Crie sua senha").count() === 1 && await page.getByRole("button", { name: /CONTINUAR/ }).count() === 0, "o Primeiro acesso não entra mais só com o @: pede a criação da senha");
+  reg.rpc.length = 0; reg.tabelas.length = 0;
   await entrarSimples(page, "@Ana");
-  ok(reg.rpc.some(r => r.startsWith("entrar_com_arroba")), "o @ é conferido pela função segura do servidor");
   ok(tocouPrivada(reg.tabelas).length === 0, "ACESSO SIMPLES: NENHUMA tabela privada é lida ou gravada (joiners, masterlist, pagamentos, multas, notificações, avisos...): " + JSON.stringify(tocouPrivada(reg.tabelas)));
   const guardado = JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "{}");
   ok(guardado.cog === "ana" && !("email" in guardado) && !("cpf" in guardado) && !("rua" in guardado), "o navegador guarda só a identidade mínima (sem e-mail, CPF ou endereço)");
