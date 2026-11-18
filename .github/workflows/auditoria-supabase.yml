@@ -138,6 +138,7 @@ jobs:
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          IDS_ALVO: '18180,18376'
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Consulta por pessoa (somente leitura)

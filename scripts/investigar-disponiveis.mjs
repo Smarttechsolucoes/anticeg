@@ -23,3 +23,22 @@ const pagos = outros.filter(o => o.b.some(m => m.pago_item || m.pago_frete || m.
 console.log(`dos que têm OUTRO dono no banco: ${outros.length} · com pagamento registrado: ${pagos.length}`);
 for (const o of outros) for (const m of o.b) console.log(`  #${m.id} [${o.cod}] ${m.ceg} | ${m.nome_do_item} | valor ${Number(m.valor_item).toFixed(2)} | status "${n(m.status)}" | pago ${m.pago_item ? 'I' : '-'}${m.pago_frete ? 'F' : '-'}${m.pago_rf ? 'R' : '-'}`);
 console.log(`banco: ${ml.filter(m => semAcento(m.cog) === 'disponivel').length} linhas com dono "disponivel"`);
+
+// ── formato das linhas "disponivel" no banco (colunas e valores mais comuns; essas linhas não têm dono, logo não há dado pessoal) + estado dos alvos (só vazio/preenchido)
+if (process.env.IDS_ALVO) {
+  const todas = await ler('masterlist', '*');
+  const dispo = todas.filter(m => semAcento(m.cog) === 'disponivel');
+  const colunas = Object.keys(todas[0]);
+  console.log(`\ncolunas da masterlist (${colunas.length}): ${colunas.join(', ')}`);
+  console.log(`linhas "disponivel": ${dispo.length}`);
+  for (const c of colunas) {
+    if (['id', 'created_at', 'updated_at'].includes(c)) continue;
+    const cnt = new Map(); for (const m of dispo) { const v = JSON.stringify(m[c] ?? null); cnt.set(v, (cnt.get(v) || 0) + 1); }
+    const top = [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([v, k]) => `${v.length > 40 ? v.slice(0, 40) + '…' : v}×${k}`);
+    console.log(`  ${c}: ${top.join(' | ')}${cnt.size > 3 ? ` (+${cnt.size - 3} outros)` : ''}`);
+  }
+  for (const id of process.env.IDS_ALVO.split(',').map(Number)) {
+    const m = todas.find(x => x.id === id); if (!m) { console.log(`\n#${id}: não existe`); continue; }
+    console.log(`\n#${id} (campos de identificação: vazio/preenchido): ` + colunas.filter(c => /nome$|^nome|email|twitter|cog|cpf|telefone|endereco|insta|joiner/i.test(c) && !/nome_do_item/.test(c)).map(c => `${c}=${m[c] == null || n(m[c]) === '' ? 'vazio' : 'preenchido'}`).join(', '));
+  }
+}
