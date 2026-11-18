@@ -9,14 +9,14 @@ on:
       acao:
         description: 'Qual correção'
         type: choice
-        options: [todas, email, demandas, registrar-aplicadas, verificar-registro, reverter, arquivar-copias, sync-indevido, arquivar-pares]
+        options: [todas, email, demandas, registrar-aplicadas, verificar-registro, reverter, arquivar-copias, sync-indevido, arquivar-pares, liberar-itens]
         default: todas
       aplicar:
         description: 'GRAVAR de verdade (desmarcado = ensaio, não grava)'
         type: boolean
         default: false
       ids:
-        description: 'Só para a ação arquivar-copias: ids das linhas da masterlist (até 10, separados por vírgula). Cada uma é reprovada na hora; só arquiva cópia provada e livre'
+        description: 'Para as ações arquivar-copias e liberar-itens: ids das linhas da masterlist (até 10, separados por vírgula). Cada uma é reprovada na hora; só arquiva cópia provada e livre'
         type: string
         default: ''
       pares:

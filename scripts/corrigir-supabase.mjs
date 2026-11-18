@@ -1,6 +1,6 @@
 // CORREÇÕES PONTUAIS no Supabase, com ENSAIO por padrão. Só grava com APLICAR=1. Cada ação confere o estado ATUAL imediatamente antes de gravar e só mexe nos casos inequívocos; o resto fica como está, com o motivo.
 // O log do GitHub é PÚBLICO: só contagens, ids de linha/cadastro/demanda, códigos de item, CEG e nomes de produto. Nunca @, e-mail, nome de pessoa, CPF ou endereço.
-// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido | arquivar-pares (PARES=dup:preservada,...).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
+// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido | arquivar-pares (PARES=dup:preservada,...) | liberar-itens (IDS=...: passa para "disponível" linhas que a planilha marca sem dono).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
 // ANTES de gravar qualquer correção, o plano com os valores anteriores vai para um registro PRIVADO e durável (bucket privado do Supabase; ver registro-privado.mjs). Se o registro não puder ser gravado e conferido, NADA é gravado no banco.
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
@@ -515,8 +515,75 @@ async function arquivarPares() {
   catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
 }
 
+// ───────── I) liberar itens: a PLANILHA marca o item como "disponível" (sem dono) e o banco ainda o mantém com um dono. Passa a linha para "disponível" (cog e nome), o mesmo formato das demais linhas sem dono. Nada é apagado.
+async function liberarItens() {
+  secao('I) liberar itens que a planilha marca como "disponível" (IDS explícitos), cada um reprovado na hora');
+  const ids = String(process.env.IDS || '').split(/[,\s]+/).filter(Boolean).map(Number);
+  if (!ids.length || ids.some(x => !Number.isInteger(x))) { console.log('  informe IDS=id,id,...'); falhas++; return; }
+  if (ids.length > 10) { console.log('  mais de 10 ids: recusado'); falhas++; return; }
+  const ml = await ler('masterlist', '*');
+  const dem = await ler('pagamento_demandas', 'id, itens'), rep = await ler('repassos', 'id, item_id');
+  const env = await ler('envio_solicitacoes', 'id, itens'), loj = await ler('lojinha_repasses', 'id, masterlist_id');
+  if (!ml || !dem || !rep || !env || !loj) { console.log('  leitura incompleta: nada feito'); falhas++; return; }
+  const semAcento = v => n(v).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const norm = t => String(t).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const resp = await fetch('https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995');
+  if (!resp.ok) { console.log('  não consegui ler a planilha'); falhas++; return; }
+  const linhasCsv = (await resp.text()).replace(/^﻿/, '').split('\n'); const hIdx = linhasCsv.findIndex(l => l.includes('ABA'));
+  if (hIdx === -1) { console.log('  cabeçalho da planilha não encontrado'); falhas++; return; }
+  const records = parse(linhasCsv.slice(hIdx).join('\n'), { columns: true, skip_empty_lines: true });
+  const colMap = {}; Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
+  const col = (r, nm) => r[colMap[norm(nm)]] ?? '';
+  const rows = records.filter(r => n(col(r, 'ABA / CEG')) && n(col(r, 'NOME DO ITEM')));
+  const idsEm = itens => (Array.isArray(itens) ? itens : []).map(e => (e && typeof e === 'object') ? String(e.id ?? e.item_id ?? e.masterlist_id ?? '') : String(e ?? '')).filter(Boolean);
+  const refs = id => { const k = String(id); return [dem.some(x => idsEm(x.itens).includes(k)) && 'demanda', rep.some(x => String(x.item_id) === k) && 'repasse', env.some(x => idsEm(x.itens).includes(k)) && 'envio', loj.some(x => String(x.masterlist_id) === k) && 'loja-repasse'].filter(Boolean); };
+  const pago = x => !!(x.pago_item || x.pago_frete || x.pago_rf);
+  const LIVRE = 'disponível';
+  const por = new Map(ml.map(m => [m.id, m]));
+  const plano = [], recusadas = [];
+  for (const id of ids) {
+    const m = por.get(id); const recusa = t => recusadas.push({ id, motivo: t });
+    if (!m) { recusa('a linha não existe'); continue; }
+    if (semAcento(m.cog) === 'disponivel') { recusa('já está disponível'); continue; }
+    const cod = n(m.id_linha); if (!cod) { recusa('a linha não tem código'); continue; }
+    const doCod = rows.filter(r => n(col(r, 'ID')) === cod);
+    if (!doCod.length) { recusa('o código não existe na planilha'); continue; }
+    if (!doCod.every(r => semAcento(col(r, '@')) === 'disponivel' && semAcento(col(r, 'NOME')) === 'disponivel')) { recusa('a planilha tem este código com dono (não é "disponível" em todas as linhas)'); continue; }
+    if (pago(m)) { recusa('tem pagamento registrado'); continue; }
+    const { data: mot, error: eM } = await sb.rpc('masterlist_motivos_protecao', { p_id: id });
+    if (eM || (mot && mot.length)) { recusa('protegida: ' + (eM?.message || mot.join(','))); continue; }
+    const rf = refs(id); if (rf.length) { recusa('tem referência: ' + rf.join(',')); continue; }
+    plano.push({ id, codigo: cod, ceg: m.ceg, item: m.nome_do_item, valor: Number(m.valor_item || 0), status: m.status, cog_antes: m.cog, nome_antes: m.nome, linhas_planilha: doCod.length, outras_no_banco: ml.filter(x => n(x.id_linha) === cod && x.id !== id).length });
+  }
+  linha('ids informados', ids.length); linha('aprovados', plano.length);
+  plano.forEach(p => console.log(`  liberar #${p.id} [${p.codigo}] | ${p.ceg} | ${p.item} | valor ${p.valor.toFixed(2)} | status "${n(p.status)}" | planilha: ${p.linhas_planilha} linha(s) "disponível" · outras linhas do banco com o mesmo código: ${p.outras_no_banco}`));
+  recusadas.forEach(r => console.log(`  RECUSADO #${r.id}: ${r.motivo}`));
+  if (!plano.length) return;
+  if (!APLICAR) { console.log('  ENSAIO: nada foi gravado.'); return; }
+  const alteracoes = plano.flatMap(p => [
+    { tipo: 'campo_masterlist', masterlist_id: p.id, campo: 'cog', antes: p.cog_antes, depois: LIVRE, codigo: p.codigo },
+    { tipo: 'campo_masterlist', masterlist_id: p.id, campo: 'nome', antes: p.nome_antes, depois: LIVRE, codigo: p.codigo }]);
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_liberar_itens_plano.json`, { versao: 1, tipo: 'correcao_liberar_itens', run: RUN, quando: new Date().toISOString(), alteracoes, recusadas }); console.log(`  registro privado do plano gravado e conferido: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO: ' + e.message + ' — NADA foi gravado'); falhas++; return; }
+  for (const p of plano) {
+    const { error } = await sb.from('masterlist').update({ cog: LIVRE, nome: LIVRE }).eq('id', p.id).eq('cog', p.cog_antes).eq('nome', p.nome_antes).eq('pago_item', false).eq('pago_frete', false).eq('pago_rf', false);
+    if (error) { console.log(`  #${p.id}: ERRO ${error.message}`); falhas++; }
+  }
+  const { data: depois } = await sb.from('masterlist').select('*').in('id', plano.map(p => p.id));
+  for (const p of plano) {
+    const d = (depois || []).find(x => x.id === p.id);
+    const ok = !!d && d.cog === LIVRE && d.nome === LIVRE && String(d.id_linha) === p.codigo && Number(d.valor_item || 0) === p.valor && String(d.status ?? '') === String(p.status ?? '') && !pago(d);
+    for (const a of alteracoes.filter(x => x.masterlist_id === p.id)) a.resultado = ok ? 'aplicado' : 'nao_confirmado';
+    console.log(`  #${p.id}: ${ok ? 'aplicado (dono agora "disponível"; código, valor e status intactos)' : 'NÃO CONFIRMADO'}`);
+    if (!ok) falhas++;
+  }
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_liberar_itens_resultado.json`, { versao: 1, tipo: 'resultado_liberar_itens', run: RUN, plano: `correcoes/${STAMP}_liberar_itens_plano.json`, quando: new Date().toISOString(), alteracoes }); console.log(`  registro privado do RESULTADO: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
 if (ACAO === 'arquivar-pares') await arquivarPares();
+if (ACAO === 'liberar-itens') await liberarItens();
 if (ACAO === 'sync-indevido') await corrigirSyncIndevido();
 if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();
