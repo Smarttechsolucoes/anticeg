@@ -39,7 +39,7 @@ async function nova(cen = {}) {
   return { browser, page, reg, erros };
 }
 const ir = async (page, caminho = "/") => { await page.goto(`http://localhost:${PORTA}${caminho}`, { waitUntil: "networkidle" }); await page.waitForTimeout(900); };
-const entradaInicial = async (page, valor) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(valor); await page.getByRole("button", { name: /ENTRAR/ }).click(); await page.waitForTimeout(700); };
+const entradaInicial = async (page, valor) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(valor); await page.getByRole("button", { name: /Primeiro acesso/ }).click(); await page.waitForTimeout(700); };
 
 { // 1) entrada inicial pelo E-MAIL: abre a ativação com o e-mail já preenchido e o @ em branco; o pedido vai SÓ com o e-mail
   const T = await nova(); const { page, reg } = T; await ir(page);
@@ -75,9 +75,9 @@ const entradaInicial = async (page, valor) => { await page.getByPlaceholder("@ d
 }
 { // 3) com @ preenchido o fluxo continua o de sempre (pedido com @ e e-mail)
   const T = await nova(); const { page, reg } = T; await ir(page);
-  await entradaInicial(page, "ana");
+  await page.goto("http://localhost:5197/primeiro-acesso", { waitUntil: "networkidle" }); await page.waitForTimeout(500); await page.getByPlaceholder("@ da rede social (sem @)").fill("ana"); await page.getByRole("button", { name: /CONTINUAR/ }).click(); await page.waitForTimeout(900);   // o acesso só com @ agora é pelo Primeiro acesso (a tela inicial exige senha)
   const modal = page.getByTestId("ativacao-modal");
-  ok(await modal.count() === 1 && await modal.getByLabel("Seu @ cadastrado").inputValue() === "ana", "entrada pelo @ continua abrindo a ativação com o @");
+  ok(await modal.count() === 1 && await modal.getByLabel("Seu @ cadastrado").inputValue() === "ana", "primeiro acesso pelo @ continua abrindo a ativação com o @");
   await modal.getByLabel("E-mail do cadastro").fill("ana@exemplo.com"); await modal.getByLabel("Crie sua senha").fill("senha-boa-123"); await modal.getByLabel("Repita a senha").fill("senha-boa-123");
   await modal.getByRole("button", { name: "Enviar código de confirmação" }).click(); await page.waitForTimeout(700);
   ok(reg.pedir.length === 1 && JSON.stringify(reg.pedir[0]) === JSON.stringify({ cog: "ana", email: "ana@exemplo.com" }), "com @: o pedido segue com @ e e-mail");

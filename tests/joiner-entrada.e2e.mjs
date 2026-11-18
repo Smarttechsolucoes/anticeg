@@ -58,6 +58,11 @@ const tocouPrivada = tabs => tabs.filter(x => PRIVADAS.some(tb => x.split(" ")[1
 const corpo = page => page.locator("body").innerText();
 const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(valor); await page.getByRole("button", { name: /ENTRAR/ }).first().click(); await page.waitForTimeout(1000); };
 
+// acesso só com @ (identidade mínima): pelo "Primeiro acesso", que não pede senha e não carrega nenhum dado privado
+const entrarSimples = async (page, cog) => { await page.goto("http://localhost:5197/primeiro-acesso", { waitUntil: "networkidle" }); await page.waitForTimeout(500); await page.getByPlaceholder("@ da rede social (sem @)").fill(cog); await page.getByRole("button", { name: /CONTINUAR/ }).click(); await page.waitForTimeout(1000); };
+// acesso rápido da página inicial: @ OU e-mail + senha
+const entrarComSenha = async (page, id, senha) => { await page.getByPlaceholder("@ da rede social ou e-mail").fill(id); if (senha !== null) await page.getByPlaceholder("senha", { exact: true }).fill(senha); await page.getByRole("button", { name: /ENTRAR/ }).first().click(); await page.waitForTimeout(1200); };
+
 // ── recurso DESLIGADO (5199): o login continua como hoje (lê a joiner pelo banco) ─────────────
 {
   const T = await nova(5199);
@@ -71,12 +76,13 @@ const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede s
 {
   const T = await nova(5197); const { page, reg, erros } = T;
   await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.waitForTimeout(500);
-  await entrar(page, "ana@exemplo.com");
-  ok(await page.getByTestId("ativacao-modal").count() === 1 && reg.rpc.length === 0 && tocouPrivada(reg.tabelas).length === 0, "e-mail na entrada NÃO vira acesso simples: abre a ativação pelo e-mail e nenhuma tabela privada é consultada");
+  // o ACESSO RÁPIDO da página inicial exige senha (ver bloco abaixo); o acesso só com @ continua existindo no "Primeiro acesso" (identidade mínima, sem dado privado)
+  await page.getByPlaceholder("@ da rede social ou e-mail").fill("ana@exemplo.com"); await page.getByRole("button", { name: /Primeiro acesso/ }).click(); await page.waitForTimeout(500);
+  ok(await page.getByTestId("ativacao-modal").count() === 1 && reg.rpc.length === 0 && tocouPrivada(reg.tabelas).length === 0, "e-mail digitado + 'Primeiro acesso' NÃO vira acesso simples: abre a ativação pelo e-mail e nenhuma tabela privada é consultada");
   await page.getByTestId("fechar-acesso").first().click(); await page.waitForTimeout(500);
-  await entrar(page, "naoexiste");
+  await entrarSimples(page, "naoexiste");
   ok((await corpo(page)).includes("Acesso não encontrado"), "@ inexistente: 'Acesso não encontrado' (mesma resposta de sempre)");
-  await entrar(page, "@Ana");
+  await entrarSimples(page, "@Ana");
   ok(reg.rpc.some(r => r.startsWith("entrar_com_arroba")), "o @ é conferido pela função segura do servidor");
   ok(tocouPrivada(reg.tabelas).length === 0, "ACESSO SIMPLES: NENHUMA tabela privada é lida ou gravada (joiners, masterlist, pagamentos, multas, notificações, avisos...): " + JSON.stringify(tocouPrivada(reg.tabelas)));
   const guardado = JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "{}");
@@ -96,11 +102,47 @@ const entrar = async (page, valor) => { await page.getByPlaceholder("@ da rede s
   await T.browser.close();
 }
 
+// ── ACESSO RÁPIDO COM SENHA (página inicial, recurso LIGADO): @ OU e-mail + senha, sempre ─────────────
+{
+  const T = await nova(5197); const { page, reg, erros } = T;
+  const inicio = async () => { await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.waitForTimeout(500); reg.rpc.length = 0; reg.tabelas.length = 0; reg.loginFn.length = 0; };
+  await inicio();
+  ok(await page.getByPlaceholder("senha", { exact: true }).count() === 1 && await page.getByPlaceholder("@ da rede social ou e-mail").count() === 1, "a página inicial mostra @/e-mail e senha no acesso rápido");
+  await entrarComSenha(page, "@ana", null);
+  ok((await corpo(page)).includes("Digite sua senha") && reg.loginFn.length === 0 && reg.rpc.length === 0 && tocouPrivada(reg.tabelas).length === 0, "sem senha: não entra, não consulta o servidor e nenhuma tabela privada é lida");
+  await entrarComSenha(page, "ana@exemplo.com", "");
+  ok((await corpo(page)).includes("Digite sua senha") && reg.loginFn.length === 0, "e-mail sem senha: também não entra");
+  await entrarComSenha(page, "@ana", "errada");
+  ok(reg.loginFn.length === 1 && reg.loginFn[0].cog === "ana" && reg.loginFn[0].senha === "errada" && (await corpo(page)).includes("incorretos") && !reg.rpc.some(r => r.startsWith("meus_dados")) && tocouPrivada(reg.tabelas).length === 0, "@ + senha errada: recusa, sem dado privado");
+  ok(!JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "null"), "senha errada: nenhuma identidade fica guardada no navegador");
+  await inicio();
+  await entrarComSenha(page, "naoexiste", "senha-boa-123");
+  ok((await corpo(page)).includes("incorretos") && !reg.rpc.some(r => r.startsWith("meus_dados")), "@ inexistente + senha: mesma recusa genérica (não revela se o @ existe)");
+  await inicio();
+  await entrarComSenha(page, "ana@exemplo.com", "senha-boa-123");
+  ok(reg.loginFn.length === 1 && reg.loginFn[0].email === "ana@exemplo.com" && !("cog" in reg.loginFn[0]), "e-mail + senha certa: login pelo e-mail");
+  const porEmail = JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "{}");
+  ok(porEmail.cog === "ana" && porEmail.acesso_simples === false && reg.rpc.some(r => r.startsWith("meus_dados")) && reg.tabelas.some(t => t.includes("masterlist")), "e-mail + senha: entra com a conta completa e só então lê os dados e itens da própria pessoa");
+  await page.evaluate(() => { localStorage.removeItem("anticeg_user_v2"); }); await inicio();
+  await entrarComSenha(page, "@Ana", "senha-boa-123");
+  ok(reg.loginFn.length === 1 && reg.loginFn[0].cog === "ana", "@ + senha certa: login pelo @ (com ou sem '@' e maiúsculas)");
+  const porArroba = JSON.parse(await page.evaluate(() => localStorage.getItem("anticeg_user_v2")) || "{}");
+  ok(porArroba.cog === "ana" && porArroba.acesso_simples === false && porArroba.email === "ana@exemplo.com", "@ + senha: entra com a conta completa");
+  ok(!reg.rpc.some(r => r.startsWith("entrar_com_arroba")), "o acesso rápido não usa mais o acesso sem senha");
+  // esqueci minha senha: resposta neutra e nenhum dado privado
+  await page.evaluate(() => { localStorage.removeItem("anticeg_user_v2"); }); await inicio();
+  await page.getByRole("button", { name: "Esqueci minha senha" }).click(); await page.waitForTimeout(500);
+  ok((await corpo(page)).includes("Digite seu @ ou e-mail acima"), "esqueci minha senha sem @/e-mail: pede para digitar");
+  await page.getByPlaceholder("@ da rede social ou e-mail").fill("ana@exemplo.com"); await page.getByRole("button", { name: "Esqueci minha senha" }).click(); await page.waitForTimeout(800);
+  ok((await corpo(page)).includes("Se existir uma conta ativada") && tocouPrivada(reg.tabelas).length === 0, "esqueci minha senha: resposta neutra (não revela se existe conta)");
+  ok(erros.length === 0, "acesso rápido: nenhum erro de JavaScript" + (erros.length ? ": " + erros[0] : ""));
+  await T.browser.close();
+}
+
 // ── MODO LIMITADO (só com @): percorre TODAS as áreas protegidas e as públicas e confirma que nenhuma lê ou grava tabela privada ─────────
 {
   const T = await nova(5197); const { page, reg, erros } = T;
-  await page.goto("http://localhost:5197/", { waitUntil: "networkidle" }); await page.waitForTimeout(500);
-  await entrar(page, "@Ana");
+  await entrarSimples(page, "@Ana");
   const protegidas = ["masterlist", "perfil", "envio", "disponiveis", "claims", "prevenda", "wave-maker", "run-it-vol-2", "paper-tales", "odd-fresh", "promo-13", "mercari"];
   for (const slug of protegidas) {
     reg.tabelas.length = 0;
