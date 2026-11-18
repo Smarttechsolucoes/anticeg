@@ -42,6 +42,10 @@ on:
         description: 'Marca da pessoa (8 hex do sha256 do @ em minúsculas, sem @) para consultar o que ela tem na planilha x banco (somente leitura; o log só traz marcas). Vazio = não roda'
         type: string
         default: ''
+      disponiveis:
+        description: 'Como o banco trata as linhas que a planilha marca como disponivel (somente leitura; só contagens e ids)'
+        type: boolean
+        default: false
       controlado:
         description: 'Na SIMULAÇÃO, usar as mesmas proteções do sync controlado (sem exclusões, dono e pagamento protegidos, cadastros: nenhum). Só afeta o que a simulação mostra; nada é gravado'
         type: boolean
