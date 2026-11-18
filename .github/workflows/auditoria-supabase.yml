@@ -46,6 +46,10 @@ on:
         description: 'Como o banco trata as linhas que a planilha marca como disponivel (somente leitura; só contagens e ids)'
         type: boolean
         default: false
+      excedentes:
+        description: 'Ids (separados por vírgula) das linhas sem par na planilha para CLASSIFICAR uma a uma (par provado, referências, pagamento; somente leitura). Vazio = não roda'
+        type: string
+        default: ''
       controlado:
         description: 'Na SIMULAÇÃO, usar as mesmas proteções do sync controlado (sem exclusões, dono e pagamento protegidos, cadastros: nenhum). Só afeta o que a simulação mostra; nada é gravado'
         type: boolean
@@ -158,6 +162,15 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           IDS: ${{ inputs.candidatas }}
+
+      - name: Classificar excedentes (somente leitura)
+        if: ${{ inputs.excedentes != '' }}
+        run: node classificar-excedentes.mjs
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IDS: ${{ inputs.excedentes }}
 
       - name: Simulação do sync (não grava)
         if: ${{ inputs.simulacao }}
