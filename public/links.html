@@ -183,7 +183,8 @@
   }
   .strip:nth-child(odd){transform:rotate(-1.2deg)}
   .strip:nth-child(even){transform:rotate(1deg)}
-  .strip:hover,.strip:focus-visible{transform:rotate(0) translateY(-6px) scale(1.025);box-shadow:0 18px 28px rgba(0,0,0,.6);z-index:5}
+  .strip.in-view{transform:rotate(0) translateY(-4px) scale(1.015);box-shadow:0 16px 26px rgba(0,0,0,.58);z-index:5} /* celular: a faixa no centro da tela */
+  .strip:hover,.strip:focus-visible,.strip.is-on{transform:rotate(0) translateY(-6px) scale(1.025);box-shadow:0 18px 28px rgba(0,0,0,.6);z-index:5}
   .s1{--bg:#161616;--ink:var(--offwhite);--acc:var(--laranja);z-index:1}
   .s2{--bg:var(--offwhite);--ink:#141414;--acc:#c23a0c;z-index:2}
   .s3{--bg:var(--laranja);--ink:#141414;--acc:#f5f0e8;z-index:3}
@@ -192,7 +193,7 @@
   .s-top .dur{color:var(--acc)}
   .s-top .ttl{font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;font-weight:400;color:var(--acc)}
   .s-play{position:absolute;right:18px;top:18px;z-index:1;font-size:10px;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:6px;opacity:.55;transition:opacity .2s,color .2s}
-  .strip:hover .s-play,.strip:focus-visible .s-play{opacity:1;color:var(--acc)}
+  .strip:hover .s-play,.strip:focus-visible .s-play,.strip.is-on .s-play,.strip.in-view .s-play{opacity:1;color:var(--acc)}
   .s-title{position:relative;z-index:1;display:block;margin:8px 0 12px;line-height:.92}
   .t1{font-family:'UnifrakturMaguntia',serif;font-size:clamp(44px,13vw,58px)}
   .t2{font-family:'Rubik Glitch',sans-serif;font-size:clamp(32px,9.6vw,42px);letter-spacing:-.01em}
@@ -346,6 +347,9 @@
   const plastic = document.getElementById('plastic');
   const npName = document.getElementById('npName');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const touch = window.matchMedia('(hover: none)').matches;   // celular/tablet: sem mouse, os efeitos viram toque e rolagem
+  let ptrAt = 0;                                              // último movimento de dedo/mouse (o reflexo automático espera)
+  if(touch) document.querySelector('.hint').textContent = 'toque pra abrir o CD';
 
   /* abrir / fechar */
   let opened = false;
@@ -372,6 +376,8 @@
     angle = (angle + speed*dt) % 360;
     cd.style.transform = `rotate(${angle}deg)`;
     gloss.style.setProperty('--g', (-angle + 40) + 'deg'); // o brilho fica parado enquanto o disco gira
+    // celular: sem mouse, o reflexo do acrílico passeia sozinho enquanto a capa está fechada
+    if(touch && !opened && t - ptrAt > 1200) plastic.style.setProperty('--p', (28 + 30*Math.sin(t/900)) + '%');
     requestAnimationFrame(frame);
   }
   if(!reduce) requestAnimationFrame(frame);
@@ -383,10 +389,36 @@
     const off = () => { npName.textContent = 'ANTICEG vol. 01'; if(opened) target = BASE; };
     el.addEventListener('mouseenter', on); el.addEventListener('focus', on);
     el.addEventListener('mouseleave', off); el.addEventListener('blur', off);
+
+    /* celular: o toque faz o papel do mouse (a faixa sobe, o disco acelera, o celular vibra de leve) */
+    el.addEventListener('pointerdown', e => {
+      if(e.pointerType === 'mouse') return;
+      clearTimeout(el._t); el.classList.add('is-on'); on();
+      if(!reduce && navigator.vibrate) { try { navigator.vibrate(12); } catch(_) {} }
+    });
+    ['pointerup','pointercancel'].forEach(ev => el.addEventListener(ev, e => {
+      if(e.pointerType === 'mouse') return;
+      el._t = setTimeout(() => { el.classList.remove('is-on'); off(); }, 220);   // dá tempo de ver o efeito antes de abrir o link
+    }));
   });
 
-  /* reflexo do acrílico segue o mouse */
+  /* celular: só a faixa mais próxima do meio da tela fica em destaque enquanto a pessoa rola */
+  if(touch && !reduce){
+    const strips = [...document.querySelectorAll('.strip')]; let agendado = false;
+    const marcar = () => {
+      agendado = false;
+      const meio = innerHeight / 2; let melhor = null, dist = Infinity;
+      strips.forEach(s => { const r = s.getBoundingClientRect(); if(r.bottom < 0 || r.top > innerHeight) return;
+        const d = Math.abs((r.top + r.bottom) / 2 - meio); if(d < dist){ dist = d; melhor = s; } });
+      strips.forEach(s => s.classList.toggle('in-view', s === melhor && dist < innerHeight * .35));
+    };
+    addEventListener('scroll', () => { if(!agendado){ agendado = true; requestAnimationFrame(marcar); } }, { passive: true });
+    addEventListener('resize', marcar); marcar();
+  }
+
+  /* reflexo do acrílico segue o mouse ou o dedo */
   window.addEventListener('pointermove', e => {
+    ptrAt = performance.now();
     const p = (e.clientX / window.innerWidth) * 70 - 5;
     plastic.style.setProperty('--p', p + '%');
   });
