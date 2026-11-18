@@ -88,7 +88,7 @@ const caminho = page => page.evaluate(() => window.location.pathname);
 }
 { // 5) ativação que começa pelo e-mail (tela inicial): X volta às áreas públicas
   const T = await nova({ semUsuario: true }); const { page, reg } = T; await ir(page, "/");
-  await page.getByPlaceholder("@ da rede social ou e-mail").fill("ana@exemplo.com"); await page.getByRole("button", { name: /ENTRAR/ }).click(); await page.waitForTimeout(700);
+  await page.getByPlaceholder("@ da rede social ou e-mail").fill("ana@exemplo.com"); await page.getByRole("button", { name: /Primeiro acesso/ }).click(); await page.waitForTimeout(700);
   const modal = page.getByTestId("ativacao-modal");
   ok(await modal.count() === 1 && await modal.getByTestId("fechar-acesso").count() === 1, "ativação pelo e-mail: tem X");
   await modal.getByTestId("fechar-acesso").click(); await page.waitForTimeout(1500);

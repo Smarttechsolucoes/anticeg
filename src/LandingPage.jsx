@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import supabase from "./supabase.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
-import { JOINERS_AUTH_ATIVO, buscarAcessoSimples, solicitarCadastro } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, buscarAcessoSimples, carregarDadosPrivados, criarJoinerAuth, solicitarCadastro } from "./joinerAuth.js";
 import { AtivacaoPorEmail } from "./JoinerAuth.jsx";
 import { chamarPlanilha, mensagemPlanilha } from "./planilhaApi.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -31,6 +31,11 @@ export default function LandingPage({ onLogin, onVerCegs }) {
   const [pendingJoiner, setPendingJoiner] = useState(null);
   const [ativarEmail, setAtivarEmail] = useState(null);      // e-mail digitado na entrada: abre a ativação começando pelo e-mail (sem consultar nada antes)
   const [senha, setSenha] = useState("");
+  // acesso rápido com senha (login novo): @ OU e-mail + senha, sempre. Sem a senha nenhum dado privado é carregado.
+  const [api] = useState(() => criarJoinerAuth());
+  const [senhaAcesso, setSenhaAcesso] = useState("");
+  const [aviso, setAviso] = useState("");
+  const senhaRef = useRef(null);
 
   // primeiro acesso unificado (encontrar conta existente OU cadastrar)
   const [primeiroAcesso, setPrimeiroAcesso]   = useState(() => ["/primeiro-acesso", "/recrutador"].includes(window.location.pathname));
@@ -124,8 +129,45 @@ export default function LandingPage({ onLogin, onVerCegs }) {
     return escolherJoiner(byTw, handle);
   }
 
+  // Login novo: @ OU e-mail + senha (obrigatória). O servidor resolve o @ para a conta e confere a senha; só depois os dados privados são lidos, com a sessão da própria pessoa.
+  async function entrarComSenha(input) {
+    if (!senhaAcesso) { setError("Digite sua senha para entrar."); setLoading(false); senhaRef.current?.focus(); return; }
+    try {
+      const r = isEmail(input)
+        ? await api.entrarComEmail({ cog: "", email: input, senha: senhaAcesso })
+        : await api.entrar({ cog: input, senha: senhaAcesso });
+      if (r.erro) { setError(r.erro.replace("@ ou senha incorretos.", "@/e-mail ou senha incorretos. Ainda não ativou a conta? Use o Primeiro acesso.")); setLoading(false); return; }
+      setSenhaAcesso("");
+      // perfil ainda por concluir: o servidor não devolve os dados completos; entra com a identidade mínima e o site pede a conclusão do perfil (a sessão já está aberta)
+      const dados = r.perfilPendente ? null : await carregarDadosPrivados();
+      if (dados) { sairDaPaginaPublica(); onLogin({ ...dados.joiner, acesso_simples: false }, dados.itens); setLoading(false); return; }
+      const acesso = await buscarAcessoSimples(r.cog);
+      if (acesso) { sairDaPaginaPublica(); onLogin(acesso, []); setLoading(false); return; }
+      setError("Não conseguimos carregar seus dados agora. Tente de novo em instantes.");
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
+    }
+    setLoading(false);
+  }
+
+  // "Esqueci minha senha": a resposta é sempre a mesma, exista ou não a conta (não revela nada)
+  async function handleEsqueci() {
+    const input = email.trim();
+    setError(""); setAviso("");
+    if (!input) { setError("Digite seu @ ou e-mail acima para recuperar a senha."); return; }
+    setLoading(true);
+    try {
+      const r = await api.recuperar(isEmail(input) ? { email: input } : { cog: input });
+      if (r.erro) setError(r.erro);
+      else setAviso("Se existir uma conta ativada, enviamos o link para criar uma senha nova ao e-mail cadastrado. Confira também o spam.");
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
+    }
+    setLoading(false);
+  }
+
   async function handleEntrar() {
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setAviso("");
     const input = email.trim();
     if (!input) { setError("Informe seu @ ou e-mail."); setLoading(false); return; }
 
@@ -136,7 +178,7 @@ export default function LandingPage({ onLogin, onVerCegs }) {
       return;
     }
 
-    if (JOINERS_AUTH_ATIVO && isEmail(input)) { setAtivarEmail(input.toLowerCase()); setLoading(false); return; }
+    if (JOINERS_AUTH_ATIVO) { await entrarComSenha(input); return; }
 
     try {
       const joiner = await buscarJoiner(input);
@@ -399,14 +441,34 @@ export default function LandingPage({ onLogin, onVerCegs }) {
           type="text"
           placeholder="@ da rede social ou e-mail"
           value={email}
-          onChange={e => { setEmail(e.target.value); setError(""); }}
-          onKeyDown={e => e.key === "Enter" && handleEntrar()}
+          onChange={e => { setEmail(e.target.value); setError(""); setAviso(""); }}
+          onKeyDown={e => { if (e.key !== "Enter") return; if (JOINERS_AUTH_ATIVO && !senhaAcesso) senhaRef.current?.focus(); else handleEntrar(); }}
+          autoComplete="username"
           autoFocus
         />
+        {JOINERS_AUTH_ATIVO && (
+          <input
+            ref={senhaRef}
+            className="lp-card-input"
+            type="password"
+            placeholder="senha"
+            value={senhaAcesso}
+            onChange={e => { setSenhaAcesso(e.target.value); setError(""); }}
+            onKeyDown={e => e.key === "Enter" && handleEntrar()}
+            autoComplete="current-password"
+          />
+        )}
         {error && <div className="lp-card-error">{error}</div>}
+        {aviso && <div style={{ fontSize:11, color:"#BAFF39", fontFamily:"'DM Mono',monospace", lineHeight:1.6 }}>{aviso}</div>}
         <button className="lp-card-btn" onClick={handleEntrar} disabled={loading}>{loading ? "..." : "ENTRAR →"}</button>
+        {JOINERS_AUTH_ATIVO && <button type="button" onClick={handleEsqueci} disabled={loading} style={voltarStyle}>Esqueci minha senha</button>}
         <div className="lp-card-divider" />
-        <button className="lp-card-secondary" onClick={() => { window.location.href = "/primeiro-acesso"; }}>Primeiro acesso →</button>
+        <button className="lp-card-secondary" onClick={() => {
+          // com o login novo, quem digitou o e-mail começa a ativação por ele (como antes); sem e-mail, vai para o primeiro acesso pelo @
+          const digitado = email.trim();
+          if (JOINERS_AUTH_ATIVO && isEmail(digitado)) setAtivarEmail(digitado.toLowerCase());
+          else window.location.href = "/primeiro-acesso";
+        }}>Primeiro acesso →</button>
       </>
     );
   }
