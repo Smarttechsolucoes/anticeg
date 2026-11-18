@@ -1,9 +1,10 @@
 // CORREÇÕES PONTUAIS no Supabase, com ENSAIO por padrão. Só grava com APLICAR=1. Cada ação confere o estado ATUAL imediatamente antes de gravar e só mexe nos casos inequívocos; o resto fica como está, com o motivo.
 // O log do GitHub é PÚBLICO: só contagens, ids de linha/cadastro/demanda, códigos de item, CEG e nomes de produto. Nunca @, e-mail, nome de pessoa, CPF ou endereço.
-// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido | arquivar-pares (PARES=dup:preservada,...) | liberar-itens (IDS=...: passa para "disponível" linhas que a planilha marca sem dono).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
+// ACAO = email | demandas | todas | registrar-aplicadas | reverter | verificar-registro | arquivar-copias (IDS=...) | sync-indevido | arquivar-pares (PARES=dup:preservada,...) | liberar-itens (IDS=...: passa para "disponível" linhas que a planilha marca sem dono) | trocar-email (IDS=<id do cadastro> EMAIL_HASH=<8 hex>: ordem explícita; o e-mail sai da planilha).   APLICAR = 1 grava.   (Só a ação arquivar-copias retira linhas da masterlist, uma a uma e pela função prune_masterlist, que guarda a foto completa em masterlist_exclusoes.)
 // ANTES de gravar qualquer correção, o plano com os valores anteriores vai para um registro PRIVADO e durável (bucket privado do Supabase; ver registro-privado.mjs). Se o registro não puder ser gravado e conferido, NADA é gravado no banco.
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { parse } from 'csv-parse/sync';
 import { indexarJoiners, resolverLinha } from './resolver-joiner.js';
@@ -249,6 +250,13 @@ async function reverter() {
       if (!APLICAR) { console.log(`  linha ${a.masterlist_id}: seria restaurada a partir da foto do registro`); rev++; continue; }
       const { error } = await sb.from('masterlist').insert([a.antes]);
       if (error) { console.log(`  linha ${a.masterlist_id}: ERRO ${error.message}`); falhas++; } else { rev++; console.log(`  linha ${a.masterlist_id}: restaurada (a foto continua em masterlist_exclusoes)`); }
+    } else if (a.tipo === 'joiner_email_troca') {
+      const { data: j } = await sb.from('joiners').select('id, email').eq('id', a.joiner_id).maybeSingle();
+      const { data: conta } = await sb.from('contas_joiner').select('joiner_id').eq('joiner_id', a.joiner_id).limit(1);
+      if (!j || n(j.email).toLowerCase() !== n(a.depois).toLowerCase() || (conta || []).length) { console.log(`  cadastro ${a.joiner_id}: o e-mail mudou desde a troca (ou já tem conta) — NÃO revertido`); pulados++; continue; }
+      if (!APLICAR) { console.log(`  cadastro ${a.joiner_id}: seria revertido (e-mail volta ao anterior)`); rev++; continue; }
+      const { error } = await sb.from('joiners').update({ email: a.antes ?? null }).eq('id', a.joiner_id).eq('email', j.email);
+      if (error) { console.log(`  cadastro ${a.joiner_id}: ERRO ${error.message}`); falhas++; } else { rev++; console.log(`  cadastro ${a.joiner_id}: revertido`); }
     } else if (a.tipo === 'campo_masterlist') {
       const { data: atual } = await sb.from('masterlist').select(`id, ${a.campo}`).eq('id', a.masterlist_id);
       if (!atual || atual.length !== 1 || atual[0][a.campo] !== a.depois) { console.log(`  linha ${a.masterlist_id} ${a.campo}: o valor mudou desde a correção — NÃO revertido`); pulados++; continue; }
@@ -581,9 +589,68 @@ async function liberarItens() {
   catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
 }
 
+// ───────── J) trocar o e-mail do cadastro (ordem explícita da administração). O e-mail novo NUNCA entra como parâmetro (o log do workflow é público): vem só o id do cadastro e o HASH do e-mail; o script acha o e-mail nas linhas da planilha que pertencem a este cadastro e confere o hash.
+// Não envia e-mail a ninguém (nem aviso ao e-mail antigo, nem código). Não cria conta. Grava um registro privado com o valor anterior; reversível pela ação "reverter".
+async function trocarEmail() {
+  secao('J) trocar o e-mail de UM cadastro (id explícito + hash do e-mail novo), reprovado na hora');
+  const jid = Number(String(process.env.IDS || '').trim()), hash = String(process.env.EMAIL_HASH || '').trim().toLowerCase();
+  if (!Number.isInteger(jid) || !/^[0-9a-f]{8}$/.test(hash)) { console.log('  informe IDS=<id do cadastro> e EMAIL_HASH=<8 hex do sha256 do e-mail novo em minúsculas>'); falhas++; return; }
+  const hmail = e => createHash('sha256').update(n(e).toLowerCase()).digest('hex').slice(0, 8);
+  const lc = v => n(v).toLowerCase().replace(/\s+/g, ' ');
+  const emailLimpo = v => { const e = lc(v); return /^[^\s@#]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : ''; };
+  const norm = t => String(t).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const jo = await ler('joiners', 'id, cog, email, twitter'), contas = await ler('contas_joiner', 'joiner_id', 'joiner_id');
+  if (!jo || !contas) { console.log('  leitura incompleta: nada feito'); falhas++; return; }
+  const j = jo.find(x => x.id === jid); if (!j) { console.log('  o cadastro não existe'); falhas++; return; }
+  if (contas.some(c => c.joiner_id === jid)) { console.log('  RECUSADO: o cadastro já tem conta (a troca de e-mail de quem já tem conta segue o fluxo do site)'); falhas++; return; }
+  const resp = await fetch('https://docs.google.com/spreadsheets/d/1jMwVDT1AQBJpvZP6kVhDD0z8zZxBrHU3KuyRA-G4HBs/export?format=csv&gid=2116437995');
+  if (!resp.ok) { console.log('  não consegui ler a planilha'); falhas++; return; }
+  const linhasCsv = (await resp.text()).replace(/^﻿/, '').split('\n'); const hIdx = linhasCsv.findIndex(l => l.includes('ABA'));
+  if (hIdx === -1) { console.log('  cabeçalho da planilha não encontrado'); falhas++; return; }
+  const records = parse(linhasCsv.slice(hIdx).join('\n'), { columns: true, skip_empty_lines: true });
+  const colMap = {}; Object.keys(records[0]).forEach(k => { colMap[norm(k)] = k; });
+  const col = (r, nm) => r[colMap[norm(nm)]] ?? '';
+  const rows = records.filter(r => n(col(r, 'ABA / CEG')) && n(col(r, 'NOME DO ITEM')));
+  const idx = indexarJoiners(jo, await carregarArrobasAntigos(sb, jo));
+  const dela = rows.filter(r => { const rs = resolverLinha({ twitter: n(col(r, '@')), email: emailLimpo(col(r, 'EMAIL')) }, idx); return lc(rs.cog) === lc(j.cog); });
+  const candidatos = [...new Set(dela.map(r => emailLimpo(col(r, 'EMAIL'))).filter(e => e && hmail(e) === hash))];
+  linha('linhas da planilha que pertencem a este cadastro', dela.length);
+  if (candidatos.length !== 1) { console.log(`  RECUSADO: o hash corresponde a ${candidatos.length} e-mail(s) nas linhas da planilha deste cadastro (precisa ser exatamente 1)`); falhas++; return; }
+  const novo = candidatos[0], atual = lc(j.email);
+  if (novo === atual) { console.log('  nada a fazer: o cadastro já está com este e-mail'); return; }
+  const outros = jo.filter(x => x.id !== jid && lc(x.email) === novo);
+  if (outros.length) { console.log(`  RECUSADO: este e-mail já está em outro(s) cadastro(s) (${outros.length}) — caso de ajuda, não de troca`); falhas++; return; }
+  let authComEmail = 0;
+  for (let p = 1; p < 60; p++) { const { data, error } = await sb.auth.admin.listUsers({ page: p, perPage: 1000 }); if (error) { console.log(`  não consegui listar as contas (${error.message}): nada feito`); falhas++; return; } authComEmail += (data.users || []).filter(u => lc(u.email) === novo).length; if ((data.users || []).length < 1000) break; }
+  if (authComEmail) { console.log('  RECUSADO: já existe uma conta de acesso com este e-mail (ligada a outro cadastro ou solta)'); falhas++; return; }
+  const mesmoArroba = jo.filter(x => lc(x.twitter).replace(/^@/, '') === lc(j.twitter).replace(/^@/, '') && n(j.twitter)).length;
+  const { data: libAntes, error: eLA } = await sb.rpc('vinculo_liberado', { p_joiner_id: jid });
+  linha('cadastro', `#${jid} · tinha e-mail: ${atual ? 'SIM' : 'não'} · cadastros com o mesmo @: ${mesmoArroba} · liberado para ativar ANTES: ${eLA ? 'não consegui consultar (' + eLA.message + ')' : libAntes}`);
+  console.log(`  e-mail novo (hash ${hash}) está em ${dela.filter(r => emailLimpo(col(r, 'EMAIL')) === novo).length} linha(s) da planilha deste cadastro; nenhum outro cadastro nem conta usa este e-mail`);
+  if (!APLICAR) { console.log('  ENSAIO: nada foi gravado.'); return; }
+  const alteracoes = [{ tipo: 'joiner_email_troca', joiner_id: jid, antes: j.email ?? null, depois: novo, liberado_antes: eLA ? null : libAntes }];
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_trocar_email_plano.json`, { versao: 1, tipo: 'correcao_trocar_email', run: RUN, quando: new Date().toISOString(), alteracoes }); console.log(`  registro privado do plano gravado e conferido: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO: ' + e.message + ' — NADA foi gravado'); falhas++; return; }
+  let q = sb.from('joiners').update({ email: novo }).eq('id', jid); q = j.email == null ? q.is('email', null) : q.eq('email', j.email);
+  const { error: eU } = await q; if (eU) { console.log(`  ERRO ao gravar: ${eU.message}`); falhas++; return; }
+  const { data: dep } = await sb.from('joiners').select('id, email, cog, twitter').eq('id', jid).maybeSingle();
+  let ok = !!dep && lc(dep.email) === novo && dep.cog === j.cog && n(dep.twitter) === n(j.twitter);
+  const { data: libDepois, error: eLD } = await sb.rpc('vinculo_liberado', { p_joiner_id: jid });
+  linha('liberado para ativar DEPOIS', eLD ? 'não consegui consultar (' + eLD.message + ')' : libDepois);
+  if (ok && libAntes === true && libDepois === false) {
+    const { error: eR } = await sb.from('joiners').update({ email: j.email ?? null }).eq('id', jid).eq('email', novo);
+    console.log(`  a troca faria o cadastro PERDER a liberação: desfeita automaticamente${eR ? ' (ERRO ao desfazer: ' + eR.message + ')' : ''}`); ok = false; falhas++;
+  }
+  alteracoes[0].resultado = ok ? 'aplicado' : 'nao_confirmado'; alteracoes[0].liberado_depois = eLD ? null : libDepois;
+  console.log(`  cadastro #${jid}: ${ok ? 'e-mail trocado (cog e @ intactos)' : 'NÃO APLICADO/NÃO CONFIRMADO'}`);
+  try { const g = await gravarRegistro(sb, `correcoes/${STAMP}_trocar_email_resultado.json`, { versao: 1, tipo: 'resultado_trocar_email', run: RUN, plano: `correcoes/${STAMP}_trocar_email_plano.json`, quando: new Date().toISOString(), alteracoes }); console.log(`  registro privado do RESULTADO: ${g.caminho}`); }
+  catch (e) { console.log('  ERRO ao gravar o resultado: ' + e.message); falhas++; }
+}
+
 if (ACAO === 'registrar-aplicadas') await registrarAplicadas();
 if (ACAO === 'arquivar-pares') await arquivarPares();
 if (ACAO === 'liberar-itens') await liberarItens();
+if (ACAO === 'trocar-email') await trocarEmail();
 if (ACAO === 'sync-indevido') await corrigirSyncIndevido();
 if (ACAO === 'arquivar-copias') await arquivarCopias();
 if (ACAO === 'reverter') await reverter();

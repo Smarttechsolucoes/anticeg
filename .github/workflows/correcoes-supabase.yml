@@ -9,7 +9,7 @@ on:
       acao:
         description: 'Qual correção'
         type: choice
-        options: [todas, email, demandas, registrar-aplicadas, verificar-registro, reverter, arquivar-copias, sync-indevido, arquivar-pares, liberar-itens]
+        options: [todas, email, demandas, registrar-aplicadas, verificar-registro, reverter, arquivar-copias, sync-indevido, arquivar-pares, liberar-itens, trocar-email]
         default: todas
       aplicar:
         description: 'GRAVAR de verdade (desmarcado = ensaio, não grava)'
@@ -21,6 +21,10 @@ on:
         default: ''
       pares:
         description: 'Só para a ação arquivar-pares: pares duplicada:preservada separados por vírgula (até 10). Cada par é reprovado na hora; a preservada nunca é tocada'
+        type: string
+        default: ''
+      email_hash:
+        description: 'Só para a ação trocar-email: 8 hex do sha256 do e-mail novo em minúsculas (o e-mail em si nunca entra aqui; ids = id do cadastro)'
         type: string
         default: ''
       registro:
@@ -60,3 +64,4 @@ jobs:
           REGISTRO: ${{ inputs.registro }}
           IDS: ${{ inputs.ids }}
           PARES: ${{ inputs.pares }}
+          EMAIL_HASH: ${{ inputs.email_hash }}
