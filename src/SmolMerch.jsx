@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
+import AcessoConfirmado from "./AcessoConfirmado.jsx";
 import { enviarComprovante as enviarArquivoSeguro, abrirComprovante } from "./comprovantes.js";
 import { criarPedidoLoja, JOINERS_AUTH_ATIVO } from "./joinerAuth.js";
 import { tabelaQ4, tabelaPublica, meusIdsFechados } from "./pedidosFechados.js";
@@ -398,6 +399,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           </div>
         )}
 
+        {cfg.acesso && <AcessoConfirmado />}
         {cfg.aoVivo && aba !== "pedido" ? <PainelPublico aba={aba} cfg={cfg} produtos={produtos} meuSocial={logado ? social : ""} /> : (<>
         <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "14px 16px", marginBottom: 28, fontSize: 12, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "var(--laranja)", marginBottom: 8 }}>⚠ AVISOS IMPORTANTES</div>
@@ -442,6 +444,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação."
                 : pagamento === "depois" ? "Pedido registrado! Avisaremos como pagar."
                 : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
+              {cfg.aposPedido && <div style={{ marginTop: 10, color: "rgba(245,240,232,.75)" }}>{cfg.aposPedido}</div>}
               {pedidoId && <div style={{ marginTop: 8, fontSize: 10, opacity: .5 }}>#{pedidoId}</div>}
             </div>
             <a href={cfg.grupoWhatsapp || "https://chat.whatsapp.com/FqcEhq1039j3ZH0YntnCHD"} target="_blank" rel="noopener noreferrer"
