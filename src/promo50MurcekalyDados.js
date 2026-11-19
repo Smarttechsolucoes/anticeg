@@ -25,7 +25,7 @@ function rodada(id, nome, foto, preco, membros, sold = []) {
   };
 }
 
-export const PROMO_50_MURCEKALY_PRODUTOS = [
+const LISTA = [
   // ── NACIFIC ATEEZ (R$ 15 cada) ──
   rodada("ateez-r1", "ATEEZ NACIFIC R1", "ateez-r1.jpg", 15, ATEEZ, [6]),
   rodada("ateez-r2", "ATEEZ NACIFIC R2", "ateez-r2.jpg", 15, ATEEZ),
@@ -121,6 +121,12 @@ export const PROMO_50_MURCEKALY_PRODUTOS = [
   { id: "sg25-set", nome: "SG25 SET", foto: "sg25-set.jpg", opcoes: unica("sg25-set", "SG25 Set", 90) },
 ];
 
+// abas do formulário: ATEEZ, ÁLBUNS e STRAY KIDS (tudo o que não é ATEEZ nem álbum: photocards, merch, SKZOO, SG2026, SG25...)
+export const SECOES_P50 = ["ATEEZ", "ÁLBUNS", "STRAY KIDS"];
+const secaoDe = p => p.id.startsWith("ateez-") ? "ATEEZ" : p.id.startsWith("album-") ? "ÁLBUNS" : "STRAY KIDS";
+export const PROMO_50_MURCEKALY_PRODUTOS = LISTA.map(p => ({ ...p, secao: secaoDe(p) }))
+  .sort((a, b) => SECOES_P50.indexOf(a.secao) - SECOES_P50.indexOf(b.secao));   // sort é estável: a ordem dentro de cada aba é a de cima
+
 // menor e maior preço entre as opções que já têm valor
 const PRECOS_P50 = PROMO_50_MURCEKALY_PRODUTOS.flatMap(p => p.opcoes.map(o => o.preco)).filter(v => typeof v === "number");
 export const PROMO_50_MURCEKALY_FAIXA = { min: Math.min(...PRECOS_P50), max: Math.max(...PRECOS_P50) };
@@ -128,6 +134,7 @@ export const PROMO_50_MURCEKALY_FAIXA = { min: Math.min(...PRECOS_P50), max: Mat
 export const PROMO_50_MURCEKALY_CFG = {
   tabela: "pedidos_promo_50_murcekaly", pasta: "promo-50-murcekaly", produto: "PROMO 50 MURCEKALY",
   titulo: "PROMO 50 MURCEKALY", sub: "",
+  secoes: SECOES_P50,        // abas no formulário
   // prazo ainda não informado: sem data, o formulário não fecha sozinho
   deadline: null, pedidosAte: null, pagarAte: null,
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
