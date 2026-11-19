@@ -71,13 +71,13 @@ export function PromoMakestarFormPage({ pixKey, cfg = MAKESTAR_CFG }) {
     e.preventDefault();
     if (cfg.bloqueado) return;
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 álbum."); return; }
-    if (pagamento === "pix" && !comprovante) { setErro("Anexe o comprovante do PIX."); return; }
+    if (!comprovante) { setErro(pagamento === "pix" ? "Anexe o comprovante do PIX." : "Pague no cartão pelo link e anexe o comprovante."); return; }
     setStatus("enviando"); setErro("");
 
     // o id é gerado aqui (não precisa ler o pedido de volta do banco) e também dá nome ao comprovante
     const id = crypto.randomUUID();
     let comprovanteUrl = null;
-    if (pagamento === "pix" && comprovante) {
+    if (comprovante) {   // PIX e cartão: os dois exigem o comprovante
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${id}.${ext}`;
       const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
@@ -96,7 +96,6 @@ export function PromoMakestarFormPage({ pixKey, cfg = MAKESTAR_CFG }) {
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
 
-    if (pagamento === "cartao") window.open("https://linknabio.gg/anticeg-comu", "_blank");
     setStatus("sucesso");
   }
 
@@ -142,8 +141,7 @@ export function PromoMakestarFormPage({ pixKey, cfg = MAKESTAR_CFG }) {
             <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Pedido registrado!</div>
             <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", lineHeight: 1.6, marginBottom: 24 }}>
-              {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação."
-                : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
+              Comprovante enviado. Aguardando confirmação.
               {pedidoId && <div style={{ marginTop: 8, fontSize: 10, opacity: .5 }}>#{pedidoId}</div>}
             </div>
             {cfg.grupoWhatsapp && (
@@ -267,15 +265,21 @@ export function PromoMakestarFormPage({ pixKey, cfg = MAKESTAR_CFG }) {
                       </button>
                     </div>
                   </div>
-                  <div>
-                    <label style={labelStyle}>Comprovante PIX</label>
-                    <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0] || null)} style={{ ...inputStyle, padding: "8px 14px", fontSize: 12 }} />
-                  </div>
                 </div>
               )}
               {pagamento === "cartao" && (
-                <div style={caixa}>Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.</div>
+                <div style={caixa}>
+                  <div style={{ marginBottom: 10 }}>1. Pague no cartão pelo link abaixo. 2. Volte aqui e anexe o comprovante do pagamento.</div>
+                  <a href="https://linknabio.gg/anticeg-comu" target="_blank" rel="noopener noreferrer"
+                    style={{ display: "inline-block", padding: "9px 16px", borderRadius: 8, background: "rgba(255,92,26,.12)", border: "1px solid var(--laranja)", color: "var(--laranja)", fontFamily: mono, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
+                    Abrir link de pagamento (cartão) ↗
+                  </a>
+                </div>
               )}
+              <div style={{ marginTop: 12 }}>
+                <label style={labelStyle}>Comprovante de pagamento {pagamento === "pix" ? "(PIX)" : "(cartão)"}</label>
+                <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0] || null)} style={{ ...inputStyle, padding: "8px 14px", fontSize: 12 }} />
+              </div>
             </div>
 
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}</div>}
