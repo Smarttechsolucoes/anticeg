@@ -13756,7 +13756,7 @@ function MercariTab({ user = null }) {
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
   const STEP_IDX = {pendente:0,aprovado:1,pago:2,finalizado:3,recusado:-1};
 
-  const [fxVal, setFxVal]     = useState(0.03141);
+  const [fxVal, setFxVal]     = useState(1/27.5); // R$ 1 = ¥ 27,5
   const [fxInp, setFxInp]     = useState('');
   const [modal, setModal]     = useState(false);
   const [itab, setItab]       = useState('pedido');
@@ -13781,7 +13781,7 @@ function MercariTab({ user = null }) {
   const tmrRef  = useRef(null);
   const idRef   = useRef('');
   const jRef    = useRef(null);
-  const fxRef   = useRef(0.03141);
+  const fxRef   = useRef(1/27.5);
   const cntRef  = useRef(1);
   const fileRef = useRef(null);
 
@@ -13926,7 +13926,7 @@ function MercariTab({ user = null }) {
           <div className="mc-sub">por @anticegs · compras no Japão</div>
         </div>
         <div className="mc-fx-row">
-          <span className="mc-fx-val">¥1 = R$ {fBRL(fxVal)}</span>
+          <span className="mc-fx-val">R$ 1 = ¥ {(1/fxVal).toLocaleString('pt-BR',{maximumFractionDigits:2})}</span>
           <button className="mc-btn-fx" onClick={()=>{setFxInp('');setModal(true);}}>✎ Câmbio</button>
         </div>
       </div>
@@ -13946,7 +13946,7 @@ function MercariTab({ user = null }) {
           <div className="mc-modal">
             <div className="mc-modal-title">Editar Câmbio</div>
             <label className="mc-modal-label">JPY / BRL</label>
-            <input className="mc-modal-inp" type="number" step="0.00001" placeholder="0.03141" value={fxInp} onChange={e=>setFxInp(e.target.value)} autoFocus />
+            <input className="mc-modal-inp" type="number" step="0.00001" placeholder="0.03636" value={fxInp} onChange={e=>setFxInp(e.target.value)} autoFocus />
             <div className="mc-modal-btns">
               <button className="mc-btn-save" onClick={()=>{const v=parseFloat(fxInp);if(v>0){setFxVal(v);fxRef.current=v;}setModal(false);}}>Salvar</button>
               <button className="mc-btn-cancel" onClick={()=>setModal(false)}>Cancelar</button>
@@ -13972,7 +13972,7 @@ function MercariTab({ user = null }) {
                 <input type="number" value={calcInp} min="0" step="1" onChange={e=>setCalcInp(e.target.value)} />
                 <span className="mc-unit">¥</span>
               </div>
-              <span className="mc-hint">¥ 1 = R$ {fxVal.toFixed(5)}</span>
+              <span className="mc-hint">R$ 1 = ¥ {(1/fxVal).toLocaleString('pt-BR',{maximumFractionDigits:2})} (¥ 1 = R$ {fxVal.toFixed(5)})</span>
             </div>
             <div className="mc-sec">Resultado</div>
             <div className="mc-result-card">
