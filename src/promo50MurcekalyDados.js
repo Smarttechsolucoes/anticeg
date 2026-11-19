@@ -78,6 +78,8 @@ export const PROMO_50_MURCEKALY_PRODUTOS = [
       { id: "blind-box-fanmade-cheshire-cry-cat", label: "Cheshire Cry Cat", preco: 140, maxTotal: 1 },
     ],
   },
+  { id: "beads-strap-felix", nome: "BEADS STRAP BY FELIX", foto: "beads-strap-felix.jpg", opcoes: unica("beads-strap-felix", "Beads Strap by Felix", 160) },
+  { id: "ball-cap-han", nome: "BALL CAP BY HAN", foto: "ball-cap-han.jpg", opcoes: unica("ball-cap-han", "Ball Cap by Han", 250) },
   { id: "hippers-set", nome: "HIPPERS SET (HIPPER + PHOTOCARD)", foto: "hippers-set.jpg", avisos: ["Cada set é de 1 membro: escolha qual."], opcoes: opcoes("hippers-set", SKZOO_MEMBRO, 65) },
 
   // ── Álbuns (R$ 30 cada) ──
