@@ -1,4 +1,4 @@
-// GERADO a partir da lista da PROMO MAKESTAR (151 álbuns em 30 grupos). Cada item: [id, artista, título].
+// GERADO a partir da lista da PROMO MAKESTAR (146 álbuns em 30 grupos). Cada item: [id, artista, título].
 // Não mude o id de um álbum depois que houver pedidos: o painel admin e a exportação casam pelo id.
 export const MAKESTAR_BRUTO = [
   { id: "nct-dream", nome: "NCT DREAM", itens: [
@@ -61,7 +61,6 @@ export const MAKESTAR_BRUTO = [
   { id: "monsta-x", nome: "MONSTA X", itens: [
     ["mk-monsta-x-13th-mini-album-the-x", "MONSTA X", "13th Mini Album [THE X]"],
     ["mk-monsta-x-11th-mini-album-shape-of-love", "MONSTA X", "11th Mini Album [SHAPE of LOVE]"],
-    ["mk-monsta-x-11th-mini-album-shape-of-love-kit-ver", "MONSTA X", "11th Mini Album [SHAPE of LOVE] (KiT ver.)"],
   ] },
   { id: "kickflip", nome: "KickFlip", itens: [
     ["mk-kickflip-2nd-mini-album-kick-out-flip-now-standard", "KickFlip", "2nd Mini Album [Kick Out, Flip Now!] (Standard)"],
@@ -112,7 +111,6 @@ export const MAKESTAR_BRUTO = [
   ] },
   { id: "i-dle", nome: "i-dle", itens: [
     ["mk-i-dle-2nd-album-2-pocaalbum-ver", "i-dle", "2nd Album [2] (POCAALBUM Ver.)"],
-    ["mk-i-dle-8th-mini-album-we-are-pocaalbum-photobook-ver", "i-dle", "8th Mini Album [We are] POCAALBUM (Photobook Ver.)"],
   ] },
   { id: "kiiikiii", nome: "KiiiKiii", itens: [
     ["mk-kiiikiii-1st-ep-uncut-gem-digging-ver", "KiiiKiii", "1st EP [UNCUT GEM] (DIGGING ver.)"],
@@ -132,7 +130,6 @@ export const MAKESTAR_BRUTO = [
   ] },
   { id: "nct-wish", nome: "NCT WISH", itens: [
     ["mk-nct-wish-1st-full-album-ode-to-love-jewel-case-ver", "NCT WISH", "1st Full Album [Ode to Love] (Jewel Case Ver.)"],
-    ["mk-nct-wish-1st-full-album-ode-to-love-smini-ver-smart-album", "NCT WISH", "1st Full Album [Ode to Love] (SMini Ver.) (Smart Album)"],
   ] },
   { id: "taeyong", nome: "TAEYONG", itens: [
     ["mk-taeyong-1st-full-album-wyld-jewel-case-ver", "TAEYONG", "1st Full Album [WYLD] (Jewel Case Ver.)"],
@@ -202,12 +199,10 @@ export const MAKESTAR_BRUTO = [
     ["mk-ten-2nd-mini-album-stunner-you-are-ver", "TEN", "2nd Mini Album [STUNNER] (YOU ARE Ver.)"],
     ["mk-to1-2nd-mini-album-re-alize", "TO1", "2nd Mini Album [RE:ALIZE]"],
     ["mk-toz-flare", "TOZ", "[FLARE]"],
-    ["mk-triples-mini-kr-ystal-eyes-aesthetic", "tripleS", "Mini [+(KR)ystal Eyes <AESTHETIC>]"],
     ["mk-tvxq-9th-full-album-20-2", "TVXQ!", "9th Full Album [20&2]"],
     ["mk-wei-7th-mini-album-the-feelings", "WEi", "7th Mini Album [The Feelings]"],
     ["mk-woodz-5th-mini-album-oo-li", "WOODZ", "5th Mini Album [OO-LI]"],
     ["mk-xia-kim-junsu-5th-full-album-gravity-orbit-ver", "XIA (Kim Junsu)", "5th Full Album [GRAVITY] Orbit Ver."],
-    ["mk-yim-siwan-1st-mini-album-the-reason", "Yim Siwan", "1st Mini Album [The Reason]"],
     ["mk-yoon-ji-sung-3rd-mini-album", "YOON JI SUNG", "3rd Mini Album [미로 (薇路)]"],
     ["mk-youngjae-3rd-mini-album-sugar", "YOUNGJAE", "3rd Mini Album [Sugar]"],
     ["mk-yuju-mini-album-rec", "YUJU", "Mini Album [REC.]"],
