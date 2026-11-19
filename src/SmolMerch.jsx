@@ -218,6 +218,8 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
   // cfg.secoes (opcional): ["ATEEZ", ...] separa os produtos em abas; cada produto traz p.secao
   const [secao,       setSecao]       = useState(cfg.secoes?.[0] || null);
+  // cfg.confirmacao (opcional): texto de uma caixa que precisa estar marcada para enviar o pedido
+  const [ciente,      setCiente]      = useState(false);
   // cfg.dadosTravados: quem está logada vê os dados do cadastro travados, com o botão "Editar" (vale só para este pedido), como no DICON
   const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
   const [editando,    setEditando]    = useState(false);
@@ -292,6 +294,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     e.preventDefault();
     if (cfg.bloqueado || aindaNaoAbriu) return;
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 item."); return; }
+    if (cfg.confirmacao && !ciente) { setErro("Marque a confirmação no fim do formulário para enviar o pedido."); return; }
     if (pagamento === "pix" && !comprovante && !soPre) { setErro("Anexe o comprovante do PIX."); return; }
     setStatus("enviando"); setErro("");
 
@@ -446,7 +449,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               Entrar no grupo de atualizações
             </a>
             <div>
-              <button type="button" onClick={() => { setStatus("idle"); setQtds({}); setComprovante(null); setErro(""); setPedidoId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              <button type="button" onClick={() => { setStatus("idle"); setQtds({}); setComprovante(null); setErro(""); setPedidoId(null); setCiente(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 style={{ marginTop: 14, padding: "12px 24px", borderRadius: 10, background: "transparent", border: "1px solid var(--laranja)", color: "var(--laranja)", fontFamily: mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.5px", cursor: "pointer" }}>
                 + Comprar novamente
               </button>
@@ -616,6 +619,12 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             </div>
             )}
 
+            {cfg.confirmacao && (
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 16, padding: "12px 14px", borderRadius: 10, border: `1px solid ${ciente ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ciente ? "rgba(255,92,26,.08)" : "rgba(245,240,232,.03)", fontSize: 13, lineHeight: 1.5, cursor: "pointer" }}>
+                <input type="checkbox" checked={ciente} onChange={e => setCiente(e.target.checked)} style={{ marginTop: 3, width: 18, height: 18, accentColor: "var(--laranja)", flexShrink: 0 }} />
+                <span>{cfg.confirmacao}</span>
+              </label>
+            )}
             {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}</div>}
             <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado || aindaNaoAbriu}
               style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "pointer" : "not-allowed", letterSpacing: "1px" }}>

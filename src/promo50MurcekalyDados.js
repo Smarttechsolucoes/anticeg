@@ -49,7 +49,7 @@ const LISTA = [
   rodada("skz-r9", "STRAY KIDS NACIFIC R9", "skz-r9.jpg", 10, SKZ, [0, 3]),
   rodada("skz-r10", "STRAY KIDS NACIFIC R10 — DOUBLE SIDED", "skz-r10.jpg", 10, SKZ),
   rodada("skz-r11", "STRAY KIDS NACIFIC R11 — HOLOGRAM", "skz-r11.jpg", 10, SKZ),
-  rodada("skz-r12", "STRAY KIDS NACIFIC R12", "skz-r12.jpg", 10, SKZ, [0, 6]),
+  rodada("skz-r12", "STRAY KIDS NACIFIC R12", "skz-r12.jpg", 10, SKZ, [0, 5]),
   rodada("skz-r13", "STRAY KIDS NACIFIC R13", "skz-r13.jpg", 10, SKZ),
   rodada("skz-r14", "STRAY KIDS NACIFIC R14", "skz-r14.jpg", 10, SKZ),
   rodada("skz-r15", "STRAY KIDS NACIFIC R15", "skz-r15.jpg", 10, SKZ),
@@ -80,7 +80,7 @@ const LISTA = [
   },
   { id: "beads-strap-felix", nome: "BEADS STRAP BY FELIX", foto: "beads-strap-felix.jpg", opcoes: unica("beads-strap-felix", "Beads Strap by Felix", 160) },
   { id: "ball-cap-han", nome: "BALL CAP BY HAN", foto: "ball-cap-han.jpg", opcoes: unica("ball-cap-han", "Ball Cap by Han", 250) },
-  { id: "hippers-set", nome: "HIPPERS SET (HIPPER + PHOTOCARD)", foto: "hippers-set.jpg", avisos: ["Cada set é de 1 membro: escolha qual."], opcoes: opcoes("hippers-set", SKZOO_MEMBRO, 65) },
+  { id: "hippers-set", nome: "HIPPERS SET (HIPPER + PHOTOCARD)", foto: "hippers-set.jpg", avisos: ["Cada set inclui: SKZOO + photocard do membro escolhido."], opcoes: opcoes("hippers-set", SKZOO_MEMBRO, 65) },
 
   // ── Álbuns (R$ 30 cada) ──
   { id: "album-karma", nome: "STRAY KIDS — KARMA (COMPACT VER.) SEALED", foto: "album-karma.jpg", opcoes: unica("album-karma", "Compact Ver.", 30) },
@@ -89,7 +89,7 @@ const LISTA = [
   { id: "album-p1harmony", nome: "P1HARMONY — HARMONY: ALL IN SEALED", foto: "album-p1harmony.jpg", opcoes: unica("album-p1harmony", "Flow In Ver.", 30) },
   { id: "album-cix", nome: "CIX — 0 OR 1 SEALED", foto: "album-cix.jpg", opcoes: [{ id: "album-cix-humanoid", label: "Humanoid Ver.", preco: 30 }, { id: "album-cix-android", label: "Android Ver.", preco: 30 }] },
   { id: "album-txt", nome: "TXT — MINISODE 1: BLUE HOUR SEALED", foto: "album-txt.jpg", opcoes: [{ id: "album-txt-ar", label: "AR Ver.", preco: 30 }, { id: "album-txt-vr", label: "VR Ver.", preco: 30 }] },
-  { id: "album-itzy", nome: "ITZY — KILL MY DOUBT SEALED", opcoes: unica("album-itzy", "Kill My Doubt", 30) },
+  { id: "album-itzy", nome: "ITZY — KILL MY DOUBT SEALED", foto: "album-itzy.jpg", opcoes: ["Limited Ver.", "A Ver.", "B Ver.", "C Ver.", "D Ver."].map(v => ({ id: `album-itzy-${slug(v)}`, label: v, preco: 30 })) },
   { id: "album-kickflip", nome: "KICKFLIP — FLIP IT, KICK IT! (UMM GREAT VER.)", foto: "album-kickflip.jpg", opcoes: unica("album-kickflip", "Umm Great Ver.", 30) },
   { id: "album-nflying", nome: "N.FLYING — EVERLASTING SEALED", foto: "album-nflying.jpg", opcoes: [{ id: "album-nflying-last", label: "Last Ver.", preco: 30 }, { id: "album-nflying-ever", label: "Ever Ver.", preco: 30 }] },
 
@@ -135,8 +135,9 @@ export const PROMO_50_MURCEKALY_CFG = {
   tabela: "pedidos_promo_50_murcekaly", pasta: "promo-50-murcekaly", produto: "PROMO 50 MURCEKALY",
   titulo: "PROMO 50 MURCEKALY", sub: "",
   secoes: SECOES_P50,        // abas no formulário
-  // prazo ainda não informado: sem data, o formulário não fecha sozinho
-  deadline: null, pedidosAte: null, pagarAte: null,
+  // o formulário fecha na sexta-feira 20/11/2026 às 10h (Brasília)
+  deadline: new Date("2026-11-20T10:00:00-03:00"), pedidosAte: "SEXTA-FEIRA (20/11) ÀS 10H", pagarAte: null,
+  confirmacao: "Estou ciente que o prazo de pagamento é IMEDIATO",   // caixa obrigatória no fim do formulário
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando abrir.
   bloqueado: false,
@@ -151,9 +152,13 @@ export const PROMO_50_MURCEKALY_CFG = {
   pagamentoAgora: false,     // só "pagar depois"
   // **texto** = negrito
   avisos: [
+    "O forms fica aberto até **sexta-feira às 10h**.",
+    "CEG **LONGA** e **DEMORADA**, a seller é enrolada!",
+    "O prazo de pagamento é **IMEDIATO** após a confirmação da seller.",
     "O estoque é **LIMITADO**: o risco de sold-out é grande.",
     "Os itens saem da **Indonésia** para o Brasil.",
     "Haverá **frete internacional** e **taxa da Receita Federal**.",
     "**Não haverá possibilidade de cancelar a claim.** Se estiver em dúvida, não marque.",
+    "CEG: https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   ],
 };
