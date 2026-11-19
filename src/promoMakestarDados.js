@@ -29,6 +29,7 @@ export const MAKESTAR_CFG = {
     "Álbuns por **R$ 30 cada**.",
     "**Pagamento imediato**: o pedido é feito já com o pagamento (PIX ou cartão).",
     "**Alto risco de sold out**.",
+    "Álbuns que têm **mais de uma versão** serão comprados de forma **aleatória**.",
     "Envios em **fevereiro/2027**.",
   ],
 };
