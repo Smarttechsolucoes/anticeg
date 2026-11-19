@@ -1,7 +1,7 @@
-// Bloco "Seu acesso" do formulário WEVERSE BLACK FRIDAY: só aparece para quem tem um pedido CONFIRMADO.
+// Bloco "Seu acesso" do formulário WEVERSE BLACK FRIDAY: só aparece para quem tem um pedido (não cancelado) — na tela "Pedido registrado" e ao reabrir a página.
 // O conteúdo (endereço, telefone, print) NÃO está no código do site: vem da função do banco weverse_meu_acesso() — que só responde
-// para a conta que tem pedido com status "confirmado" (ou para a administração) — e a imagem fica em um bucket PRIVADO do Storage,
-// lida por link assinado e curto. Sem pedido confirmado, a função devolve nulo e nada é mostrado.
+// para a conta que tem pedido não cancelado (ou para a administração); o print vem embutido no conteúdo (imagem_data) ou por link assinado.
+// Sem pedido, ou com o pedido cancelado, a função devolve nulo e nada é mostrado.
 import { useEffect, useState } from "react";
 import supabase from "./supabase.js";
 
@@ -23,7 +23,7 @@ export function CartaoAcesso({ acesso, imagemUrl }) {
   const blocos = Array.isArray(acesso.blocos) ? acesso.blocos : [];
   return (
     <div data-testid="acesso-confirmado" style={{ background: "rgba(37,211,102,.07)", border: "1px solid rgba(37,211,102,.35)", borderRadius: 12, padding: "16px 16px 8px", marginBottom: 28 }}>
-      <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "#25d366", marginBottom: 8 }}>✓ PAGAMENTO CONFIRMADO</div>
+      <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "#25d366", marginBottom: 8 }}>{acesso.pedido_confirmado === false ? "✓ PEDIDO RECEBIDO · PAGAMENTO EM CONFERÊNCIA" : "✓ PAGAMENTO CONFIRMADO"}</div>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{acesso.titulo || "Seu acesso ao endereço"}</div>
       {acesso.aviso && <div style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.7, color: "rgba(245,240,232,.7)", marginBottom: 12 }}>☆ {acesso.aviso}</div>}
       {blocos.map((b, i) => (
