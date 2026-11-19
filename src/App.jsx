@@ -27179,7 +27179,7 @@ function PrevendaTab({ user }) {
       fechado: WBF_CFG.bloqueado,
       emBreve: WBF_CFG.bloqueado,
       titulo: "WEVERSE BLACK FRIDAY",
-      subtitulo: "Acesso ao endereço da organização na Coreia do Sul · compra por sua conta",
+      subtitulo: "Acesso ao endereço da comunidade na Coreia do Sul · compra por sua conta",
       url: "/weverse-black-friday",
       tags: ["Pagamento imediato", "Só PIX", "R$ 10"],
       info: `R$ 10,00 por acesso · a compra na Weverse é de responsabilidade do cliente`,

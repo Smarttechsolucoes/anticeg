@@ -8,7 +8,7 @@ export const WBF_LINK_GRUPO = "https://chat.whatsapp.com/Hp2pUaXtOiO9fhmL1TfzkC"
 
 export const WBF_PRODUTOS = [
   {
-    id: "acesso-endereco", nome: "ACESSO AO ENDEREÇO NA COREIA DO SUL", maxPorOpcao: 1,
+    id: "acesso-endereco", nome: "ACESSO AO ENDEREÇO NA COREIA DO SUL", foto: "endereco-oculto.jpg", maxPorOpcao: 1,   // foto com o endereço, o código e o telefone COBERTOS
     avisos: ["Um acesso por pessoa."],
     opcoes: [{ id: "acesso-endereco-weverse-black-friday", label: "Acesso ao endereço (Weverse Black Friday)", preco: 10 }],
   },
@@ -29,13 +29,14 @@ export const WBF_CFG = {
   fotoGrande: true,
   pagamentoAgora: true,
   soPix: true,               // só PIX, pagamento imediato (sem "pagar depois" e sem cartão)
-  confirmacao: "Estou ciente que a compra é de minha responsabilidade e que os dados precisam ser compatíveis com a conta da organização",
+  confirmacao: "Estou ciente que a compra é de minha responsabilidade e que os dados precisam ser compatíveis com as informações enviadas após o pagamento",
   // **texto** = negrito
   avisos: [
-    "Você paga **R$ 10** para ter acesso ao **endereço da organização na Coreia do Sul**.",
+    "Você paga **R$10** para ter acesso ao endereço da **COMUNIDADE** na Coreia do Sul.",
     "O pagamento é **IMEDIATO** e somente por **PIX**: anexe o comprovante.",
-    "A compra na Weverse é de **responsabilidade do cliente**.",
-    "Os dados da compra precisam ser **compatíveis com a conta da organização**.",
+    "A compra na Weverse é de **responsabilidade do cliente**, caso não compre nada, será **reembolsado**.",
+    "O valor pago **não se aplica para compras futuras**, apenas para essa Black Friday.",
+    "Os dados da compra precisam ser **compatíveis com as informações que serão enviadas após o pagamento**.",
     "As informações sobre essas compras serão passadas no grupo do WhatsApp: " + WBF_LINK_GRUPO,
   ],
 };
