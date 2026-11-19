@@ -13756,7 +13756,7 @@ function MercariTab({ user = null }) {
   const STEPS = [{key:'pendente',label:'Solicitado'},{key:'aprovado',label:'Aprovado'},{key:'pago',label:'Pago'},{key:'finalizado',label:'Finalizado'}];
   const STEP_IDX = {pendente:0,aprovado:1,pago:2,finalizado:3,recusado:-1};
 
-  const fxVal = 1/27.5; // câmbio fixo: R$ 1 = ¥ 27,5 (ninguém altera pela tela)
+  const fxVal = 1/31.62; // câmbio fixo: R$ 1 = ¥ 31,62 (ninguém altera pela tela)
   const [itab, setItab]       = useState('pedido');
   const [joiner, setJoiner]   = useState(null);
   const [idInp, setIdInp]     = useState('');
@@ -13779,7 +13779,7 @@ function MercariTab({ user = null }) {
   const tmrRef  = useRef(null);
   const idRef   = useRef('');
   const jRef    = useRef(null);
-  const fxRef   = useRef(1/27.5);
+  const fxRef   = useRef(1/31.62);
   const cntRef  = useRef(1);
   const fileRef = useRef(null);
 
