@@ -33,7 +33,7 @@ export const tabelaQ5 = tabela => tem(TABELAS_Q5, tabela);
 export const tabelaFechada = tabela => tabelaQ4(tabela) || tabelaQ5(tabela);
 
 /** Onde LER o estoque e o "ao vivo": a visão pública nas tabelas com visão; a própria tabela nas demais. */
-export const tabelaPublica = tabela => ((tabelaQ4(tabela) && tabela !== "pedidos_dazed_han") || tabela === "pedidos_smolmerch" ? tabela + "_publico" : tabela);
+export const tabelaPublica = tabela => ((tabelaQ4(tabela) && tabela !== "pedidos_dazed_han") || tabela === "pedidos_smolmerch" || tabela === "pedidos_promo_50_murcekaly" ? tabela + "_publico" : tabela);
 
 /** O pedido desta tabela é criado por função do servidor (o formulário recebe o número de volta)? */
 export const criaPorFuncao = tabela => tabela === "pedidos_dazed_han" || (tabelaQ5(tabela) && TABELAS_Q5[tabela].funcao);
