@@ -23,7 +23,7 @@ export const MAKESTAR_CFG = {
   // true = "em breve": a página mostra a lista, mas não aceita pedido. Trocar para false quando abrir.
   bloqueado: false,
   // link do grupo de atualizações; se for null o botão não aparece
-  grupoWhatsapp: null,
+  grupoWhatsapp: "https://chat.whatsapp.com/FSVT98wH4YA4gWu1WWfe76",
   // um bloco de avisos; **texto** = negrito
   avisos: [
     "Álbuns por **R$ 30 cada**.",
