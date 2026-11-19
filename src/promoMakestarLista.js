@@ -1,4 +1,4 @@
-// GERADO a partir da lista da PROMO MAKESTAR (153 álbuns em 30 grupos). Cada item: [id, artista, título].
+// GERADO a partir da lista da PROMO MAKESTAR (151 álbuns em 30 grupos). Cada item: [id, artista, título].
 // Não mude o id de um álbum depois que houver pedidos: o painel admin e a exportação casam pelo id.
 export const MAKESTAR_BRUTO = [
   { id: "nct-dream", nome: "NCT DREAM", itens: [
@@ -167,7 +167,6 @@ export const MAKESTAR_BRUTO = [
     ["mk-dreamcatcher-special-edition-md", "DREAMCATCHER", "SPECIAL EDITION MD"],
     ["mk-drippin-1st-album-villain-the-end-pocaalbum", "DRIPPIN", "1st Album [Villain:The End] (POCAALBUM)"],
     ["mk-h1-key-2nd-mini-album-seoul-dreaming-pocaalbum", "H1-KEY", "2nd Mini Album [Seoul Dreaming] (POCAALBUM)"],
-    ["mk-haechan-1st-album-taste-savory-ver", "HAECHAN", "1st Album [TASTE] (Savory Ver.)"],
     ["mk-han-seung-woo-3rd-mini-album-frame", "HAN SEUNG WOO", "3rd Mini Album [FRAME]"],
     ["mk-huta-lee-minhyuk-2nd-album-boom", "HUTA (LEE MINHYUK)", "2nd Album [BOOM]"],
     ["mk-ive-4th-ep-ive-secret", "IVE", "4th EP [IVE SECRET]"],
@@ -189,7 +188,6 @@ export const MAKESTAR_BRUTO = [
     ["mk-mamamoo-1st-mini-album-two-rabbits", "MAMAMOO+", "1st Mini Album [TWO RABBITS]"],
     ["mk-moonbin-sanha-2nd-mini-album-refuge", "MOONBIN&SANHA", "2nd Mini Album [REFUGE]"],
     ["mk-nct-4th-full-album-golden-age-archiving-ver", "NCT", "4th Full Album [Golden Age] (Archiving Ver.)"],
-    ["mk-nct-jnjm-1st-mini-album-both-sides-both-sides-ver", "NCT JNJM", "1st Mini Album [BOTH SIDES] (BOTH SIDES Ver.)"],
     ["mk-nine-to-six-1st-single-album-good-to-you", "NINE to SIX", "1st Single Album [GOOD TO YOU]"],
     ["mk-oh-my-girl-golden-hourglass-pocaalbum", "OH MY GIRL", "[Golden Hourglass] (POCAALBUM)"],
     ["mk-plave-billboard-artist-plave-edition", "PLAVE", "[BILLBOARD ARTIST : PLAVE EDITION]"],
