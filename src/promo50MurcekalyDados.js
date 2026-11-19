@@ -49,7 +49,7 @@ const LISTA = [
   rodada("skz-r9", "STRAY KIDS NACIFIC R9", "skz-r9.jpg", 10, SKZ, [0, 3]),
   rodada("skz-r10", "STRAY KIDS NACIFIC R10 — DOUBLE SIDED", "skz-r10.jpg", 10, SKZ),
   rodada("skz-r11", "STRAY KIDS NACIFIC R11 — HOLOGRAM", "skz-r11.jpg", 10, SKZ),
-  rodada("skz-r12", "STRAY KIDS NACIFIC R12", "skz-r12.jpg", 10, SKZ, [0, 6]),
+  rodada("skz-r12", "STRAY KIDS NACIFIC R12", "skz-r12.jpg", 10, SKZ, [0, 5]),
   rodada("skz-r13", "STRAY KIDS NACIFIC R13", "skz-r13.jpg", 10, SKZ),
   rodada("skz-r14", "STRAY KIDS NACIFIC R14", "skz-r14.jpg", 10, SKZ),
   rodada("skz-r15", "STRAY KIDS NACIFIC R15", "skz-r15.jpg", 10, SKZ),
