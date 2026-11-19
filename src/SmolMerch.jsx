@@ -567,7 +567,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             <div style={{ marginBottom: 24 }}>
               <div style={labelStyle}>Pagamento</div>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                {[["agora", "Pagar agora", agora], ["depois", "Pagar depois", !agora]].map(([v, l, ativo]) => (
+                {(cfg.soPix ? [] : [["agora", "Pagar agora", agora], ["depois", "Pagar depois", !agora]]).map(([v, l, ativo]) => (
                   <button key={v} type="button" onClick={() => setPagamento(v === "agora" ? "pix" : "depois")}
                     style={{ flex: 1, padding: "12px 0", borderRadius: 8, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativo ? "rgba(255,92,26,.12)" : "transparent", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 11, cursor: "pointer", fontWeight: ativo ? 700 : 400 }}>
                     {l}
@@ -586,7 +586,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               {agora && (
                 <>
                   <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                    {[["pix", "PIX"], ["cartao", "Cartão"]].map(([v, l]) => (
+                    {(cfg.soPix ? [] : [["pix", "PIX"], ["cartao", "Cartão"]]).map(([v, l]) => (
                       <button key={v} type="button" onClick={() => setPagamento(v)}
                         style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1px solid ${pagamento === v ? "rgba(255,92,26,.6)" : "rgba(245,240,232,.1)"}`, background: pagamento === v ? "rgba(255,92,26,.08)" : "transparent", color: pagamento === v ? "var(--laranja)" : "rgba(245,240,232,.5)", fontFamily: mono, fontSize: 11, cursor: "pointer", fontWeight: pagamento === v ? 700 : 400 }}>
                         {l}
