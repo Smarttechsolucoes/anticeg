@@ -28,6 +28,8 @@ export const WBF_CFG = {
   resumoPedido: true,        // lista o item marcado embaixo, para conferência
   fotoGrande: true,
   pagamentoAgora: true,
+  acesso: true,              // logo após o pedido, o endereço aparece na tela (vem do banco, só para quem tem pedido não cancelado; não está no código)
+  aposPedido: "O acesso ao endereço está logo abaixo. O pagamento será conferido: se o comprovante não estiver correto, o pedido é cancelado e o acesso removido.",
   soPix: true,               // só PIX, pagamento imediato (sem "pagar depois" e sem cartão)
   confirmacao: "Estou ciente que a compra é de minha responsabilidade e que os dados precisam ser compatíveis com as informações enviadas após o pagamento",
   // **texto** = negrito
