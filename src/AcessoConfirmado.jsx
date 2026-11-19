@@ -40,7 +40,7 @@ export function CartaoAcesso({ acesso, imagemUrl }) {
           ))}
         </div>
       ))}
-      {imagemUrl && <img src={imagemUrl} alt="Print do endereço na Weverse" style={{ display: "block", width: "100%", height: "auto", borderRadius: 8, marginBottom: 14, background: "rgba(245,240,232,.06)" }} />}
+      {(imagemUrl || acesso.imagem_data) && <img src={imagemUrl || acesso.imagem_data} alt="Print do endereço na Weverse" style={{ display: "block", width: "100%", height: "auto", borderRadius: 8, marginBottom: 14, background: "rgba(245,240,232,.06)" }} />}
     </div>
   );
 }
