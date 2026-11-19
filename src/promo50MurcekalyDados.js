@@ -80,7 +80,7 @@ const LISTA = [
   },
   { id: "beads-strap-felix", nome: "BEADS STRAP BY FELIX", foto: "beads-strap-felix.jpg", opcoes: unica("beads-strap-felix", "Beads Strap by Felix", 160) },
   { id: "ball-cap-han", nome: "BALL CAP BY HAN", foto: "ball-cap-han.jpg", opcoes: unica("ball-cap-han", "Ball Cap by Han", 250) },
-  { id: "hippers-set", nome: "HIPPERS SET (HIPPER + PHOTOCARD)", foto: "hippers-set.jpg", avisos: ["Cada set é de 1 membro: escolha qual."], opcoes: opcoes("hippers-set", SKZOO_MEMBRO, 65) },
+  { id: "hippers-set", nome: "HIPPERS SET (HIPPER + PHOTOCARD)", foto: "hippers-set.jpg", avisos: ["Cada set inclui: SKZOO + photocard do membro escolhido."], opcoes: opcoes("hippers-set", SKZOO_MEMBRO, 65) },
 
   // ── Álbuns (R$ 30 cada) ──
   { id: "album-karma", nome: "STRAY KIDS — KARMA (COMPACT VER.) SEALED", foto: "album-karma.jpg", opcoes: unica("album-karma", "Compact Ver.", 30) },
