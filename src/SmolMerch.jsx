@@ -216,6 +216,8 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
+  // cfg.secoes (opcional): ["ATEEZ", ...] separa os produtos em abas; cada produto traz p.secao
+  const [secao,       setSecao]       = useState(cfg.secoes?.[0] || null);
   // cfg.dadosTravados: quem está logada vê os dados do cadastro travados, com o botão "Editar" (vale só para este pedido), como no DICON
   const [logado]                      = useState(() => { try { return !!JSON.parse(localStorage.getItem("anticeg_user_v2"))?.cog; } catch { return false; } });
   const [editando,    setEditando]    = useState(false);
@@ -344,6 +346,22 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const travado = !!cfg.dadosTravados && logado && cadastroCompleto && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
   const agora = pagamento !== "depois";
+  // produtos da aba escolhida (sem cfg.secoes: todos) e quantas unidades já estão marcadas em cada aba
+  const visiveis = cfg.secoes ? produtos.filter(p => p.secao === secao) : produtos;
+  const contSecao = nome => produtos.filter(p => p.secao === nome).reduce((t, p) => t + p.opcoes.reduce((a, o) => a + (qtds[o.id] || 0), 0), 0);
+  const abasSecoes = !cfg.secoes ? null : (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+      {cfg.secoes.map(nome => {
+        const on = secao === nome, c = contSecao(nome);
+        return (
+          <button key={nome} type="button" onClick={() => setSecao(nome)}
+            style={{ flex: "1 1 0", minWidth: 96, padding: "10px 8px", borderRadius: 8, border: `1px solid ${on ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: on ? "rgba(255,92,26,.12)" : "transparent", color: on ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 11, letterSpacing: "1px", cursor: "pointer" }}>
+            {nome}{c > 0 ? ` (${c})` : ""}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div style={{ minHeight: interno ? 0 : "100vh", background: "var(--bg)", color: "var(--offwhite)", display: "flex", flexDirection: "column", alignItems: "center", padding: interno ? "28px 16px 80px" : "40px 16px 80px" }}>
@@ -396,8 +414,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               <div style={{ fontFamily: mono, fontSize: 13, color: "rgba(245,240,232,.5)" }}>Pedidos encerrados em {cfg.pedidosAte}.</div>
             </div>
             <div style={labelStyle}>Itens da pré-venda</div>
+            {abasSecoes}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {produtos.map(p => (
+              {visiveis.map(p => (
                 <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                   <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
                   <div style={{ display: "flex", flexDirection: "column" }}>
@@ -477,8 +496,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
+              {abasSecoes}
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {produtos.map(p => (
+                {visiveis.map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                     <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
                     <div style={{ display: "flex", flexDirection: "column" }}>
