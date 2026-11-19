@@ -89,7 +89,7 @@ const LISTA = [
   { id: "album-p1harmony", nome: "P1HARMONY — HARMONY: ALL IN SEALED", foto: "album-p1harmony.jpg", opcoes: unica("album-p1harmony", "Flow In Ver.", 30) },
   { id: "album-cix", nome: "CIX — 0 OR 1 SEALED", foto: "album-cix.jpg", opcoes: [{ id: "album-cix-humanoid", label: "Humanoid Ver.", preco: 30 }, { id: "album-cix-android", label: "Android Ver.", preco: 30 }] },
   { id: "album-txt", nome: "TXT — MINISODE 1: BLUE HOUR SEALED", foto: "album-txt.jpg", opcoes: [{ id: "album-txt-ar", label: "AR Ver.", preco: 30 }, { id: "album-txt-vr", label: "VR Ver.", preco: 30 }] },
-  { id: "album-itzy", nome: "ITZY — KILL MY DOUBT SEALED", opcoes: unica("album-itzy", "Kill My Doubt", 30) },
+  { id: "album-itzy", nome: "ITZY — KILL MY DOUBT SEALED", foto: "album-itzy.jpg", opcoes: ["Limited Ver.", "A Ver.", "B Ver.", "C Ver.", "D Ver."].map(v => ({ id: `album-itzy-${slug(v)}`, label: v, preco: 30 })) },
   { id: "album-kickflip", nome: "KICKFLIP — FLIP IT, KICK IT! (UMM GREAT VER.)", foto: "album-kickflip.jpg", opcoes: unica("album-kickflip", "Umm Great Ver.", 30) },
   { id: "album-nflying", nome: "N.FLYING — EVERLASTING SEALED", foto: "album-nflying.jpg", opcoes: [{ id: "album-nflying-last", label: "Last Ver.", preco: 30 }, { id: "album-nflying-ever", label: "Ever Ver.", preco: 30 }] },
 
