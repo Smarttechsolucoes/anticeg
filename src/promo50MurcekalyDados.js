@@ -135,8 +135,9 @@ export const PROMO_50_MURCEKALY_CFG = {
   tabela: "pedidos_promo_50_murcekaly", pasta: "promo-50-murcekaly", produto: "PROMO 50 MURCEKALY",
   titulo: "PROMO 50 MURCEKALY", sub: "",
   secoes: SECOES_P50,        // abas no formulário
-  // prazo ainda não informado: sem data, o formulário não fecha sozinho
-  deadline: null, pedidosAte: null, pagarAte: null,
+  // o formulário fecha na sexta-feira 20/11/2026 às 10h (Brasília)
+  deadline: new Date("2026-11-20T10:00:00-03:00"), pedidosAte: "SEXTA-FEIRA (20/11) ÀS 10H", pagarAte: null,
+  confirmacao: "Estou ciente que o prazo de pagamento é IMEDIATO",   // caixa obrigatória no fim do formulário
   grupoWhatsapp: "https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando abrir.
   bloqueado: false,
@@ -151,9 +152,13 @@ export const PROMO_50_MURCEKALY_CFG = {
   pagamentoAgora: false,     // só "pagar depois"
   // **texto** = negrito
   avisos: [
+    "O forms fica aberto até **sexta-feira às 10h**.",
+    "CEG **LONGA** e **DEMORADA**, a seller é enrolada!",
+    "O prazo de pagamento é **IMEDIATO** após a confirmação da seller.",
     "O estoque é **LIMITADO**: o risco de sold-out é grande.",
     "Os itens saem da **Indonésia** para o Brasil.",
     "Haverá **frete internacional** e **taxa da Receita Federal**.",
     "**Não haverá possibilidade de cancelar a claim.** Se estiver em dúvida, não marque.",
+    "CEG: https://chat.whatsapp.com/Lux5FicJErLBTZPBQPJfq9",
   ],
 };
