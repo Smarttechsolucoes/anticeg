@@ -66,13 +66,31 @@ const NOMES = [
   "SKZOO REVERSIBLE FACE POUCH - celebrATE",
 ];
 
+// Como cada item é vendido (posição na lista acima, começando em 1). Classificação feita pelo nome e pela foto: CONFERIR com a dona.
+//   escolha   = dá para escolher o personagem SKZOO (e o membro dele): uma opção por personagem
+//   membro    = dá para escolher o membro: uma opção por membro
+//   aleatorio = o modelo é sorteado, não dá para escolher (uma opção só)
+//   conjunto  = vem o set completo (uma opção só)
+//   (os demais são produto único: uma opção só)
+const SKZOO_MEMBRO = ["Bang Chan (Wolf Chan)", "Lee Know (Leebit)", "Changbin (Dwaekki)", "Hyunjin (Jiniret)", "Han (Han Quokka)", "Felix (BbokAri)", "Seungmin (PuppyM)", "I.N (FoxI.Ny)"];
+const MEMBROS = ["Bang Chan", "Lee Know", "Changbin", "Hyunjin", "Han", "Felix", "Seungmin", "I.N"];
+const TIPO = {};
+[1, 6, 13, 15, 16, 18, 19, 20, 26, 27, 28, 29, 38, 39, 43, 44, 45, 46, 49, 50, 51, 52].forEach(n => { TIPO[n] = "escolha"; });
+[7, 14, 30].forEach(n => { TIPO[n] = "membro"; });
+[2, 3, 4, 5, 11, 17, 41, 42].forEach(n => { TIPO[n] = "aleatorio"; });
+[8, 9, 12, 22, 32].forEach(n => { TIPO[n] = "conjunto"; });
+const ETIQUETA = { escolha: "ESCOLHA O MEMBRO", membro: "ESCOLHA O MEMBRO", aleatorio: "ALEATÓRIO", conjunto: "SET COMPLETO" };
+
 // o mesmo nome pode se repetir em coleções diferentes: o id ganha um sufixo numérico só quando precisa
 const vistos = {};
-export const FANS_PRODUTOS = NOMES.map(nome => {
+export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const base = slug(nome);
   vistos[base] = (vistos[base] || 0) + 1;
   const id = vistos[base] > 1 ? `${base}-${vistos[base]}` : base;
-  return { id, nome, foto: `${id}.jpg`, opcoes: [{ id, label: nome, preco: 0 }] };
+  const tipo = TIPO[i + 1];
+  const lista = tipo === "escolha" ? SKZOO_MEMBRO : tipo === "membro" ? MEMBROS : null;
+  const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: 0 })) : [{ id, label: nome, preco: 0 }];
+  return { id, nome, foto: `${id}.jpg`, ...(ETIQUETA[tipo] ? { etiqueta: ETIQUETA[tipo] } : {}), opcoes };
 });
 
 export const FANS_PROMO_CFG = {
@@ -90,10 +108,12 @@ export const FANS_PROMO_CFG = {
   aoVivo: false,             // sem abas Ao vivo / Histórico
   resumoPedido: true,        // lista os itens marcados embaixo, para conferência
   fotoGrande: true,
+  colunas: 3,                // 3 itens por linha
   pagamentoAgora: true,      // pagamento imediato: PIX ou cartão (sem "pagar depois")
   // **texto** = negrito
   avisos: [
     "O pagamento é **IMEDIATO**: o pedido é feito já com o pagamento (PIX ou cartão).",
     "Se o item **não puder ser comprado**, o valor é **reembolsado imediatamente**.",
+    "**ALEATÓRIO** = o modelo é sorteado, não dá para escolher. **ESCOLHA O MEMBRO** = marque a quantidade de cada membro/personagem. **SET COMPLETO** = vem o conjunto inteiro.",
   ],
 };
