@@ -1,7 +1,7 @@
 // ── Formulário FANS PROMO (itens da loja oficial de fãs, compra por conta da organização) ─────────────
 // Pagamento IMEDIATO (PIX ou cartão). Se o item não puder ser comprado, o valor é reembolsado na hora.
 // Usa o mesmo formulário e o mesmo painel dos outros forms de loja (SmolMerchFormPage / AdminSmolMerch).
-// preco: null = a definir (aparece "preço em breve" e não soma no total). Preencher em reais antes de abrir.
+// preco: 0 = PROVISÓRIO (a dona ainda vai informar os valores). Preencher em reais antes de abrir; com o form bloqueado ninguém consegue pedir.
 // Nomes que terminam em "…" estavam cortados no print: completar quando houver o nome inteiro.
 // Fotos: public/fans-promo/<id>.jpg (sem a foto, o card aparece só com o nome).
 export const fotoFans = arq => `/fans-promo/${encodeURIComponent(arq)}`;
@@ -72,7 +72,7 @@ export const FANS_PRODUTOS = NOMES.map(nome => {
   const base = slug(nome);
   vistos[base] = (vistos[base] || 0) + 1;
   const id = vistos[base] > 1 ? `${base}-${vistos[base]}` : base;
-  return { id, nome, foto: `${id}.jpg`, opcoes: [{ id, label: nome, preco: null }] };
+  return { id, nome, foto: `${id}.jpg`, opcoes: [{ id, label: nome, preco: 0 }] };
 });
 
 export const FANS_PROMO_CFG = {
