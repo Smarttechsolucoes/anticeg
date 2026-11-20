@@ -17,8 +17,8 @@ export const MAKESTAR_OPCOES = MAKESTAR_GRUPOS.flatMap(g => g.itens);
 export const MAKESTAR_CFG = {
   tabela: "pedidos_promo_makestar", pasta: "promo-makestar", produto: "PROMO MAKESTAR",
   titulo: "PROMO MAKESTAR", sub: "Álbuns por R$ 30 cada",
-  // sem data de fechamento definida: preencher aqui (deadline = Date, pedidosAte = texto) quando houver
-  deadline: null, pedidosAte: null,
+  // encerrado em 20/11/2026: o card vai para "Encerrados" e a página não aceita mais pedido
+  deadline: new Date("2026-11-20T10:30:00-03:00"), pedidosAte: "20/11/2026",
   preco: MAKESTAR_PRECO,
   // true = "em breve": a página mostra a lista, mas não aceita pedido. Trocar para false quando abrir.
   bloqueado: false,
