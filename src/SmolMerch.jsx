@@ -9,9 +9,9 @@ import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } f
 const mono = "'DM Mono',monospace";
 
 function Qty({ valor, onMenos, onMais, maisDesligado = false, compacto = false }) {
-  const b = { width: compacto ? 28 : 32, height: compacto ? 28 : 32, borderRadius: "50%", border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "var(--offwhite)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
+  const b = { width: compacto ? 30 : 32, height: compacto ? 30 : 32, borderRadius: "50%", border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "var(--offwhite)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: compacto ? 6 : 10, justifyContent: compacto ? "center" : "flex-start", margin: compacto ? "0 auto" : 0 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: compacto ? 6 : 10, justifyContent: compacto ? "space-between" : "flex-start", width: compacto ? "100%" : undefined, minHeight: compacto ? 34 : undefined }}>
       <button type="button" aria-label="diminuir" onClick={onMenos} style={b}>−</button>
       <span style={{ fontFamily: mono, fontSize: compacto ? 15 : 18, fontWeight: 700, minWidth: compacto ? 16 : 22, textAlign: "center" }}>{valor}</span>
       <button type="button" aria-label="aumentar" onClick={onMais} disabled={maisDesligado} style={maisDesligado ? { ...b, opacity: .25, cursor: "not-allowed" } : b}>+</button>
@@ -29,12 +29,12 @@ function CabProduto({ p, fotoDe, grande, onZoom, compacto = false }) {
     </div>
   ) : null;
   if (grande) return (
-    <div>
+    <div style={compacto ? { display: "flex", flexDirection: "column", flex: 1 } : undefined}>
       <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
         style={{ ...img, display: "block", width: "100%", height: "auto", maxHeight: 420, objectFit: "contain" }}
         onError={e => { e.target.style.visibility = "hidden"; }} />
-      {p.etiqueta && <div style={{ padding: compacto ? "6px 8px 0" : "8px 14px 0" }}><span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: compacto ? 8 : 9, letterSpacing: "1px", lineHeight: 1.5 }}>{p.etiqueta}</span></div>}
-      <div style={{ fontWeight: 700, fontSize: compacto ? 12 : 14, lineHeight: 1.3, padding: compacto ? "6px 8px 6px" : "10px 14px 8px" }}>
+      {(p.etiqueta || compacto) && <div style={{ padding: compacto ? "8px 8px 0" : "8px 14px 0", minHeight: compacto ? 25 : undefined }}>{p.etiqueta && <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: compacto ? 8 : 9, letterSpacing: "1px", lineHeight: 1.5 }}>{p.etiqueta}</span>}</div>}
+      <div style={{ fontWeight: 700, fontSize: compacto ? 12 : 14, lineHeight: 1.3, padding: compacto ? "6px 8px 6px" : "10px 14px 8px", ...(compacto ? { flex: 1, minHeight: "calc(2.6em + 12px)" } : {}) }}>
         {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
         {p.nome}
       </div>
@@ -475,7 +475,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             </div>
             <div style={labelStyle}>Itens da pré-venda</div>
             {abasSecoes}
-            <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "stretch" } : { display: "flex", flexDirection: "column", gap: 14 }}>
               {visiveis.map(p => (
                 <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                   <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} compacto={(cfg.colunas || 1) > 1} />
@@ -560,9 +560,9 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
               <div style={labelStyle}>Escolha os itens</div>
               {cfg.legendaItens && <div style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.7, color: "rgba(245,240,232,.5)", margin: "-4px 0 12px" }}>{avisoComLinks(cfg.legendaItens)}</div>}
               {abasSecoes}
-              <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "stretch" } : { display: "flex", flexDirection: "column", gap: 14 }}>
                 {visiveis.map(p => (
-                  <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
+                  <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden", ...((cfg.colunas || 1) > 1 ? { display: "flex", flexDirection: "column" } : {}) }}>
                     <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} compacto={(cfg.colunas || 1) > 1} />
                     {(cfg.colunas || 1) > 1 && p.opcoes.length > 1 ? (() => {
                       const n = p.opcoes.reduce((t, o) => t + (qtds[o.id] || 0), 0);
@@ -571,7 +571,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                       return (
                         <div style={{ padding: "2px 8px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
                           <div style={{ fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--verde)", letterSpacing: "0.5px" }}>{min === max ? fmtReais(min) : `a partir de ${fmtReais(min)}`}</div>
-                          <button type="button" onClick={() => setSeletor(p)} style={{ width: "100%", padding: "8px 0", background: n > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.05)", border: `1px solid ${n > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)"}`, borderRadius: 6, fontFamily: mono, fontSize: 10, color: n > 0 ? "var(--laranja)" : "rgba(245,240,232,.6)", letterSpacing: "1px", cursor: "pointer" }}>
+                          <button type="button" onClick={() => setSeletor(p)} style={{ width: "100%", minHeight: 34, padding: "4px 0", background: n > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.05)", border: `1px solid ${n > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)"}`, borderRadius: 6, fontFamily: mono, fontSize: 10, color: n > 0 ? "var(--laranja)" : "rgba(245,240,232,.6)", letterSpacing: "1px", cursor: "pointer" }}>
                             {n > 0 ? `${n} no carrinho ✓` : (p.botao || "ESCOLHER OPÇÃO →")}
                           </button>
                         </div>
