@@ -83,6 +83,8 @@ const ETIQUETA = { escolha: "ESCOLHA O MEMBRO", membro: "ESCOLHA O MEMBRO", alea
 
 // o mesmo nome pode se repetir em coleções diferentes: o id ganha um sufixo numérico só quando precisa
 const vistos = {};
+// itens que a organização decidiu NÃO vender neste formulário (ficam na lista acima só para manter a numeração do TIPO)
+const RETIRADOS = ["SKZOO POWER BANK - dominATE SEOUL", "SKZOO TAMAGOTCHI & CASE SET", "SKZOO HANDHELD FAN - dominATE SEOUL"];
 export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const base = slug(nome);
   vistos[base] = (vistos[base] || 0) + 1;
@@ -91,7 +93,7 @@ export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const lista = tipo === "escolha" ? SKZOO_MEMBRO : tipo === "membro" ? MEMBROS : null;
   const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: 0 })) : [{ id, label: nome, preco: 0 }];
   return { id, nome, foto: `${id}.jpg`, ...(ETIQUETA[tipo] ? { etiqueta: ETIQUETA[tipo] } : {}), ...(lista ? { botao: "ESCOLHER MEMBRO →" } : {}), opcoes };
-});
+}).filter(p => !RETIRADOS.includes(p.nome));
 
 export const FANS_PROMO_CFG = {
   tabela: "pedidos_fans_promo", pasta: "fans-promo", produto: "FANS PROMO",
