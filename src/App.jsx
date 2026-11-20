@@ -2,6 +2,7 @@
 import supabase, { SUPABASE_URL } from "./supabase.js";
 import { chamarPlanilha, mensagemPlanilha, esperadosConfirmacao } from "./planilhaApi.js";
 import HistoricoForms from "./HistoricoForms.jsx";
+import BuscaCegs from "./BuscaCegs.jsx";
 import "./App.css";
 import LandingPage from "./LandingPage";
 import { SmolMerchFormPage, AdminSmolMerch } from "./SmolMerch.jsx";
@@ -1580,6 +1581,7 @@ function CegTab({ user, itens }) {
   const [filtro, setFiltro] = useState(!user || user.guest ? "todas" : "minhas");
   const [cegCapas, setCegCapas] = useState({});
   const [resumoCegs, setResumoCegs] = useState(null);   // só no novo login: números dos CEGs vindos do servidor
+  const [busca, setBusca] = useState("");   // busca por nome de CEG ou de item
 
   const guest = !user || user.guest;
   const meuCog = dataCog(user?.cog);
@@ -1701,6 +1703,16 @@ function CegTab({ user, itens }) {
         </div>
       </div>
 
+      <div style={{ marginBottom: 14, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input value={busca} onChange={e => setBusca(e.target.value)} aria-label="Buscar CEG ou item" placeholder="Buscar CEG ou item (ex.: SKZOO, photocard)…"
+          style={{ ...inputStyle, maxWidth: 440, flex: "1 1 260px" }} />
+        {busca && <button type="button" onClick={() => setBusca("")} style={{ background: "transparent", border: "1px solid rgba(245,240,232,.2)", color: "rgba(245,240,232,.6)", borderRadius: 6, padding: "9px 14px", fontFamily: "'DM Mono', monospace", fontSize: 11, cursor: "pointer" }}>limpar</button>}
+      </div>
+
+      {busca.trim().length >= 2 ? (
+        <BuscaCegs termo={busca} cegs={todasCegs.map(([c]) => c)} meuCog={meuCog} podeVerMeus={!guest && !user?.acesso_simples}
+          onAbrirCeg={ceg => { window.history.pushState(null, "", `/cegs/${slugify(ceg)}`); setDetalhe(ceg); }} />
+      ) : (<>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {filtrosBtns.map(f => (
           <button key={f.id} onClick={() => setFiltro(f.id)}
@@ -1768,6 +1780,7 @@ function CegTab({ user, itens }) {
           })}
         </div>
       )}
+      </>)}
     </div>
   );
 }
