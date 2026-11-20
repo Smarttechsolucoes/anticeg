@@ -307,6 +307,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     if (!qtdTotal || !nome.trim() || !email.trim()) { setErro("Preencha nome, e-mail e escolha ao menos 1 item."); return; }
     if (cfg.confirmacao && !ciente) { setErro("Marque a confirmação no fim do formulário para enviar o pedido."); return; }
     if (pagamento === "pix" && !comprovante && !soPre) { setErro("Anexe o comprovante do PIX."); return; }
+    if (pagamento === "cartao" && cfg.cartaoComprovante && !comprovante && !soPre) { setErro("Pague no link do cartão e anexe o comprovante do pagamento."); return; }
     setStatus("enviando"); setErro("");
 
     // alguém pode ter pedido o último enquanto esta pessoa preenchia: confere o limite de novo antes de gravar
@@ -330,7 +331,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     // o id é gerado aqui (não precisa ler o pedido de volta do banco) e também dá nome ao comprovante
     const id = crypto.randomUUID();
     let comprovanteUrl = null;
-    if (pagamento === "pix" && comprovante) {
+    if ((pagamento === "pix" || (pagamento === "cartao" && cfg.cartaoComprovante)) && comprovante) {
       const ext  = comprovante.name.split(".").pop();
       const path = `${cfg.pasta}/${id}.${ext}`;
       const { error: upErr } = await enviarArquivoSeguro("comprovantes", path, comprovante, { upsert: false });
@@ -349,7 +350,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     if (error) { setStatus("idle"); setErro("Erro: " + (error.message || JSON.stringify(error))); return; }
     setPedidoId(id.slice(0, 8));
 
-    if (pagamento === "cartao" && !soPre) window.open("https://linknabio.gg/anticeg-comu", "_blank");
+    if (pagamento === "cartao" && !soPre && !cfg.cartaoComprovante) window.open("https://linknabio.gg/anticeg-comu", "_blank");   // com cartaoComprovante a pessoa já pagou no link antes de enviar
     setStatus("sucesso");
   }
 
@@ -497,6 +498,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Pedido registrado!</div>
             <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.5)", lineHeight: 1.6, marginBottom: 24 }}>
               {pagamento === "pix" ? "Comprovante enviado. Aguardando confirmação."
+                : pagamento === "cartao" && cfg.cartaoComprovante ? "Comprovante do cartão enviado. Aguardando confirmação."
                 : pagamento === "depois" ? "Pedido registrado! Avisaremos como pagar."
                 : "Abrimos o link de pagamento no cartão. Se não abriu, acesse linknabio.gg/anticeg-comu."}
               {cfg.aposPedido && <div style={{ marginTop: 10, color: "rgba(245,240,232,.75)" }}>{cfg.aposPedido}</div>}
@@ -686,7 +688,25 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                       {cfg.avisoPix && <div style={{ fontSize: 11, lineHeight: 1.6, color: "rgba(245,240,232,.6)" }}>☆ {cfg.avisoPix}</div>}
                     </div>
                   )}
-                  {pagamento === "cartao" && (
+                  {pagamento === "cartao" && cfg.cartaoComprovante && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      <div style={{ ...caixa, padding: "14px 16px" }}>
+                        <div style={{ fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.4)", marginBottom: 8 }}>PAGAMENTO NO CARTÃO · 2 PASSOS</div>
+                        <div style={{ lineHeight: 1.7 }}>
+                          <div><strong style={{ color: "var(--offwhite)" }}>1.</strong> Pague no link do cartão. Valor dos itens: <strong style={{ color: "var(--offwhite)" }}>{fmtReais(total)}</strong> (o link pode incluir a taxa da máquina).</div>
+                          <a href={cfg.linkCartao || "https://linknabio.gg/anticeg-comu"} target="_blank" rel="noopener noreferrer"
+                            style={{ display: "inline-block", margin: "8px 0", padding: "9px 16px", borderRadius: 8, border: "1px solid var(--laranja)", color: "var(--laranja)", fontFamily: mono, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>ABRIR LINK DE PAGAMENTO →</a>
+                          <div><strong style={{ color: "var(--offwhite)" }}>2.</strong> Depois de pagar, anexe o comprovante abaixo e confirme o pedido.</div>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Comprovante do cartão</label>
+                        <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0] || null)} style={{ ...inputStyle, padding: "8px 14px", fontSize: 12 }} />
+                      </div>
+                      {cfg.avisoCartao && <div style={{ fontSize: 11, lineHeight: 1.6, color: "#FF9F40" }}>☆ {cfg.avisoCartao}</div>}
+                    </div>
+                  )}
+                  {pagamento === "cartao" && !cfg.cartaoComprovante && (
                     <div style={caixa}>Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.{cfg.avisoCartao && <div style={{ marginTop: 8, color: "#FF9F40" }}>☆ {cfg.avisoCartao}</div>}</div>
                   )}
                 </>

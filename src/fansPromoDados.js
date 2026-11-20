@@ -169,6 +169,7 @@ export const FANS_PROMO_CFG = {
   colunas: 3,                // 3 itens por linha
   pagamentoAgora: true,      // pagamento imediato
   soAgora: true,             // só "pagar agora" (PIX ou cartão); sem "pagar depois"
+  cartaoComprovante: true,    // no cartão: paga no link PRIMEIRO e anexa o comprovante no formulário (como no PIX)
   avisoPix: "Reembolso no PIX: o valor será reembolsado integralmente.",
   avisoCartao: "Reembolso no cartão: somente o valor do item. A taxa da máquina NÃO será reembolsada, pois é um valor que NÃO chega para a GOM.",
   // **texto** = negrito
