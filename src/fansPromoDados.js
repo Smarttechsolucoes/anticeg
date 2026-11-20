@@ -101,7 +101,7 @@ export const FANS_PROMO_CFG = {
   // formulário aberto até 22 de novembro (fecha sozinho no fim do dia, horário de Brasília)
   deadline: new Date("2026-11-22T23:59:59-03:00"), pedidosAte: "22/11/2026", pagarAte: null,
   confirmacao: "Estou ciente que o pagamento é IMEDIATO e da política de reembolso (no cartão, a taxa da máquina não é reembolsada)",
-  grupoWhatsapp: null,
+  grupoWhatsapp: "https://chat.whatsapp.com/JVCGH5uHyks8AtcrhVj5Ah",
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando os preços estiverem preenchidos.
   bloqueado: true,
   ocultarSeCadastrada: false,
@@ -127,6 +127,7 @@ export const FANS_PROMO_CFG = {
         "Caso o item **não seja comprado por falta de estoque**, o reembolso será **integral em até 48h**, individualmente no privado. As informações serão divulgadas no **grupo da CEG** informado no formulário.",
         "**Pagamentos no cartão:** reembolso **somente do valor do item**. A taxa da máquina **NÃO** será reembolsada, pois é um valor que **NÃO** chega para a GOM.",
         "**PIX:** o valor será reembolsado **integralmente**.",
+        "Grupo da CEG (as informações do reembolso saem lá): https://chat.whatsapp.com/JVCGH5uHyks8AtcrhVj5Ah",
       ],
     },
     "Ainda sem data de envio internacional.",
