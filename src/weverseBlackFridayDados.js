@@ -17,8 +17,8 @@ export const WBF_PRODUTOS = [
 export const WBF_CFG = {
   tabela: "pedidos_weverse_black_friday", pasta: "weverse-black-friday", produto: "WEVERSE BLACK FRIDAY",
   titulo: "WEVERSE BLACK FRIDAY", sub: "Acesso ao endereço na Coreia do Sul",
-  // prazo ainda não informado: sem data, o formulário não fecha sozinho
-  deadline: null, pedidosAte: null, pagarAte: null,
+  // encerrado em 20/11/2026: o card vai para "Encerrados" e a página não aceita mais pedido
+  deadline: new Date("2026-11-20T10:30:00-03:00"), pedidosAte: "20/11/2026", pagarAte: null,
   grupoWhatsapp: WBF_LINK_GRUPO,
   bloqueado: false,
   ocultarSeCadastrada: false,
