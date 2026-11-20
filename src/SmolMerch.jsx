@@ -8,19 +8,19 @@ import { SMOLMERCH_PRODUTOS, SMOLMERCH_OPCOES, SMOLMERCH_CFG, fmtReais, foto } f
 
 const mono = "'DM Mono',monospace";
 
-function Qty({ valor, onMenos, onMais, maisDesligado = false }) {
-  const b = { width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "var(--offwhite)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
+function Qty({ valor, onMenos, onMais, maisDesligado = false, compacto = false }) {
+  const b = { width: compacto ? 28 : 32, height: compacto ? 28 : 32, borderRadius: "50%", border: "1px solid rgba(245,240,232,.2)", background: "transparent", color: "var(--offwhite)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: compacto ? 6 : 10, justifyContent: compacto ? "center" : "flex-start", margin: compacto ? "0 auto" : 0 }}>
       <button type="button" aria-label="diminuir" onClick={onMenos} style={b}>−</button>
-      <span style={{ fontFamily: mono, fontSize: 18, fontWeight: 700, minWidth: 22, textAlign: "center" }}>{valor}</span>
+      <span style={{ fontFamily: mono, fontSize: compacto ? 15 : 18, fontWeight: 700, minWidth: compacto ? 16 : 22, textAlign: "center" }}>{valor}</span>
       <button type="button" aria-label="aumentar" onClick={onMais} disabled={maisDesligado} style={maisDesligado ? { ...b, opacity: .25, cursor: "not-allowed" } : b}>+</button>
     </div>
   );
 }
 
 // topo do card do produto: miniatura ao lado do nome ou, com fotoGrande, a foto inteira em largura total
-function CabProduto({ p, fotoDe, grande, onZoom }) {
+function CabProduto({ p, fotoDe, grande, onZoom, compacto = false }) {
   const img = { cursor: "zoom-in", background: "rgba(245,240,232,.06)" };
   // regras específicas do produto (opcional): p.avisos = ["texto", ...]
   const notas = p.avisos?.length ? (
@@ -33,7 +33,8 @@ function CabProduto({ p, fotoDe, grande, onZoom }) {
       <img src={fotoDe(p.foto)} alt={p.nome} loading="lazy" onClick={() => onZoom(fotoDe(p.foto, 2000))}
         style={{ ...img, display: "block", width: "100%", height: "auto", maxHeight: 420, objectFit: "contain" }}
         onError={e => { e.target.style.visibility = "hidden"; }} />
-      <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3, padding: "10px 14px 8px" }}>
+      {p.etiqueta && <div style={{ padding: compacto ? "6px 8px 0" : "8px 14px 0" }}><span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: compacto ? 8 : 9, letterSpacing: "1px", lineHeight: 1.5 }}>{p.etiqueta}</span></div>}
+      <div style={{ fontWeight: 700, fontSize: compacto ? 12 : 14, lineHeight: 1.3, padding: compacto ? "6px 8px 6px" : "10px 14px 8px" }}>
         {p.aba === "update" && <span style={{ display: "inline-block", marginRight: 8, padding: "1px 6px", borderRadius: 4, background: "rgba(255,92,26,.15)", color: "var(--laranja)", fontFamily: mono, fontSize: 9, letterSpacing: "1px", verticalAlign: "middle" }}>UPDATE</span>}
         {p.nome}
       </div>
@@ -380,7 +381,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           <a href="/" style={{ fontFamily: mono, fontSize: 10, letterSpacing: "1px", color: "rgba(245,240,232,.55)", textDecoration: "none", border: "1px solid rgba(245,240,232,.15)", borderRadius: 6, padding: "6px 12px" }}>← VOLTAR AO SITE</a>
         </div>
       )}
-      <div style={{ width: "100%", maxWidth: 520 }}>
+      <div style={{ width: "100%", maxWidth: (cfg.colunas || 1) > 1 ? 760 : 520 }}>
         <div style={{ marginBottom: 28, textAlign: "center" }}>
           {cfg.selo !== "" && <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "4px", color: "rgba(245,240,232,.3)", marginBottom: 8 }}>{cfg.selo ?? "ANTI CEGS × PRÉ-VENDA"}</div>}
           <div style={{ fontSize: "clamp(22px,6vw,32px)", fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 }}>{cfg.titulo}</div>
@@ -420,14 +421,14 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             </div>
             <div style={labelStyle}>Itens da pré-venda</div>
             {abasSecoes}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 14 }}>
               {visiveis.map(p => (
                 <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                  <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
+                  <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} compacto={(cfg.colunas || 1) > 1} />
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {p.opcoes.map(o => (
-                      <div key={o.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)" }}>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+                      <div key={o.id} style={(cfg.colunas || 1) > 1 ? { display: "flex", flexDirection: "column", gap: 4, padding: "8px 8px", borderTop: "1px solid rgba(245,240,232,.06)" } : { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)" }}>
+                        {!((cfg.colunas || 1) > 1 && p.opcoes.length === 1 && o.label === p.nome) && <div style={{ fontSize: (cfg.colunas || 1) > 1 ? 11 : 13, fontWeight: 600 }}>{o.label}</div>}
                         <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)" }}>{fmtReais(o.preco)}</div>
                       </div>
                     ))}
@@ -504,24 +505,24 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
               {abasSecoes}
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 14 }}>
                 {visiveis.map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
-                    <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} />
+                    <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} compacto={(cfg.colunas || 1) > 1} />
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {p.opcoes.map(o => {
                         const q = qtds[o.id] || 0;
                         const resta = restam(o);
                         return (
-                          <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderTop: "1px solid rgba(245,240,232,.06)", background: q > 0 ? "rgba(255,92,26,.06)" : "transparent", transition: "background .15s" }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+                          <div key={o.id} style={{ display: "flex", ...((cfg.colunas || 1) > 1 ? { flexWrap: "wrap", alignItems: "center", gap: 6, padding: "8px 8px" } : { alignItems: "center", gap: 12, padding: "10px 14px" }), borderTop: "1px solid rgba(245,240,232,.06)", background: q > 0 ? "rgba(255,92,26,.06)" : "transparent", transition: "background .15s" }}>
+                            <div style={{ flex: (cfg.colunas || 1) > 1 ? "1 1 78px" : 1, minWidth: 0 }}>
+                              {!((cfg.colunas || 1) > 1 && p.opcoes.length === 1 && o.label === p.nome) && <div style={{ fontSize: (cfg.colunas || 1) > 1 ? 11 : 13, fontWeight: 600, lineHeight: (cfg.colunas || 1) > 1 ? 1.3 : undefined }}>{o.label}</div>}
                               <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(o.preco)}</div>
                               {o.maxTotal != null && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: resta === 0 ? (o.prereserva ? "#FF9F40" : "#ff6b6b") : "rgba(245,240,232,.45)" }}>{resta === 0 ? (o.prereserva ? "ESTOQUE ESGOTADO · PRÉ-RESERVA" : "ESGOTADO") : `restam ${resta} de ${o.maxTotal}`}</div>}
                               {preDe(o, q) > 0 && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: "#FF9F40" }}>{preDe(o, q)} un em pré-reserva: só vale se sobrar estoque, não é cobrada agora</div>}
                               {o.exigeTodos && <div style={{ fontFamily: mono, fontSize: 10, color: "var(--laranja)", marginTop: 3 }}>{o.exigeTodosTexto || "só sai fechando o set completo"}</div>}
                             </div>
-                            <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} maisDesligado={!o.prereserva && q >= resta} />
+                            <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} maisDesligado={!o.prereserva && q >= resta} compacto={(cfg.colunas || 1) > 1} />
                           </div>
                         );
                       })}
