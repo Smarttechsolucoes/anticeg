@@ -3,6 +3,7 @@ import supabase from "./supabase.js";
 import { tabelaFechada, meusPedidosFechados } from "./pedidosFechados.js";
 import { FORMS_PREVENDA, identidade, filtroDoDono, normalizarPedido } from "./historicoPreVenda.js";
 import { JOINERS_AUTH_ATIVO } from "./joinerAuth.js";
+import { abrirComprovante } from "./comprovantes.js";
 
 const mono = "'DM Mono',monospace";
 const reais = n => "R$" + Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -99,12 +100,12 @@ export default function HistoricoForms({ user }) {
         </div>
       ) : lista.map(p => {
         const t = TOM[p.status.tom];
-        const data = p.criadoEm ? new Date(p.criadoEm).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null;
+        const data = p.criadoEm ? new Date(p.criadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
         return (
           <div key={p.chave} style={{ background: "var(--card-bg)", border: `1px solid ${t.borda}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
               <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 12, color: "var(--lilas)", letterSpacing: "1px" }}>{p.rotulo}</div>
-              {data && <div style={{ fontSize: 9, fontFamily: mono, color: "rgba(245,240,232,.3)", flexShrink: 0 }}>{data}</div>}
+              {data && <div style={{ fontSize: 9, fontFamily: mono, color: "rgba(245,240,232,.3)", flexShrink: 0, textAlign: "right" }}>{data}<div style={{ marginTop: 2 }}>pedido #{String(p.id).slice(0, 8)}</div></div>}
             </div>
             {p.linhas.length > 0 && (
               <div style={{ fontSize: 12, lineHeight: 1.6, color: p.status.tom === "ruim" ? "rgba(245,240,232,.4)" : "var(--offwhite)", marginBottom: 8, textDecoration: p.status.tom === "ruim" ? "line-through" : "none" }}>
@@ -112,13 +113,18 @@ export default function HistoricoForms({ user }) {
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 9, fontFamily: mono, color: t.cor, letterSpacing: "1px", border: `1px solid ${t.borda}`, borderRadius: 20, padding: "2px 8px" }}>{p.status.rotulo}</span>
-                {p.pagamento && <span style={{ fontSize: 10, fontFamily: mono, color: "rgba(245,240,232,.35)" }}>{p.pagamento}</span>}
-                {p.temComprovante && <span style={{ fontSize: 10, fontFamily: mono, color: "rgba(245,240,232,.35)" }}>comprovante enviado</span>}
-              </div>
+              <span style={{ fontSize: 9, fontFamily: mono, color: t.cor, letterSpacing: "1px", border: `1px solid ${t.borda}`, borderRadius: 20, padding: "2px 8px" }}>{p.status.rotulo}</span>
               {p.valor > 0 && <span style={{ fontSize: 12, fontFamily: mono, fontWeight: 700, color: p.status.tom === "ruim" ? "rgba(245,240,232,.25)" : "var(--laranja)" }}>{reais(p.valor)}</span>}
             </div>
+            <div style={{ fontSize: 11, lineHeight: 1.6, color: "rgba(245,240,232,.6)", marginTop: 8 }}>{p.explicacao}</div>
+            {(p.pagamento || p.temComprovante) && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(245,240,232,.06)", fontFamily: mono, fontSize: 10, color: "rgba(245,240,232,.5)" }}>
+                {p.pagamento && <span>Pagamento: <strong style={{ color: "var(--offwhite)" }}>{p.pagamento}</strong></span>}
+                <span>Comprovante: {p.temComprovante
+                  ? <><strong style={{ color: "var(--verde)" }}>enviado ✓</strong>{p.comprovanteUrl && <> · <a href={p.comprovanteUrl} onClick={e => abrirComprovante(e, p.comprovanteUrl)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--laranja)", textDecoration: "underline" }}>ver comprovante</a></>}</>
+                  : <strong style={{ color: "var(--offwhite)" }}>não enviado</strong>}</span>
+              </div>
+            )}
           </div>
         );
       })}
