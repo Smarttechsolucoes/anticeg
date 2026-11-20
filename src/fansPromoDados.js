@@ -100,7 +100,7 @@ export const FANS_PROMO_CFG = {
   titulo: "FANS PROMO", sub: "Itens da loja de fãs · compra por conta da organização",
   // sem prazo definido: pagamento imediato; para fechar, preencher deadline (Date) e pedidosAte (texto)
   deadline: null, pedidosAte: null, pagarAte: null,
-  confirmacao: "Estou ciente que o pagamento é IMEDIATO",
+  confirmacao: "Estou ciente que o pagamento é IMEDIATO e da política de reembolso (no cartão, a taxa da máquina não é reembolsada)",
   grupoWhatsapp: null,
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando os preços estiverem preenchidos.
   bloqueado: true,
@@ -111,11 +111,16 @@ export const FANS_PROMO_CFG = {
   resumoPedido: true,        // lista os itens marcados embaixo, para conferência
   fotoGrande: true,
   colunas: 3,                // 3 itens por linha
-  pagamentoAgora: true,      // pagamento imediato: PIX ou cartão (sem "pagar depois")
+  pagamentoAgora: true,      // pagamento imediato
+  soAgora: true,             // só "pagar agora" (PIX ou cartão); sem "pagar depois"
+  avisoPix: "Reembolso no PIX: o valor será reembolsado integralmente.",
+  avisoCartao: "Reembolso no cartão: somente o valor do item. A taxa da máquina NÃO será reembolsada, pois é um valor que NÃO chega para a GOM.",
   // **texto** = negrito
   avisos: [
-    "O pagamento é **IMEDIATO**: o pedido é feito já com o pagamento (PIX ou cartão).",
-    "Se o item **não puder ser comprado**, o valor é **reembolsado imediatamente**.",
-    "**ALEATÓRIO** = o modelo é sorteado, não dá para escolher. **ESCOLHA O MEMBRO** = marque a quantidade de cada membro/personagem. **SET COMPLETO** = vem o conjunto inteiro.",
+    "O pagamento é **IMEDIATO**: o pedido só é feito **pagando agora**, por **PIX** ou **cartão** (não existe pagar depois).",
+    "**Política de reembolso:** caso o item **não seja comprado por falta de estoque**, o reembolso será **integral em até 48h**, individualmente no privado. As informações serão divulgadas no **grupo da CEG** informado no formulário.",
+    "**Cartão:** reembolso **somente do valor do item**. A taxa da máquina **NÃO** será reembolsada, pois é um valor que **NÃO** chega para a GOM.",
+    "**PIX:** o valor será reembolsado **integralmente**.",
+    "**ALEATÓRIO** = o modelo é sorteado, não dá para escolher. **ESCOLHER MEMBRO** = abre a escolha da quantidade de cada membro/personagem. **SET COMPLETO** = vem o conjunto inteiro.",
   ],
 };

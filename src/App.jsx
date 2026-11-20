@@ -27200,8 +27200,8 @@ function PrevendaTab({ user }) {
       titulo: "FANS PROMO",
       subtitulo: "Itens da loja de fãs · compra por conta da organização",
       url: "/fans-promo",
-      tags: ["Pagamento imediato", "PIX ou cartão", "Reembolso imediato"],
-      info: `${FANS_PRODUTOS.length} itens · se o item não puder ser comprado, o valor é reembolsado na hora`,
+      tags: ["Pagar agora", "PIX ou cartão", "Reembolso em até 48h"],
+      info: `${FANS_PRODUTOS.length} itens · sem estoque: reembolso integral em até 48h (a taxa do cartão não é reembolsada)`,
     },
     {
       key: "dicon-origin",
