@@ -27198,7 +27198,7 @@ function PrevendaTab({ user }) {
       fechado: FANS_PROMO_CFG.bloqueado,
       emBreve: FANS_PROMO_CFG.bloqueado,
       titulo: "FANS PROMO",
-      subtitulo: "Itens da loja de fãs · compra por conta da organização",
+      subtitulo: "promo fans jype  ·  compra em grupo",
       url: "/fans-promo",
       img: "/fans-promo/capa.png",
       tags: ["Pagar agora", "PIX ou cartão", "Reembolso em até 48h"],

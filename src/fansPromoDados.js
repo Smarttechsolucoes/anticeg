@@ -153,7 +153,7 @@ export const FANS_FAIXA = { min: Math.min(..._precos), max: Math.max(..._precos)
 
 export const FANS_PROMO_CFG = {
   tabela: "pedidos_fans_promo", pasta: "fans-promo", produto: "FANS PROMO",
-  titulo: "FANS PROMO", sub: "Itens da loja de fãs · compra por conta da organização",
+  titulo: "FANS PROMO", sub: "promo fans jype  ·  compra em grupo",
   // formulário aberto até 22 de novembro (fecha sozinho no fim do dia, horário de Brasília)
   deadline: new Date("2026-11-22T23:59:59-03:00"), pedidosAte: "22/11/2026", pagarAte: null,
   confirmacao: "Estou ciente que o pagamento é IMEDIATO e da política de reembolso (no cartão, a taxa da máquina não é reembolsada)",
