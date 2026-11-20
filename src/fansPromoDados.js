@@ -98,8 +98,8 @@ export const FANS_PRODUTOS = NOMES.map((nome, i) => {
 export const FANS_PROMO_CFG = {
   tabela: "pedidos_fans_promo", pasta: "fans-promo", produto: "FANS PROMO",
   titulo: "FANS PROMO", sub: "Itens da loja de fãs · compra por conta da organização",
-  // sem prazo definido: pagamento imediato; para fechar, preencher deadline (Date) e pedidosAte (texto)
-  deadline: null, pedidosAte: null, pagarAte: null,
+  // formulário aberto até 22 de novembro (fecha sozinho no fim do dia, horário de Brasília)
+  deadline: new Date("2026-11-22T23:59:59-03:00"), pedidosAte: "22/11/2026", pagarAte: null,
   confirmacao: "Estou ciente que o pagamento é IMEDIATO e da política de reembolso (no cartão, a taxa da máquina não é reembolsada)",
   grupoWhatsapp: null,
   // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando os preços estiverem preenchidos.
@@ -117,10 +117,19 @@ export const FANS_PROMO_CFG = {
   avisoCartao: "Reembolso no cartão: somente o valor do item. A taxa da máquina NÃO será reembolsada, pois é um valor que NÃO chega para a GOM.",
   // **texto** = negrito
   avisos: [
-    "O pagamento é **IMEDIATO**: o pedido só é feito **pagando agora**, por **PIX** ou **cartão** (não existe pagar depois).",
-    "**Política de reembolso:** caso o item **não seja comprado por falta de estoque**, o reembolso será **integral em até 48h**, individualmente no privado. As informações serão divulgadas no **grupo da CEG** informado no formulário.",
-    "**Cartão:** reembolso **somente do valor do item**. A taxa da máquina **NÃO** será reembolsada, pois é um valor que **NÃO** chega para a GOM.",
-    "**PIX:** o valor será reembolsado **integralmente**.",
-    "**ALEATÓRIO** = o modelo é sorteado, não dá para escolher. **ESCOLHER MEMBRO** = abre a escolha da quantidade de cada membro/personagem. **SET COMPLETO** = vem o conjunto inteiro.",
+    "》Sempre esteja ciente das regras da comunidade, caso não lembre: [clique aqui](/regras).",
+    "Forms aberto até: **22 de novembro**",
+    "**Pagamento imediato.**",
+    {
+      texto: "Leia a **política de reembolso**.",
+      titulo: "POLÍTICA DE REEMBOLSO",
+      detalhe: [
+        "Caso o item **não seja comprado por falta de estoque**, o reembolso será **integral em até 48h**, individualmente no privado. As informações serão divulgadas no **grupo da CEG** informado no formulário.",
+        "**Pagamentos no cartão:** reembolso **somente do valor do item**. A taxa da máquina **NÃO** será reembolsada, pois é um valor que **NÃO** chega para a GOM.",
+        "**PIX:** o valor será reembolsado **integralmente**.",
+      ],
+    },
+    "Ainda sem data de envio internacional.",
   ],
+  legendaItens: "**ALEATÓRIO** = o modelo é sorteado, não dá para escolher. **ESCOLHER MEMBRO** = abre a escolha da quantidade de cada membro/personagem. **SET COMPLETO** = vem o conjunto inteiro.",
 };
