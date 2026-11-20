@@ -619,7 +619,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
             <div style={{ marginBottom: 24 }}>
               <div style={labelStyle}>Pagamento</div>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                {(cfg.soPix ? [] : [["agora", "Pagar agora", agora], ["depois", "Pagar depois", !agora]]).map(([v, l, ativo]) => (
+                {(cfg.soPix || cfg.soAgora ? [] : [["agora", "Pagar agora", agora], ["depois", "Pagar depois", !agora]]).map(([v, l, ativo]) => (
                   <button key={v} type="button" onClick={() => setPagamento(v === "agora" ? "pix" : "depois")}
                     style={{ flex: 1, padding: "12px 0", borderRadius: 8, border: `1px solid ${ativo ? "var(--laranja)" : "rgba(245,240,232,.15)"}`, background: ativo ? "rgba(255,92,26,.12)" : "transparent", color: ativo ? "var(--laranja)" : "rgba(245,240,232,.6)", fontFamily: mono, fontSize: 11, cursor: "pointer", fontWeight: ativo ? 700 : 400 }}>
                     {l}
@@ -661,10 +661,11 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                         <label style={labelStyle}>Comprovante PIX</label>
                         <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0] || null)} style={{ ...inputStyle, padding: "8px 14px", fontSize: 12 }} />
                       </div>
+                      {cfg.avisoPix && <div style={{ fontSize: 11, lineHeight: 1.6, color: "rgba(245,240,232,.6)" }}>☆ {cfg.avisoPix}</div>}
                     </div>
                   )}
                   {pagamento === "cartao" && (
-                    <div style={caixa}>Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.</div>
+                    <div style={caixa}>Após confirmar, abriremos o link de pagamento (linknabio) para você pagar no cartão.{cfg.avisoCartao && <div style={{ marginTop: 8, color: "#FF9F40" }}>☆ {cfg.avisoCartao}</div>}</div>
                   )}
                 </>
               )}
