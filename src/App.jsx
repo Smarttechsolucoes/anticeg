@@ -11,7 +11,7 @@ import { PromoMakestarFormPage } from "./PromoMakestar.jsx";
 import { MAKESTAR_GRUPOS, MAKESTAR_CFG, makestarLinhas } from "./promoMakestarDados.js";
 import { PROMO_50_MURCEKALY_PRODUTOS, PROMO_50_MURCEKALY_CFG, PROMO_50_MURCEKALY_FAIXA, fotoP50 } from "./promo50MurcekalyDados.js";
 import { WBF_PRODUTOS, WBF_CFG, fotoWbf } from "./weverseBlackFridayDados.js";
-import { FANS_PRODUTOS, FANS_PROMO_CFG, fotoFans } from "./fansPromoDados.js";
+import { FANS_PRODUTOS, FANS_PROMO_CFG, FANS_FAIXA, fotoFans } from "./fansPromoDados.js";
 import { PROMO_MURCE_50_PRODUTOS, PROMO_MURCE_50_CFG, PROMO_MURCE_50_FAIXA, fotoPm } from "./promoMurce50Dados.js";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import AdminContas from "./AdminContas.jsx";
@@ -27201,7 +27201,7 @@ function PrevendaTab({ user }) {
       subtitulo: "Itens da loja de fãs · compra por conta da organização",
       url: "/fans-promo",
       tags: ["Pagar agora", "PIX ou cartão", "Reembolso em até 48h"],
-      info: `${FANS_PRODUTOS.length} itens · sem estoque: reembolso integral em até 48h (a taxa do cartão não é reembolsada)`,
+      info: `${FANS_PRODUTOS.length} itens · de R$ ${FANS_FAIXA.min} a R$ ${FANS_FAIXA.max} · sem estoque: reembolso integral em até 48h (a taxa do cartão não é reembolsada)`,
     },
     {
       key: "dicon-origin",

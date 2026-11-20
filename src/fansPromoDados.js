@@ -1,7 +1,7 @@
 // ── Formulário FANS PROMO (itens da loja oficial de fãs, compra por conta da organização) ─────────────
 // Pagamento IMEDIATO (PIX ou cartão). Se o item não puder ser comprado, o valor é reembolsado na hora.
 // Usa o mesmo formulário e o mesmo painel dos outros forms de loja (SmolMerchFormPage / AdminSmolMerch).
-// preco: 0 = PROVISÓRIO (a dona ainda vai informar os valores). Preencher em reais antes de abrir; com o form bloqueado ninguém consegue pedir.
+// preco: em reais (ver PRECOS abaixo; 0 = sem preço, não abrir o formulário assim).
 // Nomes completos, conferidos contra a página da loja de fãs.
 // Fotos: public/fans-promo/<id>.jpg (sem a foto, o card aparece só com o nome).
 export const fotoFans = arq => `/fans-promo/${encodeURIComponent(arq)}`;
@@ -81,6 +81,59 @@ const TIPO = {};
 [8, 9, 12, 22, 32].forEach(n => { TIPO[n] = "conjunto"; });
 const ETIQUETA = { escolha: "ESCOLHA O MEMBRO", membro: "ESCOLHA O MEMBRO", aleatorio: "ALEATÓRIO", conjunto: "SET COMPLETO" };
 
+// Preços em reais informados pela organização em 20/11/2026 (por nome do item; vale para todas as opções do item).
+const PRECOS = {
+  "SKZOO STANDING PLUSH OUTFIT - celebrATE": 102,
+  "ACRYLIC STAND - celebrATE": 98,
+  "SKZOO NAME TAG (KARMA VER.) - KARMA": 115,
+  "SECRET GLITTER CAN BADGE - ZOOTOPIA2 | SKZOO": 17,
+  "SKZOO PLUSH STANDING Ver. - SKZOO Everywhere All Around The World": 119,
+  "SKZOO PLUSH BAG - celebrATE": 267,
+  "SKZOO MAGNET PLUSH SET - celebrATE": 123,
+  "TOTE BAG - '合 (HOP)' POP-UP STORE": 112,
+  "MINI FOLDING PHOTO - '合 (HOP)' POP-UP STORE": 53,
+  "CARDIGAN - SKZ'S MAGIC SCHOOL": 199,
+  "T-SHIRT - SKZ'S MAGIC SCHOOL": 119,
+  "JOGGER PANTS WHITE - 'PILOT : FOR ★★★★★'": 217,
+  "SKZOO LIGHT STICK COVER VER.2": 86,
+  "SKZOO PLUSH MINI Ver.": 110,
+  "SKZOO PLUSH ORIGINAL Ver.": 119,
+  "MINI CD KEYRING - ATE": 77,
+  "NECKLACE by Hyunjin - celebrATE": 157,
+  "SOON-DOONG-DORI KEYRING SET by Lee Know - celebrATE": 208,
+  "UMBRELLA - ATE": 106,
+  "REUSABLE BAG - ATE": 40,
+  "SHOULDER PLUSH - ZOOTOPIA2 | SKZOO": 84,
+  "GYM SACK - MANIAC SPECIAL": 67,
+  "SKZOO ROOM SHOES - SKZ'S MAGIC SCHOOL": 119,
+  "SKZOO MINI TUBE - SKZ'S MAGIC SCHOOL in BUSAN": 22,
+  "SKZOO PLUSH HUG ME Ver. - SKZOO Everywhere All Around The World": 310,
+  "SKZOO ACRYLIC STAND SEOUL Ver. - SKZOO Everywhere All Around The World": 62,
+  "SECRET ACRYLIC STAND - STAY in Our Little House": 62,
+  "SPECIAL TRADING CARD - STAY in Our Little House": 20,
+  "SKZOO CEREMONY BALL CAP PLUSH - KARMA": 115,
+  "SKZOO MAGNETIC HOLDER - celebrATE": 89,
+  "SKZOO ORIGINAL BACKPACK SILVER Ver. - celebrATE": 110,
+  "SKZOO FACE KEYRING SILVER Ver. - celebrATE": 72,
+  "PHOTOCARD HOLDER - celebrATE": 102,
+  "PuppyM PLUSH LYING Ver. by Seungmin - celebrATE": 275,
+  "MAGNETIC CARD WALLET - ATE": 94,
+  "Stray Kids ACRYLIC POP HOLDER - ATE": 40,
+  "SKZOO PHOTOCARD TINCASE - celebrATE": 64,
+  "SKZOO REVERSIBLE FACE POUCH - celebrATE": 153,
+  "SKZOO PLUSH 10CM Ver. - SKZ 5'CLOCK": 68,
+  "SPECIAL TRADING CARD - SKZ 5'CLOCK": 17,
+  "SKZOO SECRET BOUCLE CAN BADGE - SKZ 5'CLOCK": 34,
+  "SECRET ACRYLIC STAND - SKZ 5'CLOCK": 55,
+  "SPECIAL TRADING CARD - celebrATE": 17,
+  "IMAGE PICKET - celebrATE": 43,
+  "SPECIAL TICKET SET - celebrATE": 51,
+  "ID PHOTO SET - SKZ 5'CLOCK": 26,
+  "BALLCAP KEYRING - '合 (HOP)' POP-UP STORE": 106,
+  "SKZOO SECRET ACRYLIC CARABINER - celebrATE": 42,
+  "ID PHOTO SET - celebrATE": 26,
+};
+
 // o mesmo nome pode se repetir em coleções diferentes: o id ganha um sufixo numérico só quando precisa
 const vistos = {};
 // itens que a organização decidiu NÃO vender neste formulário (ficam na lista acima só para manter a numeração do TIPO)
@@ -91,9 +144,12 @@ export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const id = vistos[base] > 1 ? `${base}-${vistos[base]}` : base;
   const tipo = TIPO[i + 1];
   const lista = tipo === "escolha" ? SKZOO_MEMBRO : tipo === "membro" ? MEMBROS : null;
-  const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: 0 })) : [{ id, label: nome, preco: 0 }];
+  const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: PRECOS[nome] ?? 0 })) : [{ id, label: nome, preco: PRECOS[nome] ?? 0 }];
   return { id, nome, foto: `${id}.jpg`, ...(ETIQUETA[tipo] ? { etiqueta: ETIQUETA[tipo] } : {}), ...(lista ? { botao: "ESCOLHER MEMBRO →" } : {}), opcoes };
 }).filter(p => !RETIRADOS.includes(p.nome));
+
+const _precos = FANS_PRODUTOS.flatMap(p => p.opcoes.map(o => o.preco));
+export const FANS_FAIXA = { min: Math.min(..._precos), max: Math.max(..._precos) };
 
 export const FANS_PROMO_CFG = {
   tabela: "pedidos_fans_promo", pasta: "fans-promo", produto: "FANS PROMO",
