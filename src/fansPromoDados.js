@@ -2,7 +2,7 @@
 // Pagamento IMEDIATO (PIX ou cartão). Se o item não puder ser comprado, o valor é reembolsado na hora.
 // Usa o mesmo formulário e o mesmo painel dos outros forms de loja (SmolMerchFormPage / AdminSmolMerch).
 // preco: 0 = PROVISÓRIO (a dona ainda vai informar os valores). Preencher em reais antes de abrir; com o form bloqueado ninguém consegue pedir.
-// Nomes que terminam em "…" estavam cortados no print: completar quando houver o nome inteiro.
+// Nomes completos, conferidos contra a página da loja de fãs.
 // Fotos: public/fans-promo/<id>.jpg (sem a foto, o card aparece só com o nome).
 export const fotoFans = arq => `/fans-promo/${encodeURIComponent(arq)}`;
 
@@ -13,7 +13,7 @@ const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, 
 const NOMES = [
   "SKZOO PLUSH 10CM Ver. - SKZ 5'CLOCK",
   "SPECIAL TRADING CARD - SKZ 5'CLOCK",
-  "SKZOO SECRET BOUCLE CAN BADGE - SKZ …",
+  "SKZOO SECRET BOUCLE CAN BADGE - SKZ 5'CLOCK",
   "SECRET ACRYLIC STAND - SKZ 5'CLOCK",
   "SPECIAL TRADING CARD - celebrATE",
   "SKZOO POWER BANK - dominATE SEOUL",
@@ -24,16 +24,16 @@ const NOMES = [
   "SKZOO SECRET ACRYLIC CARABINER - celebrATE",
   "ID PHOTO SET - celebrATE",
 
-  "SKZOO STANDING PLUSH OUTFIT - …",
+  "SKZOO STANDING PLUSH OUTFIT - celebrATE",
   "ACRYLIC STAND - celebrATE",
   "SKZOO TAMAGOTCHI & CASE SET",
   "SKZOO NAME TAG (KARMA VER.) - KARMA",
   "SECRET GLITTER CAN BADGE - ZOOTOPIA2 | SKZOO",
-  "SKZOO PLUSH STANDING Ver. - SKZO…",
+  "SKZOO PLUSH STANDING Ver. - SKZOO Everywhere All Around The World",
   "SKZOO PLUSH BAG - celebrATE",
   "SKZOO MAGNET PLUSH SET - celebrATE",
   "TOTE BAG - '合 (HOP)' POP-UP STORE",
-  "MINI FOLDING PHOTO - '合 (HOP)' POP-UP …",
+  "MINI FOLDING PHOTO - '合 (HOP)' POP-UP STORE",
   "CARDIGAN - SKZ'S MAGIC SCHOOL",
   "T-SHIRT - SKZ'S MAGIC SCHOOL",
   "JOGGER PANTS WHITE - 'PILOT : FOR ★★★★★'",
@@ -49,14 +49,14 @@ const NOMES = [
   "SHOULDER PLUSH - ZOOTOPIA2 | SKZOO",
   "GYM SACK - MANIAC SPECIAL",
   "SKZOO ROOM SHOES - SKZ'S MAGIC SCHOOL",
-  "SKZOO MINI TUBE - SKZ'S MAGIC SCHOOL …",
-  "SKZOO PLUSH HUG ME Ver. - SKZOO …",
-  "SKZOO ACRYLIC STAND SEOUL Ver. - SKZOO …",
-  "SECRET ACRYLIC STAND - STAY in Our Little …",
-  "SPECIAL TRADING CARD - STAY in Our Little …",
-  "SKZOO CEREMONY BALL CAP PLUSH - …",
+  "SKZOO MINI TUBE - SKZ'S MAGIC SCHOOL in BUSAN",
+  "SKZOO PLUSH HUG ME Ver. - SKZOO Everywhere All Around The World",
+  "SKZOO ACRYLIC STAND SEOUL Ver. - SKZOO Everywhere All Around The World",
+  "SECRET ACRYLIC STAND - STAY in Our Little House",
+  "SPECIAL TRADING CARD - STAY in Our Little House",
+  "SKZOO CEREMONY BALL CAP PLUSH - KARMA",
   "SKZOO MAGNETIC HOLDER - celebrATE",
-  "SKZOO ORIGINAL BACKPACK SILVER Ver. …",
+  "SKZOO ORIGINAL BACKPACK SILVER Ver. - celebrATE",
   "SKZOO FACE KEYRING SILVER Ver. - celebrATE",
   "PHOTOCARD HOLDER - celebrATE",
   "PuppyM PLUSH LYING Ver. by Seungmin - celebrATE",
