@@ -360,6 +360,13 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const campo = trava => trava ? { ...inputStyle, background: "rgba(245,240,232,.03)", color: "rgba(245,240,232,.7)", cursor: "default" } : inputStyle;
   const travado = !!cfg.dadosTravados && logado && cadastroCompleto && !editando && !!nome.trim() && !!email.trim();
   const caixa = { background: "rgba(245,240,232,.04)", border: "1px solid rgba(245,240,232,.1)", borderRadius: 10, padding: "14px 16px", fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.6)", lineHeight: 1.7 };
+  // botão de reserva do pagamento no cartão (só no fluxo com comprovante do cartão): aparece na tela do cartão e junto de qualquer erro de envio
+  const botaoLinkErro = (
+    <a href={cfg.linkCartao || "https://linknabio.gg/anticeg-comu"} target="_blank" rel="noopener noreferrer"
+      style={{ display: "block", textAlign: "center", padding: "10px 12px", borderRadius: 8, border: "1px dashed rgba(245,240,232,.3)", color: "rgba(245,240,232,.8)", fontFamily: mono, fontSize: 11, lineHeight: 1.5, textDecoration: "none" }}>
+      Em caso de erro, esse é o link do pagamento no cartão →
+    </a>
+  );
   const agora = pagamento !== "depois";
   // produtos da aba escolhida (sem cfg.secoes: todos) e quantas unidades já estão marcadas em cada aba
   const visiveis = cfg.secoes ? produtos.filter(p => p.secao === secao) : produtos;
@@ -704,6 +711,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                         <input type="file" accept="image/*,application/pdf" onChange={e => setComprovante(e.target.files[0] || null)} style={{ ...inputStyle, padding: "8px 14px", fontSize: 12 }} />
                       </div>
                       {cfg.avisoCartao && <div style={{ fontSize: 11, lineHeight: 1.6, color: "#FF9F40" }}>☆ {cfg.avisoCartao}</div>}
+                      {botaoLinkErro}
                     </div>
                   )}
                   {pagamento === "cartao" && !cfg.cartaoComprovante && (
@@ -720,7 +728,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                 <span>{cfg.confirmacao}</span>
               </label>
             )}
-            {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}</div>}
+            {erro && <div style={{ color: "#ff6b6b", fontFamily: mono, fontSize: 11, marginBottom: 16 }}>{erro}{pagamento === "cartao" && cfg.cartaoComprovante && <div style={{ marginTop: 10 }}>{botaoLinkErro}</div>}</div>}
             <button type="submit" disabled={status === "enviando" || !qtdTotal || cfg.bloqueado || aindaNaoAbriu}
               style={{ width: "100%", padding: "14px 0", borderRadius: 10, background: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "var(--laranja)" : "rgba(245,240,232,.1)", color: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "#fff" : "rgba(245,240,232,.3)", fontFamily: mono, fontSize: 13, fontWeight: 700, border: "none", cursor: qtdTotal && !cfg.bloqueado && !aindaNaoAbriu ? "pointer" : "not-allowed", letterSpacing: "1px" }}>
               {cfg.bloqueado ? "AINDA NÃO DISPONÍVEL" : aindaNaoAbriu ? `ABRE ÀS ${cfg.abreEmRotulo || "—"} · ${contagem}` : status === "enviando" ? "ENVIANDO..." : "CONFIRMAR PEDIDO →"}
