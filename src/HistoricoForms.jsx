@@ -19,6 +19,7 @@ export default function HistoricoForms({ user }) {
   const [pedidos, setPedidos] = useState(null);     // null = carregando
   const [falhas, setFalhas] = useState(0);
   const [filtro, setFiltro] = useState("todos");
+  const [filtroForm, setFiltroForm] = useState("todos");   // "todos" ou o nome do formulário
 
   useEffect(() => {
     if (!ident) return;   // sem conta: a tela abaixo já mostra o aviso e nada é consultado
@@ -31,9 +32,12 @@ export default function HistoricoForms({ user }) {
         if (!JOINERS_AUTH_ATIVO && tabelaFechada(f.tabela)) {   // login desligado: tabelas fechadas ao visitante (Q4b/Q5b) devolvem o histórico por função do servidor (sem nome, e-mail nem endereço do comprovante)
           return (await meusPedidosFechados(f.tabela, { email: ident.email, arroba: ident.arroba, cog: ident.cog })).map(p => normalizarPedido(f, p));
         }
-        const { data, error } = (JOINERS_AUTH_ATIVO && f.dono.includes("email"))
+        const direto = () => supabase.from(f.tabela).select("*").or(ou).order("created_at", { ascending: false });
+        let { data, error } = (JOINERS_AUTH_ATIVO && f.dono.includes("email"))
           ? await supabase.rpc("meus_pedidos", { p_tabela: f.tabela })
-          : await supabase.from(f.tabela).select("*").or(ou).order("created_at", { ascending: false });
+          : await direto();
+        // a função meus_pedidos só aceita as lojas da lista fixa dela; nas lojas mais novas lê direto (a regra da tabela só devolve os pedidos do e-mail da conta)
+        if (error && JOINERS_AUTH_ATIVO && f.dono.includes("email")) ({ data, error } = await direto());
         if (error) throw error;
         return (data || []).map(p => normalizarPedido(f, p));
       });
@@ -50,7 +54,9 @@ export default function HistoricoForms({ user }) {
 
   const por = k => pedidos.filter(p => p.status.chave === k);
   const totalConfirmado = por("confirmado").reduce((a, p) => a + p.valor, 0);
-  const lista = filtro === "todos" ? pedidos : por(filtro);
+  const doForm = filtroForm === "todos" ? pedidos : pedidos.filter(p => p.rotulo === filtroForm);
+  const lista = filtro === "todos" ? doForm : doForm.filter(p => p.status.chave === filtro);
+  const formularios = [...new Set(pedidos.map(p => p.rotulo))].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const filtros = [["todos", "Todos", pedidos.length], ["confirmado", "Confirmados", por("confirmado").length], ["pendente", "Pendentes", por("pendente").length], ["cancelado", "Cancelados", por("cancelado").length]];
 
   return (
@@ -73,6 +79,16 @@ export default function HistoricoForms({ user }) {
           </button>
         ))}
       </div>
+
+      {formularios.length > 1 && (
+        <div style={{ marginBottom: 16 }}>
+          <select value={filtroForm} onChange={e => setFiltroForm(e.target.value)} aria-label="Filtrar por formulário"
+            style={{ width: "100%", maxWidth: 320, fontFamily: mono, fontSize: 11, padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(245,240,232,.15)", background: "var(--card-bg)", color: "var(--offwhite)" }}>
+            <option value="todos">Todos os formulários ({pedidos.length})</option>
+            {formularios.map(r => <option key={r} value={r}>{r} ({pedidos.filter(p => p.rotulo === r).length})</option>)}
+          </select>
+        </div>
+      )}
 
       {falhas > 0 && <div style={{ fontFamily: mono, fontSize: 10, color: "#ffb86b", background: "rgba(255,184,107,.08)", border: "1px solid rgba(255,184,107,.25)", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>Não foi possível carregar {falhas === 1 ? "um dos formulários" : `${falhas} dos formulários`} agora; os demais aparecem abaixo. Tente de novo mais tarde.</div>}
 

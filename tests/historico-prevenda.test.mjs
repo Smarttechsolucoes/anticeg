@@ -23,9 +23,10 @@ test("filtro: cada tabela só usa as colunas de dono que ela tem; curingas do il
 });
 test("nenhuma tabela é consultada por uma coluna que ela não tem (colunas de dono conferidas contra o esquema real de 17/10 + MURCE-ITENS)", () => {
   const colunas = { pedidos_smolmerch: ["email", "social"], pedidos_murce_itens: ["email", "social"], pedidos_wmag: ["email", "social"], pedidos_wmag_leeknow: ["email", "social"], pedidos_dazed_seungmin: ["email", "social"], pedidos_dazed_han: ["email", "social"], pedidos_esquire_hyunjin: ["email", "social"], pedidos_bazaar_in: ["email", "social"],
-    pedidos_revista: ["email", "social", "joiner_cog"], pedidos_singba: ["joiner_cog"], pedidos_popcorn_sleeve: ["joiner_cog"], pedidos_lightstick: ["joiner_cog"], pedidos_skzoo_rio: ["cog"], pedidos_popup: ["email", "social", "claim"], mercari_pedidos: ["joiner_cog"], formulario_pedidos: ["joiner_cog"] };
+    pedidos_revista: ["email", "social", "joiner_cog"], pedidos_singba: ["joiner_cog"], pedidos_popcorn_sleeve: ["joiner_cog"], pedidos_lightstick: ["joiner_cog"], pedidos_skzoo_rio: ["cog"], pedidos_popup: ["email", "social", "claim"], mercari_pedidos: ["joiner_cog"], formulario_pedidos: ["joiner_cog"],
+    pedidos_dicon_origin: ["email", "social"], pedidos_promo_murce_50: ["email", "social"], pedidos_promo_makestar: ["email", "social"], pedidos_promo_50_murcekaly: ["email", "social"], pedidos_weverse_black_friday: ["email", "social"], pedidos_fans_promo: ["email", "social"], pedidos_bazaar_v: ["email", "social"] };
   for (const f of FORMS_PREVENDA) { assert.ok(colunas[f.tabela], f.tabela); assert.deepEqual([...f.dono].sort(), [...colunas[f.tabela]].sort(), f.tabela); }
-  assert.equal(FORMS_PREVENDA.length, 16);
+  assert.equal(FORMS_PREVENDA.length, 23);
 });
 test("resumo: SMOL MERCH lista item e quantidade; capas só as pedidas; valor e pagamento", () => {
   const s = normalizarPedido(F("smolmerch"), { id: 7, created_at: "2026-10-17T12:00:00Z", status: "pendente", valor_total: 62, qtd_total: 2, forma_pagamento: "depois", itens: [{ produto: "Miso PVC Candy Pouch", opcao: "Candy Pouch", qtd: 2, preco: 32 }, { produto: "Han BDAY", opcao: "Adesivo", qtd: 1 }] });
@@ -44,6 +45,12 @@ test("resumo aguenta dados faltando ou fora do formato (itens nulos, texto no lu
   for (const f of FORMS_PREVENDA) { const r = normalizarPedido(f, { id: 1, itens: null, valor_total: "abc", capa_a: null }); assert.ok(Array.isArray(r.linhas)); assert.equal(r.valor, 0); }
   assert.deepEqual(totaisDoPedido({ valor_brl_total: "120.5", quantidade: "3" }), { valor: 120.5, qtd: 3 });
   assert.equal(pagamentoDoPedido({ metodo_pagamento: "imediato" }), "pagamento imediato");
+});
+test("formulários novos (Dicon, Promo Murce 50, Makestar, Promo 50, Weverse, FANS PROMO, Bazaar V) entram no histórico com os itens", () => {
+  const f = normalizarPedido(F("fans-promo"), { id: 9, created_at: "2026-11-21T10:00:00Z", status: "aguardando", valor_total: 136, forma_pagamento: "pix", itens: [{ produto: "SKZOO PLUSH 10CM Ver. - SKZ 5'CLOCK", opcao: "Bang Chan (Wolf Chan)", qtd: 2, preco: 68 }] });
+  assert.equal(f.rotulo, "FANS PROMO"); assert.deepEqual(f.linhas, ["2× SKZOO PLUSH 10CM Ver. - SKZ 5'CLOCK · Bang Chan (Wolf Chan)"]); assert.equal(f.valor, 136); assert.equal(f.pagamento, "PIX"); assert.equal(f.status.chave, "pendente");
+  assert.deepEqual(normalizarPedido(F("bazaar-v"), { id: 1, capa_a: 1, capa_f: 2 }).linhas, ["Versão A ×1", "Versão F ×2"]);
+  for (const c of ["dicon-origin", "promo-murce-50", "promo-makestar", "promo-50-murcekaly", "weverse-black-friday"]) assert.ok(F(c), c);
 });
 test("situação em palavras da joiner", () => {
   for (const s of ["confirmado", "pago", "aprovado", "finalizado"]) assert.equal(statusInfo(s).chave, "confirmado", s);
