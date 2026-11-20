@@ -365,6 +365,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
     <a href={cfg.linkCartao || "https://linknabio.gg/anticeg-comu"} target="_blank" rel="noopener noreferrer"
       style={{ display: "block", textAlign: "center", padding: "10px 12px", borderRadius: 8, border: "1px dashed rgba(245,240,232,.3)", color: "rgba(245,240,232,.8)", fontFamily: mono, fontSize: 11, lineHeight: 1.5, textDecoration: "none" }}>
       Em caso de erro, esse é o link do pagamento no cartão →
+      <div style={{ marginTop: 4, color: "var(--laranja)", textDecoration: "underline", wordBreak: "break-all" }}>{cfg.linkCartao || "https://linknabio.gg/anticeg-comu"}</div>
     </a>
   );
   const agora = pagamento !== "depois";
