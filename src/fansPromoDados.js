@@ -90,7 +90,7 @@ export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const tipo = TIPO[i + 1];
   const lista = tipo === "escolha" ? SKZOO_MEMBRO : tipo === "membro" ? MEMBROS : null;
   const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: 0 })) : [{ id, label: nome, preco: 0 }];
-  return { id, nome, foto: `${id}.jpg`, ...(ETIQUETA[tipo] ? { etiqueta: ETIQUETA[tipo] } : {}), opcoes };
+  return { id, nome, foto: `${id}.jpg`, ...(ETIQUETA[tipo] ? { etiqueta: ETIQUETA[tipo] } : {}), ...(lista ? { botao: "ESCOLHER MEMBRO →" } : {}), opcoes };
 });
 
 export const FANS_PROMO_CFG = {

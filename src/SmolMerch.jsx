@@ -217,6 +217,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [erro,        setErro]        = useState("");
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
+  const [seletor,     setSeletor]     = useState(null);   // produto com várias opções aberto na janela "ESCOLHER ..." (só no modo em colunas)
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
   // cfg.secoes (opcional): ["ATEEZ", ...] separa os produtos em abas; cada produto traz p.secao
   const [secao,       setSecao]       = useState(cfg.secoes?.[0] || null);
@@ -375,6 +376,38 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
           <img src={lightbox} alt="produto" style={{ maxWidth: "92vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain" }} />
         </div>
       )}
+      {seletor && (() => {
+        const ps = seletor;
+        const precos = ps.opcoes.map(o => o.preco);
+        const min = Math.min(...precos), max = Math.max(...precos);
+        return (
+          <div onClick={() => setSeletor(null)} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,.9)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth: 440, width: "100%", maxHeight: "92vh", overflowY: "auto", background: "#111", border: "1px solid rgba(245,240,232,.1)", borderRadius: 14, padding: 16 }}>
+              <img src={fotoDe(ps.foto)} alt={ps.nome} onError={e => { e.target.style.display = "none"; }} style={{ width: "100%", maxHeight: "28vh", objectFit: "contain", borderRadius: 10, display: "block", marginBottom: 12, background: "rgba(245,240,232,.04)" }} />
+              <div style={{ fontFamily: mono, fontSize: 12, color: "var(--offwhite)", lineHeight: 1.3 }}>{ps.nome}</div>
+              <div style={{ fontFamily: mono, fontSize: 15, fontWeight: 700, color: "var(--verde)", margin: "6px 0 12px" }}>{min === max ? fmtReais(min) : `a partir de ${fmtReais(min)}`}</div>
+              <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "1.5px", color: "rgba(245,240,232,.35)", marginBottom: 8 }}>{(ps.botao || "ESCOLHER OPÇÃO").replace(/ →$/, "").toUpperCase()} (pode marcar mais de um)</div>
+              <div style={{ display: "flex", flexDirection: "column", marginBottom: 14, border: "1px solid rgba(245,240,232,.08)", borderRadius: 10, overflow: "hidden" }}>
+                {ps.opcoes.map((o, i) => {
+                  const q = qtds[o.id] || 0;
+                  const resta = restam(o);
+                  return (
+                    <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 12px", borderTop: i ? "1px solid rgba(245,240,232,.06)" : "none", background: q > 0 ? "rgba(255,92,26,.06)" : "transparent" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+                        {min !== max && <div style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,240,232,.45)", marginTop: 2 }}>{fmtReais(o.preco)}</div>}
+                        {o.maxTotal != null && <div style={{ fontFamily: mono, fontSize: 10, marginTop: 3, color: resta === 0 ? "#ff6b6b" : "rgba(245,240,232,.45)" }}>{resta === 0 ? "ESGOTADO" : `restam ${resta} de ${o.maxTotal}`}</div>}
+                      </div>
+                      <Qty valor={q} onMenos={() => ajustar(o.id, -1)} onMais={() => ajustar(o.id, 1)} maisDesligado={!o.prereserva && q >= resta} />
+                    </div>
+                  );
+                })}
+              </div>
+              <button type="button" onClick={() => setSeletor(null)} style={{ width: "100%", background: "var(--laranja)", border: "none", color: "#000", borderRadius: 8, padding: "10px", fontFamily: mono, fontSize: 11, fontWeight: 700, letterSpacing: "1px", cursor: "pointer" }}>CONCLUÍDO ✓</button>
+            </div>
+          </div>
+        );
+      })()}
       {cfg.cabecalho && !interno && (
         <div style={{ width: "calc(100% + 32px)", margin: "-40px -16px 28px", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(245,240,232,.04)", borderBottom: "1px solid rgba(245,240,232,.1)", boxSizing: "border-box" }}>
           <a href="/" style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 26, letterSpacing: 1, textDecoration: "none", color: "var(--offwhite)", lineHeight: 1 }}>ANTI<span style={{ color: "var(--laranja)" }}>CEG</span></a>
@@ -509,6 +542,19 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                 {visiveis.map(p => (
                   <div key={p.id} style={{ background: "rgba(245,240,232,.03)", border: "1px solid rgba(245,240,232,.08)", borderRadius: 12, overflow: "hidden" }}>
                     <CabProduto p={p} fotoDe={fotoDe} grande={!!cfg.fotoGrande} onZoom={setLightbox} compacto={(cfg.colunas || 1) > 1} />
+                    {(cfg.colunas || 1) > 1 && p.opcoes.length > 1 ? (() => {
+                      const n = p.opcoes.reduce((t, o) => t + (qtds[o.id] || 0), 0);
+                      const precos = p.opcoes.map(o => o.preco);
+                      const min = Math.min(...precos), max = Math.max(...precos);
+                      return (
+                        <div style={{ padding: "2px 8px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
+                          <div style={{ fontFamily: mono, fontSize: 13, fontWeight: 700, color: "var(--verde)", letterSpacing: "0.5px" }}>{min === max ? fmtReais(min) : `a partir de ${fmtReais(min)}`}</div>
+                          <button type="button" onClick={() => setSeletor(p)} style={{ width: "100%", padding: "8px 0", background: n > 0 ? "rgba(255,92,26,.15)" : "rgba(245,240,232,.05)", border: `1px solid ${n > 0 ? "rgba(255,92,26,.4)" : "rgba(245,240,232,.12)"}`, borderRadius: 6, fontFamily: mono, fontSize: 10, color: n > 0 ? "var(--laranja)" : "rgba(245,240,232,.6)", letterSpacing: "1px", cursor: "pointer" }}>
+                            {n > 0 ? `${n} no carrinho ✓` : (p.botao || "ESCOLHER OPÇÃO →")}
+                          </button>
+                        </div>
+                      );
+                    })() : (
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {p.opcoes.map(o => {
                         const q = qtds[o.id] || 0;
@@ -527,6 +573,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
