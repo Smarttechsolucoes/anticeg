@@ -23413,8 +23413,9 @@ function AdminClaimEventos() {
     if (editEvento.abertura) updates.abertura = new Date(editEvento.abertura + ":00-03:00").toISOString();
     if (editEvento.foto) {
       const ext = editEvento.foto.name.split(".").pop().toLowerCase();
-      const path = `claim/${editEvento.id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, editEvento.foto, { upsert: true });
+      // nome novo a cada troca: o bucket só permite ENVIAR arquivo novo (sobrescrever exige permissão de atualização, que ele não tem)
+      const path = `claim/${editEvento.id}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos-itens").upload(path, editEvento.foto);
       if (upErr) { alert("Erro ao enviar a foto: " + upErr.message); setEditSalvando(false); return; }
       const { data: { publicUrl } } = supabase.storage.from("fotos-itens").getPublicUrl(path);
       updates.foto_url = `${publicUrl}?v=${Date.now()}`;
