@@ -158,8 +158,8 @@ export const FANS_PROMO_CFG = {
   deadline: new Date("2026-11-22T23:59:59-03:00"), pedidosAte: "22/11/2026", pagarAte: null,
   confirmacao: "Estou ciente que o pagamento é IMEDIATO e da política de reembolso (no cartão, a taxa da máquina não é reembolsada)",
   grupoWhatsapp: "https://chat.whatsapp.com/JVCGH5uHyks8AtcrhVj5Ah",
-  // true = "em breve": a página mostra os itens, mas não aceita pedido. Trocar para false quando os preços estiverem preenchidos.
-  bloqueado: true,
+  // true = "em breve": a página mostra os itens, mas não aceita pedido. ABERTO em 20/11/2026 (preços preenchidos).
+  bloqueado: false,
   ocultarSeCadastrada: false,
   dadosTravados: true,       // joiner cadastrada: dados do cadastro travados, com o botão "Editar"
   cabecalho: true,           // barra ANTICEG no topo
