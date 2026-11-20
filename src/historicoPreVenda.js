@@ -7,7 +7,7 @@
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const cap = (rotulo, v) => (num(v) > 0 ? `${rotulo} ×${num(v)}` : null);
 const lista = itens => (Array.isArray(itens) ? itens : []);
-const itemQtd = (nome, qtd, extra) => `${num(qtd) || 1}× ${[nome, extra].filter(Boolean).join(" · ")}`;
+const itemQtd = (nome, qtd, extra) => `${num(qtd) || 1}× ${[nome, extra && extra !== nome ? extra : null].filter(Boolean).join(" · ")}`;   // item de opção única repete o nome na opção: mostra só uma vez
 
 export const FORMS_PREVENDA = [
   { chave: "smolmerch", rotulo: "SMOL MERCH", tabela: "pedidos_smolmerch", dono: ["email", "social"],
@@ -107,9 +107,22 @@ export function filtroDoDono(form, ident) {
   return p.length ? p.join(",") : null;
 }
 
+/** Frase clara para a joiner sobre em que pé está o pedido dela (situação + forma de pagamento + comprovante). */
+export function explicacaoDoPedido({ status, statusBruto, pagamento, temComprovante }) {
+  const chave = status?.chave;
+  if (chave === "confirmado") return "Pagamento confirmado pela equipe.";
+  if (chave === "cancelado") return "Este pedido foi cancelado. Em caso de dúvida, fale com a equipe no grupo da CEG do formulário.";
+  const cartao = statusBruto === "cartao" || statusBruto === "cartao_whatsapp" || pagamento === "cartão" || pagamento === "cartão (WhatsApp)";
+  if (cartao) return temComprovante ? "Recebemos o comprovante do cartão. A equipe vai conferir o pagamento." : "Pagamento no cartão ainda sem comprovante. Se você já pagou, avise a equipe no grupo da CEG do formulário.";
+  if (pagamento === "PIX") return temComprovante ? "Recebemos o comprovante do PIX. A equipe vai conferir o pagamento." : "Aguardando o pagamento por PIX e o comprovante.";
+  if (pagamento === "pagar depois") return "Pagamento ainda não feito. Siga o prazo informado no formulário e no grupo da CEG.";
+  return "Aguardando a equipe confirmar o pedido.";
+}
+
 /** Resumo pronto para mostrar: um objeto por pedido. */
 export function normalizarPedido(form, p) {
   const { valor, qtd } = totaisDoPedido(p);
-  return { chave: `${form.chave}-${p.id}`, formChave: form.chave, rotulo: (form.rotuloDoPedido && form.rotuloDoPedido(p)) || form.rotulo, id: p.id, criadoEm: p.created_at || null,
-    linhas: (form.linhas(p) || []).filter(Boolean), valor, qtd, pagamento: pagamentoDoPedido(p), temComprovante: !!p.comprovante_url, status: statusInfo(p.status), statusBruto: p.status || null };
+  const r = { chave: `${form.chave}-${p.id}`, formChave: form.chave, rotulo: (form.rotuloDoPedido && form.rotuloDoPedido(p)) || form.rotulo, id: p.id, criadoEm: p.created_at || null,
+    linhas: (form.linhas(p) || []).filter(Boolean), valor, qtd, pagamento: pagamentoDoPedido(p), temComprovante: !!p.comprovante_url, comprovanteUrl: p.comprovante_url || null, status: statusInfo(p.status), statusBruto: p.status || null };
+  return { ...r, explicacao: explicacaoDoPedido(r) };
 }

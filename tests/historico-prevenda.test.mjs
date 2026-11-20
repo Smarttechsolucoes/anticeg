@@ -1,7 +1,7 @@
 // Histórico dos formulários de pré-venda (src/historicoPreVenda.js): quem é o dono, o filtro enviado ao banco e o resumo de cada pedido. Rodar:  node --test tests/historico-prevenda.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FORMS_PREVENDA, identidade, filtroDoDono, normalizarPedido, statusInfo, totaisDoPedido, pagamentoDoPedido } from "../src/historicoPreVenda.js";
+import { FORMS_PREVENDA, identidade, filtroDoDono, normalizarPedido, statusInfo, totaisDoPedido, pagamentoDoPedido, explicacaoDoPedido } from "../src/historicoPreVenda.js";
 const F = c => FORMS_PREVENDA.find(f => f.chave === c);
 
 test("identidade: visitante e sem dados não têm histórico; @ vem do twitter ou do cog, sem @ e em minúsculas", () => {
@@ -51,6 +51,19 @@ test("formulários novos (Dicon, Promo Murce 50, Makestar, Promo 50, Weverse, FA
   assert.equal(f.rotulo, "FANS PROMO"); assert.deepEqual(f.linhas, ["2× SKZOO PLUSH 10CM Ver. - SKZ 5'CLOCK · Bang Chan (Wolf Chan)"]); assert.equal(f.valor, 136); assert.equal(f.pagamento, "PIX"); assert.equal(f.status.chave, "pendente");
   assert.deepEqual(normalizarPedido(F("bazaar-v"), { id: 1, capa_a: 1, capa_f: 2 }).linhas, ["Versão A ×1", "Versão F ×2"]);
   for (const c of ["dicon-origin", "promo-murce-50", "promo-makestar", "promo-50-murcekaly", "weverse-black-friday"]) assert.ok(F(c), c);
+});
+test("explicação clara por situação e forma de pagamento + endereço do comprovante para a pessoa abrir", () => {
+  const F2 = c => FORMS_PREVENDA.find(f => f.chave === c);
+  const pix = normalizarPedido(F2("fans-promo"), { id: "a3ff1b42-0000", status: "aguardando", forma_pagamento: "pix", comprovante_url: "https://x/comprovantes/fans-promo/a.jpg", valor_total: 153, itens: [] });
+  assert.equal(pix.comprovanteUrl, "https://x/comprovantes/fans-promo/a.jpg"); assert.equal(pix.temComprovante, true); assert.match(pix.explicacao, /comprovante do PIX/);
+  assert.match(normalizarPedido(F2("fans-promo"), { id: 1, status: "aguardando", forma_pagamento: "pix" }).explicacao, /Aguardando o pagamento por PIX e o comprovante/);
+  assert.match(normalizarPedido(F2("fans-promo"), { id: 2, status: "cartao", forma_pagamento: "cartao" }).explicacao, /cartão ainda sem comprovante/);
+  assert.match(normalizarPedido(F2("fans-promo"), { id: 3, status: "cartao", forma_pagamento: "cartao", comprovante_url: "u" }).explicacao, /comprovante do cartão/);
+  assert.match(normalizarPedido(F2("fans-promo"), { id: 4, status: "confirmado", forma_pagamento: "pix", comprovante_url: "u" }).explicacao, /confirmado pela equipe/);
+  assert.match(normalizarPedido(F2("fans-promo"), { id: 5, status: "cancelado" }).explicacao, /cancelado/);
+  assert.match(normalizarPedido(F2("smolmerch"), { id: 6, status: "pendente", forma_pagamento: "depois" }).explicacao, /ainda não feito/);
+  assert.equal(normalizarPedido(F2("smolmerch"), { id: 7 }).comprovanteUrl, null);
+  assert.equal(typeof explicacaoDoPedido({ status: { chave: "pendente" } }), "string");
 });
 test("situação em palavras da joiner", () => {
   for (const s of ["confirmado", "pago", "aprovado", "finalizado"]) assert.equal(statusInfo(s).chave, "confirmado", s);
