@@ -72,6 +72,13 @@ async function contarPedidos(cfg) {
 
 // aviso com **negrito** e links (http/https) clicáveis
 function avisoComLinks(texto) {
+  // [texto](/caminho) vira link; o resto segue com **negrito** e URLs soltas
+  if (/\[[^\]]+\]\([^)\s]+\)/.test(texto)) {
+    return texto.split(/(\[[^\]]+\]\([^)\s]+\))/g).map((parte, n) => {
+      const m = parte.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+      return m ? <a key={n} href={m[2]} style={{ color: "var(--laranja)", textDecoration: "underline" }}>{m[1]}</a> : <span key={n}>{avisoComLinks(parte)}</span>;
+    });
+  }
   return texto.split("**").map((trecho, k) => {
     const partes = trecho.split(/(https?:\/\/[^\s]*[^\s.,;:!?)])/g).map((parte, j) => /^https?:\/\//.test(parte)
       ? <a key={j} href={parte} target="_blank" rel="noopener noreferrer" style={{ color: "var(--laranja)", textDecoration: "underline", wordBreak: "break-all" }}>{parte}</a>
@@ -217,6 +224,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
   const [erro,        setErro]        = useState("");
   const [pedidoId,    setPedidoId]    = useState(null);
   const [lightbox,    setLightbox]    = useState(null);
+  const [avisoAberto, setAvisoAberto] = useState(null);   // aviso expansível (objeto { texto, detalhe }) aberto
   const [seletor,     setSeletor]     = useState(null);   // produto com várias opções aberto na janela "ESCOLHER ..." (só no modo em colunas)
   const [aba,         setAba]         = useState("pedido"); // pedido | aovivo | historico (só com cfg.aoVivo)
   // cfg.secoes (opcional): ["ATEEZ", ...] separa os produtos em abas; cada produto traz p.secao
@@ -437,7 +445,20 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
         {cfg.aoVivo && aba !== "pedido" ? <PainelPublico aba={aba} cfg={cfg} produtos={produtos} meuSocial={logado ? social : ""} /> : (<>
         <div style={{ background: "rgba(255,92,26,.07)", border: "1px solid rgba(255,92,26,.2)", borderRadius: 10, padding: "14px 16px", marginBottom: 28, fontSize: 12, lineHeight: 1.7, color: "rgba(245,240,232,.7)" }}>
           <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "var(--laranja)", marginBottom: 8 }}>⚠ AVISOS IMPORTANTES</div>
-          {cfg.avisos.map((a, i) => <div key={i}>☆ {avisoComLinks(a)}</div>)}
+          {cfg.avisos.map((a, i) => typeof a === "object" ? (
+            <div key={i}>
+              <button type="button" onClick={() => setAvisoAberto(avisoAberto === i ? null : i)} aria-expanded={avisoAberto === i}
+                style={{ background: "none", border: "none", padding: 0, margin: 0, color: "inherit", font: "inherit", cursor: "pointer", textAlign: "left" }}>
+                ☆ {avisoComLinks(a.texto)} <span style={{ color: "var(--laranja)", textDecoration: "underline", whiteSpace: "nowrap" }}>{avisoAberto === i ? "fechar ▴" : "abrir ▾"}</span>
+              </button>
+              {avisoAberto === i && (
+                <div style={{ margin: "8px 0 6px", padding: "10px 12px", borderRadius: 8, background: "rgba(245,240,232,.05)", border: "1px solid rgba(255,92,26,.3)" }}>
+                  <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "2px", color: "var(--laranja)", marginBottom: 6 }}>{a.titulo}</div>
+                  {a.detalhe.map((d, j) => <div key={j} style={{ marginBottom: j < a.detalhe.length - 1 ? 6 : 0 }}>{avisoComLinks(d)}</div>)}
+                </div>
+              )}
+            </div>
+          ) : a.startsWith("》") ? <div key={i}>{avisoComLinks(a)}</div> : <div key={i}>☆ {avisoComLinks(a)}</div>)}
         </div>
 
         {cfg.avisoDestaque && !encerrado && (
@@ -537,6 +558,7 @@ export function SmolMerchFormPage({ pixKey, cfg = SMOLMERCH_CFG, produtos = SMOL
 
             <div style={{ marginBottom: 28 }}>
               <div style={labelStyle}>Escolha os itens</div>
+              {cfg.legendaItens && <div style={{ fontFamily: mono, fontSize: 10, lineHeight: 1.7, color: "rgba(245,240,232,.5)", margin: "-4px 0 12px" }}>{avisoComLinks(cfg.legendaItens)}</div>}
               {abasSecoes}
               <div style={(cfg.colunas || 1) > 1 ? { display: "grid", gridTemplateColumns: `repeat(${cfg.colunas}, minmax(0, 1fr))`, gap: 10, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 14 }}>
                 {visiveis.map(p => (
