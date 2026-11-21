@@ -137,16 +137,16 @@ const PRECOS = {
 // o mesmo nome pode se repetir em coleções diferentes: o id ganha um sufixo numérico só quando precisa
 const vistos = {};
 // itens que a organização decidiu NÃO vender neste formulário (ficam na lista acima só para manter a numeração do TIPO)
-const RETIRADOS = ["SKZOO POWER BANK - dominATE SEOUL", "SKZOO TAMAGOTCHI & CASE SET", "SKZOO HANDHELD FAN - dominATE SEOUL",
-  // 21/11/2026: a dona pediu para bloquear estes dois pedidos
-  "NECKLACE by Hyunjin - celebrATE", "SOON-DOONG-DORI KEYRING SET by Lee Know - celebrATE"];
+const RETIRADOS = ["SKZOO POWER BANK - dominATE SEOUL", "SKZOO TAMAGOTCHI & CASE SET", "SKZOO HANDHELD FAN - dominATE SEOUL"];
+// itens que aparecem no formulário, mas travados por limite de estoque (maxTotal: 0 = ESGOTADO, o "+" fica desligado). 21/11/2026: pedido da dona.
+const ESGOTADOS = ["NECKLACE by Hyunjin - celebrATE", "SOON-DOONG-DORI KEYRING SET by Lee Know - celebrATE"];
 export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const base = slug(nome);
   vistos[base] = (vistos[base] || 0) + 1;
   const id = vistos[base] > 1 ? `${base}-${vistos[base]}` : base;
   const tipo = TIPO[i + 1];
   const lista = tipo === "escolha" ? SKZOO_MEMBRO : tipo === "membro" ? MEMBROS : null;
-  const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: PRECOS[nome] ?? 0 })) : [{ id, label: nome, preco: PRECOS[nome] ?? 0 }];
+  const opcoes = lista ? lista.map(l => ({ id: `${id}-${slug(l)}`, label: l, preco: PRECOS[nome] ?? 0, ...(ESGOTADOS.includes(nome) ? { maxTotal: 0 } : {}) })) : [{ id, label: nome, preco: PRECOS[nome] ?? 0, ...(ESGOTADOS.includes(nome) ? { maxTotal: 0 } : {}) }];
   return { id, nome, foto: `${id}.jpg`, ...(ETIQUETA[tipo] ? { etiqueta: ETIQUETA[tipo] } : {}), ...(lista ? { botao: "ESCOLHER MEMBRO →" } : {}), opcoes };
 }).filter(p => !RETIRADOS.includes(p.nome));
 
