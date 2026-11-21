@@ -137,7 +137,9 @@ const PRECOS = {
 // o mesmo nome pode se repetir em coleções diferentes: o id ganha um sufixo numérico só quando precisa
 const vistos = {};
 // itens que a organização decidiu NÃO vender neste formulário (ficam na lista acima só para manter a numeração do TIPO)
-const RETIRADOS = ["SKZOO POWER BANK - dominATE SEOUL", "SKZOO TAMAGOTCHI & CASE SET", "SKZOO HANDHELD FAN - dominATE SEOUL"];
+const RETIRADOS = ["SKZOO POWER BANK - dominATE SEOUL", "SKZOO TAMAGOTCHI & CASE SET", "SKZOO HANDHELD FAN - dominATE SEOUL",
+  // 21/11/2026: a dona pediu para bloquear estes dois pedidos
+  "NECKLACE by Hyunjin - celebrATE", "SOON-DOONG-DORI KEYRING SET by Lee Know - celebrATE"];
 export const FANS_PRODUTOS = NOMES.map((nome, i) => {
   const base = slug(nome);
   vistos[base] = (vistos[base] || 0) + 1;
