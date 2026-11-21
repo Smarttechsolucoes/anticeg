@@ -1165,6 +1165,7 @@ td { padding:10px; vertical-align:middle; }
 .mc-rules-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:.1em; color:var(--laranja); margin-bottom:12px; text-align:center; }
 .mc-rule-item { font-family:'DM Mono',monospace; font-size:11px; color:rgba(245,240,232,.5); line-height:1.7; display:flex; gap:8px; margin-bottom:2px; }
 .mc-rule-item::before { content:'·'; color:var(--laranja); flex-shrink:0; font-size:14px; margin-top:1px; }
+.mc-rule-fds { color:#FF9F40; }
 
 /* meus pedidos */
 .mc-pedidos-login { text-align:center; padding:48px 20px; }

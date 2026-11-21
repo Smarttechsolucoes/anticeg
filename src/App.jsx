@@ -13791,7 +13791,7 @@ function MercariTab({ user = null }) {
   const [idSt, setIdSt]       = useState('');
   const [idMsg, setIdMsg]     = useState('');
   const [items, setItems]     = useState([{id:1,nome:'',link:'',jpy:0}]);
-  const [checks, setChecks]   = useState([false,false,false,false]);
+  const [checks, setChecks]   = useState([false,false,false]);
   const [semComp, setSemComp] = useState(false);
   const [fileComp, setFileComp] = useState(null);
   const [idPix, setIdPix]     = useState('');
@@ -13920,14 +13920,13 @@ function MercariTab({ user = null }) {
     setJoiner(null); jRef.current=null;
     setIdInp(''); idRef.current=''; setIdSt(''); setIdMsg('');
     setSemComp(false); setFileComp(null); setIdPix('');
-    setChecks([false,false,false,false]);
+    setChecks([false,false,false]);
     setFormErr(''); setDone(false); setPedidos(null);
     if(fileRef.current) fileRef.current.value='';
   };
 
   const RULES = [
-    'Feedbacks e retornos das compras serão repassados assim que a seller responder.',
-    <span key="r1">É necessário realizar o pagamento do <strong>valor integral</strong> no momento em que a GOM chamar para validação dos valores convertidos.</span>,
+    <span key="r-fds" className="mc-rule-fds">Pedidos realizados no final de semana serão comprados no dia útil seguinte.</span>,
     <span key="r2"><strong>Não me responsabilizo</strong> por calotes de vendedores, itens falsificados ou danos no trajeto Mercari → proxy.</span>,
     'O frete internacional e a taxa da Receita Federal serão cobrados no momento do envio da caixa.',
     <span key="r3">Cancelamentos por parte do joiner e/ou repasse dos itens <strong>não serão autorizados</strong>.</span>,
@@ -13937,7 +13936,6 @@ function MercariTab({ user = null }) {
   ];
   const CTXT = [
     'Estou ciente que ao adicionar o link do Mercari, estou realizando meu pedido.',
-    <span key="c1">Estou ciente que <strong>não posso</strong> realizar repasse de itens da caixinha em nenhuma hipótese.</span>,
     <span key="c2">Estou ciente que o prazo de pagamento é <strong>imediato</strong> e existe risco de esgotar sem aviso prévio.</span>,
     <span key="c3">Estou ciente que a GOM é responsável por <strong>intermediar</strong> o processo de compra.</span>,
   ];
