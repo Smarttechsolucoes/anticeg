@@ -23054,6 +23054,7 @@ const MARIE_CLAIRE_FELIX_CFG = {
   titulo: "MARIE CLAIRE", sub: "Hanbok Wave K-Edition · Felix", deadline: new Date("2026-11-25T10:00:00-03:00"), pedidosAte: "25/11/2026 às 10h",
   preco: 60, capas: MARIE_CLAIRE_FELIX_CAPAS,
   pagamentoImediato: true,   // sem "Pagar depois": o pedido já vai com o pagamento (PIX ou cartão)
+  grupoWpp: "https://chat.whatsapp.com/DLgaaL7HiPZAull3KnS4TV",   // botão "Entrar no grupo de atualizações" depois do pedido
   avisos: [
     <>Ao fechar a claim, seu pedido <strong>não poderá ser cancelado</strong>.</>,
     <><strong>Pagamento imediato</strong>: o pedido é feito já com o pagamento (PIX ou cartão).</>,
