@@ -16,6 +16,10 @@ import { FANS_PRODUTOS, FANS_PROMO_CFG, FANS_FAIXA, fotoFans } from "./fansPromo
 import { PROMO_MURCE_50_PRODUTOS, PROMO_MURCE_50_CFG, PROMO_MURCE_50_FAIXA, fotoPm } from "./promoMurce50Dados.js";
 import { AdminAuthGate } from "./AdminAuth.jsx";
 import AdminContas from "./AdminContas.jsx";
+import { PedidoAlteracaoCadastro } from "./CadastroPerfil.jsx";
+import { CADASTRO_ETAPA1 } from "./cadastroEtapa1.js";
+import { CadastroTarefasPainel } from "./CadastroTarefas.jsx";
+import { useCadastroTarefas } from "./cadastroTarefasLogica.js";
 import { ADMIN_AUTH_OBRIGATORIA, clienteAdmin, buscarNomeAdmin } from "./adminAuth.js";
 import { meusPedidosFechados } from "./pedidosFechados.js";
 import { COLS_PAGAMENTO, COLS_MERCARI, COLS_ENVIO, COLS_REPASSOS } from "./colunasPublicas.js";
@@ -26,7 +30,7 @@ import { lerPlanilha } from "./csvSimples.js";
 import { diasAtraso, diasCobradosMulta, multaPorDia, multaAtraso, multaDoItem, isentoMulta, diasParaVencer } from "./multa.js";
 import { JoinerAtivacaoGate, AreaProtegida, ExigeContaAtiva, RecuperacaoSenhaGate, TrocarSenhaJoiner, AvisoAjudaPerfil, AtivacaoPorEmail } from "./JoinerAuth.jsx";
 import { enviarComprovante as enviarArquivoSeguro, abrirComprovante, resolverComprovantesNoHtml, useUrlComprovante } from "./comprovantes.js";
-import { JOINERS_AUTH_ATIVO, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
+import { JOINERS_AUTH_ATIVO, criarJoinerAuth, itensDoCeg, resumoDosCegs, vencimentosDosCegs, AREAS_PROTEGIDAS, buscarAcessoSimples, carregarDadosPrivados, listarJoinersPublicos, fotosDeJoiners, meusRecrutados as buscarMeusRecrutados, joinersOnline, gravarAssinaturaPush, consultarGrupoEnvio, quadroDeClaims, claimsVendidos, criarPedidoLoja, TABELA_FORMULARIO_PUBLICA } from "./joinerAuth.js";
 import { resolverRecrutador, contarRecrutados, buscarLinkComunidade } from "./recrutador.js";
 import { escolherJoiner, escaparLike } from "./escolherJoiner.js";
 import bonequinha from "./assets/bonequinha.png";
@@ -3932,6 +3936,12 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
     setPerfilSubTab("feedback");
   }
   const [nome] = useState(user.nome || "");
+  // E1 (interruptor VITE_CADASTRO_ETAPA1): nome cadastral editável com confirmação do banco; e-mail e @ só por troca verificada ou pedido
+  const etapa1 = CADASTRO_ETAPA1 && JOINERS_AUTH_ATIVO;
+  const contaCad = etapa1 && !user.acesso_simples;
+  const apiCad = useMemo(() => (etapa1 ? criarJoinerAuth() : null), [etapa1]);
+  const [nomeCad, setNomeCad] = useState(user.nome || "");
+  const [pedidoAberto, setPedidoAberto] = useState(false);
   const [nomeSite, setNomeSite] = useState(user.nome_site || "");
   const [twitter, setTwitter] = useState(user.twitter || "");
   const [recrutadorInp, setRecrutadorInp] = useState(user.recrutador ? "@" + user.recrutador : "");
@@ -4022,7 +4032,7 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
   async function handleSalvar() {
     setLoading(true); setError(""); setSuccess("");
 
-    const updates = { nome_site: nomeSite, twitter, whatsapp, email };
+    const updates = etapa1 ? { nome_site: nomeSite, whatsapp } : { nome_site: nomeSite, twitter, whatsapp, email };
 
     // recrutador: só pode ser definido uma vez
     if (!user.recrutador && recrutadorInp.trim()) {
@@ -4032,12 +4042,25 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       updates.recrutador = cogRec;
     }
 
-    const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
-    if (err) { setError("Erro ao salvar."); setLoading(false); return; }
+    let nomeCadGravado = user.nome, avisoNome = "";
+    if (etapa1) {
+      // "Salvo no site" só depois que o banco CONFIRMA (uma linha gravada); o acesso simples (só @, sem sessão) não grava nada e é levado ao pedido
+      if (user.acesso_simples) { setError("Neste acesso não dá para salvar direto. Use \"Pedir alteração do cadastro\" mais abaixo."); setLoading(false); return; }
+      const { data: gravado, error: erroE1 } = await supabase.from("joiners").update(updates).eq("cog", user.cog).select("cog");
+      if (erroE1 || !gravado || gravado.length !== 1) { setError("Não foi possível confirmar a gravação. Nada foi alterado."); setLoading(false); return; }
+      if (String(nomeCad).replace(/\s+/g, " ").trim() !== String(user.nome || "").trim()) {
+        const r = await apiCad.salvarMeuCadastro(nomeCad);
+        if (r.erro) avisoNome = r.erro; else nomeCadGravado = r.nome;
+      }
+    } else {
+      const { error: err } = await supabase.from("joiners").update(updates).eq("cog", user.cog);
+      if (err) { setError("Erro ao salvar."); setLoading(false); return; }
+    }
 
     const camposAlterados = {};
     const mapa = { twitter: user.twitter, whatsapp: user.whatsapp, email: user.email };
     for (const campo of Object.keys(mapa)) {
+      if (!(campo in updates)) continue;
       const valorAntigo = mapa[campo] || "";
       const valorNovoCampo = updates[campo] || "";
       if (valorNovoCampo !== (valorAntigo || "")) {
@@ -4048,10 +4071,11 @@ function PerfilTab({ user, onUpdate, owner = false, openPagamentosSignal = 0, in
       await supabase.from("joiner_updates").insert([{ joiner_cog: user.cog, campos: camposAlterados }]);
     }
 
-    const updatedUser = { ...user, ...updates, nome_site: nomeSite };
+    const updatedUser = { ...user, ...updates, nome_site: nomeSite, nome: nomeCadGravado };
     localStorage.setItem("anticeg_user_v2", JSON.stringify(updatedUser));
     onUpdate(updatedUser);
-    setSuccess("Perfil atualizado com sucesso!");
+    if (avisoNome) setError("Seu perfil foi salvo, mas o nome cadastral NÃO foi alterado: " + avisoNome);
+    else setSuccess(etapa1 ? "Salvo no site ✓" : "Perfil atualizado com sucesso!");
     setLoading(false);
   }
 
@@ -6107,17 +6131,32 @@ ${compHTML}
             </button>
             {fotoErro && <div style={{ fontSize:11, color:"var(--laranja)", textAlign:"center", maxWidth:280, lineHeight:1.5 }}>{fotoErro}</div>}
           </div>
+          {etapa1 ? (
+            <div>
+              <label className="login-label">Nome cadastral <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>é o nome que vai para a planilha</span></label>
+              <input className="login-input" style={inputStyle} type="text" maxLength={80} value={nomeCad} onChange={e => setNomeCad(e.target.value)} readOnly={user.acesso_simples} data-testid="perfil-nome-cadastral" />
+            </div>
+          ) : (
           <div>
             <label className="login-label">Nome de claim <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>como está na planilha · não editável</span></label>
             <input className="login-input" style={{ ...inputStyle, opacity:0.45, cursor:"default" }} type="text" value={nome} readOnly />
           </div>
+          )}
           <div>
             <label className="login-label">Nome do site <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>como você quer aparecer aqui</span></label>
             <input className="login-input" style={inputStyle} type="text" placeholder={nome} value={nomeSite} onChange={e => setNomeSite(e.target.value)} />
           </div>
-          <div><label className="login-label">@ no Twitter</label><input className="login-input" style={inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} /></div>
+          <div><label className="login-label">@ no Twitter</label><input className="login-input" style={etapa1 ? { ...inputStyle, opacity:0.55, cursor:"default" } : inputStyle} type="text" placeholder="@seutwitter" value={twitter} onChange={e => setTwitter(e.target.value)} readOnly={etapa1} /></div>
           <div><label className="login-label">WhatsApp</label><input className="login-input" style={inputStyle} type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
-          <div><label className="login-label">E-mail</label><input className="login-input" style={inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+          <div><label className="login-label">E-mail</label><input className="login-input" style={etapa1 ? { ...inputStyle, opacity:0.55, cursor:"default" } : inputStyle} type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} readOnly={etapa1} /></div>
+          {etapa1 && (
+            <div>
+              <button type="button" data-testid="perfil-abrir-pedido" onClick={() => setPedidoAberto(v => !v)} style={{ background:"transparent", color:"var(--verde)", border:"1px solid rgba(186,255,57,.3)", borderRadius:6, padding:"8px 14px", fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer" }}>
+                {contaCad ? "Trocar e-mail ou @" : "Pedir alteração do cadastro"}
+              </button>
+              {pedidoAberto && <div style={{ marginTop:10 }}><PedidoAlteracaoCadastro user={user} conta={contaCad} api={apiCad} onFechar={() => setPedidoAberto(false)} /></div>}
+            </div>
+          )}
           <div>
             <label className="login-label">Quem te indicou <span style={{ fontSize:9, color:"rgba(245,240,232,.3)", fontFamily:"'DM Mono',monospace", letterSpacing:".05em", marginLeft:6 }}>@ do recrutador · {user.recrutador ? "não editável" : "só pode ser definido uma vez"}</span></label>
             <input className="login-input" style={{ ...inputStyle, ...(user.recrutador ? { opacity:0.45, cursor:"default" } : {}) }} type="text" placeholder="@recrutador (opcional)" value={recrutadorInp} readOnly={!!user.recrutador} onChange={e => setRecrutadorInp(e.target.value)} />
@@ -8584,6 +8623,7 @@ function ControleEstoqueTab() {
 
 function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, setCalEventos, initialSubTab = null, onSubTabChange }) {
   const isDemo = Object.keys(DEMO_COG_MAP).includes(userCog);
+  const cadastro = useCadastroTarefas({ obterCliente: clienteAdmin, ativo: !isDemo, aoAbrir: id => { setAdminMainTab("atualizacoes"); setTarefaAberta(id); try { window.history.replaceState(null, "", `/admin/atualizacoes?tarefa=${id}`); } catch { /* sem history */ } } });
   const adminWinW = useWindowWidth();
   const adminIsMobile = adminWinW <= 680;
   // quem está respondendo (nome da conta de login, vindo do servidor); undefined = carregando, null = conta sem nome cadastrado
@@ -8618,7 +8658,9 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
   const [cashbackEdit,   setCashbackEdit]   = useState(null);
   const [cashbackSaving, setCashbackSaving] = useState(false);
   const [cashbackSearch, setCashbackSearch] = useState("");
-  const [adminMainTab, setAdminMainTab] = useState(initialSubTab || "home");
+  // E1: link direto para uma tarefa de cadastro (notificação do navegador): /admin/atualizacoes?tarefa=ID abre a aba e destaca o cartão
+  const [tarefaAberta, setTarefaAberta] = useState(() => { const n = Number(new URLSearchParams(window.location.search).get("tarefa")); return Number.isInteger(n) && n > 0 ? n : null; });
+  const [adminMainTab, setAdminMainTab] = useState(initialSubTab || (tarefaAberta ? "atualizacoes" : "home"));
   const adminResetMounted = useRef(false);
   useEffect(() => { if (!adminResetMounted.current) { adminResetMounted.current = true; return; } setAdminMainTab("home"); }, [resetSignal]);
   useEffect(() => { onSubTabChange?.(adminMainTab); }, [adminMainTab]);
@@ -9321,6 +9363,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
                   + reports.filter(r => r.status !== "resolvido").length
                   + confirmacoes.length
                   + joinerUpdates.filter(u => !u.lido).length
+                  + cadastro.pendentes
                   + pagDemandas.filter(d => d.status === "em_analise").length;
   const greetMsg = totalPend > 0
     ? `${totalPend} pendência${totalPend > 1 ? "s" : ""} esperando você →`
@@ -9393,7 +9436,7 @@ function AdminTab({ owner = false, userCog = "", resetSignal = 0, calEventos, se
               <div className="admin-sidebar-group">
                 <div className="admin-sidebar-group-label">Joiners</div>
                 {temAcesso("cadastros")    && nav("cadastros",    "Cadastros",    "◉", confirmacoes.length || 0)}
-                {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", joinerUpdates.filter(u => !u.lido).length || 0)}
+                {temAcesso("atualizacoes") && nav("atualizacoes", "Atualizações", "↻", (joinerUpdates.filter(u => !u.lido).length + cadastro.pendentes) || 0)}
                 {temAcesso("badges")       && nav("badges",       "Badges",       "✦", 0)}
                 {temAcesso("badges")       && nav("recrutadores", "Recrutadores", "◈", 0)}
               </div>
@@ -12572,6 +12615,7 @@ Isso é um pagamento feito por terceiros? Confirme só se o comprovante cobrir e
       {/* ── ATUALIZAÇÕES DE PERFIL ── */}
       {adminMainTab === "atualizacoes" && (
         <div>
+          <CadastroTarefasPainel tarefas={cadastro.tarefas} tarefaAberta={tarefaAberta} erro={cadastro.erro} acoes={cadastro} />
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
             <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"rgba(245,240,232,.4)" }}>
               {joinerUpdates.filter(u => !u.lido).length} não lida(s)
@@ -18356,8 +18400,35 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
   const [email, setEmail] = useState(user.email || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // E1 (interruptor VITE_CADASTRO_ETAPA1): esta tela deixa de gravar nome/@/e-mail/confirmado direto e de dizer "salvo" sem confirmação do banco
+  const etapa1 = CADASTRO_ETAPA1 && JOINERS_AUTH_ATIVO;
+  const [apiCad] = useState(() => (etapa1 ? criarJoinerAuth() : null));
+  const [resultado, setResultado] = useState(null);   // { texto, fecha: "salvo" | "pedido" }
+  const norm = v => String(v || "").replace(/^\s*@+/, "").trim().toLowerCase();
+
+  async function salvarEtapa1() {
+    if (!nome.trim()) { setError("Nome é obrigatório."); return; }
+    setSaving(true); setError("");
+    const mudouNome = nome.trim() !== String(user.nome || "").trim(), mudouArroba = !!social.trim() && norm(social) !== norm(user.twitter), mudouEmail = !!email.trim() && email.trim().toLowerCase() !== String(user.email || "").trim().toLowerCase();
+    if (user.acesso_simples) {
+      // login legado (só @, sem sessão): o banco não aceita gravação; cada mudança vira PEDIDO, nunca alterado sozinho
+      const pedidos = [mudouNome && ["nome", nome.trim()], mudouArroba && ["arroba", social.trim()], mudouEmail && ["email", email.trim().toLowerCase()]].filter(Boolean);
+      for (const [campo, valor] of pedidos) {
+        const r = await apiCad.solicitarSemLogin({ cog: user.cog, campo, valor, mensagem: "pedido feito em Confirme seus dados" });
+        if (r.erro) { setError(r.erro); setSaving(false); return; }
+      }
+      setResultado({ fecha: "pedido", texto: pedidos.length ? "Alteração solicitada. A administração confere antes de mudar qualquer coisa no seu cadastro." : "Você não alterou nada. Para confirmar seus dados e liberar o acesso completo, ative sua conta." });
+    } else {
+      let gravado = user.nome, aviso = "";
+      if (mudouNome) { const r = await apiCad.salvarMeuCadastro(nome); if (r.erro) { setError(r.erro); setSaving(false); return; } gravado = r.nome; }
+      if (mudouArroba || mudouEmail) aviso = " Para trocar o @ ou o e-mail, use Meu Perfil › Trocar e-mail ou @.";
+      setResultado({ fecha: "salvo", nome: gravado, texto: "Salvo no site ✓" + aviso });
+    }
+    setSaving(false);
+  }
 
   async function handleSave() {
+    if (etapa1) return salvarEtapa1();
     if (!nome.trim()) { setError("Nome é obrigatório."); return; }
     setSaving(true);
     const twitterNovo = social.trim() || null;
@@ -18421,10 +18492,13 @@ function ProfileConfirmModal({ user, onSave, onSkip }) {
           <label style={{ fontSize:10, color:"rgba(245,240,232,.62)", letterSpacing:1.5, textTransform:"uppercase" }}>E-mail</label>
           <input className="login-input" type="email" placeholder="seuemail@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()} />
         </div>
-        {error && <div className="login-error">{error}</div>}
+        {error && <div className="login-error" data-testid="confirmar-erro">{error}</div>}
+        {resultado && <div data-testid="confirmar-resultado" role="status" style={{ fontSize:13, color:"var(--verde)", padding:"8px 12px", background:"rgba(186,255,57,.08)", border:"1px solid rgba(186,255,57,.2)", borderRadius:6 }}>{resultado.texto}</div>}
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
-          <button className="modal-confirm-btn" onClick={handleSave} disabled={saving} style={{ flex:1 }}>{saving ? "Salvando..." : "TUDO CERTO ✓"}</button>
-          <button className="modal-cancel-btn" onClick={handleSkip}>Agora não</button>
+          {resultado
+            ? <button className="modal-confirm-btn" data-testid="confirmar-fechar" onClick={() => (resultado.fecha === "salvo" ? onSave({ ...user, nome: resultado.nome }) : onSkip())} style={{ flex:1 }}>FECHAR</button>
+            : <><button className="modal-confirm-btn" data-testid="confirmar-salvar" onClick={handleSave} disabled={saving} style={{ flex:1 }}>{saving ? "Salvando..." : "TUDO CERTO ✓"}</button>
+          <button className="modal-cancel-btn" onClick={handleSkip}>Agora não</button></>}
         </div>
       </div>
     </div>
@@ -28511,7 +28585,7 @@ function AppPrincipal() {
 
   function handleAdminSubTab(subTab) {
     const path = subTab === "home" ? "/admin" : `/admin/${subTab}`;
-    history.replaceState(null, "", path);
+    history.replaceState(null, "", subTab === "atualizacoes" ? path + window.location.search : path);   // ?tarefa=ID (link do aviso) acompanha a aba Atualizações
   }
   function handlePerfilSubTab(subTab) {
     const path = subTab === "dados" ? "/perfil" : `/perfil/${subTab}`;
