@@ -119,7 +119,8 @@ Esperado: `{"erro":"Sem ID_SITE na planilha e sem @ para localizar a linha","def
 **Antes:** A a D checadas.
 **Conferir a fila (somente leitura) e me mostrar:**
 1. `E1_fila_antes_de_ativar_somente_leitura.sql`, partes **A e B** (e **C**, que agora existe). Esperado: sem linhas.
-2. **Se houver itens:** **não ative**. Me mande as tabelas A, B e C: eu mostro item por item o que seria enviado (tipo, tarefa, campos, tentativas), e você decide entre (a) deixar processar, (b) cancelar o item (o SQL de cancelamento está no arquivo do primeiro teste, em comentário) ou (c) corrigir antes. Nenhum item é processado sem você ver.
+2. **Repita A, B e C duas vezes mais:** (a) **logo antes** de instalar o acionador e (b) **cerca de 1 minuto depois** dele instalado. A fila pode ter recebido alterações enquanto a publicação avançava (qualquer pessoa ou rotina que altere `nome`/`email`). Em (b), se aparecer item, o acionador já o terá processado: a tarefa correspondente em Atualizações mostra o resultado.
+3. **Se houver itens em qualquer uma das conferências:** **não ative**. Me mande as tabelas A, B e C: eu mostro item por item o que seria enviado (tipo, tarefa, campos, tentativas), e você decide entre (a) deixar processar, (b) cancelar o item (o SQL de cancelamento está no arquivo do primeiro teste, em comentário) ou (c) corrigir antes. Nenhum item é processado sem você ver.
 **Validar a autenticação com a configuração real (só se A e B estavam vazias):** no Apps Script real, escolha a função **`rodarFilaPerfil_`** e clique em **Executar** uma única vez. Ela faz exatamente a chamada que o acionador fará, com `x-cron-secret`. Em **Execuções**, o registro deve dizer `rodarFilaPerfil_: HTTP 200 {"lidos":0,"enviados":0,"falharam":0,"parou":false}`. Isso prova: URL certa, chave aceita pelo porteiro, segredo igual nos dois lados, função implantada. Se vier `HTTP 403`, o segredo do Apps Script não é o do Supabase; se `HTTP 401`, a chave/JWT; me mande a linha (ela não traz o segredo).
 **Instalar:** só depois do 200 acima, execute **`instalarGatilhoFilaPerfil`** (autorize se pedir). **Checar:** Acionadores mostra 1 linha de `rodarFilaPerfil_` (a cada minuto); em Execuções, 3 execuções seguidas com `HTTP 200 lidos 0`.
 **Desligar a qualquer momento:** execute `removerGatilhoFilaPerfil` (e confira que Acionadores ficou vazio); para travar de vez, apague a propriedade `PERFIL_SYNC_SEGREDO` do Apps Script ou rode `supabase secrets unset PERFIL_SYNC_SEGREDO`. Com a fila vazia, ligar o acionador não altera nada na planilha.
@@ -127,6 +128,8 @@ Esperado: `{"erro":"Sem ID_SITE na planilha e sem @ para localizar a linha","def
 ## Etapa F — Primeiro teste de escrita controlado (ponto F)
 **Cadastro:** recomendo o **seu próprio** (o da administradora). A planilha real recebe a alteração, então vale ser um cadastro seu: você reconhece a linha e desfaz sem ônus.
 **Antes (você olha, sem mudar nada):**
+☆ Copie o resultado do passo 1 do SQL (o nome **exatamente** como está) para um bloco de notas: é o valor a restaurar.
+☆ Anote a hora e, na planilha real, abra **Arquivo › Histórico de versões** para saber de qual versão comparar depois.
 ☆ Dados: **uma única** linha com o seu @; as células B (nome) e C (e-mail) **sem fórmula**.
 ☆ MASTERLIST: quantas linhas suas têm o NOME por fórmula (vão mudar) e quantas têm texto fixo (**não** devem mudar). Anote os números de linha.
 ☆ Admin › Atualizações: sem pendências.
@@ -135,7 +138,19 @@ Esperado: `{"erro":"Sem ID_SITE na planilha e sem @ para localizar a linha","def
 1. **Atualizações:** a tarefa aparece **PENDENTE**, com selo e contagem. Em até ~2 min fica **SINCRONIZADA**. O acionador faz isso sozinho (você não clica em nada).
 2. **Dados:** na sua linha, B = nome com " (teste E1)"; D = seu número (ID do site); E = `principal`; F = versão (número da tarefa). Nas outras linhas, nada muda.
 3. **MASTERLIST:** as suas linhas **com fórmula** mostram o nome novo; as de **texto fixo continuam iguais**; nenhuma outra célula muda.
-**Desfazer:** rode o passo 3 do arquivo; a 2ª tarefa leva o nome original de volta (Dados e MASTERLIST voltam). D, E e F ficam preenchidos (é o esperado).
+**Restaurar o seu nome e provar que tudo voltou (passos 3 e 4 do arquivo):**
+1. **Banco:** rode o passo 3 (volta ao nome original, 1 linha). Se devolver 0 linhas, alguém mudou o nome no meio do teste: use o **plano B** do arquivo (restaura pelo id, só se o nome ainda não for o original). Depois rode o passo 4: `nome_voltou` deve ser `true`.
+2. **Tarefas:** o segundo `select` do passo 4 deve listar as duas tarefas mais novas, **as duas sincronizadas**: a do teste (`de` = original, `para` = original + " (teste E1)") e a do desfazer (o contrário). Se alguma estiver `pendente`, espere 2 minutos; se estiver `atencao`, o motivo aparece em Atualizações e eu preciso ver.
+3. **Fila:** rode de novo as partes A e B do SQL da fila: sem linhas.
+4. **Planilha (Dados):** na sua linha, **B** voltou ao nome original; **A** (@) e **C** (e-mail) não mudaram em nenhum momento.
+5. **Planilha (MASTERLIST):** as linhas suas com fórmula mostram o nome original; as de texto fixo nunca mudaram.
+6. **Prova pelo histórico:** Arquivo › Histórico de versões › abra a versão **de antes do teste** e use "Mostrar alterações": as únicas células que diferem são as da sua linha em Dados (D, E, F, descritas abaixo) e nada mais. Se algo diferir fora disso, me mande o print.
+
+**O que fazer com D, E e F (preenchidas pelo teste):** o teste preenche, **uma vez**, na sua linha de Dados: **D** = o número do seu cadastro no site (ID_SITE), **E** = `principal`, **F** = o número da última tarefa aplicada (a versão). Elas **não** voltam sozinhas ao vazio quando o nome é restaurado, e isso é o esperado: D/E ligam a linha ao cadastro pelo número (assim uma troca futura de @ não perde a linha) e F impede que uma alteração antiga sobrescreva uma nova.
+☆ **Recomendado: manter** D, E e F. São a ligação definitiva da sua linha e o primeiro envio real de qualquer cadastro as preencheria de qualquer jeito.
+☆ **Se preferir desfazer por completo:** só **depois** de a tarefa do desfazer estar sincronizada e de a fila estar vazia, selecione **apenas as três células D, E e F da sua linha** e aperte Delete (elas não têm fórmula). Confira que A, B e C da linha não mudaram. Consequência: a próxima alteração desse cadastro volta a achar a linha pelo @ e a preencher D, E e F de novo. Não apague a coluna inteira nem a linha de cabeçalho.
+☆ **Não** mexa em D, E ou F de outras pessoas: elas só são preenchidas quando a própria pessoa tiver uma alteração enviada.
+
 **Abortar** antes da planilha mudar: `removerGatilhoFilaPerfil` e o SQL de cancelamento (em comentário no arquivo). Se a tarefa ficar **PRECISA DE ATENÇÃO** (por exemplo `linha_nao_encontrada`, `linha_ambigua`, `celula_com_formula`), **nada foi gravado** na planilha; o motivo aparece na tarefa e me mande para decidirmos.
 **Me mande:** um print de Atualizações (pendente e depois sincronizada), o que viu em Dados e na MASTERLIST, e a linha do Registro de execução do acionador.
 

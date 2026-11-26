@@ -47,8 +47,8 @@ ok(antes === depois, "as consultas não alteraram nada");
 
 // ---- o SQL do primeiro teste controlado (E1_primeiro_teste_controlado.sql), como o editor de SQL da produção o executaria (papel confiável, sem sessão de usuário)
 const modelo = readFileSync(new URL("../supabase/cadastro-tarefas/E1_primeiro_teste_controlado.sql", import.meta.url), "utf8").replace(/\r/g, "").replaceAll("<COG>", "teste_e1").replaceAll("<NOME_ATUAL>", "Nome Secreto De Teste");
-const comandos = modelo.split("\n").filter(l => /^(select|update) /.test(l));   // os passos 1, 2 e 3 (o "abortar" está comentado)
-ok(comandos.length === 3, "o arquivo tem 3 passos executáveis (conferir, testar, desfazer) e o abortar fica comentado");
+const comandos = modelo.split("\n").filter(l => !/^--/.test(l)).join("\n").split(";").map(c => c.trim()).filter(Boolean);   // os comandos não comentados, em ordem (um comando pode ocupar várias linhas)
+ok(comandos.length === 5, "o arquivo tem os passos executáveis (1 conferir, 2 testar, 3 restaurar, 4 duas conferências) e o plano B e o abortar ficam comentados");
 const dep0 = Number((await q("select count(*)::int n from public.cadastro_tarefas"))[0].n);
 const p1 = await q(comandos[0]); ok(p1.length === 1 && p1[0].nome === "Nome Secreto De Teste", "passo 1: encontra exatamente 1 cadastro com o nome esperado");
 const p2 = await q(comandos[1]); ok(p2.length === 1 && p2[0].nome === "Nome Secreto De Teste (teste E1)", "passo 2: troca o nome de UMA linha");
@@ -57,6 +57,14 @@ ok(t2.planilha_status === "pendente" && t2.nao_lida && t2.origem === "administra
 const p2b = await q(comandos[1]); ok(p2b.length === 0, "rodar o passo 2 de novo não altera nada (a trava exige o nome original)");
 const p3 = await q(comandos[2]); ok(p3.length === 1 && p3[0].nome === "Nome Secreto De Teste", "passo 3: desfaz (volta ao nome original)");
 ok(Number((await q("select count(*)::int n from public.cadastro_tarefas"))[0].n) === dep0 + 2, "cada alteração gera exatamente uma tarefa (2 no total: teste e desfazer)");
+const v1 = await q(comandos[3]), v2 = await q(comandos[4]);
+ok(v1.length === 1 && v1[0].nome_voltou === true, "passo 4: confirma que o nome do banco voltou ao original (nome_voltou = true)");
+ok(v2.length >= 2 && v2[0].de === "Nome Secreto De Teste (teste E1)" && v2[0].para === "Nome Secreto De Teste" && v2[1].de === "Nome Secreto De Teste" && v2[1].para === "Nome Secreto De Teste (teste E1)", "passo 4: lista as 2 tarefas (desfazer e teste) com o de/para esperado");
+const planoB = modelo.split("\n").find(l => /^-- update public\.joiners set nome = .* where id = /.test(l)).replace(/^-- /, "").replace("<ID_DO_PASSO_1>", String(p1[0].id));
+await q("update public.joiners set nome = 'Alguem mexeu' where cog = 'teste_e1'");
+const semTrava = await q(comandos[2]); ok(semTrava.length === 0, "se alguém mudou o nome no meio do teste, o passo 3 não altera nada (devolve 0 linhas)");
+const b2 = await q(planoB); ok(b2.length === 1 && b2[0].nome === "Nome Secreto De Teste", "plano B restaura o original pelo id quando o passo 3 não encontra a linha");
+const b3 = await q(planoB); ok(b3.length === 0, "rodar o plano B de novo não altera nada (já está no original)");
 const errada = await q("update public.joiners set nome = 'X' where cog = 'teste_e1' and nome = 'outro nome' returning id"); ok(errada.length === 0, "a trava 'and nome = ...' impede alterar quando o nome não é o esperado");
 await d.close(); process.exitCode = falhas ? 1 : 0;
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM");
