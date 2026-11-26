@@ -34,12 +34,24 @@ const acaoTeste = async (acao, extra = {}, tentativa = 1) => {
   if (json?.ocupado === true && tentativa < 6) { console.log("   (planilha de teste ocupada; aguardando 10 s e tentando de novo " + tentativa + "/5)"); await dormir(10000); return acaoTeste(acao, extra, tentativa + 1); }
   return json;
 };
+const dica = () => {
+  if (!diag) return "";
+  if (!diag.json) return "
+→ Provável: a URL não é a de uma implantação /exec com acesso \"Qualquer pessoa\" (o Google devolveu uma página).";
+  if (/token/i.test(diag.erro ?? "")) return "
+→ Provável: o token digitado não é o ANTICEG_TOKEN do projeto desta URL.";
+  if (/a[cç][aã]o inv/i.test(diag.erro ?? "")) return "
+→ Provável: a implantação é de uma versão ANTIGA do código. Implantar › Gerenciar implantações › lápis › Nova versão › Implantar (não use \"Nova implantação\": ela muda a URL).";
+  if (/n[aã]o [eé] a planilha de teste|indispon/i.test(diag.erro ?? "")) return "
+→ Provável: esta URL é de OUTRO projeto/planilha, onde prepararPlanilhaTeste não foi executada (faltam E1_PLANILHA_TESTE e E1_PLANILHA_ID em Propriedades do script). Use a URL da implantação da planilha de teste original, ou rode prepararPlanilhaTeste na planilha nova e vazia.";
+  return "";
+};
 console.log("ENSAIO DO ACIONADOR POR HORÁRIO (perfil-sync real + banco fictício local + túnel temporário + planilha de TESTE)");
 passo("0. Confirmar a planilha de TESTE e o estado inicial");
 const ident = await acaoTeste("e1_identificar");
 const ehTeste = ident?.ok === true && ident.teste === true && ident.abas?.length === 2 && /^TESTE E1/.test(ident.nome ?? "");
 ok(ehTeste, "o Apps Script confirma: planilha de teste E1, só com Dados e MASTERLIST");
-if (!ehTeste) { console.error("\nRECUSADO: o endereço informado NÃO é a planilha de teste. Nada foi gravado." + (diag ? "\nDiagnóstico: ação " + diag.acao + " → HTTP " + diag.status + (diag.json ? ", JSON" : ", resposta que NÃO é JSON") + (diag.erro ? ", erro: “" + diag.erro + "”" : "") : "")); await sair(2); }
+if (!ehTeste) { console.error("\nRECUSADO: o endereço informado NÃO é a planilha de teste. Nada foi gravado." + (diag ? "\nDiagnóstico: ação " + diag.acao + " → HTTP " + diag.status + (diag.json ? ", JSON" : ", resposta que NÃO é JSON") + (diag.erro ? ", erro: “" + diag.erro + "”" : "") : "") + dica()); await sair(2); }
 const base0 = await acaoTeste("e1_ler");
 if (!base0?.ok || base0.dados.length !== 1 || base0.dados[0].versao !== "") { console.error("\nA planilha de teste não está no estado inicial. Rode reiniciarDadosTeste() no Apps Script dela e repita. Nada foi gravado."); await sair(2); }
 const textoFixoAntes = base0.master.find(m => !m.formula_nome)?.nome;
