@@ -115,13 +115,13 @@ node scripts/e1-montar-codigo-teste.mjs --producao C:\Users\Nanda\anticeg-privad
 git diff --no-index C:\Users\Nanda\anticeg-privado\producao-e1\Codigo-ATUAL-antes-do-E1.gs C:\Users\Nanda\anticeg-privado\producao-e1\Codigo-NOVO-producao.gs
 ```
 O `diff` deve mostrar **só linhas acrescentadas**: 1 linha na lista de ações (`"atualizar_cadastro",`), 3 linhas do ramo `if (payload.acao === "atualizar_cadastro")` e o bloco final (`atualizarCadastro_` + as 3 funções do acionador). Se o montador recusar ("não tem os pontos esperados") ou o diff mostrar remoções, **pare**: o código publicado difere do de 07/11.
-2. **Dados real:** olhe as colunas D, E e F: devem estar **vazias** (inclusive a linha 1). Crie os cabeçalhos `D1 = ID_SITE`, `E1 = PAPEL`, `F1 = VERSAO`.
+2. **Dados real:** as colunas D, E e F devem estar **vazias em todas as linhas** (não só no trecho visível): no backup, digite `=COUNTA(D:F)` numa célula livre de OUTRA aba e confira que dá `0` (ou selecione as colunas D:F e leia a Contagem na barra inferior). Crie os cabeçalhos **na mesma linha dos outros cabeçalhos da aba** (hoje a linha 5: `D5 = ID_SITE`, `E5 = PAPEL`, `F5 = VERSAO`). O código **não lê** a linha do cabeçalho nem depende da posição dela: lê da **linha 2 até a última** e acha a pessoa pelo número (D) ou pelo @ (A), então cadastros acima ou abaixo do cabeçalho são achados (testado em `tests/e1-dados-cabecalho-linha5.test.mjs`). **A linha 1 nunca é lida**: um cadastro que esteja na linha 1 não seria achado (a tarefa viria como "precisa de atenção: linha_nao_encontrada", sem gravar nada).
 3. No Apps Script real: apague o `Código.gs`, cole o `Codigo-NOVO-producao.gs`, salve. **Implantar › Gerenciar implantações › lápis › Versão: Nova versão › Implantar** (a URL `/exec` **não** muda; **não** use "Nova implantação").
 4. **Propriedades do script** (sem instalar o acionador ainda): `PERFIL_SYNC_URL` = `https://ghjfsmwwcfpfvrouyrka.supabase.co/functions/v1/perfil-sync`; `SUPABASE_ANON_KEY` = a chave **anon** (a mesma do site); `PERFIL_SYNC_SEGREDO` = **Ctrl+V** (se perdeu, rode `Set-Clipboard $seg` na mesma janela do PowerShell da etapa B; se a janela fechou, gere outro segredo e refaça só o `secrets set` da etapa B).
 **Checar (sem efeito na planilha):** a ação nova responde e recusa um pedido que não casa com ninguém:
 ```
 $env:URLP = Read-Host "URL /exec da planilha REAL"
-$s = Read-Host "ANTICEG_TOKEN da planilha REAL" -AsSecureString
+$s = Read-Host "Token da planilha REAL (ANTICEG_TOKEN_NOVO, se existir; senão ANTICEG_TOKEN)" -AsSecureString
 $tok = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 $corpo = '{"acao":"atualizar_cadastro","token":"' + $tok + '","id_site":"999999999","versao":1,"campos":["nome"],"nome":"Checagem sem efeito"}'
 curl.exe -s -L -X POST $env:URLP -H "Content-Type: text/plain" -d $corpo
