@@ -27,12 +27,13 @@ const U = n => `00000000-0000-0000-0000-0000000000${String(n).padStart(2, "0")}`
 // ---- 0) ANTES de abrir o banco: confirmar que a URL é a da planilha de TESTE (criada do zero) e que está no estado inicial
 const sair = async c => { process.exitCode = c; await new Promise(r => setTimeout(r, 400)); process.exit(c); };   // espera as conexões fecharem (evita o erro do libuv no Windows)
 let diag = null;   // o que o Apps Script respondeu (sem segredo), para explicar uma recusa
-const acaoTeste = async (acao) => {
+const acaoTeste = async (acao, tentativa = 1) => {
   const r = await fetch(URL_PLANILHA, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao, token: TOKEN, twitter: "@" + ARROBA }) });
   const txt = await r.text(); const tipo = r.headers.get("content-type") ?? "";
   let json = null; try { json = JSON.parse(txt); } catch { /* não é JSON */ }
   const limpo = String(txt).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").split(TOKEN).join("[oculto]").split(URL_PLANILHA).join("[url]").slice(0, 140);
   diag = { acao, status: r.status, tipo: tipo.split(";")[0], json: !!json, erro: typeof json?.erro === "string" ? json.erro.slice(0, 160) : null, trecho: json ? null : limpo };
+  if (json?.ocupado === true && tentativa < 6) { console.log("   (planilha de teste ocupada com outra operação; aguardando 10 s e tentando de novo " + tentativa + "/5)"); await new Promise(x => setTimeout(x, 10000)); return acaoTeste(acao, tentativa + 1); }
   return json;
 };
 const explicar = () => {
@@ -149,6 +150,8 @@ passo("5. Falha que exige intervenção: cadastro fictício SEM linha na cópia"
 await como("authenticated", CONTA2, "select public.salvar_meu_cadastro('Teste E1 Ausente')");
 await processarFila(deps); const ta = (await lista()).find(x => x.joiner_id === idAusente);
 const l5 = await acaoTeste("e1_ler");
+if (!(l5?.digesto_constantes === base0.digesto_constantes && l5.dados?.length === 1)) console.log("   diagnóstico do passo 5: linhas de Dados do @ de teste = " + (l5?.dados?.length ?? "?") + "; digest das células digitadas " + (l5?.digesto_constantes === base0.digesto_constantes ? "igual" : "DIFERENTE") + "; digest das fórmulas " + (l5?.digesto_formulas === base0.digesto_formulas ? "igual" : "DIFERENTE") + (l5?.erro ? "; resposta do Apps Script: " + String(l5.erro).slice(0, 120) : ""));
+if (ta && !(ta.planilha_status === "atencao" && ta.planilha_motivo === "linha_nao_encontrada")) console.log("   diagnóstico do passo 5: a tarefa do cadastro ausente ficou '" + ta.planilha_status + "' (motivo: " + (ta.planilha_motivo ?? "nenhum") + ", tentativas: " + ta.planilha_tentativas + ")");
 ok(l5.digesto_constantes === base0.digesto_constantes && l5.dados.length === 1, "a falha do cadastro ausente não gravou nada (MASTERLIST igual e nenhuma linha nova para ele)");
 ok(ta?.planilha_status === "atencao" && ta.planilha_motivo === "linha_nao_encontrada" && ta.planilha_tentativas === 1, "'precisa de atenção' com motivo 'linha_nao_encontrada' já na 1ª tentativa, e nada foi gravado na cópia");
 
