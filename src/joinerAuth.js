@@ -312,7 +312,29 @@ export function criarJoinerAuth(client = supabase) {
     return { resultado: res === "ok" ? "ok" : res === "aguardando" ? "aguardando" : "pendente", cog: c };
   }
 
-  return { estado, autoConsultar, autoEnviar, autoConfirmar, pedirCodigo, dicaEmail, iniciarTrocaEmail, confirmarTrocaEmail, pedirComprovacao, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail };
+  // 9) E1: salvar o NOME CADASTRAL (vai para a planilha). A tela só pode dizer "Salvo no site" se o banco devolver ok COM o valor gravado igual ao enviado.
+  async function salvarMeuCadastro(nome) {
+    const n = String(nome || "").replace(/\s+/g, " ").trim();
+    if (n.length < 2 || n.length > 80 || /[<>]/.test(n) || [...n].some(ch => ch.charCodeAt(0) < 32)) return { erro: "Use de 2 a 80 caracteres, sem < > nem caracteres de controle." };
+    const { data, error } = await client.rpc("salvar_meu_cadastro", { p_nome: n });
+    if (error) {
+      const m = String(error.message || "");
+      return { erro: /conclua o seu perfil/i.test(m) ? "Conclua o seu perfil antes de alterar o cadastro." : /entre na sua conta|permission denied/i.test(m) ? "Entre na sua conta para salvar esta alteração." : /nome inv/i.test(m) ? "Nome inválido. Use de 2 a 80 caracteres, sem < >." : "Não foi possível salvar agora. Nada foi alterado." };
+    }
+    if (!data || data.ok !== true || data.nome !== n) return { erro: "Não foi possível confirmar a gravação. Nada foi alterado." };
+    return { ok: true, nome: data.nome, alterou: data.alterou === true };
+  }
+  // 10) E1: pedido de alteração do login legado (sem sessão). NUNCA altera o cadastro; a resposta é sempre a mesma (não revela se o @ existe)
+  async function solicitarSemLogin({ cog, campo, valor, mensagem }) {
+    const c = ["nome", "arroba", "email"].includes(campo) ? campo : "";
+    if (!c || !String(valor || "").trim()) return { erro: "Informe o que precisa mudar." };
+    if (c === "email" && !emailValido(valor)) return { erro: "Digite um e-mail válido." };
+    const { data, error } = await client.rpc("solicitar_alteracao_sem_login", { p_cog: String(cog || ""), p_campo: c, p_valor: String(valor).trim(), p_mensagem: String(mensagem || "").trim() });
+    if (error) return { erro: /muitos pedidos/i.test(String(error.message)) ? "Muitos pedidos agora. Tente de novo mais tarde." : "Não foi possível enviar o pedido agora. Tente de novo em instantes." };
+    return data?.status === "solicitada" ? { ok: true } : { erro: "Não foi possível confirmar o envio do pedido." };
+  }
+
+  return { estado, autoConsultar, autoEnviar, autoConfirmar, pedirCodigo, dicaEmail, iniciarTrocaEmail, confirmarTrocaEmail, pedirComprovacao, pedirAjuda, confirmar, entrar, entrarComEmail, recuperar, trocarSenha, sair, concluirPerfil, solicitarCorrecao, trocarEmail, salvarMeuCadastro, solicitarSemLogin };
 }
 
 // Acesso simples (só @): o servidor devolve apenas a identidade mínima (cog, nome do site, foto) e se a conta está ativada.

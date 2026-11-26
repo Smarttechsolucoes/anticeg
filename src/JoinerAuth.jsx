@@ -4,6 +4,8 @@ import supabase from "./supabase.js";
 import CompletarPerfil from "./CompletarPerfil.jsx";
 import { FluxoTrocaEmail, FluxoComprovar } from "./TrocaEmailJoiner.jsx";
 import AtivacaoAutomatica from "./AtivacaoAutomatica.jsx";
+import { PedidoLegadoNoPortao } from "./CadastroPerfil.jsx";
+import { CADASTRO_ETAPA1 } from "./cadastroEtapa1.js";
 // Ativação automática (J22): só liga depois que o SQL J22 e a função "ativacao-automatica" estão em produção (variável VITE_ATIVACAO_AUTO=true na Vercel). Desligada, tudo segue como antes.
 const ATIVACAO_AUTO = import.meta.env.VITE_ATIVACAO_AUTO === "true";
 
@@ -529,7 +531,7 @@ export function AreaProtegida({ user, area, children, onLogin, onCompleto }) {  
       </div>
     );
   }
-  return <PromptSenha user={user} api={api} onSemConta={() => window.dispatchEvent(new Event("anticeg:abrir-ativacao"))} />;
+  return (<><PromptSenha user={user} api={api} onSemConta={() => window.dispatchEvent(new Event("anticeg:abrir-ativacao"))} />{CADASTRO_ETAPA1 && user?.acesso_simples && <PedidoLegadoNoPortao user={user} api={api} />}</>);
 }
 
 // Depois do link de "esqueci minha senha": o Supabase abre a sessão de recuperação e o site pede a senha nova.
