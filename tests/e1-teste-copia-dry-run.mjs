@@ -92,6 +92,18 @@ ok(M.getRange(3, 5).getValue() === "NOME" && M.getRange(3, 6).getValue() === "@"
 ok(M.f["4,5"] === "=VLOOKUP(F4,Dados!A:B,2,0)" && M.f["4,19"] === "=VLOOKUP(F4,Dados!A:C,3,0)" && !M.f["6,5"] && M.getRange(6, 5).getValue() === "Nome Fixo Digitado", "MASTERLIST: fórmulas reais em E e S; uma linha com NOME em texto fixo");
 ok(teste.abas.Dados.getRange(2, 1).getValue() === "@teste_e1" && M.getRange(4, 5).getValue() === "Teste E1 Antigo", "Dados e MASTERLIST fictícios (a fórmula já mostra o nome antigo)");
 
+// ---- 3a) uma CÓPIA da planilha de teste (conteúdo igual, SEM as propriedades do script): a preparação a reconhece pela assinatura e a adota
+const copia = novaPlanilha("ID-COPIA-DA-TESTE-cc77", []);
+for (const [n, aba] of Object.entries(teste.abas)) { const nova = new Aba(copia, n); nova.g = JSON.parse(JSON.stringify(aba.g)); nova.f = { ...aba.f }; copia.abas[n] = nova; }
+const propsCopia = { ANTICEG_TOKEN: "token-criado-a-mao-na-copia" }; const sbCopia = montarSandbox(copia, propsCopia);
+const antesCopia = JSON.stringify(sbCopia && Object.values(copia.abas).map(a => a.g.length));
+vm.runInContext("prepararPlanilhaTeste()", sbCopia);
+ok(propsCopia.E1_PLANILHA_TESTE === "1" && propsCopia.E1_PLANILHA_ID === copia.id && propsCopia.ANTICEG_TOKEN === "token-criado-a-mao-na-copia", "numa CÓPIA da planilha de teste, a preparação adota a planilha (marca as propriedades) e preserva o token que já existia");
+const imitacao = novaPlanilha("ID-IMITACAO-0001", ["Dados", "MASTERLIST"]); imitacao.abas.Dados.pôr(1, 1, "@"); imitacao.abas.Dados.pôr(2, 1, "@teste_e1"); imitacao.abas.MASTERLIST.pôr(1, 1, "Minha planilha real");
+const propsImit = { ANTICEG_TOKEN: "x" }; const sbImit = montarSandbox(imitacao, propsImit); let negou = false;
+try { vm.runInContext("prepararPlanilhaTeste()", sbImit); } catch (e) { negou = /RECUSADO/.test(String(e.message)); }
+ok(negou && propsImit.E1_PLANILHA_TESTE === undefined, "uma planilha com conteúdo que NÃO tem a assinatura exata do teste continua RECUSADA (nada é adotado nem apagado)");
+
 // ---- 3b) planilha EM PORTUGUÊS (só entende ";"): a preparação descobre o separador e a MASTERLIST não fica com erro
 const ptb = novaPlanilha("ID-PLANILHA-TESTE-pt99", ["Planilha1"], ";"); const propsPt = {}; const sbPt = montarSandbox(ptb, propsPt);
 vm.runInContext("prepararPlanilhaTeste()", sbPt);

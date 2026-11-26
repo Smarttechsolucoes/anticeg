@@ -67,15 +67,26 @@ function e1EscreverDados_(ss) {
   SpreadsheetApp.flush();
 }
 
-/** Roda UMA vez, no editor, numa planilha NOVA e VAZIA. Recusa se achar qualquer dado (nunca apaga uma planilha de verdade). */
+/** True só se a planilha É, inequivocamente, uma planilha de teste E1 já preparada (por exemplo uma CÓPIA da de teste, que não leva as propriedades do script):
+ *  exatamente as abas Dados e MASTERLIST, o título fictício na MASTERLIST!A1 e a linha @teste_e1 em Dados. Uma planilha real nunca tem essa assinatura. */
+function e1AssinaturaDeTeste_(ss) {
+  const nomes = ss.getSheets().map(function (s) { return s.getName(); }).sort().join("|");
+  if (nomes !== "Dados|MASTERLIST") return false;
+  const dados = ss.getSheetByName("Dados"), master = ss.getSheetByName("MASTERLIST");
+  return String(master.getRange(1, 1).getValue()) === "TESTE E1 - planilha FICTÍCIA (não é a real)" && dados.getLastRow() <= 4 && String(dados.getRange(1, 1).getValue()) === "@" && String(dados.getRange(2, 1).getValue()) === "@teste_e1";
+}
+
+/** Roda UMA vez, no editor, numa planilha NOVA e VAZIA (ou numa que já é, inequivocamente, a de teste, como uma cópia dela). Recusa qualquer outra que tenha conteúdo (nunca apaga uma planilha de verdade). */
 function prepararPlanilhaTeste() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!e1EhPlanilhaTeste_(ss)) {
-    ss.getSheets().forEach(function (s) {
-      if (s.getLastRow() > 1 || s.getLastColumn() > 1 || String(s.getRange(1, 1).getValue()) !== "") {
-        throw new Error("RECUSADO: esta planilha já tem conteúdo (aba '" + s.getName() + "'). A preparação só roda numa planilha NOVA e vazia.");
-      }
-    });
+    if (!e1AssinaturaDeTeste_(ss)) {
+      ss.getSheets().forEach(function (s) {
+        if (s.getLastRow() > 1 || s.getLastColumn() > 1 || String(s.getRange(1, 1).getValue()) !== "") {
+          throw new Error("RECUSADO: esta planilha já tem conteúdo (aba '" + s.getName() + "'). A preparação só roda numa planilha NOVA e vazia.");
+        }
+      });
+    }
     ss.rename("TESTE E1 - fictícia - NÃO USAR");
     const p = PropertiesService.getScriptProperties();
     p.setProperty("E1_PLANILHA_TESTE", "1");
