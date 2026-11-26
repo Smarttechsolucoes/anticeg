@@ -32,10 +32,5 @@ Remove-Item Env:E1_PLANILHA_TOKEN, Env:E1_PLANILHA_URL
 ## O que o script confere sozinho
 Identificação da planilha de teste · tarefa pendente no banco local · fila processada pela função `perfil-sync` real, **sem botão** · Dados (B, D, E) · MASTERLIST (fórmulas refletem; **texto fixo igual**; digest da planilha inteira igual: nenhuma célula digitada e nenhuma fórmula mudou) · e-mail pelo Auth · versão antiga ignorada · falha "linha não encontrada" vira "precisa de atenção" sem gravar nada.
 
-## Nível 2: o gatilho por horário de verdade (precisa de um Supabase de TESTE)
-No nível 1 a fila é processada pelo mesmo código da função, mas **não** pelo gatilho do Apps Script chamando uma função **implantada**. Para ver um disparo por horário real é preciso, no mínimo:
-1. Um projeto Supabase **novo** (Free) só de teste (nunca o de produção), com dados fictícios.
-2. No SQL Editor dele: base fictícia + J1d + J4c1 + J6 + E1 (`ENSAIO_1_base.sql` gerado por `scripts/ensaio/gerar-sql.mjs` na branch `ensaio/integrado`, depois os três de referência desta pasta e `E1_cadastro_tarefas_aplicar.sql`).
-3. `perfil-sync` implantada nesse projeto, com os segredos de teste `PLANILHA_URL`, `PLANILHA_TOKEN` (os da planilha de teste) e `PERFIL_SYNC_SEGREDO`.
-4. No Apps Script da planilha de teste, Propriedades do script: `PERFIL_SYNC_URL`, `SUPABASE_ANON_KEY`, `PERFIL_SYNC_SEGREDO` (do projeto de teste) e executar `instalarGatilhoFilaPerfil()`.
-5. No SQL Editor do projeto de teste, simular uma alteração (`update` do nome de um cadastro fictício). Em ≈ 1 min a planilha de teste recebe o nome, sem clique no admin. Desligar: `removerGatilhoFilaPerfil()`.
+## Nível 2: o gatilho por horário de verdade
+Precisa de um projeto Supabase de TESTE (novo, Free). Tudo (Google + Supabase, em ordem, com os comandos) está no checklist único **`ENSAIO_COMPLETO.md`**; os arquivos são gerados por `scripts/e1-gerar-sql-ensaio.mjs` e o ensaio roda com `scripts/e1-ensaio-gatilho.mjs`.
