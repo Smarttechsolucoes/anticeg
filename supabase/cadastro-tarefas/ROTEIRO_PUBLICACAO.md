@@ -10,6 +10,20 @@
 ☆ **Não** mude `SYNC_JOINERS` do sync da planilha para `todos` enquanto o E1 estiver no ar. Hoje ele está `somente-novos` (conferido em `.github/workflows/sync-masterlist.yml`): o sync só cria cadastros novos e nunca altera um existente, então não gera tarefas. Em `todos` ele atualizaria nome e e-mail de todo mundo, e cada mudança viraria uma tarefa e uma escrita na planilha.
 ☆ A ordem importa. Cada etapa só começa depois da checagem da anterior. Em caso de dúvida, pare e me mande a saída.
 
+## Execução em DOIS BLOCOS (uma aprovação por bloco)
+Decisão da dona (26/11): em vez de sete avais, **dois**. Dentro de cada bloco as etapas seguem na ordem abaixo, com a checagem de cada uma; **só pára e chama** se houver divergência, falha ou uma ação que exija o login dela. Os pontos A a G deixam de ser avais separados e viram etapas internas dos blocos.
+
+| Bloco | Etapas | Quem executa | Onde a dona é chamada |
+|---|---|---|---|
+| **Etapa 0** (já feita, exceto 3 itens dela) | conferências e backups | Claude (CLI, leituras e `--read-only`) | itens listados na seção "Etapa 0 — o que falta" |
+| **Bloco 1 — publicação com o recurso desligado** | A (SQL) → B (segredo + função) → **C (Apps Script real)** → D (merge + deploy) | Claude executa A, B e D; **a dona executa C** (Google) | **só em C**: colar o código, nova versão, colunas D/E/F, 3 propriedades (≈10 min, guiado). O segredo já estará na área de transferência. |
+| **Bloco 2 — teste e liberação** | E (fila + autenticação + acionador) → F (teste no cadastro da dona + restauração) → G (interruptor) | Claude executa a fila, o SQL do teste, as conferências no banco e o interruptor; **a dona executa as funções no Apps Script e olha a planilha** | executar `rodarFilaPerfil_` uma vez e `instalarGatilhoFilaPerfil` (Google); olhar Dados/MASTERLIST antes/depois (Google); me dizer o que viu |
+
+**Paradas obrigatórias (o bloco não segue sozinho):**
+☆ Bloco 1: preflight diferente do esperado antes de A; o SQL recusar; a checagem 403 da função diferente de 403; o `diff` do Apps Script com remoções; qualquer erro no deploy do site.
+☆ Bloco 2: **qualquer item na fila** antes de ligar o acionador ou 1 minuto depois; autenticação diferente de HTTP 200 com `lidos 0`; tarefa do teste em "precisa de atenção" ou que não sincroniza em ~5 minutos; o nome não voltar ao original no banco; a planilha não voltar ao original. Nesses casos **não** se liga o interruptor (G) e eu reverto o que for preciso.
+☆ Como não há como eu ler a planilha real (as ações de teste não existem em produção), a prova da volta na planilha é: tarefas `sincronizada` no banco (o Apps Script só responde ok depois de gravar) **mais** a conferência visual da dona (Dados e MASTERLIST) e o Histórico de versões.
+
 ## Pontos de aval (preciso do seu "aprovo" em cada um, separadamente)
 | Ponto | O que muda em produção | Depois dele |
 |---|---|---|
@@ -44,6 +58,17 @@ Copy-Item -Recurse C:\Users\Nanda\anticeg-cadastro-main\supabase\functions\perfi
 Copy-Item -Recurse C:\Users\Nanda\anticeg-cadastro-main\supabase\functions\_shared supabase\functions\
 ```
 (a pasta do repositório precisa estar na branch `feat/cadastro-etapa1`, igual ao PR).
+
+### Resultado da etapa 0 (26/11, feita pelo Claude por CLI, somente leitura)
+☆ **Preflight em produção (transação `--read-only`):** 26 de 26 linhas como o esperado (J1d/J4c1/J6 presentes; nada do E1; restrições de tipo as esperadas; `pg_cron`/`pg_net` ausentes).
+☆ **Fila:** a tabela `perfil_sync_pendente` tem **0 linhas** (nenhum item, nenhuma tarefa).
+☆ **Função implantada** idêntica à de 26/11 (backup datado em `producao-e1ackup-funcao-2026-11-26-etapa0`); segredos `PLANILHA_URL` e `PLANILHA_TOKEN` existem; `PERFIL_SYNC_SEGREDO` ainda não.
+☆ **PR sobre a `main` atual** (`9ce5dfb`, também o último deploy de Production): sem conflito esperado. Sync diário em `somente-novos`.
+### Etapa 0 — o que falta (depende do acesso da dona)
+1. **Google:** anotar a versão publicada do Apps Script (Implantar › Gerenciar implantações) e salvar o código atual em `producao-e1\Codigo-ATUAL-antes-do-E1.gs`.
+2. **Google:** backup da planilha real (Arquivo › Fazer uma cópia) e conferir que as colunas D, E e F de **Dados** estão vazias.
+3. **Vercel:** rodar `vercel login` e autorizar (uma vez); com isso o Claude lê as variáveis de Production (só os nomes) e confere o deploy atual.
+4. **Informar** o @ do cadastro que será usado no teste do Bloco 2 (recomendado: o da própria dona).
 
 ---
 
