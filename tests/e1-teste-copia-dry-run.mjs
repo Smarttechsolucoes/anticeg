@@ -32,7 +32,9 @@ class Aba {
   clear() { this.g = []; this.f = {}; return this; }
   avaliar(r, c) {
     const f = this.f[`${r},${c}`]; if (!f) return this.g[r - 1]?.[c - 1] ?? "";
-    const m = /^=VLOOKUP\(F(\d+),Dados!A:([BC]),(\d),0\)$/.exec(f); if (!m) return "#ERRO";
+    const pt = this.p.sep === ";";   // simula planilha em português: só entende ";" (com vírgula dá erro de análise)
+    if (pt && f.includes(",")) return "#ERROR!";
+    const m = /^=VLOOKUP\(F(\d+),Dados!A:([BC]),(\d),0\)$/.exec(pt ? f.replace(/;/g, ",") : f); if (!m) return "#ERROR!";
     const chave = String(this.g[Number(m[1]) - 1]?.[5] ?? "").toLowerCase(), dados = this.p.abas.Dados.g;
     const l = dados.find(x => String(x?.[0] ?? "").toLowerCase() === chave); return l ? (l[Number(m[3]) - 1] ?? "") : "#N/A";
   }
@@ -41,14 +43,14 @@ class Aba {
     const grade = fn => Array.from({ length: nl }, (_, i) => Array.from({ length: nc }, (_, j) => fn(r + i, c + j)));
     return {
       getValues: () => grade((x, y) => a.avaliar(x, y)), getDisplayValues: () => grade((x, y) => String(a.avaliar(x, y))),
-      getFormulas: () => grade((x, y) => a.f[`${x},${y}`] ?? ""), getValue: () => a.avaliar(r, c), getFormula: () => a.f[`${r},${c}`] ?? "", getSheet: () => a,
+      getDisplayValue: () => String(a.avaliar(r, c)), getFormulas: () => grade((x, y) => a.f[`${x},${y}`] ?? ""), getValue: () => a.avaliar(r, c), getFormula: () => a.f[`${r},${c}`] ?? "", getSheet: () => a,
       setValue: v => a.pôr(r, c, v), setFormula: f => a.pôr(r, c, f), setValues: m => m.forEach((l, i) => l.forEach((v, j) => a.pôr(r + i, c + j, v))),
     };
   }
   pôr(r, c, v) { this.escritas.push([r, c, v]); (this.g[r - 1] ??= [])[c - 1] = v; if (typeof v === "string" && v.startsWith("=")) this.f[`${r},${c}`] = v; else delete this.f[`${r},${c}`]; }
 }
-const novaPlanilha = (id, abas = ["Planilha1"]) => {
-  const p = { id, nome: "Planilha sem título", abas: {} };
+const novaPlanilha = (id, abas = ["Planilha1"], sep = ",") => {
+  const p = { id, nome: "Planilha sem título", abas: {}, sep };
   abas.forEach(n => (p.abas[n] = new Aba(p, n)));
   p.ss = {
     getId: () => p.id, getName: () => p.nome, rename: n => { p.nome = n; }, getSheetByName: n => p.abas[n] ?? null, getSheets: () => Object.values(p.abas),
@@ -89,6 +91,17 @@ const M = teste.abas.MASTERLIST;
 ok(M.getRange(3, 5).getValue() === "NOME" && M.getRange(3, 6).getValue() === "@" && M.getRange(3, 19).getValue() === "EMAIL" && M.getRange(3, 2).getValue() === "ID", "MASTERLIST: cabeçalho na linha 3, com ID em B, NOME em E, @ em F, EMAIL em S");
 ok(M.f["4,5"] === "=VLOOKUP(F4,Dados!A:B,2,0)" && M.f["4,19"] === "=VLOOKUP(F4,Dados!A:C,3,0)" && !M.f["6,5"] && M.getRange(6, 5).getValue() === "Nome Fixo Digitado", "MASTERLIST: fórmulas reais em E e S; uma linha com NOME em texto fixo");
 ok(teste.abas.Dados.getRange(2, 1).getValue() === "@teste_e1" && M.getRange(4, 5).getValue() === "Teste E1 Antigo", "Dados e MASTERLIST fictícios (a fórmula já mostra o nome antigo)");
+
+// ---- 3b) planilha EM PORTUGUÊS (só entende ";"): a preparação descobre o separador e a MASTERLIST não fica com erro
+const ptb = novaPlanilha("ID-PLANILHA-TESTE-pt99", ["Planilha1"], ";"); const propsPt = {}; const sbPt = montarSandbox(ptb, propsPt);
+vm.runInContext("prepararPlanilhaTeste()", sbPt);
+const MP = ptb.abas.MASTERLIST;
+ok(MP.f["4,5"] === "=VLOOKUP(F4;Dados!A:B;2;0)" && MP.f["4,19"] === "=VLOOKUP(F4;Dados!A:C;3;0)" && MP.getRange(4, 5).getValue() === "Teste E1 Antigo" && MP.getRange(7, 5).getValue() === "Fulana Fictícia", "planilha em português: a preparação regrava com ';' e a MASTERLIST mostra os nomes (sem #ERROR!)");
+ok(!/#ERR/.test(MP.getRange(4, 19).getValue()) && MP.getRange(6, 5).getValue() === "Nome Fixo Digitado", "planilha em português: coluna EMAIL sem erro e texto fixo preservado");
+const srvPt = await servir(sbPt);
+const emPt = await rodar({ E1_PLANILHA_URL: srvPt.url, E1_PLANILHA_TOKEN: propsPt.ANTICEG_TOKEN, E1_CONFIRMO_COPIA: "1", PLANILHA_URL: "" });
+ok(emPt.code === 0 && /TESTE REAL CONCLUÍDO/.test(emPt.o), "o teste real também passa de ponta a ponta na planilha em português");
+srvPt.s.close();
 
 // ---- 4) o script de teste
 const { s, url } = await servir(sb); const TOKEN = props.ANTICEG_TOKEN;

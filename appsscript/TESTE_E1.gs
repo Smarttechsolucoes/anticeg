@@ -23,6 +23,12 @@ function e1EhPlanilhaTeste_(ss) {
   return p.getProperty("E1_PLANILHA_TESTE") === "1" && p.getProperty("E1_PLANILHA_ID") === ss.getId();
 }
 
+function e1Formula_(celula, montar) {
+  celula.setFormula(montar(","));
+  SpreadsheetApp.flush();
+  if (/^#ERRO/i.test(String(celula.getDisplayValue()))) { celula.setFormula(montar(";")); SpreadsheetApp.flush(); }
+}
+
 function e1EscreverDados_(ss) {
   let dados = ss.getSheetByName("Dados"), master = ss.getSheetByName("MASTERLIST");
   if (!dados) dados = ss.insertSheet("Dados");
@@ -52,10 +58,11 @@ function e1EscreverDados_(ss) {
     linha(6, "TESTE-E1-0003", "Item fictício C (NOME EM TEXTO FIXO)", "Nome Fixo Digitado", "@teste_e1"),
     linha(7, "TESTE-E1-0004", "Item fictício D (outra pessoa)", "", "@fulana_ficticia"),
   ]);
-  // setFormula SEMPRE aceita a sintaxe em inglês (vírgula). Com setValues a fórmula seria lida no idioma da planilha (no Brasil o separador é ";") e daria #ERROR!.
+  // As fórmulas são gravadas com setFormula e o separador é DESCOBERTO: planilhas em português (e outros idiomas com vírgula decimal) só entendem ";", as demais entendem ",".
+  // Tenta com vírgula; se o Google devolver erro de análise (#ERROR!), regrava com ponto e vírgula.
   [[4, true], [5, true], [6, false], [7, true]].forEach(function (x) {
-    if (x[1]) master.getRange(x[0], 5).setFormula("=VLOOKUP(F" + x[0] + ",Dados!A:B,2,0)");
-    master.getRange(x[0], 19).setFormula("=VLOOKUP(F" + x[0] + ",Dados!A:C,3,0)");
+    if (x[1]) e1Formula_(master.getRange(x[0], 5), function (sep) { return "=VLOOKUP(F" + x[0] + sep + "Dados!A:B" + sep + "2" + sep + "0)"; });
+    e1Formula_(master.getRange(x[0], 19), function (sep) { return "=VLOOKUP(F" + x[0] + sep + "Dados!A:C" + sep + "3" + sep + "0)"; });
   });
   SpreadsheetApp.flush();
 }
