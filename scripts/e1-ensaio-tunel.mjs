@@ -36,14 +36,11 @@ const acaoTeste = async (acao, extra = {}, tentativa = 1) => {
 };
 const dica = () => {
   if (!diag) return "";
-  if (!diag.json) return "
-→ Provável: a URL não é a de uma implantação /exec com acesso \"Qualquer pessoa\" (o Google devolveu uma página).";
-  if (/token/i.test(diag.erro ?? "")) return "
-→ Provável: o token digitado não é o ANTICEG_TOKEN do projeto desta URL.";
-  if (/a[cç][aã]o inv/i.test(diag.erro ?? "")) return "
-→ Provável: a implantação é de uma versão ANTIGA do código. Implantar › Gerenciar implantações › lápis › Nova versão › Implantar (não use \"Nova implantação\": ela muda a URL).";
-  if (/n[aã]o [eé] a planilha de teste|indispon/i.test(diag.erro ?? "")) return "
-→ Provável: esta URL é de OUTRO projeto/planilha, onde prepararPlanilhaTeste não foi executada (faltam E1_PLANILHA_TESTE e E1_PLANILHA_ID em Propriedades do script). Use a URL da implantação da planilha de teste original, ou rode prepararPlanilhaTeste na planilha nova e vazia.";
+  const seta = t => "\n→ Provável: " + t;
+  if (!diag.json) return seta("a URL não é a de uma implantação /exec com acesso \"Qualquer pessoa\" (o Google devolveu uma página).");
+  if (/token/i.test(diag.erro ?? "")) return seta("o token digitado não é o ANTICEG_TOKEN do projeto desta URL.");
+  if (/a[cç][aã]o inv/i.test(diag.erro ?? "")) return seta("a implantação é de uma versão ANTIGA do código. Implantar › Gerenciar implantações › lápis › Nova versão › Implantar (não use \"Nova implantação\": ela muda a URL).");
+  if (/n[aã]o [eé] a planilha de teste|indispon/i.test(diag.erro ?? "")) return seta("esta URL é de OUTRO projeto/planilha, onde prepararPlanilhaTeste não foi executada (faltam E1_PLANILHA_TESTE e E1_PLANILHA_ID em Propriedades do script). Use a URL da implantação da planilha de teste original, ou rode prepararPlanilhaTeste na planilha nova e vazia.");
   return "";
 };
 console.log("ENSAIO DO ACIONADOR POR HORÁRIO (perfil-sync real + banco fictício local + túnel temporário + planilha de TESTE)");
