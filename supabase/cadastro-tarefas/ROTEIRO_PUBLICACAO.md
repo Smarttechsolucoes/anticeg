@@ -126,7 +126,7 @@ $env:URLP = Read-Host "URL /exec da planilha REAL"
 $s = Read-Host "Token da planilha REAL (ANTICEG_TOKEN_NOVO, se existir; senão ANTICEG_TOKEN)" -AsSecureString
 $tok = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 $corpo = '{"acao":"atualizar_cadastro","token":"' + $tok + '","id_site":"999999999","versao":1,"campos":["nome"],"nome":"Checagem sem efeito"}'
-curl.exe -s -L -H "Content-Type: text/plain" -d $corpo $env:URLP   # SEM -X POST: com -X POST o curl repete o POST no redirecionamento e o Google responde 411
+$corpo | curl.exe -s -L -H "Content-Type: text/plain" --data-binary "@-" $env:URLP   # o corpo vai por stdin (o PowerShell 5.1 REMOVE as aspas de argumentos para o curl.exe e o JSON chegaria quebrado: "Requisição inválida"); e SEM -X POST (com ele o Google responde 411 no redirecionamento)
 Remove-Item Env:URLP; $tok = $null
 ```
 Esperado: `{"erro":"Sem ID_SITE na planilha e sem @ para localizar a linha","definitivo":true,"motivo":"linha_nao_encontrada"}`. Nenhuma célula muda. Confirme também que as ações de sempre continuam normais (abra o site, o fluxo de pedido/confirmação não deve ter mudado: o código antigo ficou intacto, só houve acréscimos).
