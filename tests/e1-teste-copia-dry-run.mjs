@@ -42,7 +42,7 @@ class Aba {
     return {
       getValues: () => grade((x, y) => a.avaliar(x, y)), getDisplayValues: () => grade((x, y) => String(a.avaliar(x, y))),
       getFormulas: () => grade((x, y) => a.f[`${x},${y}`] ?? ""), getValue: () => a.avaliar(r, c), getFormula: () => a.f[`${r},${c}`] ?? "", getSheet: () => a,
-      setValue: v => a.pôr(r, c, v), setValues: m => m.forEach((l, i) => l.forEach((v, j) => a.pôr(r + i, c + j, v))),
+      setValue: v => a.pôr(r, c, v), setFormula: f => a.pôr(r, c, f), setValues: m => m.forEach((l, i) => l.forEach((v, j) => a.pôr(r + i, c + j, v))),
     };
   }
   pôr(r, c, v) { this.escritas.push([r, c, v]); (this.g[r - 1] ??= [])[c - 1] = v; if (typeof v === "string" && v.startsWith("=")) this.f[`${r},${c}`] = v; else delete this.f[`${r},${c}`]; }

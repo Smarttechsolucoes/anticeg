@@ -41,7 +41,7 @@ function e1EscreverDados_(ss) {
   const cab = ["ABA / CEG", "ID", "NOME DO ITEM", "PREÇO ITEM", "NOME", "@", "PREÇO FRETE", "PREÇO RF", "INFORMAÇÕES", "ITEM", "FRETE", "RF", "ITEM DATA", "FRETE DATA", "RF DATA", "Chegou?", "NACIONAL", "", "EMAIL"];
   const linha = function (n, id, item, nomeFixo, tw) {
     const r = new Array(19).fill("");
-    r[0] = "TESTE E1"; r[1] = id; r[2] = item; r[4] = nomeFixo ? nomeFixo : "=VLOOKUP(F" + n + ",Dados!A:B,2,0)"; r[5] = tw; r[18] = "=VLOOKUP(F" + n + ",Dados!A:C,3,0)";
+    r[0] = "TESTE E1"; r[1] = id; r[2] = item; r[4] = nomeFixo ? nomeFixo : ""; r[5] = tw;   // as fórmulas entram abaixo, com setFormula (sintaxe em inglês, vale em qualquer idioma da planilha)
     return r;
   };
   master.getRange(1, 1).setValue("TESTE E1 - planilha FICTÍCIA (não é a real)");
@@ -52,6 +52,11 @@ function e1EscreverDados_(ss) {
     linha(6, "TESTE-E1-0003", "Item fictício C (NOME EM TEXTO FIXO)", "Nome Fixo Digitado", "@teste_e1"),
     linha(7, "TESTE-E1-0004", "Item fictício D (outra pessoa)", "", "@fulana_ficticia"),
   ]);
+  // setFormula SEMPRE aceita a sintaxe em inglês (vírgula). Com setValues a fórmula seria lida no idioma da planilha (no Brasil o separador é ";") e daria #ERROR!.
+  [[4, true], [5, true], [6, false], [7, true]].forEach(function (x) {
+    if (x[1]) master.getRange(x[0], 5).setFormula("=VLOOKUP(F" + x[0] + ",Dados!A:B,2,0)");
+    master.getRange(x[0], 19).setFormula("=VLOOKUP(F" + x[0] + ",Dados!A:C,3,0)");
+  });
   SpreadsheetApp.flush();
 }
 
