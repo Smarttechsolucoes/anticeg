@@ -1,35 +1,41 @@
-# Teste real da etapa 1 numa CÓPIA da planilha (passo a passo)
+# Teste real da etapa 1 numa planilha de TESTE criada do zero (checklist único)
 
-**Objetivo:** ver o fluxo funcionando de verdade — gravação confirmada → tarefa em Atualizações → sincronização automática → Dados → MASTERLIST — sem tocar na planilha real nem no banco de produção.
-O banco do teste é **local e fictício**; só a planilha é de verdade (a **cópia**). Precisa de você (eu não tenho acesso ao Google): é a parte marcada ✋.
+**Objetivo:** ver o fluxo funcionando de verdade: gravação confirmada → tarefa em Atualizações → sincronização automática (sem botão do admin) → Dados → MASTERLIST, com o texto fixo intacto.
+**Isolamento:** a planilha é **nova**, privada, só com as abas `Dados` e `MASTERLIST` e dados **fictícios**. Nada da planilha real é copiado. O banco deste teste (nível 1) é local e fictício. Só aparece a ação ✋ onde é preciso a sua conta Google.
 
-## ✋ 1. Copiar a planilha (2 min)
-Arquivo › **Fazer uma cópia**. Dê um nome que não deixe dúvida (ex.: `COPIA TESTE E1 - NÃO USAR`). Trabalhe só nela. *(A cópia leva os dados de todas as joiners: mantenha-a privada e apague depois do teste.)*
+## Como o Apps Script de teste "aponta" para a planilha
+O script é **vinculado** à planilha de teste (Extensões › Apps Script, aberto de dentro dela): ele só enxerga a planilha à qual pertence. Além disso:
+☆ `prepararPlanilhaTeste()` **recusa** rodar numa planilha com qualquer conteúdo e só então grava as propriedades `E1_PLANILHA_TESTE=1` e `E1_PLANILHA_ID=<id>`.
+☆ As ações `e1_identificar`/`e1_ler` só respondem se essas propriedades batem com a planilha. O script de teste chama `e1_identificar` **antes de gravar qualquer coisa** e **recusa** se: não for planilha de teste, não tiver só as abas Dados e MASTERLIST, o nome não começar com `TESTE E1`, ou (se você informar `E1_COPIA_SHEET_ID`) o final do id não conferir.
+☆ A leitura de volta (Dados, MASTERLIST, digest) é feita pelo próprio Apps Script, com o token: **não precisa compartilhar a planilha**.
 
-## ✋ 2. Preparar a cópia (3 min)
-Na **cópia**:
-1. Aba **Dados**: crie os cabeçalhos `D1 = ID_SITE`, `E1 = PAPEL`, `F1 = VERSAO` e acrescente **uma linha** no fim: `A = @teste_e1`, `B = Teste E1 Antigo`, `C` vazio, D/E/F vazios.
-2. Aba **MASTERLIST**: acrescente **3 linhas** no fim com `F = @teste_e1`: nas duas primeiras copie as fórmulas de uma linha real (`E = VLOOKUP(F#,Dados!A:B,2,0)` e `S = VLOOKUP(F#,Dados!A:C,3,0)`); na terceira deixe `E` com **texto fixo** `Nome Fixo Digitado`.
-
-## ✋ 3. Implantação de TESTE do Apps Script (5 min)
-Na **cópia**: Extensões › Apps Script. Esse projeto é da cópia (independente do da planilha real).
-1. Ao copiar a planilha, o Google **copia junto o projeto do Apps Script** (as *Propriedades do script* NÃO vêm: por isso o token real não vai para a cópia). Confira que o código é o mesmo do real.
-2. Faça as **duas edições** e cole `ATUALIZAR_CADASTRO.gs` (ver `appsscript/ATUALIZAR_CADASTRO.md`).
-3. Propriedades do script: `ANTICEG_TOKEN` = um valor **novo e só de teste**.
-4. Implantar › Nova implantação › Aplicativo da Web (Executar como: você; Quem tem acesso: qualquer pessoa). Guarde a URL `/exec`.
-
-## ✋ 4. Rodar o teste (no seu computador, nesta pasta)
+## ✋ Ações que exigem a sua conta Google (≈ 15 min, em ordem)
+1. **Criar a planilha:** sheets.new (conta que será dona do teste). **Não** copie a real. Deixe em branco, sem renomear.
+2. **Abrir o Apps Script dela:** Extensões › Apps Script. Apague o conteúdo de `Código.gs`.
+3. **Colar o código:** cole **o arquivo inteiro** `C:\Users\Nanda\anticeg-privado\teste-e1-google\Codigo.gs` (já montado a partir do script de 07/11 + as edições da etapa 1 + o código só de teste; no repositório: `node scripts/e1-montar-codigo-teste.mjs <script-atual.gs> <saida.gs>`). Se o script **publicado** hoje for diferente do de 07/11, monte com a cópia atual dele (me avise se o montador recusar). Salvar.
+4. **Preparar:** escolha a função `prepararPlanilhaTeste` › Executar. Autorize quando pedir (é o seu próprio script, na sua planilha). Confira: a planilha virou `TESTE E1 - fictícia - NÃO USAR`, com as abas Dados e MASTERLIST.
+5. **Pegar o token de teste:** Configurações do projeto (engrenagem) › Propriedades do script › `ANTICEG_TOKEN` › copiar. **Esse valor vai só para o seu terminal (passo 7); não cole no chat.**
+6. **Implantar:** Implantar › Nova implantação › Aplicativo da Web › Executar como: **você**; Quem tem acesso: **Qualquer pessoa**. Autorize. Copie a URL que termina em `/exec` (também só para o terminal).
+7. **Rodar o teste**, no PowerShell, na pasta do repositório (`C:\Users\Nanda\anticeg-cadastro-main`, branch `feat/cadastro-etapa1`; `npm i --no-save @electric-sql/pglite` na 1ª vez). Os segredos são digitados no prompt e não aparecem na tela:
 ```
 $env:E1_CONFIRMO_COPIA="1"
-$env:E1_PLANILHA_URL="<URL /exec da implantação de TESTE>"
-$env:E1_PLANILHA_TOKEN="<o token de teste>"
-$env:E1_COPIA_SHEET_ID="<id da cópia>"      # opcional: com ele o script também confere a aba Dados (a cópia precisa estar com "qualquer pessoa com o link pode ver")
+$env:E1_PLANILHA_URL = Read-Host "URL /exec da implantação de TESTE"
+$s = Read-Host "Token de teste" -AsSecureString
+$env:E1_PLANILHA_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 node scripts/e1-teste-copia-planilha.mjs
+Remove-Item Env:E1_PLANILHA_TOKEN, Env:E1_PLANILHA_URL
 ```
-O script **recusa** rodar sem `E1_CONFIRMO_COPIA=1` ou se a URL for igual à `PLANILHA_URL` de produção, só mexe em cadastros fictícios (`@teste_e1…`) e **não imprime** URL nem token. *(Você pode me mandar só a saída do script, que não contém segredo.)*
+8. **Me mandar só a saída do script** (não contém URL nem token) e olhar a planilha de teste: Dados (linha `@teste_e1`: nome novo, e-mail novo, ID, `principal`, versão) e MASTERLIST (as duas linhas com fórmula mostram o nome/e-mail novos; a linha `Nome Fixo Digitado` não mudou).
+9. **Repetir** (se quiser): rode `reiniciarDadosTeste` no editor e execute o passo 7 de novo (o script recusa se a planilha não estiver no estado inicial).
+10. **Depois:** apague a planilha de teste (isso remove o script e a implantação).
 
-## ✋ 5. Conferir à mão na cópia (1 min)
-Aba **Dados**: linha `@teste_e1` com B = nome novo, C = e-mail novo, D = número, E = `principal`, F = versão. **MASTERLIST**: as duas linhas com fórmula mostram o nome (E) e o e-mail (S); a de texto fixo **não mudou**; nenhuma outra célula mudou.
+## O que o script confere sozinho
+Identificação da planilha de teste · tarefa pendente no banco local · fila processada pela função `perfil-sync` real, **sem botão** · Dados (B, D, E) · MASTERLIST (fórmulas refletem; **texto fixo igual**; digest da planilha inteira igual: nenhuma célula digitada e nenhuma fórmula mudou) · e-mail pelo Auth · versão antiga ignorada · falha "linha não encontrada" vira "precisa de atenção" sem gravar nada.
 
-## Depois
-Apague a cópia (e a implantação de teste). O agendador **não** entra neste teste (é de produção); a fila é processada aqui pela própria função, sem o botão do admin. O ensaio do agendador está em `tests/cadastro-etapa1-ponta-a-ponta.mjs` (passo 8).
+## Nível 2: o gatilho por horário de verdade (precisa de um Supabase de TESTE)
+No nível 1 a fila é processada pelo mesmo código da função, mas **não** pelo gatilho do Apps Script chamando uma função **implantada**. Para ver um disparo por horário real é preciso, no mínimo:
+1. Um projeto Supabase **novo** (Free) só de teste (nunca o de produção), com dados fictícios.
+2. No SQL Editor dele: base fictícia + J1d + J4c1 + J6 + E1 (`ENSAIO_1_base.sql` gerado por `scripts/ensaio/gerar-sql.mjs` na branch `ensaio/integrado`, depois os três de referência desta pasta e `E1_cadastro_tarefas_aplicar.sql`).
+3. `perfil-sync` implantada nesse projeto, com os segredos de teste `PLANILHA_URL`, `PLANILHA_TOKEN` (os da planilha de teste) e `PERFIL_SYNC_SEGREDO`.
+4. No Apps Script da planilha de teste, Propriedades do script: `PERFIL_SYNC_URL`, `SUPABASE_ANON_KEY`, `PERFIL_SYNC_SEGREDO` (do projeto de teste) e executar `instalarGatilhoFilaPerfil()`.
+5. No SQL Editor do projeto de teste, simular uma alteração (`update` do nome de um cadastro fictício). Em ≈ 1 min a planilha de teste recebe o nome, sem clique no admin. Desligar: `removerGatilhoFilaPerfil()`.

@@ -2,7 +2,7 @@
 // O banco é LOCAL (PGlite, só dados fictícios); só a planilha é de verdade (a CÓPIA). Nada toca no Supabase de produção nem na planilha real.
 // Passo a passo para montar a cópia: supabase/cadastro-tarefas/TESTE_REAL_COPIA.md
 //
-//   E1_CONFIRMO_COPIA=1 E1_PLANILHA_URL=<URL /exec da implantação de teste> E1_PLANILHA_TOKEN=<token da implantação de teste> [E1_COPIA_SHEET_ID=<id da cópia>] node scripts/e1-teste-copia-planilha.mjs
+//   E1_CONFIRMO_COPIA=1 E1_PLANILHA_URL=<URL /exec da implantação de teste> E1_PLANILHA_TOKEN=<token da implantação de teste> [E1_COPIA_SHEET_ID=<id da planilha de teste, opcional>] node scripts/e1-teste-copia-planilha.mjs
 //
 // Trava de segurança: só mexe em cadastros FICTÍCIOS (@ que começam com "teste_e1"); em qualquer outra planilha (inclusive a real) esses @ não existem e o Apps Script responde "linha não encontrada" SEM gravar nada.
 // Nenhum token, URL ou e-mail é impresso.
@@ -23,6 +23,22 @@ const fatia = (txt, inicio, fim = "\nend $$;") => { const i = txt.indexOf(inicio
 let falhas = 0; const ok = (c, m) => { console.log((c ? "  OK   " : "  FALHA ") + m); if (!c) falhas++; };
 const passo = t => console.log("\n▶ " + t);
 const U = n => `00000000-0000-0000-0000-0000000000${String(n).padStart(2, "0")}`;
+
+// ---- 0) ANTES de abrir o banco: confirmar que a URL é a da planilha de TESTE (criada do zero) e que está no estado inicial
+const sair = async c => { process.exitCode = c; await new Promise(r => setTimeout(r, 400)); process.exit(c); };   // espera as conexões fecharem (evita o erro do libuv no Windows)
+const acaoTeste = async (acao) => { const r = await fetch(URL_PLANILHA, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao, token: TOKEN, twitter: "@" + ARROBA }) }); try { return JSON.parse(await r.text()); } catch { return null; } };
+console.log("TESTE REAL (planilha = CÓPIA; banco = local fictício)");
+passo("0. Confirmar que o Apps Script de teste aponta para a planilha de TESTE (criada do zero)");
+const ident = await acaoTeste("e1_identificar");
+ok(ident?.ok === true && ident.teste === true, "o Apps Script confirma: é a planilha de teste E1 (propriedades criadas pela preparação)");
+ok(Array.isArray(ident?.abas) && ident.abas.length === 2 && ident.abas.includes("Dados") && ident.abas.includes("MASTERLIST"), "a planilha tem SÓ as abas Dados e MASTERLIST");
+ok(/^TESTE E1/.test(ident?.nome ?? ""), "o nome da planilha começa com 'TESTE E1'");
+if (SHEET_ID) ok(SHEET_ID.endsWith(ident?.id_final ?? "\u0000"), "o final do id da planilha confere com E1_COPIA_SHEET_ID");
+if (!(ident?.ok === true && ident.teste === true && ident.abas?.length === 2 && /^TESTE E1/.test(ident.nome ?? ""))) { console.error("\nRECUSADO: o endereço informado NÃO é a planilha de teste. Nada foi gravado."); await sair(2); }
+const base0 = await acaoTeste("e1_ler");
+if (!base0?.ok || base0.dados.length !== 1 || base0.dados[0].versao !== "") { console.error("\nA planilha de teste não está no estado inicial (já foi usada). Rode reiniciarDadosTeste() no Apps Script da planilha de teste e repita. Nada foi gravado."); await sair(2); }
+ok(base0.master.length === 3 && base0.master.filter(m => m.formula_nome).length === 2 && base0.master.filter(m => !m.formula_nome).length === 1, "estado inicial: 3 linhas da MASTERLIST com o @ de teste (2 com fórmula no NOME, 1 com texto fixo)");
+const textoFixoAntes = base0.master.find(m => !m.formula_nome).nome;
 
 const d = new PGlite();
 await d.exec(`
@@ -72,15 +88,8 @@ const deps = {
   },
 };
 const lista = async () => (await como("authenticated", ADM, "select * from public.admin_cadastro_tarefas(50)", [], true)).rows;
-const dadosDaCopia = async () => {
-  if (!SHEET_ID) return null;
-  const r = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Dados`); if (!r.ok) return null;
-  const linhas = (await r.text()).split("\n").map(l => l.replace(/^"|"$/g, "").split('","'));
-  return linhas.find(l => String(l[0]).replace(/^@/, "").toLowerCase() === ARROBA) ?? null;
-};
 const sufixo = new Date().toISOString().slice(11, 19).replace(/:/g, "");
 
-console.log("TESTE REAL (planilha = CÓPIA; banco = local fictício)");
 passo("1. Gravação confirmada → tarefa em Atualizações");
 const nomeNovo = `Teste E1 ${sufixo}`;
 const r1 = (await como("authenticated", CONTA, "select public.salvar_meu_cadastro($1) r", [nomeNovo])).rows[0].r;
@@ -93,17 +102,21 @@ const lote = await processarFila(deps);
 console.log("   perfil-sync:", JSON.stringify(lote));
 t = (await lista()).find(x => x.joiner_id === idTeste);
 ok(lote.enviados === 1 && t.planilha_status === "sincronizada", "o Apps Script de teste respondeu ok e a tarefa ficou 'sincronizada'");
-const l1 = await dadosDaCopia();
-if (l1) ok(l1[1] === nomeNovo && String(l1[3]) === String(idTeste) && l1[4] === "principal", "Dados da CÓPIA: B = nome novo, D = ID_SITE, E = principal (lido pela exportação da cópia)");
-else console.log("   (sem E1_COPIA_SHEET_ID: confira à mão na CÓPIA → aba Dados, linha do @" + ARROBA + ": B = “" + nomeNovo + "”, D = " + idTeste + ", E = principal)");
+const l1 = await acaoTeste("e1_ler");
+ok(l1.dados[0]?.nome === nomeNovo && String(l1.dados[0].id_site) === String(idTeste) && l1.dados[0].papel === "principal", "Dados da CÓPIA: B = nome novo, D = ID_SITE, E = principal");
+const comFormula = l1.master.filter(m => m.formula_nome), fixa = l1.master.find(m => !m.formula_nome);
+ok(comFormula.length === 2 && comFormula.every(m => m.nome === nomeNovo), "MASTERLIST: as 2 linhas com fórmula passaram a mostrar o nome novo (reflexo de Dados)");
+ok(fixa?.nome === textoFixoAntes && textoFixoAntes === "Nome Fixo Digitado", "MASTERLIST: a célula com TEXTO FIXO continua igual");
+ok(l1.digesto_constantes === base0.digesto_constantes && l1.digesto_formulas === base0.digesto_formulas, "MASTERLIST: nenhuma célula digitada e nenhuma fórmula mudou (digest da planilha inteira)");
 
 passo("3. E-mail confirmado pelo Auth → Dados!C");
 await q("update auth.users set email = $2, email_confirmed_at = now() where id = $1", [CONTA, `teste.e1.${sufixo}@exemplo.com`]);
 const lote2 = await processarFila(deps); t = (await lista()).find(x => x.joiner_id === idTeste && x.campos.email);
 ok(lote2.enviados === 1 && t?.planilha_status === "sincronizada", "tarefa do e-mail 'sincronizada'");
-const l2 = await dadosDaCopia();
-if (l2) ok(l2[2] === `teste.e1.${sufixo}@exemplo.com`, "Dados da CÓPIA: C = e-mail novo");
-else console.log("   (confira à mão: Dados!C = teste.e1." + sufixo + "@exemplo.com)");
+const l2 = await acaoTeste("e1_ler");
+ok(l2.dados[0]?.email === `teste.e1.${sufixo}@exemplo.com`, "Dados da CÓPIA: C = e-mail novo");
+ok(l2.master.filter(m => m.formula_nome).every(m => m.email === `teste.e1.${sufixo}@exemplo.com`), "MASTERLIST: a coluna EMAIL (fórmula) reflete o e-mail novo");
+ok(l2.master.find(m => !m.formula_nome).nome === textoFixoAntes && l2.digesto_constantes === base0.digesto_constantes && l2.digesto_formulas === base0.digesto_formulas, "MASTERLIST: texto fixo e demais células seguem iguais");
 
 passo("4. Versão antiga não sobrescreve a nova");
 const antiga = await deps.planilha(URL_PLANILHA, { acao: "atualizar_cadastro", token: TOKEN, id_site: idTeste, twitter: "@" + ARROBA, nome: "Nome Velho", email: "velho@exemplo.com", versao: 1, campos: ["nome"] });
@@ -112,9 +125,10 @@ ok(antiga.json?.ignorado === "versao_antiga", "o Apps Script de teste ignorou a 
 passo("5. Falha que exige intervenção: cadastro fictício SEM linha na cópia");
 await como("authenticated", CONTA2, "select public.salvar_meu_cadastro('Teste E1 Ausente')");
 await processarFila(deps); const ta = (await lista()).find(x => x.joiner_id === idAusente);
+const l5 = await acaoTeste("e1_ler");
+ok(l5.digesto_constantes === base0.digesto_constantes && l5.dados.length === 1, "a falha do cadastro ausente não gravou nada (MASTERLIST igual e nenhuma linha nova para ele)");
 ok(ta?.planilha_status === "atencao" && ta.planilha_motivo === "linha_nao_encontrada" && ta.planilha_tentativas === 1, "'precisa de atenção' com motivo 'linha_nao_encontrada' já na 1ª tentativa, e nada foi gravado na cópia");
 
-console.log("\nConfira na CÓPIA (à mão): na MASTERLIST, as linhas de teste com fórmula mostram “" + nomeNovo + "” (coluna E) e o e-mail novo (coluna S); a linha de TEXTO FIXO não mudou; nenhuma outra célula mudou.");
-console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTESTE REAL CONCLUÍDO: automático OK (conferir à mão os itens acima)");
+console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTESTE REAL CONCLUÍDO: tudo conferido automaticamente (Dados, MASTERLIST, texto fixo e digest); olhe também a planilha de teste");
 await d.close();
 process.exitCode = falhas ? 1 : 0;

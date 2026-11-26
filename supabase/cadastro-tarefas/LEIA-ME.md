@@ -41,13 +41,13 @@ VITE_JOINERS_AUTH=true VITE_CADASTRO_ETAPA1=1 npx vite build --outDir /tmp/dist-
 node tests/cadastro-etapa1.e2e.mjs                              # navegador, 35 verificações
 ```
 (`npm i --no-save @electric-sql/pglite` para os de banco; o e2e roda contra o **build**, não contra `vite dev`, por causa do StrictMode.)
-**Teste real na cópia da planilha:** `TESTE_REAL_COPIA.md` + `scripts/e1-teste-copia-planilha.mjs` (precisa de você: itens ✋).
+**Teste real numa planilha de TESTE criada do zero (só Dados e MASTERLIST, dados fictícios):** checklist em `TESTE_REAL_COPIA.md`; ferramentas `scripts/e1-montar-codigo-teste.mjs`, `scripts/e1-teste-copia-planilha.mjs` e `appsscript/TESTE_E1.gs` (**só teste, nunca na planilha real**). Precisa de você: itens ✋.
 
 ## Ordem de publicação (cada passo só com aprovação) e reversão
 | # | Passo | Reversão |
 |---|---|---|
 | 0 | Rodar `E1_preflight_somente_leitura.sql`; conferir a versão do Apps Script publicado e o "Last deployed" de `perfil-sync`; guardar cópias | — |
-| 1 | **Teste real na cópia** (TESTE_REAL_COPIA.md) | apagar a cópia |
+| 1 | **Teste real na planilha de teste** (TESTE_REAL_COPIA.md) | apagar a planilha de teste |
 | 2 | Cópia da aba Dados; no Apps Script real: colar o pedaço, 2 edições, **nova versão de implantação**; cabeçalhos D/E/F em Dados | reativar a versão anterior; apagar colunas |
 | 3 | SQL `E1_cadastro_tarefas_aplicar.sql` (**antes** de publicar a função) | `E1_cadastro_tarefas_reverter.sql` (arquiva antes de apagar) |
 | 4 | Segredo `PERFIL_SYNC_SEGREDO` na função e publicar `perfil-sync` | publicar a anterior (a fila antiga de e-mail continua suportada) |
