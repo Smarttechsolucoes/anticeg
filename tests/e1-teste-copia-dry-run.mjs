@@ -147,5 +147,18 @@ const denovo = await rodar({ E1_PLANILHA_URL: url, E1_PLANILHA_TOKEN: TOKEN, E1_
 ok(denovo.code === 2 && /reiniciarDadosTeste/.test(denovo.o), "repetir sem reiniciar é recusado, com a instrução de reiniciar");
 vm.runInContext("reiniciarDadosTeste()", sb);
 ok(D.getRange(2, 2).getValue() === "Teste E1 Antigo" && D.getRange(2, 6).getValue() === "", "reiniciarDadosTeste() devolve os dados ao estado inicial");
+// ---- 5) o código de PRODUÇÃO (montador --producao): sem nada de teste, e o web app recusa as ações de teste
+const saidaProd = join(mkdtempSync(join(tmpdir(), "e1p-")), "Producao.gs");
+const mp = spawnSync(process.execPath, ["scripts/e1-montar-codigo-teste.mjs", "--producao", entrada, saidaProd], { cwd: raiz, encoding: "utf8" });
+const codigoProd = readFileSync(saidaProd, "utf8");
+ok(mp.status === 0 && !/e1_|E1_|TESTE_E1|prepararPlanilhaTeste|e1TesteAcao_/.test(codigoProd) && /atualizar_cadastro/.test(codigoProd) && /function rodarFilaPerfil_/.test(codigoProd) && /function removerGatilhoFilaPerfil/.test(codigoProd), "montador --producao: só a etapa 1 (atualizar_cadastro + acionador), sem NENHUM código de teste");
+const planilhaProd = novaPlanilha("ID-PROD-0001", ["Dados", "MASTERLIST"]); planilhaProd.abas.Dados.pôr(1, 1, "@");
+const sandboxProd = (() => { const sb = { PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k === "ANTICEG_TOKEN" ? "tok-prod" : null) }) }, LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) }, ContentService: { MimeType: { JSON: "json" }, createTextOutput: s => ({ conteudo: s, setMimeType() { return this; } }) }, SpreadsheetApp: { getActiveSpreadsheet: () => planilhaProd.ss, flush() {} }, console: { log() {}, warn() {}, error() {} } }; vm.createContext(sb); vm.runInContext(codigoProd, sb); return sb; })();
+const chamar = corpo => JSON.parse(vm.runInContext(`doPost({ postData: { contents: ${JSON.stringify(JSON.stringify(corpo))} } }).conteudo`, sandboxProd));
+ok(chamar({ acao: "e1_ler", token: "tok-prod" }).erro === "Ação inválida" && chamar({ acao: "e1_gatilho_fila", token: "tok-prod", remover: true }).erro === "Ação inválida", "o web app de PRODUÇÃO recusa as ações de teste (Ação inválida)");
+const inval = chamar({ acao: "atualizar_cadastro", token: "tok-prod", id_site: "0", versao: 1, campos: ["nome"], nome: "X" });
+ok(inval.definitivo === true && inval.motivo === "aba_dados_ausente", "a ação atualizar_cadastro existe em produção e responde sem gravar nada (checagem sem efeito)");
+ok(planilhaProd.abas.Dados.escritas.length <= 1, "e a checagem não escreveu nada na planilha");
+
 s.close();
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTODOS OS TESTES PASSARAM"); process.exit(falhas ? 1 : 0);
