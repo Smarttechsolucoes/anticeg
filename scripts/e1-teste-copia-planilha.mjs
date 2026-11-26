@@ -107,6 +107,9 @@ const deps = {
 };
 const lista = async () => (await como("authenticated", ADM, "select * from public.admin_cadastro_tarefas(50)", [], true)).rows;
 const sufixo = new Date().toISOString().slice(11, 19).replace(/:/g, "");
+// O Google Sheets pode levar alguns segundos para recalcular as fórmulas depois da gravação em Dados: relê até 30 s antes de dar a fórmula como não refletida
+const lerAte = async cond => { let r; for (let i = 0; i < 11; i++) { r = await acaoTeste("e1_ler"); if (r?.ok && cond(r)) return r; if (i < 10) await new Promise(x => setTimeout(x, 3000)); } return r; };
+const mostrou = (r, campo) => "a MASTERLIST mostrou (" + campo + "): " + (r?.master ?? []).map(m => "linha " + m.linha + " = “" + String(m[campo]).slice(0, 60) + "”" + (m.formula_nome ? "" : " [texto fixo]")).join("; ");
 
 passo("1. Gravação confirmada → tarefa em Atualizações");
 const nomeNovo = `Teste E1 ${sufixo}`;
@@ -120,10 +123,11 @@ const lote = await processarFila(deps);
 console.log("   perfil-sync:", JSON.stringify(lote));
 t = (await lista()).find(x => x.joiner_id === idTeste);
 ok(lote.enviados === 1 && t.planilha_status === "sincronizada", "o Apps Script de teste respondeu ok e a tarefa ficou 'sincronizada'");
-const l1 = await acaoTeste("e1_ler");
+const l1 = await lerAte(r => (r.master ?? []).filter(m => m.formula_nome).every(m => m.nome === nomeNovo));
 ok(l1.dados[0]?.nome === nomeNovo && String(l1.dados[0].id_site) === String(idTeste) && l1.dados[0].papel === "principal", "Dados da CÓPIA: B = nome novo, D = ID_SITE, E = principal");
 const comFormula = l1.master.filter(m => m.formula_nome), fixa = l1.master.find(m => !m.formula_nome);
 ok(comFormula.length === 2 && comFormula.every(m => m.nome === nomeNovo), "MASTERLIST: as 2 linhas com fórmula passaram a mostrar o nome novo (reflexo de Dados)");
+if (!comFormula.every(m => m.nome === nomeNovo)) console.log("   " + mostrou(l1, "nome"));
 ok(fixa?.nome === textoFixoAntes && textoFixoAntes === "Nome Fixo Digitado", "MASTERLIST: a célula com TEXTO FIXO continua igual");
 ok(l1.digesto_constantes === base0.digesto_constantes && l1.digesto_formulas === base0.digesto_formulas, "MASTERLIST: nenhuma célula digitada e nenhuma fórmula mudou (digest da planilha inteira)");
 
@@ -131,9 +135,10 @@ passo("3. E-mail confirmado pelo Auth → Dados!C");
 await q("update auth.users set email = $2, email_confirmed_at = now() where id = $1", [CONTA, `teste.e1.${sufixo}@exemplo.com`]);
 const lote2 = await processarFila(deps); t = (await lista()).find(x => x.joiner_id === idTeste && x.campos.email);
 ok(lote2.enviados === 1 && t?.planilha_status === "sincronizada", "tarefa do e-mail 'sincronizada'");
-const l2 = await acaoTeste("e1_ler");
+const l2 = await lerAte(r => (r.master ?? []).filter(m => m.formula_nome).every(m => m.email === `teste.e1.${sufixo}@exemplo.com`));
 ok(l2.dados[0]?.email === `teste.e1.${sufixo}@exemplo.com`, "Dados da CÓPIA: C = e-mail novo");
 ok(l2.master.filter(m => m.formula_nome).every(m => m.email === `teste.e1.${sufixo}@exemplo.com`), "MASTERLIST: a coluna EMAIL (fórmula) reflete o e-mail novo");
+if (!l2.master.filter(m => m.formula_nome).every(m => m.email === `teste.e1.${sufixo}@exemplo.com`)) console.log("   " + mostrou(l2, "email"));
 ok(l2.master.find(m => !m.formula_nome).nome === textoFixoAntes && l2.digesto_constantes === base0.digesto_constantes && l2.digesto_formulas === base0.digesto_formulas, "MASTERLIST: texto fixo e demais células seguem iguais");
 
 passo("4. Versão antiga não sobrescreve a nova");
