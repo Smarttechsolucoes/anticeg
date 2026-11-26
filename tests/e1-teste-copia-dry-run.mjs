@@ -101,7 +101,14 @@ ok(teste.abas.Dados.escritas.filter(e => e[0] > 4).length === 0 && teste.abas.Da
 const realSrv = await servir(sbReal);
 const emReal = await rodar({ E1_PLANILHA_URL: realSrv.url, E1_PLANILHA_TOKEN: "token-real", E1_CONFIRMO_COPIA: "1", PLANILHA_URL: "" });
 ok(emReal.code === 2 && /NÃO é a planilha de teste/.test(emReal.o) && real.abas.Dados.escritas.length === 0, "apontado para uma planilha que NÃO é a de teste, o script RECUSA e não grava nada");
+ok(/Diagnóstico: ação e1_identificar/.test(emReal.o) && /prepararPlanilhaTeste não foi executada/.test(emReal.o), "a recusa explica a causa provável (planilha sem preparação)");
 realSrv.s.close();
+const tokenErrado = await rodar({ E1_PLANILHA_URL: url, E1_PLANILHA_TOKEN: "token-errado-xxxxxxxxxxxxxxxx", E1_CONFIRMO_COPIA: "1", PLANILHA_URL: "" });
+ok(tokenErrado.code === 2 && /Diagnóstico/.test(tokenErrado.o) && /token/i.test(tokenErrado.o) && !tokenErrado.o.includes("token-errado-xxxxxxxxxxxxxxxx") && !tokenErrado.o.includes("127.0.0.1"), "com token errado a recusa explica a causa e não imprime o token nem a URL");
+const htmlSrv = http.createServer((q, r) => { r.writeHead(200, { "Content-Type": "text/html" }); r.end("<html><body>Faça login para continuar</body></html>"); }); await new Promise(r => htmlSrv.listen(0, "127.0.0.1", r));
+const html = await rodar({ E1_PLANILHA_URL: `http://127.0.0.1:${htmlSrv.address().port}/exec`, E1_PLANILHA_TOKEN: TOKEN, E1_CONFIRMO_COPIA: "1", PLANILHA_URL: "" });
+ok(html.code === 2 && /NÃO é JSON/.test(html.o) && /Qualquer pessoa/.test(html.o) && !html.o.includes("127.0.0.1"), "se o Google devolver uma página (acesso não é 'Qualquer pessoa'), a recusa aponta essa causa");
+htmlSrv.close();
 
 const correto = await rodar({ E1_PLANILHA_URL: url, E1_PLANILHA_TOKEN: TOKEN, E1_CONFIRMO_COPIA: "1", PLANILHA_URL: "", E1_COPIA_SHEET_ID: teste.id });
 console.log(correto.o.split("\n").map(l => "   | " + l).join("\n"));

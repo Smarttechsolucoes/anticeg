@@ -26,7 +26,25 @@ const U = n => `00000000-0000-0000-0000-0000000000${String(n).padStart(2, "0")}`
 
 // ---- 0) ANTES de abrir o banco: confirmar que a URL é a da planilha de TESTE (criada do zero) e que está no estado inicial
 const sair = async c => { process.exitCode = c; await new Promise(r => setTimeout(r, 400)); process.exit(c); };   // espera as conexões fecharem (evita o erro do libuv no Windows)
-const acaoTeste = async (acao) => { const r = await fetch(URL_PLANILHA, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao, token: TOKEN, twitter: "@" + ARROBA }) }); try { return JSON.parse(await r.text()); } catch { return null; } };
+let diag = null;   // o que o Apps Script respondeu (sem segredo), para explicar uma recusa
+const acaoTeste = async (acao) => {
+  const r = await fetch(URL_PLANILHA, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao, token: TOKEN, twitter: "@" + ARROBA }) });
+  const txt = await r.text(); const tipo = r.headers.get("content-type") ?? "";
+  let json = null; try { json = JSON.parse(txt); } catch { /* não é JSON */ }
+  const limpo = String(txt).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").split(TOKEN).join("[oculto]").split(URL_PLANILHA).join("[url]").slice(0, 140);
+  diag = { acao, status: r.status, tipo: tipo.split(";")[0], json: !!json, erro: typeof json?.erro === "string" ? json.erro.slice(0, 160) : null, trecho: json ? null : limpo };
+  return json;
+};
+const explicar = () => {
+  if (!diag) return "";
+  const l = [`Diagnóstico: ação ${diag.acao} → HTTP ${diag.status}, ${diag.json ? "JSON" : "resposta que NÃO é JSON (" + (diag.tipo || "sem tipo") + ")"}${diag.erro ? ", erro do Apps Script: “" + diag.erro + "”" : ""}${diag.trecho ? ", começo da resposta: “" + diag.trecho + "”" : ""}`];
+  if (!diag.json) l.push("→ Provável: a implantação não está com acesso \"Qualquer pessoa\" (o Google devolveu uma página de login/erro), ou a URL não é a que termina em /exec.");
+  else if (/token/i.test(diag.erro ?? "")) l.push("→ Provável: o token digitado não é o de ANTICEG_TOKEN desta planilha (ou ANTICEG_TOKEN não foi criado). Rode gerarTokenTeste e copie de novo.");
+  else if (/a[cç][aã]o inv/i.test(diag.erro ?? "")) l.push("→ Provável: a implantação é de uma versão ANTIGA do código (sem e1_identificar). Implantar › Gerenciar implantações › editar (lápis) › Versão: Nova versão › Implantar.");
+  else if (/n[aã]o [eé] a planilha de teste/i.test(diag.erro ?? "")) l.push("→ Provável: prepararPlanilhaTeste não foi executada NESTA planilha (faltam as propriedades E1_PLANILHA_TESTE/E1_PLANILHA_ID).");
+  else l.push("→ Me mande esta linha de diagnóstico (ela não contém token nem URL).");
+  return l.join("\n");
+};
 console.log("TESTE REAL (planilha = CÓPIA; banco = local fictício)");
 passo("0. Confirmar que o Apps Script de teste aponta para a planilha de TESTE (criada do zero)");
 const ident = await acaoTeste("e1_identificar");
@@ -34,7 +52,7 @@ ok(ident?.ok === true && ident.teste === true, "o Apps Script confirma: é a pla
 ok(Array.isArray(ident?.abas) && ident.abas.length === 2 && ident.abas.includes("Dados") && ident.abas.includes("MASTERLIST"), "a planilha tem SÓ as abas Dados e MASTERLIST");
 ok(/^TESTE E1/.test(ident?.nome ?? ""), "o nome da planilha começa com 'TESTE E1'");
 if (SHEET_ID) ok(SHEET_ID.endsWith(ident?.id_final ?? "\u0000"), "o final do id da planilha confere com E1_COPIA_SHEET_ID");
-if (!(ident?.ok === true && ident.teste === true && ident.abas?.length === 2 && /^TESTE E1/.test(ident.nome ?? ""))) { console.error("\nRECUSADO: o endereço informado NÃO é a planilha de teste. Nada foi gravado."); await sair(2); }
+if (!(ident?.ok === true && ident.teste === true && ident.abas?.length === 2 && /^TESTE E1/.test(ident.nome ?? ""))) { console.error("\nRECUSADO: o endereço informado NÃO é a planilha de teste. Nada foi gravado.\n" + explicar()); await sair(2); }
 const base0 = await acaoTeste("e1_ler");
 if (!base0?.ok || base0.dados.length !== 1 || base0.dados[0].versao !== "") { console.error("\nA planilha de teste não está no estado inicial (já foi usada). Rode reiniciarDadosTeste() no Apps Script da planilha de teste e repita. Nada foi gravado."); await sair(2); }
 ok(base0.master.length === 3 && base0.master.filter(m => m.formula_nome).length === 2 && base0.master.filter(m => !m.formula_nome).length === 1, "estado inicial: 3 linhas da MASTERLIST com o @ de teste (2 com fórmula no NOME, 1 com texto fixo)");
