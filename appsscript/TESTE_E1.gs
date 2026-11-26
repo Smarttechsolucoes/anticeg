@@ -7,7 +7,7 @@
 //   prepararPlanilhaTeste()  - roda UMA vez, no editor, na planilha NOVA e vazia: cria as abas Dados e MASTERLIST com cabeçalhos, fórmulas e dados FICTÍCIOS.
 //   gerarTokenTeste()        - cria o token da implantação de teste (fica só em Propriedades do script; nunca é escrito no log).
 //   reiniciarDadosTeste()    - volta os dados fictícios ao estado inicial (só funciona na planilha de teste).
-//   e1_identificar / e1_ler  - ações do doPost (token obrigatório) para o script de teste CONFIRMAR em qual planilha está e ler o resultado,
+//   e1_identificar / e1_ler / e1_gatilho_fila - ações do doPost (token obrigatório) para o script de teste CONFIRMAR em qual planilha está e ler o resultado,
 //                              sem precisar compartilhar a planilha publicamente.
 // ==========================================================================================================
 
@@ -106,6 +106,13 @@ function e1TesteAcao_(ss, p) {
   const abas = ss.getSheets().map(function (s) { return s.getName(); });
   if (p.acao === "e1_identificar") {
     return { ok: true, teste: true, nome: ss.getName(), abas: abas, id_final: ss.getId().slice(-4) };
+  }
+  if (p.acao === "e1_gatilho_fila") {
+    // confere (e, se pedido, REMOVE) o acionador de horário da fila nesta planilha de teste; só mexe nos acionadores de rodarFilaPerfil_
+    const antes = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === "rodarFilaPerfil_"; }).length;
+    if (p.remover === true) removerGatilhoFilaPerfil();
+    const depois = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === "rodarFilaPerfil_"; }).length;
+    return { ok: true, gatilhos_antes: antes, gatilhos_depois: depois, removeu: p.remover === true };
   }
   const arroba = e1Norm_(p.twitter);
   const dados = ss.getSheetByName("Dados"), master = ss.getSheetByName("MASTERLIST");

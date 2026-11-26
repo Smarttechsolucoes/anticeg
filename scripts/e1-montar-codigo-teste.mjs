@@ -14,11 +14,11 @@ const B = '    const sheet = spreadsheet.getSheetByName("MASTERLIST");';
 if (!base.includes(A) || base.split(B).length !== 2) { console.error("O código informado não tem os pontos esperados do doPost (lista de ações e leitura da MASTERLIST). Nada foi gerado."); process.exit(1); }
 if (base.includes("atualizar_cadastro")) { console.error("O código informado já tem atualizar_cadastro. Use a cópia SEM as edições."); process.exit(1); }
 
-base = base.replace(A, '"atualizar_joiner",\n      "atualizar_cadastro",\n      "e1_identificar",\n      "e1_ler",\n      "recebido",');
+base = base.replace(A, '"atualizar_joiner",\n      "atualizar_cadastro",\n      "e1_identificar",\n      "e1_ler",\n      "e1_gatilho_fila",\n      "recebido",');
 base = base.replace(B, `    if (payload.acao === "atualizar_cadastro") {
       return resposta(atualizarCadastro_(spreadsheet, payload, gravar));
     }
-    if (payload.acao === "e1_identificar" || payload.acao === "e1_ler") {
+    if (payload.acao === "e1_identificar" || payload.acao === "e1_ler" || payload.acao === "e1_gatilho_fila") {
       return resposta(e1TesteAcao_(spreadsheet, payload));
     }
 
